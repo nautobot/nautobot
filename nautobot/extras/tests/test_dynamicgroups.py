@@ -1,4 +1,6 @@
+from collections import Counter
 import random
+from unittest import mock
 
 from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
@@ -1167,6 +1169,231 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         updated_members = group.update_cached_members()
         self.assertEqual(sorted(list(group.members)), sorted(list(updated_members)))
         self.assertEqual(sorted(list(group.members)), sorted(list(group.members_cached)))
+
+
+class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
+    """Tests for the cached-member refresh cascade triggered by DynamicGroup(Membership).save()."""
+
+    def _build_diamond(self):
+        """Create a diamond topology: leaf is a child of parent-1 and parent-2, which share a grandparent."""
+        leaf = DynamicGroup.objects.create(
+            name="Diamond Leaf",
+            filter={"status": [self.status_1.name]},
+            content_type=self.device_ct,
+        )
+        side_1 = DynamicGroup.objects.create(
+            name="Diamond Side 1",
+            filter={"location": ["Location 1"]},
+            content_type=self.device_ct,
+        )
+        side_2 = DynamicGroup.objects.create(
+            name="Diamond Side 2",
+            filter={"location": ["Location 3"]},
+            content_type=self.device_ct,
+        )
+        parent_1 = DynamicGroup.objects.create(
+            name="Diamond Parent 1",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=self.device_ct,
+        )
+        parent_2 = DynamicGroup.objects.create(
+            name="Diamond Parent 2",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=self.device_ct,
+        )
+        grandparent = DynamicGroup.objects.create(
+            name="Diamond Grandparent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=self.device_ct,
+        )
+        for parent_group, group, weight in (
+            (parent_1, leaf, 10),
+            (parent_1, side_1, 20),
+            (parent_2, leaf, 10),
+            (parent_2, side_2, 20),
+            (grandparent, parent_1, 10),
+            (grandparent, parent_2, 20),
+        ):
+            DynamicGroupMembership.objects.create(
+                parent_group=parent_group,
+                group=group,
+                weight=weight,
+                operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            )
+
+        return leaf, side_1, side_2, parent_1, parent_2, grandparent
+
+    def test_save_refreshes_ancestor_caches_end_state_parity(self):
+        """After saving a group, each ancestor's cached members must match a full live recalculation."""
+        leaf, _, _, parent_1, parent_2, grandparent = self._build_diamond()
+
+        # Stale-ify the caches: this device matches leaf's filter but post-dates the last cache refresh.
+        new_device = Device.objects.create(
+            name="device-location-1-new",
+            status=self.status_1,
+            role=self.device_role,
+            device_type=self.device_type,
+            location=self.locations[0],
+        )
+        self.assertNotIn(new_device, grandparent.members)
+
+        leaf.save()
+
+        for group in (leaf, parent_1, parent_2, grandparent):
+            self.assertQuerySetEqualAndNotEmpty(
+                group.members,
+                Device.objects.filter(group.generate_query()).distinct(),
+                ordered=False,
+            )
+        self.assertIn(new_device, grandparent.members)
+
+    def test_save_deduplicates_and_orders_ancestor_refreshes(self):
+        """Each ancestor is refreshed exactly once per save, and only after its own descendants."""
+        leaf, _, _, parent_1, parent_2, grandparent = self._build_diamond()
+
+        with mock.patch.object(
+            DynamicGroup,
+            "update_cached_members",
+            autospec=True,
+            side_effect=DynamicGroup.update_cached_members,
+        ) as mock_update:
+            leaf.save()
+
+        refreshed_pks = [call.args[0].pk for call in mock_update.call_args_list]
+        # The grandparent is reachable via two paths but must be refreshed only once.
+        self.assertEqual(
+            Counter(refreshed_pks),
+            Counter([leaf.pk, parent_1.pk, parent_2.pk, grandparent.pk]),
+        )
+        # The saved group is refreshed first, and parents are refreshed before grandparents.
+        self.assertEqual(refreshed_pks[0], leaf.pk)
+        self.assertGreater(refreshed_pks.index(grandparent.pk), refreshed_pks.index(parent_1.pk))
+        self.assertGreater(refreshed_pks.index(grandparent.pk), refreshed_pks.index(parent_2.pk))
+
+    def test_generate_query_fresh_group_pks_substitution(self):
+        """`generate_query(fresh_group_pks=...)` reuses fresh caches without changing the resulting members."""
+        live_query = self.parent.generate_query()
+
+        # Substituting a direct child's fresh cache changes the query structure but not its results.
+        self.first_child.update_cached_members()
+        substituted_query = self.parent.generate_query(fresh_group_pks=frozenset([self.first_child.pk]))
+        self.assertNotEqual(str(substituted_query), str(live_query))
+        # The live query contains only filter predicates; substitution introduces a cache (pk__in) subquery.
+        self.assertNotIn("pk__in", str(live_query))
+        self.assertIn("pk__in", str(substituted_query))
+        self.assertQuerySetEqualAndNotEmpty(
+            Device.objects.filter(substituted_query).distinct(),
+            Device.objects.filter(live_query).distinct(),
+            ordered=False,
+        )
+
+        # Substitution also applies to a fresh group nested inside a live-evaluated child subtree.
+        self.nested_child.update_cached_members()
+        deep_query = self.parent.generate_query(fresh_group_pks=frozenset([self.nested_child.pk]))
+        self.assertIn("pk__in", str(deep_query))
+        self.assertQuerySetEqualAndNotEmpty(
+            Device.objects.filter(deep_query).distinct(),
+            Device.objects.filter(live_query).distinct(),
+            ordered=False,
+        )
+
+        # An empty fresh set is the default and must not alter the query at all.
+        self.assertEqual(str(self.parent.generate_query(fresh_group_pks=frozenset())), str(live_query))
+
+    def test_save_evaluates_each_filter_at_most_once(self):
+        """Saving a nested group must not re-evaluate its filter once per ancestor."""
+        with mock.patch.object(
+            DynamicGroup,
+            "_generate_filter_based_query",
+            autospec=True,
+            side_effect=DynamicGroup._generate_filter_based_query,
+        ) as mock_generate:
+            self.nested_child.save()
+
+        evaluations = Counter(call.args[0].pk for call in mock_generate.call_args_list)
+        # nested_child is evaluated once for its own refresh and then served from cache during the
+        # third_child and parent refreshes; first_child/second_child are evaluated once (parent refresh).
+        self.assertEqual(
+            evaluations,
+            Counter({self.nested_child.pk: 1, self.first_child.pk: 1, self.second_child.pk: 1}),
+        )
+
+    def test_fresh_substitution_skipped_for_dynamic_groups_filter(self):
+        """Groups whose filter reads other groups' caches must always be re-evaluated live."""
+        base_group = DynamicGroup.objects.create(
+            name="Cache Base",
+            filter={"location": ["Location 1"]},
+            content_type=self.device_ct,
+        )
+        dependent_group = DynamicGroup.objects.create(
+            name="Cache Dependent",
+            filter={"dynamic_groups": [base_group.name]},
+            content_type=self.device_ct,
+        )
+        set_group = DynamicGroup.objects.create(
+            name="Cache Dependent Parent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+            content_type=self.device_ct,
+        )
+        DynamicGroupMembership.objects.create(
+            parent_group=set_group,
+            group=dependent_group,
+            weight=10,
+            operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+        )
+
+        self.assertTrue(base_group._is_cache_substitution_safe())
+        self.assertFalse(dependent_group._is_cache_substitution_safe())
+        self.assertFalse(set_group._is_cache_substitution_safe())
+
+        with mock.patch.object(
+            DynamicGroup,
+            "_generate_filter_based_query",
+            autospec=True,
+            side_effect=DynamicGroup._generate_filter_based_query,
+        ) as mock_generate:
+            dependent_group.save()
+
+        evaluations = Counter(call.args[0].pk for call in mock_generate.call_args_list)
+        # Once for its own refresh, and once more (not substituted) during the parent refresh.
+        self.assertEqual(evaluations[dependent_group.pk], 2)
+        self.assertQuerySetEqualAndNotEmpty(
+            set_group.members,
+            Device.objects.filter(set_group.generate_query()).distinct(),
+            ordered=False,
+        )
+
+    def test_membership_save_legacy_conversion_single_cascade(self):
+        """Legacy group_type conversion during membership save must not trigger a redundant extra cascade."""
+        legacy_parent = DynamicGroup.objects.create(
+            name="Legacy Parent",
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,  # wrong for a parent, but possible due to #6329
+            content_type=self.device_ct,
+        )
+        child = DynamicGroup.objects.create(
+            name="Legacy Child",
+            filter={"location": ["Location 1"]},
+            content_type=self.device_ct,
+        )
+
+        with mock.patch.object(
+            DynamicGroup,
+            "update_cached_members",
+            autospec=True,
+            side_effect=DynamicGroup.update_cached_members,
+        ) as mock_update:
+            DynamicGroupMembership(
+                parent_group=legacy_parent,
+                group=child,
+                weight=10,
+                operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+            ).save()
+
+        legacy_parent.refresh_from_db()
+        self.assertEqual(legacy_parent.group_type, DynamicGroupTypeChoices.TYPE_DYNAMIC_SET)
+        refresh_counts = Counter(call.args[0].pk for call in mock_update.call_args_list)
+        self.assertEqual(refresh_counts[legacy_parent.pk], 1)
+        self.assertQuerySetEqualAndNotEmpty(legacy_parent.members, child.members, ordered=False)
 
 
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?

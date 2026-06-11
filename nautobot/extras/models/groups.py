@@ -442,16 +442,21 @@ class DynamicGroup(PrimaryModel):
         """Deprecated  - use `members()` instead."""
         return self.members
 
-    def update_cached_members(self, members=None):
+    def update_cached_members(self, members=None, *, fresh_group_pks=frozenset()):
         """
         Update the cached members of this group and return the resulting members.
+
+        Args:
+            members (QuerySet, optional): If given, set the cached members to this set rather than recalculating them.
+            fresh_group_pks (frozenset, optional): PKs of groups whose cached members are already known to be
+                up-to-date within the current operation; their caches will be reused rather than recalculated.
         """
         if members is None:
             if self.group_type in (
                 DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
                 DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
             ):
-                members = self._get_group_queryset()
+                members = self._get_group_queryset(fresh_group_pks=fresh_group_pks)
             elif self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
                 return self.members  # nothing to do
             else:
@@ -464,6 +469,20 @@ class DynamicGroup(PrimaryModel):
         return members
 
     update_cached_members.alters_data = True
+
+    def _is_cache_substitution_safe(self):
+        """
+        Return True if this group's membership definition does not read other groups' cached members.
+
+        Filters such as `dynamic_groups` derive their results from other groups' caches, which may themselves be
+        rewritten later within the same cache-update cascade; the cached members of any group depending on such a
+        filter cannot safely substitute for re-evaluating its filter(s).
+        """
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            return "dynamic_groups" not in self.filter
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+            return all(child._is_cache_substitution_safe() for child in self.children.all())
+        return False
 
     def has_member(self, obj, use_cache=False):
         """
@@ -640,8 +659,13 @@ class DynamicGroup(PrimaryModel):
 
         if update_cached_members:
             self.update_cached_members()
-            for ancestor in self.get_ancestors():
-                ancestor.update_cached_members()
+            fresh_group_pks = set()
+            if self._is_cache_substitution_safe():
+                fresh_group_pks.add(self.pk)
+            for ancestor in self._ordered_unique_ancestors():
+                ancestor.update_cached_members(fresh_group_pks=frozenset(fresh_group_pks))
+                if ancestor._is_cache_substitution_safe():
+                    fresh_group_pks.add(ancestor.pk)
 
     def _generate_query_for_filter(self, filter_field, value):
         """
@@ -763,9 +787,14 @@ class DynamicGroup(PrimaryModel):
 
         return query
 
-    def generate_query(self):
+    def generate_query(self, *, fresh_group_pks=frozenset()):
         """
         Return a `Q` object generated recursively from this dynamic group.
+
+        Args:
+            fresh_group_pks (frozenset, optional): PKs of groups whose cached members are already known to be
+                up-to-date within the current operation; their caches will be queried directly rather than
+                re-evaluating their filters.
         """
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
             return self._generate_filter_based_query()
@@ -779,10 +808,19 @@ class DynamicGroup(PrimaryModel):
                 operator = membership.operator
                 logger.debug("Processing group %s...", group)
 
-                if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                    logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
+                if group.pk in fresh_group_pks:
+                    # This child's cache was refreshed within the current operation, so it's identical to what
+                    # re-evaluating its filter(s) would produce; query the cache directly instead.
+                    next_set = models.Q(
+                        pk__in=group.static_group_associations(manager="all_objects").values_list(
+                            "associated_object_id", flat=True
+                        )
+                    )
+                else:
+                    if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                        logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
-                next_set = group.generate_query()
+                    next_set = group.generate_query(fresh_group_pks=fresh_group_pks)
                 query = self._perform_membership_set_operation(operator, query, next_set)
 
             return query
@@ -791,9 +829,9 @@ class DynamicGroup(PrimaryModel):
 
         raise RuntimeError(f"generate_query not implemented for group_type {self.group_type}")
 
-    def _get_group_queryset(self):
+    def _get_group_queryset(self, *, fresh_group_pks=frozenset()):
         """Construct the queryset representing dynamic membership of this group."""
-        query = self.generate_query()
+        query = self.generate_query(fresh_group_pks=fresh_group_pks)
         # https://github.com/nautobot/nautobot/issues/7631
         #     Some queries may result in duplicate records, hence the need for `.distinct()`.
         #     Use of `.distinct()` in general is a code smell and a performance hit, but given the wide variety of
@@ -881,6 +919,21 @@ class DynamicGroup(PrimaryModel):
                 ancestors.extend(parent_group.get_ancestors())
 
         return ancestors
+
+    def _ordered_unique_ancestors(self):
+        """
+        Return the unique ancestors of this group, ordered such that every group precedes its own ancestors.
+
+        `get_ancestors()` enumerates every distinct path upward, so a group reachable via multiple paths (a
+        "diamond") appears multiple times. Keeping only the *last* occurrence of each group yields a valid
+        children-before-parents (topological) ordering, since in the depth-first traversal every parent
+        occurrence follows the expansion of the child it was reached through.
+        """
+        ordered = {}
+        for ancestor in self.get_ancestors():
+            ordered.pop(ancestor.pk, None)  # re-insert below to move this group to the end of the ordering
+            ordered[ancestor.pk] = ancestor
+        return list(ordered.values())
 
     # TODO: unused in core
     def get_siblings(self, include_self=False):
@@ -1136,8 +1189,8 @@ class DynamicGroupMembership(BaseModel):
         return siblings.exclude(pk=self.pk)
 
     # TODO: unused in core
-    def generate_query(self):
-        return self.group.generate_query()
+    def generate_query(self, *, fresh_group_pks=frozenset()):
+        return self.group.generate_query(fresh_group_pks=fresh_group_pks)
 
     def clean(self):
         super().clean()
@@ -1172,14 +1225,22 @@ class DynamicGroupMembership(BaseModel):
         # For backwards compatibility
         if self.parent_group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER and not self.parent_group.filter:
             self.parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
-            self.parent_group.save()
+            # If we're going to refresh the parent group's cached members below anyway, don't redundantly
+            # refresh them here; if the caller opted out of the refresh below, preserve the legacy behavior
+            # of refreshing them as a side effect of this save.
+            self.parent_group.save(update_cached_members=not update_cached_members)
 
         super().save(*args, **kwargs)
 
         if update_cached_members:
             self.parent_group.update_cached_members()
-            for ancestor in self.parent_group.get_ancestors():
-                ancestor.update_cached_members()
+            fresh_group_pks = set()
+            if self.parent_group._is_cache_substitution_safe():
+                fresh_group_pks.add(self.parent_group.pk)
+            for ancestor in self.parent_group._ordered_unique_ancestors():
+                ancestor.update_cached_members(fresh_group_pks=frozenset(fresh_group_pks))
+                if ancestor._is_cache_substitution_safe():
+                    fresh_group_pks.add(ancestor.pk)
 
 
 class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):
