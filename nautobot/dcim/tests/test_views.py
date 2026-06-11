@@ -3310,6 +3310,28 @@ class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
         viewset = ConsolePortUIViewSet()
         self.assertEqual(viewset.get_selected_objects_parents_name(ConsolePort.objects.none()), "")
 
+    def test_retrieve_connection_panel_when_connected(self):
+        """Covers the cabled/connected-endpoint branch of ConsolePortUIViewSet._get_connection_data."""
+        self.add_permissions("dcim.view_consoleport")
+        console_port = self.cabled_objects[0]
+        endpoint = console_port.connected_endpoint
+        self.assertIsNotNone(endpoint, "expected the cabled console port to resolve a connected endpoint")
+
+        response = self.client.get(console_port.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        # The connected-endpoint rows of the Connection panel should be rendered.
+        self.assertContains(response, "Console Server Port")
+        self.assertContains(response, endpoint.name)
+        self.assertContains(response, "Reachable")
+
+    def test_get_path_status_html_branches(self):
+        """Covers both branches of ConsolePortUIViewSet._get_path_status_html."""
+        viewset = ConsolePortUIViewSet()
+        # A cabled port with an active path renders the "Reachable" (success) badge.
+        self.assertIn("bg-success", viewset._get_path_status_html(self.cabled_objects[0]))
+        # A port with no path renders the "Not Reachable" (danger) badge.
+        self.assertIn("bg-danger", viewset._get_path_status_html(self.uncabled_object))
+
 
 class ConsoleServerPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = ConsoleServerPort
