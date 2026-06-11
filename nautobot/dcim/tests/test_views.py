@@ -5024,7 +5024,7 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Interface.objects.create(device=device, name="Interface A3", status=intf_status, role=intf_role),
         )
 
-       # Regression test for #8970
+        # Regression test for #8970
         cls.interface_redundancy_groups[0].add_interface(cls.interfaces[2], priority=100)
 
         cls.form_data = {
