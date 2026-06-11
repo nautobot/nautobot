@@ -2150,14 +2150,21 @@ class Module(PrimaryModel):
         if parent_module_changed:
             self._cascade_device_to_descendants()
 
-    def _cascade_device_to_descendants(self):
+    def _cascade_device_to_descendants(self, level=0):
         # Resolve the new root device — None if this module is now a spare at a Location
-        from nautobot.dcim.models.device_components import ModularComponentModel
-
         new_device = self.parent_module_bay.parent_device if self.parent_module_bay is not None else None
 
         # Update all ModularComponentModel subclasses directly owned by this module
-        for component_class in ModularComponentModel.__subclasses__():
+        component_classes = [
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            FrontPort,
+            RearPort,
+        ]
+        for component_class in component_classes:
             for component in component_class.objects.filter(module=self):
                 component.device = new_device
                 component.save(update_fields=["device"])

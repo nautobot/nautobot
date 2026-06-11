@@ -114,7 +114,6 @@ class ComponentModel(PrimaryModel):
 
 
 class ModularComponentModel(ComponentModel):
-    root_device = ...
     device = ForeignKeyWithAutoRelatedName(
         to="dcim.Device",
         on_delete=models.CASCADE,
@@ -136,19 +135,16 @@ class ModularComponentModel(ComponentModel):
         # TODO: custom clean method or devce / module / name constraint
         constraints = [
             models.UniqueConstraint(
-                fields=("device", "name"),
-                name="%(app_label)s_%(class)s_device_name_unique",
-            ),
-            models.UniqueConstraint(
-                fields=("module", "name"),
-                name="%(app_label)s_%(class)s_module_name_unique",
-            ),
+                fields=("device", "module", "name"),
+                name="%(app_label)s_%(class)s_device_model_name_unique",
+            )
         ]
 
     @property
     def parent(self):
         """Device that this component belongs to, walking up module inheritance if necessary."""
-        return self.module.device if self.module else self.device  # pylint: disable=no-member
+        # QUESTION: Should we always return self.device??
+        return self.device  # pylint: disable=no-member
 
     def render_name_template(self, save=False):
         """
@@ -209,6 +205,12 @@ class ModularComponentModel(ComponentModel):
             parent = None
 
         return super().to_objectchange(action, related_object=parent, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        if not (self.device or self.module):
+            raise ValidationError("Either device or module must be set")
 
     def save(self, *args, **kwargs):
         if not self.present_in_database:
@@ -1601,19 +1603,15 @@ class ModuleBay(PrimaryModel):
         # TODO: parent device, parent module, name
         constraints = [
             models.UniqueConstraint(
-                fields=["parent_device", "name"],
+                fields=["parent_device", "parent_module", "name"],
                 name="dcim_modulebay_parent_device_name_unique",
-            ),
-            models.UniqueConstraint(
-                fields=["parent_module", "name"],
-                name="dcim_modulebay_parent_module_name_unique",
-            ),
+            )
         ]
 
     @property
     def parent(self):
         """Walk up parent chain to find the Device that this ModuleBay is installed in, if one exists."""
-        return self.parent_module.device if self.parent_module else self.parent_device
+        return self.parent_device
 
     def __str__(self):
         if self.parent_device is not None:
@@ -1643,6 +1641,9 @@ class ModuleBay(PrimaryModel):
 
     def clean(self):
         super().clean()
+
+        if not (self.parent_device or self.parent_module):
+            raise ValidationError("Either parent_device or parent_module must be set")
 
         if not self.position:
             self.position = self.name
