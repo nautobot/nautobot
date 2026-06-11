@@ -1,8 +1,8 @@
-# Redundant Devices 
+# HA Devices 
 
 Infrastructure is typically designed with redundancy in mind, prompting vendors to develop various technologies to support different high availability (HA) strategies. These include a range of protocols, connection types, synchronization systems, and terminology.
 
-This creates a complex ecosystem that can be challenging to navigate, especially when determining how to model redundant infrastructure in Nautobot or which model to select. This guide aims to provide a clear and comprehensive approach to documenting redundant device infrastructure by covering:
+This creates a complex ecosystem that can be challenging to navigate, especially when determining how to model redundant infrastructure in Nautobot or which model to select. This guide aims to provide a clear and comprehensive approach to documenting HA device infrastructure by covering:
 
 - Use Cases
 - Vendor Implementations
@@ -40,7 +40,7 @@ While vendors offer a variety of technologies, the data model remains largely ag
 
 |     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Example Technologies | VSS / StackWise Virtual / SRX | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FXOS | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
+| Example Technologies | VSS / StackWise Virtual / SRX | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FTD | vPC / MLAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
@@ -75,7 +75,7 @@ The rest of the documentation for the below components can be found in each data
   - Cisco VSS
   - Cisco Stackwise
   - Cisco Stackwise Virtual
-  - Cisco FXOS
+  - Cisco FTD
   - HPE Intelligent Resilient Framework (IRF)
   - Juniper SRX (Chassis Cluster)
   - Extreme Networks SummitStack
