@@ -2707,10 +2707,16 @@ class DynamicGroupTestCase(
         response_body = extract_page_body(response.content.decode(response.charset))
 
         self._assert_members_tab_indicator(response_body, static_group.count)
-        self.assertIn("You can bulk-add and bulk-remove members of this group from the", response_body)
-        self.assertNotIn("Dynamic group membership is cached for performance reasons", response_body)
         self.assertNotIn("Ancestors", response_body)
         self.assertNotIn("Descendants", response_body)
+
+        # Member content lives on the separate "Members" tab
+        members_url = reverse("extras:dynamicgroup_members", kwargs={"pk": static_group.pk})
+        members_response = self.client.get(members_url)
+        self.assertHttpStatus(members_response, 200)
+        members_body = extract_page_body(members_response.content.decode(members_response.charset))
+        self.assertIn("You can bulk-add and bulk-remove members of this group from the", members_body)
+        self.assertNotIn("Dynamic group membership is cached for performance reasons", members_body)
 
     @override_settings(PAGINATE_COUNT=1)
     def test_get_object_dynamic_set_descendants_view_more(self):
@@ -2738,8 +2744,11 @@ class DynamicGroupTestCase(
         response = self.client.get(instance.get_absolute_url())
         self.assertHttpStatus(response, 200)
 
+        # Check that the "members" table on the Members tab includes all appropriate member objects
+        members_url = reverse("extras:dynamicgroup_members", kwargs={"pk": instance.pk})
+        response = self.client.get(members_url)
+        self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
-        # Check that the "members" table in the detail view includes all appropriate member objects
         for member in instance.members:
             self.assertIn(str(member.pk), response_body)
 
@@ -2750,8 +2759,11 @@ class DynamicGroupTestCase(
         self.add_permissions(get_permission_for_model(tree_model_dg.content_type.model_class(), "view"))
         response = self.client.get(tree_model_dg.get_absolute_url())
         self.assertHttpStatus(response, 200)
+        # Check that the "members" table on the Members tab includes all appropriate member objects
+        members_url = reverse("extras:dynamicgroup_members", kwargs={"pk": tree_model_dg.pk})
+        response = self.client.get(members_url)
+        self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
-        # Check that the "members" table in the detail view includes all appropriate member objects
         for member in tree_model_dg.members:
             self.assertIn(str(member.pk), response_body)
 
@@ -2768,10 +2780,13 @@ class DynamicGroupTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(instance.content_type)
 
-        response = super().test_get_object_with_constrained_permission()
+        super().test_get_object_with_constrained_permission()
 
+        # Check that the "members" table on the Members tab includes all permitted member objects
+        members_url = reverse("extras:dynamicgroup_members", kwargs={"pk": instance.pk})
+        response = self.client.get(members_url)
+        self.assertHttpStatus(response, 200)
         response_body = extract_page_body(response.content.decode(response.charset))
-        # Check that the "members" table in the detail view includes all permitted member objects
         self.assertIn(str(member1.pk), response_body)
         self.assertNotIn(str(member2.pk), response_body)
 
