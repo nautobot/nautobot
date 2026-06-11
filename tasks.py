@@ -799,13 +799,13 @@ def build_and_check_docs(context):
 
 def build_nautobot_docs(context):
     "Build Nautobot docs."
-    command = "mkdocs build --no-directory-urls --strict"
+    command = "mkdocs build"
     run_command(context, command)
 
 
 def build_example_app_docs(context):
     """Build Example App docs."""
-    command = "mkdocs build --no-directory-urls --strict"
+    command = "mkdocs build"
     if is_truthy(context.nautobot.local):
         local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
