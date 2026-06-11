@@ -1399,6 +1399,24 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
 class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mixin?
     """DynamicGroupMembership model tests."""
 
+    def test_generate_query(self):
+        """Assert `DynamicGroupMembership.generate_query()` delegates to the child group, including fresh_group_pks."""
+        membership = self.memberships[2]  # parent <- third_child (dynamic-set containing nested_child)
+        self.assertEqual(str(membership.generate_query()), str(self.third_child.generate_query()))
+
+        # The fresh_group_pks pass-through must produce the same substituted query as the child group itself,
+        # without changing the resulting members.
+        self.nested_child.update_cached_members()
+        fresh = frozenset([self.nested_child.pk])
+        substituted_query = membership.generate_query(fresh_group_pks=fresh)
+        self.assertEqual(str(substituted_query), str(self.third_child.generate_query(fresh_group_pks=fresh)))
+        self.assertIn("pk__in", str(substituted_query))
+        self.assertQuerySetEqualAndNotEmpty(
+            Device.objects.filter(substituted_query).distinct(),
+            Device.objects.filter(membership.generate_query()).distinct(),
+            ordered=False,
+        )
+
     def test_clean_content_type(self):
         """Assert that content_type b/w parent/group must match."""
         with self.assertRaises(ValidationError):
