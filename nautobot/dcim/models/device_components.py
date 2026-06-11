@@ -374,6 +374,19 @@ class CableTermination(models.Model):
                 "CableToCableTermination row directly."
             )
 
+    @property
+    def cable_id(self):
+        """The PK of the Cable this termination is connected to, or None.
+
+        Backward-compat shorthand for `self.cable_termination.cable_id`. Issues a single query on
+        first access (only the join-table row, no second query for the Cable itself). Use
+        `select_related("cable_termination")` on the parent queryset to avoid that query.
+        """
+        if getattr(self, "_pending_cable_disconnect", False):
+            return None
+        ct = getattr(self, "cable_termination", None)
+        return ct.cable_id if ct is not None else None
+
     def get_cable_peer(self, peer_connector=None):
         """Return the far-end termination of this cable.
 

@@ -4030,6 +4030,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         interface.cable = None
         self.assertTrue(interface._pending_cable_disconnect)
         self.assertIsNone(interface.cable)  # property short-circuits on the flag
+        self.assertIsNone(interface.cable_id)  # cable_id property also short-circuits on the flag
         # Join row is still in the DB until save() runs.
         self.assertTrue(CableToCableTermination.objects.filter(cable=self.cable, interface=interface).exists())
 
