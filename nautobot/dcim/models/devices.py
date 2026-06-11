@@ -2167,7 +2167,7 @@ class Module(PrimaryModel):
         for component_class in component_classes:
             component_class.objects.filter(module=self).update(device=new_device)
 
-        # Updated the device for all other module bays installed in this module
+        # Update module bay siblings
         ModuleBay.objects.filter(parent_module=self).update(parent_device=new_device)
 
         # Recurse into child Modules via get_children() so their descendants
