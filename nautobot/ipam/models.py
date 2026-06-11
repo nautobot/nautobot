@@ -1525,23 +1525,24 @@ class IPAddress(PrimaryModel):
         ):
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        exclusive_range = IPRange.objects.filter(
-            parent__namespace=self._namespace,
-            ip_version=self.ip_version,
-            is_exclusive=True,
-            start_host__lte=self.host,
-            end_host__gte=self.host,
-        ).first()
-        if exclusive_range:
-            raise ValidationError(
-                {
-                    "__all__": (
-                        f"IP address {self.host} falls within exclusive IP Range "
-                        f"{exclusive_range}. Creating an IP Address within an "
-                        "exclusive range is not permitted."
-                    )
-                }
-            )
+        if self.host and self.ip_version:
+            exclusive_range = IPRange.objects.filter(
+                parent__namespace=self._namespace,
+                ip_version=self.ip_version,
+                is_exclusive=True,
+                start_host__lte=self.host,
+                end_host__gte=self.host,
+            ).first()
+            if exclusive_range:
+                raise ValidationError(
+                    {
+                        "__all__": (
+                            f"IP address {self.host} falls within exclusive IP Range "
+                            f"{exclusive_range}. Creating an IP Address within an "
+                            "exclusive range is not permitted."
+                        )
+                    }
+                )
 
         closest_parent = self._get_closest_parent()
         if closest_parent is not None:
@@ -1721,8 +1722,6 @@ class IPRange(PrimaryModel):
     exclusive (blocking creation of individual IPAddress objects within the range).
     """
 
-    documentation_static_path = "docs/user-guide/core-data-model/ipam/iprange.html"
-
     name = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
@@ -1732,13 +1731,11 @@ class IPRange(PrimaryModel):
     start_host = VarbinaryIPField(
         null=False,
         db_index=True,
-        editable=True,
         help_text="First IP host address in the range (inclusive)",
     )
     end_host = VarbinaryIPField(
         null=False,
         db_index=True,
-        editable=True,
         help_text="Last IP host address in the range (inclusive)",
     )
     ip_version = models.IntegerField(
@@ -1789,21 +1786,20 @@ class IPRange(PrimaryModel):
     # objects = BaseManager.from_queryset(IPRangeQuerySet)() # maybe we will need this in future
 
     class Meta:
-        ordering = ("ip_version", "start_host", "end_host")
+        ordering = ("parent__namespace", "ip_version", "start_host")
         verbose_name = "IP Range"
         verbose_name_plural = "IP Ranges"
         indexes = [
             models.Index(fields=("ip_version", "start_host", "end_host")),
-            models.Index(fields=("start_host", "end_host")),
         ]
         constraints = [
             models.UniqueConstraint(
-                fields=["parent", "start_host", "end_host"],
-                name="unique_iprange_parent_start_end",
+                fields=["parent", "start_host"],
+                name="unique_iprange_parent_start",
             ),
         ]
 
-    natural_key_field_names = ["parent__namespace", "start_host", "end_host"]
+    natural_key_field_names = ["parent__namespace", "start_host"]
 
     def __init__(self, *args, start_address=None, end_address=None, namespace=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1837,17 +1833,13 @@ class IPRange(PrimaryModel):
 
     def _deconstruct_start_address(self, address):
         if address:
-            if isinstance(address, str):
-                address = netaddr.IPAddress(address)
-            self.start_host = str(address)
+            self.start_host = str(netaddr.IPAddress(address))
 
     _deconstruct_start_address.alters_data = True
 
     def _deconstruct_end_address(self, address):
         if address:
-            if isinstance(address, str):
-                address = netaddr.IPAddress(address)
-            self.end_host = str(address)
+            self.end_host = str(netaddr.IPAddress(address))
 
     _deconstruct_end_address.alters_data = True
 
@@ -1873,25 +1865,20 @@ class IPRange(PrimaryModel):
     _deconstruct_addresses.alters_data = True
 
     def clean(self):
-        super().clean()
-        self._validate_ip_version_consistency()
+        self._deconstruct_addresses()
         self._validate_start_not_after_end()
         self._resolve_and_validate_parent()
         self._validate_no_range_overlap()
         self._validate_no_exclusive_ip_conflict()
         self._validate_no_child_prefix_overlap()
+        super().clean()
 
     clean.alters_data = True
 
-    def _validate_ip_version_consistency(self):
-        """Both endpoints must share the same IP version; sets ip_version."""
-        self._deconstruct_addresses()
-
     def _validate_start_not_after_end(self):
         """start_address must be <= end_address."""
-        if self.start_address and self.end_address:
-            if self.start_address > self.end_address:
-                raise ValidationError({"start_address": "start_address must be less than or equal to end_address"})
+        if self.start_address > self.end_address:
+            raise ValidationError({"start_address": "start_address must be less than or equal to end_address"})
 
     def _resolve_and_validate_parent(self):
         """Both endpoints must resolve to the same single parent Prefix.
@@ -1936,7 +1923,7 @@ class IPRange(PrimaryModel):
         """Must not intersect any other IP Range in the same namespace."""
         overlapping_range = (
             IPRange.objects.filter(
-                parent__namespace=self.parent.namespace,
+                parent=self.parent,
                 ip_version=self.ip_version,
                 start_host__lte=self.end_host,
                 end_host__gte=self.start_host,
@@ -1959,7 +1946,7 @@ class IPRange(PrimaryModel):
         if not self.is_exclusive:
             return
         conflicting_ips = IPAddress.objects.filter(
-            parent__namespace=self.parent.namespace,
+            parent=self.parent,
             ip_version=self.ip_version,
             host__gte=self.start_host,
             host__lte=self.end_host,

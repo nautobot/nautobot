@@ -20,7 +20,7 @@ Each IP Range can be assigned an operational status and an optional functional r
 
 ## Utilization
 
-By default, an IP Range does not affect the utilization of its parent Prefix on its own only IP Addresses created within the parent contribute to utilization. If you enable **Mark as fully utilized** (`count_as_utilized`), the entire span of the range is counted toward the parent Prefix's utilization, regardless of how many individual IP Addresses exist within it. This is useful for representing a DHCP scope or reserved block as occupied space even when no individual addresses have been recorded.
+By default, an IP Range does not affect the utilization of its parent Prefix on its own; only IP Addresses created within the parent contribute to utilization. If you enable **Mark as fully utilized** (`count_as_utilized`), the entire span of the range is counted toward the parent Prefix's utilization, regardless of how many individual IP Addresses exist within it. This is useful for representing a DHCP scope or reserved block as occupied space even when no individual addresses have been recorded.
 
 When a range is marked as fully utilized but is not exclusive, any IP Addresses created within the range are not double-counted: the addresses are already represented by the range, so they do not add to utilization a second time.
 

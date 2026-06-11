@@ -1811,6 +1811,23 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             ip.delete()
             network.delete()
 
+    def test_narrowing_prefix_that_would_orphan_range_is_rejected(self):
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        prefix.prefix = "10.0.0.0/26"  # range .50-.200 no longer fits (/26 ends at .63)
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            prefix.validated_save()
+
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
     model = IPAddress
@@ -2139,6 +2156,50 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(IntegrityError):
             IPAddress.objects.create(mask_length=32, status=self.status)
 
+            self.parent = Prefix.objects.create(
+                prefix="10.0.0.0/24",
+                status=self.status,
+                namespace=self.namespace,
+                type=PrefixTypeChoices.TYPE_NETWORK,
+            )
+
+    def test_creating_ip_inside_exclusive_range_is_blocked(self):
+        Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=True,
+        )
+        ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError) as cm:
+            ip.validated_save()
+        self.assertIn("falls within exclusive IP Range", str(cm.exception))
+
+    def test_creating_ip_inside_non_exclusive_range_is_allowed(self):
+        Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=False,
+        )
+        ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        ip.validated_save()
+        self.assertTrue(IPAddress.objects.filter(host="10.0.0.75").exists())
+
 
 class TestIPRange(ModelTestCases.BaseModelTestCase):
     model = IPRange
@@ -2165,7 +2226,6 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         super().setUp()
         self.namespace = Namespace.objects.first()
         self.status = Status.objects.get(name="Active")
-        self.status.content_types.add(ContentType.objects.get_for_model(IPRange))
         self.parent = Prefix.objects.create(
             prefix="10.0.0.0/24",
             status=self.status,
@@ -2201,9 +2261,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=self.namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "must be of the same IP version"):
             ip_range.validated_save()
-        self.assertIn("must be of the same IP version", str(cm.exception))
 
     def test_start_must_not_be_greater_than_end(self):
         """start_address must be <= end_address."""
@@ -2213,9 +2272,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=self.namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "start_address must be less than or equal to end_address"):
             ip_range.validated_save()
-        self.assertIn("start_address must be less than or equal to end_address", str(cm.exception))
 
     def test_endpoints_must_resolve_to_same_parent(self):
         """start and end resolving to different parents is rejected."""
@@ -2232,9 +2290,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "must be fully contained within a single parent Prefix"):
             ip_range.validated_save()
-        self.assertIn("must be fully contained within a single parent Prefix", str(cm.exception))
 
     def test_no_suitable_parent_raises(self):
         """A range whose endpoints have no parent Prefix is rejected."""
@@ -2248,12 +2305,10 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(
+            ValidationError, "No suitable parent Prefix for 10.0.0.1 exists in Namespace test_iprange_no_parent"
+        ):
             ip_range.validated_save()
-        self.assertIn(
-            "No suitable parent Prefix for 10.0.0.1 exists in Namespace test_iprange_no_parent",
-            str(cm.exception),
-        )
 
     def test_no_overlap_with_other_range(self):
         """Two intersecting ranges in the same namespace are rejected."""
@@ -2269,9 +2324,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=self.namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "intersects with existing range"):
             overlapping.validated_save()
-        self.assertIn("intersects with existing range", str(cm.exception))
 
     def test_adjacent_ranges_do_not_overlap(self):
         """Touching-but-not-overlapping ranges are allowed (boundary check)."""
@@ -2300,9 +2354,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             is_exclusive=True,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "10.0.0.75"):
             ip_range.validated_save()
-        self.assertIn("10.0.0.75", str(cm.exception))
 
     def test_non_exclusive_range_allows_existing_ip(self):
         """A non-exclusive range over an existing IPAddress is allowed."""
@@ -2328,9 +2381,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         )
         IPAddress.objects.create(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
         ip_range.is_exclusive = True
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "10.0.0.75"):
             ip_range.validated_save()
-        self.assertIn("10.0.0.75", str(cm.exception))
 
     def test_child_prefix_at_range_boundary_caught_by_parent_check(self):
         """A child prefix overlapping the range edge makes endpoints resolve to different
@@ -2345,9 +2397,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=self.namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "must be fully contained within a single parent Prefix"):
             ip_range.validated_save()
-        self.assertIn("must be fully contained within a single parent Prefix", str(cm.exception))
 
     def test_child_prefix_fully_inside_range_is_rejected(self):
         """Rule #6 catches a child prefix mid-range that #3 would not (per Glenn's note)."""
@@ -2361,82 +2412,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             status=self.status,
             namespace=self.namespace,
         )
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "overlaps with child Prefix"):
             ip_range.validated_save()
-        self.assertIn("overlaps with child Prefix", str(cm.exception))
-
-
-class TestIPRangePrefixInteraction(ModelTestCases.BaseModelTestCase):
-    """Editing a Prefix must not break the 'range contained in parent' relationship."""
-
-    model = Prefix
-
-    def setUp(self):
-        super().setUp()
-        self.namespace = Namespace.objects.first()
-        self.status = Status.objects.get(name="Active")
-        self.status.content_types.add(ContentType.objects.get_for_model(IPRange))
-        self.prefix = Prefix.objects.create(
-            prefix="10.0.0.0/24",
-            status=self.status,
-            namespace=self.namespace,
-            type=PrefixTypeChoices.TYPE_NETWORK,
-        )
-
-    def test_narrowing_prefix_that_would_orphan_range_is_rejected(self):
-        IPRange.objects.create(
-            start_address="10.0.0.50",
-            end_address="10.0.0.200",
-            status=self.status,
-            namespace=self.namespace,
-        )
-        self.prefix.prefix = "10.0.0.0/26"  # range .50-.200 no longer fits (/26 ends at .63)
-        with self.assertRaises(ValidationError) as cm:
-            self.prefix.validated_save()
-        self.assertIn("would no longer be fully contained", str(cm.exception))
-
-
-class TestIPAddressIPRangeInteraction(ModelTestCases.BaseModelTestCase):
-    """Creating an IP inside an exclusive range must be blocked (IPAddress.clean())."""
-
-    model = IPAddress
-
-    def setUp(self):
-        super().setUp()
-        self.namespace = Namespace.objects.first()
-        self.status = Status.objects.get(name="Active")
-        self.status.content_types.add(ContentType.objects.get_for_model(IPRange))
-        self.parent = Prefix.objects.create(
-            prefix="10.0.0.0/24",
-            status=self.status,
-            namespace=self.namespace,
-            type=PrefixTypeChoices.TYPE_NETWORK,
-        )
-
-    def test_creating_ip_inside_exclusive_range_is_blocked(self):
-        IPRange.objects.create(
-            start_address="10.0.0.50",
-            end_address="10.0.0.100",
-            status=self.status,
-            namespace=self.namespace,
-            is_exclusive=True,
-        )
-        ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
-        with self.assertRaises(ValidationError) as cm:
-            ip.validated_save()
-        self.assertIn("falls within exclusive IP Range", str(cm.exception))
-
-    def test_creating_ip_inside_non_exclusive_range_is_allowed(self):
-        IPRange.objects.create(
-            start_address="10.0.0.50",
-            end_address="10.0.0.100",
-            status=self.status,
-            namespace=self.namespace,
-            is_exclusive=False,
-        )
-        ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
-        ip.validated_save()
-        self.assertTrue(IPAddress.objects.filter(host="10.0.0.75").exists())
 
 
 class TestRIR(ModelTestCases.BaseModelTestCase):

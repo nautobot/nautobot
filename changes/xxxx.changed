@@ -1,2 +1,0 @@
-Changed `IPAddress.clean()` to reject creating an IP address that falls within an exclusive IPRange.
-Changed `Prefix.clean()` to reject network/prefix-length edits that would leave a contained IPRange no longer fully within the Prefix.

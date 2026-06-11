@@ -62,6 +62,7 @@ from nautobot.ipam.choices import (
     IPAddressRoleChoices,
     IPAddressTypeChoices,
     IPAddressVersionChoices,
+    IPRangeRoleChoices,
     PrefixTypeChoices,
     ServiceProtocolChoices,
 )
@@ -86,6 +87,7 @@ __all__ = (
     "IPAddressRoleChoices",
     "IPAddressTypeChoices",
     "IPAddressVersionChoices",
+    "IPRangeRoleChoices",
     "InterfaceDuplexChoices",
     "InterfaceModeChoices",
     "InterfaceRedundancyGroupProtocolChoices",

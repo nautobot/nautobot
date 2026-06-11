@@ -1,58 +1,34 @@
 from django.db import migrations
 
-from nautobot.core.choices import ColorChoices
-
-# Starter roles for IPRange.
-IPRANGE_ROLES = [
-    {"name": "DHCP", "color": ColorChoices.COLOR_BLUE},
-    {"name": "Firewall Object", "color": ColorChoices.COLOR_RED},
-    {"name": "NAT Pool", "color": ColorChoices.COLOR_ORANGE},
-    {"name": "LB Pool", "color": ColorChoices.COLOR_GREEN},
-    {"name": "Reserved", "color": ColorChoices.COLOR_GREY},
-]
+from nautobot.extras.management import (
+    clear_role_choices,
+    clear_status_choices,
+    populate_role_choices,
+    populate_status_choices,
+)
 
 
-def create_iprange_roles(apps, schema_editor):
-    Role = apps.get_model("extras", "Role")
-    ContentType = apps.get_model("contenttypes", "ContentType")
-    iprange_ct, _ = ContentType.objects.get_or_create(
-        app_label="ipam",
-        model="iprange",
-    )
-
-    for role_data in IPRANGE_ROLES:
-        role, _ = Role.objects.get_or_create(
-            name=role_data["name"],
-            defaults={"color": role_data["color"]},
-        )
-        role.content_types.add(iprange_ct)
+def populate_default_status_and_role_choices_for_ip_range(apps, schema_editor):
+    """Create/link default Status and Role records for the IPRange content-type."""
+    populate_status_choices(apps, schema_editor, models=["ipam.IPRange"])
+    populate_role_choices(apps, schema_editor, models=["ipam.IPRange"])
 
 
-def remove_iprange_roles(apps, schema_editor):
-    Role = apps.get_model("extras", "Role")
-    ContentType = apps.get_model("contenttypes", "ContentType")
-
-    iprange_ct, _ = ContentType.objects.get_or_create(
-        app_label="ipam",
-        model="iprange",
-    )
-
-    for role_data in IPRANGE_ROLES:
-        try:
-            role = Role.objects.get(name=role_data["name"])
-        except Role.DoesNotExist:
-            continue
-        role.content_types.remove(iprange_ct)
-        # Delete the role only if it's no longer tied to any content type.
-        if not role.content_types.exists():
-            role.delete()
+def clear_default_status_and_role_choices_for_ip_range(apps, schema_editor):
+    """De-link/delete all Status and Role records from the IPRange content-type."""
+    clear_status_choices(apps, schema_editor, models=["ipam.IPRange"])
+    clear_role_choices(apps, schema_editor, models=["ipam.IPRange"])
 
 
 class Migration(migrations.Migration):
     dependencies = [
+        ("contenttypes", "0001_initial"),
         ("ipam", "0057_iprange"),
     ]
 
     operations = [
-        migrations.RunPython(create_iprange_roles, remove_iprange_roles),
+        migrations.RunPython(
+            populate_default_status_and_role_choices_for_ip_range,
+            clear_default_status_and_role_choices_for_ip_range,
+        ),
     ]
