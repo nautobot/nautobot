@@ -37,6 +37,10 @@ Types are used to indicate special functions of an IP address such as DHCP or SL
 * DHCP
 * SLAAC (IPv6 Stateless Address Autoconfiguration)
 
++++ 3.2.0
+    !!! tip "Individual DHCP addresses vs. DHCP ranges"
+        The `DHCP` IP Address `type` and an [IP Range](iprange.md) with a DHCP role address different needs. Use the `DHCP` **type on an individual IP Address** when you want to document a specific address that is (or will be) handed out by DHCP. For example, a DHCP reservation tied to a particular device. Use an **IP Range** when you want to represent the DHCP scope as a whole (for example `10.0.0.100–10.0.0.200`) without recording each address individually. The two can be combined: a non-exclusive IP Range can represent the scope while individual IP Addresses document specific reservations within it.
+
 +/- 2.0.0 "One IP Address, multiple interfaces"
     The relationship to device and virtual machine interfaces has been changed to a many-to-many relationship. This allows a single IP address record to be assigned to multiple interfaces simultaneously if desired for scenarios such as IP Anycast.
 
