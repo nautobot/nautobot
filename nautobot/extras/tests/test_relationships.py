@@ -1,5 +1,6 @@
 import contextlib
 import logging
+from unittest import mock
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -1159,6 +1160,30 @@ class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModel
         data = self.locations[0].get_relationships_with_related_objects()
         self.assertIsNone(data["source"][self.invalid_relationships[0]])
         self.assertIsNone(data["destination"][self.invalid_relationships[1]])
+
+    def test_get_relationships_with_related_objects_symmetric_uninstalled_app(self):
+        """
+        Same fallback as the non-symmetric case, but for a symmetric relationship: a descriptive count string
+        when related objects exist, and `None` (rendered as "—") when there are none.
+
+        A symmetric relationship's peer type always equals the object's own (installed) type, so to exercise the
+        uninstalled-app path we force `ContentType.model_class()` to return None for the duration of the call.
+        """
+        RelationshipAssociation(
+            relationship=self.m2ms_1,
+            source=self.locations[0],
+            destination=self.locations[1],
+        ).validated_save()
+
+        with mock.patch.object(ContentType, "model_class", return_value=None):
+            # locations[0] is associated, so the symmetric relationship renders the count string.
+            data = self.locations[0].get_relationships_with_related_objects()
+            expected = f"1 {self.location_ct} object(s)"
+            # locations[2] has no association, so it falls back to None.
+            empty_data = self.locations[2].get_relationships_with_related_objects()
+
+        self.assertEqual(data["peer"][self.m2ms_1], expected)
+        self.assertIsNone(empty_data["peer"][self.m2ms_1])
 
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
