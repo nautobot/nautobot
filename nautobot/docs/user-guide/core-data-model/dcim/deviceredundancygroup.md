@@ -3,7 +3,10 @@
 Device Redundancy Groups represent logical relationships between multiple devices. Typically, a redundancy group could represent a failover pair, failover group, or a load sharing cluster.
 Device Redundancy Groups are created first, before the devices are assigned to the group.
 
-A failover strategy represents intended operation mode of the group. Supported failover strategy are: Active/Active and Active/Standby.
+A failover strategy represents intended operation mode of the group. Supported failover strategy are:
+
+  - Active/Active
+  - Active/Passive.
 
 Secrets groups could be used to store secret information used by failover or a cluster of devices.
 
@@ -20,7 +23,7 @@ The key piece of Device Redundancy Groups is when multiple physical devices work
 
 LAG interfaces cannot span members of a Device Redundancy Group; a LAG and its member interfaces must belong to the same device (or the same virtual chassis). For multi-chassis technologies such as vPC or MLAG, the recommendation is to model a port channel on each member individually, then tie the pair together with an [Interface Redundancy Group](../core-data-model/dcim/interfaceredundancygroup.md): create one group per multi-chassis port channel, assign each member's LAG interface to it with a priority, and record the vPC/MLAG domain or pair ID in `protocol_group_id`. As users, we recommend giving the LAG the same name on both members (e.g. `Port-Channel10` on each switch) to match how the technology is typically configured, however this is not enforced nor is any configuratoins synced. The Interface Redundancy Group is the only thing in the data model relating them to each other.
 
-An Interface Redundancy Group does not change or take over the interfaces themselves — each member's LAG remains an ordinary, independently configured interface on its own device. What the group models is the real-world relationship between them: the fact that two separately configured interfaces present a single logical entity to the rest of the network. Its protocol fields (HSRP, VRRP, GLBP, CARP), optional shared `virtual_ip`, and Secrets Group exist for the first hop redundancy use case it was originally designed around, but the grouping itself applies to any set of redundant interfaces — pairing the per-member port channels of a vPC/MLAG domain is exactly that.
+An Interface Redundancy Group does not change or take over the interfaces themselves — each member's LAG remains an ordinary, independently configured interface on its own device. What the group models is the real-world relationship between them: the fact that two separately configured interfaces present a single logical entity to the rest of the network. Its protocol fields (HSRP, VRRP, GLBP, CARP), optional shared `virtual_ip`, and Secrets Group exist for the first hop redundancy protocol (FHRP) use case it was originally designed around, but the grouping itself applies to any set of redundant interfaces — pairing the per-member port channels of a vPC/MLAG domain is exactly that.
 
 The device redundancy group model provides the following fields:
 
@@ -519,16 +522,16 @@ An example of the data returned from Nautobot is presented below.
 !!! note
     The same data is reachable starting from a member device (e.g. `query { devices(name: ["nyc-fw-primary"]) { device_redundancy_group { devices { ... } } } }`) when a hostname is what you have in hand.
 
-## Key Charteristics
+## Key Characteristics
 
-- Can you port channel across multiple devices? No, but you can use interface redundancy groups to provide relationships between port channel virtual interfaces on two devices.
-- Can you see all interfaces on the Primary? No — the active unit only shows its own interfaces
-- Can you see all interfaces on the Backup? No — the standby unit has its own separate interface list
-- On Primary, can you tell which interfaces are assigned to which device? N/A — each device is modeled separately in Nautobot
-- When do you see all the interfaces on the master device? You do not, each device always shows only its own interfaces
-- Can you connect interfaces from master to non-master? The failover and stateful link interfaces connect the two units either directly or via a switch
-- What should the naming standard be for the HA pair? A combination of the two devices names (e.g., `ASA01:02` for `ASA01` and `ASA02`)
-- Should I use interface named templates? Yes
+- **Can you port channel across multiple devices?** No, but you can use interface redundancy groups to provide relationships between port channel virtual interfaces on two devices.
+- **Can you see all interfaces on the Primary?** No — the active unit only shows its own interfaces
+- **Can you see all interfaces on the Backup?** No — the standby unit has its own separate interface list
+- **On Primary, can you tell which interfaces are assigned to which device?** N/A — each device is modeled separately in Nautobot
+- **When do you see all the interfaces on the master device?** You do not, each device always shows only its own interfaces
+- **Can you connect interfaces from master to non-master?** The failover and stateful link interfaces connect the two units either directly or via a switch
+- **What should the naming standard be for the HA pair?** A combination of the two devices names (e.g., `ASA01:02` for `ASA01` and `ASA02`)
+- **Should I use interface named templates?** Yes
 
 ## Questions to ask of the data model
 
@@ -575,7 +578,8 @@ vpc domain 10
   auto-recovery
 ```
 
-> Note: The vPC domain ID (10) must match on both peers — this is the value to record in `protocol_group_id` on the Interface Redundancy Group. The peer-keepalive runs between each switch's own management IP, reflecting the two independent control planes that make this a Device Redundancy Group rather than a Virtual Chassis.
+!!! note
+    The vPC domain ID (10) must match on both peers — this is the value to record in `protocol_group_id` on the Interface Redundancy Group. The peer-keepalive runs between each switch's own management IP, reflecting the two independent control planes that make this a Device Redundancy Group rather than a Virtual Chassis.
 
 _Peer-Link_
 
@@ -629,7 +633,8 @@ vpc domain 10
   auto-recovery
 ```
 
-> Note: Only the role priority and the peer-keepalive source/destination differ from switch 1; the peer-link and downstream vPC configuration are identical on both peers.
+!!! note
+    Only the role priority and the peer-keepalive source/destination differ from switch 1; the peer-link and downstream vPC configuration are identical on both peers.
 
 _Peer-Link and vPC to Downstream Device_
 
@@ -663,7 +668,8 @@ interface Ethernet1/1
   channel-group 10 mode active
 ```
 
-> Note: The `vpc 10` number must match on both peers. The local port-channel ID is allowed to differ between peers, but keeping them identical (`Po10` ↔ `vpc 10` on both) is strongly recommended — this mirrors the data-model guidance above to give both members' LAG interfaces the same name and relate them with an Interface Redundancy Group.
+!!! note
+    The `vpc 10` number must match on both peers. The local port-channel ID is allowed to differ between peers, but keeping them identical (`Po10` ↔ `vpc 10` on both) is strongly recommended — this mirrors the data-model guidance above to give both members' LAG interfaces the same name and relate them with an Interface Redundancy Group.
 
 _Downstream Device (jcy-access-01)_
 
@@ -682,11 +688,12 @@ interface GigabitEthernet1/0/2
   channel-group 10 mode active
 ```
 
-> Note: From the downstream device's perspective, vPC is invisible — it is a standard LACP port channel whose member links happen to land on two different switches. In Nautobot the downstream side is modeled as an ordinary LAG on a single device; no special handling is required.
+!!! note
+    From the downstream device's perspective, vPC is invisible — it is a standard LACP port channel whose member links happen to land on two different switches. In Nautobot the downstream side is modeled as an ordinary LAG on a single device; no special handling is required.
 
 ## Firewall HA pair
 
-Operating systems and technologies include PAN, Fortinet, and ASA
+Operating systems and technologies include Palo Alto, Fortinet, and Cisco ASA
 
 ### Configuration Generation
 
@@ -767,19 +774,18 @@ Each retains its own unique Management IP for individual access, but they share 
 
 **Device A (Primary)**
 
-    ```
+  ```
     modify sys global-settings mgmt-dhcp disabled
     create sys management-ip 192.168.1.10/24
-
     create net self floating_mgmt_ip { address 192.168.1.12/24 vlan internal floating enabled traffic-group traffic-group-1 }
-    ```
+  ```
 
 **Device B (Standby)**
 
-    ```
+  ```
     create sys management-ip 192.168.1.11/24
     Floating Self-IP (Shared/Active):
-    ```
+  ```
 
 _Data Plane_
 
