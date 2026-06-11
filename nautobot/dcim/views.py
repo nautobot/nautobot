@@ -83,6 +83,7 @@ from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
     get_all_network_driver_mappings,
+    get_connected_endpoint_panels,
     get_connected_endpoint_tables,
     render_software_version_and_image_files,
     validate_cable_breakout_mapping,
@@ -6191,6 +6192,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 label="Connection",
                 context_data_key="connection_data",
             ),
+            *get_connected_endpoint_panels("powerfeed"),
         )
     )
 
