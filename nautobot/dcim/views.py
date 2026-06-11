@@ -2233,12 +2233,14 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         )
 
     def get_selected_objects_parents_name(self, selected_objects):
-        """Return the display name of the device_type/module_type that owns the selected component templates."""
+        """Return the display name of the parent object that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
-            if parent:
-                return parent.display
+            parent_attrs = ("device", "device_type", "module", "module_type")
+            for attr in parent_attrs:
+                parent = getattr(selected_object, attr, None)
+                if parent:
+                    return parent.display
         return ""
 
     def get_component_model_form(self, request, data=None):
@@ -4708,67 +4710,23 @@ class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerPortListView(generic.ObjectListView):
-    queryset = PowerPort.optimize_queryset_for_cable_columns(PowerPort.objects.all())
-    filterset = filters.PowerPortFilterSet
-    filterset_form = forms.PowerPortFilterForm
-    table = tables.PowerPortTable
-    action_buttons = ("import", "export")
-
-
-class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
+class PowerPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = PowerPort.objects.all()
+    bulk_update_form_class = forms.PowerPortBulkEditForm
+    create_form_class = forms.PowerPortCreateForm
+    filterset_class = filters.PowerPortFilterSet
+    filterset_form_class = forms.PowerPortFilterForm
+    form_class = forms.PowerPortForm
+    serializer_class = serializers.PowerPortSerializer
+    table_class = tables.PowerPortTable
+    action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_powerports"
     module_breadcrumb_url = "dcim:module_powerports"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PowerPortCreateView(generic.ComponentCreateView):
-    queryset = PowerPort.objects.all()
-    form = forms.PowerPortCreateForm
-    model_form = forms.PowerPortForm
-
-
-class PowerPortEditView(generic.ObjectEditView):
-    queryset = PowerPort.objects.all()
-    model_form = forms.PowerPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class PowerPortDeleteView(generic.ObjectDeleteView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerPort.objects.all()
-    table = tables.PowerPortTable
-
-
-class PowerPortBulkEditView(generic.BulkEditView):
-    queryset = PowerPort.objects.all()
-    filterset = filters.PowerPortFilterSet
-    table = tables.PowerPortTable
-    form = forms.PowerPortBulkEditForm
-
-
-class PowerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkDisconnectView(BulkDisconnectView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPort.objects.all()
-    filterset = filters.PowerPortFilterSet
-    table = tables.PowerPortTable
 
 
 #

@@ -49,6 +49,7 @@ router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("power-ports", views.PowerPortUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
@@ -501,56 +502,6 @@ urlpatterns = [
         name="device_bulk_add_consoleserverport",
     ),
     # Power ports
-    path("power-ports/", views.PowerPortListView.as_view(), name="powerport_list"),
-    path("power-ports/add/", views.PowerPortCreateView.as_view(), name="powerport_add"),
-    path(
-        "power-ports/import/",
-        views.PowerPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerport_import",
-    ),
-    path(
-        "power-ports/edit/",
-        views.PowerPortBulkEditView.as_view(),
-        name="powerport_bulk_edit",
-    ),
-    path(
-        "power-ports/rename/",
-        views.PowerPortBulkRenameView.as_view(),
-        name="powerport_bulk_rename",
-    ),
-    path(
-        "power-ports/disconnect/",
-        views.PowerPortBulkDisconnectView.as_view(),
-        name="powerport_bulk_disconnect",
-    ),
-    path(
-        "power-ports/delete/",
-        views.PowerPortBulkDeleteView.as_view(),
-        name="powerport_bulk_delete",
-    ),
-    path("power-ports/<uuid:pk>/", views.PowerPortView.as_view(), name="powerport"),
-    path(
-        "power-ports/<uuid:pk>/edit/",
-        views.PowerPortEditView.as_view(),
-        name="powerport_edit",
-    ),
-    path(
-        "power-ports/<uuid:pk>/delete/",
-        views.PowerPortDeleteView.as_view(),
-        name="powerport_delete",
-    ),
-    path(
-        "power-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerport_changelog",
-        kwargs={"model": PowerPort},
-    ),
-    path(
-        "power-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerport_notes",
-        kwargs={"model": PowerPort},
-    ),
     path(
         "power-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
