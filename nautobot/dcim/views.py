@@ -2431,37 +2431,20 @@ class PowerPortTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerOutletTemplateCreateView(generic.ComponentCreateView):
+class PowerOutletTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.PowerOutletTemplateBulkEditForm
+    filterset_class = filters.PowerOutletTemplateFilterSet
+    form_class = forms.PowerOutletTemplateForm
+    serializer_class = serializers.PowerOutletTemplateSerializer
+    table_class = tables.PowerOutletTemplateTable
     queryset = PowerOutletTemplate.objects.all()
-    form = forms.PowerOutletTemplateCreateForm
-    model_form = forms.PowerOutletTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class PowerOutletTemplateEditView(generic.ObjectEditView):
-    queryset = PowerOutletTemplate.objects.all()
-    model_form = forms.PowerOutletTemplateForm
-
-
-class PowerOutletTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = PowerOutletTemplate.objects.all()
-
-
-class PowerOutletTemplateBulkEditView(generic.BulkEditView):
-    queryset = PowerOutletTemplate.objects.all()
-    table = tables.PowerOutletTemplateTable
-    form = forms.PowerOutletTemplateBulkEditForm
-    filterset = filters.PowerOutletTemplateFilterSet
-
-
-class PowerOutletTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = PowerOutletTemplate.objects.all()
-
-
-class PowerOutletTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerOutletTemplate.objects.all()
-    table = tables.PowerOutletTemplateTable
-    filterset = filters.PowerOutletTemplateFilterSet
+    create_form_class = forms.PowerOutletTemplateCreateForm
 
 
 #
