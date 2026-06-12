@@ -6,7 +6,7 @@
 
 {% block buttons %}
     {% if confirming %}
-        <button type="submit" name="_bulkconfirm" class="btn btn-primary">
+        <button type="submit" name="_bulkconfirm" formaction="{% url 'dcim:cable_bulk_connect' %}" class="btn btn-primary">
             <span aria-hidden="true" class="mdi mdi-check me-4"></span>Create {{ bulk_count }} cables
         </button>
         <a href="{{ return_url }}" class="btn btn-secondary">
@@ -29,7 +29,7 @@
             -->Create and Add Another
         </button>
         {% if form.count %}
-            <button type="submit" name="_bulkadd" class="btn btn-primary">
+            <button type="submit" name="_bulkadd" formaction="{% url 'dcim:cable_bulk_connect' %}" class="btn btn-primary">
                 <span aria-hidden="true" class="mdi mdi-content-duplicate me-4"></span>Bulk add
             </button>
         {% endif %}

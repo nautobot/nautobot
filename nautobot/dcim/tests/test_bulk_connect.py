@@ -55,6 +55,7 @@ class _BulkConnectFixture:
         ]
         cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
         cls.breakout_1x4 = CableType.objects.create(name="BC 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        cls.bulk_user = User.objects.create_superuser(username="bulk_connect_su", email="su@example.com", password="pw")
 
     # -- helpers --
 
@@ -69,6 +70,10 @@ class _BulkConnectFixture:
             status=kwargs.pop("status", self.cable_status),
             **kwargs,
         )
+
+    def _service(self, spec, *, user=None):
+        """Build the service with a permitted user by default (``user`` is now required)."""
+        return BulkCableConnectService(spec, user=user or self.bulk_user)
 
 
 class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
@@ -98,7 +103,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=4,
         )
-        resolved = BulkCableConnectService(spec).resolve()
+        resolved = self._service(spec).resolve()
         self.assertEqual(resolved["A"].terminations, self.a[0:4])
         self.assertEqual(resolved["B"].terminations, self.b[0:4])
         self.assertEqual(resolved["A"].filled_cables, 4)
@@ -110,7 +115,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("A", 2, self.a[1])],
             count=3,
         )
-        resolved = BulkCableConnectService(spec).resolve()
+        resolved = self._service(spec).resolve()
         self.assertEqual(resolved["A"].terminations, self.a[0:6])
         self.assertEqual(resolved["A"].sel, 2)
         self.assertEqual([resolved["A"].block(i) for i in range(3)], [self.a[0:2], self.a[2:4], self.a[4:6]])
@@ -122,7 +127,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=4,
         )
-        result = BulkCableConnectService(spec).run()
+        result = self._service(spec).run()
         self.assertEqual(len(result.cables), 4)
         self.assertFalse(result.is_breakout)
         for i, cable in enumerate(result.cables):
@@ -134,7 +139,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[7]), self._sel("B", 1, self.b[7])],
             count=1,
         )
-        result = BulkCableConnectService(spec).run()
+        result = self._service(spec).run()
         self.assertEqual(len(result.cables), 1)
         self.assertEqual(result.cables[0].termination_a, self.a[7])
 
@@ -144,7 +149,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             count=3,
             label="trunk",
         )
-        result = BulkCableConnectService(spec).run()
+        result = self._service(spec).run()
         self.assertEqual([c.label for c in result.cables], ["trunk (1)", "trunk (2)", "trunk (3)"])
 
     # -- create: breakout --
@@ -156,7 +161,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=3,
         )
-        result = BulkCableConnectService(spec).run()
+        result = self._service(spec).run()
         self.assertEqual(len(result.cables), 3)
         self.assertTrue(result.is_breakout)
         for i, cable in enumerate(result.cables):
@@ -176,7 +181,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             ],
             count=3,
         )
-        result = BulkCableConnectService(spec).run()
+        result = self._service(spec).run()
         self.assertEqual(len(result.cables), 3)
         self.assertEqual([t.termination for t in result.cables[0].terminations_b], self.b[0:4])
         self.assertEqual([t.termination for t in result.cables[1].terminations_b], self.b[4:8])
@@ -191,7 +196,7 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             count=100,  # only 12 available per side
         )
         with self.assertRaises(ValidationError):
-            BulkCableConnectService(spec).run()
+            self._service(spec).run()
         self.assertEqual(Cable.objects.count(), before)
         self.assertFalse(CableToCableTermination.objects.filter(interface__in=self.a).exists())
 
@@ -202,18 +207,22 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=3,
         )
-        result = BulkCableConnectService(spec).run()
+        result = self._service(spec).run()
         self.assertEqual([c.termination_a for c in result.cables], [self.a[0], self.a[1], self.a[3]])
         self.assertEqual([c.termination_b for c in result.cables], [self.b[0], self.b[1], self.b[2]])
 
     def test_abort_length_without_unit(self):
+        # Length-without-unit is enforced by Cable.clean() during the atomic create (not re-checked in
+        # the service), so it raises on run() and rolls back, creating nothing.
+        before = Cable.objects.count()
         spec = self._spec(
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=2,
             length=5,
         )
         with self.assertRaises(ValidationError):
-            BulkCableConnectService(spec).validate(BulkCableConnectService(spec).resolve())
+            self._service(spec).run()
+        self.assertEqual(Cable.objects.count(), before)
 
     def test_permission_denied_without_add_cable(self):
         user = User.objects.create_user(username="noperm")
@@ -296,7 +305,7 @@ class BulkConnectViewTestCase(_BulkConnectFixture, TestCase):
         from django.urls import reverse
 
         before = Cable.objects.count()
-        response = self.client.post(reverse("dcim:cable_add"), self._data(_bulkadd=""))
+        response = self.client.post(reverse("dcim:cable_bulk_connect"), self._data(_bulkadd=""))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Cable.objects.count(), before)
 
@@ -305,7 +314,7 @@ class BulkConnectViewTestCase(_BulkConnectFixture, TestCase):
 
         before = Cable.objects.count()
         response = self.client.post(
-            reverse("dcim:cable_add"), self._data(count=3, label="my-trunk", _bulkadd="")
+            reverse("dcim:cable_bulk_connect"), self._data(count=3, label="my-trunk", _bulkadd="")
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Cable.objects.count(), before)  # nothing created yet
@@ -317,7 +326,7 @@ class BulkConnectViewTestCase(_BulkConnectFixture, TestCase):
         from django.urls import reverse
 
         before = Cable.objects.count()
-        response = self.client.post(reverse("dcim:cable_add"), self._data(count=3, _bulkconfirm=""))
+        response = self.client.post(reverse("dcim:cable_bulk_connect"), self._data(count=3, _bulkconfirm=""))
         self.assertEqual(response.status_code, 302, getattr(response, "content", b"")[:500])
         self.assertEqual(Cable.objects.count(), before + 3)
 

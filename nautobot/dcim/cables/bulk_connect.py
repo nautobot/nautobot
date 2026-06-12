@@ -89,59 +89,37 @@ class BulkConnectResult:
 # ─── Natural-ordering walk ───
 
 
-def _sibling_queryset(start):
-    """The open (uncabled) ports of the same kind on the same device/circuit as ``start``, in the
-    order the UI lists them. Auto-fill walks this set, so already-cabled ports are skipped."""
+def _open_siblings(start):
+    """Open (uncabled) ports of the same kind on the same device/circuit as ``start``, in the order
+    the UI lists them — the list the walk steps through, so already-cabled ports are skipped.
+
+    Finds the foreign key on the termination model that points back to the parent's model, so it
+    works for every type (Interface/RearPort/... on a Device, CircuitTermination on a Circuit, etc.)
+    and honors that model's natural ``Meta.ordering``.
+    """
     model = type(start)
     parent = start.parent
-    parent_model = type(parent)
     for fk_field in model._meta.get_fields():
-        if getattr(fk_field, "many_to_one", False) and fk_field.related_model is parent_model:
-            return model.objects.filter(**{fk_field.name: parent}, cable_termination__isnull=True)
-    # Couldn't find the parent link (e.g. a module-attached component) — just return the start so
+        if getattr(fk_field, "many_to_one", False) and fk_field.related_model is type(parent):
+            return list(model.objects.filter(**{fk_field.name: parent}, cable_termination__isnull=True))
+    # No link to the parent's model (e.g. a module-attached component) — return just the start so
     # auto-fill quietly does nothing rather than walking the wrong set.
-    return model.objects.filter(pk=start.pk)
-
-
-def _ordered_pks(start):
-    """The sibling ports' primary keys, in natural order."""
-    return list(_sibling_queryset(start).values_list("pk", flat=True))
-
-
-def _fetch_in_order(model, pks):
-    """Load instances for ``pks`` and return them in that same order."""
-    by_pk = {obj.pk: obj for obj in model.objects.filter(pk__in=pks)}
-    return [by_pk[pk] for pk in pks if pk in by_pk]
+    return [start]
 
 
 def walk_terminations(start, count):
-    """Return up to ``count`` open ports starting at ``start``, following natural order.
+    """Return up to ``count`` open ports starting at ``start``, in natural order.
 
-    Skips ports that are already cabled and stops early if it runs out. Also used by the form's
-    per-connector "Fill" button.
+    Skips already-cabled ports and stops early if it runs out. Also used by the form's per-connector
+    "Fill" button.
     """
     if count < 1:
         return []
-    ordered = _ordered_pks(start)
-    try:
-        idx = ordered.index(start.pk)
-    except ValueError:
-        return [start]
-    wanted = ordered[idx : idx + count]
-    return _fetch_in_order(type(start), wanted)
-
-
-def _walk_after(anchor, n):
-    """Return the ``n`` open ports that come right after ``anchor``."""
-    if n < 1:
-        return []
-    ordered = _ordered_pks(anchor)
-    try:
-        idx = ordered.index(anchor.pk)
-    except ValueError:
-        return []
-    wanted = ordered[idx + 1 : idx + 1 + n]
-    return _fetch_in_order(type(anchor), wanted)
+    siblings = _open_siblings(start)
+    for idx, term in enumerate(siblings):
+        if term.pk == start.pk:
+            return siblings[idx : idx + count]
+    return [start]
 
 
 # ─── Service ───
@@ -155,7 +133,9 @@ class BulkCableConnectService:
     database, so callers (the view, tests) can use them to preview or pre-validate.
     """
 
-    def __init__(self, spec, user=None):
+    def __init__(self, spec, user):
+        # `user` is required (not defaulted) so the permission check can never be silently skipped:
+        # this service writes cables, and a missing user must fail closed, not open.
         self.spec = spec
         self.user = user
 
@@ -175,17 +155,20 @@ class BulkCableConnectService:
         }
 
     def validate(self, resolved):
-        """Check the whole plan before anything is created, raising once with every problem found."""
+        """Check what only the bulk operation can know before anything is created.
+
+        Deliberately narrow: per-cable field rules (status validity, length/unit, already-connected
+        terminations, pair compatibility) are enforced by ``Cable.clean()`` and
+        ``CableToCableTermination.clean()`` when the rows are saved, and the whole create runs in one
+        transaction that rolls back on any failure — so re-checking them here would just duplicate the
+        model. What stays is the bulk math (each side must fill ``count`` whole cables) and object-level
+        permissions, which the model has no way to know about.
+        """
         errors = []
         count = self.spec.count
 
         if count < 1:
             errors.append("Count (number of cables) must be at least 1.")
-
-        errors.extend(self._validate_status())
-
-        if self.spec.length is not None and not self.spec.length_unit:
-            errors.append("Must specify a length unit when setting a cable length.")
 
         for side in (CABLE_END_A, CABLE_END_B):
             errors.extend(self._validate_side(resolved[side], count))
@@ -193,8 +176,6 @@ class BulkCableConnectService:
         if not resolved[CABLE_END_A].sel and not resolved[CABLE_END_B].sel:
             errors.append("Select at least one termination to connect.")
 
-        errors.extend(self._validate_terminations_free(resolved, count))
-        errors.extend(self._validate_pairs(resolved, count))
         errors.extend(self._validate_permissions(resolved, count))
 
         if errors:
@@ -219,8 +200,10 @@ class BulkCableConnectService:
         if count <= 1:
             return ResolvedSide(side=side, connectors=connectors, terminations=list(template), sel=sel)
 
+        # Walk forward from the furthest selected port for the remaining (count - 1) blocks; drop the
+        # anchor itself (it's already in the template) with the [1:].
         anchor = self._anchor_termination(template)
-        extra = _walk_after(anchor, (count - 1) * sel) if anchor is not None else []
+        extra = walk_terminations(anchor, (count - 1) * sel + 1)[1:] if anchor is not None else []
         return ResolvedSide(side=side, connectors=connectors, terminations=list(template) + extra, sel=sel)
 
     @staticmethod
@@ -229,24 +212,12 @@ class BulkCableConnectService:
         if not template:
             return None
         try:
-            ordered = _ordered_pks(template[0])
+            order = {term.pk: i for i, term in enumerate(_open_siblings(template[0]))}
         except (AttributeError, NotImplementedError):
             return template[-1]
-        index_by_pk = {pk: i for i, pk in enumerate(ordered)}
-        return max(template, key=lambda t: index_by_pk.get(t.pk, -1))
+        return max(template, key=lambda t: order.get(t.pk, -1))
 
     # -- validate helpers --
-
-    def _validate_status(self):
-        """The status must be one that applies to cables."""
-        from nautobot.dcim.models import Cable
-        from nautobot.extras.models import Status
-
-        if self.spec.status is None:
-            return ["A cable status is required."]
-        if not Status.objects.get_for_model(Cable).filter(pk=self.spec.status.pk).exists():
-            return [f"Status {self.spec.status} is not valid for cables."]
-        return []
 
     def _validate_side(self, resolved, count):
         """A side must use one port type/parent (the walk is a single stream) and have enough open
@@ -272,54 +243,8 @@ class BulkCableConnectService:
             )
         return errors
 
-    def _validate_terminations_free(self, resolved, count):
-        """No port may already be cabled (or otherwise uncableable), and none may be used twice."""
-        from nautobot.dcim.utils import validate_cable_termination
-
-        errors = []
-        seen = set()
-        for side in (CABLE_END_A, CABLE_END_B):
-            rside = resolved[side]
-            used = rside.terminations[: count * rside.sel] if rside.sel else []
-            for term in used:
-                key = (type(term).__name__, term.pk)
-                if key in seen:
-                    errors.append(f"{term} is used more than once in this operation.")
-                    return errors
-                seen.add(key)
-                try:
-                    validate_cable_termination(term, cable_id=None)
-                except ValidationError as exc:
-                    errors.append(exc.messages[0] if exc.messages else str(exc))
-                    return errors
-        return errors
-
-    def _validate_pairs(self, resolved, count):
-        """For non-breakout cables, each A/B pair must be a legal connection. (Breakout per-lane
-        compatibility is enforced when the rows are saved, which rolls back on failure.)"""
-        from nautobot.dcim.models import Cable
-
-        if self._is_breakout():
-            return []
-        a, b = resolved[CABLE_END_A], resolved[CABLE_END_B]
-        if not (a.sel and b.sel):
-            return []
-        errors = []
-        for i in range(count):
-            block_a, block_b = a.block(i), b.block(i)
-            if not (block_a and block_b):
-                continue
-            try:
-                Cable.validate_termination_pair(block_a[0], block_b[0])
-            except ValidationError as exc:
-                errors.append(exc.messages[0] if exc.messages else str(exc))
-                return errors
-        return errors
-
     def _validate_permissions(self, resolved, count):
         """The user must be allowed to add cables and to view every device/circuit involved."""
-        if self.user is None:
-            return []
         errors = []
         if not self.user.has_perm("dcim.add_cable"):
             return ["You do not have permission to add cables."]

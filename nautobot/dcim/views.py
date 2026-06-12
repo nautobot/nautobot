@@ -5692,6 +5692,13 @@ class CableUIViewSet(NautobotUIViewSet):
             queryset = queryset.prefetch_related(None)
         return queryset
 
+    def get_template_name(self):
+        # The bulk_connect action renders/re-renders the cable add form (and its read-only
+        # confirmation), so reuse the create template instead of the action-name default.
+        if self.action == "bulk_connect":
+            return "dcim/cable_update.html"
+        return super().get_template_name()
+
     @action(
         detail=True,
         methods=["get"],
@@ -5812,15 +5819,11 @@ class CableUIViewSet(NautobotUIViewSet):
         return render(request, "dcim/inc/cable_lane_form.html", {"form": form})
 
     def perform_create(self, request, *args, **kwargs):
-        """Handle the "Add cable" form, which carries an optional Count and a "Bulk add" button.
+        """Standard single-cable create.
 
-        Three submission intents, distinguished by the submit button name:
-
-        * ``_create`` (default) — create a single cable the normal way. Rejected if a count was
-          entered (the user must use "Bulk add" for more than one).
-        * ``_bulkadd`` — validate, then render a read-only confirmation page extrapolating the N
-          cables. Nothing is created yet. Requires a count.
-        * ``_bulkconfirm`` — the confirmation page was accepted; create the N cables atomically.
+        The Add Cable form also carries a Count and a "Bulk add" button; those submit to the dedicated
+        ``bulk_connect`` action instead (see below). If a count is present here, the user typed one but
+        clicked the plain "Create" — steer them to "Bulk add".
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
@@ -5834,21 +5837,48 @@ class CableUIViewSet(NautobotUIViewSet):
         if not form.is_valid():
             return self.form_invalid(form)
 
-        count = form.cleaned_data.get("count")
-        is_bulk = "_bulkadd" in request.POST or "_bulkconfirm" in request.POST
+        if form.cleaned_data.get("count"):
+            form.add_error(
+                "count",
+                'To create more than one cable, use the "Bulk add" button. Clear this field to '
+                "create a single cable.",
+            )
+            return self.form_invalid(form)
+        return self.form_valid(form)
 
-        if not is_bulk:
-            # Single-cable creation. A count here is ambiguous — make the user choose "Bulk add".
-            if count:
-                form.add_error(
-                    "count",
-                    'To create more than one cable, use the "Bulk add" button. Clear this field to '
-                    "create a single cable.",
-                )
-                return self.form_invalid(form)
-            return self.form_valid(form)
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="bulk-connect",
+        url_name="bulk_connect",
+        custom_view_base_action="add",
+    )
+    def bulk_connect(self, request, *args, **kwargs):
+        """Create N cables from the Add Cable form's Count — the "Bulk add" / "Confirm" two-step.
 
-        # Bulk path.
+        A dedicated action like ``bulk_disconnect`` / ``bulk_rename``: it creates many cables, so it
+        can't ride the single-instance ``perform_create`` contract. Reached only from the cable add
+        form — its "Bulk add" and "Confirm" buttons ``formaction`` here, while the plain "Create"
+        button posts to the normal ``cable_add``.
+        """
+        self.obj = self.get_object()
+        form = forms.CableCreateForm(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=forms.CableCreateForm),
+        )
+        restrict_form_fields(form, request.user)
+        if not form.is_valid():
+            return self.form_invalid(form)
+        return self.perform_bulk_connect(request, form, form.cleaned_data.get("count"))
+
+    def perform_bulk_connect(self, request, form, count):
+        """Dispatch the bulk-connect two-step (mirrors ``perform_bulk_disconnect``).
+
+        ``_bulkadd`` previews (read-only confirmation, nothing created); ``_bulkconfirm`` applies.
+        Bulk-only validation (each side fills ``count`` cables, object-level permissions) runs here;
+        per-cable field rules are left to the models during the atomic create.
+        """
         if not count:
             form.add_error("count", 'Enter the number of cables (2 or more), then use "Bulk add".')
             return self.form_invalid(form)
@@ -5864,16 +5894,33 @@ class CableUIViewSet(NautobotUIViewSet):
             return self.form_invalid(form)
 
         if "_bulkconfirm" in request.POST:
-            result = service.run()
-            noun = "breakout cables" if result.is_breakout else "cables"
-            links = format_html_join(
-                ", ", '<a href="{}">{}</a>', ((c.get_absolute_url(), str(c)) for c in result.cables)
-            )
-            messages.success(request, format_html("Created {} {}: {}", len(result.cables), noun, links))
-            return redirect(self.get_return_url(request))
+            return self._process_bulk_connect_form(request, form, service)
+        return self._render_bulk_connect_confirmation(request, form, resolved, count)
 
-        # "_bulkadd": re-render the SAME cable form template with a read-only "confirming" context
-        # that extrapolates the cables to be created. Same URL, different view of the same data.
+    def _process_bulk_connect_form(self, request, form, service):
+        """Apply step (mirrors ``_process_bulk_disconnect_form`` / bulk_rename's ``_apply``).
+
+        Create the N cables in one transaction. Per-cable field rules (status, length,
+        already-connected, pair compatibility) are enforced by the models during the create and roll
+        everything back on failure, so surface any ``ValidationError`` on the form rather than 500.
+        """
+        try:
+            result = service.run()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+            return self.form_invalid(form)
+        noun = "breakout cables" if result.is_breakout else "cables"
+        links = format_html_join(", ", '<a href="{}">{}</a>', ((c.get_absolute_url(), str(c)) for c in result.cables))
+        messages.success(request, format_html("Created {} {}: {}", len(result.cables), noun, links))
+        return redirect(self.get_return_url(request))
+
+    def _render_bulk_connect_confirmation(self, request, form, resolved, count):
+        """Preview step (mirrors ``_render_form_response``).
+
+        Re-render the SAME cable form template with a read-only ``confirming`` context extrapolating
+        the cables to be created — same URL, different view of the same data, nothing created yet.
+        """
+
         def _term_info(term):
             parent = getattr(term, "parent", None)
             return {
