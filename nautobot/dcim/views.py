@@ -2233,12 +2233,14 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         )
 
     def get_selected_objects_parents_name(self, selected_objects):
-        """Return the display name of the device_type/module_type that owns the selected component templates."""
+        """Return the display name of the parent object that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
-            if parent:
-                return parent.display
+            parent_attrs = ("device", "device_type", "module", "module_type")
+            for attr in parent_attrs:
+                parent = getattr(selected_object, attr, None)
+                if parent:
+                    return parent.display
         return ""
 
     def get_component_model_form(self, request, data=None):
@@ -4640,67 +4642,23 @@ class ConsolePortUIViewSet(
 #
 
 
-class ConsoleServerPortListView(generic.ObjectListView):
-    queryset = ConsoleServerPort.optimize_queryset_for_cable_columns(ConsoleServerPort.objects.all())
-    filterset = filters.ConsoleServerPortFilterSet
-    filterset_form = forms.ConsoleServerPortFilterForm
-    table = tables.ConsoleServerPortTable
-    action_buttons = ("import", "export")
-
-
-class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
+class ConsoleServerPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = ConsoleServerPort.objects.all()
+    bulk_update_form_class = forms.ConsoleServerPortBulkEditForm
+    create_form_class = forms.ConsoleServerPortCreateForm
+    filterset_class = filters.ConsoleServerPortFilterSet
+    filterset_form_class = forms.ConsoleServerPortFilterForm
+    form_class = forms.ConsoleServerPortForm
+    serializer_class = serializers.ConsoleServerPortSerializer
+    table_class = tables.ConsoleServerPortTable
+    action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_consoleserverports"
     module_breadcrumb_url = "dcim:module_consoleserverports"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ConsoleServerPortCreateView(generic.ComponentCreateView):
-    queryset = ConsoleServerPort.objects.all()
-    form = forms.ConsoleServerPortCreateForm
-    model_form = forms.ConsoleServerPortForm
-
-
-class ConsoleServerPortEditView(generic.ObjectEditView):
-    queryset = ConsoleServerPort.objects.all()
-    model_form = forms.ConsoleServerPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class ConsoleServerPortDeleteView(generic.ObjectDeleteView):
-    queryset = ConsoleServerPort.objects.all()
-
-
-class ConsoleServerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ConsoleServerPort.objects.all()
-    table = tables.ConsoleServerPortTable
-
-
-class ConsoleServerPortBulkEditView(generic.BulkEditView):
-    queryset = ConsoleServerPort.objects.all()
-    filterset = filters.ConsoleServerPortFilterSet
-    table = tables.ConsoleServerPortTable
-    form = forms.ConsoleServerPortBulkEditForm
-
-
-class ConsoleServerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = ConsoleServerPort.objects.all()
-
-
-class ConsoleServerPortBulkDisconnectView(BulkDisconnectView):
-    queryset = ConsoleServerPort.objects.all()
-
-
-class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsoleServerPort.objects.all()
-    filterset = filters.ConsoleServerPortFilterSet
-    table = tables.ConsoleServerPortTable
 
 
 #

@@ -29,6 +29,7 @@ router.register("cables", views.CableUIViewSet)
 router.register("cable-types", views.CableTypeUIViewSet)
 router.register("console-ports", views.ConsolePortUIViewSet)
 router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
+router.register("console-server-ports", views.ConsoleServerPortUIViewSet)
 router.register("console-server-port-templates", views.ConsoleServerPortTemplateUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
@@ -421,68 +422,6 @@ urlpatterns = [
         name="device_bulk_add_consoleport",
     ),
     # Console server ports
-    path(
-        "console-server-ports/",
-        views.ConsoleServerPortListView.as_view(),
-        name="consoleserverport_list",
-    ),
-    path(
-        "console-server-ports/add/",
-        views.ConsoleServerPortCreateView.as_view(),
-        name="consoleserverport_add",
-    ),
-    path(
-        "console-server-ports/import/",
-        views.ConsoleServerPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="consoleserverport_import",
-    ),
-    path(
-        "console-server-ports/edit/",
-        views.ConsoleServerPortBulkEditView.as_view(),
-        name="consoleserverport_bulk_edit",
-    ),
-    path(
-        "console-server-ports/rename/",
-        views.ConsoleServerPortBulkRenameView.as_view(),
-        name="consoleserverport_bulk_rename",
-    ),
-    path(
-        "console-server-ports/disconnect/",
-        views.ConsoleServerPortBulkDisconnectView.as_view(),
-        name="consoleserverport_bulk_disconnect",
-    ),
-    path(
-        "console-server-ports/delete/",
-        views.ConsoleServerPortBulkDeleteView.as_view(),
-        name="consoleserverport_bulk_delete",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/",
-        views.ConsoleServerPortView.as_view(),
-        name="consoleserverport",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/edit/",
-        views.ConsoleServerPortEditView.as_view(),
-        name="consoleserverport_edit",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/delete/",
-        views.ConsoleServerPortDeleteView.as_view(),
-        name="consoleserverport_delete",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="consoleserverport_changelog",
-        kwargs={"model": ConsoleServerPort},
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="consoleserverport_notes",
-        kwargs={"model": ConsoleServerPort},
-    ),
     path(
         "console-server-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
