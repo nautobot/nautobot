@@ -6,6 +6,8 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+use_directory_urls: false
+strict: true
 theme:
   name: "material"
   navigation_depth: 4
@@ -607,7 +609,7 @@ nav:
           - Job Extensions: "development/jobs/job-extensions.md"
           - Job Execution: "development/jobs/job-execution.md"
           - Migration Guides:
-              -  Migrating from v1: "development/jobs/migration/from-v1.md"
+              - Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
           - "development/apps/index.md"
           - Setup: "development/apps/api/setup.md"
