@@ -1,0 +1,2 @@
+Fixed the REST API incorrectly requiring the `protocol` field when creating or updating an Interface Redundancy Group.
+Fixed a `NoReverseMatch` server error when viewing an Interface or Interface Redundancy Group detail page.
