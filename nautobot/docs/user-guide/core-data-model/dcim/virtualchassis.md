@@ -11,10 +11,10 @@ You create your devices, then create the Virtual Chassis and assign the devices 
 
 ## Overview
 
-The key piece of Virtual Chassis is when multiple physical devices operate as a **single logical device** with one management IP, such as a switch stack. The model itself is intentionally simple: a single `VirtualChassis` object that member devices point to, with each member recording its position in the stack. One member can be explicitly designated as the master, and Nautobot will surface all ports (interfaces, front ports, rear ports, etc.) from every member on that master device, reflecting how the stack actually presents itself on the network.
+The key piece of Virtual Chassis is when multiple physical devices operate as a **single logical device** with one management IP, such as a switch stack. The model itself is intentionally simple: a single `VirtualChassis` object that member devices point to, with each member recording its position in the stack. One member can be explicitly designated as the master, and Nautobot will surface all ports (interfaces, front ports, rear ports, etc.) from every member on that master device, reflecting how the stack actually presents itself on the network. The one exception to this rule is if you have mgmt_only set on the interface, in that case it's not be surfaced.
 
 !!! note
-    Interfaces are not "automatically" numbered. This is similar to the real world, in which when you get a device, the in interfaces presume a `1-slot`, such as `GigabitEthernet1/0/1`, but once you set it as the 3rd slot, the interface would be `GigabitEthernet1/0/1`. You are encouraged to use the Bulk Rename feature to bulk change the device interfaces.
+    Interfaces are not "automatically" numbered. This is similar to the real world, in which when you get a device, the in interfaces presume a `1-slot`, such as `GigabitEthernet1/0/1`, but once you set it as the 3rd slot, the interface would be `GigabitEthernet3/0/1`. You are encouraged to use the Bulk Rename feature to bulk change the device interfaces.
 
 LAG interfaces are supported across devices that have the same parent virtual chassis — this is the one case in Nautobot where a LAG's member interfaces may live on different devices. The LAG will show its member interfaces across the multiple devices on the LAG itself. The recommendation is to create the LAG interface itself (e.g. `PortChannel10`) on the expected master device. Because the chassis is a single logical device, the LAG fully captures the relationship on its own; no additional grouping model (such as an Interface Redundancy Group) is needed.
 
@@ -569,16 +569,16 @@ Query variables:
 !!! note
     Because `vc_interfaces` is a property on the `Device` model, the same query can be run directly against the master device (e.g. `query { devices(name: ["jcy-vc01"]) { vc_interfaces { ... } } }`) without going through `virtual_chassis` at all.
 
-## Key Charteristics
+## Key Characteristics
 
-- Can you port channel across multiple devices? Yes — spanned EtherChannel is supported in FTD clustering
-- Can you see all interfaces on the Primary (control node)? No — Each node can only see its interfaces, but all cluster interfaces are visible via FMC
-- Can you see all interfaces on the Backup (data node)? No — only interfaces physically on that chassis module are visible locally
-- On Primary, can you tell which interfaces are assigned to which device? No — Only the FMC can see all interfaces
-- When do you see all the interfaces on the master device? You cannot - Only the FMC can see all interface
-- Can you connect interfaces from master to non-master? Yes
-- What should the naming standard be for the chassis device? Use the shared cluster name / FMC display name (logical single name)
-- Should I use interface named templates? Yes
+- **Can you port channel across multiple devices?** Yes — spanned EtherChannel is supported in FTD clustering
+- **Can you see all interfaces on the Primary (control node)?** No — Each node can only see its interfaces, but all cluster interfaces are visible via FMC
+- **Can you see all interfaces on the Backup (data node)?** No — only interfaces physically on that chassis module are visible locally
+- **On Primary, can you tell which interfaces are assigned to which device?** No — Only the FMC can see all interfaces
+- **When do you see all the interfaces on the master device?** You cannot - Only the FMC can see all interface
+- **Can you connect interfaces from master to non-master?** Yes
+- **What should the naming standard be for the chassis device?** Use the shared cluster name / FMC display name (logical single name)
+- **Should I use interface named templates?** Yes
 
 ## Questions to ask of the data model
 
@@ -597,6 +597,9 @@ Given the data model, what questions would a user ask?
 - Given a member device, I would like to know which stack/HA ports connect it to which sibling, and on which port (via cables).  TODO: Confirm
 - Given a LAG, I would like to know its member interfaces and which stack member each one lives on.
 
+!!! tip
+    You can answer all of these questions with the prior defined GraphQL query.
+
 ## Dual-chassis Single Control Plane
 
 Dual-chassis Single Control Plane VSS / StackWise Virtual (Cisco)
@@ -605,7 +608,7 @@ Dual-chassis Single Control Plane VSS / StackWise Virtual (Cisco)
 
 _Standard Global Config_
 
-```
+```raw
 !
 switch virtual domain 200
   switch 1
@@ -703,16 +706,14 @@ Multi-chassis Stack Stackwise / Virtual Chassis / Arista Stack / HPE IRF / Extre
 
 _Standard Global Config_
 
-1. Master Switch (Primary)
-Set a high priority (default is 1, max is 15) to ensure this switch wins the election.
+1. Master Switch (Primary) - Set a high priority (default is 1, max is 15) to ensure this switch wins the election.
 
 ```
 switch 1 priority 15
 switch 1 renumber 1
 ```
 
-2. Member Switches (Non-Master)
-Keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
+2. Member Switches (Non-Master) - Keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
 
 ```
 switch 2 priority 1
@@ -756,10 +757,12 @@ interface GigabitEthernet 2/0/1 # <== 2 is member 2 of stack.
 ```
 
 ### Firewall Cluster
-Firewall Cluster Cisco FXOS / SRX
+Firewall Cluster Cisco FTD / SRX
 
 
 #### Configuration Generation
+
+TODO: Is it FXOS or FTD??
 
 _FXOS Chassis — Physical Interface Config_
 
@@ -820,4 +823,3 @@ scope ssa
 ```
 
 > Note: `cluster-role` is set to `control` on the primary chassis slot and `data` on all others; `cluster-group-id` must match across all members
-
