@@ -49,6 +49,7 @@ router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
@@ -150,37 +151,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Power port templates
-    path(
-        "power-port-templates/add/",
-        views.PowerPortTemplateCreateView.as_view(),
-        name="powerporttemplate_add",
-    ),
-    path(
-        "power-port-templates/edit/",
-        views.PowerPortTemplateBulkEditView.as_view(),
-        name="powerporttemplate_bulk_edit",
-    ),
-    path(
-        "power-port-templates/rename/",
-        views.PowerPortTemplateBulkRenameView.as_view(),
-        name="powerporttemplate_bulk_rename",
-    ),
-    path(
-        "power-port-templates/delete/",
-        views.PowerPortTemplateBulkDeleteView.as_view(),
-        name="powerporttemplate_bulk_delete",
-    ),
-    path(
-        "power-port-templates/<uuid:pk>/edit/",
-        views.PowerPortTemplateEditView.as_view(),
-        name="powerporttemplate_edit",
-    ),
-    path(
-        "power-port-templates/<uuid:pk>/delete/",
-        views.PowerPortTemplateDeleteView.as_view(),
-        name="powerporttemplate_delete",
     ),
     # Power outlet templates
     path(

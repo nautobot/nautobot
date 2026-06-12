@@ -2393,37 +2393,20 @@ class ConsoleServerPortTemplateUIViewSet(
 #
 
 
-class PowerPortTemplateCreateView(generic.ComponentCreateView):
+class PowerPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.PowerPortTemplateBulkEditForm
+    filterset_class = filters.PowerPortTemplateFilterSet
+    form_class = forms.PowerPortTemplateForm
+    serializer_class = serializers.PowerPortTemplateSerializer
+    table_class = tables.PowerPortTemplateTable
     queryset = PowerPortTemplate.objects.all()
-    form = forms.PowerPortTemplateCreateForm
-    model_form = forms.PowerPortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class PowerPortTemplateEditView(generic.ObjectEditView):
-    queryset = PowerPortTemplate.objects.all()
-    model_form = forms.PowerPortTemplateForm
-
-
-class PowerPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = PowerPortTemplate.objects.all()
-
-
-class PowerPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = PowerPortTemplate.objects.all()
-    table = tables.PowerPortTemplateTable
-    form = forms.PowerPortTemplateBulkEditForm
-    filterset = filters.PowerPortTemplateFilterSet
-
-
-class PowerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = PowerPortTemplate.objects.all()
-
-
-class PowerPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPortTemplate.objects.all()
-    table = tables.PowerPortTemplateTable
-    filterset = filters.PowerPortTemplateFilterSet
+    create_form_class = forms.PowerPortTemplateCreateForm
 
 
 #
