@@ -270,20 +270,26 @@ ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,
 profile="django"
 extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
-[tool.pylint.master]
-load-plugins = "pylint_django"
-py-version = "3.10"
+[tool.pylint.main]
 ignore-paths = [
     ".*third_party.*",
     "nautobot/extras/tests/git_data/02-invalid-files/",
 ]
-jobs = 0
+init-hook = "import nautobot; nautobot.setup()"
+load-plugins = "pylint_django"
+py-version = "3.10"
 
 [tool.pylint.basic]
 # No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
 no-docstring-rgx="^(_|test_|Meta$)"
 # Don't complain about "pk" as a variable name
-good-names = """_,i,j,k,pk"""
+good-names = [
+    "_",
+    "i",
+    "j",
+    "k",
+    "pk",
+]
 
 [tool.pylint.message_control]
 # TODO: re-enable and fix these as time permits
