@@ -1,0 +1,1 @@
+Disabled Ruff rule RUF003 `ambiguous-unicode-character-comment` to allow the use of characters like `×` (multiplication) specifically in comments.
