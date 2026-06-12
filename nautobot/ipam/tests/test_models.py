@@ -2208,7 +2208,6 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
     def setUpTestData(cls):
         namespace = Namespace.objects.first()
         status = Status.objects.get(name="Active")
-        status.content_types.add(ContentType.objects.get_for_model(IPRange))
         Prefix.objects.create(  # parent
             prefix="10.99.0.0/24",
             status=status,
