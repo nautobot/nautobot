@@ -63,16 +63,9 @@
                 </div>
             {% endblock job_form_wrapper %}
             {% if enable_scheduling %}
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <strong>Job Schedule Type</strong>
-                    </div>
-                    <div class="card-body job_execution">
-                        {% block schedule_form %}
-                            {% render_form schedule_form %}
-                        {% endblock %}
-                    </div>
-                </div>
+                {% block schedule_form %}
+                    {% render_form schedule_form %}
+                {% endblock %}
             {% endif %}
         </div>
         <div class="modal-footer">
