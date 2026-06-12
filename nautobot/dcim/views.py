@@ -2489,36 +2489,20 @@ class InterfaceTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class FrontPortTemplateCreateView(generic.ComponentCreateView):
+class FrontPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.FrontPortTemplateBulkEditForm
+    filterset_class = filters.FrontPortTemplateFilterSet
+    form_class = forms.FrontPortTemplateForm
+    serializer_class = serializers.FrontPortTemplateSerializer
+    table_class = tables.FrontPortTemplateTable
     queryset = FrontPortTemplate.objects.all()
-    form = forms.FrontPortTemplateCreateForm
-    model_form = forms.FrontPortTemplateForm
-
-
-class FrontPortTemplateEditView(generic.ObjectEditView):
-    queryset = FrontPortTemplate.objects.all()
-    model_form = forms.FrontPortTemplateForm
-
-
-class FrontPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = FrontPortTemplate.objects.all()
-
-
-class FrontPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = FrontPortTemplate.objects.all()
-    table = tables.FrontPortTemplateTable
-    form = forms.FrontPortTemplateBulkEditForm
-    filterset = filters.FrontPortTemplateFilterSet
-
-
-class FrontPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = FrontPortTemplate.objects.all()
-
-
-class FrontPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = FrontPortTemplate.objects.all()
-    table = tables.FrontPortTemplateTable
-    filterset = filters.FrontPortTemplateFilterSet
+    create_form_class = forms.FrontPortTemplateCreateForm
 
 
 #
