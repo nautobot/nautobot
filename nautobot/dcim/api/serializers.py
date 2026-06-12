@@ -449,7 +449,7 @@ class InterfaceRedundancyGroupAssociationSerializer(ValidatedModelSerializer):
 class InterfaceRedundancyGroupSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     """InterfaceRedundancyGroup Serializer."""
 
-    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices)
+    protocol = ChoiceField(choices=InterfaceRedundancyGroupProtocolChoices, allow_blank=True, required=False)
 
     class Meta:
         """Meta attributes."""

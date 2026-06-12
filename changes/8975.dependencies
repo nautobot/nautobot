@@ -1,0 +1,3 @@
+Updated dependency `django-timezone-field` to `>=7.2.2,<7.3`.
+Updated dependency `pyuwsgi` to `>=2.0.30.post1,<2.1`.
+Updated dependency `regex` to `>=2026.5.9`.
