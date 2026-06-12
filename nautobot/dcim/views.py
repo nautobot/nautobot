@@ -4844,26 +4844,39 @@ class PowerOutletBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class InterfaceListView(generic.ObjectListView):
+class InterfaceUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     # `optimize_queryset_for_cable_columns` adds the `select_related` / `prefetch_related` needed
     # so `cable`, `cable_peer`, and `connection` columns don't trigger per-row N+1 queries against
     # CableToCableTermination / CablePath.
     queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
-    filterset = filters.InterfaceFilterSet
-    filterset_form = forms.InterfaceFilterForm
-    table = tables.InterfaceTable
+    bulk_update_form_class = forms.InterfaceBulkEditForm
+    create_form_class = forms.InterfaceCreateForm
+    filterset_class = filters.InterfaceFilterSet
+    filterset_form_class = forms.InterfaceFilterForm
+    form_class = forms.InterfaceForm
+    serializer_class = serializers.InterfaceSerializer
+    table_class = tables.InterfaceTable
     action_buttons = ("import", "export")
-
-
-class InterfaceView(
-    DeviceComponentPageMixin,
-    generic.ObjectView,
-):
-    queryset = Interface.objects.all()
     device_breadcrumb_url = "dcim:device_interfaces"
     module_breadcrumb_url = "dcim:module_interfaces"
 
-    def get_extra_context(self, request, instance):
+    def get_selected_objects_parents_name(self, selected_objects):
+        selected_object = selected_objects.first()
+        if selected_object:
+            parent = selected_object.device or selected_object.module
+            return parent.display
+        return ""
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if instance is None or self.action != "retrieve":
+            return context
+
         # Get assigned IP addresses
         ipaddress_table = InterfaceIPAddressTable(
             # data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
@@ -4902,12 +4915,10 @@ class InterfaceView(
         return {
             "ipaddress_table": ipaddress_table,
             "vlan_table": vlan_table,
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
             "virtual_device_contexts_table": virtual_device_contexts_table,
-            **super().get_extra_context(request, instance),
+            **context,
         }
 
     def _get_interface_redundancy_groups_table(self, request, instance):
@@ -4931,50 +4942,6 @@ class InterfaceView(
         for field in column_sequence:
             table.columns.show(field)
         return table
-
-
-class InterfaceCreateView(generic.ComponentCreateView):
-    queryset = Interface.objects.all()
-    form = forms.InterfaceCreateForm
-    model_form = forms.InterfaceForm
-
-
-class InterfaceEditView(generic.ObjectEditView):
-    queryset = Interface.objects.all()
-    model_form = forms.InterfaceForm
-    template_name = "dcim/interface_edit.html"
-
-
-class InterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = Interface.objects.all()
-    template_name = "dcim/device_interface_delete.html"
-
-
-class InterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Interface.objects.all()
-    table = tables.InterfaceTable
-
-
-class InterfaceBulkEditView(generic.BulkEditView):
-    queryset = Interface.objects.all()
-    filterset = filters.InterfaceFilterSet
-    table = tables.InterfaceTable
-    form = forms.InterfaceBulkEditForm
-
-
-class InterfaceBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = Interface.objects.all()
-
-
-class InterfaceBulkDisconnectView(BulkDisconnectView):
-    queryset = Interface.objects.all()
-
-
-class InterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Interface.objects.all()
-    filterset = filters.InterfaceFilterSet
-    table = tables.InterfaceTable
-    template_name = "dcim/interface_bulk_delete.html"
 
 
 #

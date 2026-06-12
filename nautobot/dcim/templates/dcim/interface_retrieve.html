@@ -1,0 +1,255 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="card">
+        <div class="card-header">
+            <strong>Interface</strong>
+        </div>
+        <table class="table table-hover card-body attr-table">
+            <tr>
+                {% if object.device %}
+                    <td>Device</td>
+                    <td>
+                        {{ object.device|hyperlinked_object }}
+                    </td>
+                {% else %}
+                    <td>Module</td>
+                    <td>
+                        {{ object.module|hyperlinked_object }}
+                    </td>
+                {% endif %}
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ object.name }}</td>
+            </tr>
+            <tr>
+                <td>Status</td>
+                <td>
+                    {{ object.status| hyperlinked_object_with_color }}
+                </td>
+            </tr>
+            <tr>
+                <td>Role</td>
+                <td>
+                    {{ object.role| hyperlinked_object_with_color }}
+                </td>
+            </tr>
+            <tr>
+                <td>Label</td>
+                <td>{{ object.label|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Type</td>
+                <td>{{ object.get_type_display }}</td>
+            </tr>
+            <tr>
+                <td>Port Type</td>
+                <td>{{ object.get_port_type_display|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Speed</td>
+                <td>{{ object.speed|humanize_speed|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Duplex</td>
+                <td>{{ object.get_duplex_display|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>{{ object.enabled | render_boolean }}</td>
+            </tr>
+            <tr>
+                <td>Parent Interface</td>
+                <td>{{ object.parent_interface|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <th scope="row">Bridge</th>
+                <td>{{ object.bridge|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>LAG</td>
+                <td>{{ object.lag|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }} </td>
+            </tr>
+            <tr>
+                <td>VRF</td>
+                <td>{{ object.vrf|hyperlinked_object }}</td>
+            </tr>
+            <tr>
+                <td>MTU</td>
+                <td>{{ object.mtu|placeholder }}</td>
+            </tr>
+            <tr>
+                <td>MAC Address</td>
+                <td><span class="text-monospace">{{ object.mac_address|placeholder }}</span></td>
+            </tr>
+            <tr>
+                <td>802.1Q Mode</td>
+                <td>{{ object.get_mode_display }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    {% if object.is_connectable %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Connection</strong>
+            </div>
+            {% if object.cable %}
+                <table class="table table-hover card-body attr-table">
+                    <tr>
+                        <td>Cable</td>
+                        <td>
+                            {{ object.cable|hyperlinked_object }}
+                            {% include 'dcim/inc/cable_actions.html' with trace_url_name='dcim:interface_trace' %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Cable Status</td>
+                        <td>{{ object.cable.status|hyperlinked_object_with_color }}</td>
+                    </tr>
+                    {% if object.connected_endpoint.device or object.connected_endpoint.module %}
+                        {% with iface=object.connected_endpoint %}
+                            <tr>
+                                {% if iface.device %}
+                                    <td>Device</td>
+                                    <td>{{ iface.device|hyperlinked_object }}</td>
+                                {% else %}
+                                    <td>Module</td>
+                                    <td>{{ iface.module|hyperlinked_object }}</td>
+                                {% endif %}
+                            </tr>
+                            <tr>
+                                <td>Interface</td>
+                                <td>{{ iface|hyperlinked_object }}</td>
+                            </tr>
+                            <tr>
+                                <td>Type</td>
+                                <td>{{ iface.get_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <td>Enabled</td>
+                                <td>{{ iface.enabled | render_boolean }}</td>
+                            </tr>
+                            <tr>
+                                <td>LAG</td>
+                                <td>{{ iface.lag|hyperlinked_object }}</td>
+                            </tr>
+                            <tr>
+                                <td>Description</td>
+                                <td>{{ iface.description|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>MTU</td>
+                                <td>{{ iface.mtu|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>MAC Address</td>
+                                <td>{{ iface.mac_address|placeholder }}</td>
+                            </tr>
+                            <tr>
+                                <td>802.1Q Mode</td>
+                                <td>{{ iface.get_mode_display }}</td>
+                            </tr>
+                        {% endwith %}
+                    {% elif object.connected_endpoint.circuit %}
+                        {% with circuit_term=object.connected_endpoint %}
+                            <tr>
+                                <td>Provider</td>
+                                <td>{{ circuit_term.circuit.provider|hyperlinked_object }}</td>
+                            </tr>
+                            <tr>
+                                <td>Circuit</td>
+                                <td>{{ circuit_term.circuit|hyperlinked_object }}</td>
+                            </tr>
+                            <tr>
+                                <td>Side</td>
+                                <td>{{ circuit_term.term_side }}</td>
+                            </tr>
+                        {% endwith %}
+                    {% endif %}
+                    <tr>
+                        <td>Path Status</td>
+                        <td>
+                            {% if object.path.is_active %}
+                                <span class="badge bg-success">Reachable</span>
+                            {% else %}
+                                <span class="badge bg-danger">Not Reachable</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            {% else %}
+                <div class="card-body text-secondary">
+                    Not connected
+                    {% if perms.dcim.add_cable %}
+                        {% include 'dcim/inc/cable_add_button.html' with termination=object %}
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+    {% if object.is_lag %}
+        <div class="card">
+            <div class="card-header"><strong>LAG Members</strong></div>
+            <table class="table table-hover nb-table-headings card-body">
+                <thead>
+                    <tr>
+                        <th>Parent</th>
+                        <th>Interface</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in object.member_interfaces.all %}
+                        <tr>
+                            <td>{{ member.parent|hyperlinked_object }}</td>
+                            <td>{{ member|hyperlinked_object }}</td>
+                            <td>
+                                {{ member.get_type_display }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-secondary">No member interfaces</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+    {% if object.vpn_tunnel_endpoints_src_int %}
+        <div class="card">
+            <div class="card-header"><strong>VPN Endpoints</strong></div>
+            <table class="table table-hover nb-table-headings card-body">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Role</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ object.vpn_tunnel_endpoints_src_int|hyperlinked_object }}</td>
+                        <td>{{ object.vpn_tunnel_endpoints_src_int.role|placeholder }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    {% include 'panel_table.html' with table=ipaddress_table heading="IP Addresses" %}
+    {% include 'panel_table.html' with table=vlan_table heading="VLANs" %}
+    {% include 'panel_table.html' with table=redundancy_table heading="Interface Redundancy Groups" %}
+    {% include 'panel_table.html' with table=child_interfaces_table heading="Child Interfaces" %}
+    {% include 'panel_table.html' with table=virtual_device_contexts_table heading="Virtual Device Contexts" %}
+{% endblock content_full_width_page %}
