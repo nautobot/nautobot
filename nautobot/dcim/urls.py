@@ -36,6 +36,7 @@ router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("devices", views.DeviceUIViewSet)
+router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
 router.register("interface-templates", views.InterfaceTemplateUIViewSet)
@@ -50,6 +51,7 @@ router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
@@ -152,37 +154,6 @@ urlpatterns = [
         ),
         name="devicetype_modulebaytemplate_add",
     ),
-    # Power port templates
-    path(
-        "power-port-templates/add/",
-        views.PowerPortTemplateCreateView.as_view(),
-        name="powerporttemplate_add",
-    ),
-    path(
-        "power-port-templates/edit/",
-        views.PowerPortTemplateBulkEditView.as_view(),
-        name="powerporttemplate_bulk_edit",
-    ),
-    path(
-        "power-port-templates/rename/",
-        views.PowerPortTemplateBulkRenameView.as_view(),
-        name="powerporttemplate_bulk_rename",
-    ),
-    path(
-        "power-port-templates/delete/",
-        views.PowerPortTemplateBulkDeleteView.as_view(),
-        name="powerporttemplate_bulk_delete",
-    ),
-    path(
-        "power-port-templates/<uuid:pk>/edit/",
-        views.PowerPortTemplateEditView.as_view(),
-        name="powerporttemplate_edit",
-    ),
-    path(
-        "power-port-templates/<uuid:pk>/delete/",
-        views.PowerPortTemplateDeleteView.as_view(),
-        name="powerporttemplate_delete",
-    ),
     # Power outlet templates
     path(
         "power-outlet-templates/add/",
@@ -213,37 +184,6 @@ urlpatterns = [
         "power-outlet-templates/<uuid:pk>/delete/",
         views.PowerOutletTemplateDeleteView.as_view(),
         name="poweroutlettemplate_delete",
-    ),
-    # Front port templates
-    path(
-        "front-port-templates/add/",
-        views.FrontPortTemplateCreateView.as_view(),
-        name="frontporttemplate_add",
-    ),
-    path(
-        "front-port-templates/edit/",
-        views.FrontPortTemplateBulkEditView.as_view(),
-        name="frontporttemplate_bulk_edit",
-    ),
-    path(
-        "front-port-templates/rename/",
-        views.FrontPortTemplateBulkRenameView.as_view(),
-        name="frontporttemplate_bulk_rename",
-    ),
-    path(
-        "front-port-templates/delete/",
-        views.FrontPortTemplateBulkDeleteView.as_view(),
-        name="frontporttemplate_bulk_delete",
-    ),
-    path(
-        "front-port-templates/<uuid:pk>/edit/",
-        views.FrontPortTemplateEditView.as_view(),
-        name="frontporttemplate_edit",
-    ),
-    path(
-        "front-port-templates/<uuid:pk>/delete/",
-        views.FrontPortTemplateDeleteView.as_view(),
-        name="frontporttemplate_delete",
     ),
     # Rear port templates
     path(
