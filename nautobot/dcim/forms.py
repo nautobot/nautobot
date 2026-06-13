@@ -4759,29 +4759,20 @@ class CableForm(NautobotModelForm):
 
 
 class CableCreateForm(CableForm):
-    """The cable *create* form (``CableUIViewSet.create_form_class``): ``CableForm`` plus a Count.
-
-    It is the form rendered/submitted for ``dcim:cable_add`` only — editing an existing cable uses
-    plain ``CableForm``, since a count (which produces N cables) is meaningless when modifying one
-    existing cable. The user fills
-    one cable as a template (``CableForm``'s per-connector pickers) and optionally sets ``count``.
-    ``CableUIViewSet.perform_create`` inspects the count and the submit button: a single cable saves
-    through the normal ``CableForm`` path, while "Bulk add" builds a spec via ``build_spec()`` and
-    hands it to ``BulkCableConnectService``, which creates the N cables.
-    """
+    """It is the form rendered/submitted for `dcim:cable_add` only  and not the bulk add form."""
 
     count = forms.IntegerField(
-        min_value=2,
+        min_value=1,
         required=False,
         label="Number of cables",
-        help_text="Leave blank to create a single cable. Enter 2 or more, then use “Bulk add” to "
-        "create that many cables — each side auto-fills count x (terminations you selected on that "
-        "side), walking from the last selected termination.",
+        help_text="Leave blank (or 1) to create a single cable with “Create”. Enter 2 or more, then "
+        "use “Bulk add” to create that many cables — each side auto-fills count x (terminations you "
+        "selected on that side), walking from the last selected termination for open ports.",
     )
 
     def build_spec(self):
         """Build a :class:`BulkConnectSpec` from the cleaned form data (used by the view's bulk path)."""
-        from nautobot.dcim.cables import BulkConnectSpec, ConnectorSelection
+        from nautobot.dcim.bulk_connect import BulkConnectSpec, ConnectorSelection
 
         info = self.connection_info
         selections = []
@@ -4790,9 +4781,7 @@ class CableCreateForm(CableForm):
                 connector = conn["connector"]
                 termination = self.cleaned_data.get(f"{side_label.lower()}_conn_{connector}_termination")
                 if termination is not None:
-                    selections.append(
-                        ConnectorSelection(side=side_label, connector=connector, termination=termination)
-                    )
+                    selections.append(ConnectorSelection(side=side_label, connector=connector, termination=termination))
         return BulkConnectSpec(
             cable_type=self.cleaned_data.get("cable_type"),
             selections=selections,

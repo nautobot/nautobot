@@ -1,9 +1,5 @@
 {% load form_helpers %}
-{% comment %}
-    The cable attribute fields are rendered the same way in both the editable form and the read-only
-    bulk-connect confirmation (the view disables them for the latter), so their labels and choice
-    rendering stay a single source of truth.
-{% endcomment %}
+{# Used for both the editable form and the read-only bulk-connect confirmation. #}
 <div class="card">
     <div class="card-header"><strong>Cable</strong></div>
     <div class="card-body">
@@ -39,10 +35,6 @@
     </div>
 </div>
 {% if confirming %}
-    {% comment %}
-        Read-only confirmation view: same form/URL, different context. The submitted values ride
-        along as hidden inputs so the Confirm button re-POSTs them with `_bulkconfirm`.
-    {% endcomment %}
     {% for name, value in bulk_hidden_fields %}
         <input type="hidden" name="{{ name }}" value="{{ value }}">
     {% endfor %}

@@ -5,6 +5,10 @@ import json
 import logging
 import uuid
 
+from nautobot.dcim.bulk_connect import BulkCableConnectService
+from nautobot.dcim.bulk_connect import walk_terminations
+
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -5669,8 +5673,6 @@ class CableUIViewSet(NautobotUIViewSet):
     filterset_class = filters.CableFilterSet
     filterset_form_class = forms.CableFilterForm
     form_class = forms.CableForm
-    # The "Add cable" form gains a per-operation Count (number of cables). Editing an existing cable
-    # still uses the plain CableForm (no count).
     create_form_class = forms.CableCreateForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
@@ -5693,8 +5695,7 @@ class CableUIViewSet(NautobotUIViewSet):
         return queryset
 
     def get_template_name(self):
-        # The bulk_connect action renders/re-renders the cable add form (and its read-only
-        # confirmation), so reuse the create template instead of the action-name default.
+        """Account for the bulk_connect action template."""
         if self.action == "bulk_connect":
             return "dcim/cable_update.html"
         return super().get_template_name()
@@ -5785,16 +5786,11 @@ class CableUIViewSet(NautobotUIViewSet):
         custom_view_base_action="view",
     )
     def lane_fill(self, request):
-        """HTMX: fill every connector on one side of a breakout cable from connector 1's selection.
+        """Fill every connector on one side of a breakout cable from connector single selection with HTMX.
 
-        Convenience for wide breakouts (e.g. a 1x16 landing on front ports 1-16): the user picks the
-        first connector's type / parent / termination once, and this walks the parent's natural
-        ordering (skipping connected ports) to populate the remaining connectors on that side, then
-        re-renders the lane form with those values. This is "I need X more connectors" — it fills one
-        cable's connectors, distinct from the "Number of cables" bulk-add.
+        Convenience for extending a single connector to multiple subsequent connectors when filling
+        out a breakout cable form.
         """
-        from nautobot.dcim.cables import walk_terminations
-
         side = request.GET.get("fill_side", "b")
         data = request.GET.copy()
 
@@ -5822,7 +5818,7 @@ class CableUIViewSet(NautobotUIViewSet):
         """Standard single-cable create.
 
         The Add Cable form also carries a Count and a "Bulk add" button; those submit to the dedicated
-        ``bulk_connect`` action instead (see below). If a count is present here, the user typed one but
+        `bulk_connect` action instead (see below). If a count is present here, the user typed one but
         clicked the plain "Create" — steer them to "Bulk add".
         """
         self.obj = self.get_object()
@@ -5834,13 +5830,18 @@ class CableUIViewSet(NautobotUIViewSet):
             instance=self.obj,
         )
         restrict_form_fields(form, request.user)
+
+        # Preserve values so cancel on bulk form can return here populated.
+        if "_edit" in request.POST:
+            return self.form_invalid(form)
+
         if not form.is_valid():
             return self.form_invalid(form)
 
-        if form.cleaned_data.get("count"):
+        if (form.cleaned_data.get("count") or 0) >= 2:
             form.add_error(
                 "count",
-                'To create more than one cable, use the "Bulk add" button. Clear this field to '
+                'To create more than one cable, use the "Bulk add" button. Leave this blank (or 1) to '
                 "create a single cable.",
             )
             return self.form_invalid(form)
@@ -5856,10 +5857,10 @@ class CableUIViewSet(NautobotUIViewSet):
     def bulk_connect(self, request, *args, **kwargs):
         """Create N cables from the Add Cable form's Count — the "Bulk add" / "Confirm" two-step.
 
-        A dedicated action like ``bulk_disconnect`` / ``bulk_rename``: it creates many cables, so it
-        can't ride the single-instance ``perform_create`` contract. Reached only from the cable add
-        form — its "Bulk add" and "Confirm" buttons ``formaction`` here, while the plain "Create"
-        button posts to the normal ``cable_add``.
+        A dedicated action like `bulk_disconnect` / `bulk_rename`: it creates many cables, so it
+        can't ride the single-instance `perform_create` contract. Reached only from the cable add
+        form — its "Bulk add" and "Confirm" buttons `formaction` here, while the plain "Create"
+        button posts to the normal `cable_add`.
         """
         self.obj = self.get_object()
         form = forms.CableCreateForm(
@@ -5873,19 +5874,12 @@ class CableUIViewSet(NautobotUIViewSet):
         return self.perform_bulk_connect(request, form, form.cleaned_data.get("count"))
 
     def perform_bulk_connect(self, request, form, count):
-        """Dispatch the bulk-connect two-step (mirrors ``perform_bulk_disconnect``).
-
-        ``_bulkadd`` previews (read-only confirmation, nothing created); ``_bulkconfirm`` applies.
-        Bulk-only validation (each side fills ``count`` cables, object-level permissions) runs here;
-        per-cable field rules are left to the models during the atomic create.
-        """
-        if not count:
-            form.add_error("count", 'Enter the number of cables (2 or more), then use "Bulk add".')
+        """Two step process for bulk cable creation based on `_bulk_confirm` presence."""
+        if not count or count < 2:
+            form.add_error("count", '"Bulk add" creates 2 or more cables; use "Create" for a single cable.')
             return self.form_invalid(form)
 
-        from nautobot.dcim.cables import BulkCableConnectService
-
-        service = BulkCableConnectService(form.build_spec(), user=request.user)
+        service = BulkCableConnectService(form.build_spec())
         try:
             resolved = service.resolve()
             service.validate(resolved)
@@ -5898,28 +5892,20 @@ class CableUIViewSet(NautobotUIViewSet):
         return self._render_bulk_connect_confirmation(request, form, resolved, count)
 
     def _process_bulk_connect_form(self, request, form, service):
-        """Apply step (mirrors ``_process_bulk_disconnect_form`` / bulk_rename's ``_apply``).
-
-        Create the N cables in one transaction. Per-cable field rules (status, length,
-        already-connected, pair compatibility) are enforced by the models during the create and roll
-        everything back on failure, so surface any ``ValidationError`` on the form rather than 500.
-        """
+        """Create the N cables in one transaction, enforced by model object validation."""
         try:
-            result = service.run()
+            cables = service.run()
         except ValidationError as exc:
             form.add_error(None, exc)
             return self.form_invalid(form)
-        noun = "breakout cables" if result.is_breakout else "cables"
-        links = format_html_join(", ", '<a href="{}">{}</a>', ((c.get_absolute_url(), str(c)) for c in result.cables))
-        messages.success(request, format_html("Created {} {}: {}", len(result.cables), noun, links))
+        cable_type = form.cleaned_data.get("cable_type")
+        noun = "breakout cables" if cable_type and cable_type.is_breakout else "cables"
+        links = format_html_join(", ", '<a href="{}">{}</a>', ((c.get_absolute_url(), str(c)) for c in cables))
+        messages.success(request, format_html("Created {} {}: {}", len(cables), noun, links))
         return redirect(self.get_return_url(request))
 
     def _render_bulk_connect_confirmation(self, request, form, resolved, count):
-        """Preview step (mirrors ``_render_form_response``).
-
-        Re-render the SAME cable form template with a read-only ``confirming`` context extrapolating
-        the cables to be created — same URL, different view of the same data, nothing created yet.
-        """
+        """Preview confirmation page setup."""
 
         def _term_info(term):
             parent = getattr(term, "parent", None)
@@ -5938,18 +5924,12 @@ class CableUIViewSet(NautobotUIViewSet):
             for i in range(count)
         ]
 
-        # Render the form's own fields read-only on the confirmation view (reusing its labels and
-        # choice/widget rendering rather than re-deriving a summary). Disable at the *widget* level,
-        # not via ``field.disabled`` — a disabled field makes a bound form render its initial value
-        # instead of the submitted data, which would blank out the read-only view. The submitted
-        # values still ride along as hidden inputs (disabled widgets don't submit) for the confirm POST.
+        # Render the form's but as read only to send as hidden inputs in the confirmation step.
         for field in form.fields.values():
             field.widget.attrs["disabled"] = True
 
         skip = {"_create", "_addanother", "_bulkadd", "_bulkconfirm", "csrfmiddlewaretoken"}
-        hidden_fields = [
-            (key, value) for key in request.POST if key not in skip for value in request.POST.getlist(key)
-        ]
+        hidden_fields = [(key, value) for key in request.POST if key not in skip for value in request.POST.getlist(key)]
         return Response(
             {
                 "form": form,

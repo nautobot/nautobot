@@ -1,6 +1,8 @@
 {% extends 'generic/object_create.html' %}
 
 {% block form %}
+    {# Carry return_url as a submitted field so Cancel returns to filled add form #}
+    {% if return_url and not confirming %}<input type="hidden" name="return_url" value="{{ return_url }}">{% endif %}
     {% include 'dcim/inc/cable_form.html' %}
 {% endblock %}
 
@@ -9,9 +11,10 @@
         <button type="submit" name="_bulkconfirm" formaction="{% url 'dcim:cable_bulk_connect' %}" class="btn btn-primary">
             <span aria-hidden="true" class="mdi mdi-check me-4"></span>Create {{ bulk_count }} cables
         </button>
-        <a href="{{ return_url }}" class="btn btn-secondary">
+        {# Cancel returns to the editable Add Cable form #}
+        <button type="submit" name="_edit" formaction="{% url 'dcim:cable_add' %}" class="btn btn-secondary">
             <span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel
-        </a>
+        </button>
     {% elif editing %}
         <button type="submit" name="_update" class="btn btn-primary">
             <span aria-hidden="true" class="mdi mdi-check me-4"></span>Update
@@ -20,17 +23,17 @@
             <span aria-hidden="true" class="mdi mdi-close me-4"></span>Cancel
         </a>
     {% else %}
-        <button type="submit" name="_create" class="btn btn-primary">
+        <button type="submit" name="_create" formaction="{% url 'dcim:cable_add' %}" class="btn btn-primary">
             <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
             -->Create
         </button>
-        <button type="submit" name="_addanother" class="btn btn-primary">
+        <button type="submit" name="_addanother" formaction="{% url 'dcim:cable_add' %}" class="btn btn-primary">
             <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
             -->Create and Add Another
         </button>
         {% if form.count %}
             <button type="submit" name="_bulkadd" formaction="{% url 'dcim:cable_bulk_connect' %}" class="btn btn-primary">
-                <span aria-hidden="true" class="mdi mdi-content-duplicate me-4"></span>Bulk add
+                <span aria-hidden="true" class="mdi mdi-plus-box-multiple-outline me-4"></span>Bulk add
             </button>
         {% endif %}
         <a href="{{ return_url }}" class="btn btn-secondary">

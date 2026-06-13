@@ -1,10 +1,9 @@
-"""Tests for the Bulk Connect cable-creation service (nautobot.dcim.cables.bulk_connect)."""
+"""Tests for the Bulk Connect cable-creation service (nautobot.dcim.bulk_connect)."""
 
-from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
-from nautobot.dcim.cables import (
+from nautobot.dcim.bulk_connect import (
     BulkCableConnectService,
     BulkConnectSpec,
     ConnectorSelection,
@@ -21,8 +20,6 @@ from nautobot.dcim.models import (
     Manufacturer,
 )
 from nautobot.extras.models import Role, Status
-
-User = get_user_model()
 
 
 class _BulkConnectFixture:
@@ -55,7 +52,6 @@ class _BulkConnectFixture:
         ]
         cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
         cls.breakout_1x4 = CableType.objects.create(name="BC 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
-        cls.bulk_user = User.objects.create_superuser(username="bulk_connect_su", email="su@example.com", password="pw")
 
     # -- helpers --
 
@@ -71,9 +67,8 @@ class _BulkConnectFixture:
             **kwargs,
         )
 
-    def _service(self, spec, *, user=None):
-        """Build the service with a permitted user by default (``user`` is now required)."""
-        return BulkCableConnectService(spec, user=user or self.bulk_user)
+    def _service(self, spec):
+        return BulkCableConnectService(spec)
 
 
 class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
@@ -127,21 +122,20 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=4,
         )
-        result = self._service(spec).run()
-        self.assertEqual(len(result.cables), 4)
-        self.assertFalse(result.is_breakout)
-        for i, cable in enumerate(result.cables):
+        cables = self._service(spec).run()
+        self.assertEqual(len(cables), 4)
+        for i, cable in enumerate(cables):
             self.assertEqual(cable.termination_a, self.a[i])
             self.assertEqual(cable.termination_b, self.b[i])
 
-    def test_count_one_single_cable(self):
+    def test_count_below_two_rejected(self):
+        # The bulk service is for count >= 2; a single cable goes through the normal create path.
         spec = self._spec(
             selections=[self._sel("A", 1, self.a[7]), self._sel("B", 1, self.b[7])],
             count=1,
         )
-        result = self._service(spec).run()
-        self.assertEqual(len(result.cables), 1)
-        self.assertEqual(result.cables[0].termination_a, self.a[7])
+        with self.assertRaises(ValidationError):
+            self._service(spec).run()
 
     def test_per_cable_label_suffix(self):
         spec = self._spec(
@@ -149,8 +143,8 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             count=3,
             label="trunk",
         )
-        result = self._service(spec).run()
-        self.assertEqual([c.label for c in result.cables], ["trunk (1)", "trunk (2)", "trunk (3)"])
+        cables = self._service(spec).run()
+        self.assertEqual([c.label for c in cables], ["trunk (1)", "trunk (2)", "trunk (3)"])
 
     # -- create: breakout --
 
@@ -161,10 +155,10 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=3,
         )
-        result = self._service(spec).run()
-        self.assertEqual(len(result.cables), 3)
-        self.assertTrue(result.is_breakout)
-        for i, cable in enumerate(result.cables):
+        cables = self._service(spec).run()
+        self.assertEqual(len(cables), 3)
+        self.assertTrue(cables[0].cable_type.is_breakout)
+        for i, cable in enumerate(cables):
             self.assertEqual([t.termination for t in cable.terminations_a], [self.a[i]])
             self.assertEqual([t.termination for t in cable.terminations_b], [self.b[i]])
 
@@ -181,11 +175,11 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             ],
             count=3,
         )
-        result = self._service(spec).run()
-        self.assertEqual(len(result.cables), 3)
-        self.assertEqual([t.termination for t in result.cables[0].terminations_b], self.b[0:4])
-        self.assertEqual([t.termination for t in result.cables[1].terminations_b], self.b[4:8])
-        self.assertEqual([t.termination for t in result.cables[2].terminations_b], self.b[8:12])
+        cables = self._service(spec).run()
+        self.assertEqual(len(cables), 3)
+        self.assertEqual([t.termination for t in cables[0].terminations_b], self.b[0:4])
+        self.assertEqual([t.termination for t in cables[1].terminations_b], self.b[4:8])
+        self.assertEqual([t.termination for t in cables[2].terminations_b], self.b[8:12])
 
     # -- validation / aborts --
 
@@ -207,9 +201,9 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
             selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
             count=3,
         )
-        result = self._service(spec).run()
-        self.assertEqual([c.termination_a for c in result.cables], [self.a[0], self.a[1], self.a[3]])
-        self.assertEqual([c.termination_b for c in result.cables], [self.b[0], self.b[1], self.b[2]])
+        cables = self._service(spec).run()
+        self.assertEqual([c.termination_a for c in cables], [self.a[0], self.a[1], self.a[3]])
+        self.assertEqual([c.termination_b for c in cables], [self.b[0], self.b[1], self.b[2]])
 
     def test_abort_length_without_unit(self):
         # Length-without-unit is enforced by Cable.clean() during the atomic create (not re-checked in
@@ -223,16 +217,6 @@ class BulkConnectServiceTestCase(_BulkConnectFixture, TestCase):
         with self.assertRaises(ValidationError):
             self._service(spec).run()
         self.assertEqual(Cable.objects.count(), before)
-
-    def test_permission_denied_without_add_cable(self):
-        user = User.objects.create_user(username="noperm")
-        spec = self._spec(
-            selections=[self._sel("A", 1, self.a[0]), self._sel("B", 1, self.b[0])],
-            count=2,
-        )
-        service = BulkCableConnectService(spec, user=user)
-        with self.assertRaises(ValidationError):
-            service.validate(service.resolve())
 
 
 class BulkConnectFormTestCase(_BulkConnectFixture, TestCase):
@@ -257,17 +241,23 @@ class BulkConnectFormTestCase(_BulkConnectFixture, TestCase):
     def test_form_has_optional_count_field(self):
         field = self._post_data().fields["count"]
         self.assertFalse(field.required)
-        self.assertEqual(field.min_value, 2)
+        self.assertEqual(field.min_value, 1)
 
     def test_form_valid_without_count(self):
-        form = self._post_data()  # count=1 -> below min, but field is optional; treat blank
         # A single-cable submission leaves count blank.
         form = self._post_data(count="")
         self.assertTrue(form.is_valid(), form.errors)
         self.assertFalse(form.cleaned_data.get("count"))
 
-    def test_form_count_below_minimum_invalid(self):
+    def test_form_count_one_is_single(self):
+        # count=1 is valid and means a single cable (the "Create" path), not a form error.
         form = self._post_data(count=1)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data.get("count"), 1)
+
+    def test_form_count_below_minimum_invalid(self):
+        # 0 is below the field minimum (1).
+        form = self._post_data(count=0)
         self.assertFalse(form.is_valid())
         self.assertIn("count", form.errors)
 
@@ -301,6 +291,15 @@ class BulkConnectViewTestCase(_BulkConnectFixture, TestCase):
         self.assertEqual(response.status_code, 200)  # re-rendered with error
         self.assertEqual(Cable.objects.count(), before)
 
+    def test_single_create_with_count_one_makes_one(self):
+        from django.urls import reverse
+
+        # count=1 (not blank) on "Create" must make a single cable, not error "must be >= 2".
+        before = Cable.objects.count()
+        response = self.client.post(reverse("dcim:cable_add"), self._data(count=1, _create=""))
+        self.assertEqual(response.status_code, 302, getattr(response, "content", b"")[:500])
+        self.assertEqual(Cable.objects.count(), before + 1)
+
     def test_bulk_add_without_count_rejected(self):
         from django.urls import reverse
 
@@ -308,6 +307,17 @@ class BulkConnectViewTestCase(_BulkConnectFixture, TestCase):
         response = self.client.post(reverse("dcim:cable_bulk_connect"), self._data(_bulkadd=""))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Cable.objects.count(), before)
+
+    def test_bulk_add_error_page_create_button_targets_add(self):
+        from django.urls import reverse
+
+        # A failing Bulk add re-renders from the bulk-connect URL. The "Create" button must carry an
+        # explicit formaction to cable_add, or it would post back to bulk-connect (form action="").
+        response = self.client.post(
+            reverse("dcim:cable_bulk_connect"), self._data(count=100, _bulkadd="")  # 100 > available
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f'formaction="{reverse("dcim:cable_add")}"')
 
     def test_bulk_add_renders_confirmation_without_creating(self):
         from django.urls import reverse
@@ -329,6 +339,30 @@ class BulkConnectViewTestCase(_BulkConnectFixture, TestCase):
         response = self.client.post(reverse("dcim:cable_bulk_connect"), self._data(count=3, _bulkconfirm=""))
         self.assertEqual(response.status_code, 302, getattr(response, "content", b"")[:500])
         self.assertEqual(Cable.objects.count(), before + 3)
+
+    def test_bulk_preview_cancel_returns_editable_form(self):
+        from django.urls import reverse
+
+        # The preview's "Cancel" (_edit) re-renders the editable Add Cable form with the count
+        # preserved (Bulk add button present, not the confirm view), and creates nothing.
+        before = Cable.objects.count()
+        response = self.client.post(reverse("dcim:cable_add"), self._data(count=3, _edit=""))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Cable.objects.count(), before)
+        self.assertContains(response, 'name="_bulkadd"')  # editable form, not the confirm view
+        self.assertContains(response, 'value="3"')  # count preserved
+
+    def test_bulk_confirm_redirects_to_return_url(self):
+        from django.urls import reverse
+
+        # return_url rides along as a submitted field (the bulk formactions drop the query string),
+        # so the post-create redirect returns the user to where they came from.
+        return_url = reverse("dcim:device_list")
+        response = self.client.post(
+            reverse("dcim:cable_bulk_connect"), self._data(count=2, _bulkconfirm="", return_url=return_url)
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, return_url)
 
     def test_lane_fill_populates_connectors(self):
         from django.urls import reverse
