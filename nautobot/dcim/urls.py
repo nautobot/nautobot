@@ -50,6 +50,7 @@ router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("power-outlets", views.PowerOutletUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
 router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
@@ -479,60 +480,6 @@ urlpatterns = [
         name="device_bulk_add_powerport",
     ),
     # Power outlets
-    path("power-outlets/", views.PowerOutletListView.as_view(), name="poweroutlet_list"),
-    path(
-        "power-outlets/add/",
-        views.PowerOutletCreateView.as_view(),
-        name="poweroutlet_add",
-    ),
-    path(
-        "power-outlets/import/",
-        views.PowerOutletBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="poweroutlet_import",
-    ),
-    path(
-        "power-outlets/edit/",
-        views.PowerOutletBulkEditView.as_view(),
-        name="poweroutlet_bulk_edit",
-    ),
-    path(
-        "power-outlets/rename/",
-        views.PowerOutletBulkRenameView.as_view(),
-        name="poweroutlet_bulk_rename",
-    ),
-    path(
-        "power-outlets/disconnect/",
-        views.PowerOutletBulkDisconnectView.as_view(),
-        name="poweroutlet_bulk_disconnect",
-    ),
-    path(
-        "power-outlets/delete/",
-        views.PowerOutletBulkDeleteView.as_view(),
-        name="poweroutlet_bulk_delete",
-    ),
-    path("power-outlets/<uuid:pk>/", views.PowerOutletView.as_view(), name="poweroutlet"),
-    path(
-        "power-outlets/<uuid:pk>/edit/",
-        views.PowerOutletEditView.as_view(),
-        name="poweroutlet_edit",
-    ),
-    path(
-        "power-outlets/<uuid:pk>/delete/",
-        views.PowerOutletDeleteView.as_view(),
-        name="poweroutlet_delete",
-    ),
-    path(
-        "power-outlets/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="poweroutlet_changelog",
-        kwargs={"model": PowerOutlet},
-    ),
-    path(
-        "power-outlets/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="poweroutlet_notes",
-        kwargs={"model": PowerOutlet},
-    ),
     path(
         "power-outlets/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
