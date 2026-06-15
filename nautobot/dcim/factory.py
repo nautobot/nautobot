@@ -149,7 +149,7 @@ def get_random_software_version_for_device_type(device_type):
 class CableTypeFactory(PrimaryModelFactory):
     class Meta:
         model = CableType
-        exclude = ("has_description", "has_manufacturer", "has_part_number")
+        exclude = ("has_description", "has_manufacturer", "has_part_number", "has_breakout")
 
     name = UniqueFaker("word")
     has_description = NautobotBoolIterator()
@@ -160,10 +160,21 @@ class CableTypeFactory(PrimaryModelFactory):
     part_number = factory.Maybe("has_part_number", UniqueFaker("bothify", text="???-####"), "")
     has_embedded_transceivers = NautobotBoolIterator()
 
-    a_connectors = factory.Faker("pyint", min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS)
+    has_breakout = NautobotBoolIterator()
+
+    a_connectors = factory.LazyAttribute(
+        lambda o: factory.random.randgen.randint(
+            1,
+            (CABLE_BREAKOUT_MAX_CONNECTORS - 1) if o.has_breakout else CABLE_BREAKOUT_MAX_CONNECTORS,
+        )
+    )
     # Model requires a_connectors <= b_connectors
     b_connectors = factory.LazyAttribute(
-        lambda o: factory.random.randgen.randint(o.a_connectors, CABLE_BREAKOUT_MAX_CONNECTORS)
+        lambda o: (
+            factory.random.randgen.randint(o.a_connectors + 1, CABLE_BREAKOUT_MAX_CONNECTORS)
+            if o.has_breakout
+            else o.a_connectors
+        )
     )
     # total_lanes must be a multiple of lcm(a_connectors, b_connectors) and within the global max
     total_lanes = factory.LazyAttribute(
