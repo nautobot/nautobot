@@ -3,6 +3,8 @@ dev_addr: "127.0.0.1:8001"
 site_dir: "example_app/docs"
 site_name: "Example App Documentation"
 copyright: "Copyright &copy; The Authors"
+use_directory_urls: false
+strict: true
 theme:
   name: "material"
   navigation_depth: 4
@@ -78,4 +80,4 @@ plugins:
 nav:
   - Introduction: "index.md"
   - Models:
-    - Example Model: "models/examplemodel.md"
+      - Example Model: "models/examplemodel.md"
