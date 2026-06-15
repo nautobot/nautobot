@@ -33,7 +33,7 @@ STATUS_CHOICESET_MAP = {
     "dcim.VirtualDeviceContext": dcim_choices.VirtualDeviceContextStatusChoices,
     "extras.ContactAssociation": extras_choices.ContactAssociationStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
-    "ipam.IPRange": ipam_choices.IPRangeStatusChoices,
+    "ipam.IPAddressRange": ipam_choices.IPAddressRangeStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
     "ipam.VRF": ipam_choices.VRFStatusChoices,
@@ -107,7 +107,7 @@ STATUS_DESCRIPTION_MAP = {
 ROLE_CHOICESET_MAP = {
     "extras.ContactAssociation": extras_choices.ContactAssociationRoleChoices,
     "vpn.VPNTunnelEndpoint": vpn_choices.VPNTunnelEndpointRoleChoices,
-    "ipam.IPRange": ipam_choices.IPRangeRoleChoices,
+    "ipam.IPAddressRange": ipam_choices.IPAddressRangeRoleChoices,
 }
 
 # Map of role name -> default hex_color used when importing color choices in `export_roles_from_choiceset()`.
@@ -120,7 +120,7 @@ ROLE_COLOR_MAP = {
     "Hub": ColorChoices.COLOR_DARK_GREEN,
     "Spoke": ColorChoices.COLOR_LIGHT_GREEN,
     "Peer": ColorChoices.COLOR_ORANGE,
-    # IPRange roles
+    # IPAddressRange roles
     "DHCP": ColorChoices.COLOR_BLUE,
     "Firewall Object": ColorChoices.COLOR_RED,
     "NAT Pool": ColorChoices.COLOR_ORANGE,
@@ -137,12 +137,12 @@ ROLE_DESCRIPTION_MAP = {
     "Hub": "Unit plays a Hub role",
     "Spoke": "Unit plays a Spoke role",
     "Peer": "Unit plays a Peer role",
-    # IPRange roles
-    "DHCP": "IP Range used as a DHCP scope",
-    "Firewall Object": "IP Range representing a firewall address object",
-    "NAT Pool": "IP Range used as a NAT pool",
-    "LB Pool": "IP Range used as a load balancer pool",
-    "Reserved": "IP Range reserved for a specific purpose",
+    # IPAddressRange roles
+    "DHCP": "IP Address Range used as a DHCP scope",
+    "Firewall Object": "IP Address Range representing a firewall address object",
+    "NAT Pool": "IP Address Range used as a NAT pool",
+    "LB Pool": "IP Address Range used as a load balancer pool",
+    "Reserved": "IP Address Range reserved for a specific purpose",
 }
 
 

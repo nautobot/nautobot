@@ -26,8 +26,8 @@ from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, Servi
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
-    IPRange,
     Namespace,
     Prefix,
     RIR,
@@ -1818,7 +1818,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_NETWORK,
         )
-        IPRange.objects.create(
+        IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.200",
             status=self.status,
@@ -2170,7 +2170,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_NETWORK,
         )
-        IPRange.objects.create(
+        IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
@@ -2180,7 +2180,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
         with self.assertRaises(ValidationError) as cm:
             ip.validated_save()
-        self.assertIn("falls within exclusive IP Range", str(cm.exception))
+        self.assertIn("falls within exclusive IP Address Range", str(cm.exception))
 
     def test_creating_ip_inside_non_exclusive_range_is_allowed(self):
         Prefix.objects.create(
@@ -2189,7 +2189,7 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             type=PrefixTypeChoices.TYPE_NETWORK,
         )
-        IPRange.objects.create(
+        IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
@@ -2201,8 +2201,8 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         self.assertTrue(IPAddress.objects.filter(host="10.0.0.75").exists())
 
 
-class TestIPRange(ModelTestCases.BaseModelTestCase):
-    model = IPRange
+class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
+    model = IPAddressRange
 
     @classmethod
     def setUpTestData(cls):
@@ -2214,7 +2214,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             namespace=namespace,
             type=PrefixTypeChoices.TYPE_NETWORK,
         )
-        IPRange.objects.create(
+        IPAddressRange.objects.create(
             start_address="10.99.0.10",
             end_address="10.99.0.20",
             status=status,
@@ -2233,8 +2233,8 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         )
 
     def test_create_field_population(self):
-        """Test that creating an IPRange populates derived fields correctly."""
-        ip_range = IPRange(
+        """Test that creating an IPAddressRange populates derived fields correctly."""
+        ip_range = IPAddressRange(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
@@ -2254,7 +2254,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="::/0", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.1",
             end_address="::1",
             status=self.status,
@@ -2265,7 +2265,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
 
     def test_start_must_not_be_greater_than_end(self):
         """start_address must be <= end_address."""
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.100",
             end_address="10.0.0.50",
             status=self.status,
@@ -2283,7 +2283,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="11.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.1",
             end_address="11.0.0.255",
             status=self.status,
@@ -2298,7 +2298,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="192.168.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.1",
             end_address="10.0.0.100",
             status=self.status,
@@ -2311,13 +2311,13 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
 
     def test_no_overlap_with_other_range(self):
         """Two intersecting ranges in the same namespace are rejected."""
-        IPRange.objects.create(
+        IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
             namespace=self.namespace,
         )
-        overlapping = IPRange(
+        overlapping = IPAddressRange(
             start_address="10.0.0.80",
             end_address="10.0.0.150",
             status=self.status,
@@ -2328,25 +2328,25 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
 
     def test_adjacent_ranges_do_not_overlap(self):
         """Touching-but-not-overlapping ranges are allowed (boundary check)."""
-        IPRange.objects.create(
+        IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
             namespace=self.namespace,
         )
-        adjacent = IPRange(
+        adjacent = IPAddressRange(
             start_address="10.0.0.101",
             end_address="10.0.0.150",
             status=self.status,
             namespace=self.namespace,
         )
         adjacent.validated_save()  # should not raise
-        self.assertTrue(IPRange.objects.filter(start_host="10.0.0.101").exists())
+        self.assertTrue(IPAddressRange.objects.filter(start_host="10.0.0.101").exists())
 
     def test_exclusive_range_rejects_existing_ip(self):
         """Creating an exclusive range over an existing IPAddress is rejected."""
         IPAddress.objects.create(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
@@ -2359,7 +2359,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
     def test_non_exclusive_range_allows_existing_ip(self):
         """A non-exclusive range over an existing IPAddress is allowed."""
         IPAddress.objects.create(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
@@ -2367,11 +2367,11 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
             is_exclusive=False,
         )
         ip_range.validated_save()  # should not raise
-        self.assertTrue(IPRange.objects.filter(start_host="10.0.0.50").exists())
+        self.assertTrue(IPAddressRange.objects.filter(start_host="10.0.0.50").exists())
 
     def test_enabling_is_exclusive_rejects_existing_ip(self):
         """Editing an existing range to is_exclusive=True with contained IPs is rejected."""
-        ip_range = IPRange.objects.create(
+        ip_range = IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.100",
             status=self.status,
@@ -2390,7 +2390,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="10.0.0.128/25", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.100",
             end_address="10.0.0.200",
             status=self.status,
@@ -2405,7 +2405,7 @@ class TestIPRange(ModelTestCases.BaseModelTestCase):
         Prefix.objects.create(
             prefix="10.0.0.64/26", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_NETWORK
         )
-        ip_range = IPRange(
+        ip_range = IPAddressRange(
             start_address="10.0.0.10",
             end_address="10.0.0.200",
             status=self.status,

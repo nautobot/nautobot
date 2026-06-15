@@ -794,7 +794,7 @@ class Prefix(PrimaryModel):
                 )
 
         if self._networking_values_changed:
-            # Prefix edit must not push any contained IPRange outside the new span.
+            # Prefix edit must not push any contained IPAddressRange outside the new span.
             orphaned_ranges = self.ip_ranges.exclude(
                 ip_version=self.ip_version,
                 start_host__gte=self.network,
@@ -805,10 +805,10 @@ class Prefix(PrimaryModel):
                 raise ValidationError(
                     {
                         "__all__": (
-                            f"Cannot modify Prefix: IP Range "
+                            f"Cannot modify Prefix: IP Address Range "
                             f"'{orphaned_range.start_address} - {orphaned_range.end_address}' "
                             "would no longer be fully contained within this Prefix. "
-                            "Modify or delete the IP Range first."
+                            "Modify or delete the IP Address Range first."
                         )
                     }
                 )
@@ -1526,7 +1526,7 @@ class IPAddress(PrimaryModel):
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
         if self.host and self.ip_version:
-            exclusive_range = IPRange.objects.filter(
+            exclusive_range = IPAddressRange.objects.filter(
                 parent__namespace=self._namespace,
                 ip_version=self.ip_version,
                 is_exclusive=True,
@@ -1537,7 +1537,7 @@ class IPAddress(PrimaryModel):
                 raise ValidationError(
                     {
                         "__all__": (
-                            f"IP address {self.host} falls within exclusive IP Range "
+                            f"IP address {self.host} falls within exclusive IP Address Range "
                             f"{exclusive_range}. Creating an IP Address within an "
                             "exclusive range is not permitted."
                         )
@@ -1712,13 +1712,13 @@ class IPAddressToInterface(BaseModel):
     "statuses",
     "webhooks",
 )
-class IPRange(PrimaryModel):
+class IPAddressRange(PrimaryModel):
     """
-    An IPRange represents a contiguous span of IP addresses defined by a start host and an end host,
+    An IPAddressRange represents a contiguous span of IP addresses defined by a start host and an end host,
     both contained within the same parent Prefix. Unlike a Prefix or IPAddress, a range is not a network and
     has no mask — it is simply two bare addresses marking an inclusive span.
 
-    IP Ranges can optionally be marked as fully utilized (counting toward parent prefix utilization) or
+    IP Address Ranges can optionally be marked as fully utilized (counting toward parent prefix utilization) or
     exclusive (blocking creation of individual IPAddress objects within the range).
     """
 
@@ -1726,7 +1726,7 @@ class IPRange(PrimaryModel):
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
         db_index=True,
-        help_text="Name of the IP Range",
+        help_text="Name of the IP Address Range",
     )
     start_host = VarbinaryIPField(
         null=False,
@@ -1744,13 +1744,15 @@ class IPRange(PrimaryModel):
         db_index=True,
         verbose_name="IP Version",
     )
+    # blank=True (despite null=False): parent isn't supplied on input, it's auto-resolved
+    # in clean(). full_clean() runs before clean(), so without this it'd be rejected as required.
     parent = models.ForeignKey(
         "ipam.Prefix",
         blank=True,
         null=False,
         related_name="ip_ranges",
         on_delete=models.PROTECT,
-        help_text="The parent Prefix of this IP Range. Auto-resolved from the start/end host.",
+        help_text="The parent Prefix of this IP Address Range. Auto-resolved from the start/end host.",
     )
     status = StatusField(blank=False, null=False)
     role = RoleField(blank=True, null=True)  # starter choices: DHCP, Firewall Object, NAT Pool, LB Pool, Reserved
@@ -1783,14 +1785,14 @@ class IPRange(PrimaryModel):
         "is_exclusive",
     ]
 
-    # objects = BaseManager.from_queryset(IPRangeQuerySet)() # maybe we will need this in future
+    # objects = BaseManager.from_queryset(IPAddressRangeQuerySet)() # maybe we will need this in future
 
     class Meta:
         ordering = ("parent__namespace", "ip_version", "start_host")
-        verbose_name = "IP Range"
-        verbose_name_plural = "IP Ranges"
+        verbose_name = "IP address range"
+        verbose_name_plural = "IP address ranges"
         indexes = [
-            models.Index(fields=("ip_version", "start_host", "end_host")),
+            models.Index(fields=("parent", "ip_version", "start_host", "end_host")),
         ]
         constraints = [
             models.UniqueConstraint(
@@ -1896,7 +1898,7 @@ class IPRange(PrimaryModel):
             raise ValidationError(
                 {
                     "__all__": (
-                        "IP Range must be fully contained within a single parent Prefix. "
+                        "IP Address Range must be fully contained within a single parent Prefix. "
                         "No single Prefix in namespace contains both start_address and end_address. "
                         "Consider creating a wider parent Prefix that covers the entire range."
                     )
@@ -1920,9 +1922,9 @@ class IPRange(PrimaryModel):
         self._namespace = None
 
     def _validate_no_range_overlap(self):
-        """Must not intersect any other IP Range in the same namespace."""
+        """Must not intersect any other IP Address Range in the same namespace."""
         overlapping_range = (
-            IPRange.objects.filter(
+            IPAddressRange.objects.filter(
                 parent=self.parent,
                 ip_version=self.ip_version,
                 start_host__lte=self.end_host,
@@ -1935,7 +1937,7 @@ class IPRange(PrimaryModel):
             raise ValidationError(
                 {
                     "__all__": (
-                        f"IP Range intersects with existing range "
+                        f"IP Address Range intersects with existing range "
                         f"'{overlapping_range.start_address} - {overlapping_range.end_address}'"
                     )
                 }
@@ -1956,18 +1958,22 @@ class IPRange(PrimaryModel):
             raise ValidationError(
                 {
                     "is_exclusive": (
-                        f"Cannot make this IP Range exclusive: existing IP address(es) fall within the range: {hosts}"
+                        f"Cannot make this IP Address Range exclusive: existing IP address(es) fall within the range: {hosts}"
                     )
                 }
             )
 
     def _validate_no_child_prefix_overlap(self):
         """Must not overlap any child Prefix of the parent."""
-        range_set = netaddr.IPSet(netaddr.IPRange(self.start_host, self.end_host))
+        range_set = netaddr.IPSet(netaddr.IPAddressRange(self.start_host, self.end_host))
         for child in self.parent.children.all():
             if range_set & netaddr.IPSet([child.prefix]):
                 raise ValidationError(
-                    {"__all__": (f"IP Range overlaps with child Prefix '{child.prefix}' of the assigned parent Prefix")}
+                    {
+                        "__all__": (
+                            f"IP Address Range overlaps with child Prefix '{child.prefix}' of the assigned parent Prefix"
+                        )
+                    }
                 )
 
     def save(self, *args, **kwargs):

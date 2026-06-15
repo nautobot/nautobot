@@ -59,10 +59,10 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.ipam.choices import (
+    IPAddressRangeRoleChoices,
     IPAddressRoleChoices,
     IPAddressTypeChoices,
     IPAddressVersionChoices,
-    IPRangeRoleChoices,
     PrefixTypeChoices,
     ServiceProtocolChoices,
 )
@@ -84,10 +84,10 @@ __all__ = (
     "DeviceFaceChoices",
     "DeviceRedundancyGroupFailoverStrategyChoices",
     "DynamicGroupOperatorChoices",
+    "IPAddressRangeRoleChoices",
     "IPAddressRoleChoices",
     "IPAddressTypeChoices",
     "IPAddressVersionChoices",
-    "IPRangeRoleChoices",
     "InterfaceDuplexChoices",
     "InterfaceModeChoices",
     "InterfaceRedundancyGroupProtocolChoices",

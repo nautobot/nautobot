@@ -103,11 +103,11 @@ class IPAddressTypeChoices(ChoiceSet):
 
 
 #
-# IPRange
+# IPAddressRange
 #
 
 
-class IPRangeStatusChoices(ChoiceSet):
+class IPAddressRangeStatusChoices(ChoiceSet):
     STATUS_ACTIVE = "active"
     STATUS_RESERVED = "reserved"
     STATUS_DEPRECATED = "deprecated"
@@ -119,20 +119,20 @@ class IPRangeStatusChoices(ChoiceSet):
     )
 
 
-class IPRangeRoleChoices(ChoiceSet):
-    """Default roles for IPRange objects."""
+class IPAddressRangeRoleChoices(ChoiceSet):
+    """Default roles for IPAddressRange objects."""
 
     ROLE_DHCP = "dhcp"
     ROLE_FIREWALL_OBJECT = "firewall-object"
     ROLE_NAT_POOL = "nat-pool"
-    ROLE_LB_POOL = "lb-pool"
+    ROLE_LOAD_BALANCER_POOL = "load-balancer-pool"
     ROLE_RESERVED = "reserved"
 
     CHOICES = (
         (ROLE_DHCP, "DHCP"),
         (ROLE_FIREWALL_OBJECT, "Firewall Object"),
         (ROLE_NAT_POOL, "NAT Pool"),
-        (ROLE_LB_POOL, "LB Pool"),
+        (ROLE_LOAD_BALANCER_POOL, "Load Balancer Pool"),
         (ROLE_RESERVED, "Reserved"),
     )
 

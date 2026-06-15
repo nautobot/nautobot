@@ -1,2 +1,2 @@
-Added documentation about new `IPRange` model.
+Added documentation about new `IPAddressRange` model.
 Updated `Prefix` and `IPAddress` documentation.
