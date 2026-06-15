@@ -1967,7 +1967,7 @@ class IPAddressRange(PrimaryModel):
 
     def _validate_no_child_prefix_overlap(self):
         """Must not overlap any child Prefix of the parent."""
-        range_set = netaddr.IPSet(netaddr.IPAddressRange(self.start_host, self.end_host))
+        range_set = netaddr.IPSet(netaddr.IPRange(self.start_host, self.end_host))
         for child in self.parent.children.all():
             if range_set & netaddr.IPSet([child.prefix]):
                 raise ValidationError(

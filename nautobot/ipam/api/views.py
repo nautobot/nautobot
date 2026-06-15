@@ -310,9 +310,9 @@ class PrefixViewSet(NautobotModelViewSet):
         available_ips = prefix.get_available_ips()
         # range_start and range_end are inclusive
         if range_start > default_first:
-            available_ips.remove(netaddr.IPAddressRange(default_first, range_start - 1))
+            available_ips.remove(netaddr.IPRange(default_first, range_start - 1))
         if range_end < default_last:
-            available_ips.remove(netaddr.IPAddressRange(range_end + 1, default_last))
+            available_ips.remove(netaddr.IPRange(range_end + 1, default_last))
 
         # Create the next available IP within the prefix
         if request.method == "POST":
