@@ -14,11 +14,11 @@ class TerminationTypeIconTestCase(TestCase):
         """Each registered model_name maps to its specific MDI icon class."""
         expected = {
             "interface": "mdi-ethernet",
-            "frontport": "mdi-arrow-right-bold-box",
-            "rearport": "mdi-arrow-left-bold-box",
+            "frontport": "mdi-arrow-right-bold-box-outline",
+            "rearport": "mdi-arrow-left-bold-box-outline",
             "consoleport": "mdi-console",
-            "consoleserverport": "mdi-console-network",
-            "powerport": "mdi-power-plug",
+            "consoleserverport": "mdi-console-network-outline",
+            "powerport": "mdi-power-plug-outline",
             "poweroutlet": "mdi-power-socket",
             "powerfeed": "mdi-flash",
             "circuittermination": "mdi-cable-data",
