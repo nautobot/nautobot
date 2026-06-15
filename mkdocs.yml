@@ -258,6 +258,7 @@ plugins:
         "models/extras/status.md": "user-guide/platform-functionality/status.md"
         "models/extras/team.md": "user-guide/core-data-model/extras/team.md"
         "models/ipam/ipaddress.md": "user-guide/core-data-model/ipam/ipaddress.md"
+        "models/ipam/ipaddressrange.md": "user-guide/core-data-model/ipam/ipaddressrange.md"
         "models/ipam/prefix.md": "user-guide/core-data-model/ipam/prefix.md"
         "models/ipam/rir.md": "user-guide/core-data-model/ipam/rir.md"
         "models/ipam/routetarget.md": "user-guide/core-data-model/ipam/routetarget.md"
@@ -505,6 +506,7 @@ nav:
               - Team: "user-guide/core-data-model/extras/team.md"
           - IPAM:
               - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
+              - IP Address Range: "user-guide/core-data-model/ipam/ipaddressrange.md"
               - Namespace: "user-guide/core-data-model/ipam/namespace.md"
               - Prefix: "user-guide/core-data-model/ipam/prefix.md"
               - RIR: "user-guide/core-data-model/ipam/rir.md"
