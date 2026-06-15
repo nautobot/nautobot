@@ -5346,7 +5346,7 @@ class JobTestCase(
             self.assertHttpStatus(response, 200, msg=run_url)
             content = response.content.decode(response.charset)
             self.assertIn("id__schedule_type", content, msg=run_url)
-            self.assertIn("Job Schedule Type", content, msg=run_url)
+            self.assertIn("Schedule name", content, msg=run_url)
 
             # A raw enable_scheduling POST value with no registered button must NOT render the schedule form.
             response = self.client.post(
