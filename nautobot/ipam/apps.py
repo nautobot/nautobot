@@ -7,7 +7,7 @@ class IPAMConfig(NautobotConfig):
     verbose_name = "IPAM"
     searchable_models = [
         "ipaddress",
-        "iprange",
+        "ipaddressrange",
         "namespace",
         "prefix",
         "service",
