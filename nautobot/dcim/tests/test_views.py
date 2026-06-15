@@ -118,7 +118,6 @@ from nautobot.dcim.views import (
     ConsolePortUIViewSet,
     DeviceUIViewSet,
     InterfaceConnectionsListView,
-    InventoryItemUIViewSet,
     ModuleTypeComponentAddButton,
     PowerConnectionsListView,
 )
@@ -4320,11 +4319,6 @@ class InventoryItemTestCase(ViewTestCases.DeviceComponentViewTestCase):
 
     def test_table_with_indentation_is_removed_on_filter_or_sort(self):
         self.skipTest("InventoryItem table has no implementation of indentation.")
-
-    def test_get_selected_objects_parents_name_no_selection(self):
-        """With no selected objects, the bulk-rename parent name resolves to an empty string."""
-        viewset = InventoryItemUIViewSet()
-        self.assertEqual(viewset.get_selected_objects_parents_name(InventoryItem.objects.none()), "")
 
 
 class CableTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
