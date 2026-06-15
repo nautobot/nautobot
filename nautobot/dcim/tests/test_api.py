@@ -4395,6 +4395,22 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "secrets_group": None,
                 "virtual_ip": ips[1].pk,
             },
+            # Ensure protocol remains optional
+            {
+                "name": "Interface Redundancy Group 7",
+                "status": statuses[0].pk,
+                "protocol_group_id": "10",
+                "secrets_group": None,
+                "virtual_ip": None,
+            },
+            {
+                "name": "Interface Redundancy Group 8",
+                "protocol": "",
+                "status": statuses[1].pk,
+                "protocol_group_id": "11",
+                "secrets_group": None,
+                "virtual_ip": None,
+            },
         ]
         cls.bulk_update_data = {
             "protocol": "carp",
