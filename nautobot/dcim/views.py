@@ -2452,36 +2452,20 @@ class PowerOutletTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class InterfaceTemplateCreateView(generic.ComponentCreateView):
+class InterfaceTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.InterfaceTemplateBulkEditForm
+    filterset_class = filters.InterfaceTemplateFilterSet
+    form_class = forms.InterfaceTemplateForm
+    serializer_class = serializers.InterfaceTemplateSerializer
+    table_class = tables.InterfaceTemplateTable
     queryset = InterfaceTemplate.objects.all()
-    form = forms.InterfaceTemplateCreateForm
-    model_form = forms.InterfaceTemplateForm
-
-
-class InterfaceTemplateEditView(generic.ObjectEditView):
-    queryset = InterfaceTemplate.objects.all()
-    model_form = forms.InterfaceTemplateForm
-
-
-class InterfaceTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = InterfaceTemplate.objects.all()
-
-
-class InterfaceTemplateBulkEditView(generic.BulkEditView):
-    queryset = InterfaceTemplate.objects.all()
-    table = tables.InterfaceTemplateTable
-    form = forms.InterfaceTemplateBulkEditForm
-    filterset = filters.InterfaceTemplateFilterSet
-
-
-class InterfaceTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = InterfaceTemplate.objects.all()
-
-
-class InterfaceTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = InterfaceTemplate.objects.all()
-    table = tables.InterfaceTemplateTable
-    filterset = filters.InterfaceTemplateFilterSet
+    create_form_class = forms.InterfaceTemplateCreateForm
 
 
 #

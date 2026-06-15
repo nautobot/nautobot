@@ -40,6 +40,7 @@ router.register("front-ports", views.FrontPortUIViewSet)
 router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("interface-templates", views.InterfaceTemplateUIViewSet)
 router.register("locations", views.LocationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
@@ -184,37 +185,6 @@ urlpatterns = [
         "power-outlet-templates/<uuid:pk>/delete/",
         views.PowerOutletTemplateDeleteView.as_view(),
         name="poweroutlettemplate_delete",
-    ),
-    # Interface templates
-    path(
-        "interface-templates/add/",
-        views.InterfaceTemplateCreateView.as_view(),
-        name="interfacetemplate_add",
-    ),
-    path(
-        "interface-templates/edit/",
-        views.InterfaceTemplateBulkEditView.as_view(),
-        name="interfacetemplate_bulk_edit",
-    ),
-    path(
-        "interface-templates/rename/",
-        views.InterfaceTemplateBulkRenameView.as_view(),
-        name="interfacetemplate_bulk_rename",
-    ),
-    path(
-        "interface-templates/delete/",
-        views.InterfaceTemplateBulkDeleteView.as_view(),
-        name="interfacetemplate_bulk_delete",
-    ),
-    path(
-        "interface-templates/<uuid:pk>/edit/",
-        views.InterfaceTemplateEditView.as_view(),
-        name="interfacetemplate_edit",
-    ),
-    path(
-        "interface-templates/<uuid:pk>/delete/",
-        views.InterfaceTemplateDeleteView.as_view(),
-        name="interfacetemplate_delete",
     ),
     # Rear port templates
     path(
