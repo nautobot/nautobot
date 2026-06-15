@@ -141,3 +141,11 @@ If a prefix's `type` is set to "Pool", Nautobot will treat this prefix as a rang
 * If the prefix `type` is "Network":
     * The utilization is calculated as the sum of the total address space of all child prefixes plus the total number of child IP addresses not covered by a child prefix.
     * For IPv4 networks larger than /31, if neither the first (network) or last (broadcast) address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
+
+### Pool Prefixes vs. IP Address Ranges
+
++++ 3.2.0
+    A "Pool" Prefix and an [IP Address Range](ipaddressrange.md) can both represent a span of addresses used as a unit, such as a DHCP scope or NAT pool, and their roles partially overlap. The key difference is alignment:
+
+    * A `Pool Prefix` is still a Prefix, so it must align to a CIDR boundary (for example `10.0.0.0/26`). Use a Pool when the span you want to represent happens to be a valid subnet and you want it tracked as part of the Prefix hierarchy.
+    * An `IP Address Range` is defined by an arbitrary start and end address (for example `10.0.0.50–10.0.0.200`) and does **not** need to align to a CIDR boundary. Use an IP Address Range when the span you want to represent is not a clean subnet.
