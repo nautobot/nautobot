@@ -3503,6 +3503,17 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         cls.selected_objects = interfaces
         cls.selected_objects_parent_name = device.name
 
+        # Regression test for #8970
+        interface_redundancy_group = InterfaceRedundancyGroup(
+            name="Interface Redundancy Group 1",
+            protocol=InterfaceRedundancyGroupProtocolChoices.HSRP,
+            status=Status.objects.get_for_model(InterfaceRedundancyGroup).first(),
+            protocol_group_id="1",
+        )
+        interface_redundancy_group.validated_save()
+        for priority, interface in enumerate(interfaces, start=1):
+            interface_redundancy_group.add_interface(interface, priority=priority * 10)
+
         vlan_status = Status.objects.get_for_model(VLAN).first()
         vlan_group = VLANGroup.objects.first()
         vlans = (
@@ -5012,6 +5023,9 @@ class InterfaceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             Interface.objects.create(device=device, name="Interface A2", status=intf_status),
             Interface.objects.create(device=device, name="Interface A3", status=intf_status, role=intf_role),
         )
+
+        # Regression test for #8970
+        cls.interface_redundancy_groups[0].add_interface(cls.interfaces[2], priority=100)
 
         cls.form_data = {
             "name": "IRG χ",
