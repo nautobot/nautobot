@@ -1,0 +1,1 @@
+Added the `IPAddressRange` model to represent a contiguous span of IP addresses within a parent Prefix, without creating individual IPAddress records for each address.
