@@ -4,20 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from djlint.lint import get_line
 import regex as re
 
-from djlint.helpers import (
-    inside_ignored_linter_block,
-    inside_ignored_rule,
-    overlaps_ignored_block,
-)
-from djlint.lint import get_line
-
 if TYPE_CHECKING:
-    from typing_extensions import Any
-
     from djlint.settings import Config
     from djlint.types import LintError
+    from typing_extensions import Any
 
 
 def run(
@@ -59,7 +52,7 @@ def run(
             closing_ol_match = re.search(r"</ol>", html[ol_start:], flags=re.IGNORECASE)
             if closing_ol_match:
                 ol_end_content = ol_start + closing_ol_match.start()
-                ol_content = html[ol_start : ol_end_content]
+                ol_content = html[ol_start:ol_end_content]
                 check_active_breadcrumb_items(ol_start, ol_content)
 
     # Check within {% block extra_breadcrumbs %}
@@ -90,7 +83,4 @@ def run(
         content_start_absolute = block_start + block_header_len
         check_active_breadcrumb_items(content_start_absolute, block_content)
 
-    return tuple(
-        error
-        for error in errors
-    )
+    return tuple(error for error in errors)
