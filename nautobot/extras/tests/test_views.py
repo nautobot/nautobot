@@ -2736,9 +2736,6 @@ class DynamicGroupTestCase(
         )
         self.assertInHTML(view_more_link, response_data)
 
-    @unittest.skip(
-        "DynamicGroup doesn't have console service port content type as first object for other this test doesn't work"
-    )
     def test_get_object_with_permission(self):
         location_ct = ContentType.objects.get_for_model(Location)
         instance = self._get_queryset().exclude(content_type=location_ct).first()
@@ -2773,9 +2770,6 @@ class DynamicGroupTestCase(
         for member in tree_model_dg.members:
             self.assertIn(str(member.pk), response_body)
 
-    @unittest.skip(
-        "DynamicGroup doesn't have console service port content type as first object for other this test doesn't work"
-    )
     def test_get_object_with_constrained_permission(self):
         instance = self._get_queryset().first()
         # Add view permission for one of the group's members but not the others:
@@ -2849,17 +2843,11 @@ class DynamicGroupTestCase(
         response = self.client.get(url)
         self.assertHttpStatus(response, 404)
 
-    @unittest.skip(
-        "DynamicGroup doesn't have console service port content type as first object for other this test doesn't work"
-    )
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
         self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
         super().test_edit_object_with_permission()
 
-    @unittest.skip(
-        "DynamicGroup doesn't have console service port content type as first object for other this test doesn't work"
-    )
     def test_edit_object_with_constrained_permission(self):
         instance = self._get_queryset().first()
         self.form_data["content_type"] = instance.content_type.pk  # Content-type is not editable after creation
