@@ -124,7 +124,7 @@ ROLE_COLOR_MAP = {
     "DHCP": ColorChoices.COLOR_BLUE,
     "Firewall Object": ColorChoices.COLOR_RED,
     "NAT Pool": ColorChoices.COLOR_ORANGE,
-    "LB Pool": ColorChoices.COLOR_GREEN,
+    "Load Balancer Pool": ColorChoices.COLOR_GREEN,
     "Reserved": ColorChoices.COLOR_GREY,
 }
 
@@ -141,7 +141,7 @@ ROLE_DESCRIPTION_MAP = {
     "DHCP": "IP Address Range used as a DHCP scope",
     "Firewall Object": "IP Address Range representing a firewall address object",
     "NAT Pool": "IP Address Range used as a NAT pool",
-    "LB Pool": "IP Address Range used as a load balancer pool",
+    "Load Balancer Pool": "IP Address Range used as a load balancer pool",
     "Reserved": "IP Address Range reserved for a specific purpose",
 }
 

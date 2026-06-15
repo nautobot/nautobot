@@ -1755,7 +1755,7 @@ class IPAddressRange(PrimaryModel):
         help_text="The parent Prefix of this IP Address Range. Auto-resolved from the start/end host.",
     )
     status = StatusField(blank=False, null=False)
-    role = RoleField(blank=True, null=True)  # starter choices: DHCP, Firewall Object, NAT Pool, LB Pool, Reserved
+    role = RoleField(blank=True, null=True)  # starter choices: DHCP, Firewall Object, NAT Pool, Load Balancer Pool, Reserved
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,

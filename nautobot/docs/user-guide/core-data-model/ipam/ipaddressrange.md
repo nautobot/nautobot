@@ -22,7 +22,7 @@ Unlike most Nautobot models, an IP Address Range `name` is **not** enforced to b
 
 ## Status and Role
 
-Each IP Address Range can be assigned an operational status and an optional functional role. The default statuses available are the same as those available for IP Addresses. Roles are used to indicate the purpose of a range. A starter set of roles is provided (DHCP, Firewall Object, NAT Pool, LB Pool, and Reserved), and you may define additional roles as needed.
+Each IP Address Range can be assigned an operational status and an optional functional role. The default statuses available are the same as those available for IP Addresses. Roles are used to indicate the purpose of a range. A starter set of roles is provided (DHCP, Firewall Object, NAT Pool, Load Balancer Pool, and Reserved), and you may define additional roles as needed.
 
 ## Utilization
 
