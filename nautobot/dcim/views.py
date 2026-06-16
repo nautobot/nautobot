@@ -2496,36 +2496,20 @@ class FrontPortTemplateUIViewSet(
 #
 
 
-class RearPortTemplateCreateView(generic.ComponentCreateView):
+class RearPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.RearPortTemplateBulkEditForm
+    filterset_class = filters.RearPortTemplateFilterSet
+    form_class = forms.RearPortTemplateForm
+    serializer_class = serializers.RearPortTemplateSerializer
+    table_class = tables.RearPortTemplateTable
     queryset = RearPortTemplate.objects.all()
-    form = forms.RearPortTemplateCreateForm
-    model_form = forms.RearPortTemplateForm
-
-
-class RearPortTemplateEditView(generic.ObjectEditView):
-    queryset = RearPortTemplate.objects.all()
-    model_form = forms.RearPortTemplateForm
-
-
-class RearPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = RearPortTemplate.objects.all()
-
-
-class RearPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = RearPortTemplate.objects.all()
-    table = tables.RearPortTemplateTable
-    form = forms.RearPortTemplateBulkEditForm
-    filterset = filters.RearPortTemplateFilterSet
-
-
-class RearPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = RearPortTemplate.objects.all()
-
-
-class RearPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = RearPortTemplate.objects.all()
-    table = tables.RearPortTemplateTable
-    filterset = filters.RearPortTemplateFilterSet
+    create_form_class = forms.RearPortTemplateCreateForm
 
 
 #
