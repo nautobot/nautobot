@@ -84,6 +84,8 @@ from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
     get_all_network_driver_mappings,
+    get_connected_endpoint_panels,
+    get_connected_endpoint_tables,
     render_software_version_and_image_files,
     validate_cable_breakout_mapping,
 )
@@ -4562,6 +4564,12 @@ class ConsolePortUIViewSet(
     device_breadcrumb_url = "dcim:device_consoleports"
     module_breadcrumb_url = "dcim:module_consoleports"
 
+    def get_extra_context(self, request, instance):
+        return {
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
+            **super().get_extra_context(request, instance),
+        }
+
     def get_selected_objects_parents_name(self, selected_objects):
         selected_object = selected_objects.first()
         if selected_object:
@@ -4592,6 +4600,7 @@ class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
         return {
             "device_breadcrumb_url": self.device_breadcrumb_url,
             "module_breadcrumb_url": self.module_breadcrumb_url,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
             **super().get_extra_context(request, instance),
         }
 
@@ -4660,6 +4669,7 @@ class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
         return {
             "device_breadcrumb_url": self.device_breadcrumb_url,
             "module_breadcrumb_url": self.module_breadcrumb_url,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
             **super().get_extra_context(request, instance),
         }
 
@@ -4728,6 +4738,7 @@ class PowerOutletView(DeviceComponentPageMixin, generic.ObjectView):
         return {
             "device_breadcrumb_url": self.device_breadcrumb_url,
             "module_breadcrumb_url": self.module_breadcrumb_url,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
             **super().get_extra_context(request, instance),
         }
 
@@ -4842,6 +4853,7 @@ class InterfaceView(
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
             "virtual_device_contexts_table": virtual_device_contexts_table,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
             **super().get_extra_context(request, instance),
         }
 
@@ -6238,6 +6250,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 label="Connection",
                 context_data_key="connection_data",
             ),
+            *get_connected_endpoint_panels("powerfeed"),
         )
     )
 
@@ -6282,11 +6295,14 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         return "Connected Device", self._get_connected_device_html(instance)
 
     def _get_connected_device_html(self, instance):
-        endpoint = getattr(instance, "connected_endpoint", None)
-        if endpoint and endpoint.parent:
-            parent = helpers.hyperlinked_object(endpoint.parent)
-            return format_html("{} ({})", parent, endpoint)
-        return None
+        endpoints = [e for e in instance.get_connected_endpoints() if e is not None and e.parent]
+        if not endpoints:
+            return None
+        return format_html_join(
+            mark_safe("<br>"),
+            "{} ({})",
+            ((helpers.hyperlinked_object(endpoint.parent), endpoint) for endpoint in endpoints),
+        )
 
     def _get_utilization_data(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
@@ -6318,18 +6334,36 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 trace_url,
             )
 
-            endpoint = getattr(instance, "connected_endpoint", None)
+            endpoints = [e for e in instance.get_connected_endpoints() if e is not None]
             endpoint_data = {}
 
-            if endpoint:
+            if len(endpoints) == 1:
+                endpoint = endpoints[0]
                 endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
-                # Removed the unused 'path' variable
                 endpoint_data = {
                     "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
                     "Power Port": endpoint,
                     "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
                     "Description": endpoint.description,
                     "Path Status": self._get_path_status_html(instance),  # Render Path Status dynamically
+                }
+            elif len(endpoints) > 1:
+                # Multi-termination cable: list every connected power port rather than only the first.
+                endpoint_data = {
+                    "Power Ports": format_html_join(
+                        mark_safe("<br>"),
+                        "{} ({})",
+                        (
+                            (
+                                helpers.hyperlinked_object(
+                                    getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
+                                ),
+                                helpers.hyperlinked_object(endpoint),
+                            )
+                            for endpoint in endpoints
+                        ),
+                    ),
+                    "Path Status": self._get_path_status_html(instance),
                 }
 
             return {
