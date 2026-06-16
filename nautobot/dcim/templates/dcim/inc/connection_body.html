@@ -1,0 +1,88 @@
+{% comment %}
+Inner body of the "Connection" panel for a CableTermination. Renders the attached cable plus
+compact lists of *all* cable peers and *all* connected endpoints, so multi-termination ("breakout")
+cables are shown fully rather than only the first peer.
+
+Required context:
+  - `object`: the CableTermination being rendered (the old detail templates supply this directly;
+    the `ConnectionPanel` UI component overrides it to the relevant termination).
+  - `trace_url_name`: the trace view name for this termination type (e.g. 'dcim:interface_trace').
+
+Front/rear ports are not PathEndpoints, so `cable_paths` is empty and the "Connection" row is
+omitted for them. This fragment does NOT render its own `card`/`card-body` wrapper, so it composes
+cleanly inside both the old detail-view card (`dcim/inc/connection.html`) and the UI component
+framework panel body wrapper.
+{% endcomment %}
+{% load helpers %}
+{% load cables %}
+{% if object.cable %}
+    {% with is_breakout=object.cable.cable_type.is_breakout %}
+    {# Value columns span everything to the right of the label: +1 for the Connector column on breakout cables. #}
+        <table class="table table-hover attr-table">
+            <tr>
+                <td>Cable</td>
+                <td colspan="{% if is_breakout %}4{% else %}3{% endif %}">
+                    {{ object.cable|hyperlinked_object }}
+                    {% include 'dcim/inc/cable_actions.html' with trace_url_name=trace_url_name %}
+                </td>
+            </tr>
+            <tr>
+                <td>Cable Status</td>
+                <td colspan="{% if is_breakout %}4{% else %}3{% endif %}">{{ object.cable.status|hyperlinked_object_with_color }}</td>
+            </tr>
+            {% with peers=object.get_cable_peers paths=object.cable_paths.all %}
+                {% for peer in peers %}
+                    <tr>
+                        {% if forloop.first %}
+                            <td rowspan="{{ peers|length }}" class="align-top"{% if not paths %} style="border-bottom: none;"{% endif %}>Cable Peer{{ peers|length|pluralize }}</td>
+                        {% endif %}
+                        {% if is_breakout %}<td title="Cable connector" style="width: 1%; white-space: nowrap;">{{ peer.cable_termination.connector }}</td>{% endif %}
+                        <td>{{ peer.parent|hyperlinked_object }}</td>
+                        <td colspan="2">
+                            <span class="mdi {% termination_type_icon peer %}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                            {{ peer|hyperlinked_object }}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td>Cable Peer</td>
+                        <td colspan="{% if is_breakout %}4{% else %}3{% endif %}">{{ ""|placeholder }}</td>
+                    </tr>
+                {% endfor %}
+                {% for path in paths %}
+                    <tr>
+                        {% if forloop.first %}
+                            <td rowspan="{{ paths|length }}" class="align-top" style="border-bottom: none;">Endpoint{{ paths|length|pluralize }}</td>
+                        {% endif %}
+                        {% if is_breakout %}<td title="Cable connector" style="width: 1%; white-space: nowrap;">{{ path.peer_connector }}</td>{% endif %}
+                        {% if path.destination %}
+                            <td>{{ path.destination.parent|hyperlinked_object }}</td>
+                            <td>
+                                <span class="mdi {% termination_type_icon path.destination %}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                                {{ path.destination|hyperlinked_object }}
+                            </td>
+                            <td>
+                                {% if path.is_active %}
+                                    <span class="badge bg-success">Reachable</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Not Reachable</span>
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td>{{ ""|placeholder }}</td>
+                            <td>{{ ""|placeholder }}</td>
+                            <td>{{ ""|placeholder }}</td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            {% endwith %}
+        </table>
+    {% endwith %}
+{% else %}
+    <span class="text-secondary">
+        Not connected
+        {% if perms.dcim.add_cable %}
+            {% include 'dcim/inc/cable_add_button.html' with termination=object %}
+        {% endif %}
+    </span>
+{% endif %}
