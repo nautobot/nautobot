@@ -1,0 +1,4 @@
+Improved rendering of `terminations_a` and `terminations_b` columns in `CableTable`.
+Adjusted rendering of `cable_peer` and `connection` columns in cable termination tables.
+Standardized device component icons across various tables and menus.
+Updated styling of populated rows in device DeviceBay and ModuleBay tables.

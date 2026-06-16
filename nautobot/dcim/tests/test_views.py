@@ -5640,7 +5640,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
         )
         # Sanity check:
-        self.assertBodyContains(response, '<th class="orderable"><a href="?sort=name">Name</a></th>', html=True)
+        self.assertBodyContains(
+            response,
+            '<th class="asc orderable"><a href="?sort=-name">Name<span class="mdi mdi-arrow-up-thin"></a></th>',
+            html=True,
+        )
 
     def test_set_master_after_adding_member(self):
         """Ensure master can be set for a member that was added via the Add Member flow."""

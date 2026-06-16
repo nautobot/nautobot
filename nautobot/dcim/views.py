@@ -79,7 +79,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
-from nautobot.dcim.constants import TERMINATION_FK_FIELDS
+from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_FK_FIELDS
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
@@ -1646,63 +1646,63 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         weight=100,
                         link_name="dcim:devicetype_consoleporttemplate_add",
                         label="Console Ports",
-                        icon="mdi-console",
+                        icon=DEVICE_COMPONENT_ICONS["consoleporttemplate"],
                         required_permissions=["dcim.add_consoleporttemplate"],
                     ),
                     object_detail.Button(
                         weight=200,
                         link_name="dcim:devicetype_consoleserverporttemplate_add",
                         label="Console Server Ports",
-                        icon="mdi-console-network-outline",
+                        icon=DEVICE_COMPONENT_ICONS["consoleserverporttemplate"],
                         required_permissions=["dcim.add_consoleserverporttemplate"],
                     ),
                     object_detail.Button(
                         weight=300,
                         link_name="dcim:devicetype_powerporttemplate_add",
                         label="Power Ports",
-                        icon="mdi-power-plug-outline",
+                        icon=DEVICE_COMPONENT_ICONS["powerporttemplate"],
                         required_permissions=["dcim.add_powerporttemplate"],
                     ),
                     object_detail.Button(
                         weight=400,
                         link_name="dcim:devicetype_poweroutlettemplate_add",
                         label="Power Outlets",
-                        icon="mdi-power-socket",
+                        icon=DEVICE_COMPONENT_ICONS["poweroutlettemplate"],
                         required_permissions=["dcim.add_poweroutlettemplate"],
                     ),
                     object_detail.Button(
                         weight=500,
                         link_name="dcim:devicetype_interfacetemplate_add",
                         label="Interfaces",
-                        icon="mdi-ethernet",
+                        icon=DEVICE_COMPONENT_ICONS["interfacetemplate"],
                         required_permissions=["dcim.add_interfacetemplate"],
                     ),
                     object_detail.Button(
                         weight=600,
                         link_name="dcim:devicetype_frontporttemplate_add",
                         label="Front Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["frontporttemplate"],
                         required_permissions=["dcim.add_frontporttemplate"],
                     ),
                     object_detail.Button(
                         weight=700,
                         link_name="dcim:devicetype_rearporttemplate_add",
                         label="Rear Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["rearporttemplate"],
                         required_permissions=["dcim.add_rearporttemplate"],
                     ),
                     object_detail.Button(
                         weight=800,
                         link_name="dcim:devicetype_devicebaytemplate_add",
                         label="Device Bays",
-                        icon="mdi-circle-outline",
+                        icon=DEVICE_COMPONENT_ICONS["devicebaytemplate"],
                         required_permissions=["dcim.add_devicebaytemplate"],
                     ),
                     object_detail.Button(
                         weight=900,
                         link_name="dcim:devicetype_modulebaytemplate_add",
                         label="Module Bays",
-                        icon="mdi-tray",
+                        icon=DEVICE_COMPONENT_ICONS["modulebaytemplate"],
                         required_permissions=["dcim.add_modulebaytemplate"],
                     ),
                 ),
@@ -1952,7 +1952,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:consoleporttemplate_add",
                         tab="consoleports",
                         label="Console Ports",
-                        icon="mdi-console",
+                        icon=DEVICE_COMPONENT_ICONS["consoleporttemplate"],
                         required_permissions=["dcim.add_consoleporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1960,7 +1960,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:consoleserverporttemplate_add",
                         tab="consoleserverports",
                         label="Console Server Ports",
-                        icon="mdi-console-network-outline",
+                        icon=DEVICE_COMPONENT_ICONS["consoleserverporttemplate"],
                         required_permissions=["dcim.add_consoleserverporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1968,7 +1968,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:powerporttemplate_add",
                         tab="powerports",
                         label="Power Ports",
-                        icon="mdi-power-plug-outline",
+                        icon=DEVICE_COMPONENT_ICONS["powerporttemplate"],
                         required_permissions=["dcim.add_powerporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1976,7 +1976,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:poweroutlettemplate_add",
                         tab="poweroutlets",
                         label="Power Outlets",
-                        icon="mdi-power-socket",
+                        icon=DEVICE_COMPONENT_ICONS["poweroutlettemplate"],
                         required_permissions=["dcim.add_poweroutlettemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1984,7 +1984,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:interfacetemplate_add",
                         tab="interfaces",
                         label="Interfaces",
-                        icon="mdi-ethernet",
+                        icon=DEVICE_COMPONENT_ICONS["interfacetemplate"],
                         required_permissions=["dcim.add_interfacetemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1992,7 +1992,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:frontporttemplate_add",
                         tab="frontports",
                         label="Front Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["frontporttemplate"],
                         required_permissions=["dcim.add_frontporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -2000,7 +2000,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:rearporttemplate_add",
                         tab="rearports",
                         label="Rear Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["rearporttemplate"],
                         required_permissions=["dcim.add_rearporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -2008,7 +2008,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:modulebaytemplate_add",
                         tab="modulebays",
                         label="Module Bays",
-                        icon="mdi-tray",
+                        icon=DEVICE_COMPONENT_ICONS["modulebaytemplate"],
                         required_permissions=["dcim.add_modulebaytemplate"],
                     ),
                 ),
@@ -3148,70 +3148,70 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         weight=100,
                         link_name="dcim:device_consoleports_add",
                         label="Console Ports",
-                        icon="mdi-console",
+                        icon=DEVICE_COMPONENT_ICONS["consoleport"],
                         required_permissions=["dcim.add_consoleport"],
                     ),
                     object_detail.Button(
                         weight=200,
                         link_name="dcim:device_consoleserverports_add",
                         label="Console Server Ports",
-                        icon="mdi-console-network-outline",
+                        icon=DEVICE_COMPONENT_ICONS["consoleserverport"],
                         required_permissions=["dcim.add_consoleserverport"],
                     ),
                     object_detail.Button(
                         weight=300,
                         link_name="dcim:device_powerports_add",
                         label="Power Ports",
-                        icon="mdi-power-plug-outline",
+                        icon=DEVICE_COMPONENT_ICONS["powerport"],
                         required_permissions=["dcim.add_powerport"],
                     ),
                     object_detail.Button(
                         weight=400,
                         link_name="dcim:device_poweroutlets_add",
                         label="Power Outlets",
-                        icon="mdi-power-socket",
+                        icon=DEVICE_COMPONENT_ICONS["poweroutlet"],
                         required_permissions=["dcim.add_poweroutlet"],
                     ),
                     object_detail.Button(
                         weight=500,
                         link_name="dcim:device_interfaces_add",
                         label="Interfaces",
-                        icon="mdi-ethernet",
+                        icon=DEVICE_COMPONENT_ICONS["interface"],
                         required_permissions=["dcim.add_interface"],
                     ),
                     object_detail.Button(
                         weight=600,
                         link_name="dcim:device_frontports_add",
                         label="Front Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["frontport"],
                         required_permissions=["dcim.add_frontport"],
                     ),
                     object_detail.Button(
                         weight=700,
                         link_name="dcim:device_rearports_add",
                         label="Rear Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["rearport"],
                         required_permissions=["dcim.add_rearport"],
                     ),
                     object_detail.Button(
                         weight=800,
                         link_name="dcim:device_devicebays_add",
                         label="Device Bays",
-                        icon="mdi-circle-outline",
+                        icon=DEVICE_COMPONENT_ICONS["devicebay"],
                         required_permissions=["dcim.add_devicebay"],
                     ),
                     object_detail.Button(
                         weight=900,
                         link_name="dcim:device_modulebays_add",
                         label="Module Bays",
-                        icon="mdi-tray",
+                        icon=DEVICE_COMPONENT_ICONS["modulebay"],
                         required_permissions=["dcim.add_modulebay"],
                     ),
                     object_detail.Button(
                         weight=1000,
                         link_name="dcim:device_inventoryitems_add",
                         label="Inventory Items",
-                        icon="mdi-invoice-list-outline",
+                        icon=DEVICE_COMPONENT_ICONS["inventoryitem"],
                         required_permissions=["dcim.add_inventoryitem"],
                     ),
                 ),
@@ -5634,7 +5634,7 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.prefetch_related(
+    queryset = Cable.objects.select_related("cable_type").prefetch_related(
         Prefetch(
             "terminations",
             # `select_related`-ing the per-type FK columns lets the table's `terminations_a` /
