@@ -8,6 +8,7 @@ from nautobot.core.tables import (
     TagColumn,
     ToggleColumn,
 )
+from nautobot.dcim.tables.devices import PathEndpointTable
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
@@ -164,16 +165,13 @@ class CircuitTable(StatusTableMixin, BaseTable):
 #
 
 
-class CircuitTerminationTable(BaseTable):
+class CircuitTerminationTable(PathEndpointTable):
     pk = ToggleColumn()
     circuit = tables.Column(linkify=True)
     term_side = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     provider_network = tables.Column(linkify=True)
     cloud_network = tables.Column(linkify=True)
-    # `cable` is a property on CableTermination subclasses (resolved via the cable_termination
-    # join row), not a real model field, so the column is not DB-orderable.
-    cable = tables.Column(linkify=True, orderable=False)
 
     class Meta(BaseTable.Meta):
         model = CircuitTermination
@@ -185,6 +183,8 @@ class CircuitTerminationTable(BaseTable):
             "provider_network",
             "cloud_network",
             "cable",
+            "cable_peer",
+            "connection",
             "port_speed",
             "upstream_speed",
             "xconnect_id",
