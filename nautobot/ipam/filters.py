@@ -32,6 +32,7 @@ from nautobot.vpn.models import VPNTunnelEndpoint
 
 from .models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -666,6 +667,78 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
     class Meta:
         model = IPAddressToInterface
         fields = "__all__"
+
+
+#
+# IP Address Range
+#
+
+
+class IPAddressRangeFilterSet(
+    NautobotFilterSet,
+    TenancyModelFilterSetMixin,
+    StatusModelFilterSetMixin,
+    RoleModelFilterSetMixin,
+):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+        },
+    )
+    parent = PrefixFilter()
+    namespace = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Namespace.objects.all(),
+        field_name="parent__namespace",
+        to_field_name="name",
+        label="Namespace (name or ID)",
+    )
+    start_address = MultiValueCharFilter(
+        method="filter_start_address",
+        label="Start address (exact)",
+    )
+    end_address = MultiValueCharFilter(
+        method="filter_end_address",
+        label="End address (exact)",
+    )
+    contains = MultiValueCharFilter(
+        method="filter_contains",
+        label="IP Address Ranges which contain this IP address",
+    )
+
+    class Meta:
+        model = IPAddressRange
+        fields = ["id", "name", "ip_version", "count_as_utilized", "is_exclusive"]
+
+    @staticmethod
+    def _hosts_to_bytes(values):
+        """Convert address strings to their binary host representation (mask, if any, is ignored)."""
+        return [bytes(netaddr.IPNetwork(val).ip) for val in values]
+
+    def filter_start_address(self, queryset, name, value):
+        try:
+            return queryset.filter(start_host__in=self._hosts_to_bytes(value))
+        except (netaddr.AddrFormatError, ValueError):
+            return queryset.none()
+
+    def filter_end_address(self, queryset, name, value):
+        try:
+            return queryset.filter(end_host__in=self._hosts_to_bytes(value))
+        except (netaddr.AddrFormatError, ValueError):
+            return queryset.none()
+
+    def filter_contains(self, queryset, name, value):
+        """Find ranges whose span (start_host..end_host) includes the given address(es)."""
+        query = Q()
+        try:
+            for val in value:
+                host = bytes(netaddr.IPNetwork(val).ip)
+                query |= Q(start_host__lte=host, end_host__gte=host)
+        except (netaddr.AddrFormatError, ValueError):
+            return queryset.none()
+        if not query:
+            return queryset.none()
+        return queryset.filter(query)
 
 
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):

@@ -795,7 +795,7 @@ class Prefix(PrimaryModel):
 
         if self._networking_values_changed:
             # Prefix edit must not push any contained IPAddressRange outside the new span.
-            orphaned_ranges = self.ip_ranges.exclude(
+            orphaned_ranges = self.ip_address_ranges.exclude(
                 ip_version=self.ip_version,
                 start_host__gte=self.network,
                 end_host__lte=self.broadcast,
@@ -1750,7 +1750,7 @@ class IPAddressRange(PrimaryModel):
         "ipam.Prefix",
         blank=True,
         null=False,
-        related_name="ip_ranges",
+        related_name="ip_address_ranges",
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IP Address Range. Auto-resolved from the start/end host.",
     )
@@ -1761,7 +1761,7 @@ class IPAddressRange(PrimaryModel):
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="ip_ranges",
+        related_name="ip_address_ranges",
         blank=True,
         null=True,
     )

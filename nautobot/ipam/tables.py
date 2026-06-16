@@ -23,6 +23,7 @@ from nautobot.virtualization.tables import VMInterfaceTable
 
 from .models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -640,6 +641,55 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
             "description",
         )
         orderable = False
+
+
+#
+# IPAddressRange
+#
+
+
+class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    start_address = tables.Column(linkify=True)
+    end_address = tables.Column(linkify=True)
+    parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
+    tenant = TenantColumn()
+    count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")
+    is_exclusive = BooleanColumn(verbose_name="Exclusive")
+    tags = TagColumn(url_name="ipam:ipaddressrange_list")
+    actions = ButtonsColumn(IPAddressRange)
+
+    class Meta(BaseTable.Meta):
+        model = IPAddressRange
+        fields = (
+            "pk",
+            "name",
+            "start_address",
+            "end_address",
+            "parent",
+            "ip_version",
+            "status",
+            "role",
+            "tenant",
+            "count_as_utilized",
+            "is_exclusive",
+            "description",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "start_address",
+            "end_address",
+            "parent",
+            "status",
+            "role",
+            "tenant",
+            "description",
+            "actions",
+        )
 
 
 class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
