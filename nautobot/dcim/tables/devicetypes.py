@@ -24,6 +24,7 @@ from nautobot.dcim.models import (
     PowerPortTemplate,
     RearPortTemplate,
 )
+from nautobot.dcim.tables.template_code import DeviceComponentNameColumn
 
 __all__ = (
     "ConsolePortTemplateTable",
@@ -199,6 +200,7 @@ class ComponentTemplateTable(BaseTable):
 
 
 class ConsolePortTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="consoleporttemplate")
     actions = ButtonsColumn(
         model=ConsolePortTemplate,
         buttons=("edit", "delete"),
@@ -212,6 +214,7 @@ class ConsolePortTemplateTable(ComponentTemplateTable):
 
 
 class ConsoleServerPortTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="consoleserverporttemplate")
     actions = ButtonsColumn(
         model=ConsoleServerPortTemplate,
         buttons=("edit", "delete"),
@@ -225,6 +228,7 @@ class ConsoleServerPortTemplateTable(ComponentTemplateTable):
 
 
 class PowerPortTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="powerporttemplate")
     actions = ButtonsColumn(
         model=PowerPortTemplate,
         buttons=("edit", "delete"),
@@ -248,6 +252,7 @@ class PowerPortTemplateTable(ComponentTemplateTable):
 
 
 class PowerOutletTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="poweroutlettemplate")
     actions = ButtonsColumn(
         model=PowerOutletTemplate,
         buttons=("edit", "delete"),
@@ -270,6 +275,7 @@ class PowerOutletTemplateTable(ComponentTemplateTable):
 
 
 class InterfaceTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="interfacetemplate")
     mgmt_only = BooleanColumn(verbose_name="Management Only")
     speed = tables.Column(verbose_name="Speed", accessor="speed")
     duplex = tables.Column(verbose_name="Duplex", accessor="duplex")
@@ -290,6 +296,7 @@ class InterfaceTemplateTable(ComponentTemplateTable):
 
 
 class FrontPortTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="frontporttemplate")
     rear_port_position = tables.Column(verbose_name="Position")
     actions = ButtonsColumn(
         model=FrontPortTemplate,
@@ -313,6 +320,7 @@ class FrontPortTemplateTable(ComponentTemplateTable):
 
 
 class RearPortTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="rearporttemplate")
     actions = ButtonsColumn(
         model=RearPortTemplate,
         buttons=("edit", "delete"),
@@ -326,6 +334,7 @@ class RearPortTemplateTable(ComponentTemplateTable):
 
 
 class DeviceBayTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="devicebaytemplate")
     actions = ButtonsColumn(
         model=DeviceBayTemplate,
         buttons=("edit", "delete"),
@@ -339,6 +348,7 @@ class DeviceBayTemplateTable(ComponentTemplateTable):
 
 
 class ModuleBayTemplateTable(ComponentTemplateTable):
+    name = DeviceComponentNameColumn(modelname="modulebaytemplate")
     actions = ButtonsColumn(
         model=ModuleBayTemplate,
         buttons=("edit", "delete"),

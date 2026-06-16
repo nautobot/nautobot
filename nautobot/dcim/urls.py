@@ -56,6 +56,7 @@ router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-chassis", views.VirtualChassisUIViewSet)
@@ -154,37 +155,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Rear port templates
-    path(
-        "rear-port-templates/add/",
-        views.RearPortTemplateCreateView.as_view(),
-        name="rearporttemplate_add",
-    ),
-    path(
-        "rear-port-templates/edit/",
-        views.RearPortTemplateBulkEditView.as_view(),
-        name="rearporttemplate_bulk_edit",
-    ),
-    path(
-        "rear-port-templates/rename/",
-        views.RearPortTemplateBulkRenameView.as_view(),
-        name="rearporttemplate_bulk_rename",
-    ),
-    path(
-        "rear-port-templates/delete/",
-        views.RearPortTemplateBulkDeleteView.as_view(),
-        name="rearporttemplate_bulk_delete",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/edit/",
-        views.RearPortTemplateEditView.as_view(),
-        name="rearporttemplate_edit",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/delete/",
-        views.RearPortTemplateDeleteView.as_view(),
-        name="rearporttemplate_delete",
     ),
     # Device bay templates
     path(
