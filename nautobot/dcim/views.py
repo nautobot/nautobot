@@ -2233,10 +2233,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         )
 
     def get_selected_objects_parents_name(self, selected_objects):
-        """Return the display name of the virtual_machine/device_type/module_type that owns the selected components or templates."""
+        """Return the display name of the device/device_type/module/module_type/virtual_machine that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent_attrs = ("virtual_machine", "device_type", "module_type")
+            parent_attrs = ("device", "device_type", "module", "module_type", "virtual_machine")
             for attr in parent_attrs:
                 parent = getattr(selected_object, attr, None)
                 if parent:

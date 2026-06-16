@@ -319,7 +319,6 @@ class VMInterfaceUIViewSet(
     ComponentCreateViewMixin,
     ObjectListViewMixin,
     ObjectDetailViewMixin,
-    ObjectEditViewMixin,
     ObjectDestroyViewMixin,
     ObjectBulkDestroyViewMixin,
     ObjectBulkUpdateViewMixin,
