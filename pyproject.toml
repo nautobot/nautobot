@@ -116,7 +116,7 @@ dependencies = [
     # Enhanced version of Python's built-in `re` module
     "regex (>=2026.5.9)",
     # Social authentication/registration with support for many auth providers
-    "social-auth-app-django (>=5.7.0,<5.8)",
+    "social-auth-app-django (>=5.9.0,<5.10)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
     # Enhanced HTTP client library
@@ -129,7 +129,7 @@ all = [
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.8,<2.3)",
     "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.8.7,<4.9)",
+    "social-auth-core[saml] (>=4.9.1,<4.10)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
@@ -142,7 +142,7 @@ remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.8.7,<4.9)" ]
+sso = [ "social-auth-core[saml] (>=4.9.1,<4.10)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
