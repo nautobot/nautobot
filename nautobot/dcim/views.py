@@ -4679,7 +4679,6 @@ class PowerPortUIViewSet(
         }
 
 
-
 #
 # Power outlets
 #
