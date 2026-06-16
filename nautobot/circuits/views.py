@@ -14,14 +14,15 @@ from nautobot.core.ui.breadcrumbs import (
 )
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.object_detail import (
+    ConnectionPanel,
     ObjectDetailContent,
     ObjectFieldsPanel,
     ObjectsTablePanel,
 )
 from nautobot.core.ui.utils import render_component_template
 from nautobot.core.views import generic
-from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.dcim.utils import get_connected_endpoint_panels
 
 from . import filters, forms, tables
 from .api import serializers
@@ -72,16 +73,6 @@ class CircuitTerminationObjectFieldsPanel(ObjectFieldsPanel):
         return super().render_key(key, value, context)
 
     def render_value(self, key, value, context):
-        instance = get_obj_from_context(context, self.context_object_key)
-        location = getattr(instance, "location", None)
-
-        # Cable column is hidden if the location is unset
-        if not location and key == "cable":
-            return None
-
-        if location and key == "cable":
-            return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
-
         if key == "connected_endpoint":
             ip_addresses = getattr(value, "ip_addresses", None)
             if not ip_addresses or not ip_addresses.exists():
@@ -123,10 +114,10 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=[
+                    "circuit",
                     "location",
                     "provider_network",
                     "cloud_network",
-                    "cable",
                     "port_speed",
                     "connected_endpoint",
                     "xconnect_id",
@@ -140,6 +131,13 @@ class CircuitTerminationUIViewSet(NautobotUIViewSet):
                     "port_speed",
                 ],
             ),
+            ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="circuits:circuittermination_trace",
+                require_location=True,
+            ),
+            *get_connected_endpoint_panels("circuittermination"),
         )
     )
 
@@ -205,7 +203,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
             super().__init__(
                 fields=(
                     "location",  # TODO: render location hierarchy
-                    "cable",
                     "provider_network",
                     "cloud_network",
                     "port_speed",
@@ -272,16 +269,6 @@ class CircuitUIViewSet(NautobotUIViewSet):
             return super().render_key(key, value, context)
 
         def render_value(self, key, value, context):
-            """
-            Add custom rendering of connected cables.
-
-            TODO: this might make sense to move into the base class to handle Cable objects in general?
-            """
-            if key == "cable":
-                if not context["termination"].location:
-                    return ""
-                return render_component_template("circuits/inc/circuit_termination_cable_fragment.html", context)
-
             if key == "port_speed":
                 return render_component_template("circuits/inc/circuit_termination_speed_fragment.html", context)
 
@@ -316,12 +303,28 @@ class CircuitUIViewSet(NautobotUIViewSet):
                 context_object_key="circuit_termination_a",
                 side=CircuitTerminationSideChoices.SIDE_A,
             ),
+            ConnectionPanel(
+                label="Connections - A Side",
+                section=SectionChoices.RIGHT_HALF,
+                weight=150,
+                context_object_key="circuit_termination_a",
+                trace_url_name="circuits:circuittermination_trace",
+                require_location=True,
+            ),
             CircuitTerminationPanel(
                 label="Termination - Z Side",
                 section=SectionChoices.RIGHT_HALF,
                 weight=200,
                 context_object_key="circuit_termination_z",
                 side=CircuitTerminationSideChoices.SIDE_Z,
+            ),
+            ConnectionPanel(
+                label="Connections - Z Side",
+                section=SectionChoices.RIGHT_HALF,
+                weight=250,
+                context_object_key="circuit_termination_z",
+                trace_url_name="circuits:circuittermination_trace",
+                require_location=True,
             ),
         ),
     )

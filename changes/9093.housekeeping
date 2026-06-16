@@ -1,0 +1,2 @@
+Consolidated most icon-selection logic for device component rendering in tables and menus.
+Changed `termination_type_icon` template-tag method from a tag to a filter for simpler usage.
