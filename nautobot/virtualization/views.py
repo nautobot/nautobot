@@ -17,7 +17,6 @@ from nautobot.core.views.mixins import (
     ObjectChangeLogViewMixin,
     ObjectDestroyViewMixin,
     ObjectDetailViewMixin,
-    ObjectEditViewMixin,
     ObjectListViewMixin,
     ObjectNotesViewMixin,
 )
