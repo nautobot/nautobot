@@ -7,7 +7,8 @@ from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Prefetch, Sum
+from django.db.models import Case, F, GeneratedField, Prefetch, Sum, Value, When
+from django.db.models.functions import Cast, Coalesce, Concat
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -127,6 +128,35 @@ class ModularComponentModel(ComponentModel):
         null=True,
     )
 
+    _device_name_key = GeneratedField(
+        expression=Concat(
+            Coalesce(Cast("device_id", output_field=models.CharField()), Value("")),
+            Value("||"),
+            F("name"),
+            output_field=models.CharField(),
+        ),
+        output_field=models.CharField(),
+        db_persist=True,  # must be True to be indexable
+    )
+
+    _module_name_key = GeneratedField(
+        expression=Case(
+            When(
+                module_id__isnull=False,
+                then=Concat(
+                    Cast("module_id", output_field=models.CharField()),
+                    Value("||"),
+                    F("name"),
+                    output_field=models.CharField(),
+                ),
+            ),
+            default=Cast("id", output_field=models.CharField()),  # unique fallback
+            output_field=models.CharField(),
+        ),
+        output_field=models.CharField(),
+        db_persist=True,
+    )
+
     natural_key_field_names = ["device", "module", "name"]
 
     class Meta:
@@ -135,9 +165,13 @@ class ModularComponentModel(ComponentModel):
         # TODO: custom clean method or devce / module / name constraint
         constraints = [
             models.UniqueConstraint(
-                fields=("device", "module", "name"),
-                name="%(app_label)s_%(class)s_device_model_name_unique",
-            )
+                fields=["_device_name_key"],
+                name="%(app_label)s_%(class)s_device_name_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["_module_name_key"],
+                name="%(app_label)s_%(class)s_module_name_unique",
+            ),
         ]
 
     @property
@@ -215,7 +249,7 @@ class ModularComponentModel(ComponentModel):
     def save(self, *args, **kwargs):
         if not self.present_in_database:
             if self.device is None and self.module is not None:
-                self.device = self.module.parent_module_bay.parent_device
+                self.device = getattr(self.module.parent_module_bay, "parent_devie", None)
 
         super().save(*args, **kwargs)
 

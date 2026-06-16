@@ -2151,9 +2151,6 @@ class Module(PrimaryModel):
             self._cascade_device_to_descendants()
 
     def _cascade_device_to_descendants(self, level=0):
-        # Resolve the new root device — None if this module is now a spare at a Location
-        new_device = self.parent_module_bay.parent_device if self.parent_module_bay is not None else None
-
         # Update all ModularComponentModel subclasses directly owned by this module
         component_classes = [
             ConsolePort,
@@ -2165,10 +2162,10 @@ class Module(PrimaryModel):
             RearPort,
         ]
         for component_class in component_classes:
-            component_class.objects.filter(module=self).update(device=new_device)
+            component_class.objects.filter(module=self).update(device=self.device)
 
         # Update module bay siblings
-        ModuleBay.objects.filter(parent_module=self).update(parent_device=new_device)
+        ModuleBay.objects.filter(parent_module=self).update(parent_device=self.device)
 
         # Recurse into child Modules via get_children() so their descendants
         # are also updated
@@ -2192,8 +2189,7 @@ class Module(PrimaryModel):
         ]
         instantiated_components = []
         for model, templates in component_models:
-            device = self.parent_module_bay.parent_device if self.parent_module_bay else None
-            model.objects.bulk_create([x.instantiate(device=device, module=self) for x in templates])
+            model.objects.bulk_create([x.instantiate(device=self.device, module=self) for x in templates])
         return instantiated_components
 
     create_components.alters_data = True
