@@ -10,6 +10,7 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
+    IPAddressRangeAddressFieldsMixin,
     NumericArrayField,
     PrefixFieldMixin,
     ReturnURLForm,
@@ -34,7 +35,6 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
-from nautobot.ipam.formfields import IPAddressFormField
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -507,8 +507,24 @@ class PrefixFilterForm(
 #
 
 
-class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
+class NamespaceFormMixin(forms.ModelForm):
+    """
+    Adds a `namespace` form field (which is not a model field) and pushes its value onto the
+    instance on clean, clearing `parent` so the model re-resolves it from namespace + host(s).
+
+    Shared by IPAddress- and IPAddressRange-style forms, where `parent` is auto-derived rather
+    than entered directly.
+    """
+
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), label="Namespace")
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+        if instance is not None and instance.present_in_database and instance.parent_id is not None:
+            initial.setdefault("namespace", instance.parent.namespace)
+        kwargs["initial"] = initial
+        super().__init__(*args, **kwargs)
 
     def clean_namespace(self):
         """
@@ -524,6 +540,10 @@ class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
         # This prevents the model from revalidating the 'parent', which could raise a validation error when the current
         # parent differs from the parent derived from the new `namespace`.
         self.instance.parent = None
+
+
+class IPAddressFormMixin(NamespaceFormMixin, NautobotModelForm, TenancyForm, AddressFieldMixin):
+    """Combines namespace handling, model/tenancy form behavior, and the single `address` field."""
 
 
 class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
@@ -633,10 +653,6 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
-
-            # Always populate the namespace from the parent.
-            if instance.present_in_database:
-                initial["namespace"] = instance.parent.namespace
 
         kwargs["initial"] = initial
 
@@ -757,15 +773,7 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 #
 
 
-class IPAddressRangeForm(NautobotModelForm, TenancyForm):
-    namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), label="Namespace")
-    start_address = IPAddressFormField(
-        help_text="First IP address in the range (inclusive, without mask)",
-    )
-    end_address = IPAddressFormField(
-        help_text="Last IP address in the range (inclusive, without mask)",
-    )
-
+class IPAddressRangeForm(NamespaceFormMixin, IPAddressRangeAddressFieldsMixin, NautobotModelForm, TenancyForm):
     class Meta:
         model = IPAddressRange
         fields = [
@@ -783,47 +791,11 @@ class IPAddressRangeForm(NautobotModelForm, TenancyForm):
             "tags",
         ]
 
-    def clean_namespace(self):
-        """
-        Explicitly set the Namespace on the instance so it will be used on save.
-
-        While the model does this itself on create, the model form is creating a bare instance first
-        and setting attributes individually based on the form field values. Since namespace isn't an
-        actual model field, it gets ignored by default.
-        """
-        namespace = self.cleaned_data.pop("namespace")
-        setattr(self.instance, "_namespace", namespace)
-        # 'parent' is always derived from 'namespace' + start/end host, so we clear it here to prevent
-        # the model from revalidating a stale parent (which could raise if the old parent differs from
-        # the one derived from the new namespace).
-        self.instance.parent = None
-
-    def clean(self):
-        # Pass start/end address to the instance, required to be accessible in IPAddressRange.clean()
-        self.instance.start_address = self.cleaned_data.get("start_address")
-        self.instance.end_address = self.cleaned_data.get("end_address")
-        super().clean()
-
     def _get_validation_exclusions(self):
-        """
-        By default Django excludes non-form-field model fields from validation. We need start_host/end_host
-        and parent included so model-level validation (overlap, parent resolution) runs correctly.
-        """
         exclude = super()._get_validation_exclusions()
         for field in ("start_host", "end_host", "parent"):
             exclude.remove(field)
         return exclude
-
-    def __init__(self, *args, **kwargs):
-        instance = kwargs.get("instance")
-        initial = kwargs.get("initial", {}).copy()
-
-        # Always populate the namespace from the parent on edit (mirrors IPAddressForm).
-        if instance and instance.present_in_database and instance.parent_id is not None:
-            initial["namespace"] = instance.parent.namespace
-
-        kwargs["initial"] = initial
-        super().__init__(*args, **kwargs)
 
 
 class IPAddressRangeBulkEditForm(
