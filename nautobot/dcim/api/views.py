@@ -77,6 +77,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.extras.api.object_locks import ObjectLockableModelViewSetMixin
 from nautobot.extras.api.views import (
     ConfigContextQuerySetMixin,
     CustomFieldModelViewSet,
@@ -304,7 +305,7 @@ class RackReservationViewSet(NautobotModelViewSet):
 #
 
 
-class ManufacturerViewSet(NautobotModelViewSet):
+class ManufacturerViewSet(ObjectLockableModelViewSetMixin, NautobotModelViewSet):
     queryset = Manufacturer.objects.annotate(
         cloud_account_count=count_related(CloudAccount, "provider"),
         device_type_count=count_related(DeviceType, "manufacturer"),

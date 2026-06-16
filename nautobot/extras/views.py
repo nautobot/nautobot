@@ -6,8 +6,9 @@ from urllib.parse import parse_qs
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
@@ -23,6 +24,7 @@ from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
+from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema import SchemaError
 from jsonschema.validators import Draft7Validator
@@ -35,6 +37,7 @@ from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.models import BaseModel
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.templatetags import helpers
@@ -156,6 +159,7 @@ from .models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectLock,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -1603,6 +1607,7 @@ class CustomLinkUIViewSet(NautobotUIViewSet):
 
 
 class DynamicGroupUIViewSet(NautobotUIViewSet):
+    base_template = None
     bulk_update_form_class = forms.DynamicGroupBulkEditForm
     filterset_class = filters.DynamicGroupFilterSet
     filterset_form_class = forms.DynamicGroupFilterForm
@@ -4011,6 +4016,85 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         return context
 
 
+class ObjectLockUIViewSet(
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+):
+    """Minimal management/recovery view for Object Locks.
+
+    Composes the individual UI view mixins (rather than subclassing ``NautobotUIViewSet``) so it
+    exposes only list/detail/destroy/changelog — locks are created via the API/manager, so no
+    create/edit (or notes/data-compliance) actions are offered. This mirrors ``ObjectChangeUIViewSet``.
+
+    Release (single or bulk) requires ``extras.delete_objectlock`` plus ownership of the claim;
+    releasing another source's claim requires ``extras.force_release_objectlock``. The bulk path
+    dispatches the generic ``BulkDeleteObjects`` system job (a queryset delete that does not re-check
+    ownership), so the same per-claim ownership rule is enforced here in ``check_permissions``.
+    """
+
+    queryset = ObjectLock.objects.select_related("content_type", "created_by").prefetch_related("locked_object")
+    serializer_class = serializers.ObjectLockSerializer
+    table_class = tables.ObjectLockTable
+    filterset_class = filters.ObjectLockFilterSet
+    filterset_form_class = forms.ObjectLockFilterForm
+    # Locks are not created/imported via the UI; only listed, viewed, exported, and released.
+    action_buttons = ("export",)
+
+    def check_permissions(self, request):
+        """Gate bulk release on delete-object-lock, plus force-release for any other-owned claim.
+
+        Mirrors the single-object rule in ``perform_destroy``: releasing your own claim needs
+        ``extras.delete_objectlock``; releasing another source's claim needs
+        ``extras.force_release_objectlock``. The bulk path dispatches the generic ``BulkDeleteObjects``
+        job (a queryset delete that does not re-check ownership), so the ownership rule is enforced here.
+
+        Args:
+            request: The DRF-wrapped request being dispatched.
+        """
+        if self.action == "bulk_destroy":
+            if not request.user.has_perm("extras.delete_objectlock"):
+                self.permission_denied(
+                    request, message="Bulk release of Object Locks requires the delete object lock permission."
+                )
+            # On confirm, require force-release if any selected claim is owned by another source (or none).
+            if "_confirm" in request.POST and not request.user.has_perm("extras.force_release_objectlock"):
+                selected = self.queryset.filter(pk__in=request.POST.getlist("pk"))
+                other_owned = bool(request.POST.get("_all")) or selected.exclude(created_by_id=request.user.pk).exists()
+                if other_owned:
+                    self.permission_denied(
+                        request,
+                        message="Releasing another source's lock in bulk requires force_release_objectlock.",
+                    )
+        super().check_permissions(request)
+
+    def perform_destroy(self, request, **kwargs):
+        """Release a single lock, enforcing own-claim vs force-release rules.
+
+        A user without ``extras.force_release_objectlock`` may only release a claim they created.
+        Releasing another source's claim is force-release and is logged.
+
+        Args:
+            request: The request performing the release.
+            **kwargs: Additional keyword arguments forwarded to the base destroy handler.
+
+        Returns:
+            The response produced by the base ``perform_destroy`` handler.
+
+        Raises:
+            PermissionDenied: If the user may not release another source's claim.
+        """
+        obj = self.get_object()
+        is_owner = obj.created_by_id == request.user.pk
+        if not is_owner and not request.user.has_perm("extras.force_release_objectlock"):
+            raise PermissionDenied("Releasing another source's lock requires force_release_objectlock.")
+        if not is_owner:
+            logger.warning("Object Lock force-released by user=%s lock=%s", request.user, obj.pk)
+        return super().perform_destroy(request, **kwargs)
+
+
 class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.
@@ -4776,3 +4860,193 @@ class WebhookUIViewSet(NautobotUIViewSet):
             ),
         ]
     )
+
+
+#
+# Object Lock bulk actions
+#
+
+
+class ObjectLockBulkActionView(PermissionRequiredMixin, View):
+    """Shared plumbing for the generic bulk lock/release confirmation views.
+
+    These views are model-agnostic: the target model is supplied at request time via the
+    ``content_type`` parameter, so they cannot rely on Nautobot's queryset-bound
+    ``ObjectPermissionRequiredMixin``. Django's ``PermissionRequiredMixin`` with
+    ``raise_exception = True`` is used so a logged-in user lacking the permission receives a 403
+    rather than being redirected to the login page.
+    """
+
+    template_name = "extras/objectlock_bulk_confirm.html"
+    mode = ""
+    # raise_exception=True => 403 (not a login redirect) for an authenticated user without the perm.
+    raise_exception = True
+
+    def _resolve_request(self, request):
+        """Resolve the target model, selected objects, and their lock state for this request.
+
+        ``content_type`` is read from POST *or* GET: a list view's bulk ``<form>`` only submits the
+        ``pk`` checkboxes, so a real button click supplies ``content_type`` via the button's
+        ``formaction`` query string (GET), while the unit test posts it in the body (POST).
+
+        Args:
+            request: The current ``HttpRequest``.
+
+        Returns:
+            A ``(content_type, model, pk_list, objects, lock_states)`` tuple, where ``lock_states``
+            maps ``object.pk`` -> ``LockState`` for the locked members only.
+        """
+        from nautobot.extras.object_lock_ui import lock_state_for_objects
+
+        ct_pk = (request.POST.get("content_type") or request.GET.get("content_type") or "").strip()
+        # A valid button always sends an integer pk; reject missing/garbage input (e.g. a tampered
+        # ``content_type=abc``) with a graceful 404 rather than letting a non-numeric pk reach the ORM
+        # and raise a ValueError -> HTTP 500.
+        if not ct_pk.isdigit():
+            raise Http404("Invalid content_type")
+        content_type = get_object_or_404(ContentType, pk=ct_pk)
+        model = content_type.model_class()
+        if model is None:
+            raise Http404("The content type's model is no longer installed.")
+        if not issubclass(model, BaseModel):
+            # A tampered content_type could point at a non-Nautobot model whose manager has no
+            # restrict()/RestrictedQuerySet; reject with a 404 rather than a 500 AttributeError.
+            raise Http404("Object Lock is not supported for this content type.")
+        view_restricted = model.objects.restrict(request.user, "view")
+        if request.POST.get("_all"):
+            # "Select all matching" — resolve from the (view-restricted) filtered queryset, the way
+            # Nautobot's other bulk views do. The list's active filter rides along on the button's
+            # ``formaction`` query string (``request.GET``), so this honors that filter rather than
+            # acting on every object of the model.
+            filterset_class = get_filterset_for_model(model)
+            base = view_restricted.only("pk")
+            matched = filterset_class(request.GET, base).qs if filterset_class is not None else base
+            pk_list = [str(pk) for pk in matched.values_list("pk", flat=True)]
+        else:
+            pk_list = request.POST.getlist("pk")
+        # Enforce object-level view permissions on the targets.
+        objects = list(view_restricted.filter(pk__in=pk_list))
+        return content_type, model, pk_list, objects, lock_state_for_objects(objects)
+
+    def _safe_return_url(self, request):
+        """Return a request-supplied ``return_url`` only if it is safe, else the home page."""
+        return_url = request.POST.get("return_url") or request.GET.get("return_url") or ""
+        if return_url and url_has_allowed_host_and_scheme(url=return_url, allowed_hosts=request.get_host()):
+            return iri_to_uri(return_url)
+        return reverse("home")
+
+    @staticmethod
+    def _enqueue(request, job_class, **kwargs):
+        """Enqueue a system Job the way Nautobot's bulk-edit/-delete views do.
+
+        Mirrors ``nautobot.core.views.mixins`` / ``JobRunView``: resolve the ``Job`` DB record by
+        ``class_path``, filter the kwargs to the Job's declared vars via ``prepare_job_kwargs``, then
+        hand off to ``JobResult.enqueue_job`` with ``serialize_data`` (which converts the
+        ``content_type`` model instance into a PK for the ObjectVar).
+
+        Args:
+            request: The current ``HttpRequest`` (supplies the user).
+            job_class: The system Job class to enqueue.
+            **kwargs: Raw job kwargs matching the Job's ``run()`` signature.
+
+        Returns:
+            The created ``JobResult`` instance.
+        """
+        job_model = JobModel.objects.get_for_class_path(job_class.class_path)
+        job_kwargs = job_class.prepare_job_kwargs(kwargs)
+        return JobResult.enqueue_job(job_model, request.user, **job_class.serialize_data(job_kwargs))
+
+
+class ObjectLockBulkLockView(ObjectLockBulkActionView):
+    """Confirm + enqueue a bulk lock over selected objects, surfacing already-locked members."""
+
+    permission_required = "extras.add_objectlock"
+    mode = "lock"
+
+    def post(self, request):
+        from nautobot.core.jobs.object_lock_bulk import BulkLockObjects
+        from nautobot.extras.forms.object_lock_bulk import ObjectLockBulkLockForm
+
+        content_type, model, pk_list, objects, lock_states = self._resolve_request(request)
+        locked_objects = [obj for obj in objects if obj.pk in lock_states]
+        unlocked_pks = [str(obj.pk) for obj in objects if obj.pk not in lock_states]
+
+        if request.POST.get("_confirm"):
+            form = ObjectLockBulkLockForm(request.POST)
+            if form.is_valid():
+                target_pks = (
+                    unlocked_pks if request.POST["_confirm"] == "unlocked_only" else [str(o.pk) for o in objects]
+                )
+                self._enqueue(
+                    request,
+                    BulkLockObjects,
+                    content_type=content_type,
+                    pk_list=target_pks,
+                    mode=form.cleaned_data["mode"],
+                    reason=form.cleaned_data["reason"],
+                    source_key=form.cleaned_data["source_key"],
+                    expires=form.cleaned_data["expires"].isoformat(),
+                )
+                messages.success(request, f"Enqueued bulk lock for {len(target_pks)} object(s).")
+                return redirect(self._safe_return_url(request))
+        else:
+            form = ObjectLockBulkLockForm()
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "mode": self.mode,
+                "action_title": f"Lock {len(objects)} {model._meta.verbose_name_plural}",
+                "content_type": content_type,
+                "all_pks": pk_list,
+                "locked_objects": locked_objects,
+                "unlocked_count": len(unlocked_pks),
+                "return_url": self._safe_return_url(request),
+            },
+        )
+
+
+class ObjectLockBulkReleaseView(ObjectLockBulkActionView):
+    """Confirm + enqueue a bulk release over selected objects."""
+
+    # Releasing requires delete permission, not add.
+    permission_required = "extras.delete_objectlock"
+    mode = "release"
+
+    def post(self, request):
+        from nautobot.core.jobs.object_lock_bulk import BulkReleaseObjects
+        from nautobot.extras.forms.object_lock_bulk import ObjectLockBulkReleaseForm
+
+        content_type, model, pk_list, objects, lock_states = self._resolve_request(request)
+        locked_objects = [obj for obj in objects if obj.pk in lock_states]
+
+        if request.POST.get("_confirm"):
+            form = ObjectLockBulkReleaseForm(request.POST)
+            if form.is_valid():
+                self._enqueue(
+                    request,
+                    BulkReleaseObjects,
+                    content_type=content_type,
+                    pk_list=pk_list,
+                    source_key=None,
+                )
+                messages.success(request, "Enqueued bulk release.")
+                return redirect(self._safe_return_url(request))
+        else:
+            form = ObjectLockBulkReleaseForm()
+
+        return render(
+            request,
+            self.template_name,
+            {
+                "form": form,
+                "mode": self.mode,
+                "action_title": f"Release locks on {len(objects)} {model._meta.verbose_name_plural}",
+                "content_type": content_type,
+                "all_pks": pk_list,
+                "locked_objects": locked_objects,
+                "return_url": self._safe_return_url(request),
+            },
+        )

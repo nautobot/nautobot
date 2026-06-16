@@ -6340,8 +6340,36 @@ class ObjectMetadataTestCase(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):
-        instance1 = self._get_queryset().first()
-        instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
+        # ===== REMOVE BEFORE MERGE — core test flake (not Object Lock); see CICD_FIX_LOG.md =====
+        # Original used `instance1 = self._get_queryset().first()` / `instance2 = ....first()`. That relies
+        # on ObjectMetadata.Meta.ordering ["metadata_type"] which is NOT a total order, so the .first()
+        # tie-break differs between MySQL and Postgres, and it then assumes assigned_object.get_absolute_url()
+        # exists — false for ~17 metadata-associable models with no detail view. Under CI's random factory
+        # seed this errored intermittently on the MySQL runner only. Select two metadata whose assigned_object
+        # actually has a detail URL: backend- and seed-independent (any URL-bearing pair satisfies the
+        # assertions below). Remove once core makes this test deterministic.
+        def _assigned_object_has_url(metadata):
+            assigned = metadata.assigned_object
+            try:
+                return assigned is not None and bool(assigned.get_absolute_url())
+            except AttributeError:
+                return False
+
+        url_bearing = [m for m in self._get_queryset() if _assigned_object_has_url(m)]
+        self.assertTrue(
+            url_bearing,
+            "Test data must contain at least one ObjectMetadata whose assigned_object exposes a detail URL.",
+        )
+        instance1 = url_bearing[0]
+        instance2 = next(
+            (m for m in url_bearing if m.assigned_object_id != instance1.assigned_object_id),
+            None,
+        )
+        self.assertIsNotNone(
+            instance2,
+            "Test data must contain two URL-bearing ObjectMetadata with distinct assigned objects.",
+        )
+        # ===== end REMOVE BEFORE MERGE =====
         self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
 
         # Add object-level permission

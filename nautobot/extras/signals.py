@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
+from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -45,6 +46,8 @@ from nautobot.extras.models import (
     JobResult,
     MetadataType,
     ObjectChange,
+    ObjectLock,
+    ObjectLockGeneration,
     Relationship,
 )
 from nautobot.extras.models.approvals import (
@@ -470,6 +473,113 @@ def _handle_deleted_object(sender, instance, **kwargs):
 
     # Increment metric counters
     model_deletes.labels(instance._meta.model_name).inc()
+
+
+#
+# Object Lock enforcement
+#
+
+
+# Deliberately global (no ``sender=``): connecting a sender-less ``pre_delete`` receiver for every
+# model disables Django's bulk fast-delete path app-wide. That is intentional — it forces
+# ``QuerySet.delete()`` to fetch and fire ``pre_delete`` per row, so a bulk delete under a change
+# context stays enforced instead of silently skipping locked rows. The kill-switch / change-context /
+# BaseModel guards below keep the no-lock cost negligible.
+@receiver(pre_delete)
+def _object_lock_enforce_delete(sender, instance, raw=False, **kwargs):
+    """Block deletes of delete-locked objects."""
+    from nautobot.extras.locking import enforce_object_lock, GATE_MODE_DELETE
+    from nautobot.extras.models.object_locks import ObjectLock as _ObjectLock
+
+    # Kill switch FIRST — before any cache access.
+    if not settings.OBJECT_LOCK_ENFORCED:
+        return
+    if raw or sender is _ObjectLock:
+        return
+    if change_context_state.get() is None:
+        return  # No change context (out-of-band ORM, shell, migrations): not enforced.
+    if not isinstance(instance, BaseModel):
+        return
+    enforce_object_lock(sender, instance, GATE_MODE_DELETE)
+
+
+@receiver(pre_save)
+def _object_lock_enforce_update(sender, instance, raw=False, **kwargs):
+    """Block updates of update-locked existing objects."""
+    from nautobot.extras.locking import enforce_object_lock, GATE_MODE_UPDATE
+    from nautobot.extras.models.object_locks import ObjectLock as _ObjectLock
+
+    if not settings.OBJECT_LOCK_ENFORCED:
+        return
+    if raw or sender is _ObjectLock:
+        return
+    if change_context_state.get() is None:
+        return
+    if not isinstance(instance, BaseModel):
+        return
+    # Update locking applies to existing objects only; new objects are never locked.
+    if not instance.present_in_database:
+        return
+    enforce_object_lock(sender, instance, GATE_MODE_UPDATE)
+
+
+def _m2m_field_name_for_sender(instance, sender):
+    """Return the M2M field name on ``instance`` whose through-model is ``sender``, else None.
+
+    Args:
+        instance (BaseModel): The forward-side object whose M2M relation is mutating.
+        sender (type): The m2m_changed ``sender`` (the relation's through model class).
+
+    Returns:
+        str | None: The forward-side M2M field name (e.g. "tags"), or None if no field on
+        ``instance`` uses ``sender`` as its through model.
+    """
+    for field in instance._meta.get_fields():
+        if field.many_to_many and getattr(field, "remote_field", None) is not None:
+            if getattr(field.remote_field, "through", None) is sender:
+                return field.name
+    return None
+
+
+@receiver(m2m_changed)
+def _object_lock_enforce_m2m(sender, instance, action, reverse=False, **kwargs):
+    """Enforce field-level locks on M2M changes (which never fire pre_save).
+
+    This is a GLOBAL receiver: it fires on every M2M change in Nautobot. The gate-membership
+    test runs before the through-model -> field-name resolution to keep the no-lock path cheap.
+    """
+    if action not in ("pre_add", "pre_remove", "pre_clear"):
+        return
+    if not settings.OBJECT_LOCK_ENFORCED:
+        return
+    if reverse or not isinstance(instance, BaseModel):
+        return  # reverse-side fan-out intentionally not enforced (documented limitation)
+    if change_context_state.get() is None:
+        return
+    if not getattr(instance, "present_in_database", False):
+        return
+    from nautobot.extras.locking import enforce_m2m_change, GATE_MODE_UPDATE, get_gate
+
+    content_type_id = ContentType.objects.get_for_model(instance).id
+    if content_type_id not in get_gate()[GATE_MODE_UPDATE]:
+        return  # gate miss: common path
+    field_name = _m2m_field_name_for_sender(instance, sender)
+    if field_name is not None:
+        enforce_m2m_change(instance, field_name, action)
+
+
+@receiver(post_save, sender=ObjectLock)
+@receiver(post_delete, sender=ObjectLock)
+def _object_lock_bump_generation(sender, instance, **kwargs):
+    """Bump the Object Lock generation token and invalidate the gate cache when a lock changes."""
+    from nautobot.extras.locking import clear_gate_snapshot, invalidate_gate_cache  # lazy: avoids cycle
+
+    # Bump synchronously so the token is correct within the current transaction; clear the per-request
+    # gate snapshot so a lock created mid-request is honored by later writes in it; invalidate the
+    # cross-worker cache once the transaction commits.
+    ObjectLockGeneration.bump()
+    clear_gate_snapshot()
+    transaction.on_commit(invalidate_gate_cache)
 
 
 #

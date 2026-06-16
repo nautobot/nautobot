@@ -101,6 +101,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
+    ObjectLockableFilterSetMixin,
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
@@ -545,7 +546,7 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         fields = ["id", "created", "description", "tags"]
 
 
-class ManufacturerFilterSet(NautobotFilterSet, NameSearchFilterSet):
+class ManufacturerFilterSet(ObjectLockableFilterSetMixin, NautobotFilterSet, NameSearchFilterSet):
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     inventory_items = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
