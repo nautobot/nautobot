@@ -430,27 +430,13 @@ class VMInterfaceUIViewSet(
                 related_list_url_name="ipam:ipaddress_list",
                 related_field_name="vm_interfaces",
             ),
-            # Tagged + untagged VLANs
-            # No "Add": a VLAN isn't created from an interface. You assign VLANs by editing the
-            # interface's `untagged_vlan` / `tagged_vlans` fields -- the same fields used when the
-            # interface is first created. So this panel links to the interface edit form instead.
+            # Tagged + untagged VLANs. Per-row edit lives in the table's actions column (see
+            # InterfaceVLANTable); a VLAN isn't created from an interface, so no Add button here.
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=400,
                 context_table_key="vlan_table",
-                # Custom footer template right-aligns the footer button (the default footer floats it left).
-                footer_content_template_path="virtualization/inc/vminterface_vlan_panel_footer.html",
-                footer_buttons=(
-                    object_detail.Button(
-                        weight=100,
-                        color=ButtonActionColorChoices.EDIT,
-                        link_name="virtualization:vminterface_edit",
-                        label="Edit VLAN Assignments",
-                        icon="mdi-pencil",
-                        required_permissions=["virtualization.change_vminterface"],
-                        link_includes_pk=True,
-                    ),
-                ),
+                add_button_route=None,  # VLANs aren't added from here; hide the default Add button
                 # "View all" links to the VLAN list filtered by this VM interface (tagged or untagged),
                 # using the `vm_interfaces` filter added to VLANFilterSet.
                 related_list_url_name="ipam:vlan_list",
