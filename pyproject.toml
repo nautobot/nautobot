@@ -142,7 +142,7 @@ regex = ">=2026.4.4"
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-social-auth-core = {version = "~4.8.5", optional = true, extras = ["saml"]}
+social-auth-core = {version = "~4.9.1", optional = true, extras = ["saml"]}
 # Social authentication/registration with support for many auth providers
 # NOTE: When upgrading to 5.6.0 or later, remove the patch in nautobot/core/apps/__init__.py
 #       that addresses a security vulnerability in social-auth-app-django 5.4.3

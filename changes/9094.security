@@ -1,0 +1,1 @@
+Updated dependency `pyjwt` to `2.13.0` to mitigate multiple security vulnerabilities. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
