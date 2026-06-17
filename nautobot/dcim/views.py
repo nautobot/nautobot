@@ -5136,7 +5136,7 @@ class DeviceBayUIViewSet(
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
-        if instance is not None:
+        if self.action == "retrieve":
             installed_device = instance.installed_device
             context["installed_device_data"] = {
                 "device": installed_device,
@@ -5151,9 +5151,10 @@ class DeviceBayUIViewSet(
 
         if request.method == "POST":
             form = forms.PopulateDeviceBayForm(device_bay, request.POST)
+            restrict_form_fields(form, request.user)
             if form.is_valid():
                 device_bay.installed_device = form.cleaned_data["installed_device"]
-                device_bay.save()
+                device_bay.validated_save()
                 messages.success(
                     request,
                     f"Added {device_bay.installed_device} to {device_bay}.",
@@ -5161,6 +5162,7 @@ class DeviceBayUIViewSet(
                 return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
         else:
             form = forms.PopulateDeviceBayForm(device_bay)
+            restrict_form_fields(form, request.user)
 
         return Response(
             {
@@ -5180,7 +5182,7 @@ class DeviceBayUIViewSet(
             if form.is_valid():
                 removed_device = device_bay.installed_device
                 device_bay.installed_device = None
-                device_bay.save()
+                device_bay.validated_save()
                 messages.success(
                     request,
                     f"Removed {removed_device} from {device_bay}.",
