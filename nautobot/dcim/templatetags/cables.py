@@ -1,23 +1,19 @@
 from django import template
+from django_jinja import library
+
+from nautobot.dcim.constants import CABLE_TERMINATION_GENERIC_ICON, DEVICE_COMPONENT_ICONS
 
 register = template.Library()
 
 
-@register.simple_tag()
+@library.filter()
+@register.filter()
 def termination_type_icon(termination):
-    """Return an MDI icon class string for a cable termination object based on its type."""
+    """Return an MDI icon class string for a cable termination object or modelname based on its type."""
     if termination is None:
         return "mdi-help-circle-outline"
-    model_name = termination._meta.model_name
-    icons = {
-        "interface": "mdi-ethernet",
-        "frontport": "mdi-arrow-right-bold-box",
-        "rearport": "mdi-arrow-left-bold-box",
-        "consoleport": "mdi-console",
-        "consoleserverport": "mdi-console-network",
-        "powerport": "mdi-power-plug",
-        "poweroutlet": "mdi-power-socket",
-        "powerfeed": "mdi-flash",
-        "circuittermination": "mdi-cable-data",
-    }
-    return icons.get(model_name, "mdi-cable-data")
+    if isinstance(termination, str):
+        model_name = termination
+    else:
+        model_name = termination._meta.model_name
+    return DEVICE_COMPONENT_ICONS.get(model_name, CABLE_TERMINATION_GENERIC_ICON)
