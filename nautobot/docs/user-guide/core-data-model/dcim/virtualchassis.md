@@ -11,12 +11,12 @@ You create your devices, then create the Virtual Chassis and assign the devices 
 
 ## Overview
 
-Choosing between this and a [Device Redundancy Group](deviceredundancygroup.md) comes down to the management control plane count — use a Virtual Chassis when the members share **one** control plane, and a Device Redundancy Group when each keeps its **own**. See [HA Devices](hadevice.md) for the full comparison.
+Choosing between Virtual Chassis and a [Device Redundancy Group](deviceredundancygroup.md) comes down to the management control plane count — use a Virtual Chassis when the members share **one** control plane, and a Device Redundancy Group when each keeps its **own**. See [HA Devices](hadevice.md) for the full comparison.
 
 Use a Virtual Chassis when multiple physical devices operate as a **single logical device** with one management IP, such as a switch stack. The model is small: a single `VirtualChassis` object that member devices point to, with each member recording its position in the stack. One member can be explicitly designated as the master, and Nautobot will surface all ports (interfaces, front ports, rear ports, etc.) from every member on that master device, reflecting how the stack actually presents itself on the network. The one exception is an interface with `mgmt_only` set, which is not surfaced on the master.
 
 !!! note
-    Interfaces are not renumbered automatically. As on real hardware, a device's interfaces default to slot 1 (e.g. `GigabitEthernet1/0/1`); when that device becomes member 3, its interfaces should be `GigabitEthernet3/0/1`. Use the Bulk Rename feature to renumber them.
+    Interfaces are **not** renumbered automatically. As on real hardware, a device's interfaces default to slot 1 (e.g. `GigabitEthernet1/0/1`); when that device becomes member 3, its interfaces should be `GigabitEthernet3/0/1`. Use the Bulk Rename feature to renumber them.
 
 LAG interfaces are supported across devices that have the same parent virtual chassis — this is the one case in Nautobot where a LAG's member interfaces may live on different devices. The LAG will show its member interfaces across the multiple devices on the LAG itself. The recommendation is to create the LAG interface itself (e.g. `PortChannel10`) on the expected master device. Because the chassis is a single logical device, the LAG fully captures the relationship on its own; no additional grouping model (such as an Interface Redundancy Group) is needed.
 

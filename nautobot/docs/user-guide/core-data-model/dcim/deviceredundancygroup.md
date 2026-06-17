@@ -23,9 +23,9 @@ Use a Device Redundancy Group when multiple physical devices work together to pr
 
 TODO: Review this as our final recommendation
 
-LAG interfaces cannot span members of a Device Redundancy Group; a LAG and its member interfaces must belong to the same device (or the same virtual chassis). For multi-chassis technologies such as vPC or MLAG, the recommendation is to model a port channel on each member individually, then tie the pair together with an [Interface Redundancy Group](interfaceredundancygroup.md): create one group per multi-chassis port channel, assign each member's LAG interface to it with a priority, and record the vPC/MLAG domain or pair ID in `protocol_group_id` — the cross-vendor redundancy identifier (vPC domain, MLAG domain, cluster ID) that config templates read to render the domain/group lines. As users, we recommend giving the LAG the same name on both members (e.g. `Port-Channel10` on each switch) to match how the technology is typically configured, however this is not enforced nor is any configuration synced. The Interface Redundancy Group is the only thing in the data model relating them to each other.
+LAG interfaces cannot span members of a Device Redundancy Group; a LAG and its member interfaces must belong to the same device (or the same virtual chassis). For multi-chassis technologies such as vPC or MLAG, the recommendation is to model a port channel on each member individually, then tie the pair together with an [Interface Redundancy Group](interfaceredundancygroup.md): create one group per multi-chassis port channel, assign each member's LAG interface to it with a priority, and record the vPC/MLAG domain or pair ID in `protocol_group_id` — the cross-vendor redundancy identifier (vPC domain, MLAG domain, cluster ID) that config templates read to render the domain/group lines. As users, we recommend giving the LAG the same name on both members (e.g. `Port-Channel10` on each switch) to match how the technology is typically configured; however, this is not enforced nor is any configuration synced. The Interface Redundancy Group is the only thing in the data model relating them to each other.
 
-An Interface Redundancy Group does not change or take over the interfaces themselves — each member's LAG remains an ordinary, independently configured interface on its own device. What the group models is the relationship between them: two separately configured interfaces that present a single logical entity to the rest of the network. The `protocol` field is meant for first hop redundancy protocols such as VRRP, not for link aggregation protocols such as LACP; leave it blank when grouping port channels.
+An Interface Redundancy Group does not change or take over the interfaces themselves — each member's LAG remains an ordinary, independently configured interface on its own device. What the group models is the relationship between them: two separately configured interfaces that present a single logical entity to the rest of the network. The `protocol` field is meant for first hop redundancy protocols (FHRP) such as VRRP, not for link aggregation protocols such as LACP; leave it blank when grouping port channels.
 
 The device redundancy group model provides the following fields:
 
@@ -112,7 +112,7 @@ erDiagram
 
 ## Sample API
 
-The below Python snippet is intended to work as you drop in to your iPython shell or file. It levergages the public demo. In addition, you can update the first set of variables to more easily integrate with other systems.
+The below Python snippet is intended to work by dropping it into a iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
 
 ??? example "Show pynautobot script"
 
@@ -685,7 +685,7 @@ Given the data model, what questions would a user ask?
 
 ## Generating the Configuration
 
-The script below renders the templates against GrpahQl query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
+The script below renders the templates against GraphQL query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
 
 ??? example "Config Generation Script"
 
