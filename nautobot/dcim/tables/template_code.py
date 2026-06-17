@@ -16,7 +16,39 @@ class DeviceComponentNameColumn(tables.TemplateColumn):
         super().__init__(*args, **kwargs)
 
 
-CABLETERMINATION = """
+# When this row's termination sits on the fan-out side of a breakout cable and the trunk-side peer
+# being rendered is an Interface with a matching child interface, append the child interface in
+# brackets on the same line, e.g. "TenGigabitEthernet1/1 [TenGigabitEthernet1/1.2]". `peer_var` is
+# the loop variable name (the trunk-side peer/endpoint) in the surrounding template.
+def _breakout_child_brackets(peer_var):
+    return (
+        "{% for entry in record.get_breakout_trunk_child_interfaces %}"
+        "{% if entry.child_interface and entry.trunk_interface == " + peer_var + " %} "
+        "[{{ entry.child_interface|hyperlinked_object }}]"
+        "{% endif %}{% endfor %}"
+    )
+
+
+# Fallback for the `connection` column when an interface has no resolved cable path of its own: if
+# it's a breakout child interface, show the breakout-side termination it maps to via its
+# breakout_position. These two are mutually exclusive — a virtual child interface is never cabled,
+# and a cabled interface can't have a breakout_position — so one column serves both.
+_BREAKOUT_CONNECTION_FALLBACK = """
+{% with far=record.get_breakout_lane.far_termination %}
+{% if far %}
+    <a href="{{ far.parent.get_absolute_url }}">{{ far.parent }}</a>
+    /
+    <span class="mdi {{ far|termination_type_icon }}" title="{{ far|meta:'verbose_name'|capfirst }}"></span>
+    <a href="{{ far.get_absolute_url }}">{{ far }}</a>
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
+{% endwith %}
+"""
+
+
+CABLETERMINATION = (
+    """
 {% load cables %}
 {% load helpers %}
 {% if value %}
@@ -24,15 +56,19 @@ CABLETERMINATION = """
         <a href="{{ peer.parent.get_absolute_url }}">{{ peer.parent }}</a>
         /
         <span class="mdi {{ peer|termination_type_icon }}" title="{{ peer|meta:'verbose_name'|capfirst }}"></span>
-        <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>
+        <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>"""
+    + _breakout_child_brackets("peer")
+    + """
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
 {% else %}
     <span class="text-secondary">&mdash;</span>
 {% endif %}
 """
+)
 
-PATHENDPOINT = """
+PATHENDPOINT = (
+    """
 {% load cables %}
 {% load helpers %}
 {% if value %}
@@ -40,13 +76,17 @@ PATHENDPOINT = """
         <a href="{{ endpoint.parent.get_absolute_url }}">{{ endpoint.parent }}</a>
         /
         <span class="mdi {{ endpoint|termination_type_icon }}" title="{{ endpoint|meta:'verbose_name'|capfirst }}"></span>
-        <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>
+        <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>"""
+    + _breakout_child_brackets("endpoint")
+    + """
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
-{% else %}
-    <span class="text-secondary">&mdash;</span>
+{% else %}"""
+    + _BREAKOUT_CONNECTION_FALLBACK
+    + """
 {% endif %}
 """
+)
 
 CABLE_LENGTH = """
 {% if record.length %}

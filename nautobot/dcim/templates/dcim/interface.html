@@ -64,6 +64,21 @@
                 <td>Parent Interface</td>
                 <td>{{ object.parent_interface|hyperlinked_object }}</td>
             </tr>
+            {% if object.breakout_position %}
+            <tr>
+                <td>Breakout Position</td>
+                <td>
+                    {{ object.breakout_position }}
+                    {% with breakout_lane=object.get_breakout_lane %}
+                        {% if breakout_lane.far_termination %}
+                            &mdash; connects to
+                            {{ breakout_lane.far_termination.parent|hyperlinked_object }} /
+                            {{ breakout_lane.far_termination|hyperlinked_object }}
+                        {% endif %}
+                    {% endwith %}
+                </td>
+            </tr>
+            {% endif %}
             <tr>
                 <th scope="row">Bridge</th>
                 <td>{{ object.bridge|hyperlinked_object }}</td>

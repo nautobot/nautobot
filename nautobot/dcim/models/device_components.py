@@ -34,6 +34,7 @@ from nautobot.dcim.choices import (
     PowerPortTypeChoices,
 )
 from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_LANES,
     COPPER_TWISTED_PAIR_IFACE_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
@@ -482,6 +483,57 @@ class CableTermination(models.Model):
         """
         return len(self._mapped_far_connectors()) > 1
 
+    def get_breakout_trunk_child_interfaces(self):
+        """Trunk-side child interfaces this fan-out-side termination maps to.
+
+        For a termination on the fan-out (more-connectors) side of a breakout cable, resolve the
+        trunk-side peer and — *only* when that peer is an `Interface` — return the child
+        interface(s) whose name suffix matches each trunk-connector position this termination's
+        connector carries. This is the reverse of `Interface.get_breakout_lane`.
+
+        Returns a list of dicts, empty when not applicable (non-breakout cable, this termination on
+        the trunk side rather than the fan-out side, or a non-`Interface` trunk peer). Each dict:
+
+        - `trunk_interface`: the trunk-side peer `Interface`
+        - `position`: the trunk-connector position this termination's lane maps to
+        - `label`: the lane's mapping label, if any
+        - `child_interface`: the trunk's child interface whose `breakout_position` matches, or
+          `None` if no child interface claims that position
+        """
+        my_row = getattr(self, "cable_termination", None)
+        if my_row is None:
+            return []
+        cable = my_row.cable
+        if cable is None or not cable.cable_type_id or not cable.cable_type.is_breakout:
+            return []
+        trunk_end = cable.cable_type.trunk_end
+        # Only applies when *this* termination is on the fan-out side, opposite the trunk.
+        if my_row.cable_end == trunk_end:
+            return []
+        fanout_side, trunk_side = my_row.cable_end.lower(), trunk_end.lower()
+        results = []
+        for lane in cable.get_lanes():
+            if lane[f"{fanout_side}_connector"] != my_row.connector:
+                continue
+            trunk_termination = lane[f"{trunk_side}_termination"]
+            # Child interfaces are an Interface-only concept; ignore any other trunk peer type.
+            if not isinstance(trunk_termination, Interface):
+                continue
+            position = lane[f"{trunk_side}_position"]
+            child_interface = next(
+                (child for child in trunk_termination.child_interfaces.all() if child.breakout_position == position),
+                None,
+            )
+            results.append(
+                {
+                    "trunk_interface": trunk_termination,
+                    "position": position,
+                    "label": lane["label"],
+                    "child_interface": child_interface,
+                }
+            )
+        return results
+
     @classmethod
     def cable_columns_select_related_fields(cls):
         """
@@ -504,6 +556,8 @@ class CableTermination(models.Model):
                 "cable_termination__cable__terminations",
                 queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
             ),
+            # The breakout child-interface annotation resolves the trunk peer's child interfaces.
+            "cable_termination__cable__terminations__interface__child_interfaces",
         ]
         if issubclass(cls, PathEndpoint):
             prefetches.append("cable_paths__destination")
@@ -1025,11 +1079,29 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     # Operational attributes (distinct from interface type capabilities)
     speed = models.PositiveIntegerField(null=True, blank=True)
     duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
+    breakout_position = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_LANES)],
+        help_text=(
+            "For a child interface of a breakout-cable trunk, the position on the parent interface's "
+            "trunk connector that this child interface maps to."
+        ),
+    )
 
     objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
+        constraints = [
+            *ModularComponentModel.Meta.constraints,
+            # A given trunk position can be claimed by at most one child interface. Rows without a
+            # breakout_position are exempt automatically: NULL != NULL, so they never collide.
+            models.UniqueConstraint(
+                fields=("parent_interface", "breakout_position"),
+                name="dcim_interface_unique_parent_breakout_position",
+            ),
+        ]
 
     def clean(self):
         super().clean()
@@ -1113,6 +1185,14 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                             f"is not part of virtual chassis {self.parent.virtual_chassis}."
                         }
                     )
+
+        # A breakout position only makes sense relative to a parent (trunk) interface.
+        if self.breakout_position is not None and self.parent_interface_id is None:
+            raise ValidationError(
+                {
+                    "breakout_position": "A breakout position can only be set on an interface that has a parent interface."
+                }
+            )
 
         # Validate untagged VLAN
         location = self.parent.location if self.parent is not None else None
@@ -1198,6 +1278,50 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     @property
     def ip_address_count(self):
         return self.ip_addresses.count()
+
+    def get_breakout_lane(self):
+        """The breakout-cable trunk lane this child interface maps to, or `None` if not applicable.
+
+        Applies only when this is a child interface (`parent_interface` set) with an explicit
+        `breakout_position`, whose parent terminates the trunk (fewer-connectors) side of a breakout
+        cable that carries that position. This is the forward direction;
+        `CableTermination.get_breakout_trunk_child_interfaces` resolves the reverse.
+
+        Returns a dict describing the mapped lane, or `None` if any condition isn't met (no parent,
+        no `breakout_position`, parent not cabled to a breakout trunk, or the position isn't carried
+        by the parent's trunk connector):
+
+        - `position`: this interface's `breakout_position`
+        - `label`: the lane's mapping label, if any
+        - `far_termination`: the termination cabled on the far (breakout-side) connector for this
+          lane, or `None` if that connector is currently unoccupied
+        """
+        position = self.breakout_position
+        if position is None:
+            return None
+        parent = self.parent_interface
+        if parent is None:
+            return None
+        parent_row = getattr(parent, "cable_termination", None)
+        if parent_row is None:
+            return None
+        cable = parent_row.cable
+        if cable is None or not cable.cable_type_id or not cable.cable_type.is_breakout:
+            return None
+        # The parent must terminate the trunk (fewer-connectors) side of the breakout.
+        trunk_end = cable.cable_type.trunk_end
+        if parent_row.cable_end != trunk_end:
+            return None
+        trunk_side = trunk_end.lower()
+        far_side = "b" if trunk_end == "A" else "a"
+        for lane in cable.get_lanes():
+            if lane[f"{trunk_side}_connector"] == parent_row.connector and lane[f"{trunk_side}_position"] == position:
+                return {
+                    "position": position,
+                    "label": lane["label"],
+                    "far_termination": lane[f"{far_side}_termination"],
+                }
+        return None
 
 
 @extras_features(

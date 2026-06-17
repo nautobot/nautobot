@@ -149,22 +149,36 @@ class CableTraceSVG:
         origin_side = origin_row.cable_end  # "A" or "B"
         opposite_side = "B" if origin_side == "A" else "A"
         origin_side_key = "a_connector" if origin_side == "A" else "b_connector"
+        origin_position_key = "a_position" if origin_side == "A" else "b_position"
         far_side_key = "b_connector" if origin_side == "A" else "a_connector"
 
         # All mapping entries that originate from the origin's connector, deduplicated by the
-        # far-side connector so multi-position trunks contribute one leg per peer connector.
+        # far-side connector so multi-position trunks contribute one leg per peer connector. Also
+        # track which origin-side positions each far connector carries, so a trunk origin's numbered
+        # child interfaces can be annotated onto their corresponding legs.
         seen_far_connectors = []
+        positions_by_far_connector = {}
         for entry in cable.cable_type.mapping or []:
             if entry.get(origin_side_key) != origin_row.connector:
                 continue
             far_connector = entry.get(far_side_key)
-            if far_connector is None or far_connector in seen_far_connectors:
+            if far_connector is None:
                 continue
-            seen_far_connectors.append(far_connector)
+            positions_by_far_connector.setdefault(far_connector, []).append(entry.get(origin_position_key))
+            if far_connector not in seen_far_connectors:
+                seen_far_connectors.append(far_connector)
         seen_far_connectors.sort()
 
         if len(seen_far_connectors) <= 1:
             return linear_fanout
+
+        # Trunk-side child interfaces keyed by their breakout position, used to annotate each leg
+        # with the numbered child interface it maps to (empty for non-Interface origins).
+        child_interface_by_position = {}
+        if hasattr(self.origin, "child_interfaces"):
+            for child in self.origin.child_interfaces.all():
+                if child.breakout_position is not None:
+                    child_interface_by_position[child.breakout_position] = child
 
         # Far-side terminations indexed by connector for quick lookup; CablePaths indexed by
         # peer_connector (which corresponds to the far-side connector for the breakout leg).
@@ -190,10 +204,20 @@ class CableTraceSVG:
                 if len(full_trace) > 1:
                     leg_trace = self._expand_trace_segments(full_trace[1:])
 
+            # Annotate the leg with the trunk's numbered child interface(s) mapped to this connector.
+            child_interfaces = [
+                child_interface_by_position[position]
+                for position in positions_by_far_connector.get(far_connector, [])
+                if position in child_interface_by_position
+            ]
+            connector_label = f"{opposite_side}{far_connector}"
+            if child_interfaces:
+                connector_label += " (" + ", ".join(str(child) for child in child_interfaces) + ")"
+
             fanout_legs.append(
                 {
                     "termination": termination,
-                    "connector_label": f"{opposite_side}{far_connector}",
+                    "connector_label": connector_label,
                     "trace": leg_trace,
                 }
             )

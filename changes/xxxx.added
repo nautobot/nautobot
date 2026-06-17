@@ -1,0 +1,2 @@
+Added a `breakout_position` field to `Interface` to map a child (sub-)interface to a specific position on its parent interface's breakout-cable trunk connector.
+Added indication of breakout child-interface position mapping in the cable-peer and connection table columns, the parent and child interface detail views, and the cable trace SVG renderer.

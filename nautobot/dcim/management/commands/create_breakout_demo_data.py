@@ -134,6 +134,27 @@ class Command(BaseCommand):
         )
         return interface
 
+    def _breakout_children(self, trunk, count):
+        """Create `count` numbered virtual child interfaces under a breakout-trunk interface.
+
+        Each child's `breakout_position` (1..count) maps it to a position on the trunk connector's
+        breakout cable, demonstrating the child-interface position mapping in the UI.
+        """
+        children = []
+        for position in range(1, count + 1):
+            child, _ = Interface.objects.get_or_create(
+                device=trunk.device,
+                name=f"{trunk.name}.{position}",
+                defaults={
+                    "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "status": self.intf_status,
+                    "parent_interface": trunk,
+                    "breakout_position": position,
+                },
+            )
+            children.append(child)
+        return children
+
     def _rear_port(self, device, name, positions=1, port_type=PortTypeChoices.TYPE_LC):
         rear, _ = RearPort.objects.get_or_create(
             device=device,
@@ -272,6 +293,8 @@ class Command(BaseCommand):
         """1x400G spine port broken out to 4x 100G leaf uplinks — the canonical DC breakout."""
         spine = self._interface(self.spine1, "Ethernet1/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
         leaves = [self._interface(leaf, "Ethernet1/1", InterfaceTypeChoices.TYPE_100GE_QSFP28) for leaf in self.leaves]
+        # Numbered sub-interfaces, one per breakout lane, mapping to the four B-side leaf uplinks.
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-SPINE-LEAF-400G",
             term_a=spine,
@@ -312,6 +335,7 @@ class Command(BaseCommand):
         """A 1x4 breakout marked Planned — the cable exists but isn't physically installed yet."""
         spine = self._interface(self.spine1, "Ethernet4/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
         leaves = [self._interface(leaf, "Ethernet4/1", InterfaceTypeChoices.TYPE_100GE_QSFP28) for leaf in self.leaves]
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-PLANNED-400G",
             term_a=spine,
@@ -355,6 +379,10 @@ class Command(BaseCommand):
             self._interface(self.spine1, "Ethernet6/1", InterfaceTypeChoices.TYPE_100GE_QSFP28),
             self._interface(self.spine1, "Ethernet6/2", InterfaceTypeChoices.TYPE_100GE_QSFP28),
         ]
+        # Each trunk connector carries 4 lanes, so each gets four numbered sub-interfaces. This
+        # exercises the multi-connector trunk case (position is relative to each trunk connector).
+        for trunk in trunks:
+            self._breakout_children(trunk, 4)
         # 8 legs distributed across the four leaves (two ports each).
         legs = [
             self._interface(self.leaves[i // 2], f"Ethernet6/{(i % 2) + 1}", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS)
