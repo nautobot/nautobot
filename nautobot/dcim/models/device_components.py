@@ -3,12 +3,10 @@ import re
 import warnings
 
 from django.contrib.contenttypes.fields import GenericRelation
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Case, F, GeneratedField, Prefetch, Sum, Value, When
-from django.db.models.functions import Cast, Coalesce, Concat
+from django.db.models import Prefetch, Sum
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -19,7 +17,6 @@ from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,

@@ -409,6 +409,7 @@ select = [
 ignore = [
     "E501",  # pycodestyle: line-too-long
     "PIE808",  # unnecessary-range-start
+    "RUF003",  # ambiguous-unicode-character-comment - see https://github.com/astral-sh/ruff/issues/23886
     "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
 ]
 

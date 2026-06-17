@@ -4,46 +4,45 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0090_cablepath_add_lane_fields'),
+        ("dcim", "0090_cablepath_add_lane_fields"),
     ]
 
     operations = [
         migrations.RemoveConstraint(
-            model_name='consoleport',
-            name='dcim_consoleport_device_name_unique',
+            model_name="consoleport",
+            name="dcim_consoleport_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='consoleserverport',
-            name='dcim_consoleserverport_device_name_unique',
+            model_name="consoleserverport",
+            name="dcim_consoleserverport_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='frontport',
-            name='dcim_frontport_device_name_unique',
+            model_name="frontport",
+            name="dcim_frontport_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='interface',
-            name='dcim_interface_device_name_unique',
+            model_name="interface",
+            name="dcim_interface_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='modulebay',
-            name='dcim_modulebay_parent_device_name_unique',
+            model_name="modulebay",
+            name="dcim_modulebay_parent_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='modulebay',
-            name='dcim_modulebay_parent_module_name_unique',
+            model_name="modulebay",
+            name="dcim_modulebay_parent_module_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='poweroutlet',
-            name='dcim_poweroutlet_device_name_unique',
+            model_name="poweroutlet",
+            name="dcim_poweroutlet_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='powerport',
-            name='dcim_powerport_device_name_unique',
+            model_name="powerport",
+            name="dcim_powerport_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name='rearport',
-            name='dcim_rearport_device_name_unique',
+            model_name="rearport",
+            name="dcim_rearport_device_name_unique",
         ),
     ]
