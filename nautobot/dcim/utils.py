@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Optional
 import uuid
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -9,10 +10,14 @@ from django.utils.html import format_html, format_html_join
 from netutils.lib_mapper import NAME_TO_ALL_LIB_MAPPER, NAME_TO_LIB_MAPPER_REVERSE
 
 from nautobot.core.choices import ColorChoices
-from nautobot.core.templatetags.helpers import hyperlinked_object
+from nautobot.core.templatetags.helpers import bettertitle, hyperlinked_object
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.constants import DEFAULT_CABLE_TYPES, NONCONNECTABLE_IFACE_TYPES
+from nautobot.dcim.constants import (
+    COMPATIBLE_TERMINATION_TYPES,
+    DEFAULT_CABLE_TYPES,
+    NONCONNECTABLE_IFACE_TYPES,
+)
 
 
 def compile_path_node(ct_id, object_id):
@@ -176,14 +181,14 @@ def render_software_version_and_image_files(instance, software_version, context)
     return display
 
 
-def populate_default_cable_types(apps, schema_editor=None):
+def populate_default_cable_types(apps, schema_editor=None):  # pylint: disable=redefined-outer-name
     """Create default cable type records."""
     CableType = apps.get_model("dcim", "CableType")
     for name, defaults in DEFAULT_CABLE_TYPES.items():
         CableType.objects.get_or_create(name=name, defaults=defaults)
 
 
-def clear_default_cable_types(apps, schema_editor=None):
+def clear_default_cable_types(apps, schema_editor=None):  # pylint: disable=redefined-outer-name
     """Delete default cable type records."""
     CableType = apps.get_model("dcim", "CableType")
     for name in DEFAULT_CABLE_TYPES.keys():
@@ -410,3 +415,100 @@ def power_ports_connected_to(target_queryset):
     )
 
     return PowerPort.objects.filter(pk__in=powerport_ids)
+
+
+def get_connected_endpoint_tables(instance):
+    """Build per-type tables of the connected endpoints reachable from a `PathEndpoint`.
+
+    Walks the instance's CablePaths (one per breakout lane for a breakout cable), groups the
+    resolved destination endpoints by model, and renders each group with that model's existing
+    list table (resolved via `get_table_for_model`) so that multi-termination cables show *every*
+    connected endpoint rather than only the first. Returns a list of
+    ``{"heading": ..., "table": ...}`` dicts, ordered by endpoint type.
+
+    Returns an empty list for terminations that are not PathEndpoints (e.g. front/rear ports) or
+    that have no resolved destinations.
+
+    TODO: This is the legacy template-based equivalent of `get_connected_endpoint_panels()`. When the
+    component detail views that use it are migrated to the UI component framework, drop this helper and
+    the `connected_endpoint_tables` context + `content_full_width_page` template blocks in favor of
+    spreading `*get_connected_endpoint_panels("<model_name>")` into the view's `object_detail_content`.
+    """
+    # Imported lazily to avoid the import cycle described in `get_connected_endpoint_panels`.
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    cable_paths = getattr(instance, "cable_paths", None)
+    if cable_paths is None:
+        return []
+
+    grouped = {}
+    for path in cable_paths.all():
+        destination = path.destination
+        if destination is None:
+            continue
+        grouped.setdefault(destination._meta.model_name, []).append(destination)
+
+    endpoint_tables = []
+    for endpoints in grouped.values():
+        table_class = get_table_for_model(endpoints[0])
+        if table_class is None:
+            continue
+        endpoint_tables.append(
+            {
+                "heading": f"{bettertitle(endpoints[0]._meta.verbose_name)} Endpoints",
+                "table": table_class(data=endpoints, orderable=False, exclude=("pk", "actions")),
+            }
+        )
+    return endpoint_tables
+
+
+def get_connected_endpoint_panels(source_model_name, *, weight=200, section=None):
+    """Build one `ConnectedEndpointsPanel` per endpoint type a termination can connect to.
+
+    The candidate types come from `COMPATIBLE_TERMINATION_TYPES[source_model_name]`, intersected with
+    the registered `PathEndpoint` subclasses -- only `PathEndpoint`s can be the destination of a
+    `CablePath`, so non-PathEndpoint compatible types (e.g. front/rear ports) are skipped. Each panel
+    hides itself when the termination has no connected endpoints of its type.
+
+    Args:
+        source_model_name (str): The `model_name` of the termination type whose detail view this is,
+            e.g. "interface" or "circuittermination".
+        weight (int): The weight of the first panel; subsequent panels increment from here so they
+            render in `COMPATIBLE_TERMINATION_TYPES` order.
+        section (str, optional): A `SectionChoices` value for the panels. Defaults to `FULL_WIDTH`.
+
+    Returns:
+        (list): A list of `ConnectedEndpointsPanel` instances, suitable for spreading into an
+        `ObjectDetailContent`'s `panels`.
+    """
+    # Imported lazily: this module is imported during model loading (dcim.fields -> dcim.lookups ->
+    # dcim.utils), so importing the UI/lookup/model layers at the top of the file would cycle.
+    from nautobot.core.ui.choices import SectionChoices
+    from nautobot.core.ui.object_detail import ConnectedEndpointsPanel
+    from nautobot.core.utils.lookup import get_table_for_model
+    from nautobot.dcim.models import PathEndpoint
+
+    if section is None:
+        section = SectionChoices.FULL_WIDTH
+
+    path_endpoint_models = {
+        model._meta.model_name: model for model in apps.get_models() if issubclass(model, PathEndpoint)
+    }
+
+    panels = []
+    for index, endpoint_type in enumerate(COMPATIBLE_TERMINATION_TYPES.get(source_model_name, [])):
+        model = path_endpoint_models.get(endpoint_type)
+        if model is None:
+            continue
+        table_class = get_table_for_model(model)
+        if table_class is None:
+            continue
+        panels.append(
+            ConnectedEndpointsPanel(
+                table_class=table_class,
+                table_title=f"{bettertitle(model._meta.verbose_name)} Endpoints",
+                section=section,
+                weight=weight + index,
+            )
+        )
+    return panels
