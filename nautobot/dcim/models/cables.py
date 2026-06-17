@@ -651,8 +651,6 @@ class Cable(PrimaryModel):
                     "b": b_info,
                     "a_rowspan": a_rowspan,
                     "b_rowspan": b_rowspan,
-                    "_a_connector": a_connector,
-                    "_b_connector": b_connector,
                 }
             )
 
@@ -661,6 +659,34 @@ class Cable(PrimaryModel):
             "is_breakout": True,
             "a_connector_count": cable_type.a_connectors,
             "b_connector_count": cable_type.b_connectors,
+        }
+
+    def get_connections_a(self):
+        data = self.get_connections()
+        return {
+            "rows": [
+                {
+                    "info": row["a"],
+                    "rowspan": row["a_rowspan"],
+                }
+                for row in data["rows"]
+            ],
+            "is_breakout": data["is_breakout"],
+            "connector_count": data["a_connector_count"],
+        }
+
+    def get_connections_b(self):
+        data = self.get_connections()
+        return {
+            "rows": [
+                {
+                    "info": row["b"],
+                    "rowspan": row["b_rowspan"],
+                }
+                for row in data["rows"]
+            ],
+            "is_breakout": data["is_breakout"],
+            "connector_count": data["b_connector_count"],
         }
 
     # ─── Validation ───

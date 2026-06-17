@@ -78,6 +78,32 @@ CABLE_TERMINATION_MODELS = Q(
     )
 )
 
+DEVICE_COMPONENT_ICONS = {
+    "circuittermination": "mdi-cable-data",
+    "consoleport": "mdi-console",
+    "consoleporttemplate": "mdi-console",
+    "consoleserverport": "mdi-console-network-outline",
+    "consoleserverporttemplate": "mdi-console-network-outline",
+    "devicebay": "mdi-circle-outline",  # DeviceDeviceBayTable overrides -> mdi-circle-slice-8 for populated bays
+    "devicebaytemplate": "mdi-circle-outline",
+    "frontport": "mdi-arrow-right-bold-box-outline",
+    "frontporttemplate": "mdi-arrow-right-bold-box-outline",
+    "interface": "mdi-ethernet",
+    "interfacetemplate": "mdi-ethernet",
+    "inventoryitem": "mdi-invoice-list-outline",
+    "modulebay": "mdi-tray",  # DeviceModuleBayTable overrides -> mdi-expansion-card-variant for populated bays
+    "modulebaytemplate": "mdi-tray",
+    "powerfeed": "mdi-flash",
+    "poweroutlet": "mdi-power-socket",
+    "poweroutlettemplate": "mdi-power-socket",
+    "powerport": "mdi-power-plug-outline",
+    "powerporttemplate": "mdi-power-plug-outline",
+    "rearport": "mdi-arrow-left-bold-box-outline",
+    "rearporttemplate": "mdi-arrow-left-bold-box-outline",
+}
+
+CABLE_TERMINATION_GENERIC_ICON = "mdi-cable-data"
+
 # Maps each cable-termination type to the list of types its other end may connect to. List order is
 # significant: the first entry is used as the default B-side type when creating a cable from a given
 # A-side type (see `CableForm._init_lane_fields`), so each list should lead with the most natural /

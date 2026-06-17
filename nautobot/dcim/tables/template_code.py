@@ -1,8 +1,29 @@
+import django_tables2 as tables
+
+from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS
+
+
+class DeviceComponentNameColumn(tables.TemplateColumn):
+    def __init__(self, *args, modelname, **kwargs):
+        self.modelname = modelname
+        self.icon = DEVICE_COMPONENT_ICONS[modelname]
+        kwargs.setdefault(
+            "template_code",
+            (f'<span class="mdi {self.icon}"></span> <a href="{{{{ record.get_absolute_url }}}}">{{{{ value }}}}</a>'),
+        )
+        kwargs.setdefault("attrs", {}).setdefault("td", {})["class"] = "text-nowrap"
+        kwargs.setdefault("order_by", ("_name",))
+        super().__init__(*args, **kwargs)
+
+
 CABLETERMINATION = """
+{% load cables %}
+{% load helpers %}
 {% if value %}
     {% for peer in value %}
         <a href="{{ peer.parent.get_absolute_url }}">{{ peer.parent }}</a>
-        <span class="mdi mdi-chevron-right"></span>
+        /
+        <span class="mdi {{ peer|termination_type_icon }}" title="{{ peer|meta:'verbose_name'|capfirst }}"></span>
         <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
@@ -12,10 +33,13 @@ CABLETERMINATION = """
 """
 
 PATHENDPOINT = """
+{% load cables %}
+{% load helpers %}
 {% if value %}
     {% for endpoint in value %}
         <a href="{{ endpoint.parent.get_absolute_url }}">{{ endpoint.parent }}</a>
-        <span class="mdi mdi-chevron-right"></span>
+        /
+        <span class="mdi {{ endpoint|termination_type_icon }}" title="{{ endpoint|meta:'verbose_name'|capfirst }}"></span>
         <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
@@ -41,21 +65,20 @@ CABLE_TERMINATION_PARENT = """
 CABLE_TERMINATIONS_MULTI = """
 {% load cables %}
 {% load helpers %}
-{% for endpoint in value %}
-    {% with term=endpoint.termination %}
-        {% if term %}
-            {% termination_type_icon term as t_icon %}
-            <span class="mdi {{ t_icon }}" title="{{ term|meta:'verbose_name'|capfirst }}"></span>
-            {% if term.parent %}
-                <a href="{{ term.parent.get_absolute_url }}">{{ term.parent }}</a> /
+{% for row in value.rows %}
+    {% if row.rowspan %}
+        {% if row.info.termination %}
+            {% if row.info.termination.parent %}
+                {{ row.info.termination.parent|hyperlinked_object }} /
             {% endif %}
-            <a href="{{ term.get_absolute_url }}">{{ term }}</a>
-            {% if endpoint.connector is not None %}
-                <small class="text-muted">({{ endpoint.cable_end }}{{ endpoint.connector }})</small>
-            {% endif %}
-            {% if not forloop.last %}<br>{% endif %}
+            <span class="mdi {{ row.info.termination|termination_type_icon }}" title="{{ row.info.termination|meta:'verbose_name'|capfirst }}"></span>
         {% endif %}
-    {% endwith %}
+        {{ row.info.termination|hyperlinked_object }}
+        {% if value.is_breakout %}
+            <small class="text-secondary">({{ row.info.side }}{{ row.info.connector }})</small>
+        {% endif %}
+    {% endif %}
+    {% if not forloop.last %}<br>{% endif %}
 {% empty %}
     <span class="text-secondary">&mdash;</span>
 {% endfor %}
@@ -158,19 +181,6 @@ LOCATION_TREE_LINK = """
 {% endspaceless %}
 """
 
-
-POWERFEED_CABLE = """
-<a href="{{ value.get_absolute_url }}">{{ value }}</a>
-<a href="{% url 'dcim:powerfeed_trace' pk=record.pk %}" class="btn btn-primary btn-sm" title="Trace">
-    <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
-</a>
-"""
-
-POWERFEED_CABLETERMINATION = """
-<a href="{{ value.parent.get_absolute_url }}">{{ value.parent }}</a>
-<span class="mdi mdi-chevron-right"></span>
-<a href="{{ value.get_absolute_url }}">{{ value }}</a>
-"""
 
 RACKGROUP_ELEVATIONS = """
 <li>
