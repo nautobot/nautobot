@@ -221,7 +221,7 @@ class ModularComponentModel(ComponentModel):
 
     def save(self, *args, **kwargs):
         if self.device is None and self.module is not None:
-            self.device = getattr(self.module.parent_module_bay, "parent_devie", None)
+            self.device = getattr(self.module.parent_module_bay, "parent_device", None)
 
         super().save(*args, **kwargs)
 

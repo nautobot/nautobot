@@ -2080,6 +2080,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIsNotNone(device.primary_ip4)
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         self.assertIsNotNone(device.primary_ip6)
+
         device.validated_save()
 
     def test_software_version_device_type_validation(self):
