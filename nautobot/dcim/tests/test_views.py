@@ -3761,6 +3761,38 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_detail_shows_all_breakout_cable_peers(self):
+        """All far-end terminations of a multi-termination (breakout) cable must appear on the detail view.
+
+        Regression guard against the prior behavior of rendering only the first peer
+        (`connected_endpoint`/`get_cable_peer`) on the "Connection" panel.
+        """
+        device = create_test_device("Breakout Device")
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        trunk = Interface.objects.create(device=device, name="Breakout Trunk", status=status_active)
+        lane1 = Interface.objects.create(device=device, name="Breakout Lane 1", status=status_active)
+        lane2 = Interface.objects.create(device=device, name="Breakout Lane 2", status=status_active)
+        breakout_type = CableType.objects.create(
+            name="1x2 breakout (interface detail)", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout_type, status=cable_status)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        # Sanity check the underlying model returns both lanes before asserting the rendered output.
+        self.assertEqual(set(trunk.get_cable_peers()), {lane1, lane2})
+
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(trunk.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Both far-end lanes appear (Connection panel peer/endpoint lists + "Interface Endpoints" table),
+        # not just the first one.
+        self.assertIn(lane1.get_absolute_url(), content)
+        self.assertIn(lane2.get_absolute_url(), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_port_type_fails(self):
         """Test that a virtual interface cannot have a port type"""
         self.add_permissions("dcim.add_interface")
@@ -5608,7 +5640,11 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
         )
         # Sanity check:
-        self.assertBodyContains(response, '<th class="orderable"><a href="?sort=name">Name</a></th>', html=True)
+        self.assertBodyContains(
+            response,
+            '<th class="asc orderable"><a href="?sort=-name">Name<span class="mdi mdi-arrow-up-thin"></a></th>',
+            html=True,
+        )
 
     def test_set_master_after_adding_member(self):
         """Ensure master can be set for a member that was added via the Add Member flow."""

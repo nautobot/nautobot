@@ -51,11 +51,13 @@ router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("power-outlet-templates", views.PowerOutletTemplateUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
 router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-chassis", views.VirtualChassisUIViewSet)
@@ -154,68 +156,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Power outlet templates
-    path(
-        "power-outlet-templates/add/",
-        views.PowerOutletTemplateCreateView.as_view(),
-        name="poweroutlettemplate_add",
-    ),
-    path(
-        "power-outlet-templates/edit/",
-        views.PowerOutletTemplateBulkEditView.as_view(),
-        name="poweroutlettemplate_bulk_edit",
-    ),
-    path(
-        "power-outlet-templates/rename/",
-        views.PowerOutletTemplateBulkRenameView.as_view(),
-        name="poweroutlettemplate_bulk_rename",
-    ),
-    path(
-        "power-outlet-templates/delete/",
-        views.PowerOutletTemplateBulkDeleteView.as_view(),
-        name="poweroutlettemplate_bulk_delete",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/edit/",
-        views.PowerOutletTemplateEditView.as_view(),
-        name="poweroutlettemplate_edit",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/delete/",
-        views.PowerOutletTemplateDeleteView.as_view(),
-        name="poweroutlettemplate_delete",
-    ),
-    # Rear port templates
-    path(
-        "rear-port-templates/add/",
-        views.RearPortTemplateCreateView.as_view(),
-        name="rearporttemplate_add",
-    ),
-    path(
-        "rear-port-templates/edit/",
-        views.RearPortTemplateBulkEditView.as_view(),
-        name="rearporttemplate_bulk_edit",
-    ),
-    path(
-        "rear-port-templates/rename/",
-        views.RearPortTemplateBulkRenameView.as_view(),
-        name="rearporttemplate_bulk_rename",
-    ),
-    path(
-        "rear-port-templates/delete/",
-        views.RearPortTemplateBulkDeleteView.as_view(),
-        name="rearporttemplate_bulk_delete",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/edit/",
-        views.RearPortTemplateEditView.as_view(),
-        name="rearporttemplate_edit",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/delete/",
-        views.RearPortTemplateDeleteView.as_view(),
-        name="rearporttemplate_delete",
     ),
     # Device bay templates
     path(
