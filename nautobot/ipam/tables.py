@@ -183,6 +183,16 @@ vminterface={{ request.GET.vminterface }}\
 </span>
 """
 
+IPADDRESSRANGE_COPY = """
+<span>
+    <span id="copy_{{ record.id }}_{{ bound_column.name }}">{{ value }}</span>
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{ record.id }}_{{ bound_column.name }}">
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">Copy</span>
+    </button>
+</span>
+"""
+
 VRF_LINK = """
 {% if record.vrf %}
     <a href="{{ record.vrf.get_absolute_url }}">{{ record.vrf }}</a>
@@ -651,8 +661,8 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
 class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.Column()
-    start_address = tables.Column()
-    end_address = tables.Column()
+    start_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("start_host",))
+    end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
     tenant = TenantColumn()
     count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")

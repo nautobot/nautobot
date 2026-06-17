@@ -1404,7 +1404,7 @@ class IPAddressRangeUIViewSet(NautobotUIViewSet):
     filterset_class = filters.IPAddressRangeFilterSet
     filterset_form_class = forms.IPAddressRangeFilterForm
     form_class = forms.IPAddressRangeForm
-    queryset = IPAddressRange.objects.select_related("parent", "status", "role", "tenant__tenant_group")
+    queryset = IPAddressRange.objects.select_related("parent__namespace", "status", "role", "tenant__tenant_group")
     serializer_class = serializers.IPAddressRangeSerializer
     table_class = tables.IPAddressRangeTable
 
