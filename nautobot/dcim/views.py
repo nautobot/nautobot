@@ -4673,10 +4673,10 @@ class PowerPortUIViewSet(
     module_breadcrumb_url = "dcim:module_powerports"
 
     def get_extra_context(self, request, instance):
-        return {
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
+        return context
 
 
 #
