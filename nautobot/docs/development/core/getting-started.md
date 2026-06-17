@@ -241,7 +241,7 @@ Additional useful commands for the development environment:
     * You can add `-f` or `--follow` to follow the logs in real time.
     * You can add `-t N` or `--tail N` to specify the number of previous lines to show.
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
-* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke cli [-s servicename] [-c command]` - Launches a `bash` shell (or runs the specified `command`) inside the specified service container (if no servicename is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename] [-s servicename]` - Stops all containers (or specific containers/services) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
@@ -739,10 +739,10 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
 <!-- pyml disable-num-lines 4 no-inline-html -->
-| Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
-| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
+| Docker Compose Workflow | Virtual Environment Workflow                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invoke ruff`           | `ruff format --check development/ examples/ nautobot/ scripts/ tasks.py`<br>and<br>`ruff check development/ examples/ nautobot/ scripts/ tasks.py` |
+| `invoke pylint`         | `pylint --recursive development/ examples/ nautobot/ scripts/ tasks.py`                                                                            |
 
 ### Handling Migrations
 

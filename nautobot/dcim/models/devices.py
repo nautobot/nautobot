@@ -29,7 +29,8 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.component_creation import is_auto_component_creation_suppressed
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT, MODULE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.querysets import DeviceQuerySet
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
@@ -928,8 +929,9 @@ class Device(PrimaryModel, ConfigContextModel):
             delattr(self, "_deferred_cluster")
             self.assign_cluster(cluster)
 
-        # If this is a new Device, instantiate all related components per the DeviceType definition
-        if is_new:
+        # If this is a new Device, instantiate all related components per the DeviceType definition,
+        # unless an app has opted out via nautobot.apps.dcim.SkipAutoComponentCreation.
+        if is_new and not is_auto_component_creation_suppressed():
             self.create_components()
 
         # Update Location and Rack assignment for all nested descendant Devices.
@@ -2138,8 +2140,9 @@ class Module(PrimaryModel):
 
         super().save(*args, **kwargs)
 
-        # If this is a new Module, instantiate all related components per the ModuleType definition
-        if is_new:
+        # If this is a new Module, instantiate all related components per the ModuleType definition,
+        # unless an app has opted out via nautobot.apps.dcim.SkipAutoComponentCreation.
+        if is_new and not is_auto_component_creation_suppressed():
             self.create_components()
 
         # Render component names when this Module is first created or when the parent module bay has changed

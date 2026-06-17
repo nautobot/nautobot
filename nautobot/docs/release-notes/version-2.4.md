@@ -169,6 +169,34 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.35 (2026-06-08)
+
+### Fixed in v2.4.35
+
+- [#7762](https://github.com/nautobot/nautobot/issues/7762) - Added a reentrant lock to the `import_modules_privately()` method to address a race condition in multithreaded code.
+- [#8965](https://github.com/nautobot/nautobot/issues/8965) - Fixed slow page loads on detail views at large scale.
+- [#8988](https://github.com/nautobot/nautobot/issues/8988) - Fixed Git Repository Job loading producing multiple class objects for the same source file, which caused `isinstance` checks against shared classes to return false negatives.
+- [#9015](https://github.com/nautobot/nautobot/issues/9015) - Fixed N+1 query patterns when resolving `tags` and `config_context` in GraphQL queries.
+
+### Dependencies in v2.4.35
+
+- [#8968](https://github.com/nautobot/nautobot/issues/8968) - Updated `cryptography` dependency to `(>=46.0.7,<49)`.
+
+## v2.4.34 (2026-05-26)
+
+### Security in v2.4.34
+
+- [#8990](https://github.com/nautobot/nautobot/issues/8990) - Updated dependency `idna` to `3.16` to mitigate CVE-2026-45409. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
+- [#8990](https://github.com/nautobot/nautobot/issues/8990) - Updated indirect development dependency `pymdown-extensions` to `10.21.3` to mitigate CVE-2026-46338.
+
+### Fixed in v2.4.34
+
+- [#9000](https://github.com/nautobot/nautobot/issues/9000) - Fixed "Job Queue" in Re-Run form when queue type is kubernetes.
+
+### Dependencies in v2.4.34
+
+- [#8960](https://github.com/nautobot/nautobot/issues/8960) - Added `urllib3^2.7.0` as a direct dependency as Nautobot now directly uses it. (Previously it was an indirect dependency.)
+
 ## v2.4.33 (2026-05-08)
 
 ### Security in v2.4.33

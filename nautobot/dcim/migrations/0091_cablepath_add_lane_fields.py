@@ -6,7 +6,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [("dcim", "0089_remove_cable_old_gfk_fields")]
+    dependencies = [("dcim", "0090_remove_cable_old_gfk_fields")]
     operations = [
         migrations.AddField(
             model_name="cablepath",

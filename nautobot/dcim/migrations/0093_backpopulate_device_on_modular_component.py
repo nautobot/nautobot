@@ -122,7 +122,7 @@ def clear_backpopulated_device(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0091_remove_consoleport_dcim_consoleport_device_name_unique_and_more"),
+        ("dcim", "0092_remove_consoleport_dcim_consoleport_device_name_unique_and_more"),
     ]
 
     operations = [

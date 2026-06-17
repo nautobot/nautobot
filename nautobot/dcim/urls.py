@@ -27,6 +27,7 @@ app_name = "dcim"
 router = NautobotUIViewSetRouter()
 router.register("cables", views.CableUIViewSet)
 router.register("cable-types", views.CableTypeUIViewSet)
+router.register("console-ports", views.ConsolePortUIViewSet)
 router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
 router.register("console-server-port-templates", views.ConsoleServerPortTemplateUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
@@ -35,8 +36,10 @@ router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("devices", views.DeviceUIViewSet)
+router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("interface-templates", views.InterfaceTemplateUIViewSet)
 router.register("locations", views.LocationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
 router.register("manufacturers", views.ManufacturerUIViewSet)
@@ -47,10 +50,13 @@ router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("power-outlet-templates", views.PowerOutletTemplateUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-chassis", views.VirtualChassisUIViewSet)
@@ -150,161 +156,6 @@ urlpatterns = [
         ),
         name="devicetype_modulebaytemplate_add",
     ),
-    # Power port templates
-    path(
-        "power-port-templates/add/",
-        views.PowerPortTemplateCreateView.as_view(),
-        name="powerporttemplate_add",
-    ),
-    path(
-        "power-port-templates/edit/",
-        views.PowerPortTemplateBulkEditView.as_view(),
-        name="powerporttemplate_bulk_edit",
-    ),
-    path(
-        "power-port-templates/rename/",
-        views.PowerPortTemplateBulkRenameView.as_view(),
-        name="powerporttemplate_bulk_rename",
-    ),
-    path(
-        "power-port-templates/delete/",
-        views.PowerPortTemplateBulkDeleteView.as_view(),
-        name="powerporttemplate_bulk_delete",
-    ),
-    path(
-        "power-port-templates/<uuid:pk>/edit/",
-        views.PowerPortTemplateEditView.as_view(),
-        name="powerporttemplate_edit",
-    ),
-    path(
-        "power-port-templates/<uuid:pk>/delete/",
-        views.PowerPortTemplateDeleteView.as_view(),
-        name="powerporttemplate_delete",
-    ),
-    # Power outlet templates
-    path(
-        "power-outlet-templates/add/",
-        views.PowerOutletTemplateCreateView.as_view(),
-        name="poweroutlettemplate_add",
-    ),
-    path(
-        "power-outlet-templates/edit/",
-        views.PowerOutletTemplateBulkEditView.as_view(),
-        name="poweroutlettemplate_bulk_edit",
-    ),
-    path(
-        "power-outlet-templates/rename/",
-        views.PowerOutletTemplateBulkRenameView.as_view(),
-        name="poweroutlettemplate_bulk_rename",
-    ),
-    path(
-        "power-outlet-templates/delete/",
-        views.PowerOutletTemplateBulkDeleteView.as_view(),
-        name="poweroutlettemplate_bulk_delete",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/edit/",
-        views.PowerOutletTemplateEditView.as_view(),
-        name="poweroutlettemplate_edit",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/delete/",
-        views.PowerOutletTemplateDeleteView.as_view(),
-        name="poweroutlettemplate_delete",
-    ),
-    # Interface templates
-    path(
-        "interface-templates/add/",
-        views.InterfaceTemplateCreateView.as_view(),
-        name="interfacetemplate_add",
-    ),
-    path(
-        "interface-templates/edit/",
-        views.InterfaceTemplateBulkEditView.as_view(),
-        name="interfacetemplate_bulk_edit",
-    ),
-    path(
-        "interface-templates/rename/",
-        views.InterfaceTemplateBulkRenameView.as_view(),
-        name="interfacetemplate_bulk_rename",
-    ),
-    path(
-        "interface-templates/delete/",
-        views.InterfaceTemplateBulkDeleteView.as_view(),
-        name="interfacetemplate_bulk_delete",
-    ),
-    path(
-        "interface-templates/<uuid:pk>/edit/",
-        views.InterfaceTemplateEditView.as_view(),
-        name="interfacetemplate_edit",
-    ),
-    path(
-        "interface-templates/<uuid:pk>/delete/",
-        views.InterfaceTemplateDeleteView.as_view(),
-        name="interfacetemplate_delete",
-    ),
-    # Front port templates
-    path(
-        "front-port-templates/add/",
-        views.FrontPortTemplateCreateView.as_view(),
-        name="frontporttemplate_add",
-    ),
-    path(
-        "front-port-templates/edit/",
-        views.FrontPortTemplateBulkEditView.as_view(),
-        name="frontporttemplate_bulk_edit",
-    ),
-    path(
-        "front-port-templates/rename/",
-        views.FrontPortTemplateBulkRenameView.as_view(),
-        name="frontporttemplate_bulk_rename",
-    ),
-    path(
-        "front-port-templates/delete/",
-        views.FrontPortTemplateBulkDeleteView.as_view(),
-        name="frontporttemplate_bulk_delete",
-    ),
-    path(
-        "front-port-templates/<uuid:pk>/edit/",
-        views.FrontPortTemplateEditView.as_view(),
-        name="frontporttemplate_edit",
-    ),
-    path(
-        "front-port-templates/<uuid:pk>/delete/",
-        views.FrontPortTemplateDeleteView.as_view(),
-        name="frontporttemplate_delete",
-    ),
-    # Rear port templates
-    path(
-        "rear-port-templates/add/",
-        views.RearPortTemplateCreateView.as_view(),
-        name="rearporttemplate_add",
-    ),
-    path(
-        "rear-port-templates/edit/",
-        views.RearPortTemplateBulkEditView.as_view(),
-        name="rearporttemplate_bulk_edit",
-    ),
-    path(
-        "rear-port-templates/rename/",
-        views.RearPortTemplateBulkRenameView.as_view(),
-        name="rearporttemplate_bulk_rename",
-    ),
-    path(
-        "rear-port-templates/delete/",
-        views.RearPortTemplateBulkDeleteView.as_view(),
-        name="rearporttemplate_bulk_delete",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/edit/",
-        views.RearPortTemplateEditView.as_view(),
-        name="rearporttemplate_edit",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/delete/",
-        views.RearPortTemplateDeleteView.as_view(),
-        name="rearporttemplate_delete",
-    ),
     # Device bay templates
     path(
         "device-bay-templates/add/",
@@ -402,60 +253,6 @@ urlpatterns = [
         kwargs={"model": Device},
     ),
     # Console ports
-    path("console-ports/", views.ConsolePortListView.as_view(), name="consoleport_list"),
-    path(
-        "console-ports/add/",
-        views.ConsolePortCreateView.as_view(),
-        name="consoleport_add",
-    ),
-    path(
-        "console-ports/import/",
-        views.ConsolePortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="consoleport_import",
-    ),
-    path(
-        "console-ports/edit/",
-        views.ConsolePortBulkEditView.as_view(),
-        name="consoleport_bulk_edit",
-    ),
-    path(
-        "console-ports/rename/",
-        views.ConsolePortBulkRenameView.as_view(),
-        name="consoleport_bulk_rename",
-    ),
-    path(
-        "console-ports/disconnect/",
-        views.ConsolePortBulkDisconnectView.as_view(),
-        name="consoleport_bulk_disconnect",
-    ),
-    path(
-        "console-ports/delete/",
-        views.ConsolePortBulkDeleteView.as_view(),
-        name="consoleport_bulk_delete",
-    ),
-    path("console-ports/<uuid:pk>/", views.ConsolePortView.as_view(), name="consoleport"),
-    path(
-        "console-ports/<uuid:pk>/edit/",
-        views.ConsolePortEditView.as_view(),
-        name="consoleport_edit",
-    ),
-    path(
-        "console-ports/<uuid:pk>/delete/",
-        views.ConsolePortDeleteView.as_view(),
-        name="consoleport_delete",
-    ),
-    path(
-        "console-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="consoleport_changelog",
-        kwargs={"model": ConsolePort},
-    ),
-    path(
-        "console-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="consoleport_notes",
-        kwargs={"model": ConsolePort},
-    ),
     path(
         "console-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),

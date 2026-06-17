@@ -34,7 +34,7 @@ def _at_most_one_termination_check():
 class Migration(migrations.Migration):
     dependencies = [
         ("circuits", "0022_circuittermination_cloud_network"),
-        ("dcim", "0086_populate_default_cable_types"),
+        ("dcim", "0087_populate_default_cable_types"),
     ]
     operations = [
         migrations.AlterModelOptions(name="cable", options={"ordering": ["label", "pk"]}),

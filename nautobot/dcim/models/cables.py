@@ -651,8 +651,6 @@ class Cable(PrimaryModel):
                     "b": b_info,
                     "a_rowspan": a_rowspan,
                     "b_rowspan": b_rowspan,
-                    "_a_connector": a_connector,
-                    "_b_connector": b_connector,
                 }
             )
 
@@ -661,6 +659,34 @@ class Cable(PrimaryModel):
             "is_breakout": True,
             "a_connector_count": cable_type.a_connectors,
             "b_connector_count": cable_type.b_connectors,
+        }
+
+    def get_connections_a(self):
+        data = self.get_connections()
+        return {
+            "rows": [
+                {
+                    "info": row["a"],
+                    "rowspan": row["a_rowspan"],
+                }
+                for row in data["rows"]
+            ],
+            "is_breakout": data["is_breakout"],
+            "connector_count": data["a_connector_count"],
+        }
+
+    def get_connections_b(self):
+        data = self.get_connections()
+        return {
+            "rows": [
+                {
+                    "info": row["b"],
+                    "rowspan": row["b_rowspan"],
+                }
+                for row in data["rows"]
+            ],
+            "is_breakout": data["is_breakout"],
+            "connector_count": data["b_connector_count"],
         }
 
     # ─── Validation ───
@@ -1263,11 +1289,12 @@ class CablePath(BaseModel):
             if node.cable.status != Cable.STATUS_CONNECTED:
                 is_active = False
 
-            # Mid-path breakout bail-out: don't even enter the cable. Lane-aware routing
-            # *through* a mid-path breakout cable (e.g. an MPO trunk between pass-through ports
-            # in a cross-connect cabinet) isn't supported, so we mark the path as split and stop
-            # at the previous pass-through rather than picking an arbitrary peer.
-            if not first_hop and node.cable.cable_type_id and node.cable.cable_type.is_breakout:
+            # Mid-path breakout handling: a lane returning to its single trunk peer can be followed
+            # deterministically (e.g. a patch-panel front port whose breakout lane leads back to one
+            # trunk endpoint). Arriving on the fan-out side instead means the signal splits across
+            # multiple lanes with no way to choose, so mark the path split and stop at the previous
+            # pass-through rather than picking an arbitrary peer.
+            if not first_hop and node.breakout_fans_out():
                 is_split = True
                 break
 
@@ -1371,6 +1398,16 @@ class CablePath(BaseModel):
 
         return path
 
+    def trace(self):
+        """Return this path as a list of (near-end termination, cable, far-end termination) three-tuples."""
+        # Construct the complete path, padding to complete three-tuples (e.g. for paths that end at
+        # a RearPort) before appending the destination.
+        path = [self.origin, *self.get_path()]
+        while (len(path) + 1) % 3:
+            path.append(None)
+        path.append(self.destination)
+        return list(zip(*[iter(path)] * 3))
+
     def get_total_length(self):
         """
         Return the sum of the length of each cable in the path.
@@ -1385,6 +1422,17 @@ class CablePath(BaseModel):
     def get_split_nodes(self):
         """
         Return all available next segments in a split cable path.
+
+        A split path ends on one of two port types:
+
+        - A RearPort: the trace arrived on the rear face of a patch panel and the signal fans out
+          internally to the panel's front ports, so those front ports are the next segments.
+        - A FrontPort: the trace arrived front-to-rear at a breakout cable that fans out across
+          multiple lanes (see `CablePath.from_origin`), so the next segments are that cable's
+          far-side lane terminations — onward across the cable, not the rear port behind the front
+          port (which the trace has already traversed).
         """
-        rearport = path_node_to_object(self.path[-1])
-        return FrontPort.objects.filter(rear_port=rearport)
+        next_port = path_node_to_object(self.path[-1])
+        if isinstance(next_port, RearPort):
+            return FrontPort.objects.filter(rear_port=next_port)
+        return next_port.get_cable_peers()

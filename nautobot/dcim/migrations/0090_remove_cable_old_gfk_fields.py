@@ -6,7 +6,7 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = [("dcim", "0088_populate_cabletocabletermination")]
+    dependencies = [("dcim", "0089_populate_cabletocabletermination")]
     operations = [
         migrations.RemoveField(model_name="cable", name="_termination_a_device"),
         migrations.RemoveField(model_name="cable", name="_termination_b_device"),

@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0090_cablepath_add_lane_fields"),
+        ("dcim", "0091_cablepath_add_lane_fields"),
     ]
 
     operations = [

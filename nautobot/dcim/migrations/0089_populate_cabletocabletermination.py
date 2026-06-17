@@ -65,5 +65,5 @@ def populate_cable_to_cable_terminations(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("dcim", "0087_cabletocabletermination")]
+    dependencies = [("dcim", "0088_cabletocabletermination")]
     operations = [migrations.RunPython(populate_cable_to_cable_terminations, migrations.RunPython.noop)]

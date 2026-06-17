@@ -1,0 +1,1 @@
+Fixed incorrect logic for selecting variant icons for Interfaces in `DeviceModuleInterfaceTable`.
