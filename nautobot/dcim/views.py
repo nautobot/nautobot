@@ -4603,6 +4603,14 @@ class ConsoleServerPortUIViewSet(
     device_breadcrumb_url = "dcim:device_consoleserverports"
     module_breadcrumb_url = "dcim:module_consoleserverports"
 
+    def get_extra_context(self, request, instance):
+        return {
+            "device_breadcrumb_url": self.device_breadcrumb_url,
+            "module_breadcrumb_url": self.module_breadcrumb_url,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
+            **super().get_extra_context(request, instance),
+        }
+
 
 #
 # Power ports
