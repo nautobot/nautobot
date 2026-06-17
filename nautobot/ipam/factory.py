@@ -3,6 +3,7 @@ import logging
 import math
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 import factory
 import faker
 import netaddr
@@ -523,75 +524,60 @@ class IPAddressFactory(PrimaryModelFactory):
 
 
 class IPAddressRangeFactory(PrimaryModelFactory):
-    """Create random IPAddressRange objects, each carved from a randomly selected IPv4 Network Prefix.
+    """Create random IPAddressRange objects, each carved from a Network Prefix.
 
-    A range needs a parent Prefix that fully contains both endpoints, must not overlap other ranges
-    in the same namespace, and must not overlap the parent's child Prefixes. Rather than generating
-    arbitrary start/end addresses (which would frequently fail those validations), this factory picks
-    an existing leaf-ish Network Prefix without an existing range and carves a small span (1-10
-    addresses) out of it, so the generated range reliably passes IPAddressRange.clean().
-
-    `is_exclusive` defaults to False to avoid conflicting with any IPAddress objects already present
-    in the prefix.
-
-    Examples:
-        Create 10 IP address ranges:
-            >>> IPAddressRangeFactory.create_batch(10)
+    Picks an existing leaf Network Prefix that has no children and no existing range
+    (so the carved span can't collide with a child prefix or another range); if none
+    is available, creates a fresh parent so create_batch(n) reliably yields n ranges.
     """
 
     class Meta:
         model = IPAddressRange
-        exclude = ("has_description", "has_role", "has_tenant", "_parent_prefix", "_start_idx", "_range_size")
+        exclude = ("has_description", "has_name", "has_role", "has_tenant", "_parent_prefix", "_start_idx", "_end_idx")
 
     class Params:
         has_description = NautobotBoolIterator()
+        has_name = NautobotBoolIterator()
         has_role = NautobotBoolIterator()
         has_tenant = NautobotBoolIterator()
 
-    # Pick a Network prefix big enough to carve a range from, without child prefixes or an existing
-    # range (so the carved span can't collide with a child prefix or another range).
-    # allow_null=True: if no suitable prefix exists, this range is simply skipped rather than
-    # raising and aborting the whole test-data generation run.
-    _parent_prefix = random_instance(
-        lambda: (
-            Prefix.objects.filter(
-                type=PrefixTypeChoices.TYPE_NETWORK,
-                ip_version=4,
-                prefix_length__lte=28,
-            )
+    @factory.lazy_attribute
+    def _parent_prefix(self):
+        qs = (
+            Prefix.objects.filter(type=PrefixTypeChoices.TYPE_NETWORK)
+            .filter(Q(ip_version=4, prefix_length__lte=28) | Q(ip_version=6, prefix_length__gte=112))
             .filter(children__isnull=True)
             .filter(ip_address_ranges__isnull=True)
-        ),
-        allow_null=True,
-    )
-    _range_size = factory.LazyAttribute(lambda o: factory.random.randgen.randint(1, 10))
+        )
+        existing = qs.order_by("?").first()
+        if existing is not None:
+            return existing
+        # Guarantee a parent rather than silently dropping the object.
+        return PrefixFactory(type=PrefixTypeChoices.TYPE_NETWORK, prefix_length=24)
 
     @factory.lazy_attribute
     def _start_idx(self):
-        """Pick a random start offset inside the parent, avoiding the network/broadcast addresses."""
-        if not self._parent_prefix:
-            return None
         net = netaddr.IPNetwork(str(self._parent_prefix.prefix))
-        # leave room for the span and avoid network (idx 0) / broadcast (last) addresses
-        max_start = max(1, net.size - self._range_size - 1)
-        return factory.random.randgen.randint(1, max_start)
+        return factory.random.randgen.randint(0, net.size - 1)
+
+    @factory.lazy_attribute
+    def _end_idx(self):
+        net = netaddr.IPNetwork(str(self._parent_prefix.prefix))
+        return factory.random.randgen.randint(self._start_idx, net.size - 1)
 
     parent = factory.LazyAttribute(lambda o: o._parent_prefix)
 
     @factory.lazy_attribute
     def start_address(self):
-        if not self._parent_prefix or self._start_idx is None:
-            return None
         net = netaddr.IPNetwork(str(self._parent_prefix.prefix))
         return str(netaddr.IPAddress(net.first + self._start_idx))
 
     @factory.lazy_attribute
     def end_address(self):
-        if not self._parent_prefix or self._start_idx is None:
-            return None
         net = netaddr.IPNetwork(str(self._parent_prefix.prefix))
-        return str(netaddr.IPAddress(net.first + self._start_idx + self._range_size))
+        return str(netaddr.IPAddress(net.first + self._end_idx))
 
+    name = factory.Maybe("has_name", factory.Faker("word"), "")
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
     role = factory.Maybe(
         "has_role",
@@ -601,4 +587,16 @@ class IPAddressRangeFactory(PrimaryModelFactory):
     status = random_instance(lambda: Status.objects.get_for_model(IPAddressRange), allow_null=False)
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     count_as_utilized = factory.Faker("pybool")
-    is_exclusive = factory.LazyFunction(lambda: False)
+
+    @factory.lazy_attribute
+    def is_exclusive(self):
+        # Randomize, but only commit to True when the carved span is actually empty,
+        # so we never trip _validate_no_exclusive_ip_conflict on a reused prefix.
+        if factory.random.randgen.random() < 0.5:
+            return False
+        has_ip = IPAddress.objects.filter(
+            parent=self.parent,
+            host__gte=self.start_address,
+            host__lte=self.end_address,
+        ).exists()
+        return not has_ip

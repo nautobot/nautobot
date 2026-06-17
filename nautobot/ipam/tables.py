@@ -650,9 +650,9 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
 
 class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
-    start_address = tables.Column(linkify=True)
-    end_address = tables.Column(linkify=True)
+    name = tables.Column()
+    start_address = tables.Column()
+    end_address = tables.Column()
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
     tenant = TenantColumn()
     count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")

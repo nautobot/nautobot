@@ -705,40 +705,53 @@ class IPAddressRangeFilterSet(
         method="filter_contains",
         label="IP Address Ranges which contain this IP address",
     )
+    ip_version = django_filters.NumberFilter()
 
     class Meta:
         model = IPAddressRange
-        fields = ["id", "name", "ip_version", "count_as_utilized", "is_exclusive"]
+        fields = ["id", "name", "ip_version", "count_as_utilized", "is_exclusive", "tags"]
 
     @staticmethod
     def _hosts_to_bytes(values):
         """Convert address strings to their binary host representation (mask, if any, is ignored)."""
         return [bytes(netaddr.IPNetwork(val).ip) for val in values]
 
+    def generate_query_filter_start_address(self, value):
+        return Q(start_host__in=self._hosts_to_bytes(value))
+
     def filter_start_address(self, queryset, name, value):
         try:
-            return queryset.filter(start_host__in=self._hosts_to_bytes(value))
+            params = self.generate_query_filter_start_address(value)
         except (netaddr.AddrFormatError, ValueError):
             return queryset.none()
+        return queryset.filter(params)
+
+    def generate_query_filter_end_address(self, value):
+        return Q(end_host__in=self._hosts_to_bytes(value))
 
     def filter_end_address(self, queryset, name, value):
         try:
-            return queryset.filter(end_host__in=self._hosts_to_bytes(value))
+            params = self.generate_query_filter_end_address(value)
         except (netaddr.AddrFormatError, ValueError):
             return queryset.none()
+        return queryset.filter(params)
 
-    def filter_contains(self, queryset, name, value):
+    def generate_query_filter_contains(self, value):
         """Find ranges whose span (start_host..end_host) includes the given address(es)."""
         query = Q()
+        for val in value:
+            host = bytes(netaddr.IPNetwork(val).ip)
+            query |= Q(start_host__lte=host, end_host__gte=host)
+        return query
+
+    def filter_contains(self, queryset, name, value):
         try:
-            for val in value:
-                host = bytes(netaddr.IPNetwork(val).ip)
-                query |= Q(start_host__lte=host, end_host__gte=host)
+            params = self.generate_query_filter_contains(value)
         except (netaddr.AddrFormatError, ValueError):
             return queryset.none()
-        if not query:
+        if not params:
             return queryset.none()
-        return queryset.filter(query)
+        return queryset.filter(params)
 
 
 class VLANGroupFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, NameSearchFilterSet):

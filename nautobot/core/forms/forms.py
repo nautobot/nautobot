@@ -32,7 +32,6 @@ __all__ = (
     "ConfirmationForm",
     "DynamicFilterForm",
     "EmbeddedActionsFormMixin",
-    "IPAddressRangeAddressFieldsMixin",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
@@ -69,33 +68,6 @@ class AddressFieldMixin(forms.ModelForm):
 
         # Need to set instance attribute for `address` to run proper validation on Model.clean()
         self.instance.address = self.cleaned_data.get("address")
-
-
-class IPAddressRangeAddressFieldsMixin(forms.ModelForm):
-    """
-    Like AddressFieldMixin, but for an IP range's two bare-host endpoints (no mask).
-    Declares start/end address fields, patches initial on edit, and pushes values onto
-    the instance for model validation.
-    """
-
-    start_address = formfields.IPAddressFormField(help_text="First IP address in the range (inclusive, without mask)")
-    end_address = formfields.IPAddressFormField(help_text="Last IP address in the range (inclusive, without mask)")
-
-    def __init__(self, *args, **kwargs):
-        instance = kwargs.get("instance")
-        initial = kwargs.get("initial", {}).copy()
-        if instance is not None and instance.present_in_database:
-            if "start_address" not in initial and instance.start_address is not None:
-                initial["start_address"] = str(instance.start_address)
-            if "end_address" not in initial and instance.end_address is not None:
-                initial["end_address"] = str(instance.end_address)
-        kwargs["initial"] = initial
-        super().__init__(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-        self.instance.start_address = self.cleaned_data.get("start_address")
-        self.instance.end_address = self.cleaned_data.get("end_address")
 
 
 class BootstrapMixin(forms.BaseForm):

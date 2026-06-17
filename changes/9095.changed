@@ -1,1 +1,1 @@
-Changed related_name from `ip_ranges` to `ip_address_ranges`.
+Changed `related_name` on Tenant and Prefix models from `ip_ranges` to `ip_address_ranges`.

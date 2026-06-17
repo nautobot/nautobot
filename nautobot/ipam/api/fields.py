@@ -11,10 +11,8 @@ class IPFieldSerializer(serializers.CharField):
         """Convert API (string) representation to internal (IPNetwork) representation."""
         try:
             return netaddr.IPNetwork(data)
-        except netaddr.AddrFormatError:
-            raise serializers.ValidationError(f"Invalid IP address format: {data}")
-        except (TypeError, ValueError) as e:
-            raise serializers.ValidationError(e)
+        except (netaddr.AddrFormatError, TypeError, ValueError):
+            raise serializers.ValidationError(f"Invalid IP address: {data}")
 
 
 class IPAddressFieldSerializer(serializers.CharField):
@@ -28,7 +26,5 @@ class IPAddressFieldSerializer(serializers.CharField):
         """Convert API (string) representation to internal (IPAddress) representation."""
         try:
             return netaddr.IPAddress(data)
-        except netaddr.AddrFormatError:
-            raise serializers.ValidationError(f"Invalid IP address format: {data}")
-        except (TypeError, ValueError) as e:
-            raise serializers.ValidationError(str(e))
+        except (netaddr.AddrFormatError, TypeError, ValueError):
+            raise serializers.ValidationError(f"Invalid IP address: {data}")

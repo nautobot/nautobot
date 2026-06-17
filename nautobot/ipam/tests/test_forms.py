@@ -132,3 +132,78 @@ class IPAddressBulkCreateFormTest(TestCase):
         with self.subTest("Assert IPAddressBulkCreateForm with valid pattern"):
             form = form_class(data={"pattern": "192.0.2.[1,5,100-254]/24"})
             self.assertTrue(form.is_valid())
+
+
+class IPAddressRangeFormTest(TestCase):
+    """Tests for IPAddressRangeForm, covering NamespaceFormMixin."""
+
+    def setUp(self):
+        super().setUp()
+        self.namespace = Namespace.objects.create(name="IP Range Form Test")
+        self.prefix_status = Status.objects.get_for_model(Prefix).first()
+        self.range_status = Status.objects.get_for_model(models.IPAddressRange).first()
+        self.parent = Prefix.objects.create(
+            prefix="192.168.1.0/24",
+            namespace=self.namespace,
+            status=self.prefix_status,
+            type="network",
+        )
+
+    def _base_data(self, **overrides):
+        data = {
+            "start_address": "192.168.1.10",
+            "end_address": "192.168.1.20",
+            "namespace": self.namespace.pk,
+            "status": self.range_status.pk,
+        }
+        data.update(overrides)
+        return data
+
+    def test_valid_range(self):
+        """A range with start <= end, contained in a parent Prefix, is valid and saves."""
+        form = forms.IPAddressRangeForm(data=self._base_data())
+        self.assertTrue(form.is_valid(), form.errors)
+        instance = form.save()
+        self.assertEqual(str(instance.start_address), "192.168.1.10")
+        self.assertEqual(str(instance.end_address), "192.168.1.20")
+        self.assertEqual(instance.parent, self.parent)
+
+    def test_start_after_end_is_invalid(self):
+        """start_address greater than end_address is rejected by model validation."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="192.168.1.200", end_address="192.168.1.50"))
+        self.assertFalse(form.is_valid())
+
+    def test_no_parent_prefix_is_invalid(self):
+        """A range whose addresses resolve to no parent Prefix in the namespace is rejected."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="10.99.0.10", end_address="10.99.0.20"))
+        self.assertFalse(form.is_valid())
+
+    def test_address_with_mask_is_invalid(self):
+        """start/end address fields are bare hosts; a value carrying a mask is rejected."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="192.168.1.10/24"))
+        self.assertFalse(form.is_valid())
+
+    def test_invalid_address_is_invalid(self):
+        """A non-address value in start_address is rejected."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="not-an-ip"))
+        self.assertFalse(form.is_valid())
+
+    def test_clean_sets_addresses_on_instance(self):
+        """clean() pushes start/end address onto the instance for model validation."""
+        form = forms.IPAddressRangeForm(data=self._base_data())
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(str(form.instance.start_address), "192.168.1.10")
+        self.assertEqual(str(form.instance.end_address), "192.168.1.20")
+
+    def test_edit_prepopulates_addresses_and_namespace(self):
+        """On edit, the form prepopulates start/end address (from properties) and namespace (from parent)."""
+        instance = models.IPAddressRange.objects.create(
+            start_address="192.168.1.30",
+            end_address="192.168.1.40",
+            namespace=self.namespace,
+            status=self.range_status,
+        )
+        form = forms.IPAddressRangeForm(instance=instance)
+        self.assertEqual(str(form.initial["start_address"]), "192.168.1.30")
+        self.assertEqual(str(form.initial["end_address"]), "192.168.1.40")
+        self.assertEqual(form.initial["namespace"], self.namespace)

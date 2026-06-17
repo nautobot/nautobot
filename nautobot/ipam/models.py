@@ -1870,6 +1870,12 @@ class IPAddressRange(PrimaryModel):
 
     def clean(self):
         self._deconstruct_addresses()
+        # Skip range-level checks if either endpoint is missing (e.g. a form field failed
+        # validation), so we don't TypeError comparing None to an IPAddress. The missing
+        # value is already reported elsewhere (field error, or null=False in clean_fields).
+        if self.start_address is None or self.end_address is None:
+            super().clean()
+            return
         self._validate_start_not_after_end()
         self._resolve_and_validate_parent()
         self._validate_no_range_overlap()

@@ -10,7 +10,6 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
-    IPAddressRangeAddressFieldsMixin,
     NumericArrayField,
     PrefixFieldMixin,
     ReturnURLForm,
@@ -35,6 +34,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
+from nautobot.ipam.formfields import IPAddressFormField
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -773,7 +773,10 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
 #
 
 
-class IPAddressRangeForm(NamespaceFormMixin, IPAddressRangeAddressFieldsMixin, NautobotModelForm, TenancyForm):
+class IPAddressRangeForm(NamespaceFormMixin, NautobotModelForm, TenancyForm):
+    start_address = IPAddressFormField(help_text="First IP address in the range (inclusive, without mask)")
+    end_address = IPAddressFormField(help_text="Last IP address in the range (inclusive, without mask)")
+
     class Meta:
         model = IPAddressRange
         fields = [
@@ -791,7 +794,32 @@ class IPAddressRangeForm(NamespaceFormMixin, IPAddressRangeAddressFieldsMixin, N
             "tags",
         ]
 
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+        # If initial already has an `start/end_address`, we want to use that `start/end_address` as it was passed into
+        # the form. If we're editing an object with a `start/end_address` field, we need to patch initial
+        # to include `start/end_address` because they are a computed fields.
+        if instance is not None:
+            if "start_address" not in initial:
+                initial["start_address"] = instance.start_address
+            if "end_address" not in initial:
+                initial["end_address"] = instance.end_address
+
+        kwargs["initial"] = initial
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.instance.start_address = self.cleaned_data.get("start_address")
+        self.instance.end_address = self.cleaned_data.get("end_address")
+
     def _get_validation_exclusions(self):
+        """
+        By default Django excludes "start_host", "end_host" and "parent" from model validation because they are not form fields.
+
+        This is wrong since we need those fields to be included in the validate_unique() calculation!
+        """
         exclude = super()._get_validation_exclusions()
         for field in ("start_host", "end_host", "parent"):
             exclude.remove(field)
