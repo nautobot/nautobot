@@ -4552,7 +4552,7 @@ class ConsolePortUIViewSet(
             object_detail.ObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                label="Console Port1",
+                label="Console Port",
                 fields=["device", "module", "name", "label", "type", "description"],
                 hide_if_unset=("device", "module"),
             ),
