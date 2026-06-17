@@ -50,6 +50,7 @@ router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("power-outlet-templates", views.PowerOutletTemplateUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
 router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
@@ -154,37 +155,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Power outlet templates
-    path(
-        "power-outlet-templates/add/",
-        views.PowerOutletTemplateCreateView.as_view(),
-        name="poweroutlettemplate_add",
-    ),
-    path(
-        "power-outlet-templates/edit/",
-        views.PowerOutletTemplateBulkEditView.as_view(),
-        name="poweroutlettemplate_bulk_edit",
-    ),
-    path(
-        "power-outlet-templates/rename/",
-        views.PowerOutletTemplateBulkRenameView.as_view(),
-        name="poweroutlettemplate_bulk_rename",
-    ),
-    path(
-        "power-outlet-templates/delete/",
-        views.PowerOutletTemplateBulkDeleteView.as_view(),
-        name="poweroutlettemplate_bulk_delete",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/edit/",
-        views.PowerOutletTemplateEditView.as_view(),
-        name="poweroutlettemplate_edit",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/delete/",
-        views.PowerOutletTemplateDeleteView.as_view(),
-        name="poweroutlettemplate_delete",
     ),
     # Device bay templates
     path(
