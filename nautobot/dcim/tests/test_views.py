@@ -3814,7 +3814,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_initial_render_shows_selected_objects(self):
         """A POST with `pk` values but no `_confirm` flag re-renders the page with the selection list."""
-        self.add_permissions("dcim.change_interface")
+        self.add_permissions("dcim.change_interface", "dcim.change_cable")
         response = self.client.post(self._disconnect_url(), data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)]})
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
@@ -3827,7 +3827,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_disconnects_selected_cables(self):
         """Confirming the bulk-disconnect form deletes the join rows for *each selected* termination ONLY."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         response = self.client.post(
             self._disconnect_url(),
             data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)], "_confirm": "yes", "confirm": "true"},
@@ -3851,7 +3851,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_aggregates_survivor_cable_message_with_bullet_list(self):
         """The post-disconnect "cable still exists" notice is a *single* info message containing a bullet list."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         response = self.client.post(
             self._disconnect_url(),
             data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)], "_confirm": "yes", "confirm": "true"},
@@ -3869,7 +3869,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_skips_uncabled_selections(self):
         """Selecting an uncabled termination alongside cabled ones is harmless — the view silently skips it."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         response = self.client.post(
             self._disconnect_url(),
             data={
@@ -3900,7 +3900,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_redirects_to_return_url(self):
         """When `return_url` is supplied (e.g. by the panel-footer JS), the view redirects there."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         device_tab_url = reverse("dcim:device_interfaces", kwargs={"pk": self.iface_a1.device.pk})
         response = self.client.post(
             self._disconnect_url() + f"?return_url={device_tab_url}",
