@@ -39,7 +39,7 @@ framework panel body wrapper.
                         {% if is_breakout %}<td title="Cable connector" style="width: 1%; white-space: nowrap;">{{ peer.cable_termination.connector }}</td>{% endif %}
                         <td>{{ peer.parent|hyperlinked_object }}</td>
                         <td colspan="2">
-                            <span class="mdi {% termination_type_icon peer %}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                            <span class="mdi {{ peer|termination_type_icon }}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
                             {{ peer|hyperlinked_object }}
                         </td>
                     </tr>
@@ -58,7 +58,7 @@ framework panel body wrapper.
                         {% if path.destination %}
                             <td>{{ path.destination.parent|hyperlinked_object }}</td>
                             <td>
-                                <span class="mdi {% termination_type_icon path.destination %}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                                <span class="mdi {{ path.destination|termination_type_icon }}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
                                 {{ path.destination|hyperlinked_object }}
                             </td>
                             <td>
