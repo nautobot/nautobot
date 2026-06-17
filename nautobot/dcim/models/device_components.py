@@ -128,35 +128,6 @@ class ModularComponentModel(ComponentModel):
         null=True,
     )
 
-    _device_name_key = GeneratedField(
-        expression=Concat(
-            Coalesce(Cast("device_id", output_field=models.CharField()), Value("")),
-            Value("||"),
-            F("name"),
-            output_field=models.CharField(),
-        ),
-        output_field=models.CharField(),
-        db_persist=True,  # must be True to be indexable
-    )
-
-    _module_name_key = GeneratedField(
-        expression=Case(
-            When(
-                module_id__isnull=False,
-                then=Concat(
-                    Cast("module_id", output_field=models.CharField()),
-                    Value("||"),
-                    F("name"),
-                    output_field=models.CharField(),
-                ),
-            ),
-            default=Cast("id", output_field=models.CharField()),  # unique fallback
-            output_field=models.CharField(),
-        ),
-        output_field=models.CharField(),
-        db_persist=True,
-    )
-
     natural_key_field_names = ["device", "module", "name"]
 
     class Meta:
@@ -165,13 +136,9 @@ class ModularComponentModel(ComponentModel):
         # TODO: custom clean method or devce / module / name constraint
         constraints = [
             models.UniqueConstraint(
-                fields=["_device_name_key"],
-                name="%(app_label)s_%(class)s_device_name_unique",
-            ),
-            models.UniqueConstraint(
-                fields=["_module_name_key"],
+                fields=("module", "name"),
                 name="%(app_label)s_%(class)s_module_name_unique",
-            ),
+            )
         ]
 
     @property
@@ -242,14 +209,19 @@ class ModularComponentModel(ComponentModel):
 
     def clean(self):
         super().clean()
+        if (
+            self.__class__.objects.filter(device=self.device, module__isnull=True, name=self.name)
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError(f"A module by this name already exists on {self.device}")
 
         if not (self.device or self.module):
             raise ValidationError("Either device or module must be set")
 
     def save(self, *args, **kwargs):
-        if not self.present_in_database:
-            if self.device is None and self.module is not None:
-                self.device = getattr(self.module.parent_module_bay, "parent_devie", None)
+        if self.device is None and self.module is not None:
+            self.device = getattr(self.module.parent_module_bay, "parent_devie", None)
 
         super().save(*args, **kwargs)
 
@@ -1634,13 +1606,6 @@ class ModuleBay(PrimaryModel):
             "parent_module__id",
             "_name",
         )
-        # TODO: parent device, parent module, name
-        constraints = [
-            models.UniqueConstraint(
-                fields=["parent_device", "parent_module", "name"],
-                name="dcim_modulebay_parent_device_name_unique",
-            )
-        ]
 
     @property
     def parent(self):
@@ -1675,6 +1640,13 @@ class ModuleBay(PrimaryModel):
 
     def clean(self):
         super().clean()
+        if self.parent_device and not self.parent_module:
+            if (
+                ModuleBay.objects.filter(parent_device=self.parent_device, parent_module__isnull=True, name=self.name)
+                .exclude(pk=self.pk)
+                .exists()
+            ):
+                raise ValidationError(f"A module bay by this name already exists on {self.parent_device}")
 
         if not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
