@@ -682,125 +682,127 @@ Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Vers
 
 ??? data "GraphQL data returned"
 
-```json
-{
-  "data": {
-    "device_redundancy_groups": [
-      {
-        "name": "ANY01-bigip-drg",
-        "failover_strategy": "ACTIVE_PASSIVE",
-        "secrets_group": null,
-        "controllers": [],
-        "devices": [
+    ```json
+    {
+      "data": {
+        "device_redundancy_groups": [
           {
-            "name": "bigip1",
-            "device_redundancy_group_priority": 1,
-            "primary_ip4": {
-              "address": "192.0.2.10/24"
-            },
-            "interfaces": [
+            "name": "ANY01-bigip-drg",
+            "failover_strategy": "ACTIVE_PASSIVE",
+            "secrets_group": null,
+            "controllers": [],
+            "devices": [
               {
-                "name": "HA",
-                "ip_addresses": [
+                "name": "bigip1",
+                "device_redundancy_group_priority": 1,
+                "primary_ip4": {
+                  "address": "192.0.2.10/24"
+                },
+                "interfaces": [
                   {
-                    "float": {
-                      "network": "198.51.100.0",
-                      "prefix_length": 24
-                    },
-                    "address": "198.51.100.10/24"
+                    "name": "HA",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "198.51.100.0",
+                          "prefix_length": 24
+                        },
+                        "address": "198.51.100.10/24"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "MGMT",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "192.0.2.0",
+                          "prefix_length": 24
+                        },
+                        "address": "192.0.2.10/24"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "external",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "203.0.113.0",
+                          "prefix_length": 25
+                        },
+                        "address": "203.0.113.10/25"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "internal",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "203.0.113.128",
+                          "prefix_length": 25
+                        },
+                        "address": "203.0.113.140/25"
+                      }
+                    ]
                   }
                 ]
               },
               {
-                "name": "MGMT",
-                "ip_addresses": [
+                "name": "bigip2",
+                "device_redundancy_group_priority": 2,
+                "primary_ip4": {
+                  "address": "192.0.2.11/24"
+                },
+                "interfaces": [
                   {
-                    "float": {
-                      "network": "192.0.2.0",
-                      "prefix_length": 24
-                    },
-                    "address": "192.0.2.10/24"
-                  }
-                ]
-              },
-              {
-                "name": "external",
-                "ip_addresses": [
+                    "name": "HA",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "198.51.100.0",
+                          "prefix_length": 24
+                        },
+                        "address": "198.51.100.11/24"
+                      }
+                    ]
+                  },
                   {
-                    "float": {
-                      "network": "203.0.113.0",
-                      "prefix_length": 25
-                    },
-                    "address": "203.0.113.10/25"
-                  }
-                ]
-              },
-              {
-                "name": "internal",
-                "ip_addresses": [
+                    "name": "MGMT",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "192.0.2.0",
+                          "prefix_length": 24
+                        },
+                        "address": "192.0.2.11/24"
+                      }
+                    ]
+                  },
                   {
-                    "float": {
-                      "network": "203.0.113.128",
-                      "prefix_length": 25
-                    },
-                    "address": "203.0.113.140/25"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "bigip2",
-            "device_redundancy_group_priority": 2,
-            "primary_ip4": {
-              "address": "192.0.2.11/24"
-            },
-            "interfaces": [
-              {
-                "name": "HA",
-                "ip_addresses": [
+                    "name": "external",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "203.0.113.0",
+                          "prefix_length": 25
+                        },
+                        "address": "203.0.113.11/25"
+                      }
+                    ]
+                  },
                   {
-                    "float": {
-                      "network": "198.51.100.0",
-                      "prefix_length": 24
-                    },
-                    "address": "198.51.100.11/24"
-                  }
-                ]
-              },
-              {
-                "name": "MGMT",
-                "ip_addresses": [
-                  {
-                    "float": {
-                      "network": "192.0.2.0",
-                      "prefix_length": 24
-                    },
-                    "address": "192.0.2.11/24"
-                  }
-                ]
-              },
-              {
-                "name": "external",
-                "ip_addresses": [
-                  {
-                    "float": {
-                      "network": "203.0.113.0",
-                      "prefix_length": 25
-                    },
-                    "address": "203.0.113.11/25"
-                  }
-                ]
-              },
-              {
-                "name": "internal",
-                "ip_addresses": [
-                  {
-                    "float": {
-                      "network": "203.0.113.128",
-                      "prefix_length": 25
-                    },
-                    "address": "203.0.113.141/25"
+                    "name": "internal",
+                    "ip_addresses": [
+                      {
+                        "float": {
+                          "network": "203.0.113.128",
+                          "prefix_length": 25
+                        },
+                        "address": "203.0.113.141/25"
+                      }
+                    ]
                   }
                 ]
               }
@@ -808,14 +810,12 @@ Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Vers
           }
         ]
       }
-    ]
-  }
-}
-```
+    }
+    ```
 
 The template to generate both F5 configurations for Active and Passive.
 
-```j2
+```jinja2
 {% set group = data.device_redundancy_groups[0] %}
 {% for device in group.devices %}
 {% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
@@ -919,7 +919,7 @@ _Full Configuration for HA Pair_
 
     # Set the mirroring address — for connection mirroring (optional but recommended).
     modify cm device bigip2 mirror-ip 198.51.100.10
-
+    ```
 
 ## Generating the Configuration
 
