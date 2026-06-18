@@ -1,4 +1,4 @@
-# HA Devices 
+# HA Devices
 
 Infrastructure is typically designed with redundancy in mind, prompting vendors to develop various technologies to support different high availability (HA) strategies. These include a range of protocols, connection types, synchronization systems, and terminology.
 
@@ -15,7 +15,7 @@ This creates a complex ecosystem that can be challenging to navigate, especially
 
 ## Use Cases
 
-The primary use cases to consider when creating, updating, or documenting redundant device models are:
+The primary use cases to consider when creating, updating, or documenting HA model protocols are:
 
 - **Inventory Management:** Tracking assets and device details.
 - **Configuration Management:** Generating and managing device configurations.
@@ -26,10 +26,10 @@ To help guide these use cases, we will ask and answer each of these questions to
 - Can you create a link aggregation group (LAG) across multiple devices?
 - Can you see all interfaces on the Primary?
 - Can you see all interfaces on the Backup?
-- On a Primary object, can you tell which interfaces are assigned to which device? 
-- When do you see all the interfaces on the master device?
-- Can you connect interfaces from master to non-master? 
-- Do any configurations **not** map back to model? 
+- On a Primary object, can you tell which interfaces are assigned to which device?
+- When do you see all the interfaces on the primary device?
+- Can you connect interfaces from primary to non-primary?
+- Do any configurations **not** map back to model?
 - How are interfaces named?
 - What should the naming standard be for the chassis device?
 - Should I use interface named templates?
@@ -66,27 +66,27 @@ The rest of the documentation for the below components can be found in each data
 - Key questions for the data model
 - Configuration stanzas
 - API Calls using [pynautobot](https://docs.nautobot.com/projects/pynautobot/en/latest/) snippets
-- Design Builder snippets
+- [Design Builder](https://docs.nautobot.com/projects/design-builder/en/stable/) snippets
 
 #### Quick Navigation
 
-- [Virtual Chassis](../core-data-model/dcim/virtualchassis.md)
-  - Arista Stack
-  - Cisco VSS
-  - Cisco Stackwise
-  - Cisco Stackwise Virtual
-  - Cisco FTD
-  - HPE Intelligent Resilient Framework (IRF)
-  - Juniper SRX (Chassis Cluster)
-  - Extreme Networks SummitStack
+- [Virtual Chassis](virtualchassis.md)
+    - Arista Stack
+    - Cisco VSS
+    - Cisco Stackwise
+    - Cisco Stackwise Virtual
+    - Cisco FTD
+    - HPE Intelligent Resilient Framework (IRF)
+    - Juniper SRX (Chassis Cluster)
+    - Extreme Networks SummitStack
 
-- [Device Redundancy Group](../core-data-model/dcim/deviceredundancygroup.md)
-  - A10 Thunder
-  - Arista MLAG
-  - Aruba Silver Peak
-  - Cisco ASA
-  - Cisco vPC
-  - Cisco Viptela | Catalyst SD-WAN Manager
-  - F5 BIG-IP
-  - Juniper MC-LAG
-  - Versa Secure SD-WAN
+- [Device Redundancy Group](deviceredundancygroup.md)
+    - A10 Thunder
+    - Arista MLAG
+    - Aruba Silver Peak
+    - Cisco ASA
+    - Cisco vPC
+    - Cisco Viptela | Catalyst SD-WAN Manager
+    - F5 BIG-IP
+    - Juniper MC-LAG
+    - Versa Secure SD-WAN
