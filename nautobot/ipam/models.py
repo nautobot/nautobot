@@ -1833,7 +1833,9 @@ class IPAddressRange(PrimaryModel):
         return instance
 
     def __str__(self):
-        return f"{self.parent.namespace}: {self.start_address} - {self.end_address}"
+        if self.parent_id is not None:
+            return f"{self.parent.namespace}: {self.start_address} - {self.end_address}"
+        return f"{self.start_address} - {self.end_address}"
 
     def _deconstruct_start_address(self, address):
         if address:
@@ -2020,7 +2022,7 @@ class IPAddressRange(PrimaryModel):
         # if a namespace was explicitly set, use it
         if getattr(self, "_provided_namespace", None):
             return self._provided_namespace
-        if self.parent is not None:
+        if self.parent_id is not None:
             return self.parent.namespace
         return get_default_namespace()
 

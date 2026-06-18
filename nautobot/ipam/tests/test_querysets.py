@@ -1,5 +1,5 @@
 import re
-from unittest import expectedFailure, skipIf
+from unittest import skip, skipIf
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection, transaction
@@ -493,7 +493,7 @@ class IPAddressQuerySet(TestCase):
         self.assertEqual(ip_obj.parent.namespace, self.namespace)
 
 
-@expectedFailure  # fail because for IPAddressRange reparenting it's not yet implemented
+@skip("fail because for IPAddressRange reparenting it's not yet implemented")
 class PrefixQuerysetTestCase(TestCase):
     queryset = Prefix.objects.all()
 

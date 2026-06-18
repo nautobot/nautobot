@@ -660,7 +660,7 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
 
 class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.Column()
+    name = tables.Column(linkify=True)
     start_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("start_host",))
     end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
