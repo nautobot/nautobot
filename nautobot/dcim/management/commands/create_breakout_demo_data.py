@@ -310,6 +310,7 @@ class Command(BaseCommand):
         srv_nics = [
             self._interface(self.servers[0], f"eth{i}", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS) for i in range(1, 5)
         ]
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-40G-4x10G-SRV",
             term_a=spine,
@@ -323,6 +324,7 @@ class Command(BaseCommand):
         """100G → 2x50G with B-connector-2 intentionally uncabled — exercises the unconnected-lane path."""
         spine = self._interface(self.spine1, "Ethernet3/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)
         leaf_50g = self._interface(self.leaves[0], "Ethernet2/1", InterfaceTypeChoices.TYPE_50GE_QSFP28)
+        self._breakout_children(spine, 2)
         self._cable(
             label="DEMO-BKO-1x2-PARTIAL",
             term_a=spine,
@@ -411,6 +413,7 @@ class Command(BaseCommand):
         to 6 LC duplex legs in this scenario, demonstrating wider fan-out and multi-strand lanes.
         """
         trunk = self._interface(self.spine1, "Ethernet7/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)
+        self._breakout_children(trunk, 6)
         leg_rears = [
             self._rear_port(self.patch1, f"Rear-Agg-{i}", positions=1, port_type=PortTypeChoices.TYPE_LC)
             for i in range(1, 7)
@@ -435,6 +438,8 @@ class Command(BaseCommand):
             self._interface(self.spine1, "Ethernet10/1", InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS),
             self._interface(self.spine1, "Ethernet10/2", InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS),
         ]
+        for trunk in trunks:
+            self._breakout_children(trunk, 4)
         # 8 server NICs spread across the two server devices, 4 per server.
         legs = [
             self._interface(self.servers[i // 4], f"eth{(i % 4) + 10}", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS)
@@ -504,6 +509,7 @@ class Command(BaseCommand):
         Lanes B3/B4 traverse two patch panels with FrontPort↔RearPort pass-throughs.
         """  # noqa: RUF002
         spine = self._interface(self.spine1, "Ethernet11/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
+        self._breakout_children(spine, 4)
 
         # B1, B2 — direct to LEAF-01 (same device → grouped node on the renderer).
         leaf1_eth1 = self._interface(self.leaves[0], "Ethernet7/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)

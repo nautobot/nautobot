@@ -17,3 +17,18 @@ def termination_type_icon(termination):
     else:
         model_name = termination._meta.model_name
     return DEVICE_COMPONENT_ICONS.get(model_name, CABLE_TERMINATION_GENERIC_ICON)
+
+
+@library.filter()
+@register.filter()
+def breakout_trunk_child_interface(endpoint, near_termination):
+    """The breakout-trunk child (sub)interface mapping a connected `endpoint` back to `near_termination`.
+
+    Template-friendly wrapper for `CableTermination.get_breakout_trunk_child_interface_for_endpoint`
+    (templates can't call model methods with arguments). Used to annotate a connection endpoint with
+    the remote trunk's child interface even when the breakout cable is reached through patch-panel
+    front/rear ports. Returns `None` when there is no such mapping.
+    """
+    if endpoint is None or near_termination is None:
+        return None
+    return near_termination.get_breakout_trunk_child_interface_for_endpoint(endpoint)

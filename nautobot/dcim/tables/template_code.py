@@ -20,12 +20,28 @@ class DeviceComponentNameColumn(tables.TemplateColumn):
 # being rendered is an Interface with a matching child interface, append the child interface in
 # brackets on the same line, e.g. "TenGigabitEthernet1/1 [TenGigabitEthernet1/1.2]". `peer_var` is
 # the loop variable name (the trunk-side peer/endpoint) in the surrounding template.
+#
+# This inspects only the *immediately attached* cable, so it's right for the one-hop `cable_peer`
+# column. For the n-hop `connection` column use `_breakout_endpoint_child_bracket`, which resolves
+# the trunk child through the fully-traced path (i.e. also when a patch panel sits in between).
 def _breakout_child_brackets(peer_var):
     return (
         "{% for entry in record.get_breakout_trunk_child_interfaces %}"
         "{% if entry.child_interface and entry.trunk_interface == " + peer_var + " %} "
         "[{{ entry.child_interface|hyperlinked_object }}]"
         "{% endif %}{% endfor %}"
+    )
+
+
+# `connection`-column counterpart of `_breakout_child_brackets`: annotate a *connected endpoint*
+# with the remote breakout-trunk's child (sub)interface, resolved via the fully-traced cable path so
+# it works even when the breakout cable is reached through patch-panel front/rear ports. `endpoint_var`
+# is the loop variable naming the connected endpoint in the surrounding template.
+def _breakout_endpoint_child_bracket(endpoint_var):
+    return (
+        "{% with trunk_child=" + endpoint_var + "|breakout_trunk_child_interface:record %}"
+        "{% if trunk_child %} [{{ trunk_child|hyperlinked_object }}]{% endif %}"
+        "{% endwith %}"
     )
 
 
@@ -87,7 +103,7 @@ PATHENDPOINT = (
         /
         <span class="mdi {{ endpoint|termination_type_icon }}" title="{{ endpoint|meta:'verbose_name'|capfirst }}"></span>
         <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>"""
-    + _breakout_child_brackets("endpoint")
+    + _breakout_endpoint_child_bracket("endpoint")
     + """
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}

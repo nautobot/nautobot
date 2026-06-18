@@ -2176,6 +2176,68 @@ class CablePathTestCase(TestCase):
         self.assertEqual(if1.get_breakout_trunk_child_interfaces(), [])
         self.assertEqual(if2.get_breakout_trunk_child_interfaces(), [])
 
+    def test_get_breakout_trunk_child_interface_for_endpoint_direct(self):
+        """A leaf directly breakout-cabled to a trunk resolves the trunk's child interface."""
+        trunk, children, far_terminations = self._make_breakout_trunk()
+        leaf = far_terminations[1]
+        # The leaf's connection endpoint is the trunk, and the lane maps back to child position 1.
+        self.assertEqual(leaf.connected_endpoint, trunk)
+        self.assertEqual(leaf.get_breakout_trunk_child_interface_for_endpoint(trunk), children[1])
+
+    def test_get_breakout_trunk_child_interface_for_endpoint_through_patch_panel(self):
+        """A leaf cabled to a breakout trunk *through* a patch panel still resolves the child interface.
+
+        Mirrors the demo `_scenario_10` topology: the breakout cable is several hops away from the
+        leaf (behind a front/rear pass-through), so the immediate-cable helper sees nothing, but the
+        endpoint helper matches on the fully-traced path.
+        """
+        breakout_type = CableType(name="endpoint-patchpanel 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        breakout_type.validated_save()
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="Ethernet11/1",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet11/1.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        rearport = RearPort.objects.create(device=self.device, name="PP Rear", positions=1)
+        frontport = FrontPort.objects.create(
+            device=self.device, name="PP Front", rear_port=rearport, rear_port_position=1
+        )
+        leaf = Interface.objects.create(
+            device=self.device,
+            name="Ethernet7/1",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        # trunk --breakout(B1)--> front port; rear port --cable--> leaf
+        Cable(termination_a=trunk, termination_b=frontport, cable_type=breakout_type, status=self.status).save()
+        Cable(termination_a=rearport, termination_b=leaf, status=self.status).save()
+
+        # The leaf traces all the way to the trunk, but its own attached cable is not the breakout.
+        self.assertEqual(leaf.connected_endpoint, trunk)
+        self.assertEqual(leaf.get_breakout_trunk_child_interfaces(), [])
+        # The endpoint helper resolves the trunk's child interface via the full path.
+        self.assertEqual(leaf.get_breakout_trunk_child_interface_for_endpoint(trunk), child)
+
+    def test_get_breakout_trunk_child_interface_for_endpoint_non_trunk(self):
+        """A connection whose endpoint isn't a breakout trunk yields no child interface."""
+        if1 = Interface.objects.create(
+            device=self.device, name="ep-1", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        if2 = Interface.objects.create(
+            device=self.device, name="ep-2", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        Cable(termination_a=if1, termination_b=if2, status=self.status).save()
+        self.assertIsNone(if1.get_breakout_trunk_child_interface_for_endpoint(if2))
+
     def test_breakout_position_requires_parent_interface(self):
         """Setting breakout_position without a parent interface is rejected by clean()."""
         orphan = Interface(

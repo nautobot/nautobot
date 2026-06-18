@@ -217,6 +217,33 @@ class InterfaceTableRenderMixin:
                     self._per_row_query_cost(column, cabled_pks),
                 )
 
+    def test_render_breakout_leaf_connection_shows_trunk_child_interface(self):
+        """A fan-out (leaf) interface's connection column annotates its trunk endpoint with the child interface."""
+        child_pks, far_by_position = self._make_breakout_trunk_with_children(2)
+        leaf = far_by_position[1]
+        child = Interface.objects.get(pk=child_pks[0])  # breakout_position 1
+
+        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.filter(pk=leaf.pk))
+        table = self.table_class(queryset)  # pylint: disable=not-callable
+        rendered_connection = table.rows[0].get_cell("connection")
+        self.assertIn(child.get_absolute_url(), rendered_connection)
+
+    def test_render_breakout_leaf_connection_no_extra_n_plus_one(self):
+        """Annotating a leaf's connection with the trunk child interface adds no per-row query.
+
+        The trunk endpoint's `cable_paths`, breakout lanes, and `child_interfaces` are prefetched via
+        the `GenericPrefetch` on `cable_paths__destination`, so the connection-column annotation stays
+        constant-cost regardless of row count.
+        """
+        _, far_by_position = self._make_breakout_trunk_with_children(4)
+        leaf_pks = [iface.pk for iface in far_by_position.values()]
+        cabled_pks = self._make_cabled_interfaces(4)
+
+        self.assertLessEqual(
+            self._per_row_query_cost("connection", leaf_pks),
+            self._per_row_query_cost("connection", cabled_pks),
+        )
+
 
 class InterfaceTableTestCase(InterfaceTableRenderMixin, TestCase):
     """Test cases for InterfaceTable."""

@@ -3,6 +3,7 @@ import re
 import warnings
 
 from django.contrib.contenttypes.fields import GenericRelation
+from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -534,6 +535,57 @@ class CableTermination(models.Model):
             )
         return results
 
+    def get_breakout_trunk_child_interface_for_endpoint(self, endpoint):
+        """The breakout-trunk child (sub)interface whose lane connects to `self` via `endpoint`.
+
+        When a connection traced from `self` terminates on a breakout-trunk `Interface` `endpoint` —
+        possibly several hops away, through intervening patch-panel front/rear ports — return the
+        trunk's child interface whose breakout lane resolves back to `self`, or `None`.
+
+        This complements `get_breakout_trunk_child_interfaces`, which only inspects the cable
+        directly attached to `self`; here the breakout cable may be mid-path. Resolution roots
+        entirely on `endpoint` (its per-lane `cable_paths`, breakout cable lanes, and
+        `child_interfaces`) so a single prefetch on the connection destination keeps table renders
+        query-free per row. See `cable_columns_prefetch_related_fields`.
+        """
+        if not isinstance(endpoint, Interface):
+            return None
+        trunk_row = getattr(endpoint, "cable_termination", None)
+        if trunk_row is None:
+            return None
+        cable = trunk_row.cable
+        if cable is None or not cable.cable_type_id or not cable.cable_type.is_breakout:
+            return None
+        trunk_end = cable.cable_type.trunk_end
+        # `endpoint` must terminate the trunk (fewer-connectors) side of the breakout.
+        if trunk_row.cable_end != trunk_end:
+            return None
+        # Which fan-out connector's lane leads back to `self`? The trunk has one CablePath per
+        # fan-out lane, keyed by `peer_connector` (the breakout-side connector).
+        far_connector = next(
+            (path.peer_connector for path in endpoint.cable_paths.all() if path.destination == self),
+            None,
+        )
+        if far_connector is None:
+            return None
+        trunk_side = trunk_end.lower()
+        far_side = "b" if trunk_end == "A" else "a"
+        position = next(
+            (
+                lane[f"{trunk_side}_position"]
+                for lane in cable.get_lanes()
+                if lane[f"{trunk_side}_connector"] == trunk_row.connector
+                and lane[f"{far_side}_connector"] == far_connector
+            ),
+            None,
+        )
+        if position is None:
+            return None
+        return next(
+            (child for child in endpoint.child_interfaces.all() if child.breakout_position == position),
+            None,
+        )
+
     @classmethod
     def cable_columns_select_related_fields(cls):
         """
@@ -560,7 +612,27 @@ class CableTermination(models.Model):
             "cable_termination__cable__terminations__interface__child_interfaces",
         ]
         if issubclass(cls, PathEndpoint):
-            prefetches.append("cable_paths__destination")
+            # `cable_paths__destination` powers the `connection` column. When a destination is a
+            # breakout-trunk Interface, the connection's trunk child-interface annotation
+            # (`get_breakout_trunk_child_interface_for_endpoint`) reads that destination's own
+            # per-lane `cable_paths`, breakout cable lanes, and `child_interfaces`. Prefetch those on
+            # the Interface destinations so the annotation stays query-free per row, even when the
+            # breakout cable is several hops away behind patch-panel front/rear ports.
+            prefetches.append(
+                GenericPrefetch(
+                    "cable_paths__destination",
+                    [
+                        Interface.objects.select_related("cable_termination__cable__cable_type").prefetch_related(
+                            Prefetch(
+                                "cable_termination__cable__terminations",
+                                queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+                            ),
+                            "cable_paths__destination",
+                            "child_interfaces",
+                        )
+                    ],
+                )
+            )
         return prefetches
 
     @classmethod
