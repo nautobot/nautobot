@@ -4904,67 +4904,23 @@ class FrontPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RearPortListView(generic.ObjectListView):
-    queryset = RearPort.optimize_queryset_for_cable_columns(RearPort.objects.all())
-    filterset = filters.RearPortFilterSet
-    filterset_form = forms.RearPortFilterForm
-    table = tables.RearPortTable
-    action_buttons = ("import", "export")
-
-
-class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
+class RearPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = RearPort.objects.all()
+    bulk_update_form_class = forms.RearPortBulkEditForm
+    create_form_class = forms.RearPortCreateForm
+    filterset_class = filters.RearPortFilterSet
+    filterset_form_class = forms.RearPortFilterForm
+    form_class = forms.RearPortForm
+    serializer_class = serializers.RearPortSerializer
+    table_class = tables.RearPortTable
+    action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_rearports"
     module_breadcrumb_url = "dcim:module_rearports"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RearPortCreateView(generic.ComponentCreateView):
-    queryset = RearPort.objects.all()
-    form = forms.RearPortCreateForm
-    model_form = forms.RearPortForm
-
-
-class RearPortEditView(generic.ObjectEditView):
-    queryset = RearPort.objects.all()
-    model_form = forms.RearPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class RearPortDeleteView(generic.ObjectDeleteView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RearPort.objects.all()
-    table = tables.RearPortTable
-
-
-class RearPortBulkEditView(generic.BulkEditView):
-    queryset = RearPort.objects.all()
-    filterset = filters.RearPortFilterSet
-    table = tables.RearPortTable
-    form = forms.RearPortBulkEditForm
-
-
-class RearPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkDisconnectView(BulkDisconnectView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = RearPort.objects.all()
-    filterset = filters.RearPortFilterSet
-    table = tables.RearPortTable
 
 
 #

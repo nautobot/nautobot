@@ -58,6 +58,7 @@ router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-ports", views.RearPortUIViewSet)
 router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
@@ -521,56 +522,6 @@ urlpatterns = [
     ),
     # path('devices/front-ports/add/', views.DeviceBulkAddFrontPortView.as_view(), name='device_bulk_add_frontport'),
     # Rear ports
-    path("rear-ports/", views.RearPortListView.as_view(), name="rearport_list"),
-    path("rear-ports/add/", views.RearPortCreateView.as_view(), name="rearport_add"),
-    path(
-        "rear-ports/import/",
-        views.RearPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="rearport_import",
-    ),
-    path(
-        "rear-ports/edit/",
-        views.RearPortBulkEditView.as_view(),
-        name="rearport_bulk_edit",
-    ),
-    path(
-        "rear-ports/rename/",
-        views.RearPortBulkRenameView.as_view(),
-        name="rearport_bulk_rename",
-    ),
-    path(
-        "rear-ports/disconnect/",
-        views.RearPortBulkDisconnectView.as_view(),
-        name="rearport_bulk_disconnect",
-    ),
-    path(
-        "rear-ports/delete/",
-        views.RearPortBulkDeleteView.as_view(),
-        name="rearport_bulk_delete",
-    ),
-    path("rear-ports/<uuid:pk>/", views.RearPortView.as_view(), name="rearport"),
-    path(
-        "rear-ports/<uuid:pk>/edit/",
-        views.RearPortEditView.as_view(),
-        name="rearport_edit",
-    ),
-    path(
-        "rear-ports/<uuid:pk>/delete/",
-        views.RearPortDeleteView.as_view(),
-        name="rearport_delete",
-    ),
-    path(
-        "rear-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rearport_changelog",
-        kwargs={"model": RearPort},
-    ),
-    path(
-        "rear-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rearport_notes",
-        kwargs={"model": RearPort},
-    ),
     path(
         "rear-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
