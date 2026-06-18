@@ -4798,54 +4798,52 @@ class InterfaceUIViewSet(
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
-        if instance is None or self.action != "retrieve":
-            return context
+        if self.action == "retrieve":
+            # Get assigned IP addresses
+            ipaddress_table = InterfaceIPAddressTable(
+                # data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
+                data=instance.ip_addresses.restrict(request.user, "view").select_related("tenant"),
+                orderable=False,
+            )
 
-        # Get assigned IP addresses
-        ipaddress_table = InterfaceIPAddressTable(
-            # data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("tenant"),
-            orderable=False,
-        )
+            # Get child interfaces
+            child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+            child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
 
-        # Get child interfaces
-        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-        child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
+            # Get assigned VLANs and annotate whether each is tagged or untagged
+            vlans = []
+            if instance.untagged_vlan is not None:
+                vlans.append(instance.untagged_vlan)
+                vlans[0].tagged = False
 
-        # Get assigned VLANs and annotate whether each is tagged or untagged
-        vlans = []
-        if instance.untagged_vlan is not None:
-            vlans.append(instance.untagged_vlan)
-            vlans[0].tagged = False
+            for vlan in (
+                instance.tagged_vlans.restrict(request.user)
+                .annotate(location_count=count_related(Location, "vlans"))
+                .select_related("vlan_group", "tenant", "role")
+            ):
+                vlan.tagged = True
+                vlans.append(vlan)
+            vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
-        for vlan in (
-            instance.tagged_vlans.restrict(request.user)
-            .annotate(location_count=count_related(Location, "vlans"))
-            .select_related("vlan_group", "tenant", "role")
-        ):
-            vlan.tagged = True
-            vlans.append(vlan)
-        vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
-
-        redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
-        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
-            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
-                "device", "tenant", "primary_ip4", "primary_ip6"
-            ),
-            orderable=False,
-            exclude=("device",),
-        )
-
-        return context.update(
-            {
-                "ipaddress_table": ipaddress_table,
-                "vlan_table": vlan_table,
-                "child_interfaces_table": child_interfaces_tables,
-                "redundancy_table": redundancy_table,
-                "virtual_device_contexts_table": virtual_device_contexts_table,
-                "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            }
-        )
+            redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+            virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+                instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                    "device", "tenant", "primary_ip4", "primary_ip6"
+                ),
+                orderable=False,
+                exclude=("device",),
+            )
+            context.update(
+                {
+                    "ipaddress_table": ipaddress_table,
+                    "vlan_table": vlan_table,
+                    "child_interfaces_table": child_interfaces_tables,
+                    "redundancy_table": redundancy_table,
+                    "virtual_device_contexts_table": virtual_device_contexts_table,
+                    "connected_endpoint_tables": get_connected_endpoint_tables(instance),
+                }
+            )
+        return context
 
     def _get_interface_redundancy_groups_table(self, request, instance):
         """Return a table of assigned Interface Redundancy Groups."""
