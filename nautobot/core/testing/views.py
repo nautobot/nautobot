@@ -2242,7 +2242,7 @@ class ViewTestCases:
                 self._get_url("bulk_rename")
             except NoReverseMatch:
                 self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
-            objects = list(self._get_queryset().exclude(name="")[:1])
+            objects = list(self._get_queryset().all()[:1])
             pk_list = [obj.pk for obj in objects]
             original_name = objects[0].name
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
