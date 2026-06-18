@@ -167,6 +167,7 @@ class IPAddressRangeFormTest(TestCase):
         self.assertEqual(str(instance.start_address), "192.168.1.10")
         self.assertEqual(str(instance.end_address), "192.168.1.20")
         self.assertEqual(instance.parent, self.parent)
+        self.assertEqual(instance.status, self.range_status)
 
     def test_start_after_end_is_invalid(self):
         """start_address greater than end_address is rejected by model validation."""

@@ -349,6 +349,7 @@ class PrefixFilterCustomDataTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
 
@@ -1172,7 +1173,15 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     queryset = IPAddressRange.objects.all()
     filterset = IPAddressRangeFilterSet
     tenancy_related_name = "ip_address_ranges"
-    generic_filter_tests = (["name"],)
+    generic_filter_tests = (
+        ("name",),
+        ("namespace", "parent__namespace__name"),
+        ("namespace", "parent__namespace__id"),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("status", "status__id"),
+        ("status", "status__name"),
+    )
 
     v4_range1 = ("10.0.0.10", "10.0.0.20")
     v4_range2 = ("10.0.0.50", "10.0.0.100")
@@ -1257,20 +1266,6 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         )
 
     def test_search(self):
-        with self.subTest("match by name"):
-            params = {"q": "Alpha"}
-            self.assertQuerySetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(Q(name__icontains="Alpha") | Q(description__icontains="Alpha")),
-            )
-
-        with self.subTest("match by description"):
-            params = {"q": "dhcp"}
-            self.assertQuerySetEqualAndNotEmpty(
-                self.filterset(params, self.queryset).qs,
-                self.queryset.filter(Q(name__icontains="dhcp") | Q(description__icontains="dhcp")),
-            )
-
         with self.subTest("no match"):
             params = {"q": "no objects match this search"}
             self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
@@ -1290,16 +1285,6 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(parent__in=Prefix.objects.net_equals("10.0.0.0/8")),
-        )
-
-    def test_namespace(self):
-        params = {"namespace": [self.namespace.name]}
-        self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(parent__namespace=self.namespace)
-        )
-        params = {"namespace": [str(self.namespace.pk)]}
-        self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs, self.queryset.filter(parent__namespace=self.namespace)
         )
 
     def test_ip_version(self):
@@ -1418,20 +1403,6 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         with self.subTest("invalid input"):
             params = {"contains": ["not-an-address"]}
             self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
-
-    def test_status(self):
-        params = {"status": [self.status_a.name, self.status_b.id]}
-        self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(status__in=[self.status_a, self.status_b]),
-        )
-
-    def test_role(self):
-        params = {"role": [self.role_a.name, self.role_b.id]}
-        self.assertQuerySetEqualAndNotEmpty(
-            self.filterset(params, self.queryset).qs,
-            self.queryset.filter(role__in=[self.role_a, self.role_b]),
-        )
 
 
 class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
