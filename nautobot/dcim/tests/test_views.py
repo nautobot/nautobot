@@ -3546,9 +3546,26 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         status_active = statuses[0]
         role = Role.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=device, name="Interface A1", status=status_active, role=role),
-            Interface.objects.create(device=device, name="Interface A2", status=status_active),
-            Interface.objects.create(device=device, name="Interface A3", status=status_active, role=role),
+            Interface.objects.create(
+                device=device,
+                name="Interface A1",
+                status=status_active,
+                role=role,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface.objects.create(
+                device=device,
+                name="Interface A2",
+                status=status_active,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface.objects.create(
+                device=device,
+                name="Interface A3",
+                status=status_active,
+                role=role,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
             Interface.objects.create(
                 device=device,
                 name="LAG",
