@@ -949,3 +949,4 @@ The script below renders the templates against GraphQL query. Paste the GraphQL 
     env.filters["netmask"] = netmask
 
     print(env.from_string(CLI_CONFIG_TEMPLATE).render(**gql.json))
+    ```
