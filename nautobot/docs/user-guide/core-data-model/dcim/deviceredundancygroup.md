@@ -5,8 +5,8 @@ Device Redundancy Groups are created first, before the devices are assigned to t
 
 A failover strategy represents the intended operation mode of the group. Supported failover strategies are:
 
-  - Active/Active
-  - Active/Passive.
+- Active/Active
+- Active/Passive.
 
 Secrets groups could be used to store secret information used by failover or a cluster of devices.
 
