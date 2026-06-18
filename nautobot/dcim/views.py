@@ -4642,68 +4642,29 @@ class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerPortListView(generic.ObjectListView):
+class PowerPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = PowerPort.optimize_queryset_for_cable_columns(PowerPort.objects.all())
-    filterset = filters.PowerPortFilterSet
-    filterset_form = forms.PowerPortFilterForm
-    table = tables.PowerPortTable
+    bulk_update_form_class = forms.PowerPortBulkEditForm
+    create_form_class = forms.PowerPortCreateForm
+    filterset_class = filters.PowerPortFilterSet
+    filterset_form_class = forms.PowerPortFilterForm
+    form_class = forms.PowerPortForm
+    serializer_class = serializers.PowerPortSerializer
+    table_class = tables.PowerPortTable
     action_buttons = ("import", "export")
-
-
-class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = PowerPort.objects.all()
     device_breadcrumb_url = "dcim:device_powerports"
     module_breadcrumb_url = "dcim:module_powerports"
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PowerPortCreateView(generic.ComponentCreateView):
-    queryset = PowerPort.objects.all()
-    form = forms.PowerPortCreateForm
-    model_form = forms.PowerPortForm
-
-
-class PowerPortEditView(generic.ObjectEditView):
-    queryset = PowerPort.objects.all()
-    model_form = forms.PowerPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class PowerPortDeleteView(generic.ObjectDeleteView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerPort.objects.all()
-    table = tables.PowerPortTable
-
-
-class PowerPortBulkEditView(generic.BulkEditView):
-    queryset = PowerPort.objects.all()
-    filterset = filters.PowerPortFilterSet
-    table = tables.PowerPortTable
-    form = forms.PowerPortBulkEditForm
-
-
-class PowerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkDisconnectView(BulkDisconnectView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPort.objects.all()
-    filterset = filters.PowerPortFilterSet
-    table = tables.PowerPortTable
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
+        return context
 
 
 #
@@ -4711,68 +4672,29 @@ class PowerPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerOutletListView(generic.ObjectListView):
+class PowerOutletUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = PowerOutlet.optimize_queryset_for_cable_columns(PowerOutlet.objects.all())
-    filterset = filters.PowerOutletFilterSet
-    filterset_form = forms.PowerOutletFilterForm
-    table = tables.PowerOutletTable
+    bulk_update_form_class = forms.PowerOutletBulkEditForm
+    create_form_class = forms.PowerOutletCreateForm
+    filterset_class = filters.PowerOutletFilterSet
+    filterset_form_class = forms.PowerOutletFilterForm
+    form_class = forms.PowerOutletForm
+    serializer_class = serializers.PowerOutletSerializer
+    table_class = tables.PowerOutletTable
     action_buttons = ("import", "export")
-
-
-class PowerOutletView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = PowerOutlet.objects.all()
     device_breadcrumb_url = "dcim:device_poweroutlets"
     module_breadcrumb_url = "dcim:module_poweroutlets"
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PowerOutletCreateView(generic.ComponentCreateView):
-    queryset = PowerOutlet.objects.all()
-    form = forms.PowerOutletCreateForm
-    model_form = forms.PowerOutletForm
-
-
-class PowerOutletEditView(generic.ObjectEditView):
-    queryset = PowerOutlet.objects.all()
-    model_form = forms.PowerOutletForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class PowerOutletDeleteView(generic.ObjectDeleteView):
-    queryset = PowerOutlet.objects.all()
-
-
-class PowerOutletBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerOutlet.objects.all()
-    table = tables.PowerOutletTable
-
-
-class PowerOutletBulkEditView(generic.BulkEditView):
-    queryset = PowerOutlet.objects.all()
-    filterset = filters.PowerOutletFilterSet
-    table = tables.PowerOutletTable
-    form = forms.PowerOutletBulkEditForm
-
-
-class PowerOutletBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = PowerOutlet.objects.all()
-
-
-class PowerOutletBulkDisconnectView(BulkDisconnectView):
-    queryset = PowerOutlet.objects.all()
-
-
-class PowerOutletBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerOutlet.objects.all()
-    filterset = filters.PowerOutletFilterSet
-    table = tables.PowerOutletTable
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
+        return context
 
 
 #
