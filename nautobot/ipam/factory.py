@@ -529,6 +529,9 @@ class IPAddressRangeFactory(PrimaryModelFactory):
     Picks an existing leaf Network Prefix that has no children and no existing range
     (so the carved span can't collide with a child prefix or another range); if none
     is available, creates a fresh parent so create_batch(n) reliably yields n ranges.
+
+    Ordering: must run after overlapping IPAddresses exist — is_exclusive inspects
+    the IPs currently in the span (see below).
     """
 
     class Meta:
@@ -545,7 +548,7 @@ class IPAddressRangeFactory(PrimaryModelFactory):
     def _parent_prefix(self):
         qs = (
             Prefix.objects.filter(type=PrefixTypeChoices.TYPE_NETWORK)
-            .filter(Q(ip_version=4, prefix_length__lte=28) | Q(ip_version=6, prefix_length__gte=112))
+            .filter(Q(ip_version=4, prefix_length__lte=28) | Q(ip_version=6, prefix_length__lte=124))
             .filter(children__isnull=True)
             .filter(ip_address_ranges__isnull=True)
         )
