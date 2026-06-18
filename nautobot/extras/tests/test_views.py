@@ -1,7 +1,6 @@
 from datetime import timedelta
 from http import HTTPStatus
 import re
-import unittest
 from unittest import mock
 import urllib.parse
 import uuid
@@ -113,7 +112,7 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -7339,6 +7338,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
         # Role objects to test.
         device_ct = ContentType.objects.get_for_model(Device)
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        ipaddressrange_ct = ContentType.objects.get_for_model(IPAddressRange)
         prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         cls.form_data = {
@@ -7352,11 +7352,10 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
             "color": "000000",
             "description": "I used to be a new role object.",
             "weight": 255,
-            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk, ipaddressrange_ct.pk],
             "remove_content_types": [device_ct.pk],
         }
 
-    @unittest.expectedFailure  # IPRange has no detail view/table yet
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_view_with_content_types(self):
         """
