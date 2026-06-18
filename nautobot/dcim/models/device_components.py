@@ -1279,6 +1279,39 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     def ip_address_count(self):
         return self.ip_addresses.count()
 
+    @classmethod
+    def cable_columns_select_related_fields(cls):
+        """Extend the base cable-column hints with the parent trunk interface's cable/cable-type.
+
+        Breakout child-interface rows resolve their `connection` / `cable_peer` columns through the
+        parent trunk (`get_breakout_lane` / `get_breakout_connected_endpoint`), so the parent's
+        cable and cable type must be joined to avoid a per-row query.
+        """
+        return [
+            *super().cable_columns_select_related_fields(),
+            "parent_interface__cable_termination__cable__cable_type",
+        ]
+
+    @classmethod
+    def cable_columns_prefetch_related_fields(cls):
+        """Extend the base cable-column prefetches for breakout child-interface rows.
+
+        `get_breakout_lane` reads the parent trunk cable's terminations (via `Cable.get_lanes`), and
+        `get_breakout_connected_endpoint` scans the parent trunk's `CablePath` rows and their
+        destinations. Prefetching both off `parent_interface` keeps those accessors query-free per
+        row.
+        """
+        from nautobot.dcim.models.cables import CableToCableTermination
+
+        return [
+            *super().cable_columns_prefetch_related_fields(),
+            Prefetch(
+                "parent_interface__cable_termination__cable__terminations",
+                queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+            ),
+            "parent_interface__cable_paths__destination",
+        ]
+
     def get_breakout_lane(self):
         """The breakout-cable trunk lane this child interface maps to, or `None` if not applicable.
 
@@ -1293,6 +1326,8 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
 
         - `position`: this interface's `breakout_position`
         - `label`: the lane's mapping label, if any
+        - `far_connector`: the breakout-side connector this lane maps to (used to select the parent
+          trunk's matching `CablePath`; see `get_breakout_connected_endpoint`)
         - `far_termination`: the termination cabled on the far (breakout-side) connector for this
           lane, or `None` if that connector is currently unoccupied
         """
@@ -1319,8 +1354,34 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 return {
                     "position": position,
                     "label": lane["label"],
+                    "far_connector": lane[f"{far_side}_connector"],
                     "far_termination": lane[f"{far_side}_termination"],
                 }
+        return None
+
+    def get_breakout_connected_endpoint(self):
+        """The ultimate connected endpoint reached through this breakout child interface's lane.
+
+        Where `get_breakout_lane().far_termination` is the *one-hop* cable peer on the parent's
+        breakout cable, this is the *n-hop* endpoint: it follows the parent trunk interface's
+        already-traced `CablePath` for this lane — past any intermediate front/rear pass-through
+        ports — and returns its `destination` `PathEndpoint`.
+
+        The parent trunk has one `CablePath` per fan-out lane, identified by `peer_connector` (the
+        breakout-side connector); this lane's `far_connector` selects the matching path. Returns
+        `None` if this isn't a mapped breakout child, or if that lane's path is unresolved, split,
+        or otherwise has no destination.
+        """
+        lane = self.get_breakout_lane()
+        if lane is None:
+            return None
+        # Iterate the prefetched `cable_paths` in Python and match `peer_connector` here rather than
+        # with a `.filter()` — a prefetch cache only serves `.all()`, so filtering in SQL would
+        # re-query once per row and reintroduce the N+1 this prefetch exists to avoid. See
+        # `Interface.cable_columns_prefetch_related_fields`.
+        for path in self.parent_interface.cable_paths.all():
+            if path.peer_connector == lane["far_connector"]:
+                return path.destination
         return None
 
 

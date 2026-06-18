@@ -29,12 +29,20 @@ def _breakout_child_brackets(peer_var):
     )
 
 
-# Fallback for the `connection` column when an interface has no resolved cable path of its own: if
-# it's a breakout child interface, show the breakout-side termination it maps to via its
-# breakout_position. These two are mutually exclusive — a virtual child interface is never cabled,
-# and a cabled interface can't have a breakout_position — so one column serves both.
-_BREAKOUT_CONNECTION_FALLBACK = """
-{% with far=record.get_breakout_lane.far_termination %}
+# Fallback markup for the `connection` / `cable_peer` columns when an interface has no cable
+# termination of its own. A virtual breakout child interface is never cabled and a cabled interface
+# can't have a breakout_position, so the cabled and breakout cases are mutually exclusive and one
+# column serves both. `termination_expr` is the template expression yielding the termination object
+# to render (or a falsy value for the em-dash). Used with two different expressions:
+#
+#   - `cable_peer` shows the *one-hop* peer on the parent's breakout cable
+#     (`record.get_breakout_lane.far_termination`).
+#   - `connection` shows the *n-hop* connected endpoint reached by traversing any intermediate
+#     front/rear pass-through ports (`record.get_breakout_connected_endpoint`).
+def _breakout_fallback(termination_expr):
+    return (
+        "{% with far=" + termination_expr + " %}"
+        """
 {% if far %}
     <a href="{{ far.parent.get_absolute_url }}">{{ far.parent }}</a>
     /
@@ -45,6 +53,7 @@ _BREAKOUT_CONNECTION_FALLBACK = """
 {% endif %}
 {% endwith %}
 """
+    )
 
 
 CABLETERMINATION = (
@@ -61,8 +70,9 @@ CABLETERMINATION = (
     + """
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
-{% else %}
-    <span class="text-secondary">&mdash;</span>
+{% else %}"""
+    + _breakout_fallback("record.get_breakout_lane.far_termination")
+    + """
 {% endif %}
 """
 )
@@ -82,7 +92,7 @@ PATHENDPOINT = (
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
 {% else %}"""
-    + _BREAKOUT_CONNECTION_FALLBACK
+    + _breakout_fallback("record.get_breakout_connected_endpoint")
     + """
 {% endif %}
 """
