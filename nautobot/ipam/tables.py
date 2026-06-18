@@ -23,6 +23,7 @@ from nautobot.virtualization.tables import VMInterfaceTable
 
 from .models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -179,6 +180,16 @@ vminterface={{ request.GET.vminterface }}\
     <span aria-hidden="true" class="mdi mdi-content-copy"></span>
     <span class="visually-hidden">Copy</span>
 </button>
+</span>
+"""
+
+IPADDRESSRANGE_COPY = """
+<span>
+    <span id="copy_{{ record.id }}_{{ bound_column.name }}">{{ value }}</span>
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{ record.id }}_{{ bound_column.name }}">
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">Copy</span>
+    </button>
 </span>
 """
 
@@ -640,6 +651,55 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
             "description",
         )
         orderable = False
+
+
+#
+# IPAddressRange
+#
+
+
+class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    name = tables.Column(linkify=True)
+    start_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("start_host",))
+    end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
+    parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
+    tenant = TenantColumn()
+    count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")
+    is_exclusive = BooleanColumn(verbose_name="Exclusive")
+    tags = TagColumn(url_name="ipam:ipaddressrange_list")
+    actions = ButtonsColumn(IPAddressRange)
+
+    class Meta(BaseTable.Meta):
+        model = IPAddressRange
+        fields = (
+            "pk",
+            "name",
+            "start_address",
+            "end_address",
+            "parent",
+            "ip_version",
+            "status",
+            "role",
+            "tenant",
+            "count_as_utilized",
+            "is_exclusive",
+            "description",
+            "tags",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "name",
+            "start_address",
+            "end_address",
+            "parent",
+            "status",
+            "role",
+            "tenant",
+            "description",
+            "actions",
+        )
 
 
 class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
