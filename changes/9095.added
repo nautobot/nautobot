@@ -1,0 +1,5 @@
+Added standard CRUD UI views (list, detail, add/edit, delete, bulk edit/delete) for the IPAddressRange model.
+Added an "IP Address Ranges" tab to the Prefix detail view listing the ranges contained within a Prefix.
+Added an IP Address Ranges panel to the Role detail view for roles associated with the IPAddressRange content type.
+Added REST API for the IPAddressRange model.
+Added IPAddressRange filtering by name, namespace, parent Prefix, start/end address, and by an address contained within a range.
