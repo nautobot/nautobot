@@ -52,7 +52,7 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.extras.models.jobs import JobLogEntry
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
@@ -1871,6 +1871,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()

@@ -106,8 +106,8 @@ from nautobot.extras.utils import (
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
-from nautobot.ipam.models import IPAddress, Prefix, VLAN
-from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN
+from nautobot.ipam.tables import IPAddressRangeTable, IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
@@ -4570,6 +4570,13 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 ipaddress_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(ipaddress_table)
                 context["ipaddress_table"] = ipaddress_table
+
+            if ContentType.objects.get_for_model(IPAddressRange) in context["content_types"]:
+                ip_address_ranges = instance.ip_address_ranges.restrict(request.user, "view")
+                ip_address_range_table = IPAddressRangeTable(ip_address_ranges)
+                ip_address_range_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(ip_address_range_table)
+                context["ip_address_range_table"] = ip_address_range_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
                 prefixes = instance.prefixes.restrict(request.user, "view")
