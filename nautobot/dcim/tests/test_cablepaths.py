@@ -2057,7 +2057,7 @@ class CablePathTestCase(TestCase):
     def test_get_breakout_trunk_child_interfaces_multi_position_connector(self):
         """A fan-out connector carrying multiple lanes maps to multiple trunk child interfaces."""
         # 1x2 over 4 lanes → b_positions == 2: connector B1 carries two trunk positions.
-        trunk, children, far_terminations = self._make_breakout_trunk(
+        _, children, far_terminations = self._make_breakout_trunk(
             a_connectors=1, b_connectors=2, total_lanes=4, child_positions=(1, 2, 3, 4)
         )
         cable_type = far_terminations[1].cable.cable_type

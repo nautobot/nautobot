@@ -360,6 +360,7 @@ class Command(BaseCommand):
         patch_front = self._front_port(self.patch1, "Front-Mixed-1", patch_rear_paired)
         patch_rear_bare = self._rear_port(self.patch1, "Rear-Mixed-2")
         circuit_term = self._circuit_termination(cid="DEMO-CID-MIXED")
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-MIXED-TYPES",
             term_a=spine,
