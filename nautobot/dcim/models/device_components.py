@@ -1431,18 +1431,15 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
                 }
         return None
 
-    def get_breakout_connected_endpoint(self):
-        """The ultimate connected endpoint reached through this breakout child interface's lane.
+    def get_breakout_lane_cable_path(self):
+        """The parent trunk's `CablePath` for this breakout child interface's lane, or None.
 
-        Where `get_breakout_lane().far_termination` is the *one-hop* cable peer on the parent's
-        breakout cable, this is the *n-hop* endpoint: it follows the parent trunk interface's
-        already-traced `CablePath` for this lane — past any intermediate front/rear pass-through
-        ports — and returns its `destination` `PathEndpoint`.
-
-        The parent trunk has one `CablePath` per fan-out lane, identified by `peer_connector` (the
-        breakout-side connector); this lane's `far_connector` selects the matching path. Returns
-        `None` if this isn't a mapped breakout child, or if that lane's path is unresolved, split,
-        or otherwise has no destination.
+        A breakout child (sub)interface has no `CablePath` of its own; its physical path is its
+        parent trunk's breakout lane at this child's `breakout_position`, identified among the
+        trunk's per-lane paths by the lane's far (breakout-side) connector. Returns None when this
+        isn't a mapped breakout child, or that lane currently has no resolved path (e.g. its far
+        connector is unoccupied). Used to originate a cable trace from the subinterface — the path's
+        `cablepath_id` plus the parent trunk's PK identify the single lane to render.
         """
         lane = self.get_breakout_lane()
         if lane is None:
@@ -1453,7 +1450,34 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         # `Interface.cable_columns_prefetch_related_fields`.
         for path in self.parent_interface.cable_paths.all():
             if path.peer_connector == lane["far_connector"]:
-                return path.destination
+                return path
+        return None
+
+    def get_breakout_connected_endpoint(self):
+        """The ultimate connected endpoint reached through this breakout child interface's lane.
+
+        Where `get_breakout_lane().far_termination` is the *one-hop* cable peer on the parent's
+        breakout cable, this is the *n-hop* endpoint: it follows the parent trunk interface's
+        already-traced `CablePath` for this lane — past any intermediate front/rear pass-through
+        ports — and returns its `destination` `PathEndpoint`. Returns `None` if this isn't a mapped
+        breakout child, or if that lane's path is unresolved, split, or otherwise has no destination.
+        """
+        path = self.get_breakout_lane_cable_path()
+        return path.destination if path is not None else None
+
+    def get_breakout_child_interface_for_connector(self, peer_connector):
+        """The child (sub)interface whose breakout lane emerges through `peer_connector`, or None.
+
+        For a breakout-trunk interface, each child interface maps to a trunk-connector position
+        whose lane surfaces on a specific breakout-side connector (`get_breakout_lane().far_connector`).
+        Given that far connector — e.g. one of the trunk's per-lane `CablePath.peer_connector`
+        values — return the child interface whose lane matches, so a lane/path can be labeled with
+        its subinterface. This is the reverse of `get_breakout_lane_cable_path`.
+        """
+        for child in self.child_interfaces.all():
+            lane = child.get_breakout_lane()
+            if lane is not None and lane["far_connector"] == peer_connector:
+                return child
         return None
 
 

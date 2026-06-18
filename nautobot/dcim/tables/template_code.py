@@ -285,6 +285,17 @@ CABLE_TERMINATION_BUTTONS = """
 {% endif %}
 """
 
+# A breakout child (sub)interface is virtual and never directly cabled, so `CABLE_TERMINATION_BUTTONS`
+# offers it no Trace action. When its parent trunk is cabled, trace that lane via the parent's trace
+# view plus the lane's `cablepath_id` (resolved by `PathTraceView` to originate from this subinterface).
+INTERFACE_BREAKOUT_TRACE_BUTTON = """
+{% with breakout_path=record.get_breakout_lane_cable_path %}
+    {% if breakout_path %}
+        <li><a href="{% url 'dcim:interface_trace' pk=record.parent_interface.pk %}?cablepath_id={{ breakout_path.pk }}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant me-4" aria-hidden="true"></span>Trace</a></li>
+    {% endif %}
+{% endwith %}
+"""
+
 INTERFACE_BUTTONS = (
     """
 {% if perms.ipam.add_ipaddress and perms.dcim.change_interface %}
@@ -295,6 +306,7 @@ INTERFACE_BUTTONS = (
     </li>
 {% endif %}
 """
+    + INTERFACE_BREAKOUT_TRACE_BUTTON
     + CABLE_TERMINATION_BUTTONS
 )
 

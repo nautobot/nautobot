@@ -94,10 +94,20 @@ class CableTraceSVG:
     def __init__(self, origin, base_url="", cable_path=None):
         self.origin = origin
         self.base_url = base_url.rstrip("/") if base_url else ""
+        # A breakout child (sub)interface origin is virtual and has no `CablePath` of its own; its
+        # physical path is a single lane of its parent trunk's breakout cable. Record the parent
+        # trunk so the renderer traces only that lane and draws the child atop the trunk.
+        get_breakout_lane = getattr(origin, "get_breakout_lane", None)
+        self.trunk_origin = (
+            origin.parent_interface if get_breakout_lane is not None and get_breakout_lane() is not None else None
+        )
         # Render the explicitly-selected CablePath when given (e.g. a `?cablepath_id=` choice);
-        # otherwise fall back to the origin endpoint's first path.
-        if cable_path is None and hasattr(origin, "cable_paths"):
-            cable_path = origin.cable_paths.first()
+        # otherwise fall back to the parent trunk's lane (subinterface origin) or the origin's path.
+        if cable_path is None:
+            if self.trunk_origin is not None:
+                cable_path = origin.get_breakout_lane_cable_path()
+            elif hasattr(origin, "cable_paths"):
+                cable_path = origin.cable_paths.first()
         self.cable_path = cable_path
         self.traced_path = cable_path.trace() if cable_path is not None else []
         self.fanout_paths = self._detect_fanout()
@@ -129,6 +139,13 @@ class CableTraceSVG:
                 "trace": self._expand_trace_segments(self.traced_path[1:]),
             }
         ]
+
+        # A breakout child (sub)interface origin follows just one lane of its parent trunk's breakout
+        # cable, so render a single linear leg rather than fanning out across every lane. (The origin
+        # also isn't a termination on the cable — the trunk is — so the fan-out detection below, which
+        # locates the origin's own cable row, doesn't apply.)
+        if self.trunk_origin is not None:
+            return linear_fanout
 
         if not cable or not cable.cable_type_id:
             return linear_fanout
@@ -616,7 +633,13 @@ class CableTraceSVG:
 
         # Header: Origin node
         if header["origin"]:
-            y = self._draw_node(dwg, trunk_cx, y, header["origin"], term_position="bottom")
+            if self.trunk_origin is not None:
+                # Subinterface origin: draw the originating child interface atop its parent trunk
+                # port on the shared device — the mirror of a trace *ending* on a trunk, which folds
+                # the child below the trunk — then trace that one lane below.
+                y = self._draw_passthrough_node(dwg, trunk_cx, y, self.origin, header["origin"])
+            else:
+                y = self._draw_node(dwg, trunk_cx, y, header["origin"], term_position="bottom")
             y += self.GAP_Y
 
         # Header: Breakout cable trunk + fork

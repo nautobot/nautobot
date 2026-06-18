@@ -670,6 +670,40 @@ class CableTraceSVGTestCase(TestCase):
         svg = diagram.render()
         self.assertIn(str(child), svg)
 
+    def test_trace_from_subinterface_renders_single_lane_with_subinterface_on_top(self):
+        """Tracing from a breakout child (sub)interface follows only the parent trunk's matching lane
+        (a single linear leg, not the trunk's full fan-out) and draws the originating subinterface
+        atop its parent trunk port — the vertical mirror of a trace ending on that trunk."""
+        leaf, trunk, child = self._make_breakout_trunk_terminus()
+
+        diagram = CableTraceSVG(child)
+        # The child interface has no CablePath of its own; the renderer follows the parent trunk's lane.
+        self.assertEqual(diagram.trunk_origin, trunk)
+        self.assertEqual(len(diagram.fanout_paths), 1, "A subinterface trace follows one lane, not a fan-out")
+        self.assertEqual(diagram.fanout_paths[0]["termination"], leaf)
+
+        svg = diagram.render()
+        # The subinterface (origin), its parent trunk, and the far endpoint all appear.
+        self.assertIn(str(child), svg)
+        self.assertIn(str(trunk), svg)
+        self.assertIn(str(leaf), svg)
+        # The origin subinterface is highlighted (active termination box: success stroke, width 3).
+        self.assertIn(f'stroke="{svg_constants.COLOR_SUCCESS}"', svg)
+
+    def test_trace_from_subinterface_with_explicit_cable_path(self):
+        """Passing the parent trunk's lane `CablePath` explicitly (as the view does for a
+        `?cablepath_id=` selection) renders the same single-lane, subinterface-on-top trace."""
+        leaf, trunk, child = self._make_breakout_trunk_terminus()
+        lane = child.get_breakout_lane()
+        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane["far_connector"])
+
+        diagram = CableTraceSVG(child, cable_path=path)
+        self.assertEqual(diagram.trunk_origin, trunk)
+        self.assertEqual(len(diagram.fanout_paths), 1)
+        svg = diagram.render()
+        self.assertIn(str(child), svg)
+        self.assertIn(str(leaf), svg)
+
     def test_trace_from_trunk_side_does_not_render_subinterface_box(self):
         """Tracing the *other* direction — from the trunk out to its fan-out leaf — leaves the leaf
         as a plain terminal `node`: the leaf isn't a breakout trunk, so no child-interface box is

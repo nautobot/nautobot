@@ -1,6 +1,7 @@
 from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
+from django.urls import reverse
 
 from nautobot.core.templatetags import helpers
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
@@ -171,6 +172,21 @@ class InterfaceTableRenderMixin:
         self.assertIn(far_by_position[1].get_absolute_url(), rendered_cable_peer)
         # Only the mapped lane (position 1), not the other breakout lane.
         self.assertNotIn(far_by_position[2].get_absolute_url(), rendered_cable_peer)
+
+    def test_render_breakout_subinterface_actions_trace_button(self):
+        """A breakout child interface's actions menu offers a Trace button targeting the parent
+        trunk's lane (parent PK + the lane's cablepath_id), since the child has no cable of its own."""
+        child_pks, _ = self._make_breakout_trunk_with_children(2)
+        child = Interface.objects.get(pk=child_pks[0])
+        path = child.get_breakout_lane_cable_path()
+        self.assertIsNotNone(path)
+
+        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.filter(pk=child.pk))
+        table = self.table_class(queryset)  # pylint: disable=not-callable
+        rendered_actions = table.rows[0].get_cell("actions")
+
+        expected_href = reverse("dcim:interface_trace", args=[child.parent_interface_id]) + f"?cablepath_id={path.pk}"
+        self.assertIn(expected_href, rendered_actions)
 
     def _make_cabled_interfaces(self, count):
         """Create `count` plain interfaces each directly cabled to a peer; return the near-side pks."""

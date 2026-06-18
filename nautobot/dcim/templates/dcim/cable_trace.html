@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{% load helpers %}
+{% load cables %}
 
 {% block content %}
     <div class="row">
@@ -31,11 +33,25 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {# Viewing a single lane (e.g. one subinterface): offer a way back to the parent's full trace. #}
+                        {% if request.GET.cablepath_id %}
+                            {% with trace_url=object|viewname:"trace" %}
+                                <tr>
+                                    <td colspan="3">
+                                        <a href="{% url trace_url pk=object.pk %}">
+                                            <span class="mdi mdi-transit-connection-horizontal" aria-hidden="true"></span>
+                                            View full trace ({{ object.parent }} / {{ object }} &mdash; all paths)
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endwith %}
+                        {% endif %}
                         {% for cablepath in related_paths %}
                             <tr{% if cablepath.pk == path.pk %} class="info"{% endif %}>
                                 <td>
                                     <a href="?cablepath_id={{ cablepath.pk }}">
-                                        {{ cablepath.origin.parent }} / {{ cablepath.origin }}
+                                        {{ cablepath.origin.parent }} / {{ cablepath.origin }}{# Breakout trunk: annotate the lane with its specific child (sub)interface, in brackets. #}
+                                        {% with subinterface=cablepath|breakout_subinterface_for_path %}{% if subinterface %} [{{ subinterface }}]{% endif %}{% endwith %}
                                     </a>
                                 </td>
                                 <td>
