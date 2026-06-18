@@ -663,8 +663,8 @@ Given the data model, what questions would a user ask?
 
     Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Versa, and Silver Peak.
 
-    !!! note
-        For the templating below this was added to the GraphQL query for simplicity.
+    ??? data "For the templating below this was added to the GraphQL query for simplicity."
+
         ```
           interfaces {
             name
