@@ -1404,6 +1404,13 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             params = {"contains": ["not-an-address"]}
             self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
 
+        with self.subTest("empty value returns none, not all"):
+            fs = self.filterset({}, self.queryset)
+            self.assertQuerySetEqual(
+                fs.filter_contains(self.queryset, "contains", []),
+                self.queryset.none(),
+            )
+
 
 class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
     queryset = VRFDeviceAssignment.objects.all()

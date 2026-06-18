@@ -545,7 +545,7 @@ class IPAddressRangeFactory(PrimaryModelFactory):
         has_tenant = NautobotBoolIterator()
 
     @factory.lazy_attribute
-    def _parent_prefix(self):
+    def parent(self):
         qs = (
             Prefix.objects.filter(type=PrefixTypeChoices.TYPE_NETWORK)
             .filter(Q(ip_version=4, prefix_length__lte=28) | Q(ip_version=6, prefix_length__lte=124))
@@ -560,24 +560,22 @@ class IPAddressRangeFactory(PrimaryModelFactory):
 
     @factory.lazy_attribute
     def _start_idx(self):
-        net = self._parent_prefix.prefix
+        net = self.parent.prefix
         return factory.random.randgen.randint(0, net.size - 1)
 
     @factory.lazy_attribute
     def _end_idx(self):
-        net = self._parent_prefix.prefix
+        net = self.parent.prefix
         return factory.random.randgen.randint(self._start_idx, net.size - 1)
-
-    parent = factory.LazyAttribute(lambda o: o._parent_prefix)
 
     @factory.lazy_attribute
     def start_address(self):
-        net = self._parent_prefix.prefix
+        net = self.parent.prefix
         return str(netaddr.IPAddress(net.first + self._start_idx))
 
     @factory.lazy_attribute
     def end_address(self):
-        net = self._parent_prefix.prefix
+        net = self.parent.prefix
         return str(netaddr.IPAddress(net.first + self._end_idx))
 
     name = factory.Maybe("has_name", factory.Faker("word"), "")
