@@ -4555,7 +4555,7 @@ class ConsolePortUIViewSet(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 label="Console Port",
-                fields=["device", "module", "name", "label", "type", "description"],
+                exclude_fields=("cable_termination",),
                 hide_if_unset=("device", "module"),
             ),
             object_detail.ConnectionPanel(
