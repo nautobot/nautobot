@@ -15,7 +15,7 @@ This creates a complex ecosystem that can be challenging to navigate, especially
 
 ## Use Cases
 
-The primary use cases to consider when creating, updating, or documenting an HA model protocols is:
+The primary use cases to consider when creating, updating, or documenting HA model protocols are:
 
 - **Inventory Management:** Tracking assets and device details.
 - **Configuration Management:** Generating and managing device configurations.
@@ -66,7 +66,7 @@ The rest of the documentation for the below components can be found in each data
 - Key questions for the data model
 - Configuration stanzas
 - API Calls using [pynautobot](https://docs.nautobot.com/projects/pynautobot/en/latest/) snippets
-- Design Builder snippets
+- [Design Builder](https://docs.nautobot.com/projects/design-builder/en/stable/) snippets
 
 #### Quick Navigation
 

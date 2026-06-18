@@ -815,7 +815,7 @@ Given the data model, what questions would a user ask?
 
     > Note: The CCL port channel ID must match on both chassis; use dedicated high-bandwidth interfaces
 
-The script below renders the templates against GrpahQl query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
+The script below renders the templates against GrpahQL query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
 
 ??? example "Config Generation Script"
 
