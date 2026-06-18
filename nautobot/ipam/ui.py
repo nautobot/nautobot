@@ -69,6 +69,33 @@ class AddIPAddressButton(Button):
         return f"{reverse(self.link_name)}?{urlencode(params)}"
 
 
+class AddIPAddressRangeButton(Button):
+    """Custom button to add an IP Range inside a Prefix detail view."""
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        return context.get("first_available_ip") is not None
+
+    def get_link(self, context: Context):
+        obj = get_obj_from_context(context)
+        if not obj:
+            return None
+
+        params = {
+            "namespace": obj.namespace.pk,
+        }
+        first_available_ip = context.get("first_available_ip")
+        if first_available_ip:
+            # Pre-populate start_address with the first available IP (strip the mask)
+            params["start_address"] = first_available_ip.split("/")[0]
+        if obj.tenant:
+            params["tenant"] = obj.tenant.pk
+            if obj.tenant.tenant_group:
+                params["tenant_group"] = obj.tenant.tenant_group.pk
+        return f"{reverse(self.link_name)}?{urlencode(params)}"
+
+
 class PrefixKeyValueOverrideValueTablePanel(KeyValueTablePanel):
     """A table panel for displaying key-value pairs of prefix-related attributes, along with any override values defined on the prefix object."""
 
