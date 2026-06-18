@@ -356,6 +356,23 @@ class CableTraceSVG:
                 lines.append(breakout_text)
         return lines
 
+    def _terminal_subinterface(self, entries):
+        """Child (sub)interface of a breakout trunk this leg ends on, mapped back to the origin.
+
+        When a leg's terminal node is a breakout-trunk `Interface` whose lane resolves back to the
+        trace origin — possibly several hops away through patch-panel front/rear ports — return the
+        trunk's child interface for that lane so it can be drawn as a port on the terminal device.
+        Returns None when the leg doesn't end on such a trunk or no child interface claims the
+        matching lane position. See `Interface.get_breakout_trunk_child_interface_for_endpoint`.
+        """
+        resolver = getattr(self.origin, "get_breakout_trunk_child_interface_for_endpoint", None)
+        if resolver is None or not entries:
+            return None
+        terminal = entries[-1]
+        if terminal["type"] != "node" or terminal.get("termination") is None:
+            return None
+        return resolver(terminal["termination"])
+
     # ──────────────────────────────────────────────
     # Phase 1: Build the matrix
     # ──────────────────────────────────────────────
@@ -458,6 +475,19 @@ class CableTraceSVG:
                 else:
                     entries.append(entry)
                     entry_index += 1
+
+            # When this leg terminates on a breakout-trunk interface, fold the trunk's child
+            # (sub)interface for the lane leading back to the origin into the terminal device node:
+            # the trunk port and the child interface render as the arriving/departing port pair of a
+            # passthrough node, so the subinterface box sits on the device below its trunk port.
+            subinterface = self._terminal_subinterface(entries)
+            if subinterface is not None:
+                trunk_termination = entries[-1]["termination"]
+                entries[-1] = {
+                    "type": "passthrough_node",
+                    "arriving": trunk_termination,
+                    "departing": subinterface,
+                }
 
             column_entries.append(entries)
 
