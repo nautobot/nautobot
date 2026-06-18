@@ -661,146 +661,148 @@ Given the data model, what questions would a user ask?
 
 === "HA pairs"
 
-Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Versa, and Silver Peak.
+    Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Versa, and Silver Peak.
 
-!!! note
-    For the templating below this was added to the GraphQL query for simplicity.
-    ```
-      interfaces {
-        name
-        ip_addresses {
-          float: parent {
-            network
-            prefix_length
+    !!! note
+        For the templating below this was added to the GraphQL query for simplicity.
+        ```
+          interfaces {
+            name
+            ip_addresses {
+              float: parent {
+                network
+                prefix_length
+              }
+              address
+            }
           }
-          address
-        }
-      }
-      ```
+          ```
 
-### Configuration Generation
+    ### Configuration Generation
 
-??? data "GraphQL data returned"
+    ??? data "GraphQL data returned"
 
-    ```json
-    {
-      "data": {
-        "device_redundancy_groups": [
-          {
-            "name": "ANY01-bigip-drg",
-            "failover_strategy": "ACTIVE_PASSIVE",
-            "secrets_group": null,
-            "controllers": [],
-            "devices": [
+        ```json
+        {
+          "data": {
+            "device_redundancy_groups": [
               {
-                "name": "bigip1",
-                "device_redundancy_group_priority": 1,
-                "primary_ip4": {
-                  "address": "192.0.2.10/24"
-                },
-                "interfaces": [
+                "name": "ANY01-bigip-drg",
+                "failover_strategy": "ACTIVE_PASSIVE",
+                "secrets_group": null,
+                "controllers": [],
+                "devices": [
                   {
-                    "name": "HA",
-                    "ip_addresses": [
+                    "name": "bigip1",
+                    "device_redundancy_group_priority": 1,
+                    "primary_ip4": {
+                      "address": "192.0.2.10/24"
+                    },
+                    "interfaces": [
                       {
-                        "float": {
-                          "network": "198.51.100.0",
-                          "prefix_length": 24
-                        },
-                        "address": "198.51.100.10/24"
+                        "name": "HA",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "198.51.100.0",
+                              "prefix_length": 24
+                            },
+                            "address": "198.51.100.10/24"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "MGMT",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "192.0.2.0",
+                              "prefix_length": 24
+                            },
+                            "address": "192.0.2.10/24"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "external",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "203.0.113.0",
+                              "prefix_length": 25
+                            },
+                            "address": "203.0.113.10/25"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "internal",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "203.0.113.128",
+                              "prefix_length": 25
+                            },
+                            "address": "203.0.113.140/25"
+                          }
+                        ]
                       }
                     ]
                   },
                   {
-                    "name": "MGMT",
-                    "ip_addresses": [
+                    "name": "bigip2",
+                    "device_redundancy_group_priority": 2,
+                    "primary_ip4": {
+                      "address": "192.0.2.11/24"
+                    },
+                    "interfaces": [
                       {
-                        "float": {
-                          "network": "192.0.2.0",
-                          "prefix_length": 24
-                        },
-                        "address": "192.0.2.10/24"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "external",
-                    "ip_addresses": [
+                        "name": "HA",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "198.51.100.0",
+                              "prefix_length": 24
+                            },
+                            "address": "198.51.100.11/24"
+                          }
+                        ]
+                      },
                       {
-                        "float": {
-                          "network": "203.0.113.0",
-                          "prefix_length": 25
-                        },
-                        "address": "203.0.113.10/25"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "internal",
-                    "ip_addresses": [
+                        "name": "MGMT",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "192.0.2.0",
+                              "prefix_length": 24
+                            },
+                            "address": "192.0.2.11/24"
+                          }
+                        ]
+                      },
                       {
-                        "float": {
-                          "network": "203.0.113.128",
-                          "prefix_length": 25
-                        },
-                        "address": "203.0.113.140/25"
-                      }
-                    ]
-                  }
-                ]
-              },
-              {
-                "name": "bigip2",
-                "device_redundancy_group_priority": 2,
-                "primary_ip4": {
-                  "address": "192.0.2.11/24"
-                },
-                "interfaces": [
-                  {
-                    "name": "HA",
-                    "ip_addresses": [
+                        "name": "external",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "203.0.113.0",
+                              "prefix_length": 25
+                            },
+                            "address": "203.0.113.11/25"
+                          }
+                        ]
+                      },
                       {
-                        "float": {
-                          "network": "198.51.100.0",
-                          "prefix_length": 24
-                        },
-                        "address": "198.51.100.11/24"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "MGMT",
-                    "ip_addresses": [
-                      {
-                        "float": {
-                          "network": "192.0.2.0",
-                          "prefix_length": 24
-                        },
-                        "address": "192.0.2.11/24"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "external",
-                    "ip_addresses": [
-                      {
-                        "float": {
-                          "network": "203.0.113.0",
-                          "prefix_length": 25
-                        },
-                        "address": "203.0.113.11/25"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "internal",
-                    "ip_addresses": [
-                      {
-                        "float": {
-                          "network": "203.0.113.128",
-                          "prefix_length": 25
-                        },
-                        "address": "203.0.113.141/25"
+                        "name": "internal",
+                        "ip_addresses": [
+                          {
+                            "float": {
+                              "network": "203.0.113.128",
+                              "prefix_length": 25
+                            },
+                            "address": "203.0.113.141/25"
+                          }
+                        ]
                       }
                     ]
                   }
@@ -808,118 +810,116 @@ Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Vers
               }
             ]
           }
-        ]
-      }
-    }
-    ```
+        }
+        ```
 
-The template to generate both F5 configurations for Active and Passive.
+    The template to generate both F5 configurations for Active and Passive.
 
-```jinja2
-{% set group = data.device_redundancy_groups[0] %}
-{% for device in group.devices %}
-{% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
+    ```jinja2
+    {% set group = data.device_redundancy_groups[0] %}
+    {% for device in group.devices %}
+    {% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
 
-modify sys global-settings hostname {{ device.name }}{{ device}}
-mv cm device bigip1 {{ device.name }}
+    modify sys global-settings hostname {{ device.name }}{{ device}}
+    mv cm device bigip1 {{ device.name }}
 
-{% for interface in device.interfaces %}
-{% if "external" in interface.name %}
-create net vlan {{ interface.name }} interfaces add { 1.1 }
-create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
+    {% for interface in device.interfaces %}
+    {% if "external" in interface.name %}
+    create net vlan {{ interface.name }} interfaces add { 1.1 }
+    create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
 
-{% elif "HA" in interface.name %}
-create net vlan {{ interface.name }} interfaces add { 1.2 }
-create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
-modify cm device {{ device.name }} configsync-ip {{ interface.ip_addresses[0].address.split("/")[0] }}
-modify cm device {{ device.name }} unicast-address { { ip {{ interface.ip_addresses[0].address.split("/")[0] }} } { ip {{ device.primary_ip4.address.split("/")[0] }} } }
-modify cm device {{ device.name }} mirror-ip {{ interface.ip_addresses[0].address.split("/")[0] }}
-{% elif "internal" in interface.name %}
-create net vlan {{ interface.name }} interfaces add { 1.3 }
-create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
-{% endif %}
-{% endfor %}
+    {% elif "HA" in interface.name %}
+    create net vlan {{ interface.name }} interfaces add { 1.2 }
+    create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
+    modify cm device {{ device.name }} configsync-ip {{ interface.ip_addresses[0].address.split("/")[0] }}
+    modify cm device {{ device.name }} unicast-address { { ip {{ interface.ip_addresses[0].address.split("/")[0] }} } { ip {{ device.primary_ip4.address.split("/")[0] }} } }
+    modify cm device {{ device.name }} mirror-ip {{ interface.ip_addresses[0].address.split("/")[0] }}
+    {% elif "internal" in interface.name %}
+    create net vlan {{ interface.name }} interfaces add { 1.3 }
+    create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
+    {% endif %}
+    {% endfor %}
 
 
-{% if device.device_redundancy_group_priority == 1 %}
-modify cm trust-domain Root ca-devices add { {{ peer.primary_ip4.address.split("/")[0] }} } name {{ peer.name }} username admin password <peer-admin-password>
-create cm device-group HA-group devices add { {{ device.name }} {{ peer.name }} } type sync-failover auto-sync enabled network-failover enabled
-run cm config-sync to-group HA-group
-
-{% for interface in device.interfaces %}
-{% if "external" in interface.name %}
-create net self {{ interface.name }}-float address {{ interface.ip_addresses[0]["float"]["network"].split(".")[:3] | join(".") }}.20/{{ interface.ip_addresses[0]["float"]["prefix_length"] }} vlan {{ interface.name }} traffic-group traffic-group-1
-{% elif "internal" in interface.name %}
-create net self {{ interface.name }}-float address {{ interface.ip_addresses[0]["float"]["network"].split(".")[:3] | join(".") }}.150/{{ interface.ip_addresses[0]["float"]["prefix_length"] }} vlan {{ interface.name }} traffic-group traffic-group-1
-{% endif %}
-{% endfor %}
-{% endif %}
-{% endfor %}
-```
-
-_Full Configuration for HA Pair_
-
-
-1. Device A (Primary)
-
-    ```
-    # Set hostname.
-    modify sys global-settings hostname bigip1
-    mv cm device bigip1 bigip1
-
-    # Create the HA VLAN + self IP — the dedicated link used for sync and heartbeats.
-    create net vlan HA interfaces add { 1.2 }
-    create net self HA-self address 198.51.100.10/24 vlan HA
-    create net vlan external interfaces add { 1.1 }
-    create net self external-self address 203.0.113.10/25 vlan external
-    create net vlan internal interfaces add { 1.3 }
-    create net self internal-self address 203.0.113.140/25 vlan internal
-
-    # Set the ConfigSync address — where config is pushed/pulled.
-    modify cm device bigip1 configsync-ip 198.51.100.10
-
-    # Set failover (unicast) addresses — heartbeat over the HA link, with mgmt as backup path.
-    modify cm device bigip1 unicast-address { { ip 198.51.100.10 } { ip 192.0.2.10 } }
-
-    # Set the mirroring address — for connection mirroring (optional but recommended).
-    modify cm device bigip1 mirror-ip 198.51.100.10
-
-    # Establish device trust (one device only) — point at the peer's management IP and admin creds.
-    modify cm trust-domain Root ca-devices add { 192.0.2.11 } name bigip2 username admin password <peer-admin-password>
-
-    # Create the sync-failover device group (one device only) — this is the HA pair itself.
-    create cm device-group HA-group devices add { bigip1 bigip2 } type sync-failover auto-sync enabled network-failover enabled
+    {% if device.device_redundancy_group_priority == 1 %}
+    modify cm trust-domain Root ca-devices add { {{ peer.primary_ip4.address.split("/")[0] }} } name {{ peer.name }} username admin password <peer-admin-password>
+    create cm device-group HA-group devices add { {{ device.name }} {{ peer.name }} } type sync-failover auto-sync enabled network-failover enabled
     run cm config-sync to-group HA-group
 
-    # Create the floating self IP (one device only) — lives in traffic-group-1, moves to whichever unit is active.
-    create net self external-float address 203.0.113.20/25 vlan external traffic-group traffic-group-1
-    create net self internal-float address 203.0.113.20/25 vlan internal traffic-group traffic-group-1
+    {% for interface in device.interfaces %}
+    {% if "external" in interface.name %}
+    create net self {{ interface.name }}-float address {{ interface.ip_addresses[0]["float"]["network"].split(".")[:3] | join(".") }}.20/{{ interface.ip_addresses[0]["float"]["prefix_length"] }} vlan {{ interface.name }} traffic-group traffic-group-1
+    {% elif "internal" in interface.name %}
+    create net self {{ interface.name }}-float address {{ interface.ip_addresses[0]["float"]["network"].split(".")[:3] | join(".") }}.150/{{ interface.ip_addresses[0]["float"]["prefix_length"] }} vlan {{ interface.name }} traffic-group traffic-group-1
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
     ```
 
-2. Device B (Standby)
+    _Full Configuration for HA Pair_
 
-    ```
-    # Set hostname.
-    modify sys global-settings hostname bigip2
-    mv cm device bigip1 bigip2
 
-    # Create the HA VLAN + self IP — the dedicated link used for sync and heartbeats.
-    create net vlan HA interfaces add { 1.2 }
-    create net self HA-self address 198.51.100.11/24 vlan HA
-    create net vlan external interfaces add { 1.1 }
-    create net self external-self address 203.0.113.11/25 vlan external
-    create net vlan internal interfaces add { 1.3 }
-    create net self internal-self address 203.0.113.141/25 vlan internal
+    1. Device A (Primary)
 
-    # Set the ConfigSync address — where config is pushed/pulled.
-    modify cm device bigip2 configsync-ip 198.51.100.10
+        ```
+        # Set hostname.
+        modify sys global-settings hostname bigip1
+        mv cm device bigip1 bigip1
 
-    # Set failover (unicast) addresses — heartbeat over the HA link, with mgmt as backup path.
-    modify cm device bigip2 unicast-address { { ip 198.51.100.10 } { ip 192.0.2.11 } }
+        # Create the HA VLAN + self IP — the dedicated link used for sync and heartbeats.
+        create net vlan HA interfaces add { 1.2 }
+        create net self HA-self address 198.51.100.10/24 vlan HA
+        create net vlan external interfaces add { 1.1 }
+        create net self external-self address 203.0.113.10/25 vlan external
+        create net vlan internal interfaces add { 1.3 }
+        create net self internal-self address 203.0.113.140/25 vlan internal
 
-    # Set the mirroring address — for connection mirroring (optional but recommended).
-    modify cm device bigip2 mirror-ip 198.51.100.10
-    ```
+        # Set the ConfigSync address — where config is pushed/pulled.
+        modify cm device bigip1 configsync-ip 198.51.100.10
+
+        # Set failover (unicast) addresses — heartbeat over the HA link, with mgmt as backup path.
+        modify cm device bigip1 unicast-address { { ip 198.51.100.10 } { ip 192.0.2.10 } }
+
+        # Set the mirroring address — for connection mirroring (optional but recommended).
+        modify cm device bigip1 mirror-ip 198.51.100.10
+
+        # Establish device trust (one device only) — point at the peer's management IP and admin creds.
+        modify cm trust-domain Root ca-devices add { 192.0.2.11 } name bigip2 username admin password <peer-admin-password>
+
+        # Create the sync-failover device group (one device only) — this is the HA pair itself.
+        create cm device-group HA-group devices add { bigip1 bigip2 } type sync-failover auto-sync enabled network-failover enabled
+        run cm config-sync to-group HA-group
+
+        # Create the floating self IP (one device only) — lives in traffic-group-1, moves to whichever unit is active.
+        create net self external-float address 203.0.113.20/25 vlan external traffic-group traffic-group-1
+        create net self internal-float address 203.0.113.20/25 vlan internal traffic-group traffic-group-1
+        ```
+
+    2. Device B (Standby)
+
+        ```
+        # Set hostname.
+        modify sys global-settings hostname bigip2
+        mv cm device bigip1 bigip2
+
+        # Create the HA VLAN + self IP — the dedicated link used for sync and heartbeats.
+        create net vlan HA interfaces add { 1.2 }
+        create net self HA-self address 198.51.100.11/24 vlan HA
+        create net vlan external interfaces add { 1.1 }
+        create net self external-self address 203.0.113.11/25 vlan external
+        create net vlan internal interfaces add { 1.3 }
+        create net self internal-self address 203.0.113.141/25 vlan internal
+
+        # Set the ConfigSync address — where config is pushed/pulled.
+        modify cm device bigip2 configsync-ip 198.51.100.10
+
+        # Set failover (unicast) addresses — heartbeat over the HA link, with mgmt as backup path.
+        modify cm device bigip2 unicast-address { { ip 198.51.100.10 } { ip 192.0.2.11 } }
+
+        # Set the mirroring address — for connection mirroring (optional but recommended).
+        modify cm device bigip2 mirror-ip 198.51.100.10
+        ```
 
 ## Generating the Configuration
 
