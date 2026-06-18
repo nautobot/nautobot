@@ -4836,15 +4836,16 @@ class InterfaceUIViewSet(
             exclude=("device",),
         )
 
-        return {
-            "ipaddress_table": ipaddress_table,
-            "vlan_table": vlan_table,
-            "child_interfaces_table": child_interfaces_tables,
-            "redundancy_table": redundancy_table,
-            "virtual_device_contexts_table": virtual_device_contexts_table,
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
+        return context.update(
+            {
+                "ipaddress_table": ipaddress_table,
+                "vlan_table": vlan_table,
+                "child_interfaces_table": child_interfaces_tables,
+                "redundancy_table": redundancy_table,
+                "virtual_device_contexts_table": virtual_device_contexts_table,
+                "connected_endpoint_tables": get_connected_endpoint_tables(instance),
+            }
+        )
 
     def _get_interface_redundancy_groups_table(self, request, instance):
         """Return a table of assigned Interface Redundancy Groups."""
