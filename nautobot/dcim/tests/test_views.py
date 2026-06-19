@@ -3793,6 +3793,111 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertIn(lane2.get_absolute_url(), content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_detail_shows_breakout_trunk_child_interface(self):
+        """A fan-out-side interface's Connection panel annotates its trunk peer with the mapped child interface.
+
+        Reverse of the trunk-side breakout view: when an interface terminates the fan-out side of a
+        breakout cable and the trunk peer has a child (sub)interface for that lane, the child is shown
+        in brackets next to the trunk peer (mirrors the interface table's `_breakout_child_brackets`).
+        """
+        device = create_test_device("Breakout Child Device")
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        trunk = Interface.objects.create(device=device, name="Trunk", status=status_active)
+        child = Interface.objects.create(
+            device=device,
+            name="Trunk.1",
+            status=status_active,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        fanout = Interface.objects.create(device=device, name="Fanout", status=status_active)
+        breakout_type = CableType.objects.create(
+            name="1x2 breakout (child annotation)", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        Cable(termination_a=trunk, termination_b=fanout, cable_type=breakout_type, status=cable_status).save()
+
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(fanout.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Trunk peer is shown, annotated with its trunk-side child interface for this lane.
+        self.assertIn(trunk.get_absolute_url(), content)
+        self.assertIn(child.get_absolute_url(), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_detail_shows_breakout_trunk_child_interface_through_patch_panel(self):
+        """A leaf cabled to a breakout trunk through a patch panel still shows the trunk child as its connection.
+
+        The breakout cable is several hops away (behind a front/rear pass-through), so only the
+        fully-traced connection endpoint — not the immediate cable peer — resolves the child interface.
+        """
+        device = create_test_device("Breakout Patch Device")
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        trunk = Interface.objects.create(device=device, name="Ethernet11/1", status=status_active)
+        child = Interface.objects.create(
+            device=device,
+            name="Ethernet11/1.1",
+            status=status_active,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        rearport = RearPort.objects.create(device=device, name="PP Rear", positions=1)
+        frontport = FrontPort.objects.create(device=device, name="PP Front", rear_port=rearport, rear_port_position=1)
+        leaf = Interface.objects.create(device=device, name="Ethernet7/1", status=status_active)
+        breakout_type = CableType.objects.create(
+            name="1x4 breakout (patch panel)", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        # trunk --breakout(B1)--> front port; rear port --cable--> leaf
+        Cable(termination_a=trunk, termination_b=frontport, cable_type=breakout_type, status=cable_status).save()
+        Cable(termination_a=rearport, termination_b=leaf, status=cable_status).save()
+
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(leaf.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # The connection endpoint is the trunk, annotated with the trunk's child interface for this lane.
+        self.assertIn(trunk.get_absolute_url(), content)
+        self.assertIn(child.get_absolute_url(), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_subinterface_detail_shows_connection_via_parent_with_trace_button(self):
+        """A breakout child (sub)interface has no cable of its own, so its detail view shows a
+        scoped Connections panel for the parent trunk's lane — the parent's cable, the lane's peer,
+        and a Trace button pointing at the parent trunk's trace with the lane's cablepath_id."""
+        device = create_test_device("Subinterface Conn Device")
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        trunk = Interface.objects.create(device=device, name="Et1", status=status_active)
+        child = Interface.objects.create(
+            device=device,
+            name="Et1.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=status_active,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        leaf = Interface.objects.create(device=device, name="Leaf", status=status_active)
+        breakout_type = CableType.objects.create(
+            name="1x2 breakout (subif panel)", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        Cable(termination_a=trunk, termination_b=leaf, cable_type=breakout_type, status=cable_status).save()
+
+        path = child.get_breakout_lane_cable_path()
+        self.assertIsNotNone(path)
+
+        response = self.client.get(child.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # The parent's cable and the lane's far peer are shown (the connection is via the parent).
+        self.assertIn(trunk.get_absolute_url(), content)
+        self.assertIn(leaf.get_absolute_url(), content)
+        # The Trace button targets the parent trunk's trace, scoped to this lane via cablepath_id.
+        trace_href = reverse("dcim:interface_trace", args=[trunk.pk]) + f"?cablepath_id={path.pk}"
+        self.assertIn(trace_href, content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_port_type_fails(self):
         """Test that a virtual interface cannot have a port type"""
         self.add_permissions("dcim.add_interface")
@@ -5923,6 +6028,80 @@ class PathTraceViewTestCase(ModelViewTestCase):
         self.assertEqual(list(response.context["related_paths"]), [])
         # The single path on lane1 goes back to the trunk.
         self.assertEqual(response.context["path"].origin, lane1)
+
+    def test_pathendpoint_trace_breakout_subinterface_via_cablepath_id(self):
+        """Selecting one lane of a breakout trunk (parent PK + `?cablepath_id=`) traces that lane
+        only and renders the trunk's mapped child (sub)interface as the trace origin."""
+        self.add_permissions("dcim.view_cable", "dcim.view_interface")
+        device, active, connected = self._path_endpoint_setup()
+        breakout = CableType.objects.create(name="PathTrace sub 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        trunk = Interface.objects.create(device=device, name="sub-trunk", status=active)
+        child = Interface.objects.create(
+            device=device,
+            name="sub-trunk.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=active,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        leaf = Interface.objects.create(device=device, name="sub-leaf", status=active)
+        Cable(termination_a=trunk, termination_b=leaf, cable_type=breakout, status=connected).save()
+
+        # The lane's CablePath is one of the trunk's; select it explicitly via cablepath_id.
+        lane = child.get_breakout_lane()
+        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane["far_connector"])
+
+        url = reverse("dcim:interface_trace", args=[trunk.pk])
+        response = self.client.get(url + f"?cablepath_id={path.pk}")
+        self.assertHttpStatus(response, 200)
+        # The selected lane is the active path, and the trunk's lane paths are listed to switch between.
+        self.assertEqual(response.context["path"], path)
+        self.assertIn(path, list(response.context["related_paths"]))
+        self.assertBodyContains(response, str(child))
+        self.assertBodyContains(response, str(leaf))
+        # The page is titled for the subinterface being traced, not the parent trunk in the URL.
+        self.assertEqual(response.context["title"], f"Cable Trace for {child}")
+
+    def test_pathendpoint_trace_breakout_subinterface_lists_sibling_paths(self):
+        """Tracing one lane of a breakout trunk still lists the trunk's *other* lane paths in
+        Related Paths, so a user can switch between subinterfaces from the trace view."""
+        self.add_permissions("dcim.view_cable", "dcim.view_interface")
+        device, active, connected = self._path_endpoint_setup()
+        breakout = CableType.objects.create(
+            name="PathTrace siblings 1x2", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+        trunk = Interface.objects.create(device=device, name="sib-trunk", status=active)
+        child1 = Interface.objects.create(
+            device=device,
+            name="sib-trunk.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=active,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        leaf1 = Interface.objects.create(device=device, name="sib-leaf1", status=active)
+        leaf2 = Interface.objects.create(device=device, name="sib-leaf2", status=active)
+        cable = Cable(termination_a=trunk, termination_b=leaf1, cable_type=breakout, status=connected)
+        cable.save()
+        cable.add_termination(leaf2, "B", connector=2)
+
+        path = child1.get_breakout_lane_cable_path()
+        trunk_url = reverse("dcim:interface_trace", args=[trunk.pk])
+        response = self.client.get(trunk_url + f"?cablepath_id={path.pk}")
+        self.assertHttpStatus(response, 200)
+        # Both of the trunk's lane paths are listed even though a single lane is selected.
+        self.assertEqual(len(response.context["related_paths"]), 2)
+        self.assertQuerySetEqualAndNotEmpty(
+            response.context["related_paths"], CablePath.objects.filter(origin_id=trunk.pk)
+        )
+        self.assertEqual(response.context["path"], path)
+        # A link back to the parent trunk's full (all-lanes) trace is offered when a lane is selected.
+        self.assertBodyContains(response, "View full trace")
+
+        # On the full trace itself (no cablepath_id), that back-link is not shown.
+        response = self.client.get(trunk_url)
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("View full trace", extract_page_body(response.content.decode(response.charset)))
 
 
 class DeviceRedundancyGroupTestCase(ViewTestCases.PrimaryObjectViewTestCase):
