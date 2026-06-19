@@ -5621,13 +5621,48 @@ class PathTraceView(generic.ObjectView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    @staticmethod
+    def _select_path(cable_paths, cablepath_id):
+        """Return the `CablePath` from `cable_paths` matching `cablepath_id`, or the first as fallback."""
+        try:
+            path_id = uuid.UUID(cablepath_id)
+        except (AttributeError, TypeError, ValueError):
+            path_id = None
+        try:
+            return cable_paths.get(pk=path_id)
+        except CablePath.DoesNotExist:
+            return cable_paths.first()
+
+    @staticmethod
+    def _breakout_subinterface_origin(path):
+        """The breakout trunk's child (sub)interface mapped to the selected lane `path`, or None.
+
+        A trunk origin's CablePath identifies a lane by its breakout-side `peer_connector`; the
+        child interface whose breakout lane resolves to that same far connector is the subinterface
+        this lane belongs to. Returns None when the path origin isn't a breakout trunk with such a
+        child interface.
+        """
+        origin = getattr(path, "origin", None)
+        if origin is None or not hasattr(origin, "get_breakout_child_interface_for_connector"):
+            return None
+        return origin.get_breakout_child_interface_for_connector(path.peer_connector)
+
     def get_extra_context(self, request, instance):
         related_paths = []
+        cablepath_id = request.GET.get("cablepath_id")
 
         # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin.
         if isinstance(instance, PathEndpoint):
             cable_paths = instance.cable_paths.all().prefetch_related("origin")
-            path = cable_paths.first()
+            # A breakout trunk has one CablePath per lane; `cablepath_id` selects a single lane (e.g.
+            # tracing one subinterface), otherwise fall back to the first.
+            if cablepath_id is not None:
+                path = self._select_path(cable_paths, cablepath_id)
+            else:
+                path = cable_paths.first()
+            # Surface all of a breakout trunk's lane paths so the user can switch between lanes
+            # (subinterfaces) — including when one lane is already selected via `cablepath_id`, where
+            # this table is the only way back to the trunk's other lanes.
             if cable_paths.count() > 1:  # breakout cable!
                 related_paths = cable_paths
 
@@ -5635,36 +5670,38 @@ class PathTraceView(generic.ObjectView):
         else:
             related_paths = CablePath.objects.filter(path__contains=instance).prefetch_related("origin")
             # Check for specification of a particular path (when tracing pass-through ports)
-
-            cablepath_id = request.GET.get("cablepath_id")
             if cablepath_id is not None:
-                try:
-                    path_id = uuid.UUID(cablepath_id)
-                except (AttributeError, TypeError, ValueError):
-                    path_id = None
-                try:
-                    path = related_paths.get(pk=path_id)
-                except CablePath.DoesNotExist:
-                    path = related_paths.first()
+                path = self._select_path(related_paths, cablepath_id)
             else:
                 path = related_paths.first()
 
         # Render the SVG trace diagram for the active path (if there is one).
         trace_svg = ""
+        subinterface_origin = None
         if path is not None and getattr(path, "origin", None) is not None:
             from nautobot.dcim.svg.path_trace import CableTraceSVG
 
+            # When a single lane of a breakout trunk was selected, originate the trace from the
+            # trunk's child (sub)interface mapped to that lane so the SVG renders it atop the trunk.
+            subinterface_origin = self._breakout_subinterface_origin(path) if cablepath_id is not None else None
             trace_svg = CableTraceSVG(
-                path.origin, base_url=request.build_absolute_uri("/").rstrip("/"), cable_path=path
+                subinterface_origin or path.origin,
+                base_url=request.build_absolute_uri("/").rstrip("/"),
+                cable_path=path,
             ).render()
 
-        return {
+        context = {
             "path": path,
             "related_paths": related_paths,
             "trace_svg": trace_svg,
             "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
         }
+        # The URL traces the parent trunk, but a single selected lane is really tracing one
+        # subinterface — title it accordingly rather than the (misleading) parent interface.
+        if subinterface_origin is not None:
+            context["title"] = f"Cable Trace for {subinterface_origin}"
+        return context
 
 
 class CableCreateView(LoginRequiredMixin, View):

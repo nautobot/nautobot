@@ -456,7 +456,9 @@ def get_connected_endpoint_tables(instance):
         endpoint_tables.append(
             {
                 "heading": f"{bettertitle(endpoints[0]._meta.verbose_name)} Endpoints",
-                "table": table_class(data=endpoints, orderable=False, exclude=("pk", "actions")),
+                "table": table_class(
+                    data=endpoints, orderable=False, exclude=("pk", "actions", "connection", "cable_peer")
+                ),
             }
         )
     return endpoint_tables
@@ -509,6 +511,7 @@ def get_connected_endpoint_panels(source_model_name, *, weight=200, section=None
                 table_title=f"{bettertitle(model._meta.verbose_name)} Endpoints",
                 section=section,
                 weight=weight + index,
+                exclude_columns=["connection", "cable_peer"],
             )
         )
     return panels

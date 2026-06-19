@@ -94,10 +94,20 @@ class CableTraceSVG:
     def __init__(self, origin, base_url="", cable_path=None):
         self.origin = origin
         self.base_url = base_url.rstrip("/") if base_url else ""
+        # A breakout child (sub)interface origin is virtual and has no `CablePath` of its own; its
+        # physical path is a single lane of its parent trunk's breakout cable. Record the parent
+        # trunk so the renderer traces only that lane and draws the child atop the trunk.
+        get_breakout_lane = getattr(origin, "get_breakout_lane", None)
+        self.trunk_origin = (
+            origin.parent_interface if get_breakout_lane is not None and get_breakout_lane() is not None else None
+        )
         # Render the explicitly-selected CablePath when given (e.g. a `?cablepath_id=` choice);
-        # otherwise fall back to the origin endpoint's first path.
-        if cable_path is None and hasattr(origin, "cable_paths"):
-            cable_path = origin.cable_paths.first()
+        # otherwise fall back to the parent trunk's lane (subinterface origin) or the origin's path.
+        if cable_path is None:
+            if self.trunk_origin is not None:
+                cable_path = origin.get_breakout_lane_cable_path()
+            elif hasattr(origin, "cable_paths"):
+                cable_path = origin.cable_paths.first()
         self.cable_path = cable_path
         self.traced_path = cable_path.trace() if cable_path is not None else []
         self.fanout_paths = self._detect_fanout()
@@ -130,6 +140,13 @@ class CableTraceSVG:
             }
         ]
 
+        # A breakout child (sub)interface origin follows just one lane of its parent trunk's breakout
+        # cable, so render a single linear leg rather than fanning out across every lane. (The origin
+        # also isn't a termination on the cable — the trunk is — so the fan-out detection below, which
+        # locates the origin's own cable row, doesn't apply.)
+        if self.trunk_origin is not None:
+            return linear_fanout
+
         if not cable or not cable.cable_type_id:
             return linear_fanout
 
@@ -149,22 +166,36 @@ class CableTraceSVG:
         origin_side = origin_row.cable_end  # "A" or "B"
         opposite_side = "B" if origin_side == "A" else "A"
         origin_side_key = "a_connector" if origin_side == "A" else "b_connector"
+        origin_position_key = "a_position" if origin_side == "A" else "b_position"
         far_side_key = "b_connector" if origin_side == "A" else "a_connector"
 
         # All mapping entries that originate from the origin's connector, deduplicated by the
-        # far-side connector so multi-position trunks contribute one leg per peer connector.
+        # far-side connector so multi-position trunks contribute one leg per peer connector. Also
+        # track which origin-side positions each far connector carries, so a trunk origin's numbered
+        # child interfaces can be annotated onto their corresponding legs.
         seen_far_connectors = []
+        positions_by_far_connector = {}
         for entry in cable.cable_type.mapping or []:
             if entry.get(origin_side_key) != origin_row.connector:
                 continue
             far_connector = entry.get(far_side_key)
-            if far_connector is None or far_connector in seen_far_connectors:
+            if far_connector is None:
                 continue
-            seen_far_connectors.append(far_connector)
+            positions_by_far_connector.setdefault(far_connector, []).append(entry.get(origin_position_key))
+            if far_connector not in seen_far_connectors:
+                seen_far_connectors.append(far_connector)
         seen_far_connectors.sort()
 
         if len(seen_far_connectors) <= 1:
             return linear_fanout
+
+        # Trunk-side child interfaces keyed by their breakout position, used to annotate each leg
+        # with the numbered child interface it maps to (empty for non-Interface origins).
+        child_interface_by_position = {}
+        if hasattr(self.origin, "child_interfaces"):
+            for child in self.origin.child_interfaces.all():
+                if child.breakout_position is not None:
+                    child_interface_by_position[child.breakout_position] = child
 
         # Far-side terminations indexed by connector for quick lookup; CablePaths indexed by
         # peer_connector (which corresponds to the far-side connector for the breakout leg).
@@ -190,10 +221,20 @@ class CableTraceSVG:
                 if len(full_trace) > 1:
                     leg_trace = self._expand_trace_segments(full_trace[1:])
 
+            # Annotate the leg with the trunk's numbered child interface(s) mapped to this connector.
+            child_interfaces = [
+                child_interface_by_position[position]
+                for position in positions_by_far_connector.get(far_connector, [])
+                if position in child_interface_by_position
+            ]
+            connector_label = f"{opposite_side}{far_connector}"
+            if child_interfaces:
+                connector_label += " (" + ", ".join(str(child) for child in child_interfaces) + ")"
+
             fanout_legs.append(
                 {
                     "termination": termination,
-                    "connector_label": f"{opposite_side}{far_connector}",
+                    "connector_label": connector_label,
                     "trace": leg_trace,
                 }
             )
@@ -332,6 +373,23 @@ class CableTraceSVG:
                 lines.append(breakout_text)
         return lines
 
+    def _terminal_subinterface(self, entries):
+        """Child (sub)interface of a breakout trunk this leg ends on, mapped back to the origin.
+
+        When a leg's terminal node is a breakout-trunk `Interface` whose lane resolves back to the
+        trace origin — possibly several hops away through patch-panel front/rear ports — return the
+        trunk's child interface for that lane so it can be drawn as a port on the terminal device.
+        Returns None when the leg doesn't end on such a trunk or no child interface claims the
+        matching lane position. See `Interface.get_breakout_trunk_child_interface_for_endpoint`.
+        """
+        resolver = getattr(self.origin, "get_breakout_trunk_child_interface_for_endpoint", None)
+        if resolver is None or not entries:
+            return None
+        terminal = entries[-1]
+        if terminal["type"] != "node" or terminal.get("termination") is None:
+            return None
+        return resolver(terminal["termination"])
+
     # ──────────────────────────────────────────────
     # Phase 1: Build the matrix
     # ──────────────────────────────────────────────
@@ -434,6 +492,19 @@ class CableTraceSVG:
                 else:
                     entries.append(entry)
                     entry_index += 1
+
+            # When this leg terminates on a breakout-trunk interface, fold the trunk's child
+            # (sub)interface for the lane leading back to the origin into the terminal device node:
+            # the trunk port and the child interface render as the arriving/departing port pair of a
+            # passthrough node, so the subinterface box sits on the device below its trunk port.
+            subinterface = self._terminal_subinterface(entries)
+            if subinterface is not None:
+                trunk_termination = entries[-1]["termination"]
+                entries[-1] = {
+                    "type": "passthrough_node",
+                    "arriving": trunk_termination,
+                    "departing": subinterface,
+                }
 
             column_entries.append(entries)
 
@@ -562,7 +633,13 @@ class CableTraceSVG:
 
         # Header: Origin node
         if header["origin"]:
-            y = self._draw_node(dwg, trunk_cx, y, header["origin"], term_position="bottom")
+            if self.trunk_origin is not None:
+                # Subinterface origin: draw the originating child interface atop its parent trunk
+                # port on the shared device — the mirror of a trace *ending* on a trunk, which folds
+                # the child below the trunk — then trace that one lane below.
+                y = self._draw_passthrough_node(dwg, trunk_cx, y, self.origin, header["origin"])
+            else:
+                y = self._draw_node(dwg, trunk_cx, y, header["origin"], term_position="bottom")
             y += self.GAP_Y
 
         # Header: Breakout cable trunk + fork
