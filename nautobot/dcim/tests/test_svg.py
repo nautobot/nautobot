@@ -6,6 +6,7 @@ import re
 from django.test import SimpleTestCase, tag
 
 from nautobot.core.testing import TestCase
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Cable,
     CableType,
@@ -617,3 +618,99 @@ class CableTraceSVGTestCase(TestCase):
         # The shared rear port is drawn once (consecutive run), the distinct one once.
         self.assertEqual(svg.count("Rear-Shared"), 1, "Shared rear port should render once, not per leg")
         self.assertEqual(svg.count("Rear-Other"), 1)
+
+    def _make_breakout_trunk_terminus(self):
+        """A leaf interface breakout-cabled to a trunk that has a child (sub)interface on lane 1.
+
+        Returns `(leaf, trunk, child)`. Tracing from `leaf` ends on the breakout trunk `trunk`,
+        whose child interface `child` maps to the trunk-connector position `leaf`'s lane carries.
+        """
+        breakout = CableType(name="SVG terminus 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        breakout.validated_save()
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="terminus-trunk",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        child = Interface.objects.create(
+            device=self.device,
+            name="terminus-trunk.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        leaf = Interface.objects.create(
+            device=self.device,
+            name="terminus-leaf",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        # trunk (A1) --breakout--> leaf (B1); the leaf's lane maps back to child position 1.
+        Cable(termination_a=trunk, termination_b=leaf, cable_type=breakout, status=self.connected).save()
+        return leaf, trunk, child
+
+    def test_trace_ending_in_breakout_trunk_renders_subinterface_box(self):
+        """A trace ending on a breakout trunk folds the trunk's mapped child interface onto the
+        terminal device as a passthrough-style departing port (the trunk port on top, the child
+        (sub)interface box below it)."""
+        leaf, trunk, child = self._make_breakout_trunk_terminus()
+        self.assertEqual(leaf.get_breakout_trunk_child_interface_for_endpoint(trunk), child)
+
+        diagram = CableTraceSVG(leaf)
+        terminal_cells = [
+            cell
+            for cell in self._matrix_cells(diagram)
+            if cell["type"] == "passthrough_node" and cell.get("arriving") == trunk
+        ]
+        self.assertEqual(len(terminal_cells), 1, "Terminal trunk node should fold into a passthrough node")
+        self.assertEqual(terminal_cells[0]["departing"], child)
+
+        svg = diagram.render()
+        self.assertIn(str(child), svg)
+
+    def test_trace_from_subinterface_renders_single_lane_with_subinterface_on_top(self):
+        """Tracing from a breakout child (sub)interface follows only the parent trunk's matching lane
+        (a single linear leg, not the trunk's full fan-out) and draws the originating subinterface
+        atop its parent trunk port — the vertical mirror of a trace ending on that trunk."""
+        leaf, trunk, child = self._make_breakout_trunk_terminus()
+
+        diagram = CableTraceSVG(child)
+        # The child interface has no CablePath of its own; the renderer follows the parent trunk's lane.
+        self.assertEqual(diagram.trunk_origin, trunk)
+        self.assertEqual(len(diagram.fanout_paths), 1, "A subinterface trace follows one lane, not a fan-out")
+        self.assertEqual(diagram.fanout_paths[0]["termination"], leaf)
+
+        svg = diagram.render()
+        # The subinterface (origin), its parent trunk, and the far endpoint all appear.
+        self.assertIn(str(child), svg)
+        self.assertIn(str(trunk), svg)
+        self.assertIn(str(leaf), svg)
+        # The origin subinterface is highlighted (active termination box: success stroke, width 3).
+        self.assertIn(f'stroke="{svg_constants.COLOR_SUCCESS}"', svg)
+
+    def test_trace_from_subinterface_with_explicit_cable_path(self):
+        """Passing the parent trunk's lane `CablePath` explicitly (as the view does for a
+        `?cablepath_id=` selection) renders the same single-lane, subinterface-on-top trace."""
+        leaf, trunk, child = self._make_breakout_trunk_terminus()
+        lane = child.get_breakout_lane()
+        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane["far_connector"])
+
+        diagram = CableTraceSVG(child, cable_path=path)
+        self.assertEqual(diagram.trunk_origin, trunk)
+        self.assertEqual(len(diagram.fanout_paths), 1)
+        svg = diagram.render()
+        self.assertIn(str(child), svg)
+        self.assertIn(str(leaf), svg)
+
+    def test_trace_from_trunk_side_does_not_render_subinterface_box(self):
+        """Tracing the *other* direction — from the trunk out to its fan-out leaf — leaves the leaf
+        as a plain terminal `node`: the leaf isn't a breakout trunk, so no child-interface box is
+        folded onto it (the subinterface only renders when the trace *ends* on a trunk)."""
+        leaf, trunk, _child = self._make_breakout_trunk_terminus()
+
+        cells = self._matrix_cells(CableTraceSVG(trunk))
+        leaf_nodes = [cell for cell in cells if cell["type"] == "node" and cell.get("termination") == leaf]
+        self.assertEqual(len(leaf_nodes), 1, "Fan-out leaf should remain a plain terminal node")
+        self.assertFalse(any(cell["type"] == "passthrough_node" for cell in cells))

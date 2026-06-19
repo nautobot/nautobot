@@ -2270,6 +2270,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
     filterset = InterfaceFilterSet
     generic_filter_tests = [
         # parent class generic_filter_tests intentionally excluded
+        ("breakout_position",),
         ("bridge", "bridge__id"),
         ("bridge", "bridge__name"),
         ("bridged_interfaces", "bridged_interfaces__id"),
@@ -2429,12 +2430,15 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         )
         # Third pair is not connected
 
-        # Child interfaces
+        # Child interfaces. Each has a distinct parent, so the per-parent uniqueness constraint on
+        # `breakout_position` allows them distinct positions — giving the generic filter test the
+        # 3+ unique values it needs.
         Interface.objects.create(
             device=cabled_interfaces[3].device,
             name="Child 1",
             role=interface_roles[2],
             parent_interface=cabled_interfaces[3],
+            breakout_position=1,
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
         )
@@ -2442,6 +2446,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             device=cabled_interfaces[4].device,
             name="Child 2",
             parent_interface=cabled_interfaces[4],
+            breakout_position=2,
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
         )
@@ -2450,6 +2455,7 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
             name="Child 3",
             role=interface_roles[0],
             parent_interface=cabled_interfaces[5],
+            breakout_position=3,
             status=interface_statuses[3],
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
         )
@@ -4877,7 +4883,6 @@ class InterfaceConnectionFilterSetTestCase(_ConnectionFilterSetTestMixin, Filter
 
     @classmethod
     def setUpTestData(cls):
-
         iface_status = Status.objects.get_for_model(Interface).first()
         cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
 
