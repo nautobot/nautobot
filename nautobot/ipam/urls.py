@@ -1,4 +1,3 @@
-
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 
 from . import views
