@@ -795,7 +795,7 @@ class Prefix(PrimaryModel):
 
         if self._networking_values_changed:
             # Prefix edit must not push any contained IPAddressRange outside the new span.
-            orphaned_ranges = self.ip_ranges.exclude(
+            orphaned_ranges = self.ip_address_ranges.exclude(
                 ip_version=self.ip_version,
                 start_host__gte=self.network,
                 end_host__lte=self.broadcast,
@@ -1750,7 +1750,7 @@ class IPAddressRange(PrimaryModel):
         "ipam.Prefix",
         blank=True,
         null=False,
-        related_name="ip_ranges",
+        related_name="ip_address_ranges",
         on_delete=models.PROTECT,
         help_text="The parent Prefix of this IP Address Range. Auto-resolved from the start/end host.",
     )
@@ -1761,7 +1761,7 @@ class IPAddressRange(PrimaryModel):
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
-        related_name="ip_ranges",
+        related_name="ip_address_ranges",
         blank=True,
         null=True,
     )
@@ -1833,7 +1833,9 @@ class IPAddressRange(PrimaryModel):
         return instance
 
     def __str__(self):
-        return f"{self.parent.namespace}: {self.start_address} - {self.end_address}"
+        if self.parent_id is not None:
+            return f"{self.parent.namespace}: {self.start_address} - {self.end_address}"
+        return f"{self.start_address} - {self.end_address}"
 
     def _deconstruct_start_address(self, address):
         if address:
@@ -1870,6 +1872,12 @@ class IPAddressRange(PrimaryModel):
 
     def clean(self):
         self._deconstruct_addresses()
+        # Skip range-level checks if either endpoint is missing (e.g. a form field failed
+        # validation), so we don't TypeError comparing None to an IPAddress. The missing
+        # value is already reported elsewhere (field error, or null=False in clean_fields).
+        if self.start_address is None or self.end_address is None:
+            super().clean()
+            return
         self._validate_start_not_after_end()
         self._resolve_and_validate_parent()
         self._validate_no_range_overlap()
@@ -2014,7 +2022,7 @@ class IPAddressRange(PrimaryModel):
         # if a namespace was explicitly set, use it
         if getattr(self, "_provided_namespace", None):
             return self._provided_namespace
-        if self.parent is not None:
+        if self.parent_id is not None:
             return self.parent.namespace
         return get_default_namespace()
 

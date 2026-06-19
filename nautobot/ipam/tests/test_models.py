@@ -840,6 +840,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         IPAddress.objects.update(parent=None)
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         self.namespace = Namespace.objects.first()
