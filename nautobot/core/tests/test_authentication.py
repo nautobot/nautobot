@@ -214,6 +214,7 @@ class ExternalAuthenticationTestCase(TestCase):
         new_user = User.objects.get(username="remoteuser3")
         self.assertTrue(new_user.has_perms(["dcim.add_location", "dcim.change_location"]))
         self.assertEqual(ObjectPermission.objects.filter(name="dcim.add_location").count(), 1)
+        self.assertEqual(ObjectPermission.objects.filter(name="dcim.change_location").count(), 1)
 
     @override_settings(
         SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
