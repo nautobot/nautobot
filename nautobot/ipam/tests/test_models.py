@@ -1711,6 +1711,41 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
         self.assertSequenceEqual(v4_10dot_address_space_in_v6.get_utilization(), (0, 2**120))
 
+    def test_get_utilization_count_as_utilized_range(self):
+        namespace = Namespace.objects.create(name="get_utilization_test")
+        prefix = Prefix.objects.create(
+            prefix="10.88.0.0/28",
+            namespace=namespace,
+            status=self.status,
+        )
+        with self.subTest("counts_as_full"):
+            """A range with count_as_utilized=True adds its entire span to the numerator."""
+            ip_range = IPAddressRange.objects.create(
+                start_address="10.88.0.1",
+                end_address="10.88.0.5",  # 5 addresses
+                namespace=namespace,
+                status=self.status,
+                count_as_utilized=True,
+            )
+            utilization = prefix.get_utilization()
+            # 5 addresses from the count_as_utilized range out of 14 usable host addresses
+            self.assertEqual(utilization.numerator, 5)
+            self.assertEqual(utilization.denominator, 14)
+            ip_range.delete()
+
+        with self.subTest("counts_as_full"):
+            """A range without count_as_utilized does not inflate the numerator."""
+            ip_range = IPAddressRange.objects.create(
+                start_address="10.88.0.1",
+                end_address="10.88.0.5",
+                namespace=namespace,
+                status=self.status,
+                count_as_utilized=False,
+            )
+            utilization = prefix.get_utilization()
+            self.assertEqual(utilization.numerator, 0)
+            ip_range.delete()
+
     #
     # Uniqueness enforcement tests
     #
@@ -2414,6 +2449,47 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
         )
         with self.assertRaisesRegex(ValidationError, "overlaps with child Prefix"):
             ip_range.validated_save()
+
+    def test_percent_utilized_no_ips(self):
+        """Range with no IP addresses has 0% utilization."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.99.0.200",
+            end_address="10.99.0.209",
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.assertEqual(ip_range.get_percent_utilized(), 0.0)
+
+    def test_percent_utilized_partial(self):
+        """Range with some IP addresses shows correct utilization."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.99.0.100",
+            end_address="10.99.0.109",
+            namespace=self.namespace,
+            status=self.status,
+        )
+        IPAddress.objects.create(
+            address="10.99.0.100/24",
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.assertAlmostEqual(ip_range.get_percent_utilized(), 10.0)
+
+    def test_percent_utilized_full(self):
+        """Range where every address has an IP object shows 100%."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.99.0.110",
+            end_address="10.99.0.112",  # 3 addresses
+            namespace=self.namespace,
+            status=self.status,
+        )
+        for i in range(110, 113):
+            IPAddress.objects.create(
+                address=f"10.99.0.{i}/24",
+                namespace=self.namespace,
+                status=self.status,
+            )
+        self.assertAlmostEqual(ip_range.get_percent_utilized(), 100.0)
 
 
 class TestRIR(ModelTestCases.BaseModelTestCase):

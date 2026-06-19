@@ -1209,6 +1209,12 @@ class Prefix(PrimaryModel):
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
         available_ips = prefix - child_ips
 
+        # Subtract addresses covered by exclusive IP Ranges
+        for ip_range in self.ip_address_ranges.filter(is_exclusive=True):
+            start = netaddr.IPAddress(ip_range.start_address)
+            end = netaddr.IPAddress(ip_range.end_address)
+            available_ips -= netaddr.IPSet(netaddr.IPRange(start, end))
+
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
             [
@@ -1332,6 +1338,12 @@ class Prefix(PrimaryModel):
             child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
 
         numerator_set = child_ips | child_prefixes
+
+        # Add count_as_utilized IP Ranges to the numerator (each range counts as fully utilized)
+        for ip_range in self.ip_address_ranges.filter(count_as_utilized=True):
+            start = netaddr.IPAddress(ip_range.start_address)
+            end = netaddr.IPAddress(ip_range.end_address)
+            numerator_set |= netaddr.IPSet(netaddr.IPRange(start, end))
 
         # Exclude network and broadcast IPs from the denominator unless they're assigned to an IPAddress or child pool.
         # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
@@ -2049,6 +2061,19 @@ class IPAddressRange(PrimaryModel):
             raise ValidationError(
                 {"namespace": f"No suitable parent Prefix for {host} exists in Namespace {self._namespace}"}
             ) from e
+
+    def get_percent_utilized(self) -> float:
+        """Percentage of addresses in the range that have an IPAddress object."""
+        if self.count_as_utilized or self.is_exclusive:
+            return 100.0
+        size = netaddr.IPRange(self.start_address, self.end_address).size
+        count = IPAddress.objects.filter(
+            parent__namespace=self.parent.namespace,
+            ip_version=self.ip_version,
+            host__gte=self.start_address,
+            host__lte=self.end_address,
+        ).count()
+        return (count / size) * 100
 
 
 @extras_features(
