@@ -1865,6 +1865,20 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def test_create_with_parent_only(self):
+        """A range can be created by specifying parent directly, without namespace."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_prefix")
+        data = {
+            "start_address": "192.168.50.60",
+            "end_address": "192.168.50.70",
+            "parent": self.parent4.pk,
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created = IPAddressRange.objects.get(pk=response.data["id"])
+        self.assertEqual(created.parent, self.parent4)
+
     def test_create_no_parent_prefix_is_invalid(self):
         """Addresses with no containing Prefix in the namespace are rejected."""
         self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_namespace")
@@ -1872,6 +1886,35 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
             "start_address": "10.250.0.10",
             "end_address": "10.250.0.20",
             "namespace": self.namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_parent_and_namespace_agreeing(self):
+        """Supplying both parent and namespace that agree (parent is in that namespace) succeeds."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_prefix", "ipam.view_namespace")
+        data = {
+            "start_address": "192.168.50.80",
+            "end_address": "192.168.50.90",
+            "parent": self.parent4.pk,
+            "namespace": self.namespace.pk,  # parent4 lives in this namespace
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created = IPAddressRange.objects.get(pk=response.data["id"])
+        self.assertEqual(created.parent, self.parent4)
+
+    def test_create_with_parent_and_namespace_conflicting(self):
+        """Supplying a parent that doesn't belong to the supplied namespace is rejected."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_prefix", "ipam.view_namespace")
+        other_namespace = Namespace.objects.create(name="Other NS for conflict test")
+        data = {
+            "start_address": "192.168.50.92",
+            "end_address": "192.168.50.95",
+            "parent": self.parent4.pk,  # in self.namespace
+            "namespace": other_namespace.pk,  # different namespace
             "status": self.statuses[0].pk,
         }
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)

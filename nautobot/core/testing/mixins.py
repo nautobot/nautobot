@@ -150,8 +150,8 @@ class NautobotTestCaseMixin:
                     ct = value if isinstance(value, ContentType) else ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
-                # Convert IPNetwork instances to strings
-                elif isinstance(value, IPNetwork) or isinstance(value, IPAddress):
+                # Convert netaddr objects to strings
+                elif isinstance(value, (IPAddress, IPNetwork)):
                     model_dict[key] = str(value)
 
             else:
