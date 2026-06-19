@@ -1088,10 +1088,6 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
         url_path="assign",
         url_name="assign",
         custom_view_base_action="add",
-        custom_view_additional_permissions=[
-            "dcim.change_interface",
-            "virtualization.change_vminterface",
-        ],
     )
     def assign(self, request, *args, **kwargs):
         """Search for IPAddresses to assign to Interface or VMInterface."""
