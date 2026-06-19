@@ -1,7 +1,11 @@
+from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
 
 from nautobot.core.testing import APITestCase
+from nautobot.extras.choices import DynamicGroupTypeChoices
+from nautobot.extras.models import DynamicGroup
+from nautobot.ipam.models import IPAddressRange
 
 
 class TestPrefix(APITestCase):
@@ -65,6 +69,12 @@ class TestIPAddressRange(APITestCase):
 
     def test_ip_address_range_dynamic_groups(self):
         """Test dynamic_groups resolver is available for an IPAddressRange via GraphQL."""
+        ipaddressrange_ct = ContentType.objects.get_for_model(IPAddressRange)
+        DynamicGroup.objects.create(
+            name="DynamicGroup Test",
+            content_type=ipaddressrange_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
         get_ranges_query = """
         query {
             ip_address_ranges {
