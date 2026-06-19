@@ -194,6 +194,28 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertTrue(new_user.has_perms(["dcim.add_location", "dcim.change_location"]))
 
     @override_settings(
+        AUTHENTICATION_BACKENDS=TEST_AUTHENTICATION_BACKENDS,
+        REMOTE_AUTH_AUTO_CREATE_USER=True,
+        EXTERNAL_AUTH_DEFAULT_PERMISSIONS={
+            "dcim.add_location": None,
+            "dcim.change_location": None,
+        },
+    )
+    def test_external_auth_default_permissions_idempotent(self):
+        """Repeated requests must reuse default ObjectPermissions, not re-create them."""
+        headers = {"HTTP_REMOTE_USER": "remoteuser3"}
+
+        response = self.client.get(reverse("home"), follow=True, **headers)
+        self.assertEqual(response.status_code, 200)
+
+        response = self.client.get(reverse("home"), follow=True, **headers)
+        self.assertEqual(response.status_code, 200)
+
+        new_user = User.objects.get(username="remoteuser3")
+        self.assertTrue(new_user.has_perms(["dcim.add_location", "dcim.change_location"]))
+        self.assertEqual(ObjectPermission.objects.filter(name="dcim.add_location").count(), 1)
+
+    @override_settings(
         SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
     )
     def test_custom_social_auth_backend_prefix_sso_enabled_true(self):

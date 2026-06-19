@@ -140,8 +140,10 @@ def assign_permissions_to_user(user, permissions=None):
         try:
             object_type, action = resolve_permission_ct(permission_name)
             # 2.0 TODO(jathan): Merge multiple actions into a single ObjectPermission per content type OR just replace this with a different solution entirely.
-            obj_perm = ObjectPermission(name=permission_name, actions=[action], constraints=constraints)
-            obj_perm.save()
+            obj_perm, _ = ObjectPermission.objects.get_or_create(
+                name=permission_name,
+                defaults={"actions": [action], "constraints": constraints},
+            )
             obj_perm.users.add(user)
             obj_perm.object_types.add(object_type)
             permissions_list.append(permission_name)
