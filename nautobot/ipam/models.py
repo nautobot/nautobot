@@ -716,8 +716,18 @@ class Prefix(PrimaryModel):
                     protected_objects=self.ip_addresses.all(),
                 )
 
+            if self.parent is None and self.ip_address_ranges.exists():
+                raise models.ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {self} because it has child IPAddressRanges objects that "
+                        "would no longer have a valid parent."
+                    ),
+                    protected_objects=self.ip_address_ranges.all(),
+                )
+
             self.children.update(parent=self.parent)
             self.ip_addresses.update(parent=self.parent)
+            self.ip_address_ranges.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
     def get_parent(self):
@@ -895,6 +905,7 @@ class Prefix(PrimaryModel):
                 # Claim and/or un-claim child prefixes and IPs
                 self.reparent_subnets()
                 self.reparent_ips()
+                self.reparent_ip_address_ranges()
 
         self._network = self.network
         self._broadcast = self.broadcast
@@ -1054,6 +1065,62 @@ class Prefix(PrimaryModel):
         self.get_all_ips().select_for_update().filter(parent__prefix_length__lt=self.prefix_length).update(parent=self)
 
     reparent_ips.alters_data = True
+
+    def reparent_ip_address_ranges(self):
+        """
+        Handle changes to the parentage of IPAddressRanges as a consequence of this Prefix's
+        creation or update (analogous to reparent_ips()), but a range must remain fully contained
+        by its parent, so a range is only reparented to a Prefix that wholly contains its span.
+
+        Called automatically by save(); generally not intended for use outside of that context.
+        """
+        if self._networking_values_changed:
+            # Former child ranges no longer fully within us: move to our former parent, but only if
+            # that former parent still fully contains them. If it doesn't, Prefix.clean() should have
+            # already blocked this edit (orphaned-range validation), so reaching here with a range
+            # that fits nowhere is a guard against an inconsistent state.
+            reparentable_ranges = self.ip_address_ranges.exclude(
+                ip_version=self.ip_version,
+                start_host__gte=self.network,
+                end_host__lte=self.broadcast,
+            )
+            if self._parent_id is None and reparentable_ranges.exists():
+                raise ValidationError(
+                    {
+                        "__all__": f"{reparentable_ranges.count()} existing IP Address Ranges would no longer "
+                        "have a valid parent Prefix after this change."
+                    }
+                )
+            reparentable_ranges.update(parent_id=self._parent_id)
+
+            # Former child ranges that we are no longer closest parent of can be reparented to one of our new descendants.
+            ranges_to_reparent = []
+            for ip_range in self.ip_address_ranges.all():
+                closest = (
+                    self.children.filter(
+                        ip_version=ip_range.ip_version,
+                        network__lte=ip_range.start_host,
+                        broadcast__gte=ip_range.end_host,
+                    )
+                    .order_by("-prefix_length")
+                    .first()
+                )
+                if closest is not None and closest != self:
+                    ip_range.parent = closest
+                    ranges_to_reparent.append(ip_range)
+
+            IPAddressRange.objects.bulk_update(ranges_to_reparent, ["parent"], batch_size=1000)
+
+        # Ranges that we are now the closest parent of can be reparented to us.
+        IPAddressRange.objects.filter(
+            parent__namespace_id=self.namespace_id,
+            ip_version=self.ip_version,
+            start_host__gte=self.network,
+            end_host__lte=self.broadcast,
+            parent__prefix_length__lt=self.prefix_length,
+        ).select_for_update().update(parent=self)
+
+    reparent_ip_address_ranges.alters_data = True
 
     def supernets(self, direct=False, include_self=False, for_update=False):
         """

@@ -894,6 +894,19 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
                 prefix.description = "Sample Description"
                 prefix.save()
                 reparent_ips.assert_not_called()
+                prefix.delete()
+
+        with self.subTest("Assert reparent_ip_address_ranges"):
+            with patch.object(Prefix, "reparent_ip_address_ranges", return_value=None) as reparent_ranges:
+                Prefix.objects.create(prefix=prefix_ip, status=self.status, namespace=self.namespace)
+                reparent_ranges.assert_called_once()
+
+            with patch.object(Prefix, "reparent_ip_address_ranges", return_value=None) as reparent_ranges:
+                prefix = Prefix.objects.get(prefix=prefix_ip)
+                prefix.description = "Sample Description"
+                prefix.save()
+                reparent_ranges.assert_not_called()
+                prefix.delete()
 
     def test_location_queries(self):
         locations = Location.objects.all()[:4]
