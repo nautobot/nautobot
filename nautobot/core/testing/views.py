@@ -1117,7 +1117,11 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
-            instance1, instance2 = self._get_queryset().exclude(name="")[:2]
+            queryset = self._get_queryset()
+            has_name = any(f.name == "name" for f in queryset.model._meta.get_fields())
+            if has_name:
+                queryset = queryset.exclude(name="")
+            instance1, instance2 = queryset[:2]
             if hasattr(instance1, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
@@ -1156,7 +1160,11 @@ class ViewTestCases:
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
             """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
-            instance1, instance2 = self._get_queryset().exclude(name="")[:2]
+            queryset = self._get_queryset()
+            has_name = any(f.name == "name" for f in queryset.model._meta.get_fields())
+            if has_name:
+                queryset = queryset.exclude(name="")
+            instance1, instance2 = queryset[:2]
             if hasattr(instance1, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
@@ -1348,7 +1356,11 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
-            instance1, instance2 = self._get_queryset().exclude(name="")[:2]
+            queryset = self._get_queryset()
+            has_name = any(f.name == "name" for f in queryset.model._meta.get_fields())
+            if has_name:
+                queryset = queryset.exclude(name="")
+            instance1, instance2 = queryset[:2]
             if hasattr(self.model, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
