@@ -1,0 +1,1 @@
+Updated `testing/views.py` logic to account for nullable name field.
