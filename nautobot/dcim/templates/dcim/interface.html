@@ -64,8 +64,14 @@
                 <td>Parent Interface</td>
                 <td>{{ object.parent_interface|hyperlinked_object }}</td>
             </tr>
+            {% if object.breakout_position %}
+                <tr>
+                    <td>Breakout Position</td>
+                    <td>{{ object.breakout_position }}</td>
+                </tr>
+            {% endif %}
             <tr>
-                <th scope="row">Bridge</th>
+                <td>Bridge</td>
                 <td>{{ object.bridge|hyperlinked_object }}</td>
             </tr>
             <tr>
@@ -98,6 +104,18 @@
 
 {% block content_right_page %}
     {% include 'dcim/inc/connection.html' with trace_url_name='dcim:interface_trace' %}
+    {# A breakout child (sub)interface is virtual (no cable of its own), so the panel above renders #}
+    {# nothing for it; show its connection through the parent trunk's lane instead, with a Trace button. #}
+    {% if object.get_breakout_lane_cable_path %}
+        <div class="card">
+            <div class="card-header">
+                <strong>Connections</strong>
+            </div>
+            <div class="card-body">
+                {% include 'dcim/inc/connection_subinterface_body.html' %}
+            </div>
+        </div>
+    {% endif %}
     {% if object.is_lag %}
         <div class="card">
             <div class="card-header"><strong>LAG Members</strong></div>
