@@ -2771,6 +2771,30 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Assert that "Add IP address" appears for each of the three interfaces
         self.assertBodyContains(response, "Add IP address", count=3)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_component_tab_action_return_url(self):
+        """Edit/delete actions in a device component tab return to the tab's path-based URL, not a legacy `?tab=` URL (#9115)."""
+        device = self.devices[0]
+        self.add_permissions(
+            "dcim.change_interface",
+            "dcim.delete_interface",
+            "dcim.change_powerport",
+            "dcim.delete_powerport",
+        )
+        device_url = device.get_absolute_url()
+
+        with self.subTest("interfaces tab"):
+            response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": device.pk}))
+            body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(f"return_url={device_url}interfaces/", body)
+            self.assertNotIn(f"return_url={device_url}?tab=interfaces", body)
+
+        with self.subTest("power-ports tab where tab_id differs from url_path"):
+            response = self.client.get(reverse("dcim:device_powerports", kwargs={"pk": device.pk}))
+            body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn(f"return_url={device_url}power-ports/", body)
+            self.assertNotIn(f"return_url={device_url}?tab=power_ports", body)
+
     def test_device_interface_assign_ipaddress(self):
         device = Device.objects.first()
         self.add_permissions(
