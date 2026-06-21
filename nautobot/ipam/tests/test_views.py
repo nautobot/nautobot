@@ -702,7 +702,14 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("ipam.add_ipaddress")
         response = self.client.post(
             reverse("ipam:ipaddress_add"),
-            data=post_data({"address": "192.0.2.3/24", "namespace": self.namespace.pk}),
+            data=post_data(
+                {
+                    "address": "192.0.2.3",  # Invalid: CIDR mask intentionally omitted.
+                    "namespace": self.namespace.pk,
+                    "status": self.statuses[1].pk,
+                    "type": IPAddressTypeChoices.TYPE_HOST,
+                }
+            ),
             headers={"HX-Request": "true"},
         )
         self.assertHttpStatus(response, 200)
