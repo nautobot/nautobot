@@ -692,6 +692,26 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.5/24").exists())
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_embedded_create_form_invalid_returns_modal_partial(self):
+        """
+        An invalid HTMX (embedded modal) submission returns the modal partial, not the full create page.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/9062.
+        """
+        self.add_permissions("ipam.add_ipaddress")
+        response = self.client.post(
+            reverse("ipam:ipaddress_add"),
+            data=post_data({"address": "192.0.2.3/24", "namespace": self.namespace.pk}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn('data-nb-obj-type="IP address"', content)
+        self.assertIn("embedded_id_", content)
+        self.assertNotIn('id="nb-create-form"', content)
+        self.assertNotIn("<!DOCTYPE", content)
+
 
 class IPAddressMergeTestCase(ModelViewTestCase):
     @classmethod
