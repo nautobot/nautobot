@@ -1965,5 +1965,5 @@ class ModuleBay(PrimaryModel):
     def save(self, *args, **kwargs):
         if not self.present_in_database:
             if self.parent_device is None and self.parent_module is not None:
-                self.parent_device = self.parent_module.parent_module_bay.parent_device
+                self.parent_device = getattr(self.parent_module.parent_module_bay, "parent_device", None)
         super().save(*args, **kwargs)
