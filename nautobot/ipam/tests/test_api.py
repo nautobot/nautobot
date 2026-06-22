@@ -22,10 +22,11 @@ from nautobot.dcim.models import (
     Manufacturer,
     VirtualDeviceContext,
 )
-from nautobot.extras.models import CustomField, Role, Status
+from nautobot.extras.models import CustomField, Role, Status, Tag
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -1722,6 +1723,202 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
                 "vm_interface": vm_interfaces[1].pk,
             },
         ]
+
+
+class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
+    model = IPAddressRange
+
+    # namespace is a write-only field, not present on the serialized object
+    validation_excluded_fields = ["namespace"]
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.statuses = Status.objects.get_for_model(IPAddressRange)
+        cls.roles = Role.objects.get_for_model(IPAddressRange)
+        cls.namespace = Namespace.objects.first()
+        pfx_status = Status.objects.get_for_model(Prefix).first()
+        cls.parent4 = Prefix.objects.create(
+            prefix="192.168.50.0/24",
+            status=pfx_status,
+            namespace=cls.namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+        )
+        cls.parent4_b = Prefix.objects.create(
+            prefix="192.168.51.0/24",
+            status=pfx_status,
+            namespace=cls.namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+        )
+        cls.parent6 = Prefix.objects.create(
+            prefix="2001:db8:abcd:50::/64",
+            status=pfx_status,
+            namespace=cls.namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        first_range = IPAddressRange.objects.first()
+        cls.update_data = {
+            "start_address": str(first_range.start_address),
+            "end_address": str(first_range.end_address),
+            "namespace": cls.namespace.pk,
+            "status": cls.statuses[0].pk,
+        }
+
+        cls.create_data = [
+            {
+                # IPv4, with role + tags
+                "start_address": "192.168.50.10",
+                "end_address": "192.168.50.20",
+                "namespace": cls.namespace.pk,
+                "status": cls.statuses[0].pk,
+                "role": cls.roles[0].pk,
+                "tags": [t.pk for t in Tag.objects.get_for_model(IPAddressRange)[:2]],
+            },
+            {
+                # IPv4, no role
+                "start_address": "192.168.50.30",
+                "end_address": "192.168.50.40",
+                "namespace": cls.namespace.pk,
+                "status": cls.statuses[0].pk,
+            },
+            {
+                # IPv6, with role
+                "start_address": "2001:db8:abcd:50::10",
+                "end_address": "2001:db8:abcd:50::20",
+                "namespace": cls.namespace.pk,
+                "status": cls.statuses[0].pk,
+                "role": cls.roles[0].pk,
+            },
+            {
+                # IPv6
+                "start_address": "2001:db8:abcd:50::100",
+                "end_address": "2001:db8:abcd:50::200",
+                "namespace": cls.namespace.pk,
+                "status": cls.statuses[0].pk,
+            },
+        ]
+        cls.bulk_update_data = {
+            "description": "New description",
+            "status": cls.statuses[1].pk,
+        }
+
+    def test_create_ipv6_range(self):
+        """An IPv6 range resolves its parent and reports ip_version 6."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_namespace")
+        data = {
+            "start_address": "2001:db8:abcd:50::1000",
+            "end_address": "2001:db8:abcd:50::2000",
+            "namespace": self.namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["ip_version"], 6)
+        self.assertEqual(response.data["start_address"], "2001:db8:abcd:50::1000")
+
+    def test_create_requires_parent_or_namespace(self):
+        """Missing both parent and namespace results in a validation error."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status")
+        data = {
+            "start_address": "192.168.50.100",
+            "end_address": "192.168.50.110",
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("__all__", response.data)
+
+    def test_create_start_after_end_is_invalid(self):
+        """start_address greater than end_address is rejected (both IPv4 and IPv6)."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status")
+        for start, end, ns_parent in (
+            ("192.168.50.200", "192.168.50.100", {"namespace": self.namespace.pk}),
+            ("2001:db8:abcd:50::ff", "2001:db8:abcd:50::10", {"namespace": self.namespace.pk}),
+        ):
+            data = {"start_address": start, "end_address": end, "status": self.statuses[0].pk, **ns_parent}
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_invalid_address(self):
+        """Malformed or masked addresses are rejected on the address fields."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status")
+        for bad_start in ("", "not-an-ip", "192.168.50.10/24", "999.999.999.999", "2001:db8::/64"):
+            data = {
+                "start_address": bad_start,
+                "end_address": "192.168.50.20",
+                "namespace": self.namespace.pk,
+                "status": self.statuses[0].pk,
+            }
+            response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+            self.assertIn("start_address", response.data)
+
+    def test_create_mixed_ip_version_is_invalid(self):
+        """start IPv4 + end IPv6 (or vice versa) is rejected."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_namespace")
+        data = {
+            "start_address": "192.168.50.10",
+            "end_address": "2001:db8:abcd:50::20",
+            "namespace": self.namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_parent_only(self):
+        """A range can be created by specifying parent directly, without namespace."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_prefix")
+        data = {
+            "start_address": "192.168.50.60",
+            "end_address": "192.168.50.70",
+            "parent": self.parent4.pk,
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created = IPAddressRange.objects.get(pk=response.data["id"])
+        self.assertEqual(created.parent, self.parent4)
+
+    def test_create_no_parent_prefix_is_invalid(self):
+        """Addresses with no containing Prefix in the namespace are rejected."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_namespace")
+        data = {
+            "start_address": "10.250.0.10",
+            "end_address": "10.250.0.20",
+            "namespace": self.namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_create_with_parent_and_namespace_agreeing(self):
+        """Supplying both parent and namespace that agree (parent is in that namespace) succeeds."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_prefix", "ipam.view_namespace")
+        data = {
+            "start_address": "192.168.50.80",
+            "end_address": "192.168.50.90",
+            "parent": self.parent4.pk,
+            "namespace": self.namespace.pk,  # parent4 lives in this namespace
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created = IPAddressRange.objects.get(pk=response.data["id"])
+        self.assertEqual(created.parent, self.parent4)
+
+    def test_create_with_parent_and_namespace_conflicting(self):
+        """Supplying a parent that doesn't belong to the supplied namespace is rejected."""
+        self.add_permissions("ipam.add_ipaddressrange", "extras.view_status", "ipam.view_prefix", "ipam.view_namespace")
+        other_namespace = Namespace.objects.create(name="Other NS for conflict test")
+        data = {
+            "start_address": "192.168.50.92",
+            "end_address": "192.168.50.95",
+            "parent": self.parent4.pk,  # in self.namespace
+            "namespace": other_namespace.pk,  # different namespace
+            "status": self.statuses[0].pk,
+        }
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):

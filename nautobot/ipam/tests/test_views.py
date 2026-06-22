@@ -1248,31 +1248,6 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
         }
 
-    def test_bulk_rename_plain_string_replace(self):
-        """POST with use_regex=False should do a plain string find/replace.
-
-        Overridden because the base test picks the first object from the queryset and uses
-        `name[0]` as the literal to find, which raises IndexError when the name is empty.
-        IPAddressRange.name is optional and the factory generates blank names, so we pin to
-        one of our own named ranges instead of touching the shared base test.
-        """
-        instance = self._get_queryset().get(pk=self.ip_ranges[0].pk)
-        original_name = instance.name
-        self.add_permissions("ipam.change_ipaddressrange")
-
-        first_char = original_name[0]
-        data = {
-            "pk": [instance.pk],
-            "_preview": True,
-            "find": first_char,
-            "replace": first_char,
-            "use_regex": False,
-        }
-        response = self.client.post(self._get_url("bulk_rename"), data)
-        self.assertHttpStatus(response, 200)
-        instance.refresh_from_db()
-        self.assertEqual(instance.name, original_name)
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_move_ip_address_range_between_namespaces(self):
         """A range can only move to a namespace that already contains a suitable parent Prefix."""
