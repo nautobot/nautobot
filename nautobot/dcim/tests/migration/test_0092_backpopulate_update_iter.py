@@ -164,7 +164,7 @@ class TestChunkFlushBug(unittest.TestCase):
 
     def test_zero_items(self):
         """Empty queryset: bulk_update never called."""
-        bays, spy = self._run(n_items=0, chunk_size=5)
+        _, spy = self._run(n_items=0, chunk_size=5)
         self.assertEqual(spy.call_count, 0)
 
     def test_chunk_size_one(self):
@@ -176,7 +176,7 @@ class TestChunkFlushBug(unittest.TestCase):
 
     def test_flush_order_preserved(self):
         """Items reach bulk_update in the same order as the queryset."""
-        bays, spy = self._run(n_items=12, chunk_size=5)
+        _, spy = self._run(n_items=12, chunk_size=5)
         self.assertEqual(spy.all_flushed_pks(), list(range(12)))
 
     # -----------------------------------------------------------------------
@@ -224,7 +224,7 @@ class TestChunkFlushBug(unittest.TestCase):
             bay.parent_device = bay.parent_module.parent_module_bay.parent_device
         really propagates the right object.
         """
-        bays, spy = self._run(n_items=7, chunk_size=3)
+        bays, _ = self._run(n_items=7, chunk_size=3)
         for bay in bays:
             expected_device = bay.parent_module.parent_module_bay.parent_device
             self.assertIs(bay.parent_device, expected_device, f"Bay {bay.pk}: parent_device not set correctly")
