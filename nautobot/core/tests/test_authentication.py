@@ -9,6 +9,7 @@ from django.test.utils import override_settings
 from django.urls import reverse
 from netaddr import IPNetwork
 
+from nautobot.core.authentication import assign_permissions_to_user
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.testing import NautobotTestClient, TestCase
 from nautobot.core.utils import lookup
@@ -215,6 +216,37 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertTrue(new_user.has_perms(["dcim.add_location", "dcim.change_location"]))
         self.assertEqual(ObjectPermission.objects.filter(name="dcim.add_location").count(), 1)
         self.assertEqual(ObjectPermission.objects.filter(name="dcim.change_location").count(), 1)
+
+    def test_external_auth_default_permissions_preserves_divergent_existing(self):
+        """An existing ObjectPermission with differing actions/constraints is warned about, not overwritten."""
+        user = User.objects.create(username="remoteuser4")
+        location_ct = ContentType.objects.get_for_model(Location)
+        existing = ObjectPermission.objects.create(
+            name="dcim.add_location",
+            actions=["add", "change"],
+            constraints={"status": "decommissioning"},
+        )
+        existing.object_types.add(location_ct)
+
+        with self.assertLogs("nautobot.core.authentication", "WARNING"):
+            assign_permissions_to_user(user, {"dcim.add_location": {"status": "active"}})
+
+        existing.refresh_from_db()
+        self.assertEqual(existing.actions, ["add", "change"])
+        self.assertEqual(existing.constraints, {"status": "decommissioning"})
+        self.assertIn(user, existing.users.all())
+
+    def test_external_auth_default_permissions_does_not_widen_object_types(self):
+        """An existing ObjectPermission scoped to a different object type is warned about, not widened."""
+        user = User.objects.create(username="remoteuser5")
+        device_ct = ContentType.objects.get(app_label="dcim", model="device")
+        existing = ObjectPermission.objects.create(name="dcim.add_location", actions=["add"], constraints=None)
+        existing.object_types.add(device_ct)
+
+        with self.assertLogs("nautobot.core.authentication", "WARNING"):
+            assign_permissions_to_user(user, {"dcim.add_location": None})
+
+        self.assertEqual(list(existing.object_types.values_list("model", flat=True)), ["device"])
 
     @override_settings(
         SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
