@@ -6,6 +6,7 @@ from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.dcim import signals as dcim_signals
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Cable,
     CablePath,
@@ -1872,6 +1873,409 @@ class CablePathTestCase(TestCase):
         # Each fan-out side resolves back to the trunk.
         self.assertEqual(lane1.get_connected_endpoints(), [trunk])
         self.assertEqual(lane2.get_connected_endpoints(), [trunk])
+
+    #
+    # Breakout child-interface position mapping (Interface.get_breakout_lane /
+    # CableTermination.get_breakout_trunk_child_interfaces).
+    #
+
+    def _make_breakout_trunk(self, a_connectors=1, b_connectors=4, total_lanes=4, child_positions=(1, 2)):
+        """Create a breakout cable whose A side is a trunk interface with named child interfaces.
+
+        Returns `(trunk, children, far_terminations)` where `children` maps a position number to the
+        child Interface `<trunk>.<position>` and `far_terminations` maps a B-side connector number to
+        the Interface cabled there. Only connectors 1 and 2 of the fan-out side are cabled.
+        """
+        breakout_type = CableType(
+            name=f"breakout {a_connectors}x{b_connectors}x{total_lanes}",
+            a_connectors=a_connectors,
+            b_connectors=b_connectors,
+            total_lanes=total_lanes,
+        )
+        breakout_type.validated_save()
+
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="Ethernet1",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        children = {
+            position: Interface.objects.create(
+                device=self.device,
+                name=f"Ethernet1.{position}",
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=self.interface_status,
+                parent_interface=trunk,
+                breakout_position=position,
+            )
+            for position in child_positions
+        }
+        far1 = Interface.objects.create(
+            device=self.device, name="far-1", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        far2 = Interface.objects.create(
+            device=self.device, name="far-2", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        cable = Cable(termination_a=trunk, termination_b=far1, cable_type=breakout_type, status=self.status)
+        cable.save()
+        cable.add_termination(far2, "B", connector=2)
+        return trunk, children, {1: far1, 2: far2}
+
+    def test_get_breakout_lane_forward(self):
+        """A child interface resolves to its trunk-connector position and the far-side termination."""
+        _, children, far_terminations = self._make_breakout_trunk()
+
+        lane1 = children[1].get_breakout_lane()
+        self.assertIsNotNone(lane1)
+        self.assertEqual(lane1["position"], 1)
+        self.assertEqual(lane1["far_termination"], far_terminations[1])
+
+        lane2 = children[2].get_breakout_lane()
+        self.assertEqual(lane2["position"], 2)
+        self.assertEqual(lane2["far_termination"], far_terminations[2])
+
+    def test_get_breakout_lane_unoccupied_far_connector(self):
+        """A child mapping to a connector with no termination resolves, with far_termination None."""
+        trunk, _, _ = self._make_breakout_trunk(child_positions=())
+        child3 = Interface.objects.create(
+            device=self.device,
+            name="Ethernet1.3",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=3,
+        )
+        lane3 = child3.get_breakout_lane()
+        self.assertIsNotNone(lane3)
+        self.assertEqual(lane3["position"], 3)
+        self.assertIsNone(lane3["far_termination"])
+
+    def test_get_breakout_lane_position_out_of_range(self):
+        """A breakout_position beyond the trunk connector's position count yields no lane."""
+        trunk, _, _ = self._make_breakout_trunk(child_positions=())
+        # 1x4 breakout → a_positions == 4, so position 5 is not carried by the trunk connector.
+        child5 = Interface.objects.create(
+            device=self.device,
+            name="Ethernet1.5",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=5,
+        )
+        self.assertIsNone(child5.get_breakout_lane())
+
+    def test_get_breakout_lane_no_position_set(self):
+        """A child interface with no breakout_position has no breakout lane."""
+        trunk, _, _ = self._make_breakout_trunk(child_positions=())
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet1.mgmt",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+        )
+        self.assertIsNone(child.get_breakout_lane())
+
+    def test_get_breakout_lane_no_parent(self):
+        """The trunk interface itself (no parent_interface) has no breakout lane."""
+        trunk, _, _ = self._make_breakout_trunk(child_positions=())
+        self.assertIsNone(trunk.get_breakout_lane())
+
+    def test_get_breakout_lane_non_breakout_cable(self):
+        """A child whose parent is on an ordinary (non-breakout) cable has no breakout lane."""
+        parent = Interface.objects.create(
+            device=self.device,
+            name="Ethernet2",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        peer = Interface.objects.create(
+            device=self.device, name="peer", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        Cable(termination_a=parent, termination_b=peer, status=self.status).save()
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet2.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=parent,
+            breakout_position=1,
+        )
+        self.assertIsNone(child.get_breakout_lane())
+
+    def test_get_breakout_lane_parent_on_fanout_side(self):
+        """A child whose parent terminates the fan-out (not trunk) side has no breakout lane."""
+        breakout_type = CableType(name="fanout-parent 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        breakout_type.validated_save()
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="Ethernet3",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        fanout = Interface.objects.create(
+            device=self.device,
+            name="Ethernet4",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        Cable(termination_a=trunk, termination_b=fanout, cable_type=breakout_type, status=self.status).save()
+        # `fanout` is on the B (fan-out) side, so its children do not map to trunk positions.
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet4.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=fanout,
+            breakout_position=1,
+        )
+        self.assertIsNone(child.get_breakout_lane())
+
+    def test_get_breakout_connected_endpoint_direct(self):
+        """When a lane's far termination is itself an endpoint, that endpoint is the connection."""
+        _, children, far_terminations = self._make_breakout_trunk()
+        self.assertEqual(children[1].get_breakout_connected_endpoint(), far_terminations[1])
+        self.assertEqual(children[2].get_breakout_connected_endpoint(), far_terminations[2])
+
+    def test_get_breakout_connected_endpoint_through_patch_panel(self):
+        """The connection traverses past patch-panel front/rear ports to the ultimate endpoint.
+
+        `get_breakout_lane().far_termination` is the one-hop FrontPort, whereas
+        `get_breakout_connected_endpoint` follows the trunk's `CablePath` onward through the rear
+        port and the second cable to the final interface.
+        """
+        breakout_type = CableType(name="patchpanel 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        breakout_type.validated_save()
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="Ethernet10",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet10.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        rearport = RearPort.objects.create(device=self.device, name="PP Rear", positions=1)
+        frontport = FrontPort.objects.create(
+            device=self.device, name="PP Front", rear_port=rearport, rear_port_position=1
+        )
+        final = Interface.objects.create(
+            device=self.device, name="final", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        # Breakout trunk -> patch-panel front port (B connector 1), then rear port -> final interface.
+        Cable(termination_a=trunk, termination_b=frontport, cable_type=breakout_type, status=self.status).save()
+        Cable(termination_a=rearport, termination_b=final, status=self.status).save()
+
+        self.assertEqual(child.get_breakout_lane()["far_termination"], frontport)
+        self.assertEqual(child.get_breakout_connected_endpoint(), final)
+
+    def test_get_breakout_connected_endpoint_no_lane(self):
+        """A child with no breakout lane (non-breakout parent cable) has no breakout connection."""
+        parent = Interface.objects.create(
+            device=self.device,
+            name="Ethernet20",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        peer = Interface.objects.create(
+            device=self.device,
+            name="peer20",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        Cable(termination_a=parent, termination_b=peer, status=self.status).save()
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet20.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=parent,
+            breakout_position=1,
+        )
+        self.assertIsNone(child.get_breakout_connected_endpoint())
+
+    def test_get_breakout_trunk_child_interfaces_reverse(self):
+        """A fan-out-side termination resolves to the trunk's matching child interface."""
+        _, children, far_terminations = self._make_breakout_trunk()
+
+        mapping1 = far_terminations[1].get_breakout_trunk_child_interfaces()
+        self.assertEqual(len(mapping1), 1)
+        self.assertEqual(mapping1[0]["position"], 1)
+        self.assertEqual(mapping1[0]["child_interface"], children[1])
+
+        mapping2 = far_terminations[2].get_breakout_trunk_child_interfaces()
+        self.assertEqual(mapping2[0]["position"], 2)
+        self.assertEqual(mapping2[0]["child_interface"], children[2])
+
+    def test_get_breakout_trunk_child_interfaces_missing_child(self):
+        """When no child interface matches the position, trunk/position resolve but child is None."""
+        trunk, _, far_terminations = self._make_breakout_trunk(child_positions=())
+        mapping = far_terminations[1].get_breakout_trunk_child_interfaces()
+        self.assertEqual(len(mapping), 1)
+        self.assertEqual(mapping[0]["trunk_interface"], trunk)
+        self.assertEqual(mapping[0]["position"], 1)
+        self.assertIsNone(mapping[0]["child_interface"])
+
+    def test_get_breakout_trunk_child_interfaces_multi_position_connector(self):
+        """A fan-out connector carrying multiple lanes maps to multiple trunk child interfaces."""
+        # 1x2 over 4 lanes → b_positions == 2: connector B1 carries two trunk positions.
+        _, children, far_terminations = self._make_breakout_trunk(
+            a_connectors=1, b_connectors=2, total_lanes=4, child_positions=(1, 2, 3, 4)
+        )
+        cable_type = far_terminations[1].cable.cable_type
+        expected_positions = sorted(e["a_position"] for e in cable_type.mapping if e["b_connector"] == 1)
+        self.assertGreater(len(expected_positions), 1)  # guard: the connector really is multi-lane
+
+        mapping = far_terminations[1].get_breakout_trunk_child_interfaces()
+        self.assertEqual(sorted(entry["position"] for entry in mapping), expected_positions)
+        self.assertEqual(
+            {entry["child_interface"] for entry in mapping},
+            {children[position] for position in expected_positions},
+        )
+
+    def test_get_breakout_trunk_child_interfaces_non_interface_trunk(self):
+        """A breakout whose trunk peer is not an Interface yields no child mapping."""
+        breakout_type = CableType(name="frontport-trunk 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        breakout_type.validated_save()
+        rearport = RearPort.objects.create(device=self.device, name="RP", positions=1)
+        trunk_frontport = FrontPort.objects.create(
+            device=self.device, name="FP", rear_port=rearport, rear_port_position=1
+        )
+        far = Interface.objects.create(
+            device=self.device, name="far", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        Cable(termination_a=trunk_frontport, termination_b=far, cable_type=breakout_type, status=self.status).save()
+        self.assertEqual(far.get_breakout_trunk_child_interfaces(), [])
+
+    def test_get_breakout_trunk_child_interfaces_called_on_trunk_side(self):
+        """Calling the reverse helper on the trunk-side termination returns nothing (use forward)."""
+        trunk, _, _ = self._make_breakout_trunk()
+        self.assertEqual(trunk.get_breakout_trunk_child_interfaces(), [])
+
+    def test_get_breakout_trunk_child_interfaces_non_breakout(self):
+        """An ordinary cable yields no trunk child mapping."""
+        if1 = Interface.objects.create(
+            device=self.device,
+            name="plain-1",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        if2 = Interface.objects.create(
+            device=self.device,
+            name="plain-2",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        Cable(termination_a=if1, termination_b=if2, status=self.status).save()
+        self.assertEqual(if1.get_breakout_trunk_child_interfaces(), [])
+        self.assertEqual(if2.get_breakout_trunk_child_interfaces(), [])
+
+    def test_get_breakout_trunk_child_interface_for_endpoint_direct(self):
+        """A leaf directly breakout-cabled to a trunk resolves the trunk's child interface."""
+        trunk, children, far_terminations = self._make_breakout_trunk()
+        leaf = far_terminations[1]
+        # The leaf's connection endpoint is the trunk, and the lane maps back to child position 1.
+        self.assertEqual(leaf.connected_endpoint, trunk)
+        self.assertEqual(leaf.get_breakout_trunk_child_interface_for_endpoint(trunk), children[1])
+
+    def test_get_breakout_trunk_child_interface_for_endpoint_through_patch_panel(self):
+        """A leaf cabled to a breakout trunk *through* a patch panel still resolves the child interface.
+
+        Mirrors the demo `_scenario_10` topology: the breakout cable is several hops away from the
+        leaf (behind a front/rear pass-through), so the immediate-cable helper sees nothing, but the
+        endpoint helper matches on the fully-traced path.
+        """
+        breakout_type = CableType(name="endpoint-patchpanel 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        breakout_type.validated_save()
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="Ethernet11/1",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        child = Interface.objects.create(
+            device=self.device,
+            name="Ethernet11/1.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        rearport = RearPort.objects.create(device=self.device, name="PP Rear", positions=1)
+        frontport = FrontPort.objects.create(
+            device=self.device, name="PP Front", rear_port=rearport, rear_port_position=1
+        )
+        leaf = Interface.objects.create(
+            device=self.device,
+            name="Ethernet7/1",
+            type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS,
+            status=self.interface_status,
+        )
+        # trunk --breakout(B1)--> front port; rear port --cable--> leaf
+        Cable(termination_a=trunk, termination_b=frontport, cable_type=breakout_type, status=self.status).save()
+        Cable(termination_a=rearport, termination_b=leaf, status=self.status).save()
+
+        # The leaf traces all the way to the trunk, but its own attached cable is not the breakout.
+        self.assertEqual(leaf.connected_endpoint, trunk)
+        self.assertEqual(leaf.get_breakout_trunk_child_interfaces(), [])
+        # The endpoint helper resolves the trunk's child interface via the full path.
+        self.assertEqual(leaf.get_breakout_trunk_child_interface_for_endpoint(trunk), child)
+
+    def test_get_breakout_trunk_child_interface_for_endpoint_non_trunk(self):
+        """A connection whose endpoint isn't a breakout trunk yields no child interface."""
+        if1 = Interface.objects.create(
+            device=self.device, name="ep-1", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        if2 = Interface.objects.create(
+            device=self.device, name="ep-2", type=InterfaceTypeChoices.TYPE_10GE_SFP_PLUS, status=self.interface_status
+        )
+        Cable(termination_a=if1, termination_b=if2, status=self.status).save()
+        self.assertIsNone(if1.get_breakout_trunk_child_interface_for_endpoint(if2))
+
+    def test_breakout_position_requires_parent_interface(self):
+        """Setting breakout_position without a parent interface is rejected by clean()."""
+        orphan = Interface(
+            device=self.device,
+            name="orphan",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            breakout_position=1,
+        )
+        with self.assertRaises(ValidationError):
+            orphan.validated_save()
+
+    def test_breakout_position_unique_per_parent(self):
+        """Two child interfaces of the same parent cannot claim the same breakout_position."""
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="trunk-unique",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        Interface.objects.create(
+            device=self.device,
+            name="trunk-unique.1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        duplicate = Interface(
+            device=self.device,
+            name="trunk-unique.1-dup",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=1,
+        )
+        with self.assertRaises(ValidationError):
+            duplicate.validated_save()
 
 
 class CableToCableTerminationSignalTestCase(TestCase):
