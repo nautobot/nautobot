@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils.html import escape, strip_tags
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
-from netaddr import IPNetwork
+import netaddr
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_pks
@@ -38,6 +38,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressRange,
     Namespace,
     Prefix,
     RIR,
@@ -219,7 +220,7 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         cls.statuses = Status.objects.get_for_model(Prefix)
 
         cls.form_data = {
-            "prefix": IPNetwork("192.0.2.0/24"),
+            "prefix": netaddr.IPNetwork("192.0.2.0/24"),
             "namespace": cls.namespace.pk,
             "locations": [cls.locations[1].pk],
             "vrf": vrfs[1].pk,
@@ -564,7 +565,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         cls.form_data = {
             "namespace": cls.namespace.pk,
-            "address": IPNetwork("192.0.2.99/24"),
+            "address": netaddr.IPNetwork("192.0.2.99/24"),
             "tenant": None,
             "status": cls.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
@@ -1181,6 +1182,146 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                         relationship=sym_m2m, source_id=merged_ip.pk
                     ) | RelationshipAssociation.objects.filter(relationship=sym_m2m, destination_id=merged_ip.pk)
                     self.assertEqual(set(associations), set(correct_associations))
+
+
+class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = IPAddressRange
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.namespace = Namespace.objects.create(name="ipam_test_views_ip_address_range_test")
+        cls.statuses = Status.objects.get_for_model(IPAddressRange)
+        cls.prefix_status = Status.objects.get_for_model(Prefix).first()
+        roles = Role.objects.get_for_model(IPAddressRange)
+
+        cls.prefix, _ = Prefix.objects.get_or_create(
+            prefix="192.0.2.0/24",
+            defaults={"namespace": cls.namespace, "status": cls.prefix_status, "type": "network"},
+        )
+
+        cls.ip_ranges = (
+            IPAddressRange.objects.create(
+                name="Range 1",
+                start_address="192.0.2.1",
+                end_address="192.0.2.10",
+                namespace=cls.namespace,
+                status=cls.statuses[0],
+            ),
+            IPAddressRange.objects.create(
+                name="Range 2",
+                start_address="192.0.2.20",
+                end_address="192.0.2.30",
+                namespace=cls.namespace,
+                status=cls.statuses[0],
+            ),
+            IPAddressRange.objects.create(
+                name="Range 3",
+                start_address="192.0.2.40",
+                end_address="192.0.2.50",
+                namespace=cls.namespace,
+                status=cls.statuses[0],
+            ),
+        )
+
+        cls.form_data = {
+            "name": "A new IP address range",
+            "namespace": cls.namespace.pk,
+            "start_address": netaddr.IPAddress("192.0.2.100"),
+            "end_address": netaddr.IPAddress("192.0.2.110"),
+            "status": cls.statuses[1].pk,
+            "role": roles[0].pk,
+            "tenant_group": None,
+            "tenant": None,
+            "count_as_utilized": False,
+            "is_exclusive": False,
+            "description": "A new IP address range",
+            "tags": [t.pk for t in Tag.objects.get_for_model(IPAddressRange)],
+        }
+
+        cls.bulk_edit_data = {
+            "name": "Bulk edited range",
+            "tenant": None,
+            "status": cls.statuses[1].pk,
+            "role": roles[1].pk,
+            "count_as_utilized": True,
+            "is_exclusive": True,
+            "description": "New description",
+        }
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_move_ip_address_range_between_namespaces(self):
+        """A range can only move to a namespace that already contains a suitable parent Prefix."""
+        instance = self._get_queryset().get(pk=self.ip_ranges[0].pk)
+        new_namespace = Namespace.objects.create(name="IPAddressRange Move Namespace")
+        self.add_permissions("ipam.change_ipaddressrange")
+
+        # GET with model-level permission
+        self.assertHttpStatus(self.client.get(self._get_url("edit", instance)), 200)
+
+        form_data = self.form_data.copy()
+        form_data["start_address"] = instance.start_address
+        form_data["end_address"] = instance.end_address
+        form_data["namespace"] = new_namespace.pk
+        request = {
+            "path": self._get_url("edit", instance),
+            "data": post_data(form_data),
+        }
+
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        instance.refresh_from_db()
+        self.assertEqual(instance.parent.namespace, self.namespace)
+        self.assertBodyContains(
+            response,
+            f"No suitable parent Prefix for {instance.start_host} exists in Namespace {new_namespace}",
+        )
+
+        new_parent = Prefix.objects.create(
+            prefix=instance.parent.prefix,
+            namespace=new_namespace,
+            status=instance.parent.status,
+            type=instance.parent.type,
+        )
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.parent, new_parent)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_overlapping_range_surfaces_form_error(self):
+        """An overlap ValidationError must surface as a 200 form re-render, not a 500."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        form_data = self.form_data.copy()
+        # Overlaps Range 1 (192.0.2.1 - .10) in the same namespace/parent.
+        form_data["start_address"] = netaddr.IPAddress("192.0.2.5")
+        form_data["end_address"] = netaddr.IPAddress("192.0.2.15")
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "intersects with existing range")
+        self.assertFalse(IPAddressRange.objects.filter(start_host="192.0.2.5").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_exclusive_range_over_existing_ip_surfaces_form_error(self):
+        """An is_exclusive ValidationError must surface as a 200 form re-render, not a 500."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        # An IP inside the range we're about to create as exclusive.
+        IPAddress.objects.create(address="192.0.2.65/24", status=self.prefix_status, namespace=self.namespace)
+
+        form_data = self.form_data.copy()
+        form_data["start_address"] = netaddr.IPAddress("192.0.2.60")
+        form_data["end_address"] = netaddr.IPAddress("192.0.2.70")
+        form_data["is_exclusive"] = True
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+
+        self.assertBodyContains(
+            response,
+            "Cannot make this IP Address Range exclusive: existing IP address(es) fall within the range:",
+            status_code=200,
+        )
+        self.assertFalse(IPAddressRange.objects.filter(start_host="192.0.2.60").exists())
 
 
 class VLANGroupTestCase(

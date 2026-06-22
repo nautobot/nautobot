@@ -17,6 +17,7 @@ from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
+    IPAddressRangeFilterSet,
     IPAddressToInterfaceFilterSet,
     NamespaceFilterSet,
     PrefixFilterSet,
@@ -33,6 +34,7 @@ from nautobot.ipam.filters import (
 )
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -347,6 +349,7 @@ class PrefixFilterCustomDataTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
 
@@ -1164,6 +1167,249 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
                     self.queryset.filter(**{test_filter: False}),
                     ordered=False,
                 )
+
+
+class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+    queryset = IPAddressRange.objects.all()
+    filterset = IPAddressRangeFilterSet
+    tenancy_related_name = "ip_address_ranges"
+    generic_filter_tests = (
+        ("name",),
+        ("namespace", "parent__namespace__name"),
+        ("namespace", "parent__namespace__id"),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("status", "status__id"),
+        ("status", "status__name"),
+    )
+
+    v4_range1 = ("10.0.0.10", "10.0.0.20")
+    v4_range2 = ("10.0.0.50", "10.0.0.100")
+    v4_range3 = ("10.0.1.0", "10.0.1.255")
+    v6_range1 = ("2001:db8::10", "2001:db8::20")
+    v6_range2 = ("2001:db8::100", "2001:db8::200")
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.content_type = ContentType.objects.get_for_model(IPAddressRange)
+
+        cls.status_a = Status.objects.create(name="IP Range Status A")
+        cls.status_b = Status.objects.create(name="IP Range Status B")
+        for status in (cls.status_a, cls.status_b):
+            status.content_types.add(cls.content_type)
+
+        cls.role_a = Role.objects.create(name="IP Range Role A")
+        cls.role_b = Role.objects.create(name="IP Range Role B")
+        for role in (cls.role_a, cls.role_b):
+            role.content_types.add(cls.content_type)
+
+        tenants = list(Tenant.objects.filter(tenant_group__isnull=False)[:3])
+
+        cls.namespace = Namespace.objects.create(name="IP Address Range Filter Test Namespace")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=prefix_status)
+        cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace, status=prefix_status)
+
+        # Ranges are intentionally disjoint (no overlaps allowed within a parent).
+        cls.ip_address_range1_v4 = IPAddressRange.objects.create(
+            name="IP Range Alpha",
+            description="primary dhcp pool",
+            start_address=cls.v4_range1[0],
+            end_address=cls.v4_range1[1],
+            namespace=cls.namespace,
+            status=cls.status_a,
+            role=cls.role_a,
+            tenant=tenants[0],
+            count_as_utilized=True,
+            is_exclusive=False,
+        )
+        cls.ip_address_range2_v4 = IPAddressRange.objects.create(
+            name="IP Range Bravo",
+            description="reserved span",
+            start_address=cls.v4_range2[0],
+            end_address=cls.v4_range2[1],
+            namespace=cls.namespace,
+            status=cls.status_b,
+            role=cls.role_b,
+            tenant=tenants[1],
+            count_as_utilized=False,
+            is_exclusive=True,
+        )
+        cls.ip_address_range3_v4 = IPAddressRange.objects.create(
+            name="IP Range Charlie",
+            start_address=cls.v4_range3[0],
+            end_address=cls.v4_range3[1],
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=False,
+        )
+        cls.ip_address_range1_v6 = IPAddressRange.objects.create(
+            name="IP Range Delta",
+            start_address=cls.v6_range1[0],
+            end_address=cls.v6_range1[1],
+            namespace=cls.namespace,
+            status=cls.status_b,
+            role=cls.role_a,
+            tenant=tenants[2],
+            count_as_utilized=True,
+            is_exclusive=False,
+        )
+        cls.ip_address_range2_v6 = IPAddressRange.objects.create(
+            name="IP Range Echo",
+            start_address=cls.v6_range2[0],
+            end_address=cls.v6_range2[1],
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=True,
+        )
+
+    def test_search(self):
+        with self.subTest("no match"):
+            params = {"q": "no objects match this search"}
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+        with self.subTest("blank query returns all"):
+            params = {"q": ""}
+            self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
+
+    def test_parent(self):
+        # by PK
+        params = {"parent": [str(self.prefix4.pk)]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=self.prefix4)
+        )
+        # by literal prefix string (PrefixFilter -> Prefix.objects.net_equals)
+        params = {"parent": ["10.0.0.0/8"]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(parent__in=Prefix.objects.net_equals("10.0.0.0/8")),
+        )
+
+    def test_ip_version(self):
+        params = {"ip_version": "4"}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
+        )
+        params = {"ip_version": "6"}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
+        )
+
+    def test_count_as_utilized(self):
+        params = {"count_as_utilized": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(count_as_utilized=True)
+        )
+        params = {"count_as_utilized": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(count_as_utilized=False)
+        )
+
+    def test_is_exclusive(self):
+        params = {"is_exclusive": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_exclusive=True)
+        )
+        params = {"is_exclusive": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_exclusive=False)
+        )
+
+    def test_start_address(self):
+        # single, v4
+        params = {"start_address": [self.v4_range1[0]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+        )
+        # single, v6
+        params = {"start_address": [self.v6_range1[0]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v6.pk)
+        )
+        # multiple, mixed versions
+        params = {"start_address": [self.v4_range1[0], self.v6_range2[0]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk__in=[self.ip_address_range1_v4.pk, self.ip_address_range2_v6.pk]),
+        )
+        # invalid input -> empty queryset (no error)
+        params = {"start_address": ["not-an-address"]}
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+    def test_end_address(self):
+        # single, v4
+        params = {"end_address": [self.v4_range1[1]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+        )
+        # single, v6
+        params = {"end_address": [self.v6_range1[1]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v6.pk)
+        )
+        # multiple, mixed versions
+        params = {"end_address": [self.v4_range2[1], self.v6_range1[1]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk__in=[self.ip_address_range2_v4.pk, self.ip_address_range1_v6.pk]),
+        )
+        # invalid input -> empty queryset (no error)
+        params = {"end_address": ["not-an-address"]}
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+    def test_contains(self):
+        # address inside a v4 range
+        with self.subTest("inside v4 range"):
+            params = {"contains": ["10.0.0.15"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+            )
+
+        # inclusive on both boundaries
+        with self.subTest("start boundary is inclusive"):
+            params = {"contains": [self.v4_range1[0]]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+            )
+        with self.subTest("end boundary is inclusive"):
+            params = {"contains": [self.v4_range1[1]]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+            )
+
+        # address inside a v6 range
+        with self.subTest("inside v6 range"):
+            params = {"contains": ["2001:db8::150"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range2_v6.pk)
+            )
+
+        # multiple values OR'd together
+        with self.subTest("multiple values"):
+            params = {"contains": ["10.0.0.15", "2001:db8::150"]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(pk__in=[self.ip_address_range1_v4.pk, self.ip_address_range2_v6.pk]),
+            )
+
+        # address outside every range
+        with self.subTest("outside all ranges"):
+            params = {"contains": ["10.0.0.200"]}
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+        # invalid input -> empty queryset (no error)
+        with self.subTest("invalid input"):
+            params = {"contains": ["not-an-address"]}
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+        with self.subTest("empty value returns none, not all"):
+            fs = self.filterset({}, self.queryset)
+            self.assertQuerySetEqual(
+                fs.filter_contains(self.queryset, "contains", []),
+                self.queryset.none(),
+            )
 
 
 class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):

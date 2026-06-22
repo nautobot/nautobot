@@ -1209,6 +1209,7 @@ class InterfaceFilterSet(
             "speed",
             "enabled",
             "mtu",
+            "breakout_position",
             "mgmt_only",
             "mode",
             "description",

@@ -126,6 +126,7 @@ class Command(BaseCommand):
             from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
+                IPAddressRangeFactory,
                 NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
@@ -226,6 +227,9 @@ class Command(BaseCommand):
             description="without a Tenant and without any Prefixes or IPAddresses",
             has_tenant=False,
         )
+        # Must run after IPAddresses exist (created here via PrefixFactory's
+        # children hook, above). IPAddressRangeFactory.is_exclusive is a point-in-time check
+        _create_batch(IPAddressRangeFactory, 25)
         populate_default_cable_types(apps, schema_editor=None)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
