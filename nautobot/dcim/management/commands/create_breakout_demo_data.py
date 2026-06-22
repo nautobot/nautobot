@@ -134,6 +134,27 @@ class Command(BaseCommand):
         )
         return interface
 
+    def _breakout_children(self, trunk, count):
+        """Create `count` numbered virtual child interfaces under a breakout-trunk interface.
+
+        Each child's `breakout_position` (1..count) maps it to a position on the trunk connector's
+        breakout cable, demonstrating the child-interface position mapping in the UI.
+        """
+        children = []
+        for position in range(1, count + 1):
+            child, _ = Interface.objects.get_or_create(
+                device=trunk.device,
+                name=f"{trunk.name}.{position}",
+                defaults={
+                    "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+                    "status": self.intf_status,
+                    "parent_interface": trunk,
+                    "breakout_position": position,
+                },
+            )
+            children.append(child)
+        return children
+
     def _rear_port(self, device, name, positions=1, port_type=PortTypeChoices.TYPE_LC):
         rear, _ = RearPort.objects.get_or_create(
             device=device,
@@ -272,6 +293,8 @@ class Command(BaseCommand):
         """1x400G spine port broken out to 4x 100G leaf uplinks — the canonical DC breakout."""
         spine = self._interface(self.spine1, "Ethernet1/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
         leaves = [self._interface(leaf, "Ethernet1/1", InterfaceTypeChoices.TYPE_100GE_QSFP28) for leaf in self.leaves]
+        # Numbered sub-interfaces, one per breakout lane, mapping to the four B-side leaf uplinks.
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-SPINE-LEAF-400G",
             term_a=spine,
@@ -287,6 +310,7 @@ class Command(BaseCommand):
         srv_nics = [
             self._interface(self.servers[0], f"eth{i}", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS) for i in range(1, 5)
         ]
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-40G-4x10G-SRV",
             term_a=spine,
@@ -300,6 +324,7 @@ class Command(BaseCommand):
         """100G → 2x50G with B-connector-2 intentionally uncabled — exercises the unconnected-lane path."""
         spine = self._interface(self.spine1, "Ethernet3/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)
         leaf_50g = self._interface(self.leaves[0], "Ethernet2/1", InterfaceTypeChoices.TYPE_50GE_QSFP28)
+        self._breakout_children(spine, 2)
         self._cable(
             label="DEMO-BKO-1x2-PARTIAL",
             term_a=spine,
@@ -312,6 +337,7 @@ class Command(BaseCommand):
         """A 1x4 breakout marked Planned — the cable exists but isn't physically installed yet."""
         spine = self._interface(self.spine1, "Ethernet4/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
         leaves = [self._interface(leaf, "Ethernet4/1", InterfaceTypeChoices.TYPE_100GE_QSFP28) for leaf in self.leaves]
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-PLANNED-400G",
             term_a=spine,
@@ -336,6 +362,7 @@ class Command(BaseCommand):
         patch_front = self._front_port(self.patch1, "Front-Mixed-1", patch_rear_paired)
         patch_rear_bare = self._rear_port(self.patch1, "Rear-Mixed-2")
         circuit_term = self._circuit_termination(cid="DEMO-CID-MIXED")
+        self._breakout_children(spine, 4)
         self._cable(
             label="DEMO-BKO-MIXED-TYPES",
             term_a=spine,
@@ -355,6 +382,10 @@ class Command(BaseCommand):
             self._interface(self.spine1, "Ethernet6/1", InterfaceTypeChoices.TYPE_100GE_QSFP28),
             self._interface(self.spine1, "Ethernet6/2", InterfaceTypeChoices.TYPE_100GE_QSFP28),
         ]
+        # Each trunk connector carries 4 lanes, so each gets four numbered sub-interfaces. This
+        # exercises the multi-connector trunk case (position is relative to each trunk connector).
+        for trunk in trunks:
+            self._breakout_children(trunk, 4)
         # 8 legs distributed across the four leaves (two ports each).
         legs = [
             self._interface(self.leaves[i // 2], f"Ethernet6/{(i % 2) + 1}", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS)
@@ -382,6 +413,7 @@ class Command(BaseCommand):
         to 6 LC duplex legs in this scenario, demonstrating wider fan-out and multi-strand lanes.
         """
         trunk = self._interface(self.spine1, "Ethernet7/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)
+        self._breakout_children(trunk, 6)
         leg_rears = [
             self._rear_port(self.patch1, f"Rear-Agg-{i}", positions=1, port_type=PortTypeChoices.TYPE_LC)
             for i in range(1, 7)
@@ -406,6 +438,8 @@ class Command(BaseCommand):
             self._interface(self.spine1, "Ethernet10/1", InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS),
             self._interface(self.spine1, "Ethernet10/2", InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS),
         ]
+        for trunk in trunks:
+            self._breakout_children(trunk, 4)
         # 8 server NICs spread across the two server devices, 4 per server.
         legs = [
             self._interface(self.servers[i // 4], f"eth{(i % 4) + 10}", InterfaceTypeChoices.TYPE_10GE_SFP_PLUS)
@@ -475,6 +509,7 @@ class Command(BaseCommand):
         Lanes B3/B4 traverse two patch panels with FrontPort↔RearPort pass-throughs.
         """  # noqa: RUF002
         spine = self._interface(self.spine1, "Ethernet11/1", InterfaceTypeChoices.TYPE_400GE_QSFP_DD)
+        self._breakout_children(spine, 4)
 
         # B1, B2 — direct to LEAF-01 (same device → grouped node on the renderer).
         leaf1_eth1 = self._interface(self.leaves[0], "Ethernet7/1", InterfaceTypeChoices.TYPE_100GE_QSFP28)
