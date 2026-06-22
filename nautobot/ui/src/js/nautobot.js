@@ -44,6 +44,7 @@ window._ = { get }; // eslint-disable-line id-length
 import 'select2';
 
 import { initializeCheckboxes } from './checkbox.js';
+import { initializeClipboard } from './clipboard.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
@@ -78,6 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Checkbox
   window.nb.checkbox = { initializeCheckboxes };
+
+  // Clipboard (copy-to-clipboard buttons)
+  initializeClipboard();
 
   // Collapse
   initializeCollapseToggleAll();

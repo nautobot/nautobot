@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import CharField
+from django.template import Context, Template
 from django.test import RequestFactory, TestCase
 
 from nautobot.core.templatetags.buttons import consolidate_bulk_action_buttons
@@ -157,3 +158,49 @@ class ConsolidateBulkActionButtonsTest(TestCase):
         """Dropup order: BulkActions → Delete → Divider → StaticGroup."""
         buttons = self._get_buttons_list(has_rename=False, is_dg_associable=True, has_edit=False, has_delete=True)
         self.assertEqual(self._get_button_order(buttons), ["BulkActions", "Delete", "Divider", "StaticGroup"])
+
+
+class CopyButtonTest(TestCase):
+    """Tests for the copy_button templatetag."""
+
+    @staticmethod
+    def _render(args=""):
+        return Template("{% load buttons %}{% copy_button " + args + " %}").render(Context())
+
+    def test_target_variant(self):
+        """`target` renders a data-clipboard-target attribute and the canonical hover-copy markup."""
+        html = self._render('target="#uuid_copy"')
+        self.assertInHTML(
+            """
+            <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy</span>
+            </button>
+            """,
+            html,
+        )
+        self.assertNotIn("data-clipboard-text", html)
+
+    def test_text_variant(self):
+        """`text` renders a data-clipboard-text attribute with a literal value to copy."""
+        html = self._render('text="hello world" label="Copy name"')
+        self.assertInHTML(
+            """
+            <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-text="hello world">
+                <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+                <span class="visually-hidden">Copy name</span>
+            </button>
+            """,
+            html,
+        )
+        self.assertNotIn("data-clipboard-target", html)
+
+    def test_size_and_css_class(self):
+        """`size` and `css_class` are appended to the button class list."""
+        html = self._render('target="#x" size="sm" css_class="my-extra"')
+        self.assertIn("btn-sm", html)
+        self.assertIn("my-extra", html)
+
+    def test_no_target_or_text_renders_nothing(self):
+        """Without `target` or `text`, no button is rendered."""
+        self.assertNotIn("<button", self._render())
