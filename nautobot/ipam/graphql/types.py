@@ -20,6 +20,22 @@ class IPAddressType(OptimizedNautobotObjectType):
         return DynamicGroup.objects.get_for_object(self)
 
 
+class IPAddressRangeType(OptimizedNautobotObjectType):
+    """Graphql Type Object for IPAddressRange model."""
+
+    start_address = graphene.String()
+    end_address = graphene.String()
+    ip_version = graphene.Int()
+    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
+
+    class Meta:
+        model = models.IPAddressRange
+        filterset_class = filters.IPAddressRangeFilterSet
+
+    def resolve_dynamic_groups(self, args):
+        return DynamicGroup.objects.get_for_object(self)
+
+
 class PrefixType(OptimizedNautobotObjectType):
     """Graphql Type Object for Prefix model."""
 
