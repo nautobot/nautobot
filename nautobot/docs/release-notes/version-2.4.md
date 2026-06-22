@@ -169,6 +169,21 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.36 (2026-06-22)
+
+### Security in v2.4.36
+
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `pyjwt` to `2.13.0` to mitigate multiple security vulnerabilities. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
+- [#9096](https://github.com/nautobot/nautobot/issues/9096) - Updated dependency `cryptography` to `^48.0.1` to mitigate GHSA-537c-gmf6-5ccf.
+
+### Added in v2.4.36
+
+- [#9026](https://github.com/nautobot/nautobot/issues/9026) - Added `nautobot.apps.dcim.SkipAutoComponentCreation` context manager that lets apps opt out of Nautobot's automatic Device/Module component instantiation on a new save.
+
+### Dependencies in v2.4.36
+
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `social-auth-core` to `~4.9.1`.
+
 ## v2.4.35 (2026-06-08)
 
 ### Fixed in v2.4.35
