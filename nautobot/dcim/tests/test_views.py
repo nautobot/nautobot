@@ -2707,22 +2707,17 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_modulebays(self):
         device = Device.objects.filter(module_bays__isnull=True).first()
-        module = Module.objects.filter(parent_module_bay__isnull=True).first()
+        mtype = ModuleType.objects.create(manufacturer=device.device_type.manufacturer, model="DUMMY VENDOR")
+        module = Module.objects.create(module_type=mtype, status=Status.objects.get(name="Active"))
 
-        module_bays = (
-            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 1"),
-            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 2"),
-            ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 3"),
-        )
+        # Module Bays installed in root device
+        nested_parent_bay = ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 1")
+        ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 2")
+        ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 3")
 
-        self.assertEqual(
-            module.module_bays.count(),
-            2,
-            msg=f"Expecting 2 module bays to be assigned to {module!r} in the test dataset",
-        )
-
-        module.location = None
-        module.parent_module_bay = module_bays[0]
+        # Module that's installed in an existing module bay in the root device
+        ModuleBay.objects.create(parent_module=module, name="Test View Nested Module Bay 1")
+        module.parent_module_bay = nested_parent_bay
         module.validated_save()
 
         url = reverse("dcim:device_modulebays", kwargs={"pk": device.pk})
@@ -2731,7 +2726,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         # Custom badge - module count / module-bay count
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML("1/5", response_body)
+        self.assertInHTML("1/4", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
