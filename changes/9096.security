@@ -1,1 +1,0 @@
-Updated dependency `cryptography` to `^48.0.1` to mitigate GHSA-537c-gmf6-5ccf.
