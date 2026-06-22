@@ -149,7 +149,7 @@ Most new models should use the `custom_links`, `custom_validators`, `export_temp
 ### Adding a Foreign Key from ModelA to ModelB
 
 - Specify appropriate [`related_name`](best-practices.md#field-naming-in-data-models)
-- Select appropriate `on_delete` behavior (`SET_NULL`, `CASCADE`, `PROTECT`)
+- Select appropriate [`on_delete` behavior](best-practices.md#foreign-key-deletion-behavior-on_delete) (`CASCADE`, `SET_NULL`, or `PROTECT`)
 - Add a `DynamicModelChoiceField` to `<ModelA>Form`
 - Add a [`NaturalKeyOrPKMultipleChoiceFilter`](best-practices.md#filter-naming-and-definition) to `<ModelA>FilterSet`
 - Add a `DynamicModelMultipleChoiceField(required=False, ...)` to `<ModelA>FilterForm`

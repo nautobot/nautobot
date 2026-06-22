@@ -1318,6 +1318,7 @@ class JobResultTable(BaseTable):
     duration = tables.Column(orderable=False)
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
     console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
+    queue_name = tables.Column(accessor="queue", verbose_name="Queue Name", order_by=("celery_kwargs__queue",))
 
     def render_summary(self, record):
         """
@@ -1363,6 +1364,7 @@ class JobResultTable(BaseTable):
             "summary",
             "actions",
             "console_log",
+            "queue_name",
         )
         default_columns = (
             "pk",

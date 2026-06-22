@@ -2680,6 +2680,7 @@ class _JobModalButton(Button):
     refresh_on_close_if_done = False
     redirect_button_callback = None
     button_id = ""
+    enable_scheduling = False
 
     def __init__(self, **kwargs):
         """
@@ -2704,6 +2705,12 @@ class _JobModalButton(Button):
             button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
                 Required when using redirect_button_callback.
                 Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
+            enable_scheduling (bool, optional): If True, renders the job schedule form inside the modal,
+                allowing the job to be scheduled for future or recurring execution in addition to immediate
+                execution. Requires button_id to be set, since the view resolves this setting from the
+                registered component (never from request data). Jobs with `has_sensitive_variables = True`
+                cannot be scheduled regardless of this flag. Defaults to `False` (immediate-only, backward
+                compatible).
             redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
                 modal footer after the job completes. Requires button_id to be set.
                 Signature: `callback(job_result, request) -> dict`.
@@ -2744,6 +2751,8 @@ class _JobModalButton(Button):
             raise TypeError("class_path is required")
         if self.redirect_button_callback and not self.button_id:
             raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
+        if self.enable_scheduling and not self.button_id:
+            raise ValueError("A globally unique button_id is required when enable_scheduling is True.")
 
         if self.button_id:
             if self.button_id in registry["job_modal_buttons"]:

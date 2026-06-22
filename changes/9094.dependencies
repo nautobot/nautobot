@@ -1,0 +1,2 @@
+Updated dependency `social-auth-app-django` to `>=5.9.0,<5.10`.
+Updated dependency `social-auth-core` to `>=4.9.1,<4.10`.

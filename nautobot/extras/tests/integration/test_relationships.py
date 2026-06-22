@@ -18,6 +18,71 @@ class RelationshipsTestCase(SeleniumTestCase, ObjectDetailsMixin):
         super().setUp()
         self.login_as_superuser()
 
+    def test_relationship_symmetric_form_behavior(self):
+        """Symmetric relationship type mirrors source fields and disables destination fields."""
+        device_content_type = ContentType.objects.get_for_model(Device)
+        power_panel_content_type = ContentType.objects.get_for_model(PowerPanel)
+
+        self.browser.visit(self.live_server_url)
+        self.click_navbar_entry("Extensibility", "Relationships")
+        self.browser.find_by_id("add-button").click()
+
+        self.fill_input("label", "Symmetric Relationship Form Test")
+        self.browser.select("source_type", str(device_content_type.pk))
+        self.fill_input("source_label", "Peers")
+        self.fill_input("source_filter", '{"name__ic": "peer"}')
+
+        source_hidden = self.browser.find_by_id("id_source_hidden").first
+        if not source_hidden.checked:
+            source_hidden.click()
+
+        self.browser.select("type", RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC)
+
+        # Symmetric type should mirror source values to destination values.
+        self.assertEqual(self.browser.find_by_id("id_destination_type").first.value, str(device_content_type.pk))
+        self.assertEqual(self.browser.find_by_id("id_destination_label").first.value, "Peers")
+        self.assertEqual(self.browser.find_by_id("id_destination_filter").first.value, '{"name__ic": "peer"}')
+        self.assertTrue(self.browser.find_by_id("id_destination_hidden").first.checked)
+
+        # Symmetric type should disable destination-side inputs.
+        self.assertFalse(self.browser.find_by_id("id_destination_type").first._element.is_enabled())
+        self.assertFalse(self.browser.find_by_id("id_destination_label").first._element.is_enabled())
+        self.assertFalse(self.browser.find_by_id("id_destination_hidden").first._element.is_enabled())
+        self.assertFalse(self.browser.find_by_id("id_destination_filter").first._element.is_enabled())
+
+        # Switching to non-symmetric should re-enable destination-side inputs.
+        self.browser.select("type", RelationshipTypeChoices.TYPE_MANY_TO_MANY)
+        self.assertTrue(self.browser.find_by_id("id_destination_type").first._element.is_enabled())
+        self.assertTrue(self.browser.find_by_id("id_destination_label").first._element.is_enabled())
+        self.assertTrue(self.browser.find_by_id("id_destination_hidden").first._element.is_enabled())
+        self.assertTrue(self.browser.find_by_id("id_destination_filter").first._element.is_enabled())
+
+        # Sanity check that destination can be manually changed again in non-symmetric mode.
+        self.scroll_element_into_view(css="#id_destination_type", block="center")
+        self.browser.select("destination_type", str(power_panel_content_type.pk))
+        self.assertEqual(self.browser.find_by_id("id_destination_type").first.value, str(power_panel_content_type.pk))
+
+        # Switching back to symmetric should re-apply mirroring and lock destination fields prior to submit.
+        self.browser.select("type", RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC)
+        self.assertEqual(self.browser.find_by_id("id_destination_type").first.value, str(device_content_type.pk))
+        self.assertFalse(self.browser.find_by_id("id_destination_type").first._element.is_enabled())
+
+        # Submit and verify a relationship is successfully created with symmetric destination values preserved.
+        self.scroll_element_into_view(css='button[name="_create"]', block="center")
+        self.browser.find_by_css('button[name="_create"]').click()
+        self.assertTrue(self.browser.is_text_present("Created relationship"))
+
+        relationship = Relationship.objects.get(label="Symmetric Relationship Form Test")
+        self.assertEqual(relationship.type, RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC)
+        self.assertEqual(relationship.source_type, device_content_type)
+        self.assertEqual(relationship.destination_type, device_content_type)
+        self.assertEqual(relationship.source_label, "Peers")
+        self.assertEqual(relationship.destination_label, "Peers")
+        self.assertEqual(relationship.source_filter, {"name__ic": "peer"})
+        self.assertEqual(relationship.destination_filter, {"name__ic": "peer"})
+        self.assertTrue(relationship.source_hidden)
+        self.assertTrue(relationship.destination_hidden)
+
     def test_relationship_advanced_ui(self):
         """
         This test creates a device and a relationship for that device.

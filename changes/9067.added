@@ -1,0 +1,1 @@
+Added a "Queue Name" column to the Job Results table, displaying the Celery queue each job result was dispatched to.
