@@ -4690,7 +4690,7 @@ class PowerOutletUIViewSet(
             object_detail.ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                exclude_fields=("cable_termination"),
+                exclude_fields=("cable_termination",),
                 hide_if_unset=("device", "module"),
             ),
             object_detail.ConnectionPanel(
