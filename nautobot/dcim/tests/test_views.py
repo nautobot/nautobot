@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import F, Q
-from django.test import override_settings
+from django.test import override_settings, RequestFactory
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
@@ -114,6 +114,7 @@ from nautobot.dcim.models import (
     VirtualDeviceContext,
 )
 from nautobot.dcim.views import (
+    CableCreateView,
     ConsoleConnectionsListView,
     ConsolePortUIViewSet,
     DeviceUIViewSet,
@@ -5143,10 +5144,6 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_cable_create_view_missing_kwargs_returns_400(self):
         """Direct invocation with missing `termination_a_type`/`termination_a_id` returns 400.
         The URL patterns always supply both, so this only fires for programmatic misuse."""
-        from django.test import RequestFactory
-
-        from nautobot.dcim.views import CableCreateView
-
         request = RequestFactory().get("/")
         request.user = self.user
         response = CableCreateView.as_view()(request)  # no kwargs

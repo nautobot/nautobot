@@ -44,18 +44,6 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.constants import (
-    CABLE_BREAKOUT_MAX_CONNECTORS,
-    CABLE_BREAKOUT_MAX_LANES,
-    COMPATIBLE_TERMINATION_TYPES,
-    RACK_U_HEIGHT_DEFAULT,
-    RACK_U_HEIGHT_MAXIMUM,
-)
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -121,10 +109,20 @@ from .choices import (
     SubdeviceRoleChoices,
 )
 from .constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    COMPATIBLE_TERMINATION_TYPES,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
+    RACK_U_HEIGHT_DEFAULT,
+    RACK_U_HEIGHT_MAXIMUM,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
+)
+from .form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
 )
 from .models import (
     Cable,
@@ -174,6 +172,8 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .signals import defer_cable_path_rebuilds
+from .termination_field_set import CableTerminationFieldSet
 
 logger = logging.getLogger(__name__)
 
@@ -4432,8 +4432,6 @@ class CableForm(NautobotModelForm):
 
     def _init_lane_fields(self):
         """Add connection fields. One picker per connector per side."""
-        from nautobot.dcim.termination_field_set import CableTerminationFieldSet
-
         cable_type = None
 
         # Determine the cable type. Sources, in priority order:
@@ -4795,8 +4793,6 @@ class CableForm(NautobotModelForm):
         # `defer_cable_path_rebuilds()` wraps the block in a transaction (so a creation failure
         # mid-loop rolls back the delete) AND coalesces the per-row CableToCableTermination
         # signals into one `rebuild_paths(cable)` at context exit.
-        from nautobot.dcim.signals import defer_cable_path_rebuilds
-
         with defer_cable_path_rebuilds():
             CableToCableTermination.objects.filter(cable=cable).delete()
             for side_label, connector, termination in proposed_rows:

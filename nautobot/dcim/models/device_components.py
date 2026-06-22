@@ -42,7 +42,7 @@ from nautobot.dcim.constants import (
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
-from nautobot.dcim.utils import convert_watts_to_va, power_ports_connected_to
+from nautobot.dcim.utils import convert_watts_to_va, disconnect_termination, power_ports_connected_to
 from nautobot.extras.models import (
     ChangeLoggedModel,
     RelationshipModel,
@@ -350,7 +350,6 @@ class CableTermination(models.Model):
         if getattr(self, "_pending_cable_disconnect", False):
             # Clear the flag first to prevent re-entry from disconnect_termination's internal save calls.
             self._pending_cable_disconnect = False
-            from nautobot.dcim.utils import disconnect_termination
 
             if getattr(self, "cable_termination", None) is not None:
                 disconnect_termination(self)

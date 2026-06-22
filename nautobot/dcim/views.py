@@ -165,6 +165,8 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .svg.path_trace import CableTraceSVG
+from .termination_field_set import CableTerminationFieldSet
 from .utils import disconnect_termination
 
 logger = logging.getLogger(__name__)
@@ -5610,8 +5612,6 @@ class CableUIViewSet(NautobotUIViewSet):
         The current cable's pk is not needed since the response only depends on the selected
         termination type, side, and connector — not on any existing cable state.
         """
-        from nautobot.dcim.termination_field_set import CableTerminationFieldSet
-
         connector = request.GET.get("connector", "1")
         side = request.GET.get("side", "a")
         prefix = f"{side}_conn_{connector}"
@@ -5711,8 +5711,6 @@ class PathTraceView(generic.ObjectView):
         trace_svg = ""
         subinterface_origin = None
         if path is not None and getattr(path, "origin", None) is not None:
-            from nautobot.dcim.svg.path_trace import CableTraceSVG
-
             # When a single lane of a breakout trunk was selected, originate the trace from the
             # trunk's child (sub)interface mapped to that lane so the SVG renders it atop the trunk.
             subinterface_origin = self._breakout_subinterface_origin(path) if cablepath_id is not None else None

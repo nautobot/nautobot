@@ -4,6 +4,7 @@ import functools
 import re
 
 from django.test import SimpleTestCase, tag
+from django.utils.safestring import SafeString
 
 from nautobot.core.testing import TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
@@ -233,8 +234,6 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
 
     def test_render_returns_safestring_with_matching_dimensions(self):
         """render() returns a SafeString whose svg dimensions match _total_width/_total_height."""
-        from django.utils.safestring import SafeString
-
         mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=4)
         diagram = BreakoutDiagramSVG(mapping, show_status=False)
         svg = diagram.render()
