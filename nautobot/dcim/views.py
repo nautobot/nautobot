@@ -4910,7 +4910,7 @@ class RearPortUIViewSet(
     ComponentBulkDisconnectViewMixin,
     NautobotUIViewSet,
 ):
-    queryset = RearPort.objects.all()
+    queryset = RearPort.optimize_queryset_for_cable_columns(RearPort.objects.all())
     bulk_update_form_class = forms.RearPortBulkEditForm
     create_form_class = forms.RearPortCreateForm
     filterset_class = filters.RearPortFilterSet
