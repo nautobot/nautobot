@@ -799,13 +799,13 @@ def build_and_check_docs(context):
 
 def build_nautobot_docs(context):
     "Build Nautobot docs."
-    command = "mkdocs build --no-directory-urls --strict"
+    command = "mkdocs build"
     run_command(context, command)
 
 
 def build_example_app_docs(context):
     """Build Example App docs."""
-    command = "mkdocs build --no-directory-urls --strict"
+    command = "mkdocs build"
     if is_truthy(context.nautobot.local):
         local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
@@ -875,30 +875,38 @@ def open_selenium_vnc(context):
 
 
 # ------------------------------------------------------------------------------
-# TESTS
+# TESTS AND LINTING
 # ------------------------------------------------------------------------------
+
+PYTHON_LINT_TARGETS = ["development/", "examples/", "nautobot/", "scripts/", "tasks.py"]
 
 
 @task(
     help={
-        "target": "Module or file or directory to inspect, repeatable",
+        "jobs": "Number of parallel processes to split into (default 1, use 0 to autodetect available CPU count)."
+        "Use with caution, as we've seen occasional false positives when running with values other than 1.",
         "recursive": "Must be set if target is a directory rather than a module or file name",
+        "target": "Module or file or directory to inspect, repeatable",
+        "verbose": "Output additional information verbosely",
     },
     iterable=["target"],
 )
-def pylint(context, target=None, recursive=False):
+def pylint(context, jobs=1, recursive=False, target=None, verbose=False):
     """Perform static analysis of Nautobot code."""
-    base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
+    command = "pylint "
+    if verbose:
+        command += "--verbose "
+    if jobs != 1:
+        command += f"--jobs={jobs} "
     if not target:
         # Lint everything
-        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
-        run_command(context, command)
-    else:
-        command = base_command
-        if recursive:
-            command += "--recursive=y "
-        command += " ".join(target)
-        run_command(context, command)
+        target = PYTHON_LINT_TARGETS
+        recursive = True
+
+    if recursive:
+        command += "--recursive=y "
+    command += " ".join(target)
+    run_command(context, command)
 
 
 @task(
@@ -913,7 +921,7 @@ def pylint(context, target=None, recursive=False):
 def ruff(context, fix=False, diff=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
-        target = ["development", "examples", "nautobot", "tasks.py"]
+        target = PYTHON_LINT_TARGETS
 
     command = "ruff format "
     if not fix:
