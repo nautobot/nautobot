@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.http.response import HttpResponseRedirect
@@ -978,106 +978,128 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
             with cache.lock(
                 "nautobot.ipam.views.ipaddress_merge", blocking_timeout=15, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
-                with transaction.atomic():
-                    namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
-                    status = Status.objects.get(pk=merged_attributes.get("status"))
-                    # Retrieve all attributes from the request.
-                    if merged_attributes.get("tenant"):
-                        tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
-                    else:
-                        tenant = None
-                    if merged_attributes.get("role"):
-                        role = Role.objects.get(pk=merged_attributes.get("role"))
-                    else:
-                        role = None
-                    if merged_attributes.get("tags"):
-                        tag_pk_list = merged_attributes.get("tags").split(",")
-                        tags = Tag.objects.filter(pk__in=tag_pk_list)
-                    else:
-                        tags = []
-                    if merged_attributes.get("nat_inside"):
-                        nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
-                    else:
-                        nat_inside = None
-                    # use IP in the same namespace as a reference.
-                    ip_in_the_same_namespace = collapsed_ips.filter(parent__namespace=namespace).first()
-                    merged_ip = IPAddress(
-                        host=merged_attributes.get("host"),
-                        ip_version=ip_in_the_same_namespace.ip_version,
-                        parent=ip_in_the_same_namespace.parent,
-                        type=merged_attributes.get("type"),
-                        status=status,
-                        role=role,
-                        dns_name=merged_attributes.get("dns_name", ""),
-                        description=merged_attributes.get("description"),
-                        mask_length=merged_attributes.get("mask_length"),
-                        tenant=tenant,
-                        nat_inside=nat_inside,
-                        _custom_field_data=ip_in_the_same_namespace._custom_field_data,
-                    )
-                    merged_ip.tags.set(tags)
-                    # Update custom_field_data
-                    for key in merged_ip._custom_field_data.keys():
-                        ip_pk = merged_attributes.get("cf_" + key)
-                        merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
-                    # Update relationship data
-                    handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
-                    # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
-                    # since the update will unset the primary_ip[4/6] field on the device.
-                    # Collapsed_ips can only be one of the two families v4/v6
-                    # One of the querysets here is bound to be emtpy and one of the updates to Device's primary_ip field
-                    # is going to be a no-op
-                    device_ip4 = list(Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True))
-                    device_ip6 = list(Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True))
-                    vm_ip4 = list(
-                        VirtualMachine.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
-                    )
-                    vm_ip6 = list(
-                        VirtualMachine.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
-                    )
+                try:
+                    with transaction.atomic():
+                        namespace = Namespace.objects.get(pk=merged_attributes.get("namespace"))
+                        status = Status.objects.get(pk=merged_attributes.get("status"))
+                        # Retrieve all attributes from the request.
+                        if merged_attributes.get("tenant"):
+                            tenant = Tenant.objects.get(pk=merged_attributes.get("tenant"))
+                        else:
+                            tenant = None
+                        if merged_attributes.get("role"):
+                            role = Role.objects.get(pk=merged_attributes.get("role"))
+                        else:
+                            role = None
+                        if merged_attributes.get("tags"):
+                            tag_pk_list = merged_attributes.get("tags").split(",")
+                            tags = Tag.objects.filter(pk__in=tag_pk_list)
+                        else:
+                            tags = []
+                        if merged_attributes.get("nat_inside"):
+                            nat_inside = IPAddress.objects.get(pk=merged_attributes.get("nat_inside"))
+                        else:
+                            nat_inside = None
+                        # use IP in the same namespace as a reference.
+                        ip_in_the_same_namespace = collapsed_ips.filter(parent__namespace=namespace).first()
+                        merged_ip = IPAddress(
+                            host=merged_attributes.get("host"),
+                            ip_version=ip_in_the_same_namespace.ip_version,
+                            parent=ip_in_the_same_namespace.parent,
+                            type=merged_attributes.get("type"),
+                            status=status,
+                            role=role,
+                            dns_name=merged_attributes.get("dns_name", ""),
+                            description=merged_attributes.get("description"),
+                            mask_length=merged_attributes.get("mask_length"),
+                            tenant=tenant,
+                            nat_inside=nat_inside,
+                            _custom_field_data=ip_in_the_same_namespace._custom_field_data,
+                        )
+                        merged_ip.tags.set(tags)
+                        # Update custom_field_data
+                        for key in merged_ip._custom_field_data.keys():
+                            ip_pk = merged_attributes.get("cf_" + key)
+                            merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
+                        # Update relationship data
+                        handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
+                        # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
+                        # since the update will unset the primary_ip[4/6] field on the device.
+                        # Collapsed_ips can only be one of the two families v4/v6
+                        # One of the querysets here is bound to be emtpy and one of the updates to Device's primary_ip field
+                        # is going to be a no-op
+                        device_ip4 = list(
+                            Device.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
+                        )
+                        device_ip6 = list(
+                            Device.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
+                        )
+                        vm_ip4 = list(
+                            VirtualMachine.objects.filter(primary_ip4__in=collapsed_ips).values_list("pk", flat=True)
+                        )
+                        vm_ip6 = list(
+                            VirtualMachine.objects.filter(primary_ip6__in=collapsed_ips).values_list("pk", flat=True)
+                        )
 
-                    ip_to_interface_assignments = []
-                    # Update IPAddress to Interface Assignments
-                    for assignment in IPAddressToInterface.objects.filter(ip_address__in=collapsed_ips):
-                        updated_attributes = model_to_dict(assignment)
-                        updated_attributes["ip_address"] = merged_ip
-                        updated_attributes["interface"] = Interface.objects.filter(
-                            pk=updated_attributes["interface"]
-                        ).first()
-                        updated_attributes["vm_interface"] = VMInterface.objects.filter(
-                            pk=updated_attributes["vm_interface"]
-                        ).first()
-                        ip_to_interface_assignments.append(updated_attributes)
-                    # Update Service m2m field with IPAddresses
-                    services = list(Service.objects.filter(ip_addresses__in=collapsed_ips).values_list("pk", flat=True))
-                    # Delete Collapsed IPs
-                    try:
+                        ip_to_interface_assignments = []
+                        # Update IPAddress to Interface Assignments
+                        for assignment in IPAddressToInterface.objects.filter(ip_address__in=collapsed_ips):
+                            updated_attributes = model_to_dict(assignment)
+                            updated_attributes["ip_address"] = merged_ip
+                            updated_attributes["interface"] = Interface.objects.filter(
+                                pk=updated_attributes["interface"]
+                            ).first()
+                            updated_attributes["vm_interface"] = VMInterface.objects.filter(
+                                pk=updated_attributes["vm_interface"]
+                            ).first()
+                            ip_to_interface_assignments.append(updated_attributes)
+                        # Update Service m2m field with IPAddresses
+                        services = list(
+                            Service.objects.filter(ip_addresses__in=collapsed_ips).values_list("pk", flat=True)
+                        )
+                        # Delete Collapsed IPs. ProtectedError (on_delete=PROTECT) is raised here, before
+                        # the SQL; a DEFERRABLE INITIALLY DEFERRED FK still referencing a collapsed IP
+                        # (e.g. a firewall AddressObject) instead fails at COMMIT, handled by the outer
+                        # except IntegrityError below.
                         _, deleted_info = collapsed_ips.delete()
                         deleted_count = deleted_info[IPAddress._meta.label]
-                    except ProtectedError as e:
-                        logger.info("Caught ProtectedError while attempting to delete objects")
-                        handle_protectederror(collapsed_ips, request, e)
-                        return redirect(self.get_return_url(request))
-                    msg = format_html(
-                        'Merged {} {} into <a href="{}">{}</a>',
-                        deleted_count,
-                        self.queryset.model._meta.verbose_name,
-                        merged_ip.get_absolute_url(),
-                        merged_ip,
+                        msg = format_html(
+                            'Merged {} {} into <a href="{}">{}</a>',
+                            deleted_count,
+                            self.queryset.model._meta.verbose_name,
+                            merged_ip.get_absolute_url(),
+                            merged_ip,
+                        )
+                        logger_msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} into {merged_ip}"
+                        merged_ip.validated_save()
+                        # After some testing
+                        # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
+                        for assignment in ip_to_interface_assignments:
+                            IPAddressToInterface.objects.create(**assignment)
+                        # Update Device primary_ip fields of the Collapsed IPs
+                        Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
+                        Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
+                        VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
+                        VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
+                        for service in services:
+                            Service.objects.get(pk=service).ip_addresses.add(merged_ip)
+                except ProtectedError as e:
+                    logger.info("Caught ProtectedError while attempting to delete objects")
+                    handle_protectederror(collapsed_ips, request, e)
+                    return redirect(self.get_return_url(request))
+                except IntegrityError as e:
+                    # A collapsed IP is still referenced by a DEFERRABLE INITIALLY DEFERRED FK (e.g. a
+                    # firewall AddressObject) that merge cannot repoint; the violation surfaces at COMMIT.
+                    # The transaction is rolled back, so the merge is aborted cleanly with a message.
+                    logger.info(f"Merge aborted; a collapsed IP is still referenced and could not be deleted: {e}")
+                    messages.error(
+                        request,
+                        "Unable to merge: one or more of the selected IP addresses is still referenced by "
+                        "another object (for example a firewall address object) and could not be deleted.",
                     )
-                    logger_msg = f"Merged {deleted_count} {self.queryset.model._meta.verbose_name} into {merged_ip}"
-                    merged_ip.validated_save()
-                    # After some testing
-                    # We have to update the ForeignKey fields after merged_ip is saved to make the operation valid
-                    for assignment in ip_to_interface_assignments:
-                        IPAddressToInterface.objects.create(**assignment)
-                    # Update Device primary_ip fields of the Collapsed IPs
-                    Device.objects.filter(pk__in=device_ip4).update(primary_ip4=merged_ip)
-                    Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
-                    VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
-                    VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
-                    for service in services:
-                        Service.objects.get(pk=service).ip_addresses.add(merged_ip)
+                    return redirect(self.get_return_url(request))
+                else:
+                    # Only flash success after the transaction has actually committed.
                     logger.info(logger_msg)
                     messages.success(request, msg)
         return self.find_duplicate_ips(request, merged_attributes)

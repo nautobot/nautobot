@@ -679,7 +679,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("ipam.add_ipaddress")
         form_data = {
             "namespace": self.namespace.pk,
-            "pattern": "192.0.2.[4-6]/24",
+            "name_pattern": "192.0.2.[4-6]/24",
             "status": self.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
         }
