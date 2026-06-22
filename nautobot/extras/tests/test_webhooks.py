@@ -1,6 +1,5 @@
 from copy import deepcopy
 import json
-import unittest
 from unittest.mock import patch
 import uuid
 
@@ -521,7 +520,6 @@ class WebhookTest(APITestCase):
         change = all_changes.first()
         mock_enqueue_webhooks.assert_called_once_with(change, snapshots=change.get_snapshots(), webhook_queryset=None)
 
-    @unittest.expectedFailure  # IPAddressRange API endpoint not yet implemented
     def test_all_webhook_supported_models(self):
         """
         Assert that all models registered to support webhooks also support change logging

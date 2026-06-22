@@ -3340,6 +3340,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             [
                 {
                     "lane": 1,
+                    "label": None,
                     "a_connector": 1,
                     "a_position": 1,
                     "b_connector": 1,

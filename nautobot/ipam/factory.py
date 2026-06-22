@@ -3,8 +3,10 @@ import logging
 import math
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 import factory
 import faker
+import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.factory import (
@@ -18,7 +20,7 @@ from nautobot.core.factory import (
 from nautobot.dcim.models import Location, VirtualDeviceContext
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import IPAddress, IPAddressRange, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 
 logger = logging.getLogger(__name__)
@@ -519,3 +521,83 @@ class IPAddressFactory(PrimaryModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     # Obviously improve this
     # namespace = Namespace.objects.first()
+
+
+class IPAddressRangeFactory(PrimaryModelFactory):
+    """Create random IPAddressRange objects, each carved from a Network Prefix.
+
+    Picks an existing leaf Network Prefix that has no children and no existing range
+    (so the carved span can't collide with a child prefix or another range); if none
+    is available, creates a fresh parent so create_batch(n) reliably yields n ranges.
+
+    Ordering: must run after overlapping IPAddresses exist — is_exclusive inspects
+    the IPs currently in the span (see below).
+    """
+
+    class Meta:
+        model = IPAddressRange
+        exclude = ("has_description", "has_name", "has_role", "has_tenant", "_parent_prefix", "_start_idx", "_end_idx")
+
+    class Params:
+        has_description = NautobotBoolIterator()
+        has_name = NautobotBoolIterator()
+        has_role = NautobotBoolIterator()
+        has_tenant = NautobotBoolIterator()
+
+    @factory.lazy_attribute
+    def parent(self):
+        qs = (
+            Prefix.objects.filter(type=PrefixTypeChoices.TYPE_NETWORK)
+            .filter(Q(ip_version=4, prefix_length__lte=28) | Q(ip_version=6, prefix_length__lte=124))
+            .filter(children__isnull=True)
+            .filter(ip_address_ranges__isnull=True)
+        )
+        existing = qs.order_by("?").first()
+        if existing is not None:
+            return existing
+        # Guarantee a parent rather than silently dropping the object.
+        return PrefixFactory(type=PrefixTypeChoices.TYPE_NETWORK, prefix_length=24)
+
+    @factory.lazy_attribute
+    def _start_idx(self):
+        net = self.parent.prefix
+        return factory.random.randgen.randint(0, net.size - 1)
+
+    @factory.lazy_attribute
+    def _end_idx(self):
+        net = self.parent.prefix
+        return factory.random.randgen.randint(self._start_idx, net.size - 1)
+
+    @factory.lazy_attribute
+    def start_address(self):
+        net = self.parent.prefix
+        return str(netaddr.IPAddress(net.first + self._start_idx))
+
+    @factory.lazy_attribute
+    def end_address(self):
+        net = self.parent.prefix
+        return str(netaddr.IPAddress(net.first + self._end_idx))
+
+    name = factory.Maybe("has_name", factory.Faker("word"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(IPAddressRange), allow_null=False),
+        None,
+    )
+    status = random_instance(lambda: Status.objects.get_for_model(IPAddressRange), allow_null=False)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    count_as_utilized = factory.Faker("pybool")
+
+    @factory.lazy_attribute
+    def is_exclusive(self):
+        # Randomize, but only commit to True when the carved span is actually empty,
+        # so we never trip _validate_no_exclusive_ip_conflict on a reused prefix.
+        if factory.random.randgen.random() < 0.5:
+            return False
+        has_ip = IPAddress.objects.filter(
+            parent=self.parent,
+            host__gte=self.start_address,
+            host__lte=self.end_address,
+        ).exists()
+        return not has_ip

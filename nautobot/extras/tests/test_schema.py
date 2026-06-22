@@ -1,5 +1,3 @@
-import unittest
-
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.testing.schema import OpenAPISchemaTestCases
 from nautobot.extras.models.mixins import NotesMixin
@@ -40,7 +38,6 @@ class ExtrasOpenAPISchemaTestCase(OpenAPISchemaTestCases.BaseSchemaTestCase):
     # TODO test ImageAttachment.owner schema. Currently this is a hard-coded list of serializers, and so there's
     # no way to write a test without again hard-coding that list into the test.
 
-    @unittest.expectedFailure  # IPAddressRange API endpoint not yet implemented
     def test_note_assigned_object_schema(self):
         """Test the polymorphic serializer for a Note endpoint's `assigned_object` field."""
         self.validate_polymorphic_property(
@@ -50,7 +47,6 @@ class ExtrasOpenAPISchemaTestCase(OpenAPISchemaTestCases.BaseSchemaTestCase):
             nullable=True,
         )
 
-    @unittest.expectedFailure  # IPRange has no API serializer/viewset yet
     def test_object_change_changed_object_schema(self):
         """Test the polymorphic serializer for an ObjectChange endpoint's `changed_object` field."""
         self.validate_polymorphic_property(

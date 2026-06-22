@@ -3218,6 +3218,7 @@ class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormM
     tagged_vlans = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Tagged VLANs")
     untagged_vlan = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Untagged VLAN")
     mac_address = forms.CharField(required=False, label="MAC address")
+    breakout_position = forms.IntegerField(required=False, min_value=1, label="Breakout position")
     tags = TagFilterField(model)
 
 
@@ -3297,6 +3298,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "port_type",
             "enabled",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mac_address",
@@ -3393,6 +3395,12 @@ class InterfaceCreateForm(
         },
         help_text="Assigned LAG interface",
     )
+    breakout_position_pattern = ExpandableNameField(
+        label="Breakout position",
+        required=False,
+        help_text="Numeric ranges are supported, e.g. <code>[1-4]</code>. (Must match the number of names being "
+        "created.) Assigns each child interface's breakout position on the parent's trunk connector.",
+    )
     mtu = forms.IntegerField(
         required=False,
         min_value=INTERFACE_MTU_MIN,
@@ -3465,6 +3473,7 @@ class InterfaceCreateForm(
         "duplex",
         "enabled",
         "parent_interface",
+        "breakout_position_pattern",
         "bridge",
         "lag",
         "mtu",
@@ -3483,6 +3492,38 @@ class InterfaceCreateForm(
     class Meta:
         # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
         exclude_embedded_create = ["parent_interface", "bridge", "lag"]
+
+    def clean(self):
+        super().clean()
+
+        # Validate that the breakout positions expand to the same count as the names, and that each
+        # is a positive integer within the allowed range.
+        positions = self.cleaned_data.get("breakout_position_pattern")
+        if positions:
+            name_count = len(self.cleaned_data["name_pattern"])
+            if len(positions) != name_count:
+                raise forms.ValidationError(
+                    {
+                        "breakout_position_pattern": f"The provided name pattern will create {name_count} components, "
+                        f"however {len(positions)} breakout positions will be generated. These counts must match."
+                    },
+                    code="breakout_position_pattern_mismatch",
+                )
+            for position in positions:
+                if not position.isdigit() or not 1 <= int(position) <= CABLE_BREAKOUT_MAX_LANES:
+                    raise forms.ValidationError(
+                        {
+                            "breakout_position_pattern": f"Breakout positions must be integers between 1 and "
+                            f"{CABLE_BREAKOUT_MAX_LANES}."
+                        },
+                        code="breakout_position_pattern_invalid",
+                    )
+
+    def get_iterative_data(self, iteration):
+        positions = self.cleaned_data.get("breakout_position_pattern")
+        if positions:
+            return {"breakout_position": int(positions[iteration])}
+        return {}
 
 
 class InterfaceBulkCreateForm(
@@ -3571,6 +3612,7 @@ class InterfaceBulkEditForm(
             "type",
             "port_type",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mac_address",
@@ -3644,6 +3686,7 @@ class InterfaceBulkEditForm(
         nullable_fields = [
             "label",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mac_address",

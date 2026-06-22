@@ -53,6 +53,7 @@ from nautobot.vpn.tables import VPNTunnelEndpointTable
 from . import filters, forms, tables, ui
 from .models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -372,6 +373,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     view_titles = Titles(
         titles={
             "prefixes": f"{DEFAULT_TITLES['detail']} - Prefixes",
+            "ip_address_ranges": f"{DEFAULT_TITLES['detail']} - IP Address Ranges",
             "ip_addresses": f"{DEFAULT_TITLES['detail']} - IP Addresses",
         }
     )
@@ -537,6 +539,28 @@ class PrefixUIViewSet(NautobotUIViewSet):
                     ),
                 ],
             ),
+            object_detail.DistinctViewTab(
+                weight=950,
+                tab_id="ip-address-ranges",
+                label="IP Address Ranges",
+                related_object_attribute="ip_address_ranges",
+                url_name="ipam:prefix_ipaddressranges",
+                panels=[
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="ipaddressrange_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="parent",
+                        form_id="ipaddressrange_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkDeleteButton(form_id="ipaddressrange_form", model=IPAddressRange),
+                        ],
+                    ),
+                ],
+            ),
         ],
         extra_buttons=[
             object_detail.Button(
@@ -568,6 +592,15 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddress"],
                 render_on_tab_id=["ip-addresses"],
+            ),
+            ui.AddIPAddressRangeButton(
+                weight=100,
+                label="Add IP Address Range",
+                link_name="ipam:ipaddressrange_add",
+                color=ButtonActionColorChoices.SUBMIT,
+                icon="mdi-plus-thick",
+                required_permissions=["ipam.add_ipaddressrange"],
+                render_on_tab_id=["ip-address-ranges"],
             ),
         ],
     )
@@ -785,6 +818,49 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 "view_action": "ip_addresses",
                 "show_available": request.GET.get("show_available", "true") == "true",
                 "badge_count_override": ipaddresses.count(),
+            }
+        )
+
+    @action(
+        detail=True,
+        url_path="ip-address-ranges",
+        url_name="ipaddressranges",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddressrange"],
+    )
+    def ip_address_ranges(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        ip_address_ranges_qs = instance.ip_address_ranges.restrict(request.user, "view")
+
+        ip_address_range_table = tables.IPAddressRangeTable(
+            ip_address_ranges_qs,
+            configurable=True,
+            exclude=["parent"],
+            user=request.user,
+        )
+        if request.user.has_perm("ipam.change_ipaddressrange") or request.user.has_perm("ipam.delete_ipaddressrange"):
+            ip_address_range_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(ip_address_range_table)
+
+        permissions = {
+            "add": request.user.has_perm("ipam.add_ipaddressrange"),
+            "change": request.user.has_perm("ipam.change_ipaddressrange"),
+            "delete": request.user.has_perm("ipam.delete_ipaddressrange"),
+        }
+        return Response(
+            {
+                "first_available_ip": instance.get_first_available_ip(),
+                "ipaddressrange_table": ip_address_range_table,
+                "permissions": permissions,
+                "active_tab": "ip-address-ranges",
+                "view_action": "ip_address_ranges",
+                "badge_count_override": ip_address_ranges_qs.count(),
             }
         )
 
@@ -1314,6 +1390,43 @@ class IPAddressToInterfaceUIViewSet(view_mixins.ObjectBulkCreateViewMixin):  # 3
     def list(self, request, *args, **kwargs):
         """Redirect list view to import view."""
         return redirect(reverse("ipam:ipaddresstointerface_import"))
+
+
+#
+# IPAddressRange
+#
+
+
+class IPAddressRangeUIViewSet(NautobotUIViewSet):
+    bulk_update_form_class = forms.IPAddressRangeBulkEditForm
+    filterset_class = filters.IPAddressRangeFilterSet
+    filterset_form_class = forms.IPAddressRangeFilterForm
+    form_class = forms.IPAddressRangeForm
+    queryset = IPAddressRange.objects.select_related("parent__namespace", "status", "role", "tenant__tenant_group")
+    serializer_class = serializers.IPAddressRangeSerializer
+    table_class = tables.IPAddressRangeTable
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                fields=[
+                    "name",
+                    "start_address",
+                    "end_address",
+                    "ip_version",
+                    "parent",
+                    "status",
+                    "role",
+                    "tenant",
+                    "count_as_utilized",
+                    "is_exclusive",
+                    "description",
+                ],
+            ),
+        ),
+    )
 
 
 #
