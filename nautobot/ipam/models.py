@@ -1538,7 +1538,7 @@ class IPAddress(PrimaryModel):
                     {
                         "__all__": (
                             f"IP address {self.host} falls within exclusive IP Address Range "
-                            f"{exclusive_range}. Creating an IP Address within an "
+                            f'"{exclusive_range}". Creating an IP Address within an '
                             "exclusive range is not permitted."
                         )
                     }
