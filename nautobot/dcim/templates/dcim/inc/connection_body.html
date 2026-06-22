@@ -30,7 +30,7 @@ framework panel body wrapper.
                 <td>Cable Status</td>
                 <td colspan="{% if is_breakout %}4{% else %}3{% endif %}">{{ object.cable.status|hyperlinked_object_with_color }}</td>
             </tr>
-            {% with peers=object.get_cable_peers paths=object.cable_paths.all %}
+            {% with peers=object.get_cable_peers paths=object.cable_paths.all trunk_children=object.get_breakout_trunk_child_interfaces %}
                 {% for peer in peers %}
                     <tr>
                         {% if forloop.first %}
@@ -39,8 +39,10 @@ framework panel body wrapper.
                         {% if is_breakout %}<td title="Cable connector" style="width: 1%; white-space: nowrap;">{{ peer.cable_termination.connector }}</td>{% endif %}
                         <td>{{ peer.parent|hyperlinked_object }}</td>
                         <td colspan="2">
-                            <span class="mdi {% termination_type_icon peer %}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                            <span class="mdi {{ peer|termination_type_icon }}" title="{{ peer|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
                             {{ peer|hyperlinked_object }}
+                            {# Breakout: when this fan-out-side termination's trunk peer has a child (sub)interface mapped to this lane, show it in brackets. Mirrors `_breakout_child_brackets` in dcim/tables/template_code.py. #}
+                            {% for entry in trunk_children %}{% if entry.child_interface and entry.trunk_interface == peer %} [{{ entry.child_interface|hyperlinked_object }}]{% endif %}{% endfor %}
                         </td>
                     </tr>
                 {% empty %}
@@ -58,8 +60,10 @@ framework panel body wrapper.
                         {% if path.destination %}
                             <td>{{ path.destination.parent|hyperlinked_object }}</td>
                             <td>
-                                <span class="mdi {% termination_type_icon path.destination %}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                                <span class="mdi {{ path.destination|termination_type_icon }}" title="{{ path.destination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
                                 {{ path.destination|hyperlinked_object }}
+                                {# Breakout: annotate the trunk-side endpoint with its mapped child (sub)interface. Uses the fully-traced path, so it works even when the breakout cable is reached through patch-panel front/rear ports. #}
+                                {% with trunk_child=path.destination|breakout_trunk_child_interface:object %}{% if trunk_child %} [{{ trunk_child|hyperlinked_object }}]{% endif %}{% endwith %}
                             </td>
                             <td>
                                 {% if path.is_active %}

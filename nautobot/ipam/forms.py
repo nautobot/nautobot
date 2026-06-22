@@ -34,6 +34,7 @@ from nautobot.extras.forms import (
     StatusModelFilterFormMixin,
     TagsBulkEditFormMixin,
 )
+from nautobot.ipam.formfields import IPAddressFormField
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, VirtualMachine
@@ -49,6 +50,7 @@ from .constants import (
 )
 from .models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -505,8 +507,24 @@ class PrefixFilterForm(
 #
 
 
-class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
+class NamespaceFormMixin(forms.ModelForm):
+    """
+    Adds a `namespace` form field (which is not a model field) and pushes its value onto the
+    instance on clean, clearing `parent` so the model re-resolves it from namespace + host(s).
+
+    Shared by IPAddress- and IPAddressRange-style forms, where `parent` is auto-derived rather
+    than entered directly.
+    """
+
     namespace = DynamicModelChoiceField(queryset=Namespace.objects.all(), label="Namespace")
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+        if instance is not None and instance.present_in_database and instance.parent_id is not None:
+            initial.setdefault("namespace", instance.parent.namespace)
+        kwargs["initial"] = initial
+        super().__init__(*args, **kwargs)
 
     def clean_namespace(self):
         """
@@ -522,6 +540,10 @@ class IPAddressFormMixin(NautobotModelForm, TenancyForm, AddressFieldMixin):
         # This prevents the model from revalidating the 'parent', which could raise a validation error when the current
         # parent differs from the parent derived from the new `namespace`.
         self.instance.parent = None
+
+
+class IPAddressFormMixin(NamespaceFormMixin, NautobotModelForm, TenancyForm, AddressFieldMixin):
+    """Combines namespace handling, model/tenancy form behavior, and the single `address` field."""
 
 
 class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
@@ -631,10 +653,6 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
                     elif nat_inside_parent.vm_interface is not None:
                         initial["nat_cluster"] = nat_inside_parent.vm_interface.virtual_machine.cluster.pk
                         initial["nat_virtual_machine"] = nat_inside_parent.vm_interface.virtual_machine.pk
-
-            # Always populate the namespace from the parent.
-            if instance.present_in_database:
-                initial["namespace"] = instance.parent.namespace
 
         kwargs["initial"] = initial
 
@@ -748,6 +766,135 @@ class IPAddressFilterForm(NautobotFilterForm, TenancyFilterForm, StatusModelFilt
         label="Has NAT Inside",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
+
+
+#
+# IP Address Range
+#
+
+
+class IPAddressRangeForm(NamespaceFormMixin, NautobotModelForm, TenancyForm):
+    start_address = IPAddressFormField(help_text="First IP address in the range (inclusive, without mask)")
+    end_address = IPAddressFormField(help_text="Last IP address in the range (inclusive, without mask)")
+
+    class Meta:
+        model = IPAddressRange
+        fields = [
+            "name",
+            "namespace",
+            "start_address",
+            "end_address",
+            "status",
+            "role",
+            "description",
+            "count_as_utilized",
+            "is_exclusive",
+            "tenant_group",
+            "tenant",
+            "tags",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        initial = kwargs.get("initial", {}).copy()
+        # If initial already has an `start/end_address`, we want to use that `start/end_address` as it was passed into
+        # the form. If we're editing an object with a `start/end_address` field, we need to patch initial
+        # to include `start/end_address` because they are a computed fields.
+        if instance is not None:
+            if "start_address" not in initial:
+                initial["start_address"] = instance.start_address
+            if "end_address" not in initial:
+                initial["end_address"] = instance.end_address
+
+        kwargs["initial"] = initial
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+        self.instance.start_address = self.cleaned_data.get("start_address")
+        self.instance.end_address = self.cleaned_data.get("end_address")
+
+    def _get_validation_exclusions(self):
+        """
+        By default Django excludes "start_host", "end_host" and "parent" from model validation because they are not form fields.
+
+        This is wrong since we need those fields to be included in the validate_unique() calculation!
+        """
+        exclude = super()._get_validation_exclusions()
+        for field in ("start_host", "end_host", "parent"):
+            exclude.remove(field)
+        return exclude
+
+
+class IPAddressRangeBulkEditForm(
+    TagsBulkEditFormMixin,
+    StatusModelBulkEditFormMixin,
+    RoleModelBulkEditFormMixin,
+    NautobotBulkEditForm,
+):
+    pk = forms.ModelMultipleChoiceField(queryset=IPAddressRange.objects.all(), widget=forms.MultipleHiddenInput())
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    tenant = DynamicModelChoiceField(queryset=Tenant.objects.all(), required=False)
+    description = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    count_as_utilized = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    is_exclusive = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+
+    class Meta:
+        model = IPAddressRange
+        nullable_fields = ["name", "description", "tenant", "role"]
+
+
+class IPAddressRangeFilterForm(
+    NautobotFilterForm,
+    TenancyFilterForm,
+    StatusModelFilterFormMixin,
+    RoleModelFilterFormMixin,
+):
+    model = IPAddressRange
+    field_order = [
+        "q",
+        "namespace",
+        "parent",
+        "ip_version",
+        "status",
+        "role",
+        "count_as_utilized",
+        "is_exclusive",
+        "tenant_group",
+        "tenant",
+    ]
+    q = forms.CharField(required=False, label="Search")
+    namespace = DynamicModelMultipleChoiceField(
+        queryset=Namespace.objects.all(),
+        to_field_name="name",
+        required=False,
+    )
+    parent = DynamicModelMultipleChoiceField(
+        queryset=Prefix.objects.all(),
+        required=False,
+        label="Parent Prefix",
+    )
+    ip_version = forms.IntegerField(
+        required=False,
+        label="IP Version",
+    )
+    count_as_utilized = forms.NullBooleanField(
+        required=False,
+        label="Mark Utilized",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    is_exclusive = forms.NullBooleanField(
+        required=False,
+        label="Exclusive",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    tags = TagFilterField(model)
 
 
 #

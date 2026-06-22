@@ -132,6 +132,7 @@ __all__ = (
     "VirtualDeviceContextTable",
 )
 
+
 #
 # Device connections
 #

@@ -50,11 +50,15 @@ router.register("module-types", views.ModuleTypeUIViewSet)
 router.register("modules", views.ModuleUIViewSet)
 router.register("platforms", views.PlatformUIViewSet)
 router.register("power-feeds", views.PowerFeedUIViewSet)
+router.register("power-outlets", views.PowerOutletUIViewSet)
+router.register("power-outlet-templates", views.PowerOutletTemplateUIViewSet)
 router.register("power-panels", views.PowerPanelUIViewSet)
+router.register("power-ports", views.PowerPortUIViewSet)
 router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-chassis", views.VirtualChassisUIViewSet)
@@ -153,68 +157,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Power outlet templates
-    path(
-        "power-outlet-templates/add/",
-        views.PowerOutletTemplateCreateView.as_view(),
-        name="poweroutlettemplate_add",
-    ),
-    path(
-        "power-outlet-templates/edit/",
-        views.PowerOutletTemplateBulkEditView.as_view(),
-        name="poweroutlettemplate_bulk_edit",
-    ),
-    path(
-        "power-outlet-templates/rename/",
-        views.PowerOutletTemplateBulkRenameView.as_view(),
-        name="poweroutlettemplate_bulk_rename",
-    ),
-    path(
-        "power-outlet-templates/delete/",
-        views.PowerOutletTemplateBulkDeleteView.as_view(),
-        name="poweroutlettemplate_bulk_delete",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/edit/",
-        views.PowerOutletTemplateEditView.as_view(),
-        name="poweroutlettemplate_edit",
-    ),
-    path(
-        "power-outlet-templates/<uuid:pk>/delete/",
-        views.PowerOutletTemplateDeleteView.as_view(),
-        name="poweroutlettemplate_delete",
-    ),
-    # Rear port templates
-    path(
-        "rear-port-templates/add/",
-        views.RearPortTemplateCreateView.as_view(),
-        name="rearporttemplate_add",
-    ),
-    path(
-        "rear-port-templates/edit/",
-        views.RearPortTemplateBulkEditView.as_view(),
-        name="rearporttemplate_bulk_edit",
-    ),
-    path(
-        "rear-port-templates/rename/",
-        views.RearPortTemplateBulkRenameView.as_view(),
-        name="rearporttemplate_bulk_rename",
-    ),
-    path(
-        "rear-port-templates/delete/",
-        views.RearPortTemplateBulkDeleteView.as_view(),
-        name="rearporttemplate_bulk_delete",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/edit/",
-        views.RearPortTemplateEditView.as_view(),
-        name="rearporttemplate_edit",
-    ),
-    path(
-        "rear-port-templates/<uuid:pk>/delete/",
-        views.RearPortTemplateDeleteView.as_view(),
-        name="rearporttemplate_delete",
     ),
     # Device bay templates
     path(
@@ -411,56 +353,6 @@ urlpatterns = [
         name="device_bulk_add_consoleserverport",
     ),
     # Power ports
-    path("power-ports/", views.PowerPortListView.as_view(), name="powerport_list"),
-    path("power-ports/add/", views.PowerPortCreateView.as_view(), name="powerport_add"),
-    path(
-        "power-ports/import/",
-        views.PowerPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="powerport_import",
-    ),
-    path(
-        "power-ports/edit/",
-        views.PowerPortBulkEditView.as_view(),
-        name="powerport_bulk_edit",
-    ),
-    path(
-        "power-ports/rename/",
-        views.PowerPortBulkRenameView.as_view(),
-        name="powerport_bulk_rename",
-    ),
-    path(
-        "power-ports/disconnect/",
-        views.PowerPortBulkDisconnectView.as_view(),
-        name="powerport_bulk_disconnect",
-    ),
-    path(
-        "power-ports/delete/",
-        views.PowerPortBulkDeleteView.as_view(),
-        name="powerport_bulk_delete",
-    ),
-    path("power-ports/<uuid:pk>/", views.PowerPortView.as_view(), name="powerport"),
-    path(
-        "power-ports/<uuid:pk>/edit/",
-        views.PowerPortEditView.as_view(),
-        name="powerport_edit",
-    ),
-    path(
-        "power-ports/<uuid:pk>/delete/",
-        views.PowerPortDeleteView.as_view(),
-        name="powerport_delete",
-    ),
-    path(
-        "power-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="powerport_changelog",
-        kwargs={"model": PowerPort},
-    ),
-    path(
-        "power-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="powerport_notes",
-        kwargs={"model": PowerPort},
-    ),
     path(
         "power-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
@@ -479,60 +371,6 @@ urlpatterns = [
         name="device_bulk_add_powerport",
     ),
     # Power outlets
-    path("power-outlets/", views.PowerOutletListView.as_view(), name="poweroutlet_list"),
-    path(
-        "power-outlets/add/",
-        views.PowerOutletCreateView.as_view(),
-        name="poweroutlet_add",
-    ),
-    path(
-        "power-outlets/import/",
-        views.PowerOutletBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="poweroutlet_import",
-    ),
-    path(
-        "power-outlets/edit/",
-        views.PowerOutletBulkEditView.as_view(),
-        name="poweroutlet_bulk_edit",
-    ),
-    path(
-        "power-outlets/rename/",
-        views.PowerOutletBulkRenameView.as_view(),
-        name="poweroutlet_bulk_rename",
-    ),
-    path(
-        "power-outlets/disconnect/",
-        views.PowerOutletBulkDisconnectView.as_view(),
-        name="poweroutlet_bulk_disconnect",
-    ),
-    path(
-        "power-outlets/delete/",
-        views.PowerOutletBulkDeleteView.as_view(),
-        name="poweroutlet_bulk_delete",
-    ),
-    path("power-outlets/<uuid:pk>/", views.PowerOutletView.as_view(), name="poweroutlet"),
-    path(
-        "power-outlets/<uuid:pk>/edit/",
-        views.PowerOutletEditView.as_view(),
-        name="poweroutlet_edit",
-    ),
-    path(
-        "power-outlets/<uuid:pk>/delete/",
-        views.PowerOutletDeleteView.as_view(),
-        name="poweroutlet_delete",
-    ),
-    path(
-        "power-outlets/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="poweroutlet_changelog",
-        kwargs={"model": PowerOutlet},
-    ),
-    path(
-        "power-outlets/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="poweroutlet_notes",
-        kwargs={"model": PowerOutlet},
-    ),
     path(
         "power-outlets/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
