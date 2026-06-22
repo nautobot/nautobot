@@ -4537,7 +4537,7 @@ class ConsolePortUIViewSet(
     ComponentBulkDisconnectViewMixin,
     NautobotUIViewSet,
 ):
-    queryset = ConsolePort.objects.all()
+    queryset = ConsolePort.optimize_queryset_for_cable_columns(ConsolePort.objects.all())
     bulk_update_form_class = forms.ConsolePortBulkEditForm
     create_form_class = forms.ConsolePortCreateForm
     filterset_class = filters.ConsolePortFilterSet
