@@ -220,7 +220,7 @@ class Mixins:
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.json(),
-                {"non_field_errors": [f"Only one of {self.device_field} or {self.module_field} must be set"]},
+                {"non_field_errors": [f"{self.module_field} is installed in a different {self.device_field}"]},
             )
 
             data.pop(self.module_field)
@@ -2459,7 +2459,6 @@ class PowerPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
@@ -3048,7 +3047,7 @@ class FrontPortTest(Mixins.BasePortTestMixin):
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json(),
-            {"non_field_errors": ["Only one of device or module must be set"]},
+            {"non_field_errors": ["module is installed in a different device"]},
         )
 
         data.pop("module")

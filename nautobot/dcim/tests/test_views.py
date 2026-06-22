@@ -2715,6 +2715,12 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             ModuleBay.objects.create(parent_device=device, name="Test View Module Bay 3"),
         )
 
+        self.assertEqual(
+            module.module_bays.count(),
+            2,
+            msg=f"Expecting 2 module bays to be assigned to {module!r} in the test dataset",
+        )
+
         module.location = None
         module.parent_module_bay = module_bays[0]
         module.validated_save()
@@ -2722,9 +2728,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         url = reverse("dcim:device_modulebays", kwargs={"pk": device.pk})
         response = self.client.get(url)
         self.assertHttpStatus(response, 200)
+
         # Custom badge - module count / module-bay count
         response_body = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML("1/3", response_body)
+        self.assertInHTML("1/5", response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):

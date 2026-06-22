@@ -106,17 +106,6 @@ class ModularDeviceComponentTestCaseMixin:
         cls.device = Device.objects.first()
         cls.module = Module.objects.first()
 
-    # def test_parent_validation_device_and_module(self):
-    #     """Assert that a modular component must have a parent device or parent module but not both."""
-    #     instance = self.model(
-    #         name=f"test {self.model._meta.model_name} 1",
-    #         **{self.device_field: self.device, self.module_field: self.module},
-    #         **self.modular_component_create_data,
-    #     )
-
-    #     with self.assertRaises(ValidationError):
-    #         instance.full_clean()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
@@ -392,20 +381,6 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
             device_used_positions
         )
 
-    # def test_parent_validation_device_and_module(self):
-    #     """Assert that a modular component must have a parent device or parent module but not both."""
-    #     instance = self.model(
-    #         device=self.device,
-    #         module=self.module,
-    #         name=f"test {self.model._meta.model_name} 1",
-    #         type=PortTypeChoices.TYPE_8P8C,
-    #         rear_port=self.module_rear_port,
-    #         rear_port_position=self.module_available_positions.copy().pop(),
-    #     )
-
-    #     with self.assertRaises(ValidationError):
-    #         instance.full_clean()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
@@ -581,20 +556,6 @@ class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
         cls.device_available_positions = set(range(1, cls.device_rear_port.positions + 1)).difference(
             device_used_positions
         )
-
-    # def test_parent_validation_device_and_module(self):
-    #     """Assert that a modular component must have a parent device or parent module but not both."""
-    #     instance = self.model(
-    #         device_type=self.device_type,
-    #         module_type=self.module_type,
-    #         name=f"test {self.model._meta.model_name} 1",
-    #         type=PortTypeChoices.TYPE_8P8C,
-    #         rear_port_template=self.module_rear_port,
-    #         rear_port_position=self.module_available_positions.copy().pop(),
-    #     )
-
-    #     with self.assertRaises(ValidationError):
-    #         instance.full_clean()
 
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
@@ -5324,8 +5285,6 @@ class ModuleBayTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         module_bay.position = "1222"
         module_bay.validated_save()
         self.assertEqual(module_bay.position, "1222")
-
-    def test_uniqueness_module(self): ...
 
 
 class ModuleBayTemplateTestCase(ModularDeviceComponentTemplateTestCaseMixin, ModelTestCases.BaseModelTestCase):

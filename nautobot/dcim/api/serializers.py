@@ -219,11 +219,19 @@ class ModularDeviceComponentTemplateSerializerMixin:
 class ModularDeviceComponentSerializerMixin:
     def validate(self, data):
         """Validate device and module field constraints for modular device components."""
-        if data.get("device") and data.get("module"):
-            raise serializers.ValidationError("Only one of device or module must be set")
-        if data.get("device"):
-            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device", "name"))
-            validator(data, self)
+        if data.get("device") and (data.get("module") and data["module"].device != data["device"]):
+            raise serializers.ValidationError("module is installed in a different device")
+        if data.get("device") and not data.get("module"):
+            qs = self.Meta.model.objects.filter(
+                device=data["device"],
+                module__isnull=True,
+                name=data["name"],
+            )
+            # Exclude the current instance when updating.
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError("The fields device, name must make a unique set.")
         if data.get("module"):
             validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("module", "name"))
             validator(data, self)
@@ -1418,8 +1426,10 @@ class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
     def validate(self, attrs):
         """Validate device and module field constraints for module bay."""
-        if attrs.get("parent_device") and attrs.get("parent_module"):
-            raise serializers.ValidationError("Only one of parent_device or parent_module must be set")
+        if attrs.get("parent_device") and (
+            attrs.get("parent_module") and attrs["parent_module"].device != attrs["parent_device"]
+        ):
+            raise serializers.ValidationError("parent_module is installed in a different parent_device")
         if attrs.get("parent_device"):
             validator = UniqueTogetherValidator(
                 queryset=self.Meta.model.objects.all(), fields=("parent_device", "name")

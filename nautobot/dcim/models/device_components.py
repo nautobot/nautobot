@@ -130,7 +130,6 @@ class ModularComponentModel(ComponentModel):
     class Meta:
         abstract = True
         ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
-        # TODO: custom clean method or devce / module / name constraint
         constraints = [
             models.UniqueConstraint(
                 fields=("module", "name"),
@@ -141,8 +140,7 @@ class ModularComponentModel(ComponentModel):
     @property
     def parent(self):
         """Device that this component belongs to, walking up module inheritance if necessary."""
-        # QUESTION: Should we always return self.device??
-        return self.device  # pylint: disable=no-member
+        return self.device
 
     def render_name_template(self, save=False):
         """
@@ -207,7 +205,8 @@ class ModularComponentModel(ComponentModel):
     def clean(self):
         super().clean()
         if (
-            self.__class__.objects.filter(device=self.device, module__isnull=True, name=self.name)
+            self.module is None
+            and self.__class__.objects.filter(device=self.device, module__isnull=True, name=self.name)
             .exclude(pk=self.pk)
             .exists()
         ):
@@ -1626,6 +1625,12 @@ class ModuleBay(PrimaryModel):
             "parent_module__id",
             "_name",
         )
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent_module", "name"],
+                name="dcim_modulebay_parent_module_name_unique",
+            )
+        ]
 
     @property
     def parent(self):

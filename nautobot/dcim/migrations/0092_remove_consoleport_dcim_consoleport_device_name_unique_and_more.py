@@ -30,10 +30,6 @@ class Migration(migrations.Migration):
             name="dcim_modulebay_parent_device_name_unique",
         ),
         migrations.RemoveConstraint(
-            model_name="modulebay",
-            name="dcim_modulebay_parent_module_name_unique",
-        ),
-        migrations.RemoveConstraint(
             model_name="poweroutlet",
             name="dcim_poweroutlet_device_name_unique",
         ),
