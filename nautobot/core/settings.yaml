@@ -183,6 +183,7 @@ properties:
       icon_192: null
       icon_mask: null
       logo: null
+      navbar_icon: null
     description: >-
       A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
       custom branding of your Nautobot instance.
@@ -198,6 +199,9 @@ properties:
 
       --- 3.0.0
           The `header_bullet`, `nav_bullet`, `javascript`, and `css` assets were removed.
+
+      +++ 3.2.0
+          The `navbar_icon` asset was added as an option, replacing `icon_32` as the source for the navbar brand icon.
     properties:
       favicon:
         "$ref": "#/definitions/relative_path"
@@ -234,6 +238,11 @@ properties:
         default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
+      navbar_icon:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Collapsed navbar brand icon"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAVBAR_ICON"
     type: "object"
     version_added: "1.2.0"
   BRANDING_PREPENDED_FILENAME:
@@ -1478,6 +1487,14 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
+  NAUTOBOT_EDITION:
+    default: "community"
+    description: >-
+      The installed Nautobot edition: `community`, `professional`, or `enterprise`.
+    environment_variable: "NAUTOBOT_EDITION"
+    is_constance_config: true
+    type: "string"
+    version_added: "3.2.0"
   NAUTOBOT_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/"

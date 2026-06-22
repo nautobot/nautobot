@@ -103,6 +103,11 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
+# The Nautobot edition ('community', 'professional', or 'enterprise'), used to determine
+# edition-specific branding such as the favicon when no custom branding has been configured.
+if "NAUTOBOT_EDITION" in os.environ and os.environ["NAUTOBOT_EDITION"] != "":
+    NAUTOBOT_EDITION = os.environ["NAUTOBOT_EDITION"]
+
 # Event Brokers
 EVENT_BROKERS = {}
 
@@ -794,6 +799,17 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    "nautobot_edition_field": [
+        "django.forms.fields.ChoiceField",
+        {
+            "widget": "nautobot.core.forms.widgets.StaticSelect2",
+            "choices": (
+                ("community", "Community"),
+                ("professional", "Professional"),
+                ("enterprise", "Enterprise"),
+            ),
+        },
+    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -863,6 +879,11 @@ CONSTANCE_CONFIG = {
         help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
         field_type=int,
+    ),
+    "NAUTOBOT_EDITION": ConstanceConfigItem(
+        default="community",
+        help_text="The installed Nautobot edition: community, professional, or enterprise.",
+        field_type="nautobot_edition_field",
     ),
     "PAGINATE_COUNT": ConstanceConfigItem(
         default=_PAGINATE_COUNT_DEFAULT,
@@ -960,6 +981,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
+    "Edition": ["NAUTOBOT_EDITION"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
@@ -1137,6 +1159,7 @@ REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 # The filepath should be relative to the `MEDIA_ROOT`.
 BRANDING_FILEPATHS = {
     "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "navbar_icon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAVBAR_ICON", None),  # Collapsed navbar brand icon
     "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
     "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
     "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
