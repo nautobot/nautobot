@@ -1490,7 +1490,11 @@ properties:
   NAUTOBOT_EDITION:
     default: "community"
     description: >-
-      The installed Nautobot edition: `community`, `professional`, or `enterprise`.
+      The installed Nautobot edition.
+    enum:
+    - "community"
+    - "professional"
+    - "enterprise"
     environment_variable: "NAUTOBOT_EDITION"
     is_constance_config: true
     type: "string"

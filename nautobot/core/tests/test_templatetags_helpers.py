@@ -316,12 +316,11 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
     def test_custom_branding_or_static(self):
         """Test the `custom_branding_or_static` precedence: custom branding -> edition -> Community default."""
-        community_32x32_icon = add_nautobot_version_query_param_to_url(
-            StaticNode.handle_simple("img/nautobot_icon_32x32.png")
-        )
-
         with override_config(NAUTOBOT_EDITION="community"):
-            self.assertEqual(helpers.custom_branding_or_static("icon_32"), community_32x32_icon)
+            self.assertEqual(
+                helpers.custom_branding_or_static("icon_32"),
+                add_nautobot_version_query_param_to_url(StaticNode.handle_simple("img/nautobot_icon_32x32.png")),
+            )
 
         with override_config(NAUTOBOT_EDITION="professional"):
             self.assertEqual(
@@ -365,7 +364,10 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
         # An unknown edition falls back to the Community asset.
         with override_config(NAUTOBOT_EDITION="not_a_real_edition"):
-            self.assertEqual(helpers.custom_branding_or_static("icon_32"), community_32x32_icon)
+            self.assertEqual(
+                helpers.custom_branding_or_static("icon_32"),
+                add_nautobot_version_query_param_to_url(StaticNode.handle_simple("img/nautobot_icon_32x32.png")),
+            )
 
         # Custom branding takes precedence over the edition asset.
         with override_settings(

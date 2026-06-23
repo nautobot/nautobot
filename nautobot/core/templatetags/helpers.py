@@ -1307,15 +1307,14 @@ def custom_branding_or_static(branding_asset, static_asset=None):
         nautobot_edition_for_asset = config.get_settings_or_config(
             "NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT
         )
-        if nautobot_edition_for_asset not in NAUTOBOT_STATIC_ASSETS or branding_asset not in NAUTOBOT_STATIC_ASSETS.get(
-            nautobot_edition_for_asset
-        ):
-            nautobot_edition_for_asset = NautobotEditionChoices.DEFAULT
+        assets_for_edition = NAUTOBOT_STATIC_ASSETS.get(
+            nautobot_edition_for_asset, NAUTOBOT_STATIC_ASSETS[NautobotEditionChoices.DEFAULT]
+        )
         # TODO(4.0): Remove the `static_asset` parameter and this backup. It is retained only for
         # backward compatibility with callers of the previous two-argument signature; the edition map is
         # now the source of stock asset defaults.
-        # The edition/community asset wins for known keys; `static_asset` is the backup for anything else.
-        static_asset = NAUTOBOT_STATIC_ASSETS[nautobot_edition_for_asset].get(branding_asset) or static_asset
+        # The edition asset wins for known keys; `static_asset` is the backup for anything else.
+        static_asset = assets_for_edition.get(branding_asset, static_asset)
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
 

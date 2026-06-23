@@ -12,7 +12,6 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
-from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
@@ -804,7 +803,11 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         "django.forms.fields.ChoiceField",
         {
             "widget": "nautobot.core.forms.widgets.StaticSelect2",
-            "choices": NautobotEditionChoices.CHOICES,
+            "choices": (
+                ("community", "Community"),
+                ("professional", "Professional"),
+                ("enterprise", "Enterprise"),
+            ),
         },
     ],
 }
@@ -978,7 +981,6 @@ CONSTANCE_CONFIG_FIELDSETS = {
     "Banners": ["BANNER_LOGIN", "BANNER_TOP", "BANNER_BOTTOM"],
     "Change Logging": ["CHANGELOG_RETENTION"],
     "Device Connectivity": ["NETWORK_DRIVERS", "PREFER_IPV4"],
-    "Edition": ["NAUTOBOT_EDITION"],
     "Installation Metrics": ["DEPLOYMENT_ID"],
     "Natural Keys": ["DEVICE_UNIQUENESS", "LOCATION_NAME_AS_NATURAL_KEY"],
     "Pagination": ["PAGINATE_COUNT", "MAX_PAGE_SIZE", "PER_PAGE_DEFAULTS"],
@@ -995,7 +997,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
+    "User Interface": ["NAUTOBOT_EDITION", "SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
