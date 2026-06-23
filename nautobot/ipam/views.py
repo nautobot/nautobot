@@ -831,9 +831,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     def ip_address_ranges(self, request, *args, **kwargs):
 
         instance = self.get_object()
-        ip_address_ranges_qs = instance.ip_address_ranges.restrict(request.user, "view").select_related(
-            "status", "role", "tenant"
-        )
+        ip_address_ranges_qs = instance.ip_address_ranges.restrict(request.user, "view")
 
         ip_address_range_table = tables.IPAddressRangeTable(
             ip_address_ranges_qs,

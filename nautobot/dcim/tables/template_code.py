@@ -16,7 +16,64 @@ class DeviceComponentNameColumn(tables.TemplateColumn):
         super().__init__(*args, **kwargs)
 
 
-CABLETERMINATION = """
+# When this row's termination sits on the fan-out side of a breakout cable and the trunk-side peer
+# being rendered is an Interface with a matching child interface, append the child interface in
+# brackets on the same line, e.g. "TenGigabitEthernet1/1 [TenGigabitEthernet1/1.2]". `peer_var` is
+# the loop variable name (the trunk-side peer/endpoint) in the surrounding template.
+#
+# This inspects only the *immediately attached* cable, so it's right for the one-hop `cable_peer`
+# column. For the n-hop `connection` column use `_breakout_endpoint_child_bracket`, which resolves
+# the trunk child through the fully-traced path (i.e. also when a patch panel sits in between).
+def _breakout_child_brackets(peer_var):
+    return (
+        "{% for entry in record.get_breakout_trunk_child_interfaces %}"
+        "{% if entry.child_interface and entry.trunk_interface == " + peer_var + " %} "
+        "[{{ entry.child_interface|hyperlinked_object }}]"
+        "{% endif %}{% endfor %}"
+    )
+
+
+# `connection`-column counterpart of `_breakout_child_brackets`: annotate a *connected endpoint*
+# with the remote breakout-trunk's child (sub)interface, resolved via the fully-traced cable path so
+# it works even when the breakout cable is reached through patch-panel front/rear ports. `endpoint_var`
+# is the loop variable naming the connected endpoint in the surrounding template.
+def _breakout_endpoint_child_bracket(endpoint_var):
+    return (
+        "{% with trunk_child=" + endpoint_var + "|breakout_trunk_child_interface:record %}"
+        "{% if trunk_child %} [{{ trunk_child|hyperlinked_object }}]{% endif %}"
+        "{% endwith %}"
+    )
+
+
+# Fallback markup for the `connection` / `cable_peer` columns when an interface has no cable
+# termination of its own. A virtual breakout child interface is never cabled and a cabled interface
+# can't have a breakout_position, so the cabled and breakout cases are mutually exclusive and one
+# column serves both. `termination_expr` is the template expression yielding the termination object
+# to render (or a falsy value for the em-dash). Used with two different expressions:
+#
+#   - `cable_peer` shows the *one-hop* peer on the parent's breakout cable
+#     (`record.get_breakout_lane.far_termination`).
+#   - `connection` shows the *n-hop* connected endpoint reached by traversing any intermediate
+#     front/rear pass-through ports (`record.get_breakout_connected_endpoint`).
+def _breakout_fallback(termination_expr):
+    return (
+        "{% with far=" + termination_expr + " %}"
+        """
+{% if far %}
+    <a href="{{ far.parent.get_absolute_url }}">{{ far.parent }}</a>
+    /
+    <span class="mdi {{ far|termination_type_icon }}" title="{{ far|meta:'verbose_name'|capfirst }}"></span>
+    <a href="{{ far.get_absolute_url }}">{{ far }}</a>
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}
+{% endwith %}
+"""
+    )
+
+
+CABLETERMINATION = (
+    """
 {% load cables %}
 {% load helpers %}
 {% if value %}
@@ -24,15 +81,20 @@ CABLETERMINATION = """
         <a href="{{ peer.parent.get_absolute_url }}">{{ peer.parent }}</a>
         /
         <span class="mdi {{ peer|termination_type_icon }}" title="{{ peer|meta:'verbose_name'|capfirst }}"></span>
-        <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>
+        <a href="{{ peer.get_absolute_url }}">{{ peer }}</a>"""
+    + _breakout_child_brackets("peer")
+    + """
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
-{% else %}
-    <span class="text-secondary">&mdash;</span>
+{% else %}"""
+    + _breakout_fallback("record.get_breakout_lane.far_termination")
+    + """
 {% endif %}
 """
+)
 
-PATHENDPOINT = """
+PATHENDPOINT = (
+    """
 {% load cables %}
 {% load helpers %}
 {% if value %}
@@ -40,13 +102,17 @@ PATHENDPOINT = """
         <a href="{{ endpoint.parent.get_absolute_url }}">{{ endpoint.parent }}</a>
         /
         <span class="mdi {{ endpoint|termination_type_icon }}" title="{{ endpoint|meta:'verbose_name'|capfirst }}"></span>
-        <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>
+        <a href="{{ endpoint.get_absolute_url }}">{{ endpoint }}</a>"""
+    + _breakout_endpoint_child_bracket("endpoint")
+    + """
         {% if not forloop.last %}<br>{% endif %}
     {% endfor %}
-{% else %}
-    <span class="text-secondary">&mdash;</span>
+{% else %}"""
+    + _breakout_fallback("record.get_breakout_connected_endpoint")
+    + """
 {% endif %}
 """
+)
 
 CABLE_LENGTH = """
 {% if record.length %}
@@ -219,6 +285,17 @@ CABLE_TERMINATION_BUTTONS = """
 {% endif %}
 """
 
+# A breakout child (sub)interface is virtual and never directly cabled, so `CABLE_TERMINATION_BUTTONS`
+# offers it no Trace action. When its parent trunk is cabled, trace that lane via the parent's trace
+# view plus the lane's `cablepath_id` (resolved by `PathTraceView` to originate from this subinterface).
+INTERFACE_BREAKOUT_TRACE_BUTTON = """
+{% with breakout_path=record.get_breakout_lane_cable_path %}
+    {% if breakout_path %}
+        <li><a href="{% url 'dcim:interface_trace' pk=record.parent_interface.pk %}?cablepath_id={{ breakout_path.pk }}" class="dropdown-item text-primary"><span class="mdi mdi-transit-connection-variant me-4" aria-hidden="true"></span>Trace</a></li>
+    {% endif %}
+{% endwith %}
+"""
+
 INTERFACE_BUTTONS = (
     """
 {% if perms.ipam.add_ipaddress and perms.dcim.change_interface %}
@@ -229,6 +306,7 @@ INTERFACE_BUTTONS = (
     </li>
 {% endif %}
 """
+    + INTERFACE_BREAKOUT_TRACE_BUTTON
     + CABLE_TERMINATION_BUTTONS
 )
 
