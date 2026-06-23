@@ -766,11 +766,11 @@ class CustomValidatorContext(dict):
             # Syntax errors will be surfaced when the template is rendered.
             return
         referenced_variables = meta.find_undeclared_variables(parsed)
-        prefix = f"{source} " if source else ""
+        prefix = f"{source} uses the" if source else "Encountered the"
         for deprecated, (replacement, removal_version) in cls.DEPRECATED_VARIABLES.items():
             if deprecated in referenced_variables:
                 logger.warning(
-                    "%suses the deprecated Jinja2 variable `%s`; use `%s` instead. "
+                    "%s deprecated Jinja2 variable `%s`; use `%s` instead. "
                     "Support for `%s` will be removed in Nautobot %s.",
                     prefix,
                     deprecated,
