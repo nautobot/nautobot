@@ -214,7 +214,7 @@ Once you have verified that all of the above is correct, publish the release and
     First, you'll need to render the documentation.
 
     ```no-highlight
-    poetry run mkdocs build --no-directory-urls --strict
+    poetry run mkdocs build
     ```
 
     Second, you'll need to build the Python package distributions (which will include the rendered documentation):

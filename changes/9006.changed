@@ -1,1 +1,0 @@
-Improved the Relationship create/edit form UX for symmetric relationship types by mirroring source-side values to destination-side fields and temporarily disabling destination-side inputs.

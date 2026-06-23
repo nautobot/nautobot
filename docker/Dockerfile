@@ -163,7 +163,7 @@ COPY --chown=nautobot:nautobot docs /source/docs
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 # Build the rendered docs, this ensures that the docs are in the final image.
-RUN mkdocs build --no-directory-urls && \
+RUN mkdocs build && \
     poetry build
 
 ################################ Stage: dev (development environment for Nautobot core)
