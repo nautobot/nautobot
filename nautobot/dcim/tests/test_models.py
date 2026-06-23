@@ -3970,6 +3970,20 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             list(qs[:1])
         self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
+    def test_select_related_none_clears_without_warning(self):
+        """`select_related(None)` passes through untouched and does not warn.
+
+        Regression test: the translation previously called `field.startswith(...)` on every field,
+        which raised `AttributeError` for the `None` sentinel that Django passes to clear
+        select_related.
+        """
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qs = Interface.objects.select_related("device").select_related(None)
+            list(qs[:1])  # force evaluation
+        self.assertEqual(qs.query.select_related, False)
+        self.assertFalse(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
     def test_filter_cable_none_translates_to_isnull_true(self):
         """`filter(cable=None)` is treated as "uncabled" — translates to `cable_termination__isnull=True`."""
         with warnings.catch_warnings(record=True) as caught:
