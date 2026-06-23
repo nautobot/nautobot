@@ -63,7 +63,7 @@ def backpopulate_device(apps, schema_editor):
 
         # If nothing was resolved in this pass, all remaining unresolved bays
         # are spares (no device reachable) — stop iterating.
-        if not updates and not unresolved_bays.exists():
+        if not updates and not unresolved_bays.all().exists():
             break
 
     component_models = [

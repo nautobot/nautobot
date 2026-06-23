@@ -82,6 +82,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.models.device_component_templates import ModularComponentTemplateModel
 from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -105,6 +106,26 @@ class ModularDeviceComponentTestCaseMixin:
     def setUpTestData(cls):
         cls.device = Device.objects.first()
         cls.module = Module.objects.first()
+
+    def test_parent_validation_device_and_module(self):
+        """Validate whether the current object's device reference is the same as the nested device reference in module/module_bay. Does not apply to TemplateTestCases"""
+        if issubclass(self.model, ModularComponentTemplateModel):
+            self.skipTest("Only applies to modular components - not modular templates.")
+
+        module = (
+            Module.objects.filter(parent_module_bay__parent_device__isnull=False)
+            .exclude(parent_module_bay__parent_device=self.device)
+            .first()
+        )
+
+        instance = self.model(
+            name=f"test {self.model._meta.model_name} 1",
+            **{self.device_field: self.device, self.module_field: module},
+            **self.modular_component_create_data,
+        )
+
+        with self.assertRaises(ValidationError):
+            instance.full_clean()
 
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""

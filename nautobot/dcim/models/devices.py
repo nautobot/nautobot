@@ -2153,7 +2153,7 @@ class Module(PrimaryModel):
         if parent_module_changed:
             self._cascade_device_to_descendants()
 
-    def _cascade_device_to_descendants(self, level=0):
+    def _cascade_device_to_descendants(self):
         # Update all ModularComponentModel subclasses directly owned by this module
         component_classes = [
             ConsolePort,
@@ -2172,7 +2172,7 @@ class Module(PrimaryModel):
 
         # Recurse into child Modules via get_children() so their descendants
         # are also updated
-        for child_module in self.get_children():
+        for child_module in self.get_children().select_related("parent_module_bay__parent_device"):
             child_module._cascade_device_to_descendants()
 
     def create_components(self):

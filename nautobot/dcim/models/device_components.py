@@ -197,22 +197,27 @@ class ModularComponentModel(ComponentModel):
 
         # Annotate the parent
         try:
-            parent = self.module if self.module else self.device
+            direct_ancestor = self.module if self.module else self.device
         except ObjectDoesNotExist:
             # The parent may have already been deleted
-            parent = None
+            direct_ancestor = None
 
-        return super().to_objectchange(action, related_object=parent, **kwargs)
+        return super().to_objectchange(action, related_object=direct_ancestor, **kwargs)
 
     def clean(self):
         super().clean()
+        if self.device and self.module:
+            if self.device != (nested_device := getattr(self.module.parent_module_bay, "parent_device", None)):
+                raise ValidationError(
+                    f"Module's assigned device differs ({nested_device._meta.verbose_name}) from the root device: {self.device._meta.verbose_name}"
+                )
         if (
             self.module is None
             and self.__class__.objects.filter(device=self.device, module__isnull=True, name=self.name)
             .exclude(pk=self.pk)
             .exists()
         ):
-            raise ValidationError(f"A module by this name already exists on {self.device}")
+            raise ValidationError(f"A {self._meta.verbose_name} by this name already exists on {self.device}")
 
         if not (self.device or self.module):
             raise ValidationError("Either device or module must be set")
@@ -1946,15 +1951,22 @@ class ModuleBay(PrimaryModel):
 
     def clean(self):
         super().clean()
-        if self.parent_device and not self.parent_module:
+
+        if self.parent_device and self.parent_module:
+            if self.parent_device != (
+                nested_device := getattr(self.parent_module.parent_module_bay, "parent_device", None)
+            ):
+                raise ValidationError(
+                    f"{self._meta.verbose_name}.parent_device differs from the parent_module's nested device: {nested_device._meta.verbose_name}"
+                )
+        elif self.parent_device and not self.parent_module:
             if (
                 ModuleBay.objects.filter(parent_device=self.parent_device, parent_module__isnull=True, name=self.name)
                 .exclude(pk=self.pk)
                 .exists()
             ):
                 raise ValidationError(f"A module bay by this name already exists on {self.parent_device}")
-
-        if not (self.parent_device or self.parent_module):
+        elif not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
 
         if not self.position:
