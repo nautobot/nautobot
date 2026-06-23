@@ -19,6 +19,14 @@ build:
       # VIRTUAL_ENV needs to be set manually for now.
       # See https://github.com/readthedocs/readthedocs.org/pull/11152/
       - "VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --only docs"
+    build:
+      html:
+        # mkdocs.yml defaults to use_directory_urls=False because that is necessary for the static documentation
+        # packaged with Nautobot itself.
+        # However, for the published docs on ReadTheDocs, we want to explicitly override those flags.
+        # Additionally, suppress the warning about mkdocs v2 from various mkdocs plugins (DISABLE_MKDOCS_2_WARNING=true)
+        # Additionally, suppress the warning about mkdocs v2 from mkdocs-material (NO_MKDOCS_2_WARNING=1)
+        - "DISABLE_MKDOCS_2_WARNING=true NO_MKDOCS_2_WARNING=1 mkdocs build --config-file mkdocs.yml --use-directory-urls --site-dir $READTHEDOCS_OUTPUT/html/"
 
 # MKDocs configuration file
 mkdocs:
