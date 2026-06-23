@@ -1,0 +1,1 @@
+Fixed edit/delete actions on device component tabs (Interfaces, Console Ports, etc.) returning the user to a stale `?tab=` URL that displayed an empty list instead of the correct component tab.
