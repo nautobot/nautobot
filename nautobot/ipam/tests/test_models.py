@@ -1939,6 +1939,93 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         ip_range.refresh_from_db()
         self.assertEqual(ip_range.parent, narrow)
 
+    def test_widening_prefix_reparents_range_down_to_swallowed_prefix(self):
+        """Widening a Prefix so that it swallows a previously-wider Prefix must push a range
+        that is attached directly to this Prefix down into the newly-claimed child, which is
+        now the closest parent fully containing the range.
+
+        Exercises the `if closest != self:` branch in reparent_ip_address_ranges().
+        """
+        # A /24 as a top-level prefix...
+        swallowed = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        # ...with a narrower /26 nested inside it.
+        inner = Prefix.objects.create(
+            prefix="10.0.0.0/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        self.assertEqual(inner.parent, swallowed)
+
+        # The range fits inside the /26, so its closest parent is the /26.
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.10",
+            end_address="10.0.0.20",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        self.assertEqual(ip_range.parent, inner)
+
+        # Widen the /26 to a /23. The /23 now contains the /24, so the /24 becomes a child of
+        # `inner`, and that /24 is now the closest parent of the range.
+        inner.prefix = "10.0.0.0/23"
+        inner.validated_save()
+
+        swallowed.refresh_from_db()
+        self.assertEqual(swallowed.parent, inner)  # the tree has flipped
+
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, swallowed)  # range pushed down to the closest child
+
+    def test_range_straddling_two_children_stays_at_parent(self):
+        """When a range's endpoints fall into two different children, closest_start != closest_end,
+        so closest = self and the range is NOT reparented downward — it stays on the parent.
+
+        Exercises the `else` (closest = self) path in reparent_ip_address_ranges().
+        """
+        parent = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        # Create the range before any children exist; the child-overlap validator would reject it otherwise.
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.70",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        self.assertEqual(ip_range.parent, parent)
+
+        # Two /26s — the range .50-.70 straddles both (.50 in the first, .70 in the second).
+        Prefix.objects.create(
+            prefix="10.0.0.0/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        Prefix.objects.create(
+            prefix="10.0.0.64/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, parent)  # no single child contains the whole range
+
+        # Changing the parent's network (/24 -> /23) triggers the _networking_values_changed branch.
+        parent.prefix = "10.0.0.0/23"
+        parent.validated_save()
+
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, parent)  # still on the parent
+
     def test_get_available_ips_excludes_exclusive_range(self):
         """Addresses within an exclusive IP Address Range are removed from available IPs."""
         prefix = Prefix.objects.create(

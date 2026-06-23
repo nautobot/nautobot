@@ -1069,8 +1069,13 @@ class Prefix(PrimaryModel):
     def reparent_ip_address_ranges(self):
         """
         Handle changes to the parentage of IPAddressRanges as a consequence of this Prefix's
-        creation or update (analogous to reparent_ips()), but a range must remain fully contained
-        by its parent, so a range is only reparented to a Prefix that wholly contains its span.
+        creation or update (analogous to reparent_ips()). Unlike an IP, which is a single host,
+        a range spans two endpoints, so when picking a new parent we only reparent a range to a
+        Prefix that wholly contains its span (both endpoints), never one that covers just part of it.
+
+        - Former child ranges of ours that no longer fit our new network can be reparented to our former parent.
+        - Former child ranges that we are no longer the closest parent of can be reparented to one of our new descendants.
+        - Ranges that we are now the closest parent of can be reparented to us.
 
         Called automatically by save(); generally not intended for use outside of that context.
         """
@@ -1096,16 +1101,14 @@ class Prefix(PrimaryModel):
             # Former child ranges that we are no longer closest parent of can be reparented to one of our new descendants.
             ranges_to_reparent = []
             for ip_range in self.ip_address_ranges.all():
-                closest = (
-                    self.children.filter(
-                        ip_version=ip_range.ip_version,
-                        network__lte=ip_range.start_host,
-                        broadcast__gte=ip_range.end_host,
-                    )
-                    .order_by("-prefix_length")
-                    .first()
-                )
-                if closest is not None and closest != self:
+                # A child fully contains the range iff it's the closest parent of BOTH endpoints.
+                try:
+                    closest_start = self.children.get_closest_parent(ip_range.start_host, include_self=True)
+                    closest_end = self.children.get_closest_parent(ip_range.end_host, include_self=True)
+                    closest = closest_start if closest_start == closest_end else self
+                except Prefix.DoesNotExist:
+                    closest = self
+                if closest != self:
                     ip_range.parent = closest
                     ranges_to_reparent.append(ip_range)
 
