@@ -207,7 +207,7 @@ class ModularComponentModel(ComponentModel):
     def clean(self):
         super().clean()
         if self.device and self.module:
-            if self.device != (nested_device := getattr(self.module.parent_module_bay, "parent_device", None)):
+            if self.device != (nested_device := getattr(self.module.parent_module_bay, "parent_device", None)):  # pylint: disable=no-member
                 raise ValidationError(
                     f"Module's assigned device differs ({nested_device._meta.verbose_name}) from the root device: {self.device._meta.verbose_name}"
                 )
