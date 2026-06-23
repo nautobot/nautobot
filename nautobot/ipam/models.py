@@ -1103,8 +1103,8 @@ class Prefix(PrimaryModel):
             for ip_range in self.ip_address_ranges.all():
                 # A child fully contains the range iff it's the closest parent of BOTH endpoints.
                 try:
-                    closest_start = self.children.get_closest_parent(ip_range.start_host, include_self=True)
-                    closest_end = self.children.get_closest_parent(ip_range.end_host, include_self=True)
+                    closest_start = self.children.get_closest_parent(ip_range.start_host, include_self=True)  # pylint: disable=no-member
+                    closest_end = self.children.get_closest_parent(ip_range.end_host, include_self=True)  # pylint: disable=no-member
                     closest = closest_start if closest_start == closest_end else self
                 except Prefix.DoesNotExist:
                     closest = self
