@@ -11,7 +11,7 @@ from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from netaddr import IPNetwork
+from netaddr import IPAddress, IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core.models import fields as core_fields
@@ -150,8 +150,8 @@ class NautobotTestCaseMixin:
                     ct = value if isinstance(value, ContentType) else ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
-                # Convert IPNetwork instances to strings
-                elif isinstance(value, IPNetwork):
+                # Convert netaddr objects to strings
+                elif isinstance(value, (IPAddress, IPNetwork)):
                     model_dict[key] = str(value)
 
             else:
