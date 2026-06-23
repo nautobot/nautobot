@@ -3778,6 +3778,41 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_detail_shows_assigned_vlans(self):
+        """The detail view's VLAN table lists both the untagged and tagged VLANs assigned to the interface."""
+        interface = Interface.objects.first()
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.first()
+        untagged_vlan = VLAN.objects.create(
+            vid=200,
+            name="Untagged VLAN",
+            location=interface.device.location,
+            status=vlan_status,
+            vlan_group=vlan_group,
+        )
+        tagged_vlans = [
+            VLAN.objects.create(
+                vid=201 + i,
+                name=f"Tagged VLAN {i}",
+                location=interface.device.location,
+                status=vlan_status,
+                vlan_group=vlan_group,
+            )
+            for i in range(2)
+        ]
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.untagged_vlan = untagged_vlan
+        interface.validated_save()
+        interface.tagged_vlans.set(tagged_vlans)
+
+        self.add_permissions("dcim.view_interface", "ipam.view_vlan")
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, untagged_vlan.get_absolute_url())
+        for tagged_vlan in tagged_vlans:
+            self.assertBodyContains(response, tagged_vlan.get_absolute_url())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_all_breakout_cable_peers(self):
         """All far-end terminations of a multi-termination (breakout) cable must appear on the detail view.
 
