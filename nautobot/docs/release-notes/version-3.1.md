@@ -157,7 +157,7 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 ### Documentation in v3.1.6
 
-- [#9129](https://github.com/nautobot/nautobot/issues/9129) - Fixed an unintended change to the online (docs.nautobot.com) documentation structure in v3.1.5.
+- [#9129](https://github.com/nautobot/nautobot/issues/9129) - Fixed an unintended change to the online (`docs.nautobot.com`) documentation structure in v3.1.5.
 
 ### Housekeeping in v3.1.6
 
