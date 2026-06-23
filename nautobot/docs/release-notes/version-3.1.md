@@ -148,6 +148,21 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.6 (2026-06-23)
+
+### Fixed in v3.1.6
+
+- [#6327](https://github.com/nautobot/nautobot/issues/6327) - Fixed an `AttributeError` ('NoneType' object has no attribute 'strip') raised by the `render_markdown` template filter when rendering a null value.
+- [#9115](https://github.com/nautobot/nautobot/issues/9115) - Fixed edit/delete actions on device component tabs (Interfaces, Console Ports, etc.) returning the user to a stale `?tab=` URL that displayed an empty list instead of the correct component tab.
+
+### Documentation in v3.1.6
+
+- [#9129](https://github.com/nautobot/nautobot/issues/9129) - Fixed an unintended change to the online (docs.nautobot.com) documentation structure in v3.1.5.
+
+### Housekeeping in v3.1.6
+
+- [#9129](https://github.com/nautobot/nautobot/issues/9129) - Added configuration to suppress warnings about MkDocs v2 that were emitted while building documentation.
+
 ## v3.1.5 (2026-06-22)
 
 ### Security in v3.1.5

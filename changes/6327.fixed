@@ -1,1 +1,0 @@
-Fixed an `AttributeError` ('NoneType' object has no attribute 'strip') raised by the `render_markdown` template filter when rendering a null value.
