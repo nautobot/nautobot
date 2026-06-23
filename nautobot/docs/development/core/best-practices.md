@@ -129,6 +129,80 @@ class ExampleModel(PrimaryModel):
 
 When constructing a CharField or SlugField, always utilize the `CHARFIELD_MAX_LENGTH` constant unless your field requires a value greater than `CHARFIELD_MAX_LENGTH`, which is `255`.
 
+### Foreign Key Deletion Behavior (`on_delete`)
+
+Every `ForeignKey` and `OneToOneField` must declare an [`on_delete`](https://docs.djangoproject.com/en/stable/ref/models/fields/#django.db.models.ForeignKey.on_delete) behavior describing what happens to the referencing (child) row when the referenced (parent) object is deleted. The choice has real user-facing consequences: it determines whether users can delete a parent object at all, what happens to dependent data, and how easily related records can be cleaned up. Choose the option that matches the actual relationship between the two models.
+
+Nautobot primarily uses three of Django's `on_delete` options:
+
+| Option     | Effect on the child row                            | When to use                                                                                          |
+| ---------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `CASCADE`  | Delete the child row.                              | The child has no meaning without the parent (composition or "part of" relationships).                |
+| `SET_NULL` | Set the field to `NULL` (requires `null=True`).    | The relationship is optional metadata that can be cleared without removing the child row.            |
+| `PROTECT`  | Block the delete by raising `ProtectedError`.      | Only when neither `CASCADE` nor `SET_NULL` is safe (see [below](#when-protect-is-appropriate)).      |
+
+The other Django options (`SET_DEFAULT`, `SET()`, `DO_NOTHING`, `RESTRICT`) are not typically used within Nautobot.
+
+#### Default to `CASCADE` or `SET_NULL`, not `PROTECT`
+
+`PROTECT` is the most common source of friction in Nautobot's delete UX, and new models should default to `CASCADE` or `SET_NULL` whenever the relationship reasonably allows it:
+
+- A single protected reference blocks the entire delete and surfaces as a Django `ProtectedError`.
+- Users frequently expect a top-level delete to "just work"; protection forces them to discover and clear every reference by hand before the operation succeeds.
+- Bulk-delete operations become significantly harder when any one of the selected objects has a chain of protected children.
+- Apps and integrations that reorganize or replace objects programmatically must re-point every protected child individually before the original can be removed, which is verbose and error-prone.
+
+Treat `PROTECT` as the exception, not the default. If you are reaching for `PROTECT` simply because you have not decided what should happen on deletion, the answer is almost always `CASCADE` (for required, composition-style relationships) or `SET_NULL` (for optional ones).
+
+#### When `PROTECT` is appropriate
+
+`PROTECT` is the right choice when silently deleting the child row, or silently nulling the reference, would lose important data or context that the user needs to confront explicitly. Concretely, prefer `PROTECT` when **all** of the following are true:
+
+1. The relationship is required (`null=False`), so `SET_NULL` is not an option.
+2. Cascading the delete would either destroy a large amount of operational data, or erase historical context (such as an audit trail) that cannot be reconstructed.
+3. There is a reasonable expectation that the user should resolve the relationship before deletion, rather than have it resolved silently.
+
+Representative core examples that meet this bar:
+
+- **Organizational hierarchy with non-trivial children.** `Rack` and `Location` use `PROTECT` because deleting a location via `CASCADE` would destroy the racks, devices, interfaces, and IP addresses underneath it from a single click.
+- **Definitions referenced by data.** `ObjectMetadata` and `MetadataType` use `PROTECT` because removing a metadata type while data still uses it would orphan that data with no way to recover its meaning.
+- **User attribution.** `RackReservation` and `User` use `PROTECT` so deleting a user account does not silently rewrite the reservation's history.
+
+The common thread: cascading the delete would destroy or rewrite data that the user almost certainly did not intend to lose, and nulling the reference is not available because the field is required.
+
+#### Examples in core
+
+```python
+# CASCADE: the child only exists as part of the parent
+class RackReservation(...):
+    rack = models.ForeignKey(
+        to="dcim.Rack",
+        on_delete=models.CASCADE,
+        related_name="rack_reservations",
+    )
+
+# SET_NULL: optional organizational grouping
+class Rack(...):
+    rack_group = models.ForeignKey(
+        to="dcim.RackGroup",
+        on_delete=models.SET_NULL,
+        related_name="racks",
+        blank=True,
+        null=True,
+    )
+
+# PROTECT: deleting the location would destroy or orphan large amounts of infrastructure
+class Rack(...):
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="racks",
+    )
+```
+
+!!! tip
+    Before selecting `PROTECT`, ask: "If a user deletes the referenced object, what is the *least surprising* outcome?" If the honest answer is "delete the child row too" or "clear the reference and keep the row", use `CASCADE` or `SET_NULL`. Reach for `PROTECT` only when neither outcome is safe.
+
 ## Getting URL Routes
 
 When developing new models a need often arises to retrieve a reversible route for a model to access it in either the web UI or the REST API. When this time comes, you **must** use `nautobot.core.utils.lookup.get_route_for_model`. You **must not** write your own logic to construct route names.

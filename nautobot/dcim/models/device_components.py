@@ -279,6 +279,9 @@ class CableTerminationQuerySet(RestrictedQuerySet):
 
     @classmethod
     def _translate_select_related_fields(cls, fields):
+        if fields == (None,):
+            return fields
+
         translated = []
         for field in fields:
             if field == "cable":

@@ -4521,7 +4521,7 @@ class ConsolePortUIViewSet(
     ComponentBulkDisconnectViewMixin,
     NautobotUIViewSet,
 ):
-    queryset = ConsolePort.objects.all()
+    queryset = ConsolePort.optimize_queryset_for_cable_columns(ConsolePort.objects.all())
     bulk_update_form_class = forms.ConsolePortBulkEditForm
     create_form_class = forms.ConsolePortCreateForm
     filterset_class = filters.ConsolePortFilterSet
@@ -4533,18 +4533,23 @@ class ConsolePortUIViewSet(
     device_breadcrumb_url = "dcim:device_consoleports"
     module_breadcrumb_url = "dcim:module_consoleports"
 
-    def get_extra_context(self, request, instance):
-        return {
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
-
-    def get_selected_objects_parents_name(self, selected_objects):
-        selected_object = selected_objects.first()
-        if selected_object:
-            parent = selected_object.device or selected_object.module
-            return parent.display
-        return ""
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Console Port",
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:consoleport_trace",
+            ),
+            *get_connected_endpoint_panels("consoleport"),
+        )
+    )
 
 
 #
@@ -4639,11 +4644,22 @@ class PowerPortUIViewSet(
     device_breadcrumb_url = "dcim:device_powerports"
     module_breadcrumb_url = "dcim:module_powerports"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                exclude_fields=("cable_termination"),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:powerport_trace",
+            ),
+            *get_connected_endpoint_panels("powerport"),
+        )
+    )
 
 
 #
