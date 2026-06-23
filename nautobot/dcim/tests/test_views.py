@@ -18,6 +18,7 @@ from nautobot.circuits.choices import CircuitTerminationSideChoices
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
 from nautobot.core.templatetags.buttons import job_export_url, job_import_url
 from nautobot.core.testing import (
+    AssertNoRepeatedQueries,
     extract_page_body,
     ModelViewTestCase,
     post_data,
@@ -2532,6 +2533,39 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "controller_managed_device_group": ControllerManagedDeviceGroup.objects.first().pk,
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_list_no_n_plus_one_queries(self):
+        """The device list must not issue a per-device query to resolve the primary IP column."""
+        template_device = self.devices[0]
+        namespace = Namespace.objects.first()
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        intf_status = Status.objects.get_for_model(Interface).first()
+        Prefix.objects.get_or_create(prefix="10.99.0.0/16", namespace=namespace, defaults={"status": prefix_status})
+        for i in range(12):
+            device = Device.objects.create(
+                name=f"N+1 Device {i}",
+                location=template_device.location,
+                device_type=template_device.device_type,
+                role=template_device.role,
+                status=template_device.status,
+            )
+            interface = Interface.objects.create(device=device, name="eth0", status=intf_status)
+            ip_address = IPAddress.objects.create(address=f"10.99.{i}.1/32", namespace=namespace, status=ip_status)
+            interface.add_ip_addresses([ip_address])
+            device.primary_ip4 = ip_address
+            device.validated_save()
+
+        self.assertGreater(
+            Device.objects.filter(primary_ip4__isnull=False).count(),
+            10,
+            "Need >10 devices with a primary IP to exceed the AssertNoRepeatedQueries threshold",
+        )
+
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+
     def _build_device_bay_chain(self, parent_count):
         """Create a parent->child DeviceBay chain and return (devices, bays)."""
         device_type = DeviceType.objects.create(
@@ -4291,6 +4325,50 @@ class CableTestCase(
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_cable_list_no_n_plus_one_queries(self):
+        """The cable list must not issue per-row queries while rendering circuit termination strings."""
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        device = Device.objects.first()
+        intf_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        for i in range(12):
+            interface = Interface.objects.create(
+                device=device,
+                name=f"n+1-eth{i}",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=intf_status,
+            )
+            circuit = Circuit.objects.create(
+                cid=f"N+1 Circuit {i}",
+                provider=provider,
+                circuit_type=circuit_type,
+                status=circuit_status,
+            )
+            circuit_termination = CircuitTermination.objects.create(
+                circuit=circuit,
+                term_side=CircuitTerminationSideChoices.SIDE_A,
+                location=location,
+            )
+            Cable.objects.create(
+                termination_a=interface,
+                termination_b=circuit_termination,
+                status=cable_status,
+            )
+
+        self.assertGreater(
+            Cable.objects.count(),
+            10,
+            "Need >10 cables to exceed the AssertNoRepeatedQueries threshold",
+        )
+
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+
     def test_delete_a_cable_which_has_a_peer_connection(self):
         """Test for https://github.com/nautobot/nautobot/issues/1694."""
         self.add_permissions("dcim.delete_cable")
@@ -4597,6 +4675,38 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             status=connected,
         )
         Cable.objects.create(termination_a=cls.interfaces[2], termination_b=rearport, status=connected)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_connections_no_n_plus_one_queries(self):
+        """The interface connections list must not issue a per-row query to resolve each interface's parent device."""
+        device_a = create_test_device("N+1 Device A")
+        device_b = create_test_device("N+1 Device B")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        connected = Status.objects.get(name="Connected")
+        for i in range(13):
+            interface_a = Interface.objects.create(
+                device=device_a,
+                name=f"n+1-a-eth{i}",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=interface_status,
+            )
+            interface_b = Interface.objects.create(
+                device=device_b,
+                name=f"n+1-b-eth{i}",
+                type=InterfaceTypeChoices.TYPE_1GE_SFP,
+                status=interface_status,
+            )
+            Cable.objects.create(termination_a=interface_a, termination_b=interface_b, status=connected)
+
+        self.assertGreater(
+            InterfaceConnectionsListView().get_queryset().count(),
+            10,
+            "Need >10 interface connections to exceed the AssertNoRepeatedQueries threshold",
+        )
+
+        with AssertNoRepeatedQueries(self, threshold=10):
+            response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_objects_filtered(self):

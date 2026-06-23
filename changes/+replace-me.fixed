@@ -1,0 +1,1 @@
+Fixed N+1 queries on the Device, Cable, and Interface Connections list views.

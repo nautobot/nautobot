@@ -6,6 +6,7 @@ import uuid
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
@@ -28,6 +29,7 @@ from django_tables2 import RequestConfig
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from nautobot.circuits.models import CircuitTermination
 from nautobot.cloud.tables import CloudAccountTable
 from nautobot.core.choices import ButtonActionColorChoices, ButtonColorChoices
 from nautobot.core.exceptions import AbortTransaction
@@ -2727,6 +2729,8 @@ class DeviceComponentPageMixin:
 class DeviceUIViewSet(NautobotUIViewSet):
     queryset = Device.objects.select_related(
         "device_type__manufacturer",  # Needed for __str__() on device_type
+        "primary_ip4",  # Avoid a per-row query for the primary IP column in the list view
+        "primary_ip6",
     )
     filterset_class = filters.DeviceFilterSet
     filterset_form_class = forms.DeviceFilterForm
@@ -5272,6 +5276,27 @@ class DeviceBulkAddInventoryItemView(generic.BulkComponentCreateView):
 #
 # Cables
 #
+def _cable_termination_prefetch_querysets():
+    """Per-model querysets for prefetching Cable terminations.
+
+    The cable list table renders each termination's parent (device/circuit/power panel) and its string
+    representation, so without these ``select_related`` hints every row triggers per-row queries. A fresh list is
+    built per call because ``GenericPrefetch`` consumes the querysets it is given.
+    """
+    component_select_related = ("device", "module")
+    return [
+        ConsolePort.objects.select_related(*component_select_related),
+        ConsoleServerPort.objects.select_related(*component_select_related),
+        FrontPort.objects.select_related(*component_select_related),
+        Interface.objects.select_related(*component_select_related),
+        PowerOutlet.objects.select_related(*component_select_related),
+        PowerPort.objects.select_related(*component_select_related),
+        RearPort.objects.select_related(*component_select_related),
+        PowerFeed.objects.select_related("power_panel"),
+        CircuitTermination.objects.select_related("circuit", "location", "provider_network", "cloud_network"),
+    ]
+
+
 class CableUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.CableBulkEditForm
     filterset_class = filters.CableFilterSet
@@ -5279,7 +5304,10 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.prefetch_related("termination_a", "termination_b")
+    queryset = Cable.objects.prefetch_related(
+        GenericPrefetch("termination_a", _cable_termination_prefetch_querysets()),
+        GenericPrefetch("termination_b", _cable_termination_prefetch_querysets()),
+    )
     action_buttons = ("import", "export")
 
     def get_queryset(self):
@@ -5466,16 +5494,35 @@ class InterfaceConnectionsListView(ConnectionsListView):
         """
         This is a required so that the call to `ContentType.objects.get_for_model` does not result in a circular import.
         """
-        qs = Interface.objects.filter(_path__isnull=False).exclude(
-            # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
-            # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
-            # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
-            # used for reverse querying.
-            # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A)
-            # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A), then
-            #       the connection will appear in the table, but if it only matches (B) then the connection will not!
-            _path__destination_type=ContentType.objects.get_for_model(Interface),
-            pk__lt=F("_path__destination_id"),
+        qs = (
+            Interface.objects.filter(_path__isnull=False)
+            # The table renders each interface's parent device (Side A) and its connected peer and that peer's
+            # parent device (Side B). Without these, every row triggers per-row queries for the local device,
+            # the remote endpoint, and the remote device.
+            .select_related("device", "module")
+            .prefetch_related(
+                GenericPrefetch(
+                    "_path__destination",
+                    [
+                        Interface.objects.select_related("device", "module"),
+                        CircuitTermination.objects.select_related(
+                            "circuit", "location", "provider_network", "cloud_network"
+                        ),
+                    ],
+                )
+            )
+            .exclude(
+                # If an Interface is connected to another Interface, avoid returning both (A, B) and (B, A)
+                # Unfortunately we can't use something consistent to pick which pair to exclude (such as device or name)
+                # as _path.destination is a GenericForeignKey without a corresponding GenericRelation and so cannot be
+                # used for reverse querying.
+                # The below at least ensures uniqueness, but doesn't guarantee whether we get (A, B) or (B, A)
+                # TODO: this is very problematic when filtering the view via FilterSet - if the filterset matches (A),
+                #       then the connection will appear in the table, but if it only matches (B) then the connection
+                #       will not!
+                _path__destination_type=ContentType.objects.get_for_model(Interface),
+                pk__lt=F("_path__destination_id"),
+            )
         )
         if self.queryset is None:
             self.queryset = qs
