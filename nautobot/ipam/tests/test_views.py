@@ -4,6 +4,7 @@ from unittest import mock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Count, ProtectedError, QuerySet
 from django.test import override_settings
@@ -746,6 +747,26 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(
             self.client.get(f"{list_url}?saved_view={other_view.pk}", headers={"HX-Request": "true"}), 200
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_parent_inconsistency_warnings(self):
+        """Cover the 'parent appears incorrect' diagnostic branches in the detail get_extra_context()."""
+        ip = IPAddress.objects.filter(parent__isnull=False).first()
+        self.assertIsNotNone(ip)
+        detail_url = reverse("ipam:ipaddress", kwargs={"pk": ip.pk})
+
+        with self.subTest("stored parent differs from computed closest parent"):
+            with mock.patch.object(IPAddress, "_get_closest_parent", return_value=None):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
+
+        with self.subTest("no valid containing prefix, parent set"):
+            with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
+
+        with self.subTest("no valid containing prefix, parent is None"):
+            IPAddress.objects.filter(pk=ip.pk).update(parent=None)
+            with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
 
 
 class IPAddressMergeTestCase(ModelViewTestCase):
