@@ -9,7 +9,7 @@
                     <div class="card{% if token.is_expired %} border-danger{% endif %}">
                         <div class="card-header nb-text-none{% if token.is_expired %} bg-danger-subtle border-danger text-body{% endif %}">
                             <div class="d-print-none float-end">
-                                <a class="btn btn-sm btn-success copy-token" data-clipboard-target="#token_{{ token.pk }}">
+                                <a class="btn btn-sm btn-success" data-clipboard-target="#token_{{ token.pk }}">
                                     <span class="mdi mdi-content-copy me-4" aria-hidden="true"></span><!--
                                     -->Copy</a>
                                 {% if perms.users.change_token %}
@@ -77,11 +77,4 @@
             {% endif %}
         </div>
     </div>
-{% endblock %}
-
-{% block javascript %}
-    {{ block.super }}
-    <script type="text/javascript">
-        new ClipboardJS('.copy-token');
-    </script>
 {% endblock %}
