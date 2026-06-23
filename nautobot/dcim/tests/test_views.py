@@ -3687,7 +3687,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
             required_on="source",
         )
         relationship.validated_save()
-        self.addCleanup(relationship.delete)
 
         self.add_permissions("dcim.add_interface")
 

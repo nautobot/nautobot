@@ -2200,7 +2200,6 @@ class ViewTestCases:
                 required=True,
             )
             custom_field.content_types.set([ContentType.objects.get_for_model(self.model)])
-            self.addCleanup(custom_field.delete)
 
             self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
