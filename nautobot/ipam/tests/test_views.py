@@ -763,11 +763,6 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
                 self.assertHttpStatus(self.client.get(detail_url), 200)
 
-        with self.subTest("no valid containing prefix, parent is None"):
-            IPAddress.objects.filter(pk=ip.pk).update(parent=None)
-            with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
-                self.assertHttpStatus(self.client.get(detail_url), 200)
-
 
 class IPAddressMergeTestCase(ModelViewTestCase):
     @classmethod

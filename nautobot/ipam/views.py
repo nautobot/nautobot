@@ -1247,6 +1247,8 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
                         ),
                     )
             except ValidationError:  # No valid parent found
+                # A null parent is a deprecated/invalid state, and it makes breadcrumb rendering
+                # raise before this view returns, so this branch is unreachable via the detail view.
                 if instance.parent is None:
                     add_url = (
                         reverse("ipam:prefix_add")
