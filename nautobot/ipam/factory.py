@@ -552,9 +552,8 @@ class IPAddressRangeFactory(PrimaryModelFactory):
             .filter(children__isnull=True)
             .filter(ip_address_ranges__isnull=True)
         )
-        existing = qs.order_by("?").first()
-        if existing is not None:
-            return existing
+        if qs.exists():
+            return factory.random.randgen.choice(qs)
         # Guarantee a parent rather than silently dropping the object.
         return PrefixFactory(type=PrefixTypeChoices.TYPE_NETWORK, prefix_length=24)
 

@@ -9,26 +9,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import override_settings
-from django.test.utils import isolate_apps
 
-from nautobot.core.models import BaseModel
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.models import Status, Tag
 
 User = get_user_model()
-
-
-@isolate_apps("nautobot.core.tests")
-class BaseModelTest(TestCase):
-    class FakeBaseModel(BaseModel):
-        def clean(self):
-            raise ValidationError("validation error")
-
-    def test_validated_save_calls_full_clean(self):
-        with self.assertRaises(ValidationError):
-            self.FakeBaseModel().validated_save()
 
 
 class ModelUtilsTestCase(TestCase):
@@ -64,8 +51,13 @@ class ModelUtilsTestCase(TestCase):
                 natural_slug = construct_natural_slug(values, pk=pk)
                 self.assertEqual(natural_slug, expected_natural_slug)
 
+    def test_validated_save_calls_full_clean(self):
+        with patch.object(Manufacturer, "clean", side_effect=ValidationError("clean was called")):
+            with self.assertRaisesRegex(ValidationError, "clean was called"):
+                Manufacturer(name="Cisco").validated_save()
 
-class NaturalKeyTestCase(BaseModelTest):
+
+class NaturalKeyTestCase(TestCase):
     """Test the various natural-key APIs for a few representative models."""
 
     def test_natural_key(self):
@@ -118,7 +110,7 @@ class NaturalKeyTestCase(BaseModelTest):
         """
         Verify that the ContentType of the object is cached.
         """
-        self.assertEqual(self.FakeBaseModel._content_type, self.FakeBaseModel._content_type_cached)
+        self.assertEqual(Manufacturer._content_type, Manufacturer._content_type_cached)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=2)
     def test__content_type_caching_enabled(self):
@@ -127,21 +119,21 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(self.FakeBaseModel._content_type_cache_key)
+        cache.delete(Manufacturer._content_type_cache_key)
 
-        with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
-            self.FakeBaseModel._content_type_cached
-            self.FakeBaseModel._content_type_cached
-            self.FakeBaseModel._content_type_cached
+        with patch.object(Manufacturer, "_content_type", return_value=True) as mock__content_type:
+            Manufacturer._content_type_cached
+            Manufacturer._content_type_cached
+            Manufacturer._content_type_cached
             self.assertEqual(mock__content_type.call_count, 1)
 
             time.sleep(3)  # Let the cache expire
 
-            self.FakeBaseModel._content_type_cached
+            Manufacturer._content_type_cached
             self.assertEqual(mock__content_type.call_count, 2)
 
         # Clean-up after ourselves
-        cache.delete(self.FakeBaseModel._content_type_cache_key)
+        cache.delete(Manufacturer._content_type_cache_key)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=0)
     def test__content_type_caching_disabled(self):
@@ -150,12 +142,12 @@ class NaturalKeyTestCase(BaseModelTest):
         """
 
         # Ensure the cache is empty from previous tests
-        cache.delete(self.FakeBaseModel._content_type_cache_key)
+        cache.delete(Manufacturer._content_type_cache_key)
 
-        with patch.object(self.FakeBaseModel, "_content_type", return_value=True) as mock__content_type:
-            self.FakeBaseModel._content_type_cached
-            self.FakeBaseModel._content_type_cached
-            self.assertEqual(mock__content_type.call_count, 2)
+        with patch.object(Manufacturer, "_content_type", return_value=True) as mock__content_type:
+            Manufacturer._content_type_cached
+            Manufacturer._content_type_cached
+            Manufacturer(mock__content_type.call_count, 2)
 
 
 class TreeModelTestCase(TestCase):

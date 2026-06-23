@@ -1,0 +1,1 @@
+Fixed various causes of inconsistent factory data being produced by the `generate_test_data` management command.
