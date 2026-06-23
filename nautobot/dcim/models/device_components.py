@@ -281,7 +281,9 @@ class CableTerminationQuerySet(RestrictedQuerySet):
     def _translate_select_related_fields(cls, fields):
         translated = []
         for field in fields:
-            if field == "cable":
+            if field is None:
+                translated.append(None)
+            elif field == "cable":
                 cls._warn('select_related("cable")', 'select_related("cable_termination__cable")')
                 translated.append("cable_termination__cable")
             elif field.startswith("cable__"):
