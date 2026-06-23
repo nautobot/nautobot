@@ -2718,6 +2718,26 @@ class DynamicGroupTestCase(
         self.assertIn("You can bulk-add and bulk-remove members of this group from the", members_body)
         self.assertNotIn("Dynamic group membership is cached for performance reasons", members_body)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_members_tab_action_return_url(self):
+        """Edit/delete actions on the Members tab return to the Members tab, not the group's detail page (#9117)."""
+        static_group = DynamicGroup.objects.create(
+            name="DG Members Return URL",
+            content_type=ContentType.objects.get_for_model(Location),
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+        )
+        static_group.add_members(Location.objects.all()[:2])
+        self.add_permissions("dcim.change_location", "dcim.delete_location")
+
+        group_url = static_group.get_absolute_url()
+        members_url = reverse("extras:dynamicgroup_members", kwargs={"pk": static_group.pk})
+        response = self.client.get(members_url)
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(f"return_url={group_url}members/", body)
+        self.assertNotIn(f'return_url={group_url}"', body)
+
     @override_settings(PAGINATE_COUNT=1)
     def test_get_object_dynamic_set_descendants_view_more(self):
         _, dynamic_set, _ = self.create_dynamic_group()
