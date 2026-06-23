@@ -147,17 +147,19 @@ def assign_permissions_to_user(user, permissions=None):
             if not created and (obj_perm.actions != [action] or obj_perm.constraints != constraints):
                 logger.warning(
                     f"ObjectPermission '{permission_name}' already exists with actions or constraints that differ "
-                    "from EXTERNAL_AUTH_DEFAULT_PERMISSIONS; leaving the existing record unchanged."
+                    "from EXTERNAL_AUTH_DEFAULT_PERMISSIONS; not assigning it to user."
                 )
-            obj_perm.users.add(user)
+                continue
             existing_object_types = set(obj_perm.object_types.values_list("pk", flat=True))
-            if not existing_object_types:
-                obj_perm.object_types.add(object_type)
-            elif existing_object_types != {object_type.pk}:
+            if existing_object_types and existing_object_types != {object_type.pk}:
                 logger.warning(
                     f"ObjectPermission '{permission_name}' already has object type(s) that differ from the expected "
-                    f"'{object_type}'; not modifying its object types to avoid widening its scope."
+                    f"'{object_type}'; not assigning it to user."
                 )
+                continue
+            obj_perm.users.add(user)
+            if not existing_object_types:
+                obj_perm.object_types.add(object_type)
             permissions_list.append(permission_name)
         except ValueError:
             logging.error(

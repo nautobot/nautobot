@@ -218,7 +218,7 @@ class ExternalAuthenticationTestCase(TestCase):
         self.assertEqual(ObjectPermission.objects.filter(name="dcim.change_location").count(), 1)
 
     def test_external_auth_default_permissions_preserves_divergent_existing(self):
-        """An existing ObjectPermission with differing actions/constraints is warned about, not overwritten."""
+        """An existing ObjectPermission with differing actions/constraints is warned about and not assigned."""
         user = User.objects.create(username="remoteuser4")
         location_ct = ContentType.objects.get_for_model(Location)
         existing = ObjectPermission.objects.create(
@@ -234,10 +234,10 @@ class ExternalAuthenticationTestCase(TestCase):
         existing.refresh_from_db()
         self.assertEqual(existing.actions, ["add", "change"])
         self.assertEqual(existing.constraints, {"status": "decommissioning"})
-        self.assertIn(user, existing.users.all())
+        self.assertNotIn(user, existing.users.all())
 
     def test_external_auth_default_permissions_does_not_widen_object_types(self):
-        """An existing ObjectPermission scoped to a different object type is warned about, not widened."""
+        """An existing ObjectPermission scoped to a different object type is warned about, not widened or assigned."""
         user = User.objects.create(username="remoteuser5")
         device_ct = ContentType.objects.get(app_label="dcim", model="device")
         existing = ObjectPermission.objects.create(name="dcim.add_location", actions=["add"], constraints=None)
@@ -247,6 +247,7 @@ class ExternalAuthenticationTestCase(TestCase):
             assign_permissions_to_user(user, {"dcim.add_location": None})
 
         self.assertEqual(list(existing.object_types.values_list("model", flat=True)), ["device"])
+        self.assertNotIn(user, existing.users.all())
 
     @override_settings(
         SOCIAL_AUTH_BACKEND_PREFIX="custom_auth.backend",
