@@ -700,6 +700,23 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_no_parent_prefix(self):
+        """Bulk-add into a namespace with no containing prefix: the per-instance 'no parent' errors are
+        re-rendered on the form (covers IPAddressBulkCreateForm.add_error re-routing), not a 500/KeyError."""
+        self.add_permissions("ipam.add_ipaddress")
+        empty_namespace = Namespace.objects.create(name="bulk-add-no-parent")
+        form_data = {
+            "namespace": empty_namespace.pk,
+            "name_pattern": "192.0.2.[4-6]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        # Errors are surfaced on the form (HTTP 200), and nothing is created.
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(IPAddress.objects.filter(parent__namespace=empty_namespace).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_assign_without_interface_redirects(self):
         """GET on the assign endpoint with no interface/vminterface redirects to the add page."""
         self.add_permissions("ipam.add_ipaddress")
