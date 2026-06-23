@@ -2,8 +2,8 @@ from django.utils.html import escape
 from jsonschema import Draft7Validator
 
 from nautobot.core.testing import TestCase
-from nautobot.extras.models import ConfigContext, ConfigContextSchema
-from nautobot.extras.tables import ConfigContextSchemaValidationStateColumn
+from nautobot.extras.models import ConfigContext, ConfigContextSchema, JobResult
+from nautobot.extras.tables import ConfigContextSchemaValidationStateColumn, JobResultTable
 
 
 class ConfigContextSchemaValidationStateColumnTestCase(TestCase):
@@ -39,3 +39,26 @@ class ConfigContextSchemaValidationStateColumnTestCase(TestCase):
         self.assertIn("mdi-close-thick", rendered)
         self.assertIn("text-danger", rendered)
         self.assertIn("No schema available", rendered)
+
+
+class JobResultTableTestCase(TestCase):
+    def test_queue_name_column_renders_queue_from_celery_kwargs(self):
+        """The Queue Name column reads the queue from a JobResult's celery_kwargs."""
+        job_result = JobResult.objects.create(
+            name="queued.TestQueuedJob",
+            celery_kwargs={"queue": "test-queue-name"},
+        )
+        table = JobResultTable(JobResult.objects.filter(pk=job_result.pk))
+
+        cell = next(iter(table.rows)).get_cell("queue_name")
+
+        self.assertEqual(cell, "test-queue-name")
+
+    def test_queue_name_column_renders_placeholder_without_queue(self):
+        """The Queue Name column renders the empty placeholder when no queue is set."""
+        job_result = JobResult.objects.create(name="no_queue.TestNoQueueJob")
+        table = JobResultTable(JobResult.objects.filter(pk=job_result.pk))
+
+        cell = next(iter(table.rows)).get_cell("queue_name")
+
+        self.assertEqual(cell, table.default)
