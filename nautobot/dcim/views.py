@@ -4981,6 +4981,7 @@ class DeviceBayUIViewSet(
                 section=SectionChoices.RIGHT_HALF,
                 label="Installed Device",
                 context_data_key="installed_device_data",
+                hide_if_unset=["device_type"],
             ),
         )
     )
