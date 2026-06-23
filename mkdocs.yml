@@ -6,6 +6,8 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+# use_directory_urls: false is appropriate for local development and for packaging compiled docs as static files.
+# Note that for deployment to ReadTheDocs, you may want to override this (e.g. `mkdocs build --use-directory-urls`)
 use_directory_urls: false
 strict: true
 theme:
