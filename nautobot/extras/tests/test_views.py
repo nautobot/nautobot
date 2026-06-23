@@ -2735,7 +2735,7 @@ class DynamicGroupTestCase(
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
 
-        self.assertIn(f"return_url={group_url}members/", body)
+        self.assertIn(f"return_url={members_url}", body)
         self.assertNotIn(f'return_url={group_url}"', body)
 
     @override_settings(PAGINATE_COUNT=1)
