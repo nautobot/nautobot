@@ -12,6 +12,7 @@ import django.forms
 from django.utils.safestring import mark_safe
 
 from nautobot import __version__
+from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
@@ -803,11 +804,7 @@ CONSTANCE_ADDITIONAL_FIELDS = {
         "django.forms.fields.ChoiceField",
         {
             "widget": "nautobot.core.forms.widgets.StaticSelect2",
-            "choices": (
-                ("community", "Community"),
-                ("professional", "Professional"),
-                ("enterprise", "Enterprise"),
-            ),
+            "choices": NautobotEditionChoices.CHOICES,
         },
     ],
 }

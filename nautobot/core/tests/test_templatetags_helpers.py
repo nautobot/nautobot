@@ -391,6 +391,13 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 add_nautobot_version_query_param_to_url(f"{settings.MEDIA_URL}branding/custom_navbar.svg"),
             )
 
+        # A caller-provided `static_asset` is used as a backup for keys no edition defines (e.g. app assets).
+        with override_config(NAUTOBOT_EDITION="community"):
+            self.assertEqual(
+                helpers.custom_branding_or_static("example_app_icon", "example_app/icon.png"),
+                add_nautobot_version_query_param_to_url(StaticNode.handle_simple("example_app/icon.png")),
+            )
+
     def test_hyperlinked_object_target_new_tab(self):
         # None gives a placeholder
         self.assertEqual(helpers.hyperlinked_object_target_new_tab(None), helpers.placeholder(None))
