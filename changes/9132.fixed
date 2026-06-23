@@ -1,1 +1,1 @@
-Moved the charset declaration to the first tag in <head>.
+Moved the charset declaration to be the first tag in `<head>`.
