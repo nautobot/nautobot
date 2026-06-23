@@ -388,7 +388,7 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.module = Module.objects.filter(rear_ports__isnull=False).first()
+        cls.module = Module.objects.filter(rear_ports__isnull=False, parent_module_bay__isnull=True).first()
         cls.module_rear_port = cls.module.rear_ports.first()
         module_used_positions = set(cls.module_rear_port.front_ports.values_list("rear_port_position", flat=True))
         cls.module_available_positions = set(range(1, cls.module_rear_port.positions + 1)).difference(

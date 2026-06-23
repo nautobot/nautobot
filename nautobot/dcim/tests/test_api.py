@@ -2995,15 +2995,19 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.module = Module.objects.first()
-        cls.module_rear_ports = (
-            RearPort.objects.create(module=cls.module, name="Test FrontPort RP1", positions=100),
-            RearPort.objects.create(module=cls.module, name="Test FrontPort RP2", positions=100),
-        )
         cls.device = Device.objects.first()
         cls.device_rear_ports = (
             RearPort.objects.create(device=cls.device, name="Test FrontPort RP3", positions=100),
             RearPort.objects.create(device=cls.device, name="Test FrontPort RP4", positions=100),
+        )
+        cls.module = (
+            Module.objects.filter(parent_module_bay__isnull=False)
+            .exclude(parent_module_bay__parent_device=cls.device)
+            .first()
+        )
+        cls.module_rear_ports = (
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP1", positions=100),
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP2", positions=100),
         )
 
         cls.create_data = [
@@ -3045,6 +3049,7 @@ class FrontPortTest(Mixins.BasePortTestMixin):
         url = self._get_list_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
         self.assertEqual(
             response.json(),
             {"non_field_errors": ["module is installed in a different device"]},
