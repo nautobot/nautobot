@@ -342,7 +342,9 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
     def tunnel_interface(self):
         """Filter tunnel interfaces on the same device as source_interface."""
         if self.has_source_interface:
-            qs = Interface.objects.filter(type="tunnel", device=self.source_interface.device)
+            qs = Interface.objects.filter(
+                type="tunnel", device=self.source_interface.device, vpn_tunnel_endpoints_tunnel__isnull=True
+            )
             return factory.random.randgen.choice(qs) if qs.exists() else None
         return None
 

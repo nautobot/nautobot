@@ -4,7 +4,6 @@ import warnings
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.prefetch import GenericPrefetch
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -19,7 +18,6 @@ from nautobot.core.models.ordering import naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.tree_queries import TreeModel
-from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -136,19 +134,15 @@ class ModularComponentModel(ComponentModel):
         ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
         constraints = [
             models.UniqueConstraint(
-                fields=("device", "name"),
-                name="%(app_label)s_%(class)s_device_name_unique",
-            ),
-            models.UniqueConstraint(
                 fields=("module", "name"),
                 name="%(app_label)s_%(class)s_module_name_unique",
-            ),
+            )
         ]
 
     @property
     def parent(self):
         """Device that this component belongs to, walking up module inheritance if necessary."""
-        return self.module.device if self.module else self.device  # pylint: disable=no-member
+        return self.device
 
     def render_name_template(self, save=False):
         """
@@ -203,22 +197,36 @@ class ModularComponentModel(ComponentModel):
 
         # Annotate the parent
         try:
-            parent = self.device if self.device else self.module
+            direct_ancestor = self.module if self.module else self.device
         except ObjectDoesNotExist:
             # The parent may have already been deleted
-            parent = None
+            direct_ancestor = None
 
-        return super().to_objectchange(action, related_object=parent, **kwargs)
+        return super().to_objectchange(action, related_object=direct_ancestor, **kwargs)
 
     def clean(self):
         super().clean()
-
-        # Validate that a Device or Module is set, but not both
         if self.device and self.module:
-            raise ValidationError("Only one of device or module must be set")
+            if self.device != (nested_device := getattr(self.module.parent_module_bay, "parent_device", None)):  # pylint: disable=no-member
+                raise ValidationError(
+                    f"Module's assigned device differs ({nested_device._meta.verbose_name}) from the root device: {self.device._meta.verbose_name}"
+                )
+        if (
+            self.module is None
+            and self.__class__.objects.filter(device=self.device, module__isnull=True, name=self.name)
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError(f"A {self._meta.verbose_name} by this name already exists on {self.device}")
 
         if not (self.device or self.module):
             raise ValidationError("Either device or module must be set")
+
+    def save(self, *args, **kwargs):
+        if self.device is None and self.module is not None:
+            self.device = getattr(self.module.parent_module_bay, "parent_device", None)
+
+        super().save(*args, **kwargs)
 
 
 class CableTerminationQuerySet(RestrictedQuerySet):
@@ -1900,6 +1908,7 @@ class ModuleBay(PrimaryModel):
 
     class Meta:
         # TODO: Ordering by parent_module.id is not correct but prevents an infinite loop
+
         ordering = (
             "parent_device",
             "parent_module__id",
@@ -1907,19 +1916,15 @@ class ModuleBay(PrimaryModel):
         )
         constraints = [
             models.UniqueConstraint(
-                fields=["parent_device", "name"],
-                name="dcim_modulebay_parent_device_name_unique",
-            ),
-            models.UniqueConstraint(
                 fields=["parent_module", "name"],
                 name="dcim_modulebay_parent_module_name_unique",
-            ),
+            )
         ]
 
     @property
     def parent(self):
         """Walk up parent chain to find the Device that this ModuleBay is installed in, if one exists."""
-        return self.parent_module.device if self.parent_module else self.parent_device
+        return self.parent_device
 
     def __str__(self):
         if self.parent_device is not None:
@@ -1950,14 +1955,22 @@ class ModuleBay(PrimaryModel):
     def clean(self):
         super().clean()
 
-        # Validate that a Device or Module is set, but not both
         if self.parent_device and self.parent_module:
-            raise ValidationError("Only one of parent_device or parent_module must be set")
-
-        if not (self.parent_device or self.parent_module):
+            if self.parent_device != (
+                nested_device := getattr(self.parent_module.parent_module_bay, "parent_device", None)
+            ):
+                raise ValidationError(
+                    f"{self._meta.verbose_name}.parent_device differs from the parent_module's nested device: {nested_device._meta.verbose_name}"
+                )
+        elif self.parent_device and not self.parent_module:
+            if (
+                ModuleBay.objects.filter(parent_device=self.parent_device, parent_module__isnull=True, name=self.name)
+                .exclude(pk=self.pk)
+                .exists()
+            ):
+                raise ValidationError(f"A module bay by this name already exists on {self.parent_device}")
+        elif not (self.parent_device or self.parent_module):
             raise ValidationError("Either parent_device or parent_module must be set")
-
-        # Populate the position field with the name of the module bay if it is not supplied by the user.
 
         if not self.position:
             self.position = self.name
@@ -1965,9 +1978,7 @@ class ModuleBay(PrimaryModel):
     clean.alters_data = True
 
     def save(self, *args, **kwargs):
+        if not self.present_in_database:
+            if self.parent_device is None and self.parent_module is not None:
+                self.parent_device = getattr(self.parent_module.parent_module_bay, "parent_device", None)
         super().save(*args, **kwargs)
-
-        if self.parent_device is not None:
-            # Set the has_module_bays cache key on the parent device - see Device.has_module_bays()
-            cache_key = construct_cache_key(self.parent_device, method_name="has_module_bays", branch_aware=True)
-            cache.set(cache_key, True, timeout=5)

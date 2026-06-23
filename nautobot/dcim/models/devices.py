@@ -30,7 +30,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.component_creation import is_auto_component_creation_suppressed
-from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT, MODULE_RECURSION_DEPTH_LIMIT
+from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.querysets import DeviceQuerySet
 from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
@@ -1088,12 +1088,7 @@ class Device(PrimaryModel, ConfigContextModel):
         """
         Cacheable property for determining whether this Device has any ModuleBays, and therefore may contain Modules.
         """
-        cache_key = construct_cache_key(self, method_name="has_module_bays", branch_aware=True)
-        module_bays_exists = cache.get(cache_key)
-        if module_bays_exists is None:
-            module_bays_exists = self.module_bays.exists()
-            cache.set(cache_key, module_bays_exists, timeout=5)
-        return module_bays_exists
+        return self.all_module_bays.exists()
 
     @property
     def all_modules(self):
@@ -1103,16 +1098,7 @@ class Device(PrimaryModel, ConfigContextModel):
         # Supports Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
         # This query looks for modules that are installed in a module_bay and attached to this device
         # We artificially limit the recursion to 4 levels or we would be stuck in an infinite loop.
-        recursion_depth = MODULE_RECURSION_DEPTH_LIMIT
-        qs = Module.objects.all()
-        if not self.has_module_bays:
-            # Short-circuit to avoid an expensive nested query
-            return qs.none()
-        query = Q()
-        for level in range(recursion_depth):
-            recursive_query = "parent_module_bay__parent_module__" * level
-            query = query | Q(**{f"{recursive_query}parent_module_bay__parent_device": self})
-        return qs.filter(query)
+        return Module.objects.filter(parent_module_bay__parent_device_id=self)
 
     @property
     def all_nested_devices(self):
@@ -1139,56 +1125,56 @@ class Device(PrimaryModel, ConfigContextModel):
         Return all Console Ports that are installed in the device or in modules that are installed in the device.
         """
         # TODO: These could probably be optimized to reduce the number of joins
-        return ConsolePort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return ConsolePort.objects.filter(device=self)
 
     @property
     def all_console_server_ports(self):
         """
         Return all Console Server Ports that are installed in the device or in modules that are installed in the device.
         """
-        return ConsoleServerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return ConsoleServerPort.objects.filter(device=self)
 
     @property
     def all_front_ports(self):
         """
         Return all Front Ports that are installed in the device or in modules that are installed in the device.
         """
-        return FrontPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return FrontPort.objects.filter(device=self)
 
     @property
     def all_interfaces(self):
         """
         Return all Interfaces that are installed in the device or in modules that are installed in the device.
         """
-        return Interface.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return Interface.objects.filter(device=self)
 
     @property
     def all_module_bays(self):
         """
         Return all Module Bays that are installed in the device or in modules that are installed in the device.
         """
-        return ModuleBay.objects.filter(Q(parent_device=self) | Q(parent_module__in=self.all_modules))
+        return ModuleBay.objects.filter(parent_device=self)
 
     @property
     def all_power_ports(self):
         """
         Return all Power Ports that are installed in the device or in modules that are installed in the device.
         """
-        return PowerPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return PowerPort.objects.filter(device=self)
 
     @property
     def all_power_outlets(self):
         """
         Return all Power Outlets that are installed in the device or in modules that are installed in the device.
         """
-        return PowerOutlet.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return PowerOutlet.objects.filter(device=self)
 
     @property
     def all_rear_ports(self):
         """
         Return all Rear Ports that are installed in the device or in modules that are installed in the device.
         """
-        return RearPort.objects.filter(Q(device=self) | Q(module__in=self.all_modules))
+        return RearPort.objects.filter(device=self)
 
     @property
     def radio_profile_assignments(self):
@@ -2082,7 +2068,7 @@ class Module(PrimaryModel):
         """Walk up parent chain to find the Device that this Module is installed in, if one exists."""
         if self.parent_module_bay is None:
             return None
-        return self.parent_module_bay.parent
+        return self.parent_module_bay.parent_device
 
     def clean(self):
         super().clean()
@@ -2146,7 +2132,8 @@ class Module(PrimaryModel):
                 raise ValidationError("Creating this instance would cause an infinite loop.")
             parent_module = getattr(parent_module.parent_module_bay, "parent_module", None)
 
-        # Keep track of whether the parent module bay has changed so we can update the component names
+        # Keep track of whether the parent module bay has changed so we can update
+        # the component names and cascade the root device to descendants
         parent_module_changed = (
             not is_new and not Module.objects.filter(pk=self.pk, parent_module_bay=self.parent_module_bay).exists()
         )
@@ -2161,6 +2148,32 @@ class Module(PrimaryModel):
         # Render component names when this Module is first created or when the parent module bay has changed
         if is_new or parent_module_changed:
             self.render_component_names()
+
+        # Cascade the root device to all descendants when the parent module bay has changed
+        if parent_module_changed:
+            self._cascade_device_to_descendants()
+
+    def _cascade_device_to_descendants(self):
+        # Update all ModularComponentModel subclasses directly owned by this module
+        component_classes = [
+            ConsolePort,
+            ConsoleServerPort,
+            PowerPort,
+            PowerOutlet,
+            Interface,
+            FrontPort,
+            RearPort,
+        ]
+        for component_class in component_classes:
+            component_class.objects.filter(module=self).update(device=self.device)
+
+        # Update module bay siblings
+        ModuleBay.objects.filter(parent_module=self).update(parent_device=self.device)
+
+        # Recurse into child Modules via get_children() so their descendants
+        # are also updated
+        for child_module in self.get_children().select_related("parent_module_bay__parent_device"):
+            child_module._cascade_device_to_descendants()
 
     def create_components(self):
         """Create module components from the module type definition."""
@@ -2179,7 +2192,7 @@ class Module(PrimaryModel):
         ]
         instantiated_components = []
         for model, templates in component_models:
-            model.objects.bulk_create([x.instantiate(device=None, module=self) for x in templates])
+            model.objects.bulk_create([x.instantiate(device=self.device, module=self) for x in templates])
         return instantiated_components
 
     create_components.alters_data = True
