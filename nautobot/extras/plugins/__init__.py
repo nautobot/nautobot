@@ -7,8 +7,10 @@ from logging import getLogger
 from django.conf import settings
 from django.conf.urls import include
 from django.core.exceptions import ValidationError
+from django.template import engines
 from django.template.loader import get_template
 from django.urls import clear_url_caches, get_resolver, path, URLPattern
+from jinja2 import meta
 from packaging import version
 
 from nautobot.core.apps import (
@@ -715,6 +717,11 @@ def register_plugin_menu_items(section_name, menu_items):
 
 
 class CustomValidatorContext(dict):
+    # Mapping of deprecated context variable names to a (replacement, removal_version) tuple. Used to warn
+    # authors who still reference an old variable name in a Jinja2 template rendered with this context.
+    # TODO: 4.0 remove the `object` entry (and the legacy `object` key set in __init__).
+    DEPRECATED_VARIABLES = {"object": ("obj", "4.0")}
+
     def __init__(self, obj):
         """
         If there is an active change context, meaning we are in a web request context,
@@ -736,7 +743,41 @@ class CustomValidatorContext(dict):
         if user is None:
             user = AnonymousUser()
 
-        super().__init__(object=obj, user=user)
+        # TODO: 4.0 remove the legacy `object` key; `obj` is the supported name.
+        super().__init__(obj=obj, object=obj, user=user)
+
+    @classmethod
+    def warn_about_deprecated_template_variables(cls, template_code, source=None):
+        """Log a warning for each deprecated context variable referenced in a Jinja2 template.
+
+        Any feature that renders a user-provided Jinja2 template against this context can call this to nudge
+        authors toward the supported variable names defined in `DEPRECATED_VARIABLES`.
+
+        Args:
+            template_code (str): The Jinja2 template source to inspect.
+            source (str, optional): Human-readable identifier for the template (e.g. a rule name) used in the log message.
+        """
+        if not cls.DEPRECATED_VARIABLES:
+            return
+        try:
+            parsed = engines["jinja"].env.parse(template_code)
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Don't let our desire to warn about deprecated variables break the app if the template is invalid.
+            # Syntax errors will be surfaced when the template is rendered.
+            return
+        referenced_variables = meta.find_undeclared_variables(parsed)
+        prefix = f"{source} " if source else ""
+        for deprecated, (replacement, removal_version) in cls.DEPRECATED_VARIABLES.items():
+            if deprecated in referenced_variables:
+                logger.warning(
+                    "%suses the deprecated Jinja2 variable `%s`; use `%s` instead. "
+                    "Support for `%s` will be removed in Nautobot %s.",
+                    prefix,
+                    deprecated,
+                    replacement,
+                    deprecated,
+                    removal_version,
+                )
 
 
 class CustomValidator:
@@ -765,7 +806,8 @@ class CustomValidator:
     def clean(self):
         """
         Implement custom model validation in the standard Django clean method pattern. The model instance is accessed
-        with the `object` key within `self.context`, e.g. `self.context['object']`. ValidationError must be raised to
+        with the `obj` key within `self.context`, e.g. `self.context['obj']`. (The legacy `object` key is also
+        available but is deprecated and will be removed in Nautobot 4.0.) ValidationError must be raised to
         prevent saving model instance changes, and propagate messages to the user. For convenience,
         `self.validation_error(<message>)` may be called to raise a ValidationError.
         """
