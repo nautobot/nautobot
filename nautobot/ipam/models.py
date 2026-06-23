@@ -1075,10 +1075,10 @@ class Prefix(PrimaryModel):
         Called automatically by save(); generally not intended for use outside of that context.
         """
         if self._networking_values_changed:
-            # Former child ranges no longer fully within us: move to our former parent, but only if
-            # that former parent still fully contains them. If it doesn't, Prefix.clean() should have
-            # already blocked this edit (orphaned-range validation), so reaching here with a range
-            # that fits nowhere is a guard against an inconsistent state.
+            # Ranges that no longer fit our new network move up to our former parent, which is
+            # guaranteed to contain them (they were inside our old network, which was inside that
+            # parent). The only failure is having no former parent — Prefix.clean() rejects that
+            # case first, so this raise is just a safety net.
             reparentable_ranges = self.ip_address_ranges.exclude(
                 ip_version=self.ip_version,
                 start_host__gte=self.network,

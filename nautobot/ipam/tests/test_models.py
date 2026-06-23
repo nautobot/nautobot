@@ -1877,6 +1877,149 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
             prefix.validated_save()
 
+    def test_narrowing_prefix_that_would_partially_orphan_range_is_rejected(self):
+        """Range partially overlaps the narrowed prefix (start inside, end outside).
+        Reparenting to the former parent would be wrong, so the edit must be rejected."""
+        Prefix.objects.create(
+            prefix="10.0.0.0/8",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+        )
+        mid = Prefix.objects.create(
+            prefix="10.1.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.1.1.0",
+            end_address="10.1.10.0",  # fits in /16, not in /24
+            status=self.status,
+            namespace=self.namespace,
+        )
+        # Narrow /16 to /24 — range start (10.1.1.0) is inside /24 but end (10.1.10.0) is outside.
+        mid.prefix = "10.1.1.0/24"
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            mid.validated_save()
+
+    def test_deleting_parentless_prefix_with_ranges_is_protected(self):
+        """A top-level Prefix (parent=None) containing IP Address Ranges cannot be deleted."""
+        # self.root is 101.102.0.0/16, parent=None (top-level container)
+        IPAddressRange.objects.create(
+            start_address="101.102.50.10",
+            end_address="101.102.50.20",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaises(ProtectedError):
+            self.root.delete()
+
+    def test_range_reparented_to_closer_child_prefix(self):
+        """When a narrower Prefix that fully contains a range is created, the range reparents to it."""
+        wide = Prefix.objects.create(
+            prefix="60.0.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip_range = IPAddressRange.objects.create(
+            start_address="60.0.1.10",
+            end_address="60.0.1.20",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        self.assertEqual(ip_range.parent, wide)
+        narrow = Prefix.objects.create(
+            prefix="60.0.1.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, narrow)
+
+    def test_get_available_ips_excludes_exclusive_range(self):
+        """Addresses within an exclusive IP Address Range are removed from available IPs."""
+        prefix = Prefix.objects.create(
+            prefix="70.0.0.0/28",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="70.0.0.4",
+            end_address="70.0.0.8",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=True,
+        )
+        available = prefix.get_available_ips()
+        for addr in ("70.0.0.4", "70.0.0.5", "70.0.0.6", "70.0.0.7", "70.0.0.8"):
+            self.assertNotIn(netaddr.IPAddress(addr), available)
+        # an address outside the exclusive range is still available
+        self.assertIn(netaddr.IPAddress("70.0.0.10"), available)
+
+    def test_clean_rejects_all_network_edits_that_would_orphan_a_range(self):
+        """The orphaned-range guard in clean() must fire for every kind of networking change that
+        pushes a contained range outside the new span."""
+        parent = Prefix.objects.create(
+            prefix="40.0.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="40.0.50.0",
+            end_address="40.0.60.0",
+            status=self.status,
+            namespace=self.namespace,
+        )
+
+        with self.subTest("Narrowing prefix_length pushes the range out"):
+            parent.refresh_from_db()
+            parent.prefix = "40.0.0.0/24"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                parent.validated_save()
+
+        with self.subTest("Changing network pushes the range out"):
+            parent.refresh_from_db()
+            parent.prefix = "41.0.0.0/16"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                parent.validated_save()
+
+        with self.subTest("Partial overlap (start inside, end outside) is also rejected"):
+            parent.refresh_from_db()
+            parent.prefix = "40.0.50.0/24"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                parent.validated_save()
+
+    def test_clean_blocks_orphaning_edit_before_reparent_runs(self):
+        """A network edit that would orphan a contained range is rejected by clean() before
+        reparent_ip_address_ranges() ever runs"""
+        # top-level prefix (parent=None) with a contained range
+        top = Prefix.objects.create(
+            prefix="50.0.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        self.assertIsNone(top.parent)
+        IPAddressRange.objects.create(
+            start_address="50.0.50.0",
+            end_address="50.0.60.0",
+            status=self.status,
+            namespace=self.namespace,
+        )
+
+        with patch.object(Prefix, "reparent_ip_address_ranges", return_value=None) as mock_reparent:
+            top.refresh_from_db()
+            top.prefix = "50.0.0.0/24"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                top.validated_save()
+            # clean() raised, so save() and therefore reparent never ran.
+            mock_reparent.assert_not_called()
+
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
     model = IPAddress
@@ -2503,6 +2646,28 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
                 status=self.status,
             )
         self.assertAlmostEqual(ip_range.get_percent_utilized(), 100.0)
+
+    def test_percent_utilized_count_as_utilized_is_full(self):
+        """A count_as_utilized range reports 100% regardless of actual IPs."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.60",
+            status=self.status,
+            namespace=self.namespace,
+            count_as_utilized=True,
+        )
+        self.assertEqual(ip_range.get_percent_utilized(), 100.0)
+
+    def test_percent_utilized_exclusive_is_full(self):
+        """An exclusive range reports 100% (no IPs can be created within it)."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.70",
+            end_address="10.0.0.80",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=True,
+        )
+        self.assertEqual(ip_range.get_percent_utilized(), 100.0)
 
 
 class TestRIR(ModelTestCases.BaseModelTestCase):
