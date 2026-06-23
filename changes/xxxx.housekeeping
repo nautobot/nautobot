@@ -1,0 +1,1 @@
+Added configuration to suppress warnings about MkDocs v2 that were emitted while building documentation.
