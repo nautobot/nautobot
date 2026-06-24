@@ -1,0 +1,1 @@
+Fixed an error when trying to serialize a many-to-many relationship to a model that supports cable terminations.
