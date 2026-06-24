@@ -138,3 +138,4 @@ When a Job is submitted for execution or scheduling, Nautobot checks for any rel
 | Approve scheduled Job      | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + `extras.change_scheduledjob`|
 | View Job Log Entries       | `extras.view_joblogentry`                                |
 | View Job Console Output    | `extras.view_jobconsoleentry`                            |
+| Download Job output file(s)| `extras.view_fileproxy`                                  |
