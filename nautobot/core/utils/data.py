@@ -149,6 +149,8 @@ def to_meters(length, unit):
     if unit not in valid_units:
         raise ValueError(f"Unknown unit {unit}. Must be one of the following: {', '.join(valid_units)}")
 
+    if unit == choices.CableLengthUnitChoices.UNIT_KILOMETER:
+        return length * 1000
     if unit == choices.CableLengthUnitChoices.UNIT_METER:
         return length
     if unit == choices.CableLengthUnitChoices.UNIT_CENTIMETER:
@@ -157,4 +159,4 @@ def to_meters(length, unit):
         return length * Decimal("0.3048")
     if unit == choices.CableLengthUnitChoices.UNIT_INCH:
         return length * Decimal("0.3048") * 12
-    raise ValueError(f"Unknown unit {unit}. Must be 'm', 'cm', 'ft', or 'in'.")
+    raise ValueError(f"Unknown unit {unit}. Must be 'km', 'm', 'cm', 'ft', or 'in'.")

@@ -279,7 +279,8 @@ class Cable(PrimaryModel):
         blank=True,
     )
     # Stores the normalized length (in meters) for database ordering
-    _abs_length = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
+    # max(length) = 65535, max(length_unit) = "km" --> max(_abs_length) = 65535000.0000
+    _abs_length = models.DecimalField(max_digits=13, decimal_places=4, blank=True, null=True)
 
     # Typed many-to-many accessors for each terminating model. The through model is
     # CableToCableTermination, which carries the cable_end / connector lane attributes.
