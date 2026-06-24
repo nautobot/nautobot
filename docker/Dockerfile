@@ -117,6 +117,7 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
     poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
+    poetry config keyring.enabled false && \
     poetry config installer.no-binary lxml,pyuwsgi,xmlsec
 
 ################################ Stage: python-dependencies (intermediate build target)
