@@ -15,6 +15,8 @@ from nautobot.dcim.choices import (
 )
 from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT
 from nautobot.dcim.forms import (
+    ConsoleServerPortTemplateForm,
+    ConsoleServerPortTemplateFilterForm,
     DeviceFilterForm,
     DeviceForm,
     InterfaceBulkEditForm,
@@ -41,6 +43,19 @@ from nautobot.ipam.models import VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 
+class ConsoleServerPortTemplateTestCase(FormTestCases.BaseFormTestCase):
+    form_class = ConsoleServerPortTemplateForm
+
+    def setUp(self):
+        pass
+
+    @classmethod
+    def setUpTestData(cls):
+        pass
+
+    def test_empty_filter_is_valid(self):
+        form = ConsoleServerPortTemplateFilterForm(data={})
+        self.assertTrue(form.is_valid(), form.errors)
 
 class DeviceTestCase(FormTestCases.BaseFormTestCase):
     form_class = DeviceForm
