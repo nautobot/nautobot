@@ -103,6 +103,7 @@ class Command(BaseCommand):
                 SoftwareVersionFactory,
                 VirtualDeviceContextFactory,
             )
+            from nautobot.dcim.models import CableType
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
@@ -262,7 +263,8 @@ class Command(BaseCommand):
         # children hook, above). IPAddressRangeFactory.is_exclusive is a point-in-time check
         _create_batch(IPAddressRangeFactory, 25)
         for name, defaults in DEFAULT_CABLE_TYPES.items():
-            CableTypeFactory(name=name, **defaults)
+            if not CableType.objects.filter(name=name).exists():
+                CableTypeFactory.create(name=name, **defaults)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
         _create_batch(CableTypeFactory, 10)
