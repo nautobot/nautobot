@@ -674,7 +674,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
     def test_all_types_have_filter_forms(self):
         for model_class in FeatureQuery("dynamic_groups").list_subclasses():
-            # TODO: Fix test for VMInstance instantiation
+            # TODO: Fix test for VMInterface instantiation
             if model_class is VMInterface:
                 continue
 
