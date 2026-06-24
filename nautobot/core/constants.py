@@ -239,7 +239,7 @@ NAUTOBOT_STATIC_ASSETS = {
         "icon_180": "img/professional/nautobot-professional-180x180.png",
         "icon_192": "img/professional/nautobot-professional-192x192.png",
         "favicon": "img/professional/nautobot-professional.ico",
-        "icon_mask": "img/nautobot_icon_monochrome.svg",
+        "icon_mask": "img/professional/nautobot-professional-monochrome.svg",
         "logo": "img/nautobot_logo.svg",
     },
     "enterprise": {
@@ -249,7 +249,7 @@ NAUTOBOT_STATIC_ASSETS = {
         "icon_180": "img/enterprise/nautobot-enterprise-180x180.png",
         "icon_192": "img/enterprise/nautobot-enterprise-192x192.png",
         "favicon": "img/enterprise/nautobot-enterprise.ico",
-        "icon_mask": "img/nautobot_icon_monochrome.svg",
+        "icon_mask": "img/enterprise/nautobot-enterprise-monochrome.svg",
         "logo": "img/nautobot_logo.svg",
     },
 }
