@@ -47,13 +47,6 @@ from nautobot.virtualization.models import Cluster, ClusterGroup, ClusterType
 class ConsoleServerPortTemplateTestCase(FormTestCases.BaseFormTestCase):
     form_class = ConsoleServerPortTemplateForm
 
-    def setUp(self):
-        pass
-
-    @classmethod
-    def setUpTestData(cls):
-        pass
-
     def test_empty_filter_is_valid(self):
         form = ConsoleServerPortTemplateFilterForm(data={})
         self.assertTrue(form.is_valid(), form.errors)
