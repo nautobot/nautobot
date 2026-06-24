@@ -1,1 +1,0 @@
-Updated dependency `django` to `>=5.2.15,<6.0` to mitigate CVE-2026-6873, CVE-2026-7666, CVE-2026-8404, CVE-2026-35193, and CVE-2026-48587.
