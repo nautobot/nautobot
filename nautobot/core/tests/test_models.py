@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.test import override_settings
+from django.test.utils import isolate_apps
 
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.testing import TestCase
@@ -69,6 +70,7 @@ class NaturalKeyTestCase(TestCase):
         dt = DeviceType.objects.first()
         self.assertEqual(dt.natural_key(), [dt.manufacturer.name, dt.model])
 
+    @isolate_apps("nautobot.core.tests")
     def test_natural_key_with_proxy_model(self):
         """Test that natural_key_field_lookups function returns the same value as its base class."""
 
