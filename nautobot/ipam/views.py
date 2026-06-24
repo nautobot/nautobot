@@ -1115,10 +1115,9 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
         # check_permissions() in dispatch() already enforced authentication + view permission by this point.
         if "interface" not in request.GET and "vminterface" not in request.GET:
             return redirect(self.get_return_url(request, default_return_url="ipam:ipaddress_add"))
-        interface, error_msg = retrieve_interface_or_vminterface_from_request(request)
-        if error_msg:
-            messages.warning(request, error_msg)
-            return redirect(self.get_return_url(request, default_return_url="ipam:ipaddress_add"))
+        # An *invalid* interface/vminterface is already handled by dispatch() (it warns and redirects
+        # before this action runs), so the interface is guaranteed valid here.
+        interface, _ = retrieve_interface_or_vminterface_from_request(request)
 
         form = forms.IPAddressAssignForm(data=request.GET)
         table = None
