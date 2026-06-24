@@ -1,3 +1,0 @@
-Updated documentation dependency `mkdocstrings-python` to `~2.0.4`.
-Updated development dependency `faker` to `^40.21.0`.
-Updated development dependency `ruff` to `~0.15.16`.
