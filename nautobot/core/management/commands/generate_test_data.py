@@ -178,6 +178,7 @@ class Command(BaseCommand):
                 sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
                 self.stdout.write(f"  SHA256: {sha256_hash}")
 
+        self.stdout.write("Creating default Role instances...")
         for model_path, choiceset in ROLE_CHOICESET_MAP.items():
             content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
             choices = export_metadata_from_choiceset(choiceset, metadatamodel="role")
@@ -187,11 +188,13 @@ class Command(BaseCommand):
                 defaults.pop("slug")
                 try:
                     role = Role.objects.get(name=defaults["name"])
+                    role.content_types.add(content_type)
                 except Role.DoesNotExist:
-                    role = RoleFactory(**defaults)
-                role.content_types.add(content_type)
+                    role = RoleFactory.create(**defaults, content_types=[content_type], using=db_name)
 
         _create_batch(RoleFactory, 20)
+
+        self.stdout.write("Creating default Status instances...")
         for model_path, choiceset in STATUS_CHOICESET_MAP.items():
             content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
             choices = export_metadata_from_choiceset(choiceset, metadatamodel="status")
@@ -201,9 +204,9 @@ class Command(BaseCommand):
                 defaults.pop("slug")
                 try:
                     status = Status.objects.get(name=defaults["name"])
+                    status.content_types.add(content_type)
                 except Status.DoesNotExist:
-                    status = StatusFactory(**defaults)
-                status.content_types.add(content_type)
+                    status = StatusFactory.create(**defaults, content_types=[content_type], using=db_name)
 
         _create_batch(StatusFactory, 10)
         # Ensure that we have some tags that are applicable to all relevant content-types
