@@ -1,6 +1,7 @@
 from ipaddress import IPv6Address, IPV6LENGTH, IPv6Network
 import itertools
 
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Model
 import factory
@@ -89,11 +90,18 @@ class PrimaryModelFactory(BaseModelFactory):
 
     @factory.post_generation
     def tags(self, create, extracted, **kwargs):
+        # stay idempotent - in some cases this may be called repeatedly
+        if self.tags.exists():
+            return
+
+        from nautobot.extras.factory import TaggedItemFactory
+
         if create:
-            if extracted:
-                self.tags.set(extracted)
-            else:
-                self.tags.set(get_random_instances(Tag.objects.get_for_model(self._meta.model)))
+            if not extracted:
+                extracted = get_random_instances(Tag.objects.get_for_model(self._meta.model))
+            content_type = ContentType.objects.get_for_model(self)
+            for tag in extracted:
+                TaggedItemFactory.create(content_type=content_type, object_id=self.id, tag=tag)
 
 
 def _get_queryset_from_model_or_queryset_or_lambda(model_or_queryset_or_lambda):
@@ -184,7 +192,7 @@ def get_random_instances(model_or_queryset_or_lambda, minimum=0, maximum=None):
         maximum (int): Maximum number of objects to return, or None for no limit
     """
     branch = factory.random.randgen.randint(0, 2)
-    queryset = _get_queryset_from_model_or_queryset_or_lambda(model_or_queryset_or_lambda)
+    queryset = _get_queryset_from_model_or_queryset_or_lambda(model_or_queryset_or_lambda).distinct()
     count = queryset.count()
     if maximum is None:
         maximum = count
