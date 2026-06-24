@@ -1251,7 +1251,9 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         )
 
 
-@task(help={"fix": "Automatically apply formatting and linting recommendations where supported. May not fix all issues."})
+@task(
+    help={"fix": "Automatically apply formatting and linting recommendations where supported. May not fix all issues."}
+)
 def lint(context, fix=False):
     """Run all linters."""
     hadolint(context)
