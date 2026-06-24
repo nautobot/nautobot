@@ -6048,7 +6048,7 @@ class PathTraceViewTestCase(ModelViewTestCase):
 
         # The lane's CablePath is one of the trunk's; select it explicitly via cablepath_id.
         lane = child.get_breakout_lane()
-        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane["far_connector"])
+        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane.far_connector)
 
         url = reverse("dcim:interface_trace", args=[trunk.pk])
         response = self.client.get(url + f"?cablepath_id={path.pk}")

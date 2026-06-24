@@ -1928,12 +1928,12 @@ class CablePathTestCase(TestCase):
 
         lane1 = children[1].get_breakout_lane()
         self.assertIsNotNone(lane1)
-        self.assertEqual(lane1["position"], 1)
-        self.assertEqual(lane1["far_termination"], far_terminations[1])
+        self.assertEqual(lane1.position, 1)
+        self.assertEqual(lane1.far_termination, far_terminations[1])
 
         lane2 = children[2].get_breakout_lane()
-        self.assertEqual(lane2["position"], 2)
-        self.assertEqual(lane2["far_termination"], far_terminations[2])
+        self.assertEqual(lane2.position, 2)
+        self.assertEqual(lane2.far_termination, far_terminations[2])
 
     def test_get_breakout_lane_unoccupied_far_connector(self):
         """A child mapping to a connector with no termination resolves, with far_termination None."""
@@ -1948,8 +1948,8 @@ class CablePathTestCase(TestCase):
         )
         lane3 = child3.get_breakout_lane()
         self.assertIsNotNone(lane3)
-        self.assertEqual(lane3["position"], 3)
-        self.assertIsNone(lane3["far_termination"])
+        self.assertEqual(lane3.position, 3)
+        self.assertIsNone(lane3.far_termination)
 
     def test_get_breakout_lane_position_out_of_range(self):
         """A breakout_position beyond the trunk connector's position count yields no lane."""
@@ -2072,7 +2072,7 @@ class CablePathTestCase(TestCase):
         Cable(termination_a=trunk, termination_b=frontport, cable_type=breakout_type, status=self.status).save()
         Cable(termination_a=rearport, termination_b=final, status=self.status).save()
 
-        self.assertEqual(child.get_breakout_lane()["far_termination"], frontport)
+        self.assertEqual(child.get_breakout_lane().far_termination, frontport)
         self.assertEqual(child.get_breakout_connected_endpoint(), final)
 
     def test_get_breakout_connected_endpoint_no_lane(self):

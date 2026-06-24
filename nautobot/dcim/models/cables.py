@@ -1,5 +1,7 @@
 from collections import defaultdict
+from dataclasses import dataclass
 import logging
+from typing import Optional
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -41,16 +43,62 @@ from nautobot.extras.utils import extras_features
 # would be the much more invasive but much more "correct" fix.
 from nautobot.core.models.generics import BaseModel, PrimaryModel  # isort: skip
 
-from .device_components import FrontPort, RearPort
+from .device_components import CableTermination, FrontPort, RearPort
 
 __all__ = (
     "Cable",
+    "CableLane",
+    "CableLaneSide",
     "CablePath",
     "CableToCableTermination",
     "CableType",
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CableLaneSide:
+    """One side (A or B) of a `CableLane`: its connector/position and resolved termination.
+
+    `termination` is the actual termination object (e.g. an `Interface`) or `None` when that
+    side of the lane is unconnected.
+    """
+
+    connector: int
+    position: int
+    termination: Optional[CableTermination]
+
+
+@dataclass(frozen=True)
+class CableLane:
+    """A single logical lane of a cable's connector mapping, with both sides' terminations resolved.
+
+    Note that multiple lanes which share a far-/near-side connector resolve to the same termination
+    object — the cable's mapping is what makes them distinct logical lanes, not the termination row.
+
+    Use `side()` to access a side by `cable_end` ("A"/"B") rather than reaching for the
+    `a_*`/`b_*` attributes by name; this keeps callers that work relative to a trunk/fan-out
+    side from constructing attribute names from strings.
+    """
+
+    lane: int
+    label: Optional[str]
+    a_connector: int
+    a_position: int
+    b_connector: int
+    b_position: int
+    a_termination: Optional[CableTermination]
+    b_termination: Optional[CableTermination]
+
+    def side(self, cable_end):
+        """Return the `CableLaneSide` for `cable_end` ("A" or "B", case-insensitive)."""
+        end = cable_end.lower()
+        return CableLaneSide(
+            connector=getattr(self, f"{end}_connector"),
+            position=getattr(self, f"{end}_position"),
+            termination=getattr(self, f"{end}_termination"),
+        )
 
 
 #
@@ -557,9 +605,9 @@ class Cable(PrimaryModel):
 
     def get_lanes(self):
         """
-        Return a list of lane dicts, each containing lane number, connector/position info, and
-        actual termination objects (or None for unconnected). Standard (non-breakout) cables
-        return a single-element list representing the implicit one-lane connection.
+        Return a list of `CableLane` instances, each carrying the lane number, connector/position
+        info, and actual termination objects (or None for unconnected). Standard (non-breakout)
+        cables return a single-element list representing the implicit one-lane connection.
 
         Note that multiple lanes which share a far-/near-side connector resolve to the same
         termination object — the cable's mapping is what makes them distinct logical lanes,
@@ -573,16 +621,16 @@ class Cable(PrimaryModel):
             a_endpoint = endpoint_lookup.get(("A", entry["a_connector"]))
             b_endpoint = endpoint_lookup.get(("B", entry["b_connector"]))
             lanes.append(
-                {
-                    "lane": lane_number,
-                    "label": entry.get("label"),
-                    "a_connector": entry["a_connector"],
-                    "a_position": entry["a_position"],
-                    "b_connector": entry["b_connector"],
-                    "b_position": entry["b_position"],
-                    "a_termination": a_endpoint.termination if a_endpoint else None,
-                    "b_termination": b_endpoint.termination if b_endpoint else None,
-                }
+                CableLane(
+                    lane=lane_number,
+                    label=entry.get("label"),
+                    a_connector=entry["a_connector"],
+                    a_position=entry["a_position"],
+                    b_connector=entry["b_connector"],
+                    b_position=entry["b_position"],
+                    a_termination=a_endpoint.termination if a_endpoint else None,
+                    b_termination=b_endpoint.termination if b_endpoint else None,
+                )
             )
         return lanes
 

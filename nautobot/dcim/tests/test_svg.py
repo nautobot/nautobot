@@ -694,7 +694,7 @@ class CableTraceSVGTestCase(TestCase):
         `?cablepath_id=` selection) renders the same single-lane, subinterface-on-top trace."""
         leaf, trunk, child = self._make_breakout_trunk_terminus()
         lane = child.get_breakout_lane()
-        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane["far_connector"])
+        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane.far_connector)
 
         diagram = CableTraceSVG(child, cable_path=path)
         self.assertEqual(diagram.trunk_origin, trunk)

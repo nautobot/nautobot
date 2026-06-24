@@ -1,5 +1,7 @@
+from dataclasses import dataclass
 from decimal import Decimal
 import re
+from typing import Optional
 import warnings
 
 from django.contrib.contenttypes.fields import GenericRelation
@@ -521,25 +523,28 @@ class CableTermination(models.Model):
         # Only applies when *this* termination is on the fan-out side, opposite the trunk.
         if my_row.cable_end == trunk_end:
             return []
-        fanout_side, trunk_side = my_row.cable_end.lower(), trunk_end.lower()
         results = []
         for lane in cable.get_lanes():
-            if lane[f"{fanout_side}_connector"] != my_row.connector:
+            fanout = lane.side(my_row.cable_end)
+            if fanout.connector != my_row.connector:
                 continue
-            trunk_termination = lane[f"{trunk_side}_termination"]
+            trunk = lane.side(trunk_end)
             # Child interfaces are an Interface-only concept; ignore any other trunk peer type.
-            if not isinstance(trunk_termination, Interface):
+            if not isinstance(trunk.termination, Interface):
                 continue
-            position = lane[f"{trunk_side}_position"]
             child_interface = next(
-                (child for child in trunk_termination.child_interfaces.all() if child.breakout_position == position),
+                (
+                    child
+                    for child in trunk.termination.child_interfaces.all()
+                    if child.breakout_position == trunk.position
+                ),
                 None,
             )
             results.append(
                 {
-                    "trunk_interface": trunk_termination,
-                    "position": position,
-                    "label": lane["label"],
+                    "trunk_interface": trunk.termination,
+                    "position": trunk.position,
+                    "label": lane.label,
                     "child_interface": child_interface,
                 }
             )
@@ -578,14 +583,13 @@ class CableTermination(models.Model):
         )
         if far_connector is None:
             return None
-        trunk_side = trunk_end.lower()
-        far_side = "b" if trunk_end == "A" else "a"
+        far_end = "B" if trunk_end == "A" else "A"
         position = next(
             (
-                lane[f"{trunk_side}_position"]
+                lane.side(trunk_end).position
                 for lane in cable.get_lanes()
-                if lane[f"{trunk_side}_connector"] == trunk_row.connector
-                and lane[f"{far_side}_connector"] == far_connector
+                if lane.side(trunk_end).connector == trunk_row.connector
+                and lane.side(far_end).connector == far_connector
             ),
             None,
         )
@@ -1085,6 +1089,21 @@ class BaseInterface(RelationshipModel):
     remove_ip_addresses.alters_data = True
 
 
+@dataclass(frozen=True)
+class BreakoutLane:
+    """The breakout lane a trunk child (sub)interface maps to, as returned by `Interface.get_breakout_lane`.
+
+    `position` is the child's position on the trunk connector; `far_connector` is the breakout-side
+    connector that lane surfaces on, and `far_termination` is the one-hop termination that connector
+    carries (or `None` when the far connector is currently unoccupied).
+    """
+
+    position: int
+    label: Optional[str]
+    far_connector: int
+    far_termination: Optional[CableTermination]
+
+
 @extras_features(
     "cable_terminations",
     "custom_links",
@@ -1429,16 +1448,17 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         trunk_end = cable.cable_type.trunk_end
         if parent_row.cable_end != trunk_end:
             return None
-        trunk_side = trunk_end.lower()
-        far_side = "b" if trunk_end == "A" else "a"
+        far_end = "B" if trunk_end == "A" else "A"
         for lane in cable.get_lanes():
-            if lane[f"{trunk_side}_connector"] == parent_row.connector and lane[f"{trunk_side}_position"] == position:
-                return {
-                    "position": position,
-                    "label": lane["label"],
-                    "far_connector": lane[f"{far_side}_connector"],
-                    "far_termination": lane[f"{far_side}_termination"],
-                }
+            trunk = lane.side(trunk_end)
+            if trunk.connector == parent_row.connector and trunk.position == position:
+                far = lane.side(far_end)
+                return BreakoutLane(
+                    position=position,
+                    label=lane.label,
+                    far_connector=far.connector,
+                    far_termination=far.termination,
+                )
         return None
 
     def get_breakout_lane_cable_path(self):
@@ -1459,7 +1479,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         # re-query once per row and reintroduce the N+1 this prefetch exists to avoid. See
         # `Interface.cable_columns_prefetch_related_fields`.
         for path in self.parent_interface.cable_paths.all():
-            if path.peer_connector == lane["far_connector"]:
+            if path.peer_connector == lane.far_connector:
                 return path
         return None
 
@@ -1486,7 +1506,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         """
         for child in self.child_interfaces.all():
             lane = child.get_breakout_lane()
-            if lane is not None and lane["far_connector"] == peer_connector:
+            if lane is not None and lane.far_connector == peer_connector:
                 return child
         return None
 

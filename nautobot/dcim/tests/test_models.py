@@ -37,6 +37,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CableLane,
     CablePath,
     CableToCableTermination,
     CableType,
@@ -3359,16 +3360,16 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual("", self.cable.get_mapping_diagram_svg())
         self.assertEqual(
             [
-                {
-                    "lane": 1,
-                    "label": None,
-                    "a_connector": 1,
-                    "a_position": 1,
-                    "b_connector": 1,
-                    "b_position": 1,
-                    "a_termination": interface1,
-                    "b_termination": interface2,
-                },
+                CableLane(
+                    lane=1,
+                    label=None,
+                    a_connector=1,
+                    a_position=1,
+                    b_connector=1,
+                    b_position=1,
+                    a_termination=interface1,
+                    b_termination=interface2,
+                ),
             ],
             self.cable.get_lanes(),
         )

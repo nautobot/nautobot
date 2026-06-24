@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('dcim', '0093_backpopulate_device_on_modular_component'),
+        ("dcim", "0093_backpopulate_device_on_modular_component"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cable',
-            name='_abs_length',
+            model_name="cable",
+            name="_abs_length",
             field=models.DecimalField(blank=True, decimal_places=4, max_digits=13, null=True),
         ),
     ]
