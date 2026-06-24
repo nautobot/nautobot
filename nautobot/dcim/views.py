@@ -3893,10 +3893,11 @@ class BulkComponentCreateUIViewSetMixin:
                                     ) in component_form.errors.as_data().items():
                                         for e in errors:
                                             err_str = ", ".join(e)
-                                            form.add_error(
-                                                field,
-                                                f"{obj} {name}: {err_str}",
-                                            )
+                                            if field not in form.fields:
+                                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                                form.add_error(None, f"{obj} {name}: {field}: {err_str}")
+                                            else:
+                                                form.add_error(field, f"{obj} {name}: {err_str}")
 
                         # Enforce object-level permissions
                         if component_queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
