@@ -1,0 +1,17 @@
+Added Filter Forms For Dynamic Groups.
+
+Added base class `DeviceComponentTemplateFilterForm`.
+Added base class `ModularDeviceComponentTemplateFilterForm`.
+
+Created `ConsolePortTemplateFilterForm`.
+Created `ConsoleServerPortTemplateFilterForm`.
+Created `PowerPortTemplateFilterForm`.
+Created `PowerOutletTemplateFilterForm`.
+Created `InterfaceTemplateFilterForm`.
+Created `FrontPortTemplateFilterForm`.
+Created `RearPortTemplateFilterForm`.
+Created `DeviceBayTemplateFilterForm`.
+Created `ModuleBayTemplateFilterForm`.
+
+Added `ConsoleServerPortTemplateTestCase`.
+Added `test_all_types_have_filter_forms` to dynamically generate filter form tests.
