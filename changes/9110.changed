@@ -1,0 +1,3 @@
+Changed Prefix utilization to include IP Address Ranges marked as fully utilized, without double-counting IP Addresses that fall within such a range.
+Changed the Prefix available-IP calculation to exclude addresses covered by exclusive IP Address Ranges.
+Changed Prefix saves to reparent contained IP Address Ranges when a Prefix's network is created or modified, keeping each range attached to the closest Prefix that fully contains it.
