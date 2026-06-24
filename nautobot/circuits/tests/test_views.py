@@ -43,6 +43,18 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
         }
 
+    def test_provider_contacts_rendered_as_markdown(self):
+        """The noc_contact and admin_contact fields are rendered as Markdown on the detail view (#8677)."""
+        self.add_permissions("circuits.view_provider")
+        provider = Provider.objects.create(
+            name="Markdown Provider",
+            noc_contact="**NOC bold**",
+            admin_contact="*Admin italic*",
+        )
+        response = self.client.get(provider.get_absolute_url())
+        self.assertBodyContains(response, "<strong>NOC bold</strong>", html=True)
+        self.assertBodyContains(response, "<em>Admin italic</em>", html=True)
+
 
 class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = CircuitType
