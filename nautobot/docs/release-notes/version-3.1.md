@@ -148,6 +148,56 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.5 (2026-06-22)
+
+### Security in v3.1.5
+
+- [#8800](https://github.com/nautobot/nautobot/issues/8800) - Refreshed UI `package-lock.json`, including updating development dependency `shell-quote` to `1.8.4` to mitigate CVE-2026-9277.
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated dependency `django` to `>=5.2.15,<6.0` to mitigate CVE-2026-6873, CVE-2026-7666, CVE-2026-8404, CVE-2026-35193, and CVE-2026-48587.
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `pyjwt` to `2.13.0` to mitigate multiple security vulnerabilities. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
+- [#9096](https://github.com/nautobot/nautobot/issues/9096) - Updated dependency `cryptography` to `>=48.0.1,<49` to mitigate GHSA-537c-gmf6-5ccf.
+
+### Added in v3.1.5
+
+- [#9050](https://github.com/nautobot/nautobot/issues/9050) - Added `enable_scheduling option` to the `_JobModalButton` UI component.
+- [#9067](https://github.com/nautobot/nautobot/issues/9067) - Added a "Queue Name" column to the Job Results table, displaying the Celery queue each job result was dispatched to.
+- [#9070](https://github.com/nautobot/nautobot/issues/9070) - Added existing utility `get_celery_queues()` to the `nautobot.apps.jobs` public API.
+
+### Changed in v3.1.5
+
+- [#9006](https://github.com/nautobot/nautobot/issues/9006) - Improved the Relationship create/edit form UX for symmetric relationship types by mirroring source-side values to destination-side fields and temporarily disabling destination-side inputs.
+
+### Fixed in v3.1.5
+
+- [#9016](https://github.com/nautobot/nautobot/issues/9016) - Fixed incorrect slug for `128GFC_QSFP28` - was "128gfc-sfp28" instead of "128gfc-qsfp28".
+- [#9043](https://github.com/nautobot/nautobot/issues/9043) - Disabled Poetry keyring configuration which caused clean startups of local development to fail. See documentation [here](https://python-poetry.org/docs/repositories/#configuring-credentials).
+- [#9072](https://github.com/nautobot/nautobot/issues/9072) - Fixed the REST API incorrectly requiring the `protocol` field when creating or updating an Interface Redundancy Group.
+- [#9072](https://github.com/nautobot/nautobot/issues/9072) - Fixed a `NoReverseMatch` server error when viewing an Interface or Interface Redundancy Group detail page.
+- [#9102](https://github.com/nautobot/nautobot/issues/9102) - Added logic to prevent `import nautobot.apps.testing` from throwing an exception when Splinter or Selenium are not installed.
+
+### Dependencies in v3.1.5
+
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated dependency `django-timezone-field` to `>=7.2.2,<7.3`.
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated dependency `pyuwsgi` to `>=2.0.30.post1,<2.1`.
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated dependency `regex` to `>=2026.5.9`.
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `social-auth-app-django` to `>=5.9.0,<5.10`.
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `social-auth-core` to `>=4.9.1,<4.10`.
+
+### Documentation in v3.1.5
+
+- [#9028](https://github.com/nautobot/nautobot/issues/9028) - Added development best practices documentation for the common `on_delete` options for foreign keys.
+
+### Housekeeping in v3.1.5
+
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated documentation dependency `mkdocstrings-python` to `~2.0.4`.
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated development dependency `faker` to `^40.21.0`.
+- [#8975](https://github.com/nautobot/nautobot/issues/8975) - Updated development dependency `ruff` to `~0.15.16`.
+- [#9056](https://github.com/nautobot/nautobot/issues/9056) - Moved directory-urls and strict options from tasks.py to mkdocs.yml.
+- [#9080](https://github.com/nautobot/nautobot/issues/9080) - Fixed intermittent Pylint CI failures by disabling parallel Pylint execution by default.
+- [#9080](https://github.com/nautobot/nautobot/issues/9080) - Updated `invoke pylint` task to support additional optional parameters.
+- [#9080](https://github.com/nautobot/nautobot/issues/9080) - Fixed Pylint and Ruff not covering the `scripts/` directory.
+- [#9088](https://github.com/nautobot/nautobot/issues/9088) - Disabled Ruff rule RUF003 `ambiguous-unicode-character-comment` to allow the use of characters like `×` (multiplication) specifically in comments.
+
 ## v3.1.4 (2026-06-08)
 
 ### Security in v3.1.4
