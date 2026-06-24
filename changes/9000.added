@@ -1,0 +1,1 @@
+Added an `EventConsumer` framework and `EventConsumerJob` base class to `nautobot.core.events`, providing a symmetric consume-side counterpart to the existing `EventBroker` notification system.

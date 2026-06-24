@@ -1,0 +1,1 @@
+Added `RedisEventConsumer` and the `run_event_consumers` management command, completing the consume-side counterpart to the existing `RedisEventBroker`.
