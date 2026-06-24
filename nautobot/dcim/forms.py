@@ -212,6 +212,7 @@ class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
         label="Module",
     )
 
+
 class DeviceComponentTemplateFilterForm(NautobotFilterForm):
     q = forms.CharField(required=False, label="Search")
     device_type = DynamicModelMultipleChoiceField(
@@ -220,12 +221,14 @@ class DeviceComponentTemplateFilterForm(NautobotFilterForm):
         label="Device Type",
     )
 
+
 class ModularDeviceComponentTemplateFilterForm(DeviceComponentTemplateFilterForm):
     module_type = DynamicModelMultipleChoiceField(
         queryset=ModuleType.objects.all(),
         required=False,
         label="Module Type",
     )
+
 
 class InterfaceCommonForm(forms.Form):
     def clean(self):
@@ -1326,6 +1329,7 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
 class ConsoleServerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
     model = ConsoleServerPortTemplate
 
+
 class PowerPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = PowerPortTemplate
@@ -1915,6 +1919,7 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
 
 class ModuleBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
     model = ModuleBayTemplate
+
 
 #
 # Component template import forms

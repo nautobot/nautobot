@@ -35,7 +35,6 @@ from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     RelationshipTypeChoices,
 )
-
 from nautobot.extras.filters import DynamicGroupFilterSet, DynamicGroupMembershipFilterSet
 from nautobot.extras.models import (
     CustomField,
@@ -48,18 +47,11 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-
-from nautobot.extras.utils import (
-    FeatureQuery,
-    fixup_dynamic_group_group_types
-)
+from nautobot.extras.utils import FeatureQuery, fixup_dynamic_group_group_types
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.ipam.querysets import PrefixQuerySet
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import (
-    VirtualMachine,
-    VMInterface
-)
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 
 class DynamicGroupTestBase(TestCase):
@@ -689,8 +681,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
             with self.subTest(model_class=model_class):
                 try:
                     test_dynamic_group = DynamicGroup.objects.create(
-                        name="Placeholder Dynamic Group",
-                        content_type=ContentType.objects.get_for_model(model_class)
+                        name="Placeholder Dynamic Group", content_type=ContentType.objects.get_for_model(model_class)
                     )
 
                     self.assertIsNotNone(test_dynamic_group.generate_filter_form())
