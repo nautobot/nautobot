@@ -13,7 +13,7 @@ from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.propagate import get_global_textmap, set_global_textmap
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanLimits, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
@@ -46,6 +46,10 @@ class InstrumentFunctionTest(testing.TestCase):
 
     def test_instrument_sets_tracer_provider(self):
         """instrument() should configure a TracerProvider as the global provider."""
+        # instrument() reads `from nautobot.core import settings` directly because it runs before
+        # django.setup() (see instrument()'s docstring for why that ordering is required), so
+        # django.conf.settings is not configured and override_settings() would have no effect here.
+        # Patch the module attribute that instrument() actually reads.
         with patch.multiple(
             "nautobot.core.cli.opentelemetry.settings",
             OTEL_TRACES_EXPORTER=["none"],
@@ -73,7 +77,12 @@ class InstrumentExporterBranchTest(testing.TestCase):
         super().tearDown()
 
     def _patch_settings(self, **overrides):
-        """Patch instrument()'s view of settings with sensible defaults that disable noisy layers."""
+        """Patch instrument()'s view of settings with sensible defaults that disable noisy layers.
+
+        instrument() reads `from nautobot.core import settings` directly because it runs before
+        django.setup() (see instrument()'s docstring for why), so override_settings() does not reach
+        it; we patch the module attribute that instrument() reads.
+        """
         defaults = {
             "OTEL_TRACES_EXPORTER": ["none"],
             "OTEL_METRICS_EXPORTER": ["none"],
@@ -234,7 +243,7 @@ class RequestsInstrumentationTraceparentTest(testing.TestCase):
         tracer = self._provider.get_tracer(__name__)
 
         with patch("requests.adapters.HTTPAdapter.send", mock_adapter_send):
-            with tracer.start_as_current_span("test-parent-span"):
+            with tracer.start_as_current_span("test-parent-span"):  # pylint: disable=not-context-manager
                 requests.get("https://example.com/api/test", timeout=5)
 
         self.assertIn(
@@ -323,6 +332,30 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         self.assertEqual(attrs.get("graphql.variables"), json.dumps(self._SAMPLE_VARIABLES))
         self.assertEqual(attrs.get("graphql.operation.type"), "query")
         self.assertEqual(attrs.get("http.status_code"), 200)
+
+    def test_long_document_truncated_by_span_limits(self):
+        """A large graphql.document is truncated by the SDK's OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
+
+        The middleware itself does not truncate; it relies on the standard OTel span attribute value
+        length limit, which the production TracerProvider picks up from the environment. Here we build a
+        provider with an explicit limit to confirm our graphql.document attribute is subject to it.
+        """
+        limit = 64
+        limited_provider = TracerProvider(span_limits=SpanLimits(max_span_attribute_length=limit))
+        limited_provider.add_span_processor(SimpleSpanProcessor(self._exporter))
+        self._mock_trace.get_tracer.return_value = limited_provider.get_tracer("nautobot.graphql")
+
+        long_query = "query Big { sites { " + ("name " * 200) + "} }"
+        middleware = self._make_middleware(status_code=200)
+        request = self._build_request(query=long_query)
+
+        middleware(request)
+
+        spans = self._exporter.get_finished_spans()
+        self.assertEqual(len(spans), 1)
+        document = spans[0].attributes.get("graphql.document")
+        self.assertEqual(len(document), limit, "graphql.document should be truncated to the span attribute limit.")
+        self.assertEqual(document, long_query[:limit])
 
     def test_log_emitted_with_correct_fields(self):
         """The INFO log for a GraphQL request must include username, IP, query, variables, status, and duration."""
