@@ -939,6 +939,51 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # ALL available buttons gone — outer AND nested
         self.assertBodyContains(response, "btn btn-xs btn-success", count=0)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_pk_checkbox_only_for_ipaddresses(self):
+        """The bulk-select checkbox renders only for real IPAddress rows, not for IPRange or available rows."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.3",
+            end_address="10.0.0.4",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        addr = IPAddress.objects.create(
+            address="10.0.0.6/29",
+            namespace=self.namespace,
+            status=ip_status,
+        )
+
+        self.add_permissions("ipam.change_ipaddress", "ipam.delete_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertInHTML(
+            f'<input type="checkbox" name="pk" value="{addr.pk}" '
+            f'class="form-check-input nb-form-check-input-sm mt-2" />',
+            content,
+        )
+
+        # Real IPAddress row HAS a select checkbox carrying its pk
+        self.assertIn(f'name="pk" value="{addr.pk}"', content)
+
+        # Exactly one such checkbox — none for the IPRange row, none for available rows
+        self.assertBodyContains(response, 'name="pk" value=', count=1)
+
+        # The IPRange's pk never appears as a checkbox value
+        self.assertNotIn(f'name="pk" value="{ip_range.pk}"', content)
+
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
