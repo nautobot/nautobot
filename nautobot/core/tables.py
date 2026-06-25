@@ -245,6 +245,7 @@ class BaseTable(django_tables2.Table):
                         # For some reason get_related_field_for_models(Tag, DynamicGroup) gives a M2M with the name
                         # `dynamicgroup`, which isn't actually a field on Tag. May be a django-taggit issue?
                         # Workaround for now: make sure the field actually exists on the model under this name:
+                        getattr(model, first_relation)
                         intermediate_model = model._meta.get_field(first_relation).related_model
                     except (AttributeError, FieldDoesNotExist):
                         # Couldn't resolve the lookup field; skip the display prefetch (the count annotation
