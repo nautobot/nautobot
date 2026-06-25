@@ -25,14 +25,14 @@
     {% endif %}
 {% endwith %}
 {% if settings.BRANDING_FILEPATHS.css %}
-    <link rel="stylesheet" id="custom-css" href="{% custom_branding_or_static 'css' None %}">
+    <link rel="stylesheet" id="custom-css" href="{% custom_branding_or_static 'css' %}">
 {% endif %}
-<link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' 'img/nautobot_icon_180x180.png' %}">
-<link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' 'img/nautobot_icon_32x32.png' %}">
-<link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' 'img/nautobot_icon_16x16.png' %}">
-<link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' 'img/nautobot_icon_192x192.png' %}">
-<link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' 'img/nautobot_icon_monochrome.png' %}">
-<link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' 'img/favicon.ico' %}">
+<link rel="apple-touch-icon" sizes="180x180" href="{% custom_branding_or_static 'icon_180' %}">
+<link rel="icon" type="image/png" sizes="32x32" href="{% custom_branding_or_static 'icon_32' %}">
+<link rel="icon" type="image/png" sizes="16x16" href="{% custom_branding_or_static 'icon_16' %}">
+<link rel="icon" type="image/png" sizes="192x192" href="{% custom_branding_or_static 'icon_192' %}">
+<link rel="mask-icon" type="image/png" color="#0097ff" href="{% custom_branding_or_static 'icon_mask' %}">
+<link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' %}">
 <meta name="msapplication-TileColor" content="#2d89ef">
 <meta name="theme-color" content="#ffffff">
 <meta charset="UTF-8">
