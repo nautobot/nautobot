@@ -27,6 +27,15 @@ from nautobot.extras import choices, models
 logger = logging.getLogger(__name__)
 
 
+def _linked_count_to_attr(lookup):
+    """Derive the `Prefetch(to_attr=...)` name used by `LinkedCountColumn` for a (possibly nested) lookup.
+
+    Django forbids `__` in a `to_attr`, so a nested lookup like `"interfaces__device"` becomes
+    `"interfaces_device_list"`. A non-nested lookup like `"interfaces"` becomes `"interfaces_list"`.
+    """
+    return lookup.replace("__", "_") + "_list"
+
+
 class BaseTable(django_tables2.Table):
     """
     Default table for object lists.
@@ -230,17 +239,27 @@ class BaseTable(django_tables2.Table):
                     count_fields.append((column.name, column_model, reverse_lookup, distinct))
                     try:
                         lookup = column.column.lookup or get_related_field_for_models(model, column_model).name
+                        # `lookup` may be a nested lookup like `"interfaces__device"`; only the first segment is a
+                        # field on `model`. The remainder is followed on the related model via select_related below.
+                        first_relation, _, remainder = lookup.partition("__")
                         # For some reason get_related_field_for_models(Tag, DynamicGroup) gives a M2M with the name
                         # `dynamicgroup`, which isn't actually a field on Tag. May be a django-taggit issue?
                         # Workaround for now: make sure the field actually exists on the model under this name:
-                        getattr(model, lookup)
-                    except AttributeError:
-                        lookup = None
-                    if lookup is not None:
-                        # Also attempt to prefetch the first matching record for display - see LinkedCountColumn
+                        intermediate_model = model._meta.get_field(first_relation).related_model
+                    except (AttributeError, FieldDoesNotExist):
+                        # Couldn't resolve the lookup field; skip the display prefetch (the count annotation
+                        # below still applies, so the column degrades to a count badge).
+                        pass
+                    else:
+                        # Also attempt to prefetch the first matching record for display - see LinkedCountColumn.
+                        # Use order_by() because we don't care about ordering here and it's potentially expensive.
+                        related_qs = intermediate_model.objects.order_by()
+                        if remainder:
+                            # Follow the trailing chain (e.g. `device`) via select_related so the render-time
+                            # attribute walk is free.
+                            related_qs = related_qs.select_related(remainder)
                         prefetch_fields.append(
-                            # Use order_by() because we don't care about ordering here and it's potentially expensive
-                            Prefetch(lookup, column_model.objects.order_by()[:1], to_attr=f"{lookup}_list")
+                            Prefetch(first_relation, related_qs[:1], to_attr=_linked_count_to_attr(lookup))
                         )
                     continue
 
@@ -644,7 +663,8 @@ class LinkedCountColumn(django_tables2.Column):
         lookup (str, optional): The field name on the base record that can be used to query the related objects.
             If not specified, `nautobot.core.utils.lookup.get_related_field_for_models()` will be called at render time
             to attempt to intelligently find the appropriate field.
-            TODO: this currently does *not* support nested lookups via `__`. That may be solvable in the future.
+            Nested lookups via `__` are supported (e.g. `"interfaces__device"`): the first segment is prefetched
+            and the remaining segments are followed on the related object via `select_related`.
         reverse_lookup (str, optional): The reverse lookup parameter to use to derive the count.
             If not specified, the first key in `url_params` will be implicitly used as the `reverse_lookup` value.
         distinct (bool, optional): Parameter passed through to `count_related()`.
@@ -672,13 +692,13 @@ class LinkedCountColumn(django_tables2.Column):
                 # Link for N related circuits will be reverse("circuits:circuit_list") + "?cloud_network=<record.name>"
                 viewname="circuits:circuit_list",
                 url_params={"cloud_network": "name"},
-                # We'd like to do the below but this module isn't currently smart enough to build the right Prefetch()
-                # for a nested lookup:
-                # lookup="circuit_terminations__circuit",
-                # For the count,
+                # `reverse_lookup` is rooted on Circuit (the count model); it drives
                 # .annotate(circuit_count=count_related(Circuit, "circuit_terminations__cloud_network", distinct=True))
                 reverse_lookup="circuit_terminations__cloud_network",
+                # `lookup` is the nested lookup rooted on CloudNetwork, used to display the single related circuit
+                lookup="circuit_terminations__circuit",
                 distinct=True,
+                display_field="cid",
                 verbose_name="Circuits",
             )
         ```
@@ -714,8 +734,16 @@ class LinkedCountColumn(django_tables2.Column):
         except AttributeError:
             lookup = None
         if lookup:
-            if related_records := getattr(record, f"{lookup}_list", None):
+            if related_records := getattr(record, _linked_count_to_attr(lookup), None):
                 related_record = related_records[0]
+                # For a nested lookup like `"interfaces__device"`, walk the trailing chain (`device`) on the
+                # prefetched record. select_related (see BaseTable) makes this free; a None mid-chain falls
+                # through to the count badge below rather than raising.
+                _, _, remainder = lookup.partition("__")
+                for part in filter(None, remainder.split("__")):
+                    related_record = getattr(related_record, part, None)
+                    if related_record is None:
+                        break
         url = reverse(self.viewname, kwargs=self.view_kwargs)
         if self.url_params:
             url += "?" + urlencode(
