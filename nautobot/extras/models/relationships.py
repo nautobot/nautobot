@@ -12,7 +12,6 @@ from django.db.models import Q
 from django.urls import reverse
 from django.urls.exceptions import NoReverseMatch
 from django.utils.html import format_html
-from opentelemetry import trace as _otel_trace
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -26,6 +25,7 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.core.utils.otel import traced_span
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -468,10 +468,14 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden=hidden,
             listing=True,
         )
-        _tracer = _otel_trace.get_tracer("nautobot.extras.relationships")
-        with _tracer.start_as_current_span("relationship_cache.get [source]") as _span:
-            _span.set_attribute("relationship_cache.model", concrete_model._meta.label_lower)
-            _span.set_attribute("relationship_cache.hidden", str(hidden))
+        with traced_span(
+            "nautobot.extras.relationships",
+            "relationship_cache.get [source]",
+            **{
+                "relationship_cache.model": concrete_model._meta.label_lower,
+                "relationship_cache.hidden": str(hidden),
+            },
+        ) as _span:
             if not get_queryset:
                 listing = cache.get(list_cache_key)
                 if listing is not None:
@@ -524,10 +528,14 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden=hidden,
             listing=True,
         )
-        _tracer = _otel_trace.get_tracer("nautobot.extras.relationships")
-        with _tracer.start_as_current_span("relationship_cache.get [destination]") as _span:
-            _span.set_attribute("relationship_cache.model", concrete_model._meta.label_lower)
-            _span.set_attribute("relationship_cache.hidden", str(hidden))
+        with traced_span(
+            "nautobot.extras.relationships",
+            "relationship_cache.get [destination]",
+            **{
+                "relationship_cache.model": concrete_model._meta.label_lower,
+                "relationship_cache.hidden": str(hidden),
+            },
+        ) as _span:
             if not get_queryset:
                 listing = cache.get(list_cache_key)
                 if listing is not None:

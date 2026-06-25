@@ -7,7 +7,8 @@ from constance import config
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError
-from opentelemetry import trace as _otel_trace
+
+from nautobot.core.utils.otel import traced_span
 
 logger = logging.getLogger(__name__)
 
@@ -24,9 +25,11 @@ def get_app_settings_or_config(app_name, variable_name, fallback=None):
         return settings.PLUGINS_CONFIG[app_name][variable_name]
     # django-constance 4.x removed some built-in error handling here, so we have to do it ourselves now
     constance_key = f"{app_name}__{variable_name}"
-    _tracer = _otel_trace.get_tracer("nautobot.apps.config")
-    with _tracer.start_as_current_span("constance_config.get") as _span:
-        _span.set_attribute("constance_config.key", constance_key)
+    with traced_span(
+        "nautobot.apps.config",
+        "constance_config.get",
+        **{"constance_config.key": constance_key},
+    ):
         with contextlib.suppress(ObjectDoesNotExist, OperationalError, ProgrammingError):
             return getattr(config, constance_key)
     logger.warning(

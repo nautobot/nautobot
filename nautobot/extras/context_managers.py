@@ -5,9 +5,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.test.client import RequestFactory
-from opentelemetry import trace as _otel_trace
 
 from nautobot.core.events import publish_event
+from nautobot.core.utils.otel import traced_span
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
@@ -234,10 +234,14 @@ def web_request_context(
         webhook_queryset = None
         last_action = None
         last_content_type = None
-        _tracer = _otel_trace.get_tracer("nautobot.extras.changelog")
-        with _tracer.start_as_current_span("changelog.dispatch_hooks") as _span:
-            _span.set_attribute("changelog.change_id", str(change_context.change_id))
-            _span.set_attribute("changelog.context", context)
+        with traced_span(
+            "nautobot.extras.changelog",
+            "changelog.dispatch_hooks",
+            **{
+                "changelog.change_id": str(change_context.change_id),
+                "changelog.context": context,
+            },
+        ) as _span:
             # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
             object_change_count = 0
             for oc in (

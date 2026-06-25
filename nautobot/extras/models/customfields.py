@@ -15,7 +15,6 @@ from django.db.models import Model
 from django.forms.widgets import TextInput
 from django.utils.html import format_html
 from jinja2 import TemplateError, TemplateSyntaxError
-from opentelemetry import trace as _otel_trace
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
@@ -43,6 +42,7 @@ from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.otel import traced_span
 from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -67,9 +67,11 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         list_cache_key = construct_cache_key(
             self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
         )
-        _tracer = _otel_trace.get_tracer("nautobot.extras.customfields")
-        with _tracer.start_as_current_span("computed_field_cache.get") as _span:
-            _span.set_attribute("customfield_cache.model", concrete_model._meta.label_lower)
+        with traced_span(
+            "nautobot.extras.customfields",
+            "computed_field_cache.get",
+            **{"customfield_cache.model": concrete_model._meta.label_lower},
+        ) as _span:
             if not get_queryset:
                 listing = cache.get(list_cache_key)
                 if listing is not None:
@@ -483,10 +485,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             exclude_filter_disabled=exclude_filter_disabled,
             listing=True,
         )
-        _tracer = _otel_trace.get_tracer("nautobot.extras.customfields")
-        with _tracer.start_as_current_span("custom_field_cache.get") as _span:
-            _span.set_attribute("customfield_cache.model", concrete_model._meta.label_lower)
-            _span.set_attribute("customfield_cache.exclude_filter_disabled", exclude_filter_disabled)
+        with traced_span(
+            "nautobot.extras.customfields",
+            "custom_field_cache.get",
+            **{
+                "customfield_cache.model": concrete_model._meta.label_lower,
+                "customfield_cache.exclude_filter_disabled": exclude_filter_disabled,
+            },
+        ) as _span:
             if not get_queryset:
                 listing = cache.get(list_cache_key)
                 if listing is not None:
@@ -516,9 +522,11 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         cache_key = construct_cache_key(
             self, method_name="keys_for_model", branch_aware=True, model=concrete_model._meta.label_lower
         )
-        _tracer = _otel_trace.get_tracer("nautobot.extras.customfields")
-        with _tracer.start_as_current_span("custom_field_keys_cache.get") as _span:
-            _span.set_attribute("customfield_cache.model", concrete_model._meta.label_lower)
+        with traced_span(
+            "nautobot.extras.customfields",
+            "custom_field_keys_cache.get",
+            **{"customfield_cache.model": concrete_model._meta.label_lower},
+        ) as _span:
             keys = cache.get(cache_key)
             if keys is None:
                 _span.set_attribute("customfield_cache.hit", False)
