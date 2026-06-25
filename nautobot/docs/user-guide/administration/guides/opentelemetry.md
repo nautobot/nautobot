@@ -32,8 +32,8 @@ Setting `OTEL_PYTHON_DJANGO_INSTRUMENT=True` activates the core instrumentation 
 - **GraphQL request tracing** - Requests to `/graphql` and `/api/graphql` receive additional spans with the full query document, operation type, and variables.
 - **Database query spans** - Every SQL query is captured as a child span with the query text and SQL commenter annotations.
 - **Redis command spans** - Every Redis command is captured as a child span.
-- **Celery job spans** - Task dispatch and execution are traced. Trace context is propagated from the web request into the async job, linking them in the same trace.
-- **Outbound HTTP propagation** - Outgoing HTTP requests made by Nautobot (webhooks, SSoT data sources, etc.) carry the `traceparent` header, stitching downstream services into the same trace.
+- **Celery job spans** - Task dispatch and execution are traced. `CeleryInstrumentor` carries the W3C trace context in the Celery message headers, so a job enqueued during a web request - including jobs enqueued via `transaction.on_commit()` after the request's transaction commits - is linked to that request in the same trace. Jobs that originate outside a request, such as scheduled/recurring jobs dispatched by Celery Beat, have no inbound context to continue and therefore begin a new trace of their own.
+- **Outbound HTTP propagation** - Outgoing HTTP requests made through the Python `requests` library (webhooks, SSoT data sources, etc.) carry the `traceparent` header via `RequestsInstrumentor`, stitching downstream services into the same trace. Only the `requests` library is auto-instrumented; HTTP calls made by other clients - notably GitPython during Git repository sync - are not traced or propagated.
 
 This layer has the highest value-to-cost ratio. Database and Redis spans in particular are useful for identifying N+1 query patterns and slow cache operations.
 
@@ -179,7 +179,7 @@ As a coarse, SDK-side safety net you can also cap how much of any single attribu
 
 ### Outbound propagation to untrusted services
 
-`RequestsInstrumentor` adds a `traceparent` header to all outgoing HTTP requests made by Nautobot. For most integrations this is harmless - external services that do not understand `traceparent` ignore it. However, if outbound requests target untrusted external services, the header leaks that the request is part of a trace. This is generally low-risk but worth being aware of in high-security environments.
+`RequestsInstrumentor` adds a `traceparent` header to outgoing HTTP requests made through the Python `requests` library. For most integrations this is harmless - external services that do not understand `traceparent` ignore it. However, if outbound requests target untrusted external services, the header leaks that the request is part of a trace. This is generally low-risk but worth being aware of in high-security environments. Requests made by other clients (for example GitPython during Git repository sync) are not instrumented and carry no `traceparent`.
 
 ### Collector availability
 
