@@ -149,6 +149,27 @@ class ColorChoices(ChoiceSet):
 
 
 #
+# Nautobot edition
+#
+
+
+class NautobotEditionChoices(ChoiceSet):
+    """The installed Nautobot edition (see the `NAUTOBOT_EDITION` setting)."""
+
+    COMMUNITY = "community"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+
+    DEFAULT = COMMUNITY
+
+    CHOICES = (
+        (COMMUNITY, "Community"),
+        (PROFESSIONAL, "Professional"),
+        (ENTERPRISE, "Enterprise"),
+    )
+
+
+#
 # Button color choices
 #
 
