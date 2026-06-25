@@ -1,3 +1,4 @@
+from collections import namedtuple
 from collections.abc import Iterable
 
 from django.core.exceptions import ValidationError
@@ -10,7 +11,6 @@ from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.choices import PrefixTypeChoices
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
-from nautobot.ipam.querysets import IPAddressQuerySet
 from nautobot.virtualization.models import VMInterface
 
 
@@ -41,76 +41,140 @@ def get_add_available_prefixes_callback(show_available: bool, parent: Prefix):
     return lambda prefixes: prefixes
 
 
-def add_available_ipaddresses(prefix: netaddr.IPNetwork, ipaddress_list: Iterable[IPAddress], is_pool: bool = False):
+# A single positioned entry, used only while ordering the rows:
+#   - position : the host value, which sets the vertical order
+#   - rank     : tie-breaker when two entries share a position (see RANGE_ROW/ADDRESS/GAP inside)
+#   - item     : the thing the table renders — one of:
+#       IPAddress                  -> a real address row
+#       IPRange                    -> a range row
+#       (count, first_ip)          -> an "N available" block (outer, not nested)
+#       (count, first_ip, range)   -> an "N available" block nested inside `range`
+#   The 2-/3-tuple item shapes are the contract the table renderer relies on; don't change them.
+_Entry = namedtuple("_Entry", ["position", "rank", "item"])
+
+
+def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False, ip_ranges=None, show_available=True):
     """
-    Annotate ranges of available IP addresses within a given prefix.
+    Interleave available-IP gaps and IPRange rows within a prefix.
 
-    Args:
-        prefix (netaddr.IPNetwork): The network to calculate available addresses within.
-        ipaddress_list (Iterable[IPAddress]): List or QuerySet of extant IPAddress objects.
-        is_pool (bool): If True, the first/last IPs in the prefix will be considered usable, regardless of mask length.
-
-    Returns:
-        The contents of `ipaddress_list` interleaved with tuples of the form
-        `(number_of_available_addresses, first_such_address)`.
+    Non-exclusive ranges: row + nested interior (available space inside the span stays in the
+        pool, rendered as a nested "X available" block; real addresses inside are nested too).
+    Exclusive ranges: row only; the span is removed from the pool (only before/after gaps remain).
+    show_available=False: ranges and addresses are still shown; only the available-gap rows are suppressed.
     """
-    output = []
-    prev_ip = None
+    # Tie-breaker for entries sharing a start position: a range row renders before the
+    # addresses/gaps nested inside it, which render before a trailing gap.
+    RANGE_ROW, ADDRESS, GAP = 0, 1, 2
 
-    # Ignore the network and broadcast addresses for non-pool IPv4 prefixes larger than /31.
-    if prefix.version == 4 and prefix.prefixlen < 31 and not is_pool:
-        first_ip_in_prefix = netaddr.IPAddress(prefix.first + 1, version=prefix.version)
-        last_ip_in_prefix = netaddr.IPAddress(prefix.last - 1, version=prefix.version)
+    ip_ranges = list(ip_ranges or [])
+    addresses = list(ipaddress_list) if ipaddress_list is not None else []
+    version, prefixlen = prefix.version, prefix.prefixlen
+
+    # Hosts to enumerate, excluding network/broadcast for normal IPv4 prefixes.
+    if version == 4 and prefixlen < 31 and not is_pool:
+        first_value, last_value = prefix.first + 1, prefix.last - 1
     else:
-        first_ip_in_prefix = netaddr.IPAddress(prefix.first, version=prefix.version)
-        last_ip_in_prefix = netaddr.IPAddress(prefix.last, version=prefix.version)
+        first_value, last_value = prefix.first, prefix.last
 
-    if not ipaddress_list:
-        return [
-            (
-                int(last_ip_in_prefix - first_ip_in_prefix + 1),
-                f"{first_ip_in_prefix}/{prefix.prefixlen}",
-            )
-        ]
+    def host_value(address):
+        return address.address.ip.value
 
-    # sort the IP address list
-    if isinstance(ipaddress_list, IPAddressQuerySet):
-        ipaddress_list = ipaddress_list.order_by("host")
-    elif isinstance(ipaddress_list, list):
-        ipaddress_list.sort(key=lambda ip: ip.host)
+    def format_ip(value):
+        return f"{netaddr.IPAddress(value, version=version)}/{prefixlen}"
 
-    # Account for any available IPs before the first real IP
-    if ipaddress_list[0].address.ip.value > first_ip_in_prefix.value:
-        skipped_count = ipaddress_list[0].address.ip.value - first_ip_in_prefix.value
-        first_skipped = f"{first_ip_in_prefix}/{prefix.prefixlen}"
-        output.append((skipped_count, first_skipped))
+    def available_block(count, first_host, nested_range):
+        """Legacy tuple the table expects: (count, first_ip) or (count, first_ip, range)."""
+        if nested_range is None:
+            return (count, format_ip(first_host))
+        return (count, format_ip(first_host), nested_range)
 
-    # Iterate through existing IPs and annotate free ranges
-    for ip in ipaddress_list:
-        if prev_ip:
-            diff = ip.address.ip.value - prev_ip.address.ip.value
-            if diff > 1:
-                first_skipped = f"{prev_ip.address.ip + 1}/{prefix.prefixlen}"
-                output.append((diff - 1, first_skipped))
-        output.append(ip)
-        prev_ip = ip
+    def range_containing(host):
+        """Range whose span includes `host`, or None (first match wins; overlaps are a validation error)."""
+        for ip_range in ip_ranges:
+            if ip_range.start_address.value <= host <= ip_range.end_address.value:
+                return ip_range
+        return None
 
-    # Include any remaining available IPs
-    if prev_ip.address.ip < last_ip_in_prefix:
-        skipped_count = last_ip_in_prefix.value - prev_ip.address.ip.value
-        first_skipped = f"{prev_ip.address.ip + 1}/{prefix.prefixlen}"
-        output.append((skipped_count, first_skipped))
+    def range_of_item(item):
+        """The range an item belongs to, for tree-line detection; None if it isn't a range child."""
+        if isinstance(item, IPAddress):
+            return getattr(item, "containing_ip_range", None)
+        if isinstance(item, tuple) and len(item) >= 3:  # nested available block: (count, ip, range)
+            return item[2]
+        return None
 
-    return output
+    def span_entries(lo, hi, addrs_inside, nested_range=None):
+        """Gaps + address rows for the closed interval [lo, hi]; gaps tagged with `nested_range`."""
+        entries = []
+        cursor = lo
+        for address in sorted(addrs_inside, key=host_value):
+            host = host_value(address)
+            if host > cursor and show_available:
+                entries.append(_Entry(cursor, GAP, available_block(host - cursor, cursor, nested_range)))
+            entries.append(_Entry(host, ADDRESS, address))
+            cursor = host + 1
+        if cursor <= hi and show_available:
+            entries.append(_Entry(cursor, GAP, available_block(hi - cursor + 1, cursor, nested_range)))
+        return entries
+
+    # Tag every address with the range that contains it (if any). Addresses inside a range are
+    # rendered as that range's interior; the rest are top-level occupiers.
+    for address in addresses:
+        address.containing_ip_range = range_containing(host_value(address))
+
+    # Top-level occupiers consume space: free addresses + every range by its full span.
+    occupiers = [(host_value(a), host_value(a), a) for a in addresses if a.containing_ip_range is None]
+    occupiers += [(r.start_address.value, r.end_address.value, r) for r in ip_ranges]
+    occupiers.sort(key=lambda o: o[0])
+
+    # Walk the occupiers, emitting outer gaps, rows and (for non-exclusive ranges) interiors.
+    entries = []
+    prev_end = first_value - 1
+    for start, end, occupier in occupiers:
+        if start > prev_end + 1 and show_available:  # outer gap before this occupier
+            entries.append(_Entry(prev_end + 1, GAP, available_block(start - prev_end - 1, prev_end + 1, None)))
+
+        if isinstance(occupier, IPAddress):
+            entries.append(_Entry(start, ADDRESS, occupier))
+        else:  # IPRange
+            entries.append(_Entry(start, RANGE_ROW, occupier))
+            if not occupier.is_exclusive:  # exclusive ranges expose no interior
+                inside = [a for a in addresses if a.containing_ip_range is occupier]
+                entries += span_entries(start, end, inside, nested_range=occupier)
+
+        prev_end = max(prev_end, end)
+
+    if prev_end < last_value and show_available:  # trailing outer gap
+        entries.append(_Entry(prev_end + 1, GAP, available_block(last_value - prev_end, prev_end + 1, None)))
+
+    # Order by (position, rank), then keep only the rendered items.
+    entries.sort(key=lambda e: (e.position, e.rank))
+    result = [entry.item for entry in entries]
+
+    # Tree-line siblings: an address draws |- if the next entry belongs to the same range, else |_.
+    # Nested available-blocks count as range children too, hence working off the final ordered list.
+    for idx, item in enumerate(result):
+        if not isinstance(item, IPAddress):
+            continue
+        parent_range = range_of_item(item)
+        if parent_range is None:
+            continue
+        next_item = result[idx + 1] if idx + 1 < len(result) else None
+        item.range_has_next_sibling = next_item is not None and range_of_item(next_item) is parent_range
+
+    return result
 
 
-def get_add_available_ipaddresses_callback(show_available: bool, parent: Prefix):
-    """Conditionally provide a callback for add_available_ipaddresses()."""
-    if show_available:
-        return lambda ip_addresses: add_available_ipaddresses(
-            parent.prefix, ip_addresses, is_pool=(parent.type == PrefixTypeChoices.TYPE_POOL)
-        )
-    return lambda ip_addresses: ip_addresses
+def get_add_available_ipaddresses_callback(show_available, parent):
+    """Always inject IP ranges; `show_available` only toggles the available-IP gap rows."""
+    ip_ranges = list(parent.ip_address_ranges.all())
+    return lambda ip_addresses: add_available_ipaddresses(
+        parent.prefix,
+        ip_addresses,
+        is_pool=(parent.type == PrefixTypeChoices.TYPE_POOL),
+        ip_ranges=ip_ranges,
+        show_available=show_available,
+    )
 
 
 def add_available_vlans(vlan_group: VLANGroup, vlans: list[VLAN]):

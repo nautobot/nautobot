@@ -600,7 +600,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 color=ButtonActionColorChoices.SUBMIT,
                 icon="mdi-plus-thick",
                 required_permissions=["ipam.add_ipaddressrange"],
-                render_on_tab_id=["ip-address-ranges"],
+                render_on_tab_id=["ip-address-ranges", "ip-addresses"],
             ),
         ],
     )

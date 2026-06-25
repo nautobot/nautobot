@@ -2735,7 +2735,8 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
         self.assertAlmostEqual(ip_range.get_percent_utilized(), 100.0)
 
     def test_percent_utilized_count_as_utilized_is_full(self):
-        """A count_as_utilized range reports 100% regardless of actual IPs."""
+        """A count_as_utilized range reports 100% even when only some addresses have IPAddresses,
+        the flag short-circuits the actual-utilization calculation."""
         ip_range = IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.60",
@@ -2743,6 +2744,8 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             count_as_utilized=True,
         )
+        IPAddress.objects.create(address="10.0.0.51/24", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.0.52/24", status=self.status, namespace=self.namespace)
         self.assertEqual(ip_range.get_percent_utilized(), 100.0)
 
     def test_percent_utilized_exclusive_is_full(self):
