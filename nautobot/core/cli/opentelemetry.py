@@ -14,7 +14,7 @@ from opentelemetry.sdk.metrics.export import (
     PeriodicExportingMetricReader,
 )
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import SpanLimits, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from nautobot import __version__
@@ -41,7 +41,10 @@ def instrument():
     yet configured here, which is why this module reads ``nautobot.core.settings`` directly.
     """
     resource = Resource(attributes={SERVICE_NAME: "nautobot", SERVICE_VERSION: __version__})
-    provider = TracerProvider(resource=resource)
+    # Cap attribute value length so large values (e.g. GraphQL queries) don't bloat spans. The OTEL
+    # SDK is unbounded by default; OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT defaults to 8192 (settings.py).
+    span_limits = SpanLimits(max_attribute_length=settings.OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT)
+    provider = TracerProvider(resource=resource, span_limits=span_limits)
     trace.set_tracer_provider(provider)
 
     if "none" not in settings.OTEL_TRACES_EXPORTER:
