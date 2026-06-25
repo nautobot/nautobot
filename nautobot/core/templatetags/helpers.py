@@ -27,7 +27,8 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import NAUTOBOT_STATIC_ASSETS, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -1287,14 +1288,33 @@ def advanced_filter_indicator(basic_filter_form, filter_params):
 
 
 @register.simple_tag
-def custom_branding_or_static(branding_asset, static_asset):
+def custom_branding_or_static(branding_asset, static_asset=None):
     """
-    This tag attempts to return custom branding assets relative to the MEDIA_ROOT and MEDIA_URL, if such
-    branding has been configured in settings, else it returns stock branding via static.
+    Return the URL of an asset, honoring the following precedence:
+
+    1. Custom branding configured via `settings.BRANDING_FILEPATHS` (relative to MEDIA_ROOT/MEDIA_URL).
+    2. The static asset for the active `NAUTOBOT_EDITION`, falling back to the "community" asset for any
+       branding key the edition does not override.
+    3. The caller-provided `static_asset`, used as a backup for branding keys not defined for any edition.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
+
+    # TODO(4.0): Remove. Honor a custom `icon_32` for the navbar (the pre-`navbar_icon` key) for back-compatibility.
+    elif branding_asset == "navbar_icon" and settings.BRANDING_FILEPATHS.get("icon_32"):
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get('icon_32')}"
     else:
+        nautobot_edition_for_asset = config.get_settings_or_config(
+            "NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT
+        )
+        assets_for_edition = NAUTOBOT_STATIC_ASSETS.get(
+            nautobot_edition_for_asset, NAUTOBOT_STATIC_ASSETS[NautobotEditionChoices.DEFAULT]
+        )
+        # TODO(4.0): Remove the `static_asset` parameter and this backup. It is retained only for
+        # backward compatibility with callers of the previous two-argument signature; the edition map is
+        # now the source of stock asset defaults.
+        # The edition asset wins for known keys; `static_asset` is the backup for anything else.
+        static_asset = assets_for_edition.get(branding_asset, static_asset)
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
 
