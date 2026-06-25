@@ -1,0 +1,2 @@
+Added a `NAUTOBOT_EDITION` setting reflecting the installed edition (Community, Professional, or Enterprise).
+Added a `navbar_icon` branding key to `BRANDING_FILEPATHS` for customizing the navbar icon independently of the favicon.

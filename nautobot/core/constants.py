@@ -218,3 +218,38 @@ DEFAULT_M2M_FIELDS = ["tags", "content_types", "object_types"]
 
 # Maximum number of homepage panels layout columns, for narrower device viewports columns will be wrapped.
 HOMEPAGE_PANELS_LAYOUT_COLUMNS = 4
+
+# Static branding assets per edition (edition -> branding key -> path). Every edition map is comprehensive,
+# defining all branding keys; non-community editions reuse the community asset for any key they do not brand.
+NAUTOBOT_STATIC_ASSETS = {
+    "community": {
+        "navbar_icon": "img/nautobot_icon.svg",
+        "icon_16": "img/nautobot_icon_16x16.png",
+        "icon_32": "img/nautobot_icon_32x32.png",
+        "icon_180": "img/nautobot_icon_180x180.png",
+        "icon_192": "img/nautobot_icon_192x192.png",
+        "favicon": "img/favicon.ico",
+        "icon_mask": "img/nautobot_icon_monochrome.svg",
+        "logo": "img/nautobot_logo.svg",
+    },
+    "professional": {
+        "navbar_icon": "img/professional/nautobot-professional-navbar-icon.svg",
+        "icon_16": "img/professional/nautobot-professional-16x16.png",
+        "icon_32": "img/professional/nautobot-professional-32x32.png",
+        "icon_180": "img/professional/nautobot-professional-180x180.png",
+        "icon_192": "img/professional/nautobot-professional-192x192.png",
+        "favicon": "img/professional/nautobot-professional.ico",
+        "icon_mask": "img/professional/nautobot-professional-monochrome.svg",
+        "logo": "img/nautobot_logo.svg",
+    },
+    "enterprise": {
+        "navbar_icon": "img/enterprise/nautobot-enterprise-navbar-icon.svg",
+        "icon_16": "img/enterprise/nautobot-enterprise-16x16.png",
+        "icon_32": "img/enterprise/nautobot-enterprise-32x32.png",
+        "icon_180": "img/enterprise/nautobot-enterprise-180x180.png",
+        "icon_192": "img/enterprise/nautobot-enterprise-192x192.png",
+        "favicon": "img/enterprise/nautobot-enterprise.ico",
+        "icon_mask": "img/enterprise/nautobot-enterprise-monochrome.svg",
+        "logo": "img/nautobot_logo.svg",
+    },
+}
