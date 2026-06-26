@@ -122,6 +122,26 @@ class InterfaceTableRenderMixin:
 
                 self.assertEqual(rendered_duplex, expected_output)
 
+    def test_row_attrs_color_by_cable_status(self):
+        """A cabled interface's row carries a cable-status color class; an uncabled one does not.
+
+        Runs for both the list table and the device/module tab table, guarding against the list
+        table missing the `cable_status_color_css` row coloring its tab counterpart has.
+        """
+        uncabled = Interface.objects.create(device=self.device, name="uncabled", status=self.interface_status)
+        cabled_a = Interface.objects.create(device=self.device, name="cabled-a", status=self.interface_status)
+        cabled_b = Interface.objects.create(device=self.device, name="cabled-b", status=self.interface_status)
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        Cable.objects.create(termination_a=cabled_a, termination_b=cabled_b, status=cable_status)
+
+        cabled_table = self.table_class(Interface.objects.filter(pk=cabled_a.pk))  # pylint: disable=not-callable
+        cabled_class = str(cabled_table.rows[0].attrs.get("class", ""))
+        # "Connected" cable status is green → table-success.
+        self.assertIn("table-success", cabled_class)
+
+        uncabled_table = self.table_class(Interface.objects.filter(pk=uncabled.pk))  # pylint: disable=not-callable
+        self.assertNotIn("table-success", str(uncabled_table.rows[0].attrs.get("class", "")))
+
     def _make_breakout_trunk_with_children(self, count):
         """Create a 1xN breakout trunk with `count` far interfaces and matching child interfaces.
 

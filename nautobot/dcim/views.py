@@ -4581,6 +4581,7 @@ class ConsoleServerPortListView(generic.ObjectListView):
     filterset_form = forms.ConsoleServerPortFilterForm
     table = tables.ConsoleServerPortTable
     action_buttons = ("import", "export")
+    template_name = "dcim/device_component_list.html"
 
 
 class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
@@ -4724,6 +4725,9 @@ class InterfaceListView(generic.ObjectListView):
     filterset_form = forms.InterfaceFilterForm
     table = tables.InterfaceTable
     action_buttons = ("import", "export")
+    # Load `connection_toggles.js` so the per-row cable actions (mark connected/planned, detach)
+    # function in the list view.
+    template_name = "dcim/device_component_list.html"
 
 
 class InterfaceView(
@@ -4860,6 +4864,7 @@ class FrontPortListView(generic.ObjectListView):
     filterset_form = forms.FrontPortFilterForm
     table = tables.FrontPortTable
     action_buttons = ("import", "export")
+    template_name = "dcim/device_component_list.html"
 
 
 class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
@@ -4928,6 +4933,7 @@ class RearPortListView(generic.ObjectListView):
     filterset_form = forms.RearPortFilterForm
     table = tables.RearPortTable
     action_buttons = ("import", "export")
+    template_name = "dcim/device_component_list.html"
 
 
 class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
