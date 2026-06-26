@@ -253,3 +253,10 @@ NAUTOBOT_STATIC_ASSETS = {
         "logo": "img/nautobot_logo.svg",
     },
 }
+
+# Per-edition product page URLs.
+NAUTOBOT_EDITION_URLS = {
+    "community": "https://networktocode.com/nautobot",
+    "professional": "https://networktocode.com/nautobot/nautobot-professional/",
+    "enterprise": "https://networktocode.com/nautobot/nautobot-enterprise/",
+}

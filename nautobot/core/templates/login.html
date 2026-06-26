@@ -8,58 +8,245 @@
     {{ block.super }}
 
     <style>
-        /* This is a wrapper element containing page title, breadcrumbs, search bar, and user profile dropdown. */
-        #header :nth-child(2) {
-            display: none;
+        /* Hide chrome, but keep #header's banner/message strip so login-page banners still show. */
+        #sidenav,
+        #footer,
+        #header > .container-fluid {
+            display: none !important;
         }
 
-        #header .alert:last-child {
+        /* The body reserves left padding for the (now-hidden) fixed sidenav; remove it
+           so the centered card is centered against the full viewport, not offset right. */
+        body {
+            padding-inline: 0 !important;
+        }
+
+        /* Turn the main content area into a full-viewport, centered flex container. */
+        #main-content.wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            width: 100%;
+            margin: 0;
+            padding: 2rem 1.5rem;
+            background-color: var(--bs-body-bg);
+        }
+
+        /* Keep the card (and footer) at their natural height so they are never
+           compressed when the viewport is short. Centering uses auto margins
+           (not justify-content) so that when the content is taller than the
+           viewport it scrolls fully from the top instead of being clipped. */
+        #main-content.wrapper > * {
+            flex-shrink: 0;
+        }
+
+        /* Center card vertically. */
+        .nb-login-card {
+            margin-top: auto;
+        }
+
+        .nb-login-footer {
+            margin-bottom: auto;
+        }
+
+        .nb-login-card {
+            width: 100%;
+            max-width: 40rem;
+            border-radius: 1.25rem;
+            border: 1px solid var(--bs-border-color);
+            /* Bootstrap's .card sets overflow:hidden, which clips the form if the
+               card is ever height-constrained. */
+            overflow: visible;
+        }
+
+        /* In dark mode lift the card slightly above the page background so it
+           stands out; in light mode it stays white via the bg-body class. */
+        [data-bs-theme="dark"] .nb-login-card {
+            background-color: #262626 !important;
+        }
+
+        .nb-login-card .card-body {
+            padding: 2.5rem;
+        }
+
+        /* Logo + edition line as a left lockup: the brand block shrinks to the logo
+           width, and the edition is right-aligned so it tracks under the "nautobot"
+           wordmark (matching the original stacked lockup). */
+        .nb-login-brand {
+            display: inline-block;
+            margin-bottom: 2.5rem;
+            text-align: left;
+        }
+
+        .nb-login-logo {
+            display: block;
+            max-width: 15rem;
+            height: auto;
+        }
+
+        .nb-login-edition {
+            margin-top: 0.5rem;
+            color: var(--bs-orange);
+            text-align: right;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        /* Stack the form: full-width label above a full-width input (the default
+           Nautobot form layout is horizontal at the md breakpoint). */
+        .nb-login-card form .d-md-flex {
+            display: block !important;
+        }
+
+        .nb-login-card form .col-form-label {
+            flex: 0 0 100%;
+            max-width: 100%;
+            width: 100%;
+            padding: 0 0 0.375rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        /* Form inputs take up full width of card. */
+        .nb-login-card form .col-md-9 {
+            flex: 0 0 100%;
+            max-width: 100%;
+            width: 100%;
+        }
+
+        /* The mockup has no "required" asterisks. */
+        .nb-login-card .nb-required::before {
+            content: none !important;
+        }
+
+        /* Optional notice (e.g. demo-instance message from BANNER_LOGIN), shown as a
+           filled info panel between the logo and the form. Colors come from Bootstrap's
+           info-subtle tokens so it themes light/dark like the rest of the UI. */
+        .nb-login-notice {
+            margin-bottom: 1.75rem;
+            padding: 1.125rem 1.25rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            font-size: 0.9375rem;
+        }
+
+        .nb-login-notice > :last-child {
             margin-bottom: 0;
         }
+
+        .nb-login-notice h1,
+        .nb-login-notice h2,
+        .nb-login-notice h3,
+        .nb-login-notice h4,
+        .nb-login-notice h5,
+        .nb-login-notice h6 {
+            margin: 0 0 0.5rem;
+            font-size: 1.0625rem;
+            font-weight: 600;
+        }
+
+        .nb-login-notice p {
+            margin-bottom: 0.5rem;
+        }
+
+        /* Credentials etc. rendered as `code` in the markdown become readable chips. */
+        .nb-login-notice code {
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.375rem;
+            background-color: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            font-weight: 600;
+        }
+
+        /* Full-width, comfortably sized form controls to match the mockup. */
+        .nb-login-card .form-control {
+            padding: 0.625rem 0.75rem;
+        }
+
+        /* Nautobot styles .btn-primary as a "ghost" button (transparent fill).
+           The mockup wants a solid, brand-blue, theme-aware button. */
+        .nb-login-card .btn-primary {
+            --bs-btn-color: #fff;
+            --bs-btn-bg: var(--bs-primary);
+            --bs-btn-border-color: var(--bs-primary);
+            --bs-btn-hover-color: #fff;
+            --bs-btn-hover-bg: var(--bs-primary);
+            --bs-btn-hover-border-color: var(--bs-primary);
+            --bs-btn-active-color: #fff;
+            --bs-btn-active-bg: var(--bs-primary);
+            --bs-btn-active-border-color: var(--bs-primary);
+        }
+
+        .nb-login-card .btn-primary:hover,
+        .nb-login-card .btn-primary:focus {
+            filter: brightness(0.95);
+        }
+
+        .nb-login-footer a {
+            text-decoration: none;
+        }
+
+        .nb-login-footer a:hover {
+            text-decoration: underline;
+        }
     </style>
-{% endblock %}
+{% endblock extra_styles %}
 
 {% block content %}
-    <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
-        <div class="col-sm-12 col-md-9 col-lg-7 nb-lg-max-width">
+    <div class="nb-login-card card bg-body shadow-lg">
+        <div class="card-body">
+            <div class="nb-login-brand">
+                <img
+                    class="nb-login-logo"
+                    src="{% custom_branding_or_static 'logo' %}"
+                    alt="{{ settings.BRANDING_TITLE }}"
+                />
+                {% if show_edition_badge %}
+                    <div class="nb-login-edition">{{ nautobot_edition }}</div>
+                {% endif %}
+            </div>
+
             {% if "BANNER_LOGIN"|settings_or_config %}
-                <div class="alert alert-info text-center" role="alert">
+                <div class="nb-login-notice alert alert-info" role="alert">
                     {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
                 </div>
             {% endif %}
+
             {% if form.non_field_errors %}
-                <div class="card border-danger mb-20">
-                    <div class="card-header bg-danger-subtle border-danger text-body">
-                        <strong>Errors</strong>
-                    </div>
-                    <div class="card-body">
-                        {{ form.non_field_errors }}
-                    </div>
+                <div class="alert alert-danger" role="alert">
+                    {{ form.non_field_errors }}
                 </div>
             {% endif %}
+
             <form action="{% url 'login' %}" method="post">
-                <div class="card">
-                    <div class="card-header">
-                        <strong>Log In</strong>
-                    </div>
-                    <div class="card-body">
-                        {% csrf_token %}
-                        {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
-                        {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
-                        {% render_form form %}
-                    </div>
-                    <div class="card-footer bg-body text-center">
-                        <button type="submit" class="btn btn-primary">Log In</button>
-                    </div>
-                </div>
+                {% csrf_token %}
+                {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
+                {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
+                {% render_form form %}
+                <button type="submit" class="btn btn-primary w-100 mt-24">Sign in</button>
             </form>
+
             {% if SSO_AUTH_ENABLED %}
                 <div class="position-relative text-center">
                     <hr class="border-top m-20">
-                    <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle">Or</span>
-                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary">Continue with SSO</a>
+                    <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle text-secondary">Or</span>
+                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary w-100">Continue with SSO</a>
                 </div>
             {% endif %}
         </div>
     </div>
-{% endblock %}
+
+    <div class="nb-login-footer text-secondary text-center mt-24 fs-5">
+        &copy; {% now "Y" %} Network to Code
+        &middot;
+        Powered by
+        <a class="text-secondary" href="{{ edition_url }}" target="_blank" rel="noopener">
+            Nautobot{% if is_commercial_edition %} {{ nautobot_edition }}{% endif %}
+        </a>
+        &middot;
+        <a class="text-secondary" href="https://docs.nautobot.com" target="_blank" rel="noopener">Docs</a>
+    </div>
+{% endblock content %}

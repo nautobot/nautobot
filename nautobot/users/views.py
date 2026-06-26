@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -18,9 +19,12 @@ from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import NAUTOBOT_EDITION_URLS
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.ui.titles import Titles
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.views.generic import GenericView
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -52,6 +56,13 @@ class LoginView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
+    def show_edition_badge(self):
+        """Show the edition badge only for a commercial edition with no custom branding logo overriding the stock logo."""
+        edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        has_custom_logo = bool(settings.BRANDING_FILEPATHS.get("logo"))
+        is_commercial_edition = edition in (NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE)
+        return is_commercial_edition and not has_custom_logo
+
     def get(self, request):
         form = LoginForm(request)
 
@@ -59,12 +70,20 @@ class LoginView(View):
             logger = logging.getLogger("nautobot.auth.login")
             return self.redirect_to_next(request, logger)
 
+        edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
+        is_commercial_edition = edition in (NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE)
+
         return render(
             request,
             self.template_name,
             {
                 "form": form,
                 "title": "Login",
+                "nautobot_edition": edition_display,
+                "is_commercial_edition": is_commercial_edition,
+                "edition_url": NAUTOBOT_EDITION_URLS.get(edition, "https://nautobot.com"),
+                "show_edition_badge": self.show_edition_badge(),
             },
         )
 
@@ -87,12 +106,20 @@ class LoginView(View):
         else:
             logger.debug("Login form validation failed")
 
+        edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
+        is_commercial_edition = edition in (NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE)
+
         return render(
             request,
             self.template_name,
             {
                 "form": form,
                 "title": "Login",
+                "nautobot_edition": edition_display,
+                "is_commercial_edition": is_commercial_edition,
+                "edition_url": NAUTOBOT_EDITION_URLS.get(edition, "https://nautobot.com"),
+                "show_edition_badge": self.show_edition_badge(),
             },
         )
 
