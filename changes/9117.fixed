@@ -1,0 +1,1 @@
+Fixed edit/delete actions on a Dynamic Group's Members tab returning the user to the group's detail page instead of the Members tab.
