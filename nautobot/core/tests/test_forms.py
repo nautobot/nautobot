@@ -442,6 +442,22 @@ class DynamicModelMultipleChoiceFieldTest(testing.TestCase):
             [address_1.address, address_2.address],
         )
 
+    def test_clean_null_option(self):
+        """Selecting the "None" null option (submitted as the string "null") should be dropped gracefully."""
+        field = forms.DynamicModelMultipleChoiceField(
+            queryset=ipam_models.IPAddress.objects.all(), null_option="None", required=False
+        )
+        # "null" on its own clears the selection rather than raising `"null" is not a valid UUID.`
+        self.assertEqual(list(field.clean(["null"])), [])
+
+        # "null" mixed with a real selection keeps only the real object
+        ipaddr_status = extras_models.Status.objects.get_for_model(ipam_models.IPAddress).first()
+        prefix_status = extras_models.Status.objects.get_for_model(ipam_models.Prefix).first()
+        namespace = ipam_models.Namespace.objects.first()
+        ipam_models.Prefix.objects.create(prefix="10.1.1.0/24", namespace=namespace, status=prefix_status)
+        address = ipam_models.IPAddress.objects.create(address="10.1.1.1/24", namespace=namespace, status=ipaddr_status)
+        self.assertEqual(list(field.clean(["null", str(address.pk)])), [address])
+
 
 class MultiValueCharFieldTest(testing.TestCase):
     def setUp(self):

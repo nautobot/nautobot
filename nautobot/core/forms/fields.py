@@ -651,6 +651,15 @@ class DynamicModelMultipleChoiceField(DynamicModelChoiceMixin, django_forms.Mode
     filter = django_filters.ModelMultipleChoiceFilter
     widget = widgets.APISelectMultiple
 
+    def clean(self, value):
+        """
+        When null option is enabled and "None" is selected, it is submitted as the string 'null'. Drop any
+        such values so they don't reach the model lookup and fail.
+        """
+        if self.null_option is not None and isinstance(value, (list, tuple)):
+            value = [v for v in value if v != settings.FILTERS_NULL_CHOICE_VALUE]
+        return super().clean(value)
+
 
 class LaxURLField(django_forms.URLField):
     """
