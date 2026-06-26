@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from django.db import connection
 from django.db.models import IntegerField, Value
 from django.test import tag, TestCase
@@ -6,6 +8,7 @@ from django.test.utils import CaptureQueriesContext
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
+from nautobot.core.tables import LinkedCountColumn
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
 from nautobot.extras.models import JobLogEntry
@@ -251,3 +254,19 @@ class BaseTableLinkedCountColumnTestCase(TestCase):
             self.assertNotIn("assigned_prefix_count", table.data.data.query.annotations)
         finally:
             del RIR.assigned_prefix_count
+
+
+class LinkedCountColumnRenderTestCase(TestCase):
+    def test_nested_lookup_with_none_mid_chain_falls_back_to_count(self):
+        """A None partway through a nested `lookup` chain breaks the walk and falls back to the count badge."""
+        column = LinkedCountColumn(
+            viewname="dcim:device_list",
+            url_params={"ip_addresses": "pk"},
+            lookup="interfaces__device__name",
+        )
+        record = SimpleNamespace(
+            pk="00000000-0000-0000-0000-000000000000",
+            interfaces_device_name_list=[SimpleNamespace(device=None)],
+        )
+        rendered = column.render(bound_column=None, record=record, value=1)
+        self.assertIn("badge", rendered)
