@@ -236,13 +236,13 @@
                 <button type="submit" class="btn btn-primary w-100 mt-24">Sign in</button>
             </form>
 
-
+            {% if SSO_AUTH_ENABLED %}
                 <div class="position-relative text-center">
                     <hr class="border-top m-20">
                     <span class="nb-login-or px-16 position-absolute start-50 top-0 translate-middle text-secondary">Or</span>
-                    <a class="btn btn-primary w-100">Continue with SSO</a>
+                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary w-100">Continue with SSO</a>
                 </div>
-
+            {% endif %}
         </div>
     </div>
 
