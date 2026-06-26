@@ -553,11 +553,13 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         if self.model_form is None:
             raise RuntimeError("self.model_form must not be None")
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = self.model_form(  # pylint: disable=not-callable
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=self.model_form),
             instance=obj,
+            **form_kwargs,
         )
         restrict_form_fields(form, request.user)
 
@@ -602,10 +604,16 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         else:
             logger.debug("Form validation failed")
 
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
         return render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
