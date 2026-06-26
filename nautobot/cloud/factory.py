@@ -3,6 +3,7 @@ import factory
 
 from nautobot.cloud import models
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     PrimaryModelFactory,
@@ -83,13 +84,15 @@ class CloudNetworkFactory(PrimaryModelFactory):
     @factory.post_generation
     def prefixes(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.prefixes.set(extracted)
-            else:
-                # TODO Investigate https://github.com/nautobot/nautobot/actions/runs/11019738391/job/30603271529
-                # to uncomment the line below.
-                # self.prefixes.set(get_random_instances(Prefix))
-                self.prefixes.set(get_random_instances(model_or_queryset_or_lambda=Prefix, maximum=1))
+            if not extracted:
+                extracted = get_random_instances(Prefix)
+            for prefix in extracted:
+                CloudNetworkPrefixAssignmentFactory.create(cloud_network=self, prefix=prefix)
+
+
+class CloudNetworkPrefixAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.CloudNetworkPrefixAssignment
 
 
 class CloudServiceFactory(PrimaryModelFactory):
@@ -110,7 +113,12 @@ class CloudServiceFactory(PrimaryModelFactory):
     @factory.post_generation
     def cloud_networks(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.cloud_networks.set(extracted)
-            else:
-                self.cloud_networks.set(get_random_instances(models.CloudNetwork))
+            if not extracted:
+                extracted = get_random_instances(models.CloudNetwork)
+            for cloud_network in extracted:
+                CloudServiceNetworkAssignmentFactory.create(cloud_service=self, cloud_network=cloud_network)
+
+
+class CloudServiceNetworkAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.CloudServiceNetworkAssignment

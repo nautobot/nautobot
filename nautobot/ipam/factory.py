@@ -10,6 +10,7 @@ import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
@@ -20,7 +21,21 @@ from nautobot.core.factory import (
 from nautobot.dcim.models import Location, VirtualDeviceContext
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, IPAddressRange, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressRange,
+    Namespace,
+    Prefix,
+    PrefixLocationAssignment,
+    RIR,
+    RouteTarget,
+    VLAN,
+    VLANGroup,
+    VLANLocationAssignment,
+    VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
+)
 from nautobot.tenancy.models import Tenant
 
 logger = logging.getLogger(__name__)
@@ -135,20 +150,18 @@ class VRFFactory(PrimaryModelFactory):
     @factory.post_generation
     def prefixes(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.prefixes.set(extracted)
-            else:
-                self.prefixes.set(
-                    get_random_instances(lambda: Prefix.objects.filter(namespace=self.namespace), minimum=0)
-                )
+            if not extracted:
+                extracted = get_random_instances(lambda: Prefix.objects.filter(namespace=self.namespace), minimum=0)
+            for prefix in extracted:
+                VRFPrefixAssignmentFactory.create(prefix=prefix, vrf=self)
 
     @factory.post_generation
     def virtual_device_contexts(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.virtual_device_contexts.set(extracted)
-            else:
-                self.virtual_device_contexts.set(get_random_instances(VirtualDeviceContext))
+            if not extracted:
+                extracted = get_random_instances(VirtualDeviceContext)
+            for vdc in extracted:
+                VRFDeviceAssignmentFactory.create(virtual_device_context=vdc, vrf=self)
 
 
 class VLANGroupFactory(OrganizationalModelFactory):
@@ -253,17 +266,20 @@ class VLANFactory(PrimaryModelFactory):
     def locations(self, create, extracted, **kwargs):
         if create:
             if extracted:
-                self.locations.set(extracted)
+                for location in extracted:
+                    VLANLocationAssignmentFactory.create(location=location, vlan=self)
             else:
                 vlan_ct = ContentType.objects.get_for_model(VLAN)
-                self.locations.set(
-                    get_random_instances(
-                        lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
-                    )
-                )
+                for location in get_random_instances(
+                    lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
+                ):
+                    if not VLANLocationAssignment.objects.filter(location=location, vlan=self).exists():
+                        VLANLocationAssignmentFactory.create(location=location, vlan=self)
                 if self.vlan_group and self.vlan_group.location:
                     # add the parent of the vlan group location to the vlan locations
-                    self.locations.add(self.vlan_group.location.ancestors(include_self=True)[0])
+                    parent_location = self.vlan_group.location.ancestors(include_self=True)[0]
+                    if not VLANLocationAssignment.objects.filter(location=parent_location, vlan=self).exists():
+                        VLANLocationAssignmentFactory.create(location=parent_location, vlan=self)
 
 
 class VLANGetOrCreateFactory(VLANFactory):
@@ -271,9 +287,24 @@ class VLANGetOrCreateFactory(VLANFactory):
         django_get_or_create = ("vlan_group", "vid")
 
 
+class VLANLocationAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = VLANLocationAssignment
+
+
 class VRFGetOrCreateFactory(VRFFactory):
     class Meta:
         django_get_or_create = ("tenant",)
+
+
+class VRFDeviceAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = VRFDeviceAssignment
+
+
+class VRFPrefixAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = VRFPrefixAssignment
 
 
 class NamespaceFactory(PrimaryModelFactory):
@@ -356,23 +387,21 @@ class PrefixFactory(PrimaryModelFactory):
     @factory.post_generation
     def locations(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.locations.set(extracted)
-            else:
+            if not extracted:
                 prefix_ct = ContentType.objects.get_for_model(Prefix)
-                self.locations.set(
-                    get_random_instances(
-                        lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
-                    )
+                extracted = get_random_instances(
+                    lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
                 )
+            for location in extracted:
+                PrefixLocationAssignmentFactory.create(location=location, prefix=self)
 
     @factory.post_generation
     def vrfs(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.vrfs.set(extracted)
-            else:
-                self.vrfs.set(get_random_instances(lambda: VRF.objects.filter(namespace=self.namespace), minimum=0))
+            if not extracted:
+                extracted = get_random_instances(lambda: VRF.objects.filter(namespace=self.namespace), minimum=0)
+            for vrf in extracted:
+                VRFPrefixAssignmentFactory.create(vrf=vrf, prefix=self)
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
@@ -461,6 +490,11 @@ class PrefixFactory(PrimaryModelFactory):
                     type=child_type,
                     **kwargs,
                 )
+
+
+class PrefixLocationAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = PrefixLocationAssignment
 
 
 class IPAddressFactory(PrimaryModelFactory):
@@ -552,9 +586,8 @@ class IPAddressRangeFactory(PrimaryModelFactory):
             .filter(children__isnull=True)
             .filter(ip_address_ranges__isnull=True)
         )
-        existing = qs.order_by("?").first()
-        if existing is not None:
-            return existing
+        if qs.exists():
+            return factory.random.randgen.choice(qs)
         # Guarantee a parent rather than silently dropping the object.
         return PrefixFactory(type=PrefixTypeChoices.TYPE_NETWORK, prefix_length=24)
 
