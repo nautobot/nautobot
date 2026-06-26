@@ -5209,6 +5209,13 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
 class InventoryItemFieldsPanel(object_detail.ObjectFieldsPanel):
     """ObjectFieldsPanel with context-aware rendering of `software_version` and its image files."""
 
+    def get_data(self, context):
+        data = super().get_data(context)
+        # InventoryItem is a TreeModel, but the parent is already shown via the `parent` field, so drop the
+        # auto-injected ancestor "Hierarchy" row that `fields="__all__"` adds for tree models.
+        data.pop("_hierarchy", None)
+        return data
+
     def render_value(self, key, value, context):
         if key == "software_version":
             instance = get_obj_from_context(context, self.context_object_key)
@@ -5235,22 +5242,10 @@ class InventoryItemUIViewSet(DeviceComponentPageMixin, ComponentCreateViewMixin,
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 label="Inventory Item",
-                fields=[
-                    "device",
-                    "parent",
-                    "name",
-                    "label",
-                    "manufacturer",
-                    "part_id",
-                    "serial",
-                    "asset_tag",
-                    "software_version",
-                    "description",
+                fields="__all__",
+                exclude_fields=[
+                    "discovered",
                 ],
-                key_transforms={
-                    "parent": "Parent Item",
-                    "serial": "Serial",
-                },
             ),
         ),
     )
