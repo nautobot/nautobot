@@ -4803,6 +4803,44 @@ class CableForm(NautobotModelForm):
                 cable.add_termination(termination, cable_end=side_label, connector=connector)
 
 
+class CableCreateForm(CableForm):
+    """It is the form rendered/submitted for `dcim:cable_add` only  and not the bulk add form."""
+
+    count = forms.IntegerField(
+        min_value=1,
+        required=False,
+        label="Number of cables",
+        help_text="Leave blank (or 1) to create a single cable with “Create”. Enter 2 or more, then "
+        "use “Bulk add” to create that many cables — each side auto-fills count x (terminations you "
+        "selected on that side), walking from the last selected termination for open ports.",
+    )
+
+    def build_spec(self):
+        """Build a :class:`BulkConnectSpec` from the cleaned form data (used by the view's bulk path)."""
+        from nautobot.dcim.bulk_connect import BulkConnectSpec, ConnectorSelection
+
+        info = self.connection_info
+        selections = []
+        for side_key, side_label in (("a_side", "A"), ("b_side", "B")):
+            for conn in info[side_key]:
+                connector = conn["connector"]
+                termination = self.cleaned_data.get(f"{side_label.lower()}_conn_{connector}_termination")
+                if termination is not None:
+                    selections.append(ConnectorSelection(side=side_label, connector=connector, termination=termination))
+        return BulkConnectSpec(
+            cable_type=self.cleaned_data.get("cable_type"),
+            selections=selections,
+            count=self.cleaned_data.get("count") or 1,
+            status=self.cleaned_data.get("status"),
+            label=self.cleaned_data.get("label") or "",
+            color=self.cleaned_data.get("color") or "",
+            length=self.cleaned_data.get("length"),
+            length_unit=self.cleaned_data.get("length_unit") or "",
+            type=self.cleaned_data.get("type") or "",
+            tags=list(self.cleaned_data.get("tags") or []),
+        )
+
+
 class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
     pk = forms.ModelMultipleChoiceField(queryset=Cable.objects.all(), widget=forms.MultipleHiddenInput)
     type = forms.ChoiceField(

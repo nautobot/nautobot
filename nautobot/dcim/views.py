@@ -5,6 +5,10 @@ import json
 import logging
 import uuid
 
+from nautobot.dcim.bulk_connect import BulkCableConnectService
+from nautobot.dcim.bulk_connect import walk_terminations
+
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -5539,6 +5543,7 @@ class CableUIViewSet(NautobotUIViewSet):
     filterset_class = filters.CableFilterSet
     filterset_form_class = forms.CableFilterForm
     form_class = forms.CableForm
+    create_form_class = forms.CableCreateForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
     queryset = Cable.objects.select_related("cable_type").prefetch_related(
@@ -5558,6 +5563,12 @@ class CableUIViewSet(NautobotUIViewSet):
         if self.action == "destroy":
             queryset = queryset.prefetch_related(None)
         return queryset
+
+    def get_template_name(self):
+        """Account for the bulk_connect action template."""
+        if self.action == "bulk_connect":
+            return "dcim/cable_update.html"
+        return super().get_template_name()
 
     @action(
         detail=True,
@@ -5635,6 +5646,168 @@ class CableUIViewSet(NautobotUIViewSet):
                 "parent_field": result["meta"]["parent_field"],
                 "term_field": result["meta"]["term_field"],
             },
+        )
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="lane-fill",
+        url_name="lane_fill",
+        custom_view_base_action="view",
+    )
+    def lane_fill(self, request):
+        """Fill every connector on one side of a breakout cable from connector single selection with HTMX.
+
+        Convenience for extending a single connector to multiple subsequent connectors when filling
+        out a breakout cable form.
+        """
+        side = request.GET.get("fill_side", "b")
+        data = request.GET.copy()
+
+        cable_type = CableType.objects.filter(pk=data.get("cable_type")).first() if data.get("cable_type") else None
+        connectors = (cable_type.a_connectors if side == "a" else cable_type.b_connectors) if cable_type else 1
+
+        prefix1 = f"{side}_conn_1"
+        type_name = data.get(f"{prefix1}_type")
+        parent_pk = data.get(f"{prefix1}_parent")
+        term_pk = data.get(f"{prefix1}_termination")
+        if connectors > 1 and type_name and term_pk:
+            ct = ContentType.objects.filter(model=type_name.replace("-", "")).first()
+            model = ct.model_class() if ct else None
+            seed = model.objects.filter(pk=term_pk).first() if model else None
+            if seed is not None:
+                for i, termination in enumerate(walk_terminations(seed, connectors), start=1):
+                    data[f"{side}_conn_{i}_type"] = type_name
+                    data[f"{side}_conn_{i}_parent"] = parent_pk
+                    data[f"{side}_conn_{i}_termination"] = str(termination.pk)
+
+        form = forms.CableForm(data=data)
+        return render(request, "dcim/inc/cable_lane_form.html", {"form": form})
+
+    def perform_create(self, request, *args, **kwargs):
+        """Standard single-cable create.
+
+        The Add Cable form also carries a Count and a "Bulk add" button; those submit to the dedicated
+        `bulk_connect` action instead (see below). If a count is present here, the user typed one but
+        clicked the plain "Create" — steer them to "Bulk add".
+        """
+        self.obj = self.get_object()
+        form_class = self.get_form_class()
+        form = form_class(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=form_class),
+            instance=self.obj,
+        )
+        restrict_form_fields(form, request.user)
+
+        # Preserve values so cancel on bulk form can return here populated.
+        if "_edit" in request.POST:
+            return self.form_invalid(form)
+
+        if not form.is_valid():
+            return self.form_invalid(form)
+
+        if (form.cleaned_data.get("count") or 0) >= 2:
+            form.add_error(
+                "count",
+                'To create more than one cable, use the "Bulk add" button. Leave this blank (or 1) to '
+                "create a single cable.",
+            )
+            return self.form_invalid(form)
+        return self.form_valid(form)
+
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="bulk-connect",
+        url_name="bulk_connect",
+        custom_view_base_action="add",
+    )
+    def bulk_connect(self, request, *args, **kwargs):
+        """Create N cables from the Add Cable form's Count — the "Bulk add" / "Confirm" two-step.
+
+        A dedicated action like `bulk_disconnect` / `bulk_rename`: it creates many cables, so it
+        can't ride the single-instance `perform_create` contract. Reached only from the cable add
+        form — its "Bulk add" and "Confirm" buttons `formaction` here, while the plain "Create"
+        button posts to the normal `cable_add`.
+        """
+        self.obj = self.get_object()
+        form = forms.CableCreateForm(
+            data=request.POST,
+            files=request.FILES,
+            initial=normalize_querydict(request.GET, form_class=forms.CableCreateForm),
+        )
+        restrict_form_fields(form, request.user)
+        if not form.is_valid():
+            return self.form_invalid(form)
+        return self.perform_bulk_connect(request, form, form.cleaned_data.get("count"))
+
+    def perform_bulk_connect(self, request, form, count):
+        """Two step process for bulk cable creation based on `_bulk_confirm` presence."""
+        if not count or count < 2:
+            form.add_error("count", '"Bulk add" creates 2 or more cables; use "Create" for a single cable.')
+            return self.form_invalid(form)
+
+        service = BulkCableConnectService(form.build_spec())
+        try:
+            resolved = service.resolve()
+            service.validate(resolved)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+            return self.form_invalid(form)
+
+        if "_bulkconfirm" in request.POST:
+            return self._process_bulk_connect_form(request, form, service)
+        return self._render_bulk_connect_confirmation(request, form, resolved, count)
+
+    def _process_bulk_connect_form(self, request, form, service):
+        """Create the N cables in one transaction, enforced by model object validation."""
+        try:
+            cables = service.run()
+        except ValidationError as exc:
+            form.add_error(None, exc)
+            return self.form_invalid(form)
+        cable_type = form.cleaned_data.get("cable_type")
+        noun = "breakout cables" if cable_type and cable_type.is_breakout else "cables"
+        links = format_html_join(", ", '<a href="{}">{}</a>', ((c.get_absolute_url(), str(c)) for c in cables))
+        messages.success(request, format_html("Created {} {}: {}", len(cables), noun, links))
+        return redirect(self.get_return_url(request))
+
+    def _render_bulk_connect_confirmation(self, request, form, resolved, count):
+        """Preview confirmation page setup."""
+
+        def _term_info(term):
+            parent = getattr(term, "parent", None)
+            return {
+                "type": term._meta.verbose_name.title(),
+                "parent": str(parent) if parent is not None else "",
+                "name": str(term),
+            }
+
+        cables = [
+            {
+                "index": i + 1,
+                "a": [_term_info(term) for term in resolved["A"].block(i)],
+                "b": [_term_info(term) for term in resolved["B"].block(i)],
+            }
+            for i in range(count)
+        ]
+
+        # Render the form's but as read only to send as hidden inputs in the confirmation step.
+        for field in form.fields.values():
+            field.widget.attrs["disabled"] = True
+
+        skip = {"_create", "_addanother", "_bulkadd", "_bulkconfirm", "csrfmiddlewaretoken"}
+        hidden_fields = [(key, value) for key in request.POST if key not in skip for value in request.POST.getlist(key)]
+        return Response(
+            {
+                "form": form,
+                "confirming": True,
+                "bulk_cables": cables,
+                "bulk_hidden_fields": hidden_fields,
+                "bulk_count": count,
+            }
         )
 
 

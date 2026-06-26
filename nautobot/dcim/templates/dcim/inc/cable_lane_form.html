@@ -26,7 +26,12 @@
                                 <td{% if row.a_rowspan > 1 %} rowspan="{{ row.a_rowspan }}"{% endif %} class="align-top border-end p-3">
                                     {% with a=row.a %}
                                         {% if conns.cable_type.is_breakout %}
-                                            <h4><strong>A{{ a.connector }}</strong>{% if a.lanes > 1 %} <span class="badge bg-secondary">{{ a.lanes }} lanes</span>{% endif %}</h4>
+                                            <div class="d-flex align-items-center justify-content-between mb-10">
+                                                <h4 class="mb-0"><strong>A{{ a.connector }}</strong>{% if a.lanes > 1 %} <span class="badge bg-secondary">{{ a.lanes }} lanes</span>{% endif %}</h4>
+                                                <button type="button" class="btn btn-link btn-sm p-0 text-muted cable-clear-connector" data-prefix="a_conn_{{ a.connector }}" title="Clear this connector" aria-label="Clear connector A{{ a.connector }}">
+                                                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                                                </button>
+                                            </div>
                                         {% endif %}
                                         <div id="a_conn_{{ a.connector }}_fields">
                                             {% render_field a.type_field %}
@@ -35,6 +40,19 @@
                                                 {% render_field a.term_field %}
                                             </div>
                                         </div>
+                                        {% if a.connector == 1 and conns.cable_type.a_connectors > 1 %}
+                                            <div class="text-end mt-4">
+                                                <button type="button" class="btn btn-default btn-sm"
+                                                        hx-get="{% url 'dcim:cable_lane_fill' %}"
+                                                        hx-include="closest form"
+                                                        hx-vals='{"fill_side": "a"}'
+                                                        hx-target="#lane-terminations-container"
+                                                        hx-swap="innerHTML"
+                                                        title="Fill the remaining A connectors with the next open terminations">
+                                                    <span aria-hidden="true" class="mdi mdi-arrow-expand-down me-4"></span>Fill {{ conns.cable_type.a_connectors }} A connectors from here
+                                                </button>
+                                            </div>
+                                        {% endif %}
                                     {% endwith %}
                                 </td>
                             {% endif %}
@@ -42,7 +60,12 @@
                                 <td{% if row.b_rowspan > 1 %} rowspan="{{ row.b_rowspan }}"{% endif %} class="align-top p-3">
                                     {% with b=row.b %}
                                         {% if conns.cable_type.is_breakout %}
-                                            <h4><strong>B{{ b.connector }}</strong>{% if b.lanes > 1 %} <span class="badge bg-secondary">{{ b.lanes }} lanes</span>{% endif %}</h4>
+                                            <div class="d-flex align-items-center justify-content-between mb-10">
+                                                <h4 class="mb-0"><strong>B{{ b.connector }}</strong>{% if b.lanes > 1 %} <span class="badge bg-secondary">{{ b.lanes }} lanes</span>{% endif %}</h4>
+                                                <button type="button" class="btn btn-link btn-sm p-0 text-muted cable-clear-connector" data-prefix="b_conn_{{ b.connector }}" title="Clear this connector" aria-label="Clear connector B{{ b.connector }}">
+                                                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                                                </button>
+                                            </div>
                                         {% endif %}
                                         <div id="b_conn_{{ b.connector }}_fields">
                                             {% render_field b.type_field %}
@@ -51,6 +74,19 @@
                                                 {% render_field b.term_field %}
                                             </div>
                                         </div>
+                                        {% if b.connector == 1 and conns.cable_type.b_connectors > 1 %}
+                                            <div class="text-end mt-4">
+                                                <button type="button" class="btn btn-default btn-sm"
+                                                        hx-get="{% url 'dcim:cable_lane_fill' %}"
+                                                        hx-include="closest form"
+                                                        hx-vals='{"fill_side": "b"}'
+                                                        hx-target="#lane-terminations-container"
+                                                        hx-swap="innerHTML"
+                                                        title="Fill the remaining B connectors with the next open terminations">
+                                                    <span aria-hidden="true" class="mdi mdi-arrow-expand-down me-4"></span>Fill {{ conns.cable_type.b_connectors }} B connectors from here
+                                                </button>
+                                            </div>
+                                        {% endif %}
                                     {% endwith %}
                                 </td>
                             {% endif %}
