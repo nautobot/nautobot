@@ -378,3 +378,49 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         self.assertIn("duration_ms", log, "duration_ms must be present in the log entry.")
         self.assertIsInstance(log["duration_ms"], float)
         self.assertGreaterEqual(log["duration_ms"], 0.0)
+
+
+class MainInstrumentGatingTest(testing.TestCase):
+    """Verify main() decides whether to call instrument() from the loaded nautobot_config, not nautobot.core.settings.
+
+    Regression coverage for the case where OTEL_PYTHON_DJANGO_INSTRUMENT is enabled via a nautobot_config.py
+    override (not the OTEL_PYTHON_DJANGO_INSTRUMENT environment variable). Reading the flag from
+    nautobot.core.settings missed such overrides because that base module only reflects the env-var default;
+    main() now reads it from the loaded config module in sys.modules["nautobot_config"].
+    """
+
+    def _run_main(self, *, config_instrument):
+        """Drive main() up to the instrument() gate with a fake loaded config and stubbed Django hand-off.
+
+        Args:
+            config_instrument: Value of OTEL_PYTHON_DJANGO_INSTRUMENT on the loaded nautobot_config module.
+
+        Returns:
+            The MagicMock standing in for nautobot.core.cli.opentelemetry.instrument.
+        """
+        fake_settings = MagicMock()
+        fake_settings.OTEL_PYTHON_DJANGO_INSTRUMENT = config_instrument
+
+        with (
+            patch("nautobot.core.cli.load_settings") as mock_load_settings,
+            patch.dict("sys.modules", {"nautobot_config": fake_settings}),
+            patch("nautobot.core.cli.opentelemetry.instrument") as mock_instrument,
+            patch("nautobot.core.cli.execute_from_command_line"),
+            patch("sys.argv", ["nautobot-server", "migrate"]),
+        ):
+            from nautobot.core.cli import main
+
+            main()
+
+        mock_load_settings.assert_called_once()
+        return mock_instrument
+
+    def test_instrument_called_when_config_enables_it(self):
+        """instrument() runs when the loaded nautobot_config sets OTEL_PYTHON_DJANGO_INSTRUMENT True."""
+        mock_instrument = self._run_main(config_instrument=True)
+        mock_instrument.assert_called_once()
+
+    def test_instrument_not_called_when_config_disables_it(self):
+        """instrument() is skipped when the loaded nautobot_config sets OTEL_PYTHON_DJANGO_INSTRUMENT False."""
+        mock_instrument = self._run_main(config_instrument=False)
+        mock_instrument.assert_not_called()
