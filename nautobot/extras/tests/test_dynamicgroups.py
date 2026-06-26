@@ -47,11 +47,11 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.extras.utils import fixup_dynamic_group_group_types
+from nautobot.extras.utils import FeatureQuery, fixup_dynamic_group_group_types
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.ipam.querysets import PrefixQuerySet
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 
 class DynamicGroupTestBase(TestCase):
@@ -671,6 +671,23 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         # Form instance should have identical field set to filter fields.
         self.assertEqual(sorted(form.fields), sorted(filter_fields))
+
+    def test_all_types_have_filter_forms(self):
+        for model_class in FeatureQuery("dynamic_groups").list_subclasses():
+            # TODO: Fix test for VMInterface instantiation
+            if model_class is VMInterface:
+                continue
+
+            with self.subTest(model_class=model_class):
+                try:
+                    test_dynamic_group = DynamicGroup.objects.create(
+                        name="Placeholder Dynamic Group", content_type=ContentType.objects.get_for_model(model_class)
+                    )
+
+                    self.assertIsNotNone(test_dynamic_group.generate_filter_form())
+                finally:
+                    if test_dynamic_group is not None:
+                        test_dynamic_group.delete()
 
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""

@@ -1251,17 +1251,19 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         )
 
 
-@task
-def lint(context):
+@task(
+    help={"fix": "Automatically apply formatting and linting recommendations where supported. May not fix all issues."}
+)
+def lint(context, fix=False):
     """Run all linters."""
     hadolint(context)
-    markdownlint(context)
+    markdownlint(context, fix=fix)
     yamllint(context)
-    ruff(context)
+    ruff(context, fix=fix)
     pylint(context)
-    eslint(context)
-    prettier(context)
-    djhtml(context)
+    eslint(context, fix=fix)
+    prettier(context, fix=fix)
+    djhtml(context, fix=fix)
     djlint(context)
     check_migrations(context)
     check_schema(context)

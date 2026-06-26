@@ -97,6 +97,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.render_markdown("[I am a link](https://www.example.com)"),
             '<p><a href="https://www.example.com" rel="noopener noreferrer">I am a link</a></p>',
         )
+        self.assertEqual(helpers.render_markdown(None), "")
+        self.assertEqual(helpers.render_markdown(""), "")
 
     def test_render_markdown_security(self):
         self.assertEqual(helpers.render_markdown('<script>alert("XSS")</script>'), "")

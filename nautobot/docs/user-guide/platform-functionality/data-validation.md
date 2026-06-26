@@ -68,7 +68,10 @@ In this example, a device hostname validation rule has been created and prevents
 ![Regex Rules Enforcement](../../media/data-validation-engine/ss_regex-rules-enforcement_dark.png#only-dark){ .on-glb }
 [//]: # "`https://next.demo.nautobot.com/dcim/devices/add/`"
 
-Regex rules may also support complex Jinja2 rendering called context processing which allows for the regular expression itself to by dynamically generated based on the context of the data it is validating.
+Regex rules may also support complex Jinja2 rendering called context processing which allows for the regular expression itself to by dynamically generated based on the context of the data it is validating. The object being validated is available in the template as the `obj` variable (e.g. `{{ obj.name }}`).
+
+!!! note
+    The `obj` variable was previously named `object`. The `object` variable is still available but is deprecated and will be removed in Nautobot 4.0.
 
 In this example the name of a device must start with the first three characters of the name of the location to which the device belongs. The dynamic nature of the Jinja2 rendering means that the location name can be anything, the enforcement action is simply that the given device name matches its assigned location.
 

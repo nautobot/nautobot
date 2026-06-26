@@ -140,10 +140,26 @@ def assign_permissions_to_user(user, permissions=None):
         try:
             object_type, action = resolve_permission_ct(permission_name)
             # 2.0 TODO(jathan): Merge multiple actions into a single ObjectPermission per content type OR just replace this with a different solution entirely.
-            obj_perm = ObjectPermission(name=permission_name, actions=[action], constraints=constraints)
-            obj_perm.save()
+            obj_perm, created = ObjectPermission.objects.get_or_create(
+                name=permission_name,
+                defaults={"actions": [action], "constraints": constraints},
+            )
+            if not created and (obj_perm.actions != [action] or obj_perm.constraints != constraints):
+                logger.warning(
+                    f"ObjectPermission '{permission_name}' already exists with actions or constraints that differ "
+                    "from EXTERNAL_AUTH_DEFAULT_PERMISSIONS; not assigning it to user."
+                )
+                continue
+            existing_object_types = set(obj_perm.object_types.values_list("pk", flat=True))
+            if existing_object_types and existing_object_types != {object_type.pk}:
+                logger.warning(
+                    f"ObjectPermission '{permission_name}' already has object type(s) that differ from the expected "
+                    f"'{object_type}'; not assigning it to user."
+                )
+                continue
             obj_perm.users.add(user)
-            obj_perm.object_types.add(object_type)
+            if not existing_object_types:
+                obj_perm.object_types.add(object_type)
             permissions_list.append(permission_name)
         except ValueError:
             logging.error(
