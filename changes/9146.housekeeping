@@ -1,0 +1,1 @@
+Changed `lint` task to support `--fix` flag in order to apply fixes for all.

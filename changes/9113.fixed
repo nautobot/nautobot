@@ -1,0 +1,1 @@
+Fixed an `IntegrityError` raised on every request after the first when `EXTERNAL_AUTH_DEFAULT_PERMISSIONS` is configured for externally-authenticated users.

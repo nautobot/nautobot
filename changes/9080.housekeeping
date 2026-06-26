@@ -1,3 +1,0 @@
-Fixed intermittent pylint CI failures by disabling parallel pylint execution by default.
-Updated "invoke pylint" task to support additional optional parameters.
-Fixed pylint and ruff not covering the `scripts/` directory.
