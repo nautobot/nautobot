@@ -51,6 +51,8 @@
         }
 
         .nb-login-card {
+            /* Card background, reused by the "Or" divider label so its cutout matches the card. */
+            --nb-card-bg: var(--bs-body-bg);
             width: 100%;
             max-width: 40rem;
             border-radius: 1.25rem;
@@ -60,14 +62,19 @@
             overflow: visible;
         }
 
-        /* In dark mode lift the card slightly above the page background so it
-           stands out; in light mode it stays white via the bg-body class. */
+        /* In dark mode lift the card above the page background so it stands out. */
         [data-bs-theme="dark"] .nb-login-card {
-            background-color: #262626 !important;
+            --nb-card-bg: #262626;
+            background-color: var(--nb-card-bg) !important;
         }
 
         .nb-login-card .card-body {
             padding: 2.5rem;
+        }
+
+        /* "Or" divider label: paint over the <hr> with the card background, matching it in both themes. */
+        .nb-login-or {
+            background-color: var(--nb-card-bg);
         }
 
         /* Logo + edition line as a left lockup: the brand block shrinks to the logo
@@ -229,13 +236,13 @@
                 <button type="submit" class="btn btn-primary w-100 mt-24">Sign in</button>
             </form>
 
-            {% if SSO_AUTH_ENABLED %}
+
                 <div class="position-relative text-center">
                     <hr class="border-top m-20">
-                    <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle text-secondary">Or</span>
-                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary w-100">Continue with SSO</a>
+                    <span class="nb-login-or px-16 position-absolute start-50 top-0 translate-middle text-secondary">Or</span>
+                    <a class="btn btn-primary w-100">Continue with SSO</a>
                 </div>
-            {% endif %}
+
         </div>
     </div>
 
