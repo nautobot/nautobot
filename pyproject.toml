@@ -27,9 +27,9 @@ dependencies = [
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=48.0.1,<49)",
+    "cryptography (>=49.0.0,<50)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.15,<5.3)",
+    "django (>=6.0.6,<6.1)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -48,19 +48,19 @@ dependencies = [
     # Advanced query filters
     "django-filter (>=25.2,<25.3)",
     # Health check endpoint
-    "django-health-check (>=3.20.8,<3.21)",
+    "django-health-check (>=4.4.3,<4.5)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
     "django-prometheus (>=2.4.1,<2.5)",
     # Redis cache for Django used for distributed locking
-    "django-redis (>=6.0.0,<6.1)",
+    "django-redis (>=7.0.0,<7.1)",
     # Django silk for request profiling
     "django-silk (>=5.5.0,<5.6)",
     # Structured logging for Django
     "django-structlog[celery] (>=10.0.0,<10.1)",
     # Advanced HTML tables
-    "django-tables2 (>=2.8.0,<2.9)",
+    "django-tables2 (>=3.0.0,<3.1)",
     # Tags
     "django-taggit (>=6.1.0,<6.2)",
     # Represent time zones in Django
@@ -116,7 +116,7 @@ dependencies = [
     # Enhanced version of Python's built-in `re` module
     "regex (>=2026.5.9)",
     # Social authentication/registration with support for many auth providers
-    "social-auth-app-django (>=5.9.0,<5.10)",
+    "social-auth-app-django (>=6.0.0,<6.1)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
     # Enhanced HTTP client library
@@ -142,7 +142,7 @@ remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.9.1,<4.10)" ]
+sso = [ "social-auth-core[saml] (>=5.0.2,<5.1)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"
@@ -169,7 +169,7 @@ exclude = [
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~6.2.0"
+django-debug-toolbar = "~7.0.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -179,9 +179,9 @@ factory-boy = "~3.3.3"
 # Factory Boy dependency.
 faker = "^40.21.0"
 # Alternative to Make, CLI based on `tasks.py`
-invoke = "~2.2.1"
+invoke = "~3.0.3"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
-rich = "~14.3.4"
+rich = "~15.0.0"
 # Change log management and generation
 towncrier = "~25.8.0"
 # Watch files for celery and mkdocs reload
