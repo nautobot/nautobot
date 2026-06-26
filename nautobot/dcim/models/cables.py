@@ -27,6 +27,7 @@ from nautobot.dcim.constants import (
 from nautobot.dcim.fields import JSONPathField
 from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
 from nautobot.dcim.utils import (
+    build_connector_row_layout,
     decompile_path_node,
     generate_cable_breakout_mapping,
     object_to_path_node,
@@ -652,6 +653,8 @@ class Cable(PrimaryModel):
         cable_type = self.cable_type if self.cable_type_id else None
 
         def _build_connector_info(side, connector_number, position_count):
+            if connector_number is None:
+                return None
             endpoint = endpoint_by_connector.get((side, connector_number))
             return {
                 "connector": connector_number,
@@ -671,50 +674,15 @@ class Cable(PrimaryModel):
                 "b_connector_count": 1,
             }
 
-        # Build the mapping: which A connectors map to which B connectors
-        a_to_b_connectors = {}
-        b_to_a_connectors = {}
-        for entry in cable_type.mapping:
-            a_to_b_connectors.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
-            b_to_a_connectors.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
-
-        # Build a flat row list from the mapping, assigning rowspans.
-        # Each unique (a_connector, b_connector) pair gets one row.
-        rows = []
-        seen_a_connectors = {}  # a_connector → first row index
-        seen_b_connectors = {}  # b_connector → first row index
-        seen_pairs = set()
-
-        for entry in cable_type.mapping:
-            a_connector = entry["a_connector"]
-            b_connector = entry["b_connector"]
-            pair = (a_connector, b_connector)
-            if pair in seen_pairs:
-                continue
-            seen_pairs.add(pair)
-
-            a_info = _build_connector_info("A", a_connector, cable_type.a_positions)
-            b_info = _build_connector_info("B", b_connector, cable_type.b_positions)
-
-            a_rowspan = 0  # 0 = skip (covered by previous rowspan)
-            b_rowspan = 0
-
-            if a_connector not in seen_a_connectors:
-                a_rowspan = len(a_to_b_connectors.get(a_connector, []))
-                seen_a_connectors[a_connector] = len(rows)
-
-            if b_connector not in seen_b_connectors:
-                b_rowspan = len(b_to_a_connectors.get(b_connector, []))
-                seen_b_connectors[b_connector] = len(rows)
-
-            rows.append(
-                {
-                    "a": a_info,
-                    "b": b_info,
-                    "a_rowspan": a_rowspan,
-                    "b_rowspan": b_rowspan,
-                }
-            )
+        rows = [
+            {
+                "a": _build_connector_info("A", layout["a_connector"], cable_type.a_positions),
+                "b": _build_connector_info("B", layout["b_connector"], cable_type.b_positions),
+                "a_rowspan": layout["a_rowspan"],
+                "b_rowspan": layout["b_rowspan"],
+            }
+            for layout in build_connector_row_layout(cable_type.mapping)
+        ]
 
         return {
             "rows": rows,

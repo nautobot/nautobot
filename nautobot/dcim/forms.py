@@ -174,6 +174,7 @@ from .models import (
 )
 from .signals import defer_cable_path_rebuilds
 from .termination_field_set import CableTerminationFieldSet
+from .utils import build_connector_row_layout
 
 logger = logging.getLogger(__name__)
 
@@ -4482,11 +4483,12 @@ class CableForm(NautobotModelForm):
         if self.instance and self.instance.present_in_database:
             conns = self.instance.get_connections()
             for row in conns["rows"]:
+                # Rows covered by an earlier cell's rowspan carry a None cell on that side — skip them.
                 a = row["a"]
                 b = row["b"]
-                if a["connector"] not in existing_a:
+                if a is not None and a["connector"] not in existing_a:
                     existing_a[a["connector"]] = a["termination"]
-                if b["connector"] not in existing_b:
+                if b is not None and b["connector"] not in existing_b:
                     existing_b[b["connector"]] = b["termination"]
 
         # Pre-populate A-side from URL params (used by the connect flow). Each failure mode here
@@ -4646,39 +4648,20 @@ class CableForm(NautobotModelForm):
                     "b": b_enriched.get(1, {}),
                     "a_rowspan": 1,
                     "b_rowspan": 1,
-                    "_ac": 1,
-                    "_bc": 1,
                 }
             ]
         else:
-            a_to_b = {}
-            b_to_a = {}
-            for entry in cable_type.mapping:
-                a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
-                b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
-
-            # Build flat rows with rowspan hints (same logic as get_connections)
-            rows = []
-            a_seen = set()
-            b_seen = set()
-            for entry in cable_type.mapping:
-                ac, bc = entry["a_connector"], entry["b_connector"]
-                if (ac, bc) in {(r["_ac"], r["_bc"]) for r in rows}:
-                    continue
-                a_rowspan = len(a_to_b.get(ac, [])) if ac not in a_seen else 0
-                b_rowspan = len(b_to_a.get(bc, [])) if bc not in b_seen else 0
-                a_seen.add(ac)
-                b_seen.add(bc)
-                rows.append(
-                    {
-                        "a": a_enriched.get(ac, {}),
-                        "b": b_enriched.get(bc, {}),
-                        "a_rowspan": a_rowspan,
-                        "b_rowspan": b_rowspan,
-                        "_ac": ac,
-                        "_bc": bc,
-                    }
-                )
+            # Reuse the same layout helper as `Cable.get_connections` so the edit form and the
+            # detail view render identically structured tables.
+            rows = [
+                {
+                    "a": a_enriched.get(layout["a_connector"], {}),
+                    "b": b_enriched.get(layout["b_connector"], {}),
+                    "a_rowspan": layout["a_rowspan"],
+                    "b_rowspan": layout["b_rowspan"],
+                }
+                for layout in build_connector_row_layout(cable_type.mapping)
+            ]
 
         return {
             "rows": rows,
