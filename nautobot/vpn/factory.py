@@ -331,9 +331,7 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
     has_source_interface = NautobotBoolIterator()
     source_interface = factory.Maybe(
         "has_source_interface",
-        random_instance(
-            lambda: Interface.objects.filter(vpn_tunnel_endpoints_src_int__isnull=True, device__isnull=False)
-        ),
+        random_instance(lambda: Interface.objects.filter(device__isnull=False)),
         None,
     )
     source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("hostname"))
