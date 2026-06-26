@@ -1,0 +1,1 @@
+Fixed VPNTunnelEndpoint source_interface field from OneToOne to ForeignKey.

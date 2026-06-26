@@ -475,7 +475,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         null=True,
         verbose_name="Device",
     )
-    source_interface = models.OneToOneField(
+    source_interface = models.ForeignKey(
         to="dcim.Interface",
         on_delete=models.CASCADE,
         related_name="vpn_tunnel_endpoints_src_int",
