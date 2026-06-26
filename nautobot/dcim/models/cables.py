@@ -213,6 +213,17 @@ class CableType(PrimaryModel):
         return self.a_connectors != self.b_connectors
 
     @property
+    def is_multi_connector(self):
+        """True if either side has more than one connector (i.e. multiple terminations per side).
+
+        Broader than `is_breakout`, which requires *differing* connector counts: a symmetric
+        multi-connector type such as a polarity-shuffled 2x2 is multi-connector but not a breakout.
+        Multi-connector cable types model per-lane terminations and therefore require breakout-eligible
+        termination types (see `Cable.breakout_eligible`).
+        """
+        return self.a_connectors > 1 or self.b_connectors > 1
+
+    @property
     def trunk_end(self):
         """The cable end (`"A"` or `"B"`) on the trunk (fewer-connectors) side of a breakout.
 
@@ -1163,6 +1174,21 @@ class CableToCableTermination(BaseModel):
         term = self.termination
         if term is not None:
             validate_cable_termination(term, cable_id=self.cable_id)
+
+        # A multi-connector cable type models per-lane terminations, which only certain termination
+        # types support; reject e.g. a console or power termination on a breakout cable. Single-
+        # connector cable types (and standard cables with no cable_type) impose no such restriction.
+        if (
+            term is not None
+            and self.cable is not None
+            and self.cable.cable_type_id is not None
+            and self.cable.cable_type.is_multi_connector
+            and term._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES
+        ):
+            raise ValidationError(
+                f"A {term._meta.verbose_name} cannot terminate a multi-connector cable type; only "
+                "interfaces, front ports, rear ports, and circuit terminations support breakout."
+            )
 
         # `connector` must be in the range defined by the parent cable's CableType. Standard cables
         # (no CableType) have a single connector on each end, so `connector` must be 1; breakout

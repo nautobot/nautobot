@@ -109,6 +109,7 @@ from .choices import (
     SubdeviceRoleChoices,
 )
 from .constants import (
+    BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
     CABLE_BREAKOUT_MAX_CONNECTORS,
     CABLE_BREAKOUT_MAX_LANES,
     COMPATIBLE_TERMINATION_TYPES,
@@ -4390,13 +4391,21 @@ class CableForm(NautobotModelForm):
         # submission rather than the form silently falling back to a default layout.
         self._init_warnings: list[tuple] = []
 
-        # Disable cable type field for cables with incompatible termination types
-        # TODO revisit this, should permit non-breakout CableTypes here...
+        # When this cable's existing terminations don't support breakout lane modeling (e.g. console
+        # or power terminations), restrict the cable type choices to single-connector types. Multi-
+        # connector types require breakout-eligible terminations (enforced in
+        # `CableToCableTermination.clean`). Previously the whole field was disabled, which wrongly
+        # blocked valid single-connector cable types too.
         if self.instance and self.instance.present_in_database and not self.instance.breakout_eligible:
-            self.fields["cable_type"].disabled = True
+            self.fields["cable_type"].queryset = self.fields["cable_type"].queryset.filter(
+                a_connectors=1, b_connectors=1
+            )
+            self.fields["cable_type"].widget.add_query_param("a_connectors", 1)
+            self.fields["cable_type"].widget.add_query_param("b_connectors", 1)
             self.fields["cable_type"].help_text = (
-                "Cable types are not available for this cable. "
-                "Only cables with interface, front port, rear port, or circuit termination types support breakout."
+                "Only single-connector cable types are available because this cable's terminations "
+                "do not support breakout. Interfaces, front ports, rear ports, and circuit terminations "
+                "support multi-connector breakout cable types."
             )
 
         # Resolve HTMX endpoint URLs. The lane-form endpoint differs by saved-ness (renders the
@@ -4715,6 +4724,23 @@ class CableForm(NautobotModelForm):
                 Cable.validate_termination_pair(term_a, term_b)
             except ValidationError as exc:
                 self.add_error(f"b_conn_{entry['b_connector']}_termination", exc)
+
+        # Multi-connector (breakout) cable types only support breakout-eligible termination types.
+        # Surface this as a per-field error here rather than letting `CableToCableTermination.clean()`
+        # raise from `save()`.
+        if cable_type is not None and cable_type.is_multi_connector:
+            for side_info, side_label in ((info["a_side"], "a"), (info["b_side"], "b")):
+                for conn in side_info:
+                    field_name = f"{side_label}_conn_{conn['connector']}_termination"
+                    termination = cleaned_data.get(field_name)
+                    if (
+                        termination is not None
+                        and termination._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES
+                    ):
+                        self.add_error(
+                            field_name,
+                            f"A {termination._meta.verbose_name} cannot terminate a multi-connector cable type.",
+                        )
 
         return cleaned_data
 

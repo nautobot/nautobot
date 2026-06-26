@@ -33,6 +33,7 @@ from nautobot.dcim.models import (
     CableToCableTermination,
     CableType,
     ConsolePort,
+    ConsoleServerPort,
     Device,
     DeviceBay,
     DeviceType,
@@ -1295,6 +1296,54 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         # Only one row despite four mapping entries — the layout collapses the (1, 1) repeats.
         self.assertEqual(len(result["rows"]), 1)
         self.assertEqual((result["rows"][0]["a"]["connector"], result["rows"][0]["b"]["connector"]), (1, 1))
+
+    def _console_cable(self):
+        """A saved, valid cable terminating on console ports — not breakout-eligible."""
+        cp = ConsolePort.objects.create(device=self.device, name="cp-elig", type=ConsolePortTypeChoices.TYPE_RJ45)
+        csp = ConsoleServerPort.objects.create(
+            device=self.device, name="csp-elig", type=ConsolePortTypeChoices.TYPE_RJ45
+        )
+        return Cable.objects.create(termination_a=cp, termination_b=csp, status=self.cable_status)
+
+    def test_cable_type_choices_restricted_not_disabled_for_non_breakout_eligible_cable(self):
+        """A non-breakout-eligible cable still allows single-connector cable types; only multi-connector
+        types are filtered out, and the field is no longer disabled wholesale."""
+        cable = self._console_cable()
+        self.assertFalse(cable.breakout_eligible)
+        single = CableType.objects.create(name="Choices 1x1", a_connectors=1, b_connectors=1, total_lanes=1)
+        multi = CableType.objects.create(name="Choices 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+
+        field = CableForm(instance=cable).fields["cable_type"]
+        self.assertFalse(field.disabled)
+        self.assertIn(single, field.queryset)
+        self.assertNotIn(multi, field.queryset)
+
+    def test_form_rejects_multi_connector_cable_type_with_ineligible_termination(self):
+        """Selecting a multi-connector cable type for console terminations is a form error, not a 500."""
+        multi = CableType.objects.create(name="Reject form 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        cp = ConsolePort.objects.create(device=self.device, name="cp-multi", type=ConsolePortTypeChoices.TYPE_RJ45)
+        csp = ConsoleServerPort.objects.create(
+            device=self.device, name="csp-multi", type=ConsolePortTypeChoices.TYPE_RJ45
+        )
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": str(multi.pk),
+            "a_conn_1_type": "consoleport",
+            "a_conn_1_parent": str(self.device.pk),
+            "a_conn_1_termination": str(cp.pk),
+            "b_conn_1_type": "consoleserverport",
+            "b_conn_1_parent": str(self.device.pk),
+            "b_conn_1_termination": str(csp.pk),
+        }
+        form = CableForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("a_conn_1_termination", form.errors)
+        self.assertIn("multi-connector cable type", str(form.errors["a_conn_1_termination"]))
 
     def test_get_connection_fields_mesh_2x2_is_structurally_valid(self):
         """Regression: a polarity-shuffled 2x2 (mesh) renders as a valid 2-row table without crashing."""

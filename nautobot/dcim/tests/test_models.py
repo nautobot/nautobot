@@ -3827,13 +3827,15 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             incompatible_row.full_clean()
 
     def test_cabletocabletermination_rejects_incompatible_peer_on_breakout_lane(self):
-        """On a 1x2 breakout, each B-side row peers with A-connector 1 — incompatible types fail clean."""
+        """On a 1x2 breakout, each B-side row peers with A-connector 1 — incompatible pairs fail clean."""
         ct = CableType.objects.create(name="Test 1x2 mixed", a_connectors=1, b_connectors=2, total_lanes=2)
         cable = Cable.objects.create(status=self.status, cable_type=ct)
-        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=self.interface3, connector=1)
-        # B-side connector 2 shares lane 2 with A-connector 1, so this pair gets checked.
-        incompatible_row = CableToCableTermination(cable=cable, cable_end="B", power_port=self.power_port1, connector=2)
-        with self.assertRaisesRegex(ValidationError, "Incompatible termination types"):
+        # Both rear ports are breakout-eligible, but their position counts differ (3 vs 2), so the
+        # peer-pair check across lane 2 must fail. (A non-eligible type would instead be rejected
+        # outright by the multi-connector eligibility check before the pair check runs.)
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", rear_port=self.rear_port3, connector=1)
+        incompatible_row = CableToCableTermination(cable=cable, cable_end="B", rear_port=self.rear_port2, connector=2)
+        with self.assertRaisesRegex(ValidationError, "same number of positions"):
             incompatible_row.full_clean()
 
     def test_cabletocabletermination_compatible_peer_on_breakout_lane_accepted(self):
@@ -4141,6 +4143,32 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         # Connector below the field minimum is rejected by the field-level validator.
         with self.assertRaises(ValidationError):
             standard_cable.add_termination(self.interface3, "A", connector=0)
+
+    def test_multi_connector_cable_type_requires_breakout_eligible_termination(self):
+        """A multi-connector cable type only accepts breakout-eligible termination types."""
+        breakout_type = CableType.objects.create(name="Eligibility 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        cable = Cable.objects.create(status=self.status, cable_type=breakout_type)
+        # A PowerPort is not breakout-eligible, so it cannot terminate a multi-connector cable.
+        with self.assertRaisesRegex(ValidationError, "cannot terminate a multi-connector cable type"):
+            cable.add_termination(self.power_port1, cable_end="A", connector=1)
+        self.assertFalse(CableToCableTermination.objects.filter(cable=cable).exists())
+
+    def test_symmetric_multi_connector_cable_type_requires_breakout_eligible_termination(self):
+        """A symmetric multi-connector type (is_breakout False) still requires eligible terminations."""
+        shuffle_type = CableType.objects.create(name="Eligibility 2x2", a_connectors=2, b_connectors=2, total_lanes=8)
+        self.assertFalse(shuffle_type.is_breakout)
+        self.assertTrue(shuffle_type.is_multi_connector)
+        cable = Cable.objects.create(status=self.status, cable_type=shuffle_type)
+        with self.assertRaisesRegex(ValidationError, "cannot terminate a multi-connector cable type"):
+            cable.add_termination(self.power_port1, cable_end="A", connector=1)
+
+    def test_single_connector_cable_type_allows_any_termination(self):
+        """A single-connector cable type imposes no breakout-eligibility restriction."""
+        simple_type = CableType.objects.create(name="Eligibility 1x1", a_connectors=1, b_connectors=1, total_lanes=1)
+        cable = Cable.objects.create(status=self.status, cable_type=simple_type)
+        # A PowerPort on a single-connector cable type must not raise the breakout-eligibility error.
+        cable.add_termination(self.power_port1, cable_end="A", connector=1)
+        self.assertEqual(cable.terminations.count(), 1)
 
 
 class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):
