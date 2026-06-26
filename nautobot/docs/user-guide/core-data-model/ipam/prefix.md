@@ -6,6 +6,9 @@ At the database level, a prefix stores its network information in the fields `ne
 
 Each prefix belongs to a specific [Namespace](namespace.md), and is unique within that namespace. Each prefix can also optionally be assigned to a particular [Location(s)](../dcim/location.md), as well as to zero or more [virtual routing and forwarding (VRF)](vrf.md) instances. All prefixes not assigned to a VRF are considered to be in the "global" VRF within their namespace.
 
+!!! note "Assigning VRFs and Locations via import"
+    A Prefix's relationships to VRFs and Locations are many-to-many associations, managed through dedicated assignment records rather than as direct fields on the Prefix. As a result, **these associations cannot be set when creating Prefixes through CSV/bulk import** — a `vrfs` or `locations` column is ignored and the Prefix is created without the association. To assign them, edit the Prefix (or the VRF/Location) in the UI after import, or use the REST API assignment endpoints (`/api/ipam/vrf-prefix-assignments/` and `/api/ipam/prefix-location-assignments/`).
+
 +/- 2.0.0 "Prefixes are unique per Namespace"
     In Nautobot 1.x, prior to the introduction of the namespace data model, a prefix might or might not be unique within its assigned VRF. In Nautobot 2.0, prefixes are always unique within their namespace. You may need to do some cleanup of your data after migrating from Nautobot 1.x to suit the new data requirements.
 
