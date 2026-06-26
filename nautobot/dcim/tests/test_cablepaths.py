@@ -1,7 +1,10 @@
+from io import StringIO
 from unittest import mock
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.management import call_command
 from django.test import TestCase
 
 from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
@@ -2478,3 +2481,226 @@ class CableToCableTerminationSignalTestCase(TestCase):
         with mock.patch.object(dcim_signals, "rebuild_paths", wraps=dcim_signals.rebuild_paths) as spy:
             create_cablepath(trunk, rebuild=True)
         spy.assert_any_call(trunk)
+
+
+class TracePathsCommandTestCase(TestCase):
+    """
+    Coverage for the `trace_paths` management command.
+
+    Two concerns are exercised here:
+
+    * Correctness: a normal (non-`--force`) run must (re)create *every* expected CablePath,
+      including all fan-out lanes of a breakout cable.
+    * Resilience: the command must run to completion rather than aborting partway when it encounters inconsistent or
+      incorrect existing data — orphaned CablePath rows, or a cabling loop that was inadvertently committed.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Trace Paths Device Type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        cls.device = Device.objects.create(
+            location=cls.location,
+            device_type=device_type,
+            role=device_role,
+            name="Trace Paths Device",
+            status=device_status,
+        )
+        cls.interface_status = Status.objects.get_for_model(Interface).first()
+        cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        provider = Provider.objects.first()
+        circuit_type = CircuitType.objects.first()
+        circuit_status = Status.objects.get_for_model(Circuit).first()
+        cls.circuit = Circuit.objects.create(
+            provider=provider, circuit_type=circuit_type, cid="Trace Paths Circuit", status=circuit_status
+        )
+
+        cls.interface_ct = ContentType.objects.get_for_model(Interface)
+
+    def run_command(self, *args):
+        """Run `trace_paths` with the given args, returning its combined stdout/stderr output."""
+        out = StringIO()
+        err = StringIO()
+        call_command("trace_paths", *args, stdout=out, stderr=err)
+        return out.getvalue() + err.getvalue()
+
+    def make_straight_cable(self, name):
+        """Create `[a] --cable-- [b]` between two new interfaces; paths are traced on save."""
+        a = Interface.objects.create(device=self.device, name=f"{name}-a", status=self.interface_status)
+        b = Interface.objects.create(device=self.device, name=f"{name}-b", status=self.interface_status)
+        Cable(termination_a=a, termination_b=b, status=self.cable_status).save()
+        return a, b
+
+    def make_breakout_trunk(self, name, b_connectors=4, total_lanes=4):
+        """Create a 1xN breakout cable with a single connected fan-out lane.
+
+        The trunk origin gets one CablePath per fan-out lane (one complete, the rest partial),
+        which gives us a multi-lane origin to corrupt and re-trace.
+        """
+        breakout_type = CableType(
+            name=f"{name}-type", a_connectors=1, b_connectors=b_connectors, total_lanes=total_lanes
+        )
+        breakout_type.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(device=self.device, name=f"{name}-trunk", status=self.interface_status)
+        lane1 = Interface.objects.create(device=self.device, name=f"{name}-lane1", status=self.interface_status)
+        Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout_type, status=self.cable_status).save()
+        return trunk, lane1
+
+    def trunk_paths(self, trunk):
+        return CablePath.objects.filter(origin_type=self.interface_ct, origin_id=trunk.pk)
+
+    # --- Basic behavior -------------------------------------------------------------------------
+
+    def test_noop_when_all_paths_present(self):
+        """With every cabled origin already traced, a plain run retraces nothing and finishes.
+
+        This is the common `nautobot-server post_upgrade` case (lots of cables, nothing missing),
+        so it must skip *fully-traced* origins — including breakout origins, whose existing path
+        count already equals their lane count. If any origin were re-examined we'd see "Retracing".
+        """
+        self.make_straight_cable("noop")
+        self.make_breakout_trunk("noop-breakout")  # complete: trunk has all 4 lane paths
+        before = CablePath.objects.count()
+        self.assertGreaterEqual(before, 5)
+
+        output = self.run_command()
+
+        self.assertIn("Finished.", output)
+        self.assertIn("Found no missing", output)
+        self.assertNotIn("Retracing", output)
+        self.assertEqual(CablePath.objects.count(), before)
+
+    def test_regenerates_all_missing_paths(self):
+        """After all CablePaths are dropped, a plain run rebuilds them for every cabled origin."""
+        a, b = self.make_straight_cable("regen")
+        expected = CablePath.objects.count()
+        self.assertGreater(expected, 0)
+
+        CablePath.objects.all().delete()
+        output = self.run_command()
+
+        self.assertIn("Finished.", output)
+        self.assertEqual(CablePath.objects.count(), expected)
+        path = CablePath.objects.get(origin_type=self.interface_ct, origin_id=a.pk)
+        self.assertEqual(path.destination, b)
+
+    def test_force_recreates_paths(self):
+        """`--force --no-input` deletes and recreates all paths without prompting."""
+        a, b = self.make_straight_cable("force")
+
+        output = self.run_command("--force", "--no-input")
+
+        self.assertIn("Deleting", output)
+        self.assertIn("Finished.", output)
+        path = CablePath.objects.get(origin_type=self.interface_ct, origin_id=a.pk)
+        self.assertEqual(path.destination, b)
+
+    def test_force_with_no_existing_paths_skips_prompt(self):
+        """`--force` with zero existing paths takes the no-prompt branch and rebuilds cleanly."""
+        a, _ = self.make_straight_cable("force-empty")
+        CablePath.objects.all().delete()
+
+        # No --no-input: with paths_count == 0 the command must not block on input().
+        output = self.run_command("--force")
+
+        self.assertIn("Finished.", output)
+        self.assertEqual(CablePath.objects.filter(origin_type=self.interface_ct, origin_id=a.pk).count(), 1)
+
+    def test_force_aborts_on_negative_confirmation(self):
+        """`--force` without `--no-input` aborts (and deletes nothing) when the user declines."""
+        self.make_straight_cable("abort")
+        before = CablePath.objects.count()
+
+        with mock.patch("builtins.input", return_value="no"):
+            output = self.run_command("--force")
+
+        self.assertIn("Aborting", output)
+        self.assertEqual(CablePath.objects.count(), before)
+
+    def test_force_proceeds_on_affirmative_confirmation(self):
+        """`--force` without `--no-input` proceeds when the user confirms with "yes"."""
+        a, _ = self.make_straight_cable("confirm")
+
+        with mock.patch("builtins.input", return_value="yes"):
+            output = self.run_command("--force")
+
+        self.assertIn("Deleting", output)
+        self.assertIn("Finished.", output)
+        self.assertEqual(CablePath.objects.filter(origin_type=self.interface_ct, origin_id=a.pk).count(), 1)
+
+    # --- Correctness: all expected paths are traced (the command's TODO) ------------------------
+
+    def test_fills_in_missing_breakout_lanes(self):
+        """A plain run must fill in breakout fan-out lanes that are missing from an origin that
+        already has *some* lanes traced.
+
+        This is the case called out by the TODO in the command: filtering origins on
+        `cable_paths__isnull=True` only skips origins with *zero* paths, so a breakout trunk that
+        is missing one lane (but has others) was wrongly considered "already traced" and skipped.
+        """
+        trunk, _ = self.make_breakout_trunk("partial")
+        # Baseline: a 1:4 breakout produces one trunk-side path per lane.
+        self.assertEqual(self.trunk_paths(trunk).count(), 4)
+
+        # Simulate inconsistent data: two lanes never got traced.
+        self.trunk_paths(trunk).filter(peer_connector__in=[3, 4]).delete()
+        self.assertEqual(self.trunk_paths(trunk).count(), 2)
+
+        output = self.run_command()
+
+        self.assertIn("Finished.", output)
+        self.assertEqual(self.trunk_paths(trunk).count(), 4)
+        self.assertEqual(set(self.trunk_paths(trunk).values_list("peer_connector", flat=True)), {1, 2, 3, 4})
+
+    # --- Resilience to inconsistent / incorrect existing data -----------------------------------
+
+    def test_survives_orphaned_cablepath_rows(self):
+        """Orphaned CablePath rows (origin/path referencing objects that no longer exist) don't
+        break the command; a plain run leaves them untouched and `--force` clears them out."""
+        a, b = self.make_straight_cable("orphan")
+        # A CablePath whose origin and path point at nonexistent objects.
+        orphan = CablePath.objects.create(
+            origin_type=self.interface_ct,
+            origin_id=uuid.uuid4(),
+            path=[f"{self.interface_ct.pk}:{uuid.uuid4()}"],
+            is_active=False,
+            peer_connector=1,
+        )
+
+        # A plain run completes and leaves the orphan alone (it isn't a real cabled origin).
+        plain_output = self.run_command()
+        self.assertIn("Finished.", plain_output)
+        self.assertTrue(CablePath.objects.filter(pk=orphan.pk).exists())
+
+        # --force wipes everything (including the orphan) and rebuilds the real paths.
+        force_output = self.run_command("--force", "--no-input")
+        self.assertIn("Finished.", force_output)
+        self.assertFalse(CablePath.objects.filter(pk=orphan.pk).exists())
+        self.assertEqual(CablePath.objects.get(origin_type=self.interface_ct, origin_id=a.pk).destination, b)
+
+    def test_survives_committed_cabling_loop(self):
+        """A cabling loop that was committed without being traced must not abort the command."""
+        # A healthy straight cable that must still get traced despite the loop elsewhere.
+        good_a, good_b = self.make_straight_cable("loop-control")
+
+        # Two terminations of the same circuit cabled directly together form a loop. Commit the
+        # cabling with tracing suppressed so the loop lives in the DB with no CablePath rows.
+        ct_a = CircuitTermination.objects.create(circuit=self.circuit, location=self.location, term_side="A")
+        ct_z = CircuitTermination.objects.create(circuit=self.circuit, location=self.location, term_side="Z")
+        with mock.patch("nautobot.dcim.signals.rebuild_paths"):
+            Cable(termination_a=ct_a, termination_b=ct_z, status=self.cable_status).save()
+        self.assertEqual(
+            CablePath.objects.filter(origin_type=ContentType.objects.get_for_model(CircuitTermination)).count(), 0
+        )
+
+        # Force a full retrace so the command actually visits the looped circuit terminations.
+        output = self.run_command("--force", "--no-input")
+
+        self.assertIn("Finished.", output)
+        self.assertIn("Skipped 2 circuit terminations with inconsistent data", output)
+        # The healthy cable is traced even though the loop could not be.
+        self.assertEqual(CablePath.objects.get(origin_type=self.interface_ct, origin_id=good_a.pk).destination, good_b)

@@ -1,1 +1,3 @@
 Fixed errors when creating extremely long cables.
+Fixed the `trace_paths` management command (run by `nautobot-server post_upgrade`) not regenerating missing breakout cable fan-out lane paths.
+Fixed the `trace_paths` management command aborting partway through when it encountered inconsistent existing cable data (such as a cabling loop); it now skips the affected origin and continues.
