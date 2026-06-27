@@ -29,14 +29,14 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
-from nautobot.core.views.mixins import GetReturnURLMixin
+from nautobot.core.views.mixins import BulkEditAndBulkDeleteModelMixin, GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import AdminGroup, ObjectPermission
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 
@@ -71,6 +71,26 @@ class GetReturnURLMixinTestCase(TestCase):
         request = self.factory.get("/")
         location = Location.objects.first()
         self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
+
+
+class BulkEditAndBulkDeleteModelMixinTestCase(TestCase):
+    """Tests for model-level ContentType policy fallback in bulk operations."""
+
+    def test_get_bulk_content_type_uses_model_policy_when_view_has_no_override(self):
+        """If view override is unset, bulk content type should use model.for_concrete_model."""
+
+        class ProxyAdminGroup(AdminGroup):
+            for_concrete_model = False
+
+            class Meta:
+                proxy = True
+                app_label = "users"
+
+        mixin = BulkEditAndBulkDeleteModelMixin()
+        sentinel_ct = object()
+        with mock.patch.object(ContentType.objects, "get_for_model", return_value=sentinel_ct) as mocked_get_for_model:
+            self.assertEqual(mixin.get_bulk_content_type(ProxyAdminGroup), sentinel_ct)
+        mocked_get_for_model.assert_called_once_with(ProxyAdminGroup, for_concrete_model=False)
 
 
 class HomeViewTestCase(TestCase):

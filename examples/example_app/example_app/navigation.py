@@ -37,6 +37,19 @@ menu_items = (
                         query_params={"number": "100"},
                     ),
                     NavMenuItem(
+                        link="plugins:example_app:proxyexamplemodel_list",
+                        name="Proxy Examples",
+                        permissions=["example_app.view_proxyexamplemodel"],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="plugins:example_app:proxyexamplemodel_add",
+                                permissions=[
+                                    "example_app.add_proxyexamplemodel",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
                         link="plugins:example_app:anotherexamplemodel_list",
                         name="Another Example Models",
                         permissions=["example_app.view_anotherexamplemodel"],

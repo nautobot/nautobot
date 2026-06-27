@@ -9,7 +9,7 @@ from nautobot.apps.forms import (
     TagsBulkEditFormMixin,
 )
 
-from example_app.models import AnotherExampleModel, ExampleModel
+from example_app.models import AnotherExampleModel, ExampleModel, ProxyExampleModel
 
 
 class ExampleAppConfigForm(BootstrapMixin, forms.Form):
@@ -41,6 +41,34 @@ class ExampleModelBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
     """Bulk edit form for `ExampleModel` objects."""
 
     pk = forms.ModelMultipleChoiceField(queryset=ExampleModel.objects.all(), widget=forms.MultipleHiddenInput)
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    number = forms.IntegerField(required=False)
+
+    class Meta:
+        nullable_fields = []
+
+
+class ProxyExampleModelForm(NautobotModelForm):
+    """Generic create/update form for `ProxyExampleModel` objects."""
+
+    class Meta:
+        model = ProxyExampleModel
+        fields = ["name", "number"]
+
+
+class ProxyExampleModelFilterForm(BootstrapMixin, forms.Form):
+    """Filtering/search form for `ProxyExampleModel` objects."""
+
+    model = ProxyExampleModel
+    q = forms.CharField(required=False, label="Search")
+    name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
+    number = forms.IntegerField(required=False)
+
+
+class ProxyExampleModelBulkEditForm(NautobotBulkEditForm, TagsBulkEditFormMixin):
+    """Bulk edit form for `ProxyExampleModel` objects."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=ProxyExampleModel.objects.all(), widget=forms.MultipleHiddenInput)
     name = forms.CharField(max_length=CHARFIELD_MAX_LENGTH, required=False)
     number = forms.IntegerField(required=False)
 

@@ -1,0 +1,3 @@
+Improved proxy-model relationship rendering so values display correctly on object detail pages.
+Improved proxy-model relationship rendering in list views when relationship table columns are enabled.
+Aligned core UI content-type handling with model-level proxy policy behavior.

@@ -1,7 +1,6 @@
 import logging
 
 from django import forms
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
@@ -11,6 +10,7 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
 )
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     RelationshipSideChoices,
@@ -102,7 +102,7 @@ class CustomFieldModelFilterFormMixin(forms.Form):
 
 class CustomFieldModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        self.obj_type = get_content_type_for_model(self._meta.model)
         self.custom_fields = []
 
         super().__init__(*args, **kwargs)
@@ -148,7 +148,7 @@ class CustomFieldModelBulkEditFormMixin(BulkEditForm):
         super().__init__(*args, **kwargs)
 
         self.custom_fields = []
-        self.obj_type = ContentType.objects.get_for_model(self.model)
+        self.obj_type = get_content_type_for_model(self.model)
 
         # Add all applicable CustomFields to the form
         custom_fields = CustomField.objects.filter(content_types=self.obj_type)
@@ -219,12 +219,12 @@ class NoteModelBulkEditFormMixin(BulkEditForm, NoteFormBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.obj_type = ContentType.objects.get_for_model(self.model)
+        self.obj_type = get_content_type_for_model(self.model)
 
 
 class NoteModelFormMixin(forms.ModelForm, NoteFormBase):
     def __init__(self, *args, **kwargs):
-        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        self.obj_type = get_content_type_for_model(self._meta.model)
 
         super().__init__(*args, **kwargs)
 
@@ -235,7 +235,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.obj_type = ContentType.objects.get_for_model(self.model)
+        self.obj_type = get_content_type_for_model(self.model)
         self.relationships = []
 
         self._append_relationships()
@@ -501,7 +501,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
 
 class RelationshipModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        self.obj_type = get_content_type_for_model(self._meta.model)
         self.relationships = []
         super().__init__(*args, **kwargs)
 
@@ -702,7 +702,7 @@ class RelationshipModelFilterFormMixin(forms.Form):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.relationships = []
-        self.obj_type = ContentType.objects.get_for_model(self.model)
+        self.obj_type = get_content_type_for_model(self.model)
         self._append_relationships()
 
     def _append_relationships(self):
