@@ -1644,7 +1644,7 @@ class RelationshipTableTest(RelationshipBaseTest, TestCase):
         destination_relationship_column = destination_table.base_columns.get(destination_column_name)
         self.assertIsNotNone(destination_relationship_column)
         self.assertIsInstance(destination_relationship_column, RelationshipColumn)
-        destination_rendered_value = destination_table.rows[0].get_cell(
+        destination_rendered_value = destination_table.rows[0].get_cell(  # pylint: disable=no-member
             destination_column_name
         )  # pylint: disable=no-member
         self.assertIn(f"relationship={relationship.key}", destination_rendered_value)
