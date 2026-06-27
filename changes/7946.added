@@ -1,0 +1,1 @@
+Added the `obj` Jinja2 variable to data validation regex rules to align with Nautobot's conventions.

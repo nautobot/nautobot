@@ -1123,6 +1123,28 @@ class ObjectsTablePanel(Panel):
         if self.footer_buttons:
             yield from self.footer_buttons
 
+    def _get_tab_return_url_suffix(self, obj):
+        """Return the URL suffix (relative to `obj`'s detail URL) for `self.tab_id`'s tab.
+
+        The suffix is resolved from the matching tab's declared `url_name`, not from an assumption that
+        `tab_id` matches a view action method name. Falls back to the legacy `?tab=` query format when the
+        tab cannot be resolved to a distinct-view URL.
+        """
+        view = get_view_for_model(obj._meta.model)
+        content = getattr(view, "object_detail_content", None)
+        if content is not None:
+            for tab in content.tabs:
+                if tab.tab_id == self.tab_id and isinstance(tab, DistinctViewTab) and tab.url_name:
+                    try:
+                        tab_url = reverse(tab.url_name, kwargs={"pk": obj.pk})
+                    except NoReverseMatch:
+                        break
+                    base_url = obj.get_absolute_url()
+                    if tab_url.startswith(base_url):
+                        return tab_url[len(base_url) :]
+                    break
+        return f"?tab={self.tab_id}"
+
     def _get_table_add_url(self, context: Context):
         """Generate the URL for the "Add" button in the table panel.
 
@@ -1142,12 +1164,7 @@ class ObjectsTablePanel(Panel):
 
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
-            try:
-                # Check to see if the this is a NautobotUIViewset action
-                view = get_view_for_model(obj._meta.model)
-                return_url += getattr(view, self.tab_id).url_path + "/"
-            except AttributeError:
-                return_url += f"?tab={self.tab_id}"
+            return_url += self._get_tab_return_url_suffix(obj)
 
         if self.add_button_route is not None:
             add_permissions = self.add_permissions
@@ -1247,9 +1264,8 @@ class ObjectsTablePanel(Panel):
                 table_kwargs["extra_columns"] = self.extra_columns
             body_content_table = body_content_table_class(body_content_table_queryset, **table_kwargs)  # pylint: disable=not-callable
             if self.tab_id and "actions" in body_content_table.columns:
-                # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
-                # to redirect the user back to the correct tab after editing/deleteing an object
-                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
+                return_url_extra = self._get_tab_return_url_suffix(instance)
+                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = return_url_extra
 
         if self.exclude_columns:
             for column in body_content_table.columns:

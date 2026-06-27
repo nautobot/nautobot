@@ -1,0 +1,2 @@
+Updated the IP address table to display the device or virtual machine names when an IP address is assigned to an interface on a single device/VM, rather than always showing a count.
+Updated the cloud network Circuits column to display the circuit ID when a cloud network is related to a single circuit, rather than always showing a count.

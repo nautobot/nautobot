@@ -1,1 +1,0 @@
-Added logic to prevent `import nautobot.apps.testing` from throwing an exception when Splinter or Selenium are not installed.
