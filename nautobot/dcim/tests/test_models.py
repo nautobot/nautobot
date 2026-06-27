@@ -82,6 +82,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.models.device_component_templates import ModularComponentTemplateModel
 from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras import context_managers
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -107,10 +108,19 @@ class ModularDeviceComponentTestCaseMixin:
         cls.module = Module.objects.first()
 
     def test_parent_validation_device_and_module(self):
-        """Assert that a modular component must have a parent device or parent module but not both."""
+        """Validate whether the current object's device reference is the same as the nested device reference in module/module_bay. Does not apply to TemplateTestCases"""
+        if issubclass(self.model, ModularComponentTemplateModel):
+            self.skipTest("Only applies to modular components - not modular templates.")
+
+        module = (
+            Module.objects.filter(parent_module_bay__parent_device__isnull=False)
+            .exclude(parent_module_bay__parent_device=self.device)
+            .first()
+        )
+
         instance = self.model(
             name=f"test {self.model._meta.model_name} 1",
-            **{self.device_field: self.device, self.module_field: self.module},
+            **{self.device_field: self.device, self.module_field: module},
             **self.modular_component_create_data,
         )
 
@@ -178,9 +188,6 @@ class ModularDeviceComponentTestCaseMixin:
 
         with self.assertRaises(ValidationError):
             instance.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            instance.save()
 
     def test_uniqueness_module(self):
         """Assert that the combination of module and name is unique."""
@@ -381,7 +388,7 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.module = Module.objects.filter(rear_ports__isnull=False).first()
+        cls.module = Module.objects.filter(rear_ports__isnull=False, parent_module_bay__isnull=True).first()
         cls.module_rear_port = cls.module.rear_ports.first()
         module_used_positions = set(cls.module_rear_port.front_ports.values_list("rear_port_position", flat=True))
         cls.module_available_positions = set(range(1, cls.module_rear_port.positions + 1)).difference(
@@ -394,20 +401,6 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
         cls.device_available_positions = set(range(1, cls.device_rear_port.positions + 1)).difference(
             device_used_positions
         )
-
-    def test_parent_validation_device_and_module(self):
-        """Assert that a modular component must have a parent device or parent module but not both."""
-        instance = self.model(
-            device=self.device,
-            module=self.module,
-            name=f"test {self.model._meta.model_name} 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port=self.module_rear_port,
-            rear_port_position=self.module_available_positions.copy().pop(),
-        )
-
-        with self.assertRaises(ValidationError):
-            instance.full_clean()
 
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
@@ -483,9 +476,6 @@ class FrontPortTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             instance.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            instance.save()
 
     def test_uniqueness_module(self):
         """Assert that the combination of module and name is unique."""
@@ -588,20 +578,6 @@ class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
             device_used_positions
         )
 
-    def test_parent_validation_device_and_module(self):
-        """Assert that a modular component must have a parent device or parent module but not both."""
-        instance = self.model(
-            device_type=self.device_type,
-            module_type=self.module_type,
-            name=f"test {self.model._meta.model_name} 1",
-            type=PortTypeChoices.TYPE_8P8C,
-            rear_port_template=self.module_rear_port,
-            rear_port_position=self.module_available_positions.copy().pop(),
-        )
-
-        with self.assertRaises(ValidationError):
-            instance.full_clean()
-
     def test_parent_validation_no_device_or_module(self):
         """Assert that a modular component must have a parent device or parent module but not both."""
         instance = self.model(
@@ -676,9 +652,6 @@ class FrontPortTemplateTestCase(ModelTestCases.BaseModelTestCase):
 
         with self.assertRaises(ValidationError):
             instance.full_clean()
-
-        with self.assertRaises(IntegrityError):
-            instance.save()
 
     def test_uniqueness_module(self):
         """Assert that the combination of module and name is unique."""
@@ -2089,6 +2062,7 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIsNotNone(device.primary_ip4)
         device.primary_ip6 = interface.ip_addresses.all().filter(ip_version=6).first()
         self.assertIsNotNone(device.primary_ip6)
+
         device.validated_save()
 
     def test_software_version_device_type_validation(self):
@@ -3387,6 +3361,7 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             [
                 {
                     "lane": 1,
+                    "label": None,
                     "a_connector": 1,
                     "a_position": 1,
                     "b_connector": 1,
@@ -3968,6 +3943,20 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             qs = Interface.objects.select_related("cable__status")
             list(qs[:1])
         self.assertTrue(any(issubclass(w.category, DeprecationWarning) for w in caught))
+
+    def test_select_related_none_clears_without_warning(self):
+        """`select_related(None)` passes through untouched and does not warn.
+
+        Regression test: the translation previously called `field.startswith(...)` on every field,
+        which raised `AttributeError` for the `None` sentinel that Django passes to clear
+        select_related.
+        """
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qs = Interface.objects.select_related("device").select_related(None)
+            list(qs[:1])  # force evaluation
+        self.assertEqual(qs.query.select_related, False)
+        self.assertFalse(any(issubclass(w.category, DeprecationWarning) for w in caught))
 
     def test_filter_cable_none_translates_to_isnull_true(self):
         """`filter(cable=None)` is treated as "uncabled" — translates to `cable_termination__isnull=True`."""
@@ -5309,6 +5298,10 @@ class ModuleBayTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         module.location = Location.objects.get_for_model(Module).first()
         module.save()
 
+        parent_module_bay.refresh_from_db()
+        child_module_bay.refresh_from_db()
+        grandchild_module_bay.refresh_from_db()
+
         self.assertEqual(parent_module_bay.parent, self.device)
         self.assertIsNone(child_module_bay.parent)
         self.assertIsNone(grandchild_module_bay.parent)
@@ -5432,10 +5425,7 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
             rear_port_position=2,
         )
 
-        ModuleBayTemplate.objects.create(
-            module_type=cls.module_type,
-            position="1111",
-        )
+        ModuleBayTemplate.objects.create(module_type=cls.module_type, position="1111", name="slot 1")
 
         cls.module = Module.objects.create(
             module_type=cls.module_type,
@@ -5494,11 +5484,13 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
             parent_device=self.device,
             position="1111",
         )
+
         parent_module = Module.objects.create(
             module_type=self.module_type,
             parent_module_bay=parent_module_bay,
             status=self.status,
         )
+
         child_module_bay = parent_module.module_bays.first()
         child_module = Module.objects.create(
             module_type=self.module_type,
@@ -5520,6 +5512,10 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
         parent_module.parent_module_bay = None
         parent_module.location = self.location
         parent_module.save()
+
+        parent_module.refresh_from_db()
+        child_module.refresh_from_db()
+        grandchild_module.refresh_from_db()
 
         self.assertIsNone(parent_module.device)
         self.assertIsNone(child_module.device)

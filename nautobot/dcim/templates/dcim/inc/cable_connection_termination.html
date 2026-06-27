@@ -2,8 +2,7 @@
 {% load helpers %}
 {% comment %}Render a single cable connection termination with type icon, parent, and link.{% endcomment %}
 {% if term %}
-    {% termination_type_icon term as t_icon %}
-    <span class="mdi {{ t_icon }}" title="{{ term|meta:'verbose_name'|capfirst }}"></span>
+    <span class="mdi {{ term|termination_type_icon }}" title="{{ term|meta:'verbose_name'|capfirst }}"></span>
     {% if term.parent %}
         {{ term.parent|hyperlinked_object }} /
     {% endif %}

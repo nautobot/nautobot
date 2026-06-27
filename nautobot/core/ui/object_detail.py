@@ -969,6 +969,54 @@ class DataTablePanel(Panel):
         }
 
 
+class ConnectionPanel(Panel):
+    """
+    Panel rendering the cable/connection detail of a `CableTermination` (its cable, all cable peers,
+    and all connected endpoints), correctly handling multi-termination ("breakout") cables.
+
+    Renders the shared `dcim/inc/connection_body.html` fragment with `object` set to the termination,
+    so the same markup is used here and in the legacy object-retrieve detail templates.
+    """
+
+    body_content_template_path = "dcim/inc/connection_body.html"
+
+    def __init__(self, *, trace_url_name, context_object_key="object", require_location=False, **kwargs):
+        """
+        Instantiate a ConnectionPanel.
+
+        Keyword Args:
+            trace_url_name (str): The trace view name for this termination type
+                (e.g. 'dcim:interface_trace', 'circuits:circuittermination_trace').
+            context_object_key (str): The render-context key holding the termination to render.
+                Defaults to "object" (the detail-view object); set to e.g. "circuit_termination_a"
+                when the page object is not itself the termination.
+            require_location (bool): If True, the panel is hidden when the termination has no
+                `location` (matches the legacy circuit-termination behavior).
+        """
+        self.trace_url_name = trace_url_name
+        self.context_object_key = context_object_key
+        self.require_location = require_location
+        kwargs.setdefault("label", "Connections")
+        super().__init__(**kwargs)
+
+    def should_render(self, context: Context):
+        termination = context.get(self.context_object_key)
+        if termination is None:
+            return False
+        if self.require_location and getattr(termination, "location", None) is None:
+            return False
+        return getattr(termination, "is_connectable", True)
+
+    def render_body_content(self, context: Context):
+        termination = context.get(self.context_object_key)
+        return render_component_template(
+            self.body_content_template_path,
+            context,
+            object=termination,
+            trace_url_name=self.trace_url_name,
+        )
+
+
 class ObjectsTablePanel(Panel):
     """A panel that renders a Table of objects (typically related objects, rather than the "main" object of a view).
     Has built-in pagination support and "Add" button at bottom of the Table.
@@ -1113,8 +1161,15 @@ class ObjectsTablePanel(Panel):
             )
         if self.table_filter and self.table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
-        if self.table_class and not (self.table_filter or self.table_attribute):
-            raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        # A subclass that overrides `get_table_data_queryset()` supplies its own data source and so
+        # does not require `table_filter`/`table_attribute`.
+        overrides_table_data_queryset = (
+            type(self).get_table_data_queryset is not ObjectsTablePanel.get_table_data_queryset
+        )
+        if self.table_class and not (self.table_filter or self.table_attribute or overrides_table_data_queryset):
+            raise ValueError(
+                "You must specify either `table_filter` or `table_attribute`, or override `get_table_data_queryset()`"
+            )
         if self.table_attribute and not self.related_field_name:
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
 
@@ -1197,6 +1252,35 @@ class ObjectsTablePanel(Panel):
             "utilities/templatetags/table_config_form.html", table_config_form(context["body_content_table"])
         )
 
+    def get_table_data_queryset(self, instance, request):
+        """Return the base queryset used to populate this panel's table.
+
+        This is the queryset *before* `.restrict()`, `select_related`, `prefetch_related`, `order_by`,
+        and `distinct` are applied by `get_extra_context()`. The default implementation derives it from
+        `table_attribute` or `table_filter`. Override this to source the table's data differently (for
+        example, from a relationship that isn't expressible as a simple `table_filter`).
+
+        Args:
+            instance (Model): The detail-view object that this panel belongs to.
+            request (Request): The current request.
+
+        Returns:
+            (QuerySet): The base queryset of `self.table_class.Meta.model` objects to display.
+        """
+        body_content_table_model = self.table_class.Meta.model
+        if self.table_attribute:
+            return getattr(instance, self.table_attribute)
+        if isinstance(self.table_filter, str):
+            table_filters = [self.table_filter]
+        elif isinstance(self.table_filter, list):
+            table_filters = self.table_filter
+        else:
+            table_filters = []
+        query = Q()
+        for table_filter in table_filters:
+            query = query | Q(**{table_filter: instance})
+        return body_content_table_model.objects.filter(query)
+
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
 
@@ -1213,20 +1297,7 @@ class ObjectsTablePanel(Panel):
             body_content_table_model = body_content_table_class.Meta.model
             instance = get_obj_from_context(context)
 
-            if self.table_attribute:
-                body_content_table_queryset = getattr(instance, self.table_attribute)
-            else:
-                if isinstance(self.table_filter, str):
-                    table_filters = [self.table_filter]
-                elif isinstance(self.table_filter, list):
-                    table_filters = self.table_filter
-                else:
-                    table_filters = []
-                query = Q()
-                for table_filter in table_filters:
-                    query = query | Q(**{table_filter: instance})
-                body_content_table_queryset = body_content_table_model.objects.filter(query)
-
+            body_content_table_queryset = self.get_table_data_queryset(instance, request)
             body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
             if self.select_related_fields:
                 body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
@@ -1334,6 +1405,49 @@ class ObjectsTablePanel(Panel):
             "include_paginator": self.include_paginator,
             "show_table_config_button": self.show_table_config_button,  # unused now in core but kept for compatibility
         }
+
+
+class ConnectedEndpointsPanel(ObjectsTablePanel):
+    """Panel listing the connected endpoints *of a single type* reachable from a `PathEndpoint`.
+
+    Sources its table data from the termination's `CablePaths` (one per breakout lane for a breakout
+    cable), keeping only the resolved destinations whose model matches this panel's `table_class`, so
+    that multi-termination ("breakout") cables show *every* connected endpoint of that type. Declare
+    one panel per compatible endpoint type; each renders nothing when there are no connected endpoints
+    of its type.
+    """
+
+    def __init__(self, **kwargs):
+        """Instantiate a ConnectedEndpointsPanel.
+
+        Keyword Args:
+            table_class (obj): The list table for the endpoint type to display, e.g. `InterfaceTable`.
+
+        See `ObjectsTablePanel` for additional supported keyword arguments.
+        """
+        # Connected endpoints have no natural "list all" route or "add" action from this context.
+        kwargs.setdefault("enable_related_link", False)
+        kwargs.setdefault("add_button_route", None)
+        super().__init__(**kwargs)
+
+    def _connected_endpoints_queryset(self, termination):
+        """Queryset of this panel's endpoint type that are connected to `termination` via its CablePaths."""
+        model = self.table_class.Meta.model
+        cable_paths = getattr(termination, "cable_paths", None)
+        if cable_paths is None:
+            return model.objects.none()
+        destination_type = ContentType.objects.get_for_model(model)
+        destination_ids = cable_paths.filter(destination_type=destination_type).values_list("destination_id", flat=True)
+        return model.objects.filter(pk__in=destination_ids)
+
+    def get_table_data_queryset(self, instance, request):
+        return self._connected_endpoints_queryset(instance)
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        termination = get_obj_from_context(context)
+        return termination is not None and self._connected_endpoints_queryset(termination).exists()
 
 
 class KeyValueTablePanel(Panel):
@@ -2699,6 +2813,7 @@ class _JobModalButton(Button):
     refresh_on_close_if_done = False
     redirect_button_callback = None
     button_id = ""
+    enable_scheduling = False
 
     def __init__(self, **kwargs):
         """
@@ -2723,6 +2838,12 @@ class _JobModalButton(Button):
             button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
                 Required when using redirect_button_callback.
                 Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
+            enable_scheduling (bool, optional): If True, renders the job schedule form inside the modal,
+                allowing the job to be scheduled for future or recurring execution in addition to immediate
+                execution. Requires button_id to be set, since the view resolves this setting from the
+                registered component (never from request data). Jobs with `has_sensitive_variables = True`
+                cannot be scheduled regardless of this flag. Defaults to `False` (immediate-only, backward
+                compatible).
             redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
                 modal footer after the job completes. Requires button_id to be set.
                 Signature: `callback(job_result, request) -> dict`.
@@ -2763,6 +2884,8 @@ class _JobModalButton(Button):
             raise TypeError("class_path is required")
         if self.redirect_button_callback and not self.button_id:
             raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
+        if self.enable_scheduling and not self.button_id:
+            raise ValueError("A globally unique button_id is required when enable_scheduling is True.")
 
         if self.button_id:
             if self.button_id in registry["job_modal_buttons"]:

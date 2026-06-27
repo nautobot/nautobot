@@ -13,11 +13,12 @@ from nautobot.core.api import (
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam import constants
-from nautobot.ipam.api.fields import IPFieldSerializer
+from nautobot.ipam.api.fields import IPAddressFieldSerializer, IPFieldSerializer
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -344,6 +345,39 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         self.extend_field_names(fields, "interfaces")
         self.extend_field_names(fields, "vm_interfaces")
         return fields
+
+
+#
+# IP address range
+#
+
+
+class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
+    start_address = IPAddressFieldSerializer()
+    end_address = IPAddressFieldSerializer()
+    # namespace is not a model field, so we have to specify it explicitly
+    namespace = NautobotHyperlinkedRelatedField(
+        view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
+    )
+
+    class Meta:
+        model = IPAddressRange
+        fields = "__all__"
+        extra_kwargs = {
+            "ip_version": {"read_only": True},
+            "parent": {"required": False},
+        }
+
+    def validate(self, attrs):
+        namespace = attrs.get("namespace", None)
+        parent = attrs.get("parent", None)
+
+        # Only assert namespace/parent on create (parent is auto-resolved from namespace + start/end host).
+        if self.instance is None and not any([namespace, parent]):
+            raise ValidationError({"__all__": "One of parent or namespace must be provided"})
+
+        super().validate(attrs)
+        return attrs
 
 
 class AvailableIPSerializer(serializers.Serializer):

@@ -6,6 +6,8 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+use_directory_urls: false
+strict: true
 theme:
   name: "material"
   navigation_depth: 4
@@ -256,6 +258,7 @@ plugins:
         "models/extras/status.md": "user-guide/platform-functionality/status.md"
         "models/extras/team.md": "user-guide/core-data-model/extras/team.md"
         "models/ipam/ipaddress.md": "user-guide/core-data-model/ipam/ipaddress.md"
+        "models/ipam/ipaddressrange.md": "user-guide/core-data-model/ipam/ipaddressrange.md"
         "models/ipam/prefix.md": "user-guide/core-data-model/ipam/prefix.md"
         "models/ipam/rir.md": "user-guide/core-data-model/ipam/rir.md"
         "models/ipam/routetarget.md": "user-guide/core-data-model/ipam/routetarget.md"
@@ -505,6 +508,7 @@ nav:
               - Team: "user-guide/core-data-model/extras/team.md"
           - IPAM:
               - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
+              - IP Address Range: "user-guide/core-data-model/ipam/ipaddressrange.md"
               - Namespace: "user-guide/core-data-model/ipam/namespace.md"
               - Prefix: "user-guide/core-data-model/ipam/prefix.md"
               - RIR: "user-guide/core-data-model/ipam/rir.md"
@@ -609,7 +613,7 @@ nav:
           - Job Extensions: "development/jobs/job-extensions.md"
           - Job Execution: "development/jobs/job-execution.md"
           - Migration Guides:
-              -  Migrating from v1: "development/jobs/migration/from-v1.md"
+              - Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
           - "development/apps/index.md"
           - Setup: "development/apps/api/setup.md"

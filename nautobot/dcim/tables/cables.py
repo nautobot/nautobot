@@ -13,7 +13,7 @@ from nautobot.core.tables import (
 from nautobot.dcim.models import Cable, CableType
 from nautobot.extras.tables import StatusTableMixin
 
-from .template_code import CABLE_LENGTH, CABLE_TERMINATION_PARENT, CABLE_TERMINATIONS_MULTI
+from .template_code import CABLE_LENGTH, CABLE_TERMINATIONS_MULTI
 
 __all__ = ("CableTable", "CableTypeTable")
 
@@ -78,37 +78,39 @@ class CableTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     id = tables.Column(linkify=True, verbose_name="ID")
     cable_type = tables.Column(linkify=True, verbose_name="Cable Type")
-    termination_a_parent = tables.TemplateColumn(
-        template_code=CABLE_TERMINATION_PARENT,
-        accessor=Accessor("termination_a"),
+    termination_a_parent = tables.Column(
+        linkify=True,
+        accessor=Accessor("termination_a__parent"),
         orderable=False,
-        verbose_name="Side A",
+        verbose_name="Termination A Parent",
     )
-    termination_a = tables.LinkColumn(
+    termination_a = tables.Column(
+        linkify=True,
         accessor=Accessor("termination_a"),
         orderable=False,
         verbose_name="Termination A",
     )
     terminations_a = tables.TemplateColumn(
         template_code=CABLE_TERMINATIONS_MULTI,
-        accessor=Accessor("terminations_a"),
+        accessor=Accessor("get_connections_a"),
         orderable=False,
         verbose_name="A-Side Terminations",
     )
-    termination_b_parent = tables.TemplateColumn(
-        template_code=CABLE_TERMINATION_PARENT,
-        accessor=Accessor("termination_b"),
+    termination_b_parent = tables.Column(
+        linkify=True,
+        accessor=Accessor("termination_b__parent"),
         orderable=False,
-        verbose_name="Side B",
+        verbose_name="Termination B Parent",
     )
-    termination_b = tables.LinkColumn(
+    termination_b = tables.Column(
+        linkify=True,
         accessor=Accessor("termination_b"),
         orderable=False,
         verbose_name="Termination B",
     )
     terminations_b = tables.TemplateColumn(
         template_code=CABLE_TERMINATIONS_MULTI,
-        accessor=Accessor("terminations_b"),
+        accessor=Accessor("get_connections_b"),
         orderable=False,
         verbose_name="B-Side Terminations",
     )

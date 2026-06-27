@@ -163,6 +163,18 @@ class CableType(PrimaryModel):
         """True if A-side and B-side connector counts differ."""
         return self.a_connectors != self.b_connectors
 
+    @property
+    def trunk_end(self):
+        """The cable end (`"A"` or `"B"`) on the trunk (fewer-connectors) side of a breakout.
+
+        Returns `None` for non-breakout cable types. By model enforcement `a_connectors` never
+        exceeds `b_connectors`, so the trunk is always the A side for a real breakout, but this
+        is derived here rather than assumed by callers.
+        """
+        if not self.is_breakout:
+            return None
+        return "A" if self.a_connectors < self.b_connectors else "B"
+
     def get_diagram_svg(self):
         """Return SVG string for the lane mapping diagram (no connection status, all gray)."""
         diagram = BreakoutDiagramSVG(self.mapping, show_status=False)
@@ -562,6 +574,7 @@ class Cable(PrimaryModel):
             lanes.append(
                 {
                     "lane": lane_number,
+                    "label": entry.get("label"),
                     "a_connector": entry["a_connector"],
                     "a_position": entry["a_position"],
                     "b_connector": entry["b_connector"],
@@ -651,8 +664,6 @@ class Cable(PrimaryModel):
                     "b": b_info,
                     "a_rowspan": a_rowspan,
                     "b_rowspan": b_rowspan,
-                    "_a_connector": a_connector,
-                    "_b_connector": b_connector,
                 }
             )
 
@@ -661,6 +672,34 @@ class Cable(PrimaryModel):
             "is_breakout": True,
             "a_connector_count": cable_type.a_connectors,
             "b_connector_count": cable_type.b_connectors,
+        }
+
+    def get_connections_a(self):
+        data = self.get_connections()
+        return {
+            "rows": [
+                {
+                    "info": row["a"],
+                    "rowspan": row["a_rowspan"],
+                }
+                for row in data["rows"]
+            ],
+            "is_breakout": data["is_breakout"],
+            "connector_count": data["a_connector_count"],
+        }
+
+    def get_connections_b(self):
+        data = self.get_connections()
+        return {
+            "rows": [
+                {
+                    "info": row["b"],
+                    "rowspan": row["b_rowspan"],
+                }
+                for row in data["rows"]
+            ],
+            "is_breakout": data["is_breakout"],
+            "connector_count": data["b_connector_count"],
         }
 
     # ─── Validation ───

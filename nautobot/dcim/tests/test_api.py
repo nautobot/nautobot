@@ -220,7 +220,7 @@ class Mixins:
             self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
             self.assertEqual(
                 response.json(),
-                {"non_field_errors": [f"Only one of {self.device_field} or {self.module_field} must be set"]},
+                {"non_field_errors": [f"{self.module_field} is installed in a different {self.device_field}"]},
             )
 
             data.pop(self.module_field)
@@ -2459,7 +2459,6 @@ class PowerPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
     @classmethod
     def setUpTestData(cls):
         super().setUpTestData()
-
         cls.create_data = [
             {
                 "device": cls.device.pk,
@@ -2996,15 +2995,19 @@ class FrontPortTest(Mixins.BasePortTestMixin):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        cls.module = Module.objects.first()
-        cls.module_rear_ports = (
-            RearPort.objects.create(module=cls.module, name="Test FrontPort RP1", positions=100),
-            RearPort.objects.create(module=cls.module, name="Test FrontPort RP2", positions=100),
-        )
         cls.device = Device.objects.first()
         cls.device_rear_ports = (
             RearPort.objects.create(device=cls.device, name="Test FrontPort RP3", positions=100),
             RearPort.objects.create(device=cls.device, name="Test FrontPort RP4", positions=100),
+        )
+        cls.module = (
+            Module.objects.filter(parent_module_bay__isnull=False)
+            .exclude(parent_module_bay__parent_device=cls.device)
+            .first()
+        )
+        cls.module_rear_ports = (
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP1", positions=100),
+            RearPort.objects.create(module=cls.module, name="Test FrontPort RP2", positions=100),
         )
 
         cls.create_data = [
@@ -3046,9 +3049,10 @@ class FrontPortTest(Mixins.BasePortTestMixin):
         url = self._get_list_url()
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
         self.assertEqual(
             response.json(),
-            {"non_field_errors": ["Only one of device or module must be set"]},
+            {"non_field_errors": ["module is installed in a different device"]},
         )
 
         data.pop("module")
@@ -4394,6 +4398,22 @@ class InterfaceRedundancyGroupTestCase(APIViewTestCases.APIViewTestCase):
                 "protocol_group_id": "3",
                 "secrets_group": None,
                 "virtual_ip": ips[1].pk,
+            },
+            # Ensure protocol remains optional
+            {
+                "name": "Interface Redundancy Group 7",
+                "status": statuses[0].pk,
+                "protocol_group_id": "10",
+                "secrets_group": None,
+                "virtual_ip": None,
+            },
+            {
+                "name": "Interface Redundancy Group 8",
+                "protocol": "",
+                "status": statuses[1].pk,
+                "protocol_group_id": "11",
+                "secrets_group": None,
+                "virtual_ip": None,
             },
         ]
         cls.bulk_update_data = {

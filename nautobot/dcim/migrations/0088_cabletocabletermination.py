@@ -34,7 +34,7 @@ def _at_most_one_termination_check():
 class Migration(migrations.Migration):
     dependencies = [
         ("circuits", "0022_circuittermination_cloud_network"),
-        ("dcim", "0086_populate_default_cable_types"),
+        ("dcim", "0087_populate_default_cable_types"),
     ]
     operations = [
         migrations.AlterModelOptions(name="cable", options={"ordering": ["label", "pk"]}),
@@ -284,6 +284,31 @@ class Migration(migrations.Migration):
                 through="dcim.CableToCableTermination",
                 through_fields=("cable", "rear_port"),
                 to="dcim.rearport",
+            ),
+        ),
+        # Breakout child-interface position: which position on the parent (trunk) interface's
+        # breakout connector a child interface maps to.
+        migrations.AddField(
+            model_name="interface",
+            name="breakout_position",
+            field=models.PositiveSmallIntegerField(
+                blank=True,
+                null=True,
+                validators=[
+                    django.core.validators.MinValueValidator(1),
+                    django.core.validators.MaxValueValidator(256),  # CABLE_BREAKOUT_MAX_LANES
+                ],
+                help_text=(
+                    "For a child interface of a breakout-cable trunk, the position on the parent "
+                    "interface's trunk connector that this child interface maps to."
+                ),
+            ),
+        ),
+        migrations.AddConstraint(
+            model_name="interface",
+            constraint=models.UniqueConstraint(
+                fields=("parent_interface", "breakout_position"),
+                name="dcim_interface_unique_parent_breakout_position",
             ),
         ),
     ]

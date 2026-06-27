@@ -13,7 +13,7 @@ import nautobot.extras.models.mixins
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0084_add_module_type_image_support"),
+        ("dcim", "0085_fix_128gfc_qsfp28_typo"),
         ("extras", "0138_job_console_log_default_and_more"),
     ]
 

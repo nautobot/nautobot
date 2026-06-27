@@ -79,11 +79,13 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
-from nautobot.dcim.constants import TERMINATION_FK_FIELDS
+from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_FK_FIELDS
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
     get_all_network_driver_mappings,
+    get_connected_endpoint_panels,
+    get_connected_endpoint_tables,
     render_software_version_and_image_files,
     validate_cable_breakout_mapping,
 )
@@ -1644,63 +1646,63 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
                         weight=100,
                         link_name="dcim:devicetype_consoleporttemplate_add",
                         label="Console Ports",
-                        icon="mdi-console",
+                        icon=DEVICE_COMPONENT_ICONS["consoleporttemplate"],
                         required_permissions=["dcim.add_consoleporttemplate"],
                     ),
                     object_detail.Button(
                         weight=200,
                         link_name="dcim:devicetype_consoleserverporttemplate_add",
                         label="Console Server Ports",
-                        icon="mdi-console-network-outline",
+                        icon=DEVICE_COMPONENT_ICONS["consoleserverporttemplate"],
                         required_permissions=["dcim.add_consoleserverporttemplate"],
                     ),
                     object_detail.Button(
                         weight=300,
                         link_name="dcim:devicetype_powerporttemplate_add",
                         label="Power Ports",
-                        icon="mdi-power-plug-outline",
+                        icon=DEVICE_COMPONENT_ICONS["powerporttemplate"],
                         required_permissions=["dcim.add_powerporttemplate"],
                     ),
                     object_detail.Button(
                         weight=400,
                         link_name="dcim:devicetype_poweroutlettemplate_add",
                         label="Power Outlets",
-                        icon="mdi-power-socket",
+                        icon=DEVICE_COMPONENT_ICONS["poweroutlettemplate"],
                         required_permissions=["dcim.add_poweroutlettemplate"],
                     ),
                     object_detail.Button(
                         weight=500,
                         link_name="dcim:devicetype_interfacetemplate_add",
                         label="Interfaces",
-                        icon="mdi-ethernet",
+                        icon=DEVICE_COMPONENT_ICONS["interfacetemplate"],
                         required_permissions=["dcim.add_interfacetemplate"],
                     ),
                     object_detail.Button(
                         weight=600,
                         link_name="dcim:devicetype_frontporttemplate_add",
                         label="Front Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["frontporttemplate"],
                         required_permissions=["dcim.add_frontporttemplate"],
                     ),
                     object_detail.Button(
                         weight=700,
                         link_name="dcim:devicetype_rearporttemplate_add",
                         label="Rear Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["rearporttemplate"],
                         required_permissions=["dcim.add_rearporttemplate"],
                     ),
                     object_detail.Button(
                         weight=800,
                         link_name="dcim:devicetype_devicebaytemplate_add",
                         label="Device Bays",
-                        icon="mdi-circle-outline",
+                        icon=DEVICE_COMPONENT_ICONS["devicebaytemplate"],
                         required_permissions=["dcim.add_devicebaytemplate"],
                     ),
                     object_detail.Button(
                         weight=900,
                         link_name="dcim:devicetype_modulebaytemplate_add",
                         label="Module Bays",
-                        icon="mdi-tray",
+                        icon=DEVICE_COMPONENT_ICONS["modulebaytemplate"],
                         required_permissions=["dcim.add_modulebaytemplate"],
                     ),
                 ),
@@ -1950,7 +1952,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:consoleporttemplate_add",
                         tab="consoleports",
                         label="Console Ports",
-                        icon="mdi-console",
+                        icon=DEVICE_COMPONENT_ICONS["consoleporttemplate"],
                         required_permissions=["dcim.add_consoleporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1958,7 +1960,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:consoleserverporttemplate_add",
                         tab="consoleserverports",
                         label="Console Server Ports",
-                        icon="mdi-console-network-outline",
+                        icon=DEVICE_COMPONENT_ICONS["consoleserverporttemplate"],
                         required_permissions=["dcim.add_consoleserverporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1966,7 +1968,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:powerporttemplate_add",
                         tab="powerports",
                         label="Power Ports",
-                        icon="mdi-power-plug-outline",
+                        icon=DEVICE_COMPONENT_ICONS["powerporttemplate"],
                         required_permissions=["dcim.add_powerporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1974,7 +1976,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:poweroutlettemplate_add",
                         tab="poweroutlets",
                         label="Power Outlets",
-                        icon="mdi-power-socket",
+                        icon=DEVICE_COMPONENT_ICONS["poweroutlettemplate"],
                         required_permissions=["dcim.add_poweroutlettemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1982,7 +1984,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:interfacetemplate_add",
                         tab="interfaces",
                         label="Interfaces",
-                        icon="mdi-ethernet",
+                        icon=DEVICE_COMPONENT_ICONS["interfacetemplate"],
                         required_permissions=["dcim.add_interfacetemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1990,7 +1992,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:frontporttemplate_add",
                         tab="frontports",
                         label="Front Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["frontporttemplate"],
                         required_permissions=["dcim.add_frontporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -1998,7 +2000,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:rearporttemplate_add",
                         tab="rearports",
                         label="Rear Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["rearporttemplate"],
                         required_permissions=["dcim.add_rearporttemplate"],
                     ),
                     ModuleTypeComponentAddButton(
@@ -2006,7 +2008,7 @@ class ModuleTypeUIViewSet(
                         link_name="dcim:modulebaytemplate_add",
                         tab="modulebays",
                         label="Module Bays",
-                        icon="mdi-tray",
+                        icon=DEVICE_COMPONENT_ICONS["modulebaytemplate"],
                         required_permissions=["dcim.add_modulebaytemplate"],
                     ),
                 ),
@@ -2233,12 +2235,14 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         )
 
     def get_selected_objects_parents_name(self, selected_objects):
-        """Return the display name of the device_type/module_type that owns the selected component templates."""
+        """Return the display name of the parent object that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent = getattr(selected_object, "device_type", None) or getattr(selected_object, "module_type", None)
-            if parent:
-                return parent.display
+            parent_attrs = ("device", "device_type", "module", "module_type")
+            for attr in parent_attrs:
+                parent = getattr(selected_object, attr, None)
+                if parent:
+                    return parent.display
         return ""
 
     def get_component_model_form(self, request, data=None):
@@ -2393,37 +2397,20 @@ class ConsoleServerPortTemplateUIViewSet(
 #
 
 
-class PowerPortTemplateCreateView(generic.ComponentCreateView):
+class PowerPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.PowerPortTemplateBulkEditForm
+    filterset_class = filters.PowerPortTemplateFilterSet
+    form_class = forms.PowerPortTemplateForm
+    serializer_class = serializers.PowerPortTemplateSerializer
+    table_class = tables.PowerPortTemplateTable
     queryset = PowerPortTemplate.objects.all()
-    form = forms.PowerPortTemplateCreateForm
-    model_form = forms.PowerPortTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class PowerPortTemplateEditView(generic.ObjectEditView):
-    queryset = PowerPortTemplate.objects.all()
-    model_form = forms.PowerPortTemplateForm
-
-
-class PowerPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = PowerPortTemplate.objects.all()
-
-
-class PowerPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = PowerPortTemplate.objects.all()
-    table = tables.PowerPortTemplateTable
-    form = forms.PowerPortTemplateBulkEditForm
-    filterset = filters.PowerPortTemplateFilterSet
-
-
-class PowerPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = PowerPortTemplate.objects.all()
-
-
-class PowerPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPortTemplate.objects.all()
-    table = tables.PowerPortTemplateTable
-    filterset = filters.PowerPortTemplateFilterSet
+    create_form_class = forms.PowerPortTemplateCreateForm
 
 
 #
@@ -2431,37 +2418,20 @@ class PowerPortTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerOutletTemplateCreateView(generic.ComponentCreateView):
+class PowerOutletTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.PowerOutletTemplateBulkEditForm
+    filterset_class = filters.PowerOutletTemplateFilterSet
+    form_class = forms.PowerOutletTemplateForm
+    serializer_class = serializers.PowerOutletTemplateSerializer
+    table_class = tables.PowerOutletTemplateTable
     queryset = PowerOutletTemplate.objects.all()
-    form = forms.PowerOutletTemplateCreateForm
-    model_form = forms.PowerOutletTemplateForm
-    template_name = "dcim/device_component_add.html"
-
-
-class PowerOutletTemplateEditView(generic.ObjectEditView):
-    queryset = PowerOutletTemplate.objects.all()
-    model_form = forms.PowerOutletTemplateForm
-
-
-class PowerOutletTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = PowerOutletTemplate.objects.all()
-
-
-class PowerOutletTemplateBulkEditView(generic.BulkEditView):
-    queryset = PowerOutletTemplate.objects.all()
-    table = tables.PowerOutletTemplateTable
-    form = forms.PowerOutletTemplateBulkEditForm
-    filterset = filters.PowerOutletTemplateFilterSet
-
-
-class PowerOutletTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = PowerOutletTemplate.objects.all()
-
-
-class PowerOutletTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerOutletTemplate.objects.all()
-    table = tables.PowerOutletTemplateTable
-    filterset = filters.PowerOutletTemplateFilterSet
+    create_form_class = forms.PowerOutletTemplateCreateForm
 
 
 #
@@ -2469,36 +2439,20 @@ class PowerOutletTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class InterfaceTemplateCreateView(generic.ComponentCreateView):
+class InterfaceTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.InterfaceTemplateBulkEditForm
+    filterset_class = filters.InterfaceTemplateFilterSet
+    form_class = forms.InterfaceTemplateForm
+    serializer_class = serializers.InterfaceTemplateSerializer
+    table_class = tables.InterfaceTemplateTable
     queryset = InterfaceTemplate.objects.all()
-    form = forms.InterfaceTemplateCreateForm
-    model_form = forms.InterfaceTemplateForm
-
-
-class InterfaceTemplateEditView(generic.ObjectEditView):
-    queryset = InterfaceTemplate.objects.all()
-    model_form = forms.InterfaceTemplateForm
-
-
-class InterfaceTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = InterfaceTemplate.objects.all()
-
-
-class InterfaceTemplateBulkEditView(generic.BulkEditView):
-    queryset = InterfaceTemplate.objects.all()
-    table = tables.InterfaceTemplateTable
-    form = forms.InterfaceTemplateBulkEditForm
-    filterset = filters.InterfaceTemplateFilterSet
-
-
-class InterfaceTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = InterfaceTemplate.objects.all()
-
-
-class InterfaceTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = InterfaceTemplate.objects.all()
-    table = tables.InterfaceTemplateTable
-    filterset = filters.InterfaceTemplateFilterSet
+    create_form_class = forms.InterfaceTemplateCreateForm
 
 
 #
@@ -2506,36 +2460,20 @@ class InterfaceTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class FrontPortTemplateCreateView(generic.ComponentCreateView):
+class FrontPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.FrontPortTemplateBulkEditForm
+    filterset_class = filters.FrontPortTemplateFilterSet
+    form_class = forms.FrontPortTemplateForm
+    serializer_class = serializers.FrontPortTemplateSerializer
+    table_class = tables.FrontPortTemplateTable
     queryset = FrontPortTemplate.objects.all()
-    form = forms.FrontPortTemplateCreateForm
-    model_form = forms.FrontPortTemplateForm
-
-
-class FrontPortTemplateEditView(generic.ObjectEditView):
-    queryset = FrontPortTemplate.objects.all()
-    model_form = forms.FrontPortTemplateForm
-
-
-class FrontPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = FrontPortTemplate.objects.all()
-
-
-class FrontPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = FrontPortTemplate.objects.all()
-    table = tables.FrontPortTemplateTable
-    form = forms.FrontPortTemplateBulkEditForm
-    filterset = filters.FrontPortTemplateFilterSet
-
-
-class FrontPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = FrontPortTemplate.objects.all()
-
-
-class FrontPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = FrontPortTemplate.objects.all()
-    table = tables.FrontPortTemplateTable
-    filterset = filters.FrontPortTemplateFilterSet
+    create_form_class = forms.FrontPortTemplateCreateForm
 
 
 #
@@ -2543,36 +2481,20 @@ class FrontPortTemplateBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RearPortTemplateCreateView(generic.ComponentCreateView):
+class RearPortTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.RearPortTemplateBulkEditForm
+    filterset_class = filters.RearPortTemplateFilterSet
+    form_class = forms.RearPortTemplateForm
+    serializer_class = serializers.RearPortTemplateSerializer
+    table_class = tables.RearPortTemplateTable
     queryset = RearPortTemplate.objects.all()
-    form = forms.RearPortTemplateCreateForm
-    model_form = forms.RearPortTemplateForm
-
-
-class RearPortTemplateEditView(generic.ObjectEditView):
-    queryset = RearPortTemplate.objects.all()
-    model_form = forms.RearPortTemplateForm
-
-
-class RearPortTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = RearPortTemplate.objects.all()
-
-
-class RearPortTemplateBulkEditView(generic.BulkEditView):
-    queryset = RearPortTemplate.objects.all()
-    table = tables.RearPortTemplateTable
-    form = forms.RearPortTemplateBulkEditForm
-    filterset = filters.RearPortTemplateFilterSet
-
-
-class RearPortTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = RearPortTemplate.objects.all()
-
-
-class RearPortTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = RearPortTemplate.objects.all()
-    table = tables.RearPortTemplateTable
-    filterset = filters.RearPortTemplateFilterSet
+    create_form_class = forms.RearPortTemplateCreateForm
 
 
 #
@@ -3195,70 +3117,70 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         weight=100,
                         link_name="dcim:device_consoleports_add",
                         label="Console Ports",
-                        icon="mdi-console",
+                        icon=DEVICE_COMPONENT_ICONS["consoleport"],
                         required_permissions=["dcim.add_consoleport"],
                     ),
                     object_detail.Button(
                         weight=200,
                         link_name="dcim:device_consoleserverports_add",
                         label="Console Server Ports",
-                        icon="mdi-console-network-outline",
+                        icon=DEVICE_COMPONENT_ICONS["consoleserverport"],
                         required_permissions=["dcim.add_consoleserverport"],
                     ),
                     object_detail.Button(
                         weight=300,
                         link_name="dcim:device_powerports_add",
                         label="Power Ports",
-                        icon="mdi-power-plug-outline",
+                        icon=DEVICE_COMPONENT_ICONS["powerport"],
                         required_permissions=["dcim.add_powerport"],
                     ),
                     object_detail.Button(
                         weight=400,
                         link_name="dcim:device_poweroutlets_add",
                         label="Power Outlets",
-                        icon="mdi-power-socket",
+                        icon=DEVICE_COMPONENT_ICONS["poweroutlet"],
                         required_permissions=["dcim.add_poweroutlet"],
                     ),
                     object_detail.Button(
                         weight=500,
                         link_name="dcim:device_interfaces_add",
                         label="Interfaces",
-                        icon="mdi-ethernet",
+                        icon=DEVICE_COMPONENT_ICONS["interface"],
                         required_permissions=["dcim.add_interface"],
                     ),
                     object_detail.Button(
                         weight=600,
                         link_name="dcim:device_frontports_add",
                         label="Front Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["frontport"],
                         required_permissions=["dcim.add_frontport"],
                     ),
                     object_detail.Button(
                         weight=700,
                         link_name="dcim:device_rearports_add",
                         label="Rear Ports",
-                        icon="mdi-square-rounded-outline",
+                        icon=DEVICE_COMPONENT_ICONS["rearport"],
                         required_permissions=["dcim.add_rearport"],
                     ),
                     object_detail.Button(
                         weight=800,
                         link_name="dcim:device_devicebays_add",
                         label="Device Bays",
-                        icon="mdi-circle-outline",
+                        icon=DEVICE_COMPONENT_ICONS["devicebay"],
                         required_permissions=["dcim.add_devicebay"],
                     ),
                     object_detail.Button(
                         weight=900,
                         link_name="dcim:device_modulebays_add",
                         label="Module Bays",
-                        icon="mdi-tray",
+                        icon=DEVICE_COMPONENT_ICONS["modulebay"],
                         required_permissions=["dcim.add_modulebay"],
                     ),
                     object_detail.Button(
                         weight=1000,
                         link_name="dcim:device_inventoryitems_add",
                         label="Inventory Items",
-                        icon="mdi-invoice-list-outline",
+                        icon=DEVICE_COMPONENT_ICONS["inventoryitem"],
                         required_permissions=["dcim.add_inventoryitem"],
                     ),
                 ),
@@ -4615,7 +4537,7 @@ class ConsolePortUIViewSet(
     ComponentBulkDisconnectViewMixin,
     NautobotUIViewSet,
 ):
-    queryset = ConsolePort.objects.all()
+    queryset = ConsolePort.optimize_queryset_for_cable_columns(ConsolePort.objects.all())
     bulk_update_form_class = forms.ConsolePortBulkEditForm
     create_form_class = forms.ConsolePortCreateForm
     filterset_class = filters.ConsolePortFilterSet
@@ -4627,12 +4549,23 @@ class ConsolePortUIViewSet(
     device_breadcrumb_url = "dcim:device_consoleports"
     module_breadcrumb_url = "dcim:module_consoleports"
 
-    def get_selected_objects_parents_name(self, selected_objects):
-        selected_object = selected_objects.first()
-        if selected_object:
-            parent = selected_object.device or selected_object.module
-            return parent.display
-        return ""
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Console Port",
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:consoleport_trace",
+            ),
+            *get_connected_endpoint_panels("consoleport"),
+        )
+    )
 
 
 #
@@ -4657,6 +4590,7 @@ class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
         return {
             "device_breadcrumb_url": self.device_breadcrumb_url,
             "module_breadcrumb_url": self.module_breadcrumb_url,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
             **super().get_extra_context(request, instance),
         }
 
@@ -4708,67 +4642,40 @@ class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerPortListView(generic.ObjectListView):
+class PowerPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = PowerPort.optimize_queryset_for_cable_columns(PowerPort.objects.all())
-    filterset = filters.PowerPortFilterSet
-    filterset_form = forms.PowerPortFilterForm
-    table = tables.PowerPortTable
+    bulk_update_form_class = forms.PowerPortBulkEditForm
+    create_form_class = forms.PowerPortCreateForm
+    filterset_class = filters.PowerPortFilterSet
+    filterset_form_class = forms.PowerPortFilterForm
+    form_class = forms.PowerPortForm
+    serializer_class = serializers.PowerPortSerializer
+    table_class = tables.PowerPortTable
     action_buttons = ("import", "export")
-
-
-class PowerPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = PowerPort.objects.all()
     device_breadcrumb_url = "dcim:device_powerports"
     module_breadcrumb_url = "dcim:module_powerports"
 
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PowerPortCreateView(generic.ComponentCreateView):
-    queryset = PowerPort.objects.all()
-    form = forms.PowerPortCreateForm
-    model_form = forms.PowerPortForm
-
-
-class PowerPortEditView(generic.ObjectEditView):
-    queryset = PowerPort.objects.all()
-    model_form = forms.PowerPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class PowerPortDeleteView(generic.ObjectDeleteView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerPort.objects.all()
-    table = tables.PowerPortTable
-
-
-class PowerPortBulkEditView(generic.BulkEditView):
-    queryset = PowerPort.objects.all()
-    filterset = filters.PowerPortFilterSet
-    table = tables.PowerPortTable
-    form = forms.PowerPortBulkEditForm
-
-
-class PowerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkDisconnectView(BulkDisconnectView):
-    queryset = PowerPort.objects.all()
-
-
-class PowerPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerPort.objects.all()
-    filterset = filters.PowerPortFilterSet
-    table = tables.PowerPortTable
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                exclude_fields=("cable_termination"),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:powerport_trace",
+            ),
+            *get_connected_endpoint_panels("powerport"),
+        )
+    )
 
 
 #
@@ -4776,67 +4683,29 @@ class PowerPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class PowerOutletListView(generic.ObjectListView):
+class PowerOutletUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = PowerOutlet.optimize_queryset_for_cable_columns(PowerOutlet.objects.all())
-    filterset = filters.PowerOutletFilterSet
-    filterset_form = forms.PowerOutletFilterForm
-    table = tables.PowerOutletTable
+    bulk_update_form_class = forms.PowerOutletBulkEditForm
+    create_form_class = forms.PowerOutletCreateForm
+    filterset_class = filters.PowerOutletFilterSet
+    filterset_form_class = forms.PowerOutletFilterForm
+    form_class = forms.PowerOutletForm
+    serializer_class = serializers.PowerOutletSerializer
+    table_class = tables.PowerOutletTable
     action_buttons = ("import", "export")
-
-
-class PowerOutletView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = PowerOutlet.objects.all()
     device_breadcrumb_url = "dcim:device_poweroutlets"
     module_breadcrumb_url = "dcim:module_poweroutlets"
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class PowerOutletCreateView(generic.ComponentCreateView):
-    queryset = PowerOutlet.objects.all()
-    form = forms.PowerOutletCreateForm
-    model_form = forms.PowerOutletForm
-
-
-class PowerOutletEditView(generic.ObjectEditView):
-    queryset = PowerOutlet.objects.all()
-    model_form = forms.PowerOutletForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class PowerOutletDeleteView(generic.ObjectDeleteView):
-    queryset = PowerOutlet.objects.all()
-
-
-class PowerOutletBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = PowerOutlet.objects.all()
-    table = tables.PowerOutletTable
-
-
-class PowerOutletBulkEditView(generic.BulkEditView):
-    queryset = PowerOutlet.objects.all()
-    filterset = filters.PowerOutletFilterSet
-    table = tables.PowerOutletTable
-    form = forms.PowerOutletBulkEditForm
-
-
-class PowerOutletBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = PowerOutlet.objects.all()
-
-
-class PowerOutletBulkDisconnectView(BulkDisconnectView):
-    queryset = PowerOutlet.objects.all()
-
-
-class PowerOutletBulkDeleteView(generic.BulkDeleteView):
-    queryset = PowerOutlet.objects.all()
-    filterset = filters.PowerOutletFilterSet
-    table = tables.PowerOutletTable
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
+        return context
 
 
 #
@@ -4907,6 +4776,7 @@ class InterfaceView(
             "child_interfaces_table": child_interfaces_tables,
             "redundancy_table": redundancy_table,
             "virtual_device_contexts_table": virtual_device_contexts_table,
+            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
             **super().get_extra_context(request, instance),
         }
 
@@ -5671,7 +5541,7 @@ class CableUIViewSet(NautobotUIViewSet):
     form_class = forms.CableForm
     serializer_class = serializers.CableSerializer
     table_class = tables.CableTable
-    queryset = Cable.objects.prefetch_related(
+    queryset = Cable.objects.select_related("cable_type").prefetch_related(
         Prefetch(
             "terminations",
             # `select_related`-ing the per-type FK columns lets the table's `terminations_a` /
@@ -5783,13 +5653,48 @@ class PathTraceView(generic.ObjectView):
 
         return super().dispatch(request, *args, **kwargs)
 
+    @staticmethod
+    def _select_path(cable_paths, cablepath_id):
+        """Return the `CablePath` from `cable_paths` matching `cablepath_id`, or the first as fallback."""
+        try:
+            path_id = uuid.UUID(cablepath_id)
+        except (AttributeError, TypeError, ValueError):
+            path_id = None
+        try:
+            return cable_paths.get(pk=path_id)
+        except CablePath.DoesNotExist:
+            return cable_paths.first()
+
+    @staticmethod
+    def _breakout_subinterface_origin(path):
+        """The breakout trunk's child (sub)interface mapped to the selected lane `path`, or None.
+
+        A trunk origin's CablePath identifies a lane by its breakout-side `peer_connector`; the
+        child interface whose breakout lane resolves to that same far connector is the subinterface
+        this lane belongs to. Returns None when the path origin isn't a breakout trunk with such a
+        child interface.
+        """
+        origin = getattr(path, "origin", None)
+        if origin is None or not hasattr(origin, "get_breakout_child_interface_for_connector"):
+            return None
+        return origin.get_breakout_child_interface_for_connector(path.peer_connector)
+
     def get_extra_context(self, request, instance):
         related_paths = []
+        cablepath_id = request.GET.get("cablepath_id")
 
         # If tracing a PathEndpoint, locate the CablePath (if one exists) by its origin.
         if isinstance(instance, PathEndpoint):
             cable_paths = instance.cable_paths.all().prefetch_related("origin")
-            path = cable_paths.first()
+            # A breakout trunk has one CablePath per lane; `cablepath_id` selects a single lane (e.g.
+            # tracing one subinterface), otherwise fall back to the first.
+            if cablepath_id is not None:
+                path = self._select_path(cable_paths, cablepath_id)
+            else:
+                path = cable_paths.first()
+            # Surface all of a breakout trunk's lane paths so the user can switch between lanes
+            # (subinterfaces) — including when one lane is already selected via `cablepath_id`, where
+            # this table is the only way back to the trunk's other lanes.
             if cable_paths.count() > 1:  # breakout cable!
                 related_paths = cable_paths
 
@@ -5797,36 +5702,38 @@ class PathTraceView(generic.ObjectView):
         else:
             related_paths = CablePath.objects.filter(path__contains=instance).prefetch_related("origin")
             # Check for specification of a particular path (when tracing pass-through ports)
-
-            cablepath_id = request.GET.get("cablepath_id")
             if cablepath_id is not None:
-                try:
-                    path_id = uuid.UUID(cablepath_id)
-                except (AttributeError, TypeError, ValueError):
-                    path_id = None
-                try:
-                    path = related_paths.get(pk=path_id)
-                except CablePath.DoesNotExist:
-                    path = related_paths.first()
+                path = self._select_path(related_paths, cablepath_id)
             else:
                 path = related_paths.first()
 
         # Render the SVG trace diagram for the active path (if there is one).
         trace_svg = ""
+        subinterface_origin = None
         if path is not None and getattr(path, "origin", None) is not None:
             from nautobot.dcim.svg.path_trace import CableTraceSVG
 
+            # When a single lane of a breakout trunk was selected, originate the trace from the
+            # trunk's child (sub)interface mapped to that lane so the SVG renders it atop the trunk.
+            subinterface_origin = self._breakout_subinterface_origin(path) if cablepath_id is not None else None
             trace_svg = CableTraceSVG(
-                path.origin, base_url=request.build_absolute_uri("/").rstrip("/"), cable_path=path
+                subinterface_origin or path.origin,
+                base_url=request.build_absolute_uri("/").rstrip("/"),
+                cable_path=path,
             ).render()
 
-        return {
+        context = {
             "path": path,
             "related_paths": related_paths,
             "trace_svg": trace_svg,
             "view_titles": self.get_view_titles(),
             **super().get_extra_context(request, instance),
         }
+        # The URL traces the parent trunk, but a single selected lane is really tracing one
+        # subinterface — title it accordingly rather than the (misleading) parent interface.
+        if subinterface_origin is not None:
+            context["title"] = f"Cable Trace for {subinterface_origin}"
+        return context
 
 
 class CableCreateView(LoginRequiredMixin, View):
@@ -6303,6 +6210,7 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 label="Connection",
                 context_data_key="connection_data",
             ),
+            *get_connected_endpoint_panels("powerfeed"),
         )
     )
 
@@ -6347,11 +6255,14 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
         return "Connected Device", self._get_connected_device_html(instance)
 
     def _get_connected_device_html(self, instance):
-        endpoint = getattr(instance, "connected_endpoint", None)
-        if endpoint and endpoint.parent:
-            parent = helpers.hyperlinked_object(endpoint.parent)
-            return format_html("{} ({})", parent, endpoint)
-        return None
+        endpoints = [e for e in instance.get_connected_endpoints() if e is not None and e.parent]
+        if not endpoints:
+            return None
+        return format_html_join(
+            mark_safe("<br>"),
+            "{} ({})",
+            ((helpers.hyperlinked_object(endpoint.parent), endpoint) for endpoint in endpoints),
+        )
 
     def _get_utilization_data(self, instance):
         endpoint = getattr(instance, "connected_endpoint", None)
@@ -6383,18 +6294,36 @@ class PowerFeedUIViewSet(NautobotUIViewSet):
                 trace_url,
             )
 
-            endpoint = getattr(instance, "connected_endpoint", None)
+            endpoints = [e for e in instance.get_connected_endpoints() if e is not None]
             endpoint_data = {}
 
-            if endpoint:
+            if len(endpoints) == 1:
+                endpoint = endpoints[0]
                 endpoint_obj = getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
-                # Removed the unused 'path' variable
                 endpoint_data = {
                     "Device" if getattr(endpoint, "device", None) else "Module": endpoint_obj,
                     "Power Port": endpoint,
                     "Type": endpoint.get_type_display() if hasattr(endpoint, "get_type_display") else None,
                     "Description": endpoint.description,
                     "Path Status": self._get_path_status_html(instance),  # Render Path Status dynamically
+                }
+            elif len(endpoints) > 1:
+                # Multi-termination cable: list every connected power port rather than only the first.
+                endpoint_data = {
+                    "Power Ports": format_html_join(
+                        mark_safe("<br>"),
+                        "{} ({})",
+                        (
+                            (
+                                helpers.hyperlinked_object(
+                                    getattr(endpoint, "device", None) or getattr(endpoint, "module", None)
+                                ),
+                                helpers.hyperlinked_object(endpoint),
+                            )
+                            for endpoint in endpoints
+                        ),
+                    ),
+                    "Path Status": self._get_path_status_html(instance),
                 }
 
             return {

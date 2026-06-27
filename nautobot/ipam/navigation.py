@@ -41,6 +41,22 @@ menu_items = (
                         ],
                         buttons=(),
                     ),
+                    NavMenuItem(
+                        link="ipam:ipaddressrange_list",
+                        name="IP Address Ranges",
+                        weight=300,
+                        permissions=[
+                            "ipam.view_ipaddressrange",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="ipam:ipaddressrange_add",
+                                permissions=[
+                                    "ipam.add_ipaddressrange",
+                                ],
+                            ),
+                        ),
+                    ),
                 ),
             ),
             NavMenuGroup(

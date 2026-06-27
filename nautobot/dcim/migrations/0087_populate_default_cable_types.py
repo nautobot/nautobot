@@ -7,7 +7,7 @@ from nautobot.dcim.utils import clear_default_cable_types, populate_default_cabl
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0085_cabletype"),
+        ("dcim", "0086_cabletype"),
     ]
 
     operations = [
