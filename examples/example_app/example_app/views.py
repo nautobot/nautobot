@@ -16,7 +16,7 @@ from nautobot.ipam.models import Prefix
 
 from example_app import filters, forms, tables
 from example_app.api import serializers
-from example_app.models import AnotherExampleModel, ExampleModel
+from example_app.models import AnotherExampleModel, ExampleModel, ProxyExampleModel
 
 
 class CircuitDetailAppTabView(views.ObjectView):
@@ -330,6 +330,22 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
             "example_app/examplemodel_custom_action_get_all_example_model_names.html",
             {"data": [model.name for model in all_example_models]},
         )
+
+
+class ProxyExampleModelUIViewSet(views.NautobotUIViewSet):
+    """Minimal UIViewSet for the `ProxyExampleModel` proxy model.
+
+    Provides the standard CRUD/bulk/relationship UI so proxy-model ContentType behavior
+    (bulk edit/delete, relationships, etc.) can be exercised manually against a real proxy model.
+    """
+
+    bulk_update_form_class = forms.ProxyExampleModelBulkEditForm
+    filterset_class = filters.ProxyExampleModelFilterSet
+    filterset_form_class = forms.ProxyExampleModelFilterForm
+    form_class = forms.ProxyExampleModelForm
+    queryset = ProxyExampleModel.objects.all()
+    serializer_class = serializers.ProxyExampleModelSerializer
+    table_class = tables.ProxyExampleModelTable
 
 
 # Example excluding the BulkUpdateViewSet

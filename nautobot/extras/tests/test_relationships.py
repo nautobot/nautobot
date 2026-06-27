@@ -1,12 +1,12 @@
 import contextlib
 import logging
-from unittest import mock
 import uuid
 
-from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db.models import QuerySet
+from django.test import tag
 from django.urls import reverse
 from django.utils.html import format_html
 import redis.exceptions
@@ -53,40 +53,6 @@ from nautobot.extras.models.jobs import JobLogEntry
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
-
-
-class ProxyLocationTestMixin:
-    """Build and clean up proxy models used by proxy relationship regressions."""
-
-    _proxy_location_model = None
-
-    def build_proxy_location_model(self):
-        try:
-            self._proxy_location_model = apps.get_model("dcim", "ProxyLocation")
-            return self._proxy_location_model
-        except LookupError:
-            pass
-
-        class ProxyLocation(Location):
-            for_concrete_model = False
-
-            class Meta:
-                proxy = True
-                app_label = "dcim"
-
-            def get_absolute_url(self, api=False):
-                return reverse("dcim:location", kwargs={"pk": self.pk})
-
-        self._proxy_location_model = ProxyLocation
-        return self._proxy_location_model
-
-    def tearDown(self):
-        if self._proxy_location_model is not None:
-            apps.all_models.get("dcim", {}).pop("proxylocation", None)
-            apps.clear_cache()
-            ContentType.objects.clear_cache()
-            self._proxy_location_model = None
-        super().tearDown()
 
 
 class RelationshipBaseTest:
@@ -232,7 +198,7 @@ class RelationshipBaseTest:
             )
 
 
-class RelationshipTest(ProxyLocationTestMixin, RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
     model = Relationship
 
     def test_clean_filter_not_dict(self):
@@ -782,175 +748,230 @@ class RelationshipTest(ProxyLocationTestMixin, RelationshipBaseTest, ModelTestCa
         with self.assertRaises(ValidationError):
             form6.save()
 
-    def test_proxy_symmetric_detail_path_matches_basic_relationship_data(self):
-        """
-        Proxy symmetric one-to-one relationships should resolve in both basic and detail panel paths.
+    NON_SYMMETRIC_PROXY_RELATIONSHIP_TYPES = (
+        (RelationshipTypeChoices.TYPE_ONE_TO_ONE, 1),
+        (RelationshipTypeChoices.TYPE_ONE_TO_MANY, 2),
+        (RelationshipTypeChoices.TYPE_MANY_TO_MANY, 2),
+    )
+    SYMMETRIC_PROXY_RELATIONSHIP_TYPES = (
+        (RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC, 1),
+        (RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC, 2),
+    )
 
-        Regression guard: `get_relationships_with_related_objects()` previously returned None while
+    @staticmethod
+    def _as_related_pk_set(value):
+        """Normalize a detail-path value (None, single instance, or queryset) to a set of pks."""
+        if value is None:
+            return set()
+        if isinstance(value, QuerySet):
+            return {obj.pk for obj in value}
+        return {value.pk}
+
+    def _build_non_symmetric_proxy_relationship(self, relationship_type, peer_count):
+        """
+        Create a proxy<->proxy non-symmetric relationship of `relationship_type` plus associations.
+
+        The proxy object under test is placed on the source side of `peer_count` associations and on
+        the destination side of one additional association, so both the source and destination side
+        buckets are exercised for the same object.
+
+        Returns (relationship, proxy_object, expected), where `expected` maps each side bucket to the
+        set of peer pks the proxy object should resolve to on that side.
+        """
+        from example_app.models import ProxyExampleModel
+
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+        proxy_object = ProxyExampleModel.objects.create(name=f"Proxy {relationship_type} Source", number=1)
+        relationship = Relationship(
+            label=f"Proxy {relationship_type} {uuid.uuid4().hex[:8]}",
+            source_type=proxy_ct,
+            destination_type=proxy_ct,
+            type=relationship_type,
+        )
+        relationship.validated_save()
+
+        source_peers = [
+            ProxyExampleModel.objects.create(name=f"Proxy {relationship_type} Peer {i}", number=i + 2)
+            for i in range(peer_count)
+        ]
+        for peer in source_peers:
+            RelationshipAssociation(
+                relationship=relationship,
+                source_type=proxy_ct,
+                source_id=proxy_object.pk,
+                destination_type=proxy_ct,
+                destination_id=peer.pk,
+            ).validated_save()
+        origin = ProxyExampleModel.objects.create(name=f"Proxy {relationship_type} Origin", number=99)
+        RelationshipAssociation(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=origin.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_object.pk,
+        ).validated_save()
+
+        expected = {
+            RelationshipSideChoices.SIDE_SOURCE: {peer.pk for peer in source_peers},
+            RelationshipSideChoices.SIDE_DESTINATION: {origin.pk},
+        }
+        return relationship, proxy_object, expected
+
+    def _build_symmetric_proxy_relationship(self, relationship_type, peer_count):
+        """
+        Create a proxy<->proxy symmetric relationship of `relationship_type` plus associations.
+
+        The proxy object under test alternates between the source and destination columns across the
+        `peer_count` associations, so peer resolution is verified regardless of which side of an
+        association row the object occupies.
+
+        Returns (relationship, proxy_object, expected), where `expected` maps the peer side bucket to
+        the set of peer pks the proxy object should resolve to.
+        """
+        from example_app.models import ProxyExampleModel
+
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+        proxy_object = ProxyExampleModel.objects.create(name=f"Proxy {relationship_type} Source", number=1)
+        relationship = Relationship(
+            label=f"Proxy {relationship_type} {uuid.uuid4().hex[:8]}",
+            source_type=proxy_ct,
+            destination_type=proxy_ct,
+            type=relationship_type,
+        )
+        relationship.validated_save()
+
+        peers = [
+            ProxyExampleModel.objects.create(name=f"Proxy {relationship_type} Peer {i}", number=i + 2)
+            for i in range(peer_count)
+        ]
+        for i, peer in enumerate(peers):
+            RelationshipAssociation(
+                relationship=relationship,
+                source_type=proxy_ct,
+                source_id=proxy_object.pk if i % 2 == 0 else peer.pk,
+                destination_type=proxy_ct,
+                destination_id=peer.pk if i % 2 == 0 else proxy_object.pk,
+            ).validated_save()
+
+        expected = {RelationshipSideChoices.SIDE_PEER: {peer.pk for peer in peers}}
+        return relationship, proxy_object, expected
+
+    @tag("example_app")
+    def test_proxy_non_symmetric_relationship_fields_visible_for_each_relationship_type(self):
+        """
+        Axis 1 (non-symmetric): a relationship defined for the proxy ContentType must appear on a
+        proxy instance under the source and destination side buckets, for every non-symmetric type.
+
+        This guards the relationship-set resolution step (`Relationship.objects.get_for_model`). For a
+        proxy that opts into a distinct ContentType via `for_concrete_model = False`, if discovery
+        resolves to the concrete ContentType instead, the relationship never enters
+        `get_relationships()` and the object detail page renders no field for it at all, independent
+        of whether any associations exist. The basic-field path (the primary detail tab) is checked
+        alongside `get_relationships()` because that is what the detail template iterates.
+        """
+        for relationship_type, peer_count in self.NON_SYMMETRIC_PROXY_RELATIONSHIP_TYPES:
+            with self.subTest(relationship_type=relationship_type):
+                relationship, proxy_object, expected = self._build_non_symmetric_proxy_relationship(
+                    relationship_type, peer_count
+                )
+                relationships = proxy_object.get_relationships()
+                basic_fields = proxy_object.get_relationships_data_basic_fields()
+                for side in expected:
+                    self.assertIn(relationship, relationships[side])
+                    self.assertIn(relationship, basic_fields[side])
+
+    @tag("example_app")
+    def test_proxy_symmetric_relationship_fields_visible_for_each_relationship_type(self):
+        """
+        Axis 1 (symmetric): a symmetric relationship defined for the proxy ContentType must appear on
+        a proxy instance under the peer side bucket, for every symmetric type.
+
+        Same relationship-set resolution guard as the non-symmetric case, but symmetric relationships
+        surface under SIDE_PEER regardless of which association column the object occupies. The
+        basic-field path is checked alongside `get_relationships()` for the same detail-page reason.
+        """
+        for relationship_type, peer_count in self.SYMMETRIC_PROXY_RELATIONSHIP_TYPES:
+            with self.subTest(relationship_type=relationship_type):
+                relationship, proxy_object, expected = self._build_symmetric_proxy_relationship(
+                    relationship_type, peer_count
+                )
+                relationships = proxy_object.get_relationships()
+                basic_fields = proxy_object.get_relationships_data_basic_fields()
+                for side in expected:
+                    self.assertIn(relationship, relationships[side])
+                    self.assertIn(relationship, basic_fields[side])
+
+    @tag("example_app")
+    def test_proxy_non_symmetric_relationship_values_visible_for_each_relationship_type(self):
+        """
+        Axis 2 (non-symmetric): once the relationship is visible, the proxy instance's association
+        rows and resolved peer objects must be correct on each side, for every non-symmetric type.
+
+        Three things are asserted per side:
+        - basic path: `get_relationships()` association querysets resolve to the expected peers via
+          `RelationshipAssociation.get_peer()`.
+        - detail path: `get_relationships_with_related_objects()` yields the same peer set, so the two
+          detail-page value paths agree.
+        - cardinality: a "to-many" side yields a queryset while a "to-one" side yields a single
+          instance, matching `relationship.has_many()` for the peer side.
+
+        A proxy ContentType bug at this stage leaves the field visible (Axis 1) but the value empty or
+        None, so this is the value-visibility counterpart to the fields-visible tests.
+        """
+        for relationship_type, peer_count in self.NON_SYMMETRIC_PROXY_RELATIONSHIP_TYPES:
+            with self.subTest(relationship_type=relationship_type):
+                relationship, proxy_object, expected = self._build_non_symmetric_proxy_relationship(
+                    relationship_type, peer_count
+                )
+                basic = proxy_object.get_relationships()
+                detail = proxy_object.get_relationships_with_related_objects()
+
+                for side, expected_pks in expected.items():
+                    association_peer_pks = {
+                        association.get_peer(proxy_object).pk for association in basic[side][relationship]
+                    }
+                    self.assertEqual(association_peer_pks, expected_pks)
+
+                    detail_value = detail[side][relationship]
+                    self.assertEqual(self._as_related_pk_set(detail_value), expected_pks)
+                    if relationship.has_many(RelationshipSideChoices.OPPOSITE[side]):
+                        self.assertIsInstance(detail_value, QuerySet)
+                    else:
+                        self.assertNotIsInstance(detail_value, QuerySet)
+
+    @tag("example_app")
+    def test_proxy_symmetric_relationship_values_visible_for_each_relationship_type(self):
+        """
+        Axis 2 (symmetric): once the symmetric relationship is visible, the proxy instance's peer
+        associations and resolved peer objects must be correct regardless of which association column
+        the object occupies, for every symmetric type.
+
+        The same three checks as the non-symmetric case (basic path, detail path agreement, and
+        cardinality) are asserted on the peer side. This is the regression guard for the prior
+        symmetric defect where `get_relationships_with_related_objects()` returned None while
         `get_relationships_data_basic_fields()` returned the expected peer object.
         """
-        proxy_location_model = self.build_proxy_location_model()
-        proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
-        proxy_destination = proxy_location_model.objects.get(pk=self.locations[1].pk)
-        ContentType.objects.clear_cache()
-        proxy_ct = ContentType.objects.get_for_model(proxy_location_model, for_concrete_model=False)
+        for relationship_type, peer_count in self.SYMMETRIC_PROXY_RELATIONSHIP_TYPES:
+            with self.subTest(relationship_type=relationship_type):
+                relationship, proxy_object, expected = self._build_symmetric_proxy_relationship(
+                    relationship_type, peer_count
+                )
+                basic = proxy_object.get_relationships()
+                detail = proxy_object.get_relationships_with_related_objects()
 
-        relationship_key = f"proxy_sym_{uuid.uuid4().hex[:12]}"
-        relationship = Relationship(
-            label=f"Proxy Symmetric {uuid.uuid4().hex[:8]}",
-            key=relationship_key,
-            source_type=proxy_ct,
-            destination_type=proxy_ct,
-            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
-        )
-        with mock.patch.object(Relationship, "clean", autospec=True, return_value=None):
-            relationship.save()
+                for side, expected_pks in expected.items():
+                    association_peer_pks = {
+                        association.get_peer(proxy_object).pk for association in basic[side][relationship]
+                    }
+                    self.assertEqual(association_peer_pks, expected_pks)
 
-        RelationshipAssociation.objects.create(
-            relationship=relationship,
-            source_type=proxy_ct,
-            source_id=proxy_source.pk,
-            destination_type=proxy_ct,
-            destination_id=proxy_destination.pk,
-        )
-
-        proxy_source_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_source(proxy_location_model, get_queryset=False)
-        ]
-        proxy_destination_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_destination(proxy_location_model, get_queryset=False)
-        ]
-        concrete_source_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)
-        ]
-        concrete_destination_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_destination(Location, get_queryset=False)
-        ]
-        print(
-            "proxy_o2o_lookup",
-            {
-                "relationship_key": relationship.key,
-                "proxy_source_keys": proxy_source_keys,
-                "proxy_destination_keys": proxy_destination_keys,
-                "concrete_source_keys": concrete_source_keys,
-                "concrete_destination_keys": concrete_destination_keys,
-            },
-        )
-
-        basic_peer_data = {rel.key: value for rel, value in proxy_source.get_relationships()["peer"].items()}
-        detail_peer_data = {
-            rel.key: value
-            for rel, value in proxy_source.get_relationships_with_related_objects(advanced_ui=False)["peer"].items()
-        }
-        print(
-            "proxy_o2o_data",
-            {
-                "basic_peer_keys": list(basic_peer_data.keys()),
-                "detail_peer_keys": list(detail_peer_data.keys()),
-            },
-        )
-
-        self.assertIn(relationship.key, basic_peer_data)
-        self.assertIn(relationship.key, detail_peer_data)
-        basic_association = basic_peer_data[relationship.key].first()
-        detail_peer = detail_peer_data[relationship.key]
-
-        self.assertIsNotNone(basic_association)
-        basic_peer_id = (
-            basic_association.destination_id
-            if basic_association.source_id == proxy_source.pk
-            else basic_association.source_id
-        )
-        self.assertEqual(basic_peer_id, proxy_destination.pk)
-        self.assertIsNotNone(detail_peer)
-        self.assertEqual(detail_peer.pk, proxy_destination.pk)
-
-    def test_proxy_symmetric_many_to_many_detail_path_matches_basic_relationship_data(self):
-        """
-        Proxy symmetric many-to-many relationships should resolve in both basic and detail panel paths.
-        """
-        proxy_location_model = self.build_proxy_location_model()
-        proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
-        proxy_destination_1 = proxy_location_model.objects.get(pk=self.locations[1].pk)
-        proxy_destination_2 = proxy_location_model.objects.get(pk=self.locations[2].pk)
-        ContentType.objects.clear_cache()
-        proxy_ct = ContentType.objects.get_for_model(proxy_location_model, for_concrete_model=False)
-
-        relationship_key = f"proxy_sym_m2m_{uuid.uuid4().hex[:12]}"
-        relationship = Relationship(
-            label=f"Proxy Symmetric M2M {uuid.uuid4().hex[:8]}",
-            key=relationship_key,
-            source_type=proxy_ct,
-            destination_type=proxy_ct,
-            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
-        )
-        with mock.patch.object(Relationship, "clean", autospec=True, return_value=None):
-            relationship.save()
-
-        RelationshipAssociation.objects.create(
-            relationship=relationship,
-            source_type=proxy_ct,
-            source_id=proxy_source.pk,
-            destination_type=proxy_ct,
-            destination_id=proxy_destination_1.pk,
-        )
-        RelationshipAssociation.objects.create(
-            relationship=relationship,
-            source_type=proxy_ct,
-            source_id=proxy_source.pk,
-            destination_type=proxy_ct,
-            destination_id=proxy_destination_2.pk,
-        )
-
-        proxy_source_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_source(proxy_location_model, get_queryset=False)
-        ]
-        proxy_destination_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_destination(proxy_location_model, get_queryset=False)
-        ]
-        concrete_source_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_source(Location, get_queryset=False)
-        ]
-        concrete_destination_keys = [
-            rel.key for rel in Relationship.objects.get_for_model_destination(Location, get_queryset=False)
-        ]
-        print(
-            "proxy_m2m_lookup",
-            {
-                "relationship_key": relationship.key,
-                "proxy_source_keys": proxy_source_keys,
-                "proxy_destination_keys": proxy_destination_keys,
-                "concrete_source_keys": concrete_source_keys,
-                "concrete_destination_keys": concrete_destination_keys,
-            },
-        )
-
-        basic_peer_data = {rel.key: value for rel, value in proxy_source.get_relationships()["peer"].items()}
-        detail_peer_data = {
-            rel.key: value
-            for rel, value in proxy_source.get_relationships_with_related_objects(advanced_ui=False)["peer"].items()
-        }
-        print(
-            "proxy_m2m_data",
-            {
-                "basic_peer_keys": list(basic_peer_data.keys()),
-                "detail_peer_keys": list(detail_peer_data.keys()),
-            },
-        )
-
-        self.assertIn(relationship.key, basic_peer_data)
-        self.assertIn(relationship.key, detail_peer_data)
-        basic_queryset = basic_peer_data[relationship.key]
-        detail_queryset = detail_peer_data[relationship.key]
-
-        self.assertEqual(
-            {
-                association.destination_id if association.source_id == proxy_source.pk else association.source_id
-                for association in basic_queryset
-            },
-            {proxy_destination_1.pk, proxy_destination_2.pk},
-        )
-        self.assertEqual({obj.pk for obj in detail_queryset}, {proxy_destination_1.pk, proxy_destination_2.pk})
+                    detail_value = detail[side][relationship]
+                    self.assertEqual(self._as_related_pk_set(detail_value), expected_pks)
+                    # Symmetric relationships have identical source/destination cardinality.
+                    if relationship.has_many(RelationshipSideChoices.SIDE_SOURCE):
+                        self.assertIsInstance(detail_value, QuerySet)
+                    else:
+                        self.assertNotIsInstance(detail_value, QuerySet)
 
 
 class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
@@ -1426,7 +1447,7 @@ class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModel
         self.assertEqual(1, RelationshipAssociation.objects.filter(destination_dcim_location=self.locations[0]).count())
 
 
-class RelationshipTableTest(ProxyLocationTestMixin, RelationshipBaseTest, TestCase):
+class RelationshipTableTest(RelationshipBaseTest, TestCase):
     """
     Test inclusion of relationships in object table views.
     """
@@ -1577,51 +1598,106 @@ class RelationshipTableTest(ProxyLocationTestMixin, RelationshipBaseTest, TestCa
             for value in col_expected_value:
                 self.assertIn(value, rendered_value)
 
+    @tag("example_app")
+    def test_proxy_non_symmetric_relationship_table_columns_render_related_objects(self):
+        """Proxy non-symmetric relationship columns should render links in list tables."""
+        from example_app.models import ProxyExampleModel
+        from example_app.tables import ProxyExampleModelTable
+
+        proxy_source = ProxyExampleModel.objects.create(name="Proxy Table Source", number=1)
+        proxy_destination = ProxyExampleModel.objects.create(name="Proxy Table Destination", number=2)
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+
+        relationship = Relationship(
+            label=f"Proxy Non-Symmetric Table {uuid.uuid4().hex[:8]}",
+            source_type=proxy_ct,
+            destination_type=proxy_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+        )
+        relationship.validated_save()
+
+        RelationshipAssociation(
+            relationship=relationship,
+            source_type=proxy_ct,
+            source_id=proxy_source.pk,
+            destination_type=proxy_ct,
+            destination_id=proxy_destination.pk,
+        ).validated_save()
+
+        # Define the table subclass after the relationship exists so the table metaclass picks up
+        # the dynamically-generated relationship columns for the proxy ContentType.
+        class ProxyExampleRelationshipTable(ProxyExampleModelTable):
+            class Meta(ProxyExampleModelTable.Meta):
+                model = ProxyExampleModel
+
+        source_table = ProxyExampleRelationshipTable(ProxyExampleModel.objects.filter(pk=proxy_source.pk))
+        source_column_name = f"cr_{relationship.key}_src"
+        source_relationship_column = source_table.base_columns.get(source_column_name)
+        self.assertIsNotNone(source_relationship_column)
+        self.assertIsInstance(source_relationship_column, RelationshipColumn)
+        source_rendered_value = source_table.rows[0].get_cell(source_column_name)  # pylint: disable=no-member
+        self.assertIn(f"relationship={relationship.key}", source_rendered_value)
+        self.assertIn(f"source_id={proxy_source.pk}", source_rendered_value)
+
+        destination_table = ProxyExampleRelationshipTable(ProxyExampleModel.objects.filter(pk=proxy_destination.pk))
+        destination_column_name = f"cr_{relationship.key}_dst"
+        destination_relationship_column = destination_table.base_columns.get(destination_column_name)
+        self.assertIsNotNone(destination_relationship_column)
+        self.assertIsInstance(destination_relationship_column, RelationshipColumn)
+        destination_rendered_value = destination_table.rows[0].get_cell(
+            destination_column_name
+        )  # pylint: disable=no-member
+        self.assertIn(f"relationship={relationship.key}", destination_rendered_value)
+        self.assertIn(f"destination_id={proxy_destination.pk}", destination_rendered_value)
+
+    @tag("example_app")
     def test_proxy_symmetric_relationship_table_column_renders_related_objects(self):
         """Proxy symmetric relationship columns should render links in list tables."""
-        proxy_location_model = self.build_proxy_location_model()
-        proxy_source = proxy_location_model.objects.get(pk=self.locations[0].pk)
-        proxy_destination_1 = proxy_location_model.objects.get(pk=self.locations[1].pk)
-        proxy_destination_2 = proxy_location_model.objects.get(pk=self.locations[2].pk)
-        proxy_ct = ContentType.objects.get_for_model(proxy_location_model, for_concrete_model=False)
+        from example_app.models import ProxyExampleModel
+        from example_app.tables import ProxyExampleModelTable
+
+        proxy_source = ProxyExampleModel.objects.create(name="Proxy Table Source", number=1)
+        proxy_destination_1 = ProxyExampleModel.objects.create(name="Proxy Table Destination 1", number=2)
+        proxy_destination_2 = ProxyExampleModel.objects.create(name="Proxy Table Destination 2", number=3)
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
 
         relationship = Relationship(
             label=f"Proxy Symmetric Table {uuid.uuid4().hex[:8]}",
-            key=f"proxy_sym_table_{uuid.uuid4().hex[:12]}",
             source_type=proxy_ct,
             destination_type=proxy_ct,
             type=RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
         )
-        with mock.patch.object(Relationship, "clean", autospec=True, return_value=None):
-            relationship.save()
+        relationship.validated_save()
 
-        RelationshipAssociation.objects.create(
+        RelationshipAssociation(
             relationship=relationship,
             source_type=proxy_ct,
             source_id=proxy_source.pk,
             destination_type=proxy_ct,
             destination_id=proxy_destination_1.pk,
-        )
-        RelationshipAssociation.objects.create(
+        ).validated_save()
+        RelationshipAssociation(
             relationship=relationship,
             source_type=proxy_ct,
             source_id=proxy_source.pk,
             destination_type=proxy_ct,
             destination_id=proxy_destination_2.pk,
-        )
+        ).validated_save()
 
-        class ProxyLocationTable(LocationTable):
-            class Meta(LocationTable.Meta):
-                model = proxy_location_model
+        # Define the table subclass after the relationship exists so the table metaclass picks up
+        # the dynamically-generated relationship column for the proxy ContentType.
+        class ProxyExampleRelationshipTable(ProxyExampleModelTable):
+            class Meta(ProxyExampleModelTable.Meta):
+                model = ProxyExampleModel
 
-        location_table = ProxyLocationTable(proxy_location_model.objects.filter(pk=proxy_source.pk))
+        table = ProxyExampleRelationshipTable(ProxyExampleModel.objects.filter(pk=proxy_source.pk))
         column_name = f"cr_{relationship.key}_peer"
 
-        relationship_column = location_table.base_columns.get(column_name)
+        relationship_column = table.base_columns.get(column_name)
         self.assertIsNotNone(relationship_column)
         self.assertIsInstance(relationship_column, RelationshipColumn)
 
-        rendered_value = location_table.rows[0].get_cell(column_name)  # pylint: disable=no-member
+        rendered_value = table.rows[0].get_cell(column_name)  # pylint: disable=no-member
         self.assertIn(f"relationship={relationship.key}", rendered_value)
 
 
