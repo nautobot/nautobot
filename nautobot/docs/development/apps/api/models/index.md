@@ -109,10 +109,13 @@ Proxy models generally don't create new database schema and therefore typically 
 
 Nautobot models inherit a class attribute named `for_concrete_model` from `BaseModel`.
 
-- Default is `True`, which preserves Django's concrete-model `ContentType` behavior.
-- Set it to `False` on a proxy model to use the proxy model `ContentType` instead.
+- Default is `True`, which preserves Django's concrete-model `ContentType` behavior. In this case, the proxy model is effectively a transparent wrapper around the concrete model rather than being treated as a distinct model of its own - permissions, custom fields, relationships, etc. will still be defined relative to the concrete model and will apply identically through the proxy and concrete models. Typically in this pattern the proxy model will _not_ provide its own distinct views, filtersets, forms, REST API, etc. as the proxy and concrete models can be used interchangeably.
+- Set it to `False` on a proxy model to use the proxy model `ContentType` instead. In this case, the proxy model is treated as a distinct model that can have its own permission definitions, custom field definitions, etc. In this case, you probably will want to implement further code to partition the proxy model separately from the concrete model, for example:
+    - implementing a `manager` for the proxy model that only returns a subset of records suitable for being treated as the proxy model type
+    - overriding the concrete model's `manager` to conversely return only those records that do _not_ qualify as the proxy model type
+    - implementing proxy-model-specific views, filtersets, forms, REST API, etc.
 
-This setting is used by core `ContentType` resolution helpers and is honored by common Nautobot UI and extras paths (such as bulk operations, UI renderer context, and relationship lookup code).
+This setting is used by core `ContentType` resolution helpers and is honored by common Nautobot UI and extras paths (such as bulk operations, UI renderer context, and relationship lookup code). Coverage of additional `ContentType`-keyed features (custom fields, data validation rules, etc.) is being expanded incrementally.
 
 Example:
 
@@ -132,6 +135,8 @@ class ProxyExampleModel(ExampleModel):
     class Meta:
         proxy = True
 ```
+
+A working reference implementation, including UI and REST API integration, is provided by `ProxyExampleModel` in the bundled `example_app` (`examples/example_app/example_app/models.py`).
 
 In custom app code, use `nautobot.core.utils.contenttypes.get_content_type_for_model()` instead of calling `ContentType.objects.get_for_model()` directly, so the `for_concrete_model` flag is applied consistently.
 
