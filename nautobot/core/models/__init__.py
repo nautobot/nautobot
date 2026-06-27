@@ -19,6 +19,7 @@ from nautobot.core.models.querysets import (
 )
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
@@ -127,7 +128,7 @@ class BaseModel(models.Model):
         """
         Return the ContentType of the object, never cached.
         """
-        return ContentType.objects.get_for_model(cls)
+        return get_content_type_for_model(cls)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cache_key(cls):  # pylint: disable=no-self-argument
