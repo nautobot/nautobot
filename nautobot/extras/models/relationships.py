@@ -284,29 +284,17 @@ class RelationshipModel(models.Model):
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                     else:
-                        association_queryset = (
-                            RelationshipAssociation.objects.filter(
-                                relationship=relationship,
-                            )
-                            .filter(
-                                Q(source_id=self.pk, source_type=content_type)
-                                | Q(destination_id=self.pk, destination_type=content_type)
-                            )
-                            .distinct()
-                        )
-                        peer_ids = []
-                        for association in association_queryset:
-                            if association.source_id == self.pk and association.source_type_id == content_type.id:
-                                peer_ids.append(association.destination_id)
-                            elif (
-                                association.destination_id == self.pk
-                                and association.destination_type_id == content_type.id
-                            ):
-                                peer_ids.append(association.source_id)
+                        # Symmetric relationship: this object may be on either side of each association.
+                        source_peer_ids = RelationshipAssociation.objects.filter(
+                            relationship=relationship, source_id=self.pk, source_type=content_type
+                        ).values_list("destination_id", flat=True)
+                        destination_peer_ids = RelationshipAssociation.objects.filter(
+                            relationship=relationship, destination_id=self.pk, destination_type=content_type
+                        ).values_list("source_id", flat=True)
 
                         # Get the related objects based on the pks we gathered.
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
-                            pk__in=peer_ids
+                            Q(pk__in=source_peer_ids) | Q(pk__in=destination_peer_ids)
                         ).distinct()
                         if not relationship.has_many(peer_side):
                             resp[RelationshipSideChoices.SIDE_PEER][relationship] = resp[
