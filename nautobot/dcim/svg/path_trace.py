@@ -74,6 +74,9 @@ class CableTraceSVG:
 
     # Layout: cable segment
     CABLE_H = 140
+    # A breakout cable's trunk is drawn shorter than a normal cable bar so the diagonal fan-out
+    # below it gets more vertical room to spread (steeper, less crowded branches).
+    BREAKOUT_TRUNK_H = 90
     CABLE_BAR_W = 10
     CABLE_BORDER_W = 1
     # Dash pattern for a disconnected/planned cable (and its fork lines): the cable color rides on
@@ -650,32 +653,37 @@ class CableTraceSVG:
             is_breakout_fanout = bool(cable.cable_type_id) and len(col_centers) > 1
 
             if is_breakout_fanout:
-                # Breakout cable: half-height bar, then fork lines to each column.
-                y = self._draw_cable(dwg, trunk_cx, y, cable)
-                y += self.GAP_Y
+                # Breakout cable: a short vertical trunk that fans out, via one straight diagonal per
+                # connector, to the far columns. The trunk segment and every branch are drawn as one
+                # two-pass network (all borders first, then all colors) so the trunk's border never
+                # paints over a branch and the whole fan reads as a single connected shape.
+                fan_origin = (trunk_cx, y + self.BREAKOUT_TRUNK_H)
+                fan_end_y = y + self.CABLE_H + self.GAP_Y + self.CABLE_DASH_SEGMENT_LENGTH
+                segments = [((trunk_cx, y), fan_origin)]
+                segments += [(fan_origin, (cx, fan_end_y)) for cx in col_centers]
+                self._draw_cable_fan(dwg, segments, cable_color, is_connected)
+                self._draw_cable_label(dwg, trunk_cx, y, self.BREAKOUT_TRUNK_H, cable)
 
-                fork_y = y
-                self._draw_cable_line(
-                    dwg, (col_centers[0], fork_y), (col_centers[-1], fork_y), cable_color, is_connected
-                )
-                fork_y += self.GAP_Y
-                drop_end = fork_y + self.CABLE_DASH_SEGMENT_LENGTH
-                for col_idx, cx in enumerate(col_centers):
-                    self._draw_cable_line(dwg, (cx, fork_y), (cx, drop_end), cable_color, is_connected)
-                    label = header["connector_labels"][col_idx]
-                    if label:
-                        dwg.add(
-                            dwg.text(
-                                label,
-                                insert=(cx, fork_y - self.GAP_Y - self.TEXT_VERTICAL_OFFSET),
-                                text_anchor="middle",
-                                fill=constants.COLOR_SECONDARY,
-                                font_size=f"{constants.FONT_SIZE_SM}px",
-                                font_family=constants.FONT_FAMILY,
-                                font_weight="bold",
+                # Label each branch's landing column, just below the foot of its line.
+                connector_labels = header["connector_labels"]
+                y = fan_end_y + self.GAP_Y
+                if any(connector_labels):
+                    label_baseline = y + constants.FONT_SIZE_SM
+                    for col_idx, cx in enumerate(col_centers):
+                        label = connector_labels[col_idx]
+                        if label:
+                            dwg.add(
+                                dwg.text(
+                                    label,
+                                    insert=(cx, label_baseline),
+                                    text_anchor="middle",
+                                    fill=constants.COLOR_SECONDARY,
+                                    font_size=f"{constants.FONT_SIZE_SM}px",
+                                    font_family=constants.FONT_FAMILY,
+                                    font_weight="bold",
+                                )
                             )
-                        )
-                y = drop_end + self.GAP_Y
+                    y = label_baseline + self.GAP_Y
             else:
                 # Linear or single-leg: full-height cable bar, no fork. Pass the first hop's
                 # endpoints so a breakout cable here shows its lane detail, as a mid-path segment would.
@@ -988,17 +996,21 @@ class CableTraceSVG:
     def _draw_cable(self, dwg, cx, y, cable, near_end=None, far_end=None):
         """Draw a cable segment with color bar, label, breakout lane info, and status badge."""
         cable_color = f"#{cable.color}" if cable.color else constants.COLOR_SECONDARY
-        cable_url = self._url(cable)
         is_connected = cable.status.name == "Connected"
 
         bar_h = self.CABLE_H
         self._draw_cable_line(dwg, (cx, y), (cx, y + bar_h), cable_color, is_connected)
+        self._draw_cable_label(dwg, cx, y, bar_h, cable, near_end, far_end)
 
+        return y + bar_h
+
+    def _draw_cable_label(self, dwg, cx, y, bar_h, cable, near_end=None, far_end=None):
+        """Draw a cable's side label — bold name, muted detail lines, then the status badge — as a
+        vertical stack centered on the midpoint of a bar of height `bar_h` rooted at `(cx, y)`."""
+        cable_url = self._url(cable)
         label_x = cx + self.CABLE_BAR_W / 2 + self.LABEL_OFFSET_X
         label_y = y + bar_h / 2
 
-        # The label is a vertical stack — bold cable name, muted detail lines, then the status badge
-        # — centered on the cable bar's midpoint so it sits between the terminations above and below.
         detail_lines = self._cable_detail_lines(cable, near_end, far_end)
         line_step = self.TEXT_LINE_SPACING + 2
         row_count = 1 + len(detail_lines) + 1  # name + details + status badge
@@ -1032,8 +1044,6 @@ class CableTraceSVG:
         status_y = first_row_cy + (row_count - 1) * line_step
         self._draw_status_badge(dwg, label_x, status_y, cable.status.name, f"#{cable.status.color}")
 
-        return y + bar_h
-
     def _draw_cable_line(self, dwg, start, end, cable_color, is_connected):
         """Draw a cable line — the main trace bar or a breakout fork bar/drop.
 
@@ -1055,6 +1065,33 @@ class CableTraceSVG:
                 (cable_color, self.CABLE_BAR_W - 2 * self.CABLE_BORDER_W, self.CABLE_DASH, self.CABLE_DASH_OFFSET),
             ):
                 line = dwg.line(start=start, end=end, stroke=stroke, stroke_width=width, stroke_dasharray=dasharray)
+                if dashoffset:
+                    line["stroke-dashoffset"] = dashoffset
+                dwg.add(line)
+
+    def _draw_cable_fan(self, dwg, segments, cable_color, is_connected):
+        """Draw a breakout fan-out: straight cable lines diverging from a shared trunk point.
+
+        Each segment is a `(start, end)` pair sharing the same trunk `start`. All border strokes are
+        drawn before any color strokes (rather than border+color per line) so that where the branches
+        converge at the trunk, a later branch's wider border never overpaints an earlier branch's
+        fill — the fan stays a clean single junction.
+        """
+        if is_connected:
+            strokes = (
+                (constants.COLOR_BORDER, self.CABLE_BAR_W, None, 0),
+                (cable_color, self.CABLE_BAR_W - 2 * self.CABLE_BORDER_W, None, 0),
+            )
+        else:
+            strokes = (
+                (constants.COLOR_BORDER, self.CABLE_BAR_W, self.CABLE_DASH_BORDER, 0),
+                (cable_color, self.CABLE_BAR_W - 2 * self.CABLE_BORDER_W, self.CABLE_DASH, self.CABLE_DASH_OFFSET),
+            )
+        for stroke, width, dasharray, dashoffset in strokes:
+            for start, end in segments:
+                line = dwg.line(start=start, end=end, stroke=stroke, stroke_width=width)
+                if dasharray:
+                    line["stroke-dasharray"] = dasharray
                 if dashoffset:
                     line["stroke-dashoffset"] = dashoffset
                 dwg.add(line)

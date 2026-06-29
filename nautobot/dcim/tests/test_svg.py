@@ -525,6 +525,36 @@ class CableTraceSVGTestCase(TestCase):
         self.assertNotIn("Total segments", svg)
         self.assertNotIn("Total length", svg)
 
+    def test_breakout_fanout_renders_as_diagonal_fan_from_shared_trunk(self):
+        """The breakout fan-out draws one diagonal cable line per branch, all diverging from a single
+        trunk point, rather than a detached horizontal fork bar with separate vertical drops."""
+        breakout = CableType(name="SVG fan 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        breakout.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(device=self.device, name="fan-trunk", status=self.interface_status)
+        lane1 = Interface.objects.create(device=self.device, name="fan-lane-1", status=self.interface_status)
+        lane2 = Interface.objects.create(device=self.device, name="fan-lane-2", status=self.interface_status)
+        cable = Cable(termination_a=trunk, termination_b=lane1, cable_type=breakout, status=self.connected)
+        cable.save()
+        cable.add_termination(lane2, "B", connector=2)
+
+        svg = CableTraceSVG(trunk).render()
+
+        # Parse each <line> regardless of attribute order; diagonals have both axes differing.
+        def coords(tag):
+            attrs = {k: float(v) for k, v in re.findall(r'(x1|y1|x2|y2)="([\d.]+)"', tag)}
+            return attrs if {"x1", "y1", "x2", "y2"} <= attrs.keys() else None
+
+        lines = [c for c in (coords(t) for t in re.findall(r"<line [^>]*>", svg)) if c]
+        diagonals = [line for line in lines if line["x1"] != line["x2"] and line["y1"] != line["y2"]]
+
+        # Two branches, each drawn as a border + a color stroke...
+        self.assertGreaterEqual(len(diagonals), 2)
+        # ...all sharing a single trunk origin...
+        origins = {(line["x1"], line["y1"]) for line in diagonals}
+        self.assertEqual(len(origins), 1, f"fan branches should share one trunk origin, got {origins}")
+        # ...and landing on (at least) two distinct columns.
+        self.assertGreaterEqual(len({line["x2"] for line in diagonals}), 2)
+
     def test_one_to_one_cable_type_renders_as_linear_trace(self):
         """A cable_type that maps the origin's connector to a single far connector is not a fan-out.
 
