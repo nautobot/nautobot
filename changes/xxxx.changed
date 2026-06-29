@@ -1,1 +1,2 @@
 Changed `Cable.get_lanes()` and `Interface.get_breakout_lane()` to return `CableLane` and `BreakoutLane` dataclasses instead of dicts.
+Removed redundant tooltip from Cable breakout diagram.

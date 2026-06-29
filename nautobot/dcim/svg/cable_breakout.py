@@ -51,8 +51,8 @@ class BreakoutDiagramSVG:
             mapping: list of dicts describing each lane, e.g. from `CableType.mapping`.
                 Each entry must contain keys: `label`, `a_connector`, `a_position`, `b_connector`, `b_position`.
             show_status: if True, color connected lanes/connectors as green
-            a_termination_labels: dict {connector_num: "Device / Interface"} for A-side tooltips
-            b_termination_labels: dict {connector_num: "Device / Interface"} for B-side tooltips
+            a_termination_labels: dict {connector_num: "Device / Interface"} for A-side connector labels
+            b_termination_labels: dict {connector_num: "Device / Interface"} for B-side connector labels
         """
         mapping, self.a_connectors, self.b_connectors, self.total_lanes = validate_cable_breakout_mapping(mapping)
         self.a_positions = self.total_lanes // self.a_connectors
@@ -154,9 +154,6 @@ class BreakoutDiagramSVG:
 
             group = drawing.g()
 
-            tooltip = labels.get(connector, f"{side}{connector} - Unconnected")
-            group.set_desc(tooltip)
-
             group.add(
                 drawing.rect(
                     insert=(x, y_center - connector_height / 2),
@@ -164,7 +161,6 @@ class BreakoutDiagramSVG:
                     rx=constants.BORDER_RADIUS,
                     ry=constants.BORDER_RADIUS,
                     fill=bg,
-                    style="cursor: pointer;",
                 )
             )
 
