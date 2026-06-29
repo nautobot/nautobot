@@ -54,15 +54,18 @@ def cable_status_color_css(record):
     Given a record such as an Interface, return the CSS needed to apply appropriate coloring to it.
     """
     if not record.cable:
+        if record.parent_interface_id:
+            if record.get_breakout_lane().far_termination:
+                return cable_status_color_css(record.parent_interface)
         return ""
-    else:
-        CABLE_STATUS_TO_CSS_CLASS = {
-            ColorChoices.COLOR_GREEN: "table-success",
-            ColorChoices.COLOR_AMBER: "table-warning",
-            ColorChoices.COLOR_CYAN: "table-info",
-        }
-        status_color = record.cable.get_status_color().strip("#")
-        return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
+
+    CABLE_STATUS_TO_CSS_CLASS = {
+        ColorChoices.COLOR_GREEN: "table-success",
+        ColorChoices.COLOR_AMBER: "table-warning",
+        ColorChoices.COLOR_CYAN: "table-info",
+    }
+    status_color = record.cable.get_status_color().strip("#")
+    return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
 def get_network_driver_mapping_tool_names():
