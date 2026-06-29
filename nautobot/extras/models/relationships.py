@@ -290,23 +290,19 @@ class RelationshipModel(models.Model):
                             ][relationship].first()
                 else:
                     # Maybe an uninstalled App?
-                    # We can't provide a relevant queryset, but we can provide a descriptive string.
-                    # When there are no related objects, fall back to `None` so that the detail view renders
-                    # the standard "—" placeholder, consistent with relationships whose models are installed.
+                    # We can't provide a relevant queryset, but we can provide a descriptive string
                     if not relationship.symmetric:
                         count = RelationshipAssociation.objects.filter(
                             relationship=relationship, **{f"{side}_id": self.pk}
                         ).count()
-                        resp[side][relationship] = f"{count} {remote_ct} object(s)" if count else None
+                        resp[side][relationship] = f"{count} {remote_ct} object(s)"
                     else:
                         count = (
                             RelationshipAssociation.objects.filter(relationship=relationship)
                             .filter(Q(source_id=self.pk) | Q(destination_id=self.pk))
                             .count()
                         )
-                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = (
-                            f"{count} {remote_ct} object(s)" if count else None
-                        )
+                        resp[RelationshipSideChoices.SIDE_PEER][relationship] = f"{count} {remote_ct} object(s)"
 
         return resp
 
