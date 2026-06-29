@@ -3859,8 +3859,17 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 breakout_position=position,
             )
 
-        # Mirror the device Interfaces tab's queryset, then force all prefetches to run up front.
-        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.filter(device=local))
+        # Mirror what a table does when the `connection` column is visible: the cheap select_related,
+        # the unconditional (row-coloring / breakout-lane) prefetch, and the conditional `connection`
+        # prefetch. Force the prefetches to run up front.
+        queryset = (
+            Interface.objects.filter(device=local)
+            .select_related(*Interface.cable_columns_select_related_fields())
+            .prefetch_related(
+                *Interface.cable_columns_prefetch_related_fields(),
+                *Interface.connection_prefetch_related_fields(),
+            )
+        )
         subinterfaces = [iface for iface in queryset if iface.breakout_position is not None]
         self.assertEqual(len(subinterfaces), 4)
 
@@ -3892,8 +3901,17 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         )
         Cable.objects.create(termination_a=iface, termination_b=circuit_termination, status=cable_status)
 
-        # Mirror the device Interfaces tab's queryset, then force all prefetches to run up front.
-        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.filter(device=local))
+        # Mirror what a table does when the `cable_peer` and `connection` columns are visible: the
+        # cheap select_related, the unconditional prefetch, and both columns' conditional prefetches.
+        queryset = (
+            Interface.objects.filter(device=local)
+            .select_related(*Interface.cable_columns_select_related_fields())
+            .prefetch_related(
+                *Interface.cable_columns_prefetch_related_fields(),
+                *Interface.cable_peer_prefetch_related_fields(),
+                *Interface.connection_prefetch_related_fields(),
+            )
+        )
         record = next(iface for iface in queryset if iface.name == "Eth-circuit")
 
         # Reproduce what the table render touches per row: cable-status coloring, the `cable_peer`

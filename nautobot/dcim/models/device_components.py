@@ -561,7 +561,7 @@ class CableTermination(models.Model):
         directly attached to `self`; here the breakout cable may be mid-path. Resolution roots
         entirely on `endpoint` (its per-lane `cable_paths`, breakout cable lanes, and
         `child_interfaces`) so a single prefetch on the connection destination keeps table renders
-        query-free per row. See `cable_columns_prefetch_related_fields`.
+        query-free per row. See `connection_prefetch_related_fields`.
         """
         if not isinstance(endpoint, Interface):
             return None
@@ -613,14 +613,28 @@ class CableTermination(models.Model):
 
     @classmethod
     def cable_columns_prefetch_related_fields(cls):
+        """Return the `prefetch_related` arguments that must be applied UNCONDITIONALLY (regardless of
+        which columns are visible).
+
+        The cable-status row coloring (`cable_status_color_css`) runs for every row via `row_attrs`,
+        independent of column configuration, so anything it touches beyond `select_related` belongs
+        here rather than in the per-column (conditional) helpers. The base has nothing — `cable.status`
+        is `select_related` — but subclasses whose row coloring walks a relation (e.g. `Interface`'s
+        breakout child interfaces) override this.
         """
-        Return the list of `prefetch_related` arguments (strings and/or `Prefetch` objects)
-        needed for table renders of the `cable_peer` column (and, for `PathEndpoint` subclasses,
-        the `connection` column) to avoid per-row queries.
+        return []
+
+    @classmethod
+    def cable_peer_prefetch_related_fields(cls):
+        """Return the `prefetch_related` arguments (strings and/or `Prefetch` objects) needed to render
+        the `cable_peer` column query-free.
+
+        Applied conditionally by `CableTerminationTable` only when the `cable_peer` column is visible
+        (see `BaseTable.add_conditional_prefetch`), so a table that hides it pays nothing.
         """
         from nautobot.dcim.models.cables import CableToCableTermination
 
-        prefetches = [
+        return [
             Prefetch(
                 "cable_termination__cable__terminations",
                 queryset=CableToCableTermination.objects.select_related(*TERMINATION_CABLE_COLUMN_FK_FIELDS),
@@ -628,9 +642,17 @@ class CableTermination(models.Model):
             # The breakout child-interface annotation resolves the trunk peer's child interfaces.
             "cable_termination__cable__terminations__interface__child_interfaces",
         ]
-        if issubclass(cls, PathEndpoint):
-            prefetches.append(cls._connected_endpoint_destination_prefetch("cable_paths__destination"))
-        return prefetches
+
+    @classmethod
+    def connection_prefetch_related_fields(cls):
+        """Return the `prefetch_related` arguments needed to render the `connection` column query-free.
+
+        Empty for non-`PathEndpoint` terminations (which have no `connection` column). Applied
+        conditionally by `PathEndpointTable` only when the `connection` column is visible.
+        """
+        if not issubclass(cls, PathEndpoint):
+            return []
+        return [cls._connected_endpoint_destination_prefetch("cable_paths__destination")]
 
     @classmethod
     def _connected_endpoint_destination_prefetch(cls, lookup):
@@ -665,20 +687,23 @@ class CableTermination(models.Model):
     @classmethod
     def optimize_queryset_for_cable_columns(cls, queryset):
         """
-        Apply `select_related` / `prefetch_related` to `queryset` so that table renders of the
-        `cable`, `cable_peer`, and (for PathEndpoint subclasses) `connection` columns avoid the
-        per-row N+1 queries that those accessors otherwise trigger.
+        Apply the `select_related` and unconditional `prefetch_related` needed for the `cable` column
+        and the cable-status row coloring (`cable_status_color_css`), which render for every row
+        regardless of column configuration.
+
+        The heavier per-column `prefetch_related` for the `cable_peer` / `connection` columns is NOT
+        applied here — `CableTerminationTable` / `PathEndpointTable` apply it themselves, only when
+        those columns are actually visible (see `cable_peer_prefetch_related_fields` /
+        `connection_prefetch_related_fields`). So a list/detail view that hides those columns issues
+        none of their prefetch queries.
 
         Usage on a list view's `queryset`:
 
             queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
-
-        For panel-based detail views that take `select_related_fields` / `prefetch_related_fields`
-        directly, use the underlying `cable_columns_select_related_fields()` /
-        `cable_columns_prefetch_related_fields()` classmethods instead.
         """
         queryset = queryset.select_related(*cls.cable_columns_select_related_fields())
-        queryset = queryset.prefetch_related(*cls.cable_columns_prefetch_related_fields())
+        if unconditional_prefetch := cls.cable_columns_prefetch_related_fields():
+            queryset = queryset.prefetch_related(*unconditional_prefetch)
         return queryset
 
     @property
@@ -1409,12 +1434,19 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
 
     @classmethod
     def cable_columns_prefetch_related_fields(cls):
-        """Extend the base cable-column prefetches for breakout child-interface rows.
+        """Prefetch the parent trunk's breakout data UNCONDITIONALLY for breakout child rows.
 
-        `get_breakout_lane` reads the parent trunk cable's terminations (via `Cable.get_lanes`), and
-        `get_breakout_connected_endpoint` scans the parent trunk's `CablePath` rows and their
-        destinations. Prefetching both off `parent_interface` keeps those accessors query-free per
-        row — including each connected endpoint's `parent`, via the shared destination prefetch.
+        Several always-on renderers resolve a child (sub)interface's lane through its parent trunk,
+        independent of which columns are visible, so these prefetches cannot be gated on the
+        `cable_peer` / `connection` columns:
+
+        - the cable-status row coloring (`cable_status_color_css`, via `row_attrs`) calls
+          `get_breakout_lane()`, which reads the parent trunk cable's terminations (`Cable.get_lanes`);
+        - the always-present `actions` column's breakout Trace button calls
+          `get_breakout_lane_cable_path()`, which scans the parent trunk's `CablePath` rows.
+
+        The parent destination prefetch also serves the `connection` column's breakout fallback
+        (`get_breakout_connected_endpoint`) when that column is shown.
         """
         from nautobot.dcim.models.cables import CableToCableTermination
 
@@ -1491,7 +1523,7 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
         # Iterate the prefetched `cable_paths` in Python and match `peer_connector` here rather than
         # with a `.filter()` — a prefetch cache only serves `.all()`, so filtering in SQL would
         # re-query once per row and reintroduce the N+1 this prefetch exists to avoid. See
-        # `Interface.cable_columns_prefetch_related_fields`.
+        # `Interface.connection_prefetch_related_fields`.
         for path in self.parent_interface.cable_paths.all():
             if path.peer_connector == lane.far_connector:
                 return path

@@ -233,7 +233,29 @@ class InterfaceTableRenderMixin:
                     row.get_cell(column)
             return len(ctx.captured_queries)
 
+        # Warm one-time caches (notably the `ContentType` cache that `GenericPrefetch` resolves)
+        # so their constant cost doesn't skew the *marginal* per-row count measured below.
+        render_query_count(pks)
         return (render_query_count(pks) - render_query_count(pks[:1])) / (len(pks) - 1)
+
+    def test_cable_column_prefetch_skipped_when_columns_hidden(self):
+        """Hiding the `cable_peer` / `connection` columns skips their (conditional) prefetch queries.
+
+        Their prefetch is applied by the table only when the column is visible, so a table that hides
+        them evaluates its queryset with strictly fewer queries than one that shows them.
+        """
+        self._make_cabled_interfaces(4)
+        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
+
+        def prefetch_query_count(**table_kwargs):
+            table = self.table_class(queryset, **table_kwargs)  # pylint: disable=not-callable
+            with CaptureQueriesContext(connection) as ctx:
+                list(table.data.data)  # force the prefetch_related lookups to execute
+            return len(ctx.captured_queries)
+
+        shown = prefetch_query_count(exclude=())
+        hidden = prefetch_query_count(exclude=("cable_peer", "connection"))
+        self.assertLess(hidden, shown)
 
     def test_render_breakout_subinterface_columns_no_extra_n_plus_one(self):
         """The breakout connection/cable_peer fallbacks add no per-row queries beyond normal cabling.
