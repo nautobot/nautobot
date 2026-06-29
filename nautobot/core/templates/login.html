@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load helpers %}
 {% load form_helpers %}
+{% load static %}
 
 {% block title %}Log In{% endblock title %}
 
@@ -254,6 +255,6 @@
             Nautobot{% if is_commercial_edition %} {{ nautobot_edition }}{% endif %}
         </a>
         &middot;
-        <a class="text-secondary" href="https://docs.nautobot.com" target="_blank" rel="noopener">Docs</a>
+        <a class="text-secondary" href="{% if settings.BRANDING_URLS.docs %}{{ settings.BRANDING_URLS.docs }}{% else %}{% static 'docs/index.html' %}{% endif %}" target="_blank" rel="noopener">Docs</a>
     </div>
 {% endblock content %}
