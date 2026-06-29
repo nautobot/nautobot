@@ -540,8 +540,8 @@ class CableTraceSVGTestCase(TestCase):
         svg = CableTraceSVG(trunk).render()
 
         # Parse each <line> regardless of attribute order; diagonals have both axes differing.
-        def coords(tag):
-            attrs = {k: float(v) for k, v in re.findall(r'(x1|y1|x2|y2)="([\d.]+)"', tag)}
+        def coords(tag_):
+            attrs = {k: float(v) for k, v in re.findall(r'(x1|y1|x2|y2)="([\d.]+)"', tag_)}
             return attrs if {"x1", "y1", "x2", "y2"} <= attrs.keys() else None
 
         lines = [c for c in (coords(t) for t in re.findall(r"<line [^>]*>", svg)) if c]
@@ -561,8 +561,8 @@ class CableTraceSVGTestCase(TestCase):
         self.assertIn("B2", svg)
 
         def label_y(text):
-            tag = re.search(rf"<text ([^>]*)>{text}</text>", svg).group(1)
-            return float(dict(re.findall(r'([\w-]+)="([^"]*)"', tag))["y"])
+            tag_ = re.search(rf"<text ([^>]*)>{text}</text>", svg).group(1)
+            return float(dict(re.findall(r'([\w-]+)="([^"]*)"', tag_))["y"])
 
         branch_end_y = next(iter(diagonals))["y2"]
         for label in ("B1", "B2"):
@@ -607,8 +607,8 @@ class CableTraceSVGTestCase(TestCase):
         branch_end_y = max(d["y2"] for d in diagonals)
 
         def label_y(text):
-            tag = re.search(rf"<text ([^>]*)>{re.escape(text)}</text>", svg).group(1)
-            return float(dict(re.findall(r'([\w-]+)="([^"]*)"', tag))["y"])
+            tag_ = re.search(rf"<text ([^>]*)>{re.escape(text)}</text>", svg).group(1)
+            return float(dict(re.findall(r'([\w-]+)="([^"]*)"', tag_))["y"])
 
         # The child (sub)interface sits on a pill along the branch (between the fan apex and foot)...
         for child in children:

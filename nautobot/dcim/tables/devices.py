@@ -421,7 +421,7 @@ class CableTerminationTable(BaseTable):
         super().__init__(*args, **kwargs)
         # The `cable_peer` column's prefetch is expensive (it walks the cable's terminations), so
         # only apply it when that column is actually visible for this table/user.
-        for prefetch in self.Meta.model.cable_peer_prefetch_related_fields():
+        for prefetch in self.Meta.model.cable_peer_prefetch_related_fields():  # pylint: disable=no-member
             self.add_conditional_prefetch("cable_peer", prefetch=prefetch)
 
 
@@ -439,7 +439,7 @@ class PathEndpointTable(CableTerminationTable):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Likewise, only prefetch the `connection` column's path destinations when it's visible.
-        for prefetch in self.Meta.model.connection_prefetch_related_fields():
+        for prefetch in self.Meta.model.connection_prefetch_related_fields():  # pylint: disable=no-member
             self.add_conditional_prefetch("connection", prefetch=prefetch)
 
 
