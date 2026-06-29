@@ -1903,6 +1903,23 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
             mid.validated_save()
 
+    def test_narrowing_prefix_that_would_orphan_range_is_rejected_on_bare_save(self):
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        prefix.prefix = "10.0.0.0/26"
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            prefix.save()
+
     def test_deleting_parentless_prefix_with_ranges_is_protected(self):
         """A top-level Prefix (parent=None) containing IP Address Ranges cannot be deleted."""
         # self.root is 101.102.0.0/16, parent=None (top-level container)
@@ -2735,7 +2752,8 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
         self.assertAlmostEqual(ip_range.get_percent_utilized(), 100.0)
 
     def test_percent_utilized_count_as_utilized_is_full(self):
-        """A count_as_utilized range reports 100% regardless of actual IPs."""
+        """A count_as_utilized range reports 100% even when only some addresses have IPAddresses,
+        the flag short-circuits the actual-utilization calculation."""
         ip_range = IPAddressRange.objects.create(
             start_address="10.0.0.50",
             end_address="10.0.0.60",
@@ -2743,6 +2761,8 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             count_as_utilized=True,
         )
+        IPAddress.objects.create(address="10.0.0.51/24", status=self.status, namespace=self.namespace)
+        IPAddress.objects.create(address="10.0.0.52/24", status=self.status, namespace=self.namespace)
         self.assertEqual(ip_range.get_percent_utilized(), 100.0)
 
     def test_percent_utilized_exclusive_is_full(self):
