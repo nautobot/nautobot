@@ -79,7 +79,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
-from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_FK_FIELDS
+from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_CABLE_COLUMN_FK_FIELDS
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
@@ -5556,9 +5556,10 @@ class CableUIViewSet(NautobotUIViewSet):
     queryset = Cable.objects.select_related("cable_type").prefetch_related(
         Prefetch(
             "terminations",
-            # `select_related`-ing the per-type FK columns lets the table's `terminations_a` /
-            # `terminations_b` columns render every FK without an extra query per row.
-            queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+            # `select_related`-ing the per-type FK columns (plus each termination's parent and the
+            # FKs its display string needs) lets the table's `terminations_a` / `terminations_b` and
+            # `*_parent` columns render every FK without an extra query per row.
+            queryset=CableToCableTermination.objects.select_related(*TERMINATION_CABLE_COLUMN_FK_FIELDS),
         ),
     )
     action_buttons = ("add", "import", "export")

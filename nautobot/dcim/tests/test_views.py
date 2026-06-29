@@ -113,6 +113,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import cable_status_color_css
 from nautobot.dcim.views import (
     CableCreateView,
     ConsoleConnectionsListView,
@@ -3828,6 +3829,85 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertIn(trunk.get_absolute_url(), content)
         self.assertIn(child.get_absolute_url(), content)
 
+    def test_breakout_subinterface_connected_endpoint_parent_is_prefetched(self):
+        """Resolving a breakout child (sub)interface's connected endpoint and its `parent` (the
+        `connection` column on the device Interfaces tab) must be query-free once the cable-column
+        prefetch chain is applied — guarding the per-row N+1 that the chain is meant to eliminate.
+        """
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        local = create_test_device("Breakout Subiface Local")
+        remote = create_test_device("Breakout Subiface Remote")
+        breakout_type = CableType.objects.create(
+            name="1x4 breakout (device-iface N+1)", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        trunk = Interface.objects.create(
+            device=local, name="Trunk", type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS, status=status_active
+        )
+        leaves = [Interface.objects.create(device=remote, name=f"Leaf {i}", status=status_active) for i in range(1, 5)]
+        cable = Cable(termination_a=trunk, termination_b=leaves[0], cable_type=breakout_type, status=cable_status)
+        cable.save()
+        for connector, leaf in enumerate(leaves[1:], start=2):
+            cable.add_termination(leaf, "B", connector=connector)
+        for position in range(1, 5):
+            Interface.objects.create(
+                device=local,
+                name=f"Trunk.{position}",
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=status_active,
+                parent_interface=trunk,
+                breakout_position=position,
+            )
+
+        # Mirror the device Interfaces tab's queryset, then force all prefetches to run up front.
+        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.filter(device=local))
+        subinterfaces = [iface for iface in queryset if iface.breakout_position is not None]
+        self.assertEqual(len(subinterfaces), 4)
+
+        # Resolving each subinterface's n-hop connected endpoint and its parent device must not
+        # trigger any further query (the destination's `device` is select_related in the prefetch).
+        with self.assertNumQueries(0):
+            for subinterface in subinterfaces:
+                endpoint = subinterface.get_breakout_connected_endpoint()
+                self.assertIsNotNone(endpoint)
+                self.assertEqual(endpoint.parent, remote)
+
+    def test_interface_cabled_to_circuit_termination_columns_are_prefetched(self):
+        """Rendering an interface cabled to a CircuitTermination must be query-free: the cable-status
+        row coloring (`cable.status`), the circuit-termination display (`location` / `provider_network`
+        / `cloud_network`), and the parent `circuit` all come from the cable-column prefetch chain.
+        """
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        local = create_test_device("Circuit Peer Local")
+        iface = Interface.objects.create(device=local, name="Eth-circuit", status=status_active)
+        circuit = Circuit.objects.create(
+            provider=Provider.objects.first(),
+            circuit_type=CircuitType.objects.first(),
+            cid="N+1 Probe Circuit",
+            status=Status.objects.get_for_model(Circuit).first(),
+        )
+        circuit_termination = CircuitTermination.objects.create(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=local.location
+        )
+        Cable.objects.create(termination_a=iface, termination_b=circuit_termination, status=cable_status)
+
+        # Mirror the device Interfaces tab's queryset, then force all prefetches to run up front.
+        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.filter(device=local))
+        record = next(iface for iface in queryset if iface.name == "Eth-circuit")
+
+        # Reproduce what the table render touches per row: cable-status coloring, the `cable_peer`
+        # column (`get_cable_peers` → peer + its parent), and the `connection` column
+        # (`get_connected_endpoints` → endpoint + its parent). None may issue a further query.
+        with self.assertNumQueries(0):
+            cable_status_color_css(record)
+            for peer in record.get_cable_peers():
+                self.assertEqual(str(peer.parent), str(circuit))
+                str(peer)  # CircuitTermination.__str__ reads location / provider_network / cloud_network
+            for endpoint in record.get_connected_endpoints():
+                self.assertEqual(endpoint.parent, circuit)
+                str(endpoint)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_breakout_trunk_child_interface_through_patch_panel(self):
         """A leaf cabled to a breakout trunk through a patch panel still shows the trunk child as its connection.
@@ -3937,7 +4017,9 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         response = self.client.post(**request)
         self.assertHttpStatus(response, 200)
         response_content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn("A breakout position can only be set on an interface that has a parent interface.", response_content)
+        self.assertIn(
+            "A breakout position can only be set on an interface that has a parent interface.", response_content
+        )
         # Nothing was created.
         self.assertFalse(Interface.objects.filter(name__startswith="Breakout ").exists())
 
@@ -4887,14 +4969,13 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
 
-    @unittest.skipIf(
-        connection.vendor == "mysql",
-        "A residual N+1 from `term.parent` rendering appears on MySQL but not PostgreSQL. "
-        "Deferred until the upcoming device-component parent/device FK refactor, at which point "
-        "the cable-list prefetch chain can be extended through each per-type FK's device/module.",
-    )
     def test_list_view_query_count_does_not_grow_with_cable_count(self):
-        """Rendering the Cable list view must not run an extra query per cable (or per termination row)."""
+        """Rendering the Cable list view must not run an extra query per cable (or per termination row).
+
+        Covers the `*_parent` columns too: the list queryset extends each per-type termination FK
+        through to its parent (`TERMINATION_PARENT_FK_FIELDS`), so `termination.parent` rendering
+        stays query-free per row.
+        """
         self.add_permissions("dcim.view_cable")
         list_url = self._get_url("list")
 
