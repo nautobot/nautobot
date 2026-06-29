@@ -1,0 +1,1 @@
+Sort Interfaces by device_id, module_id, _name to avoid full table scan of dcim_device
