@@ -2300,7 +2300,11 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             else:
                 for field, errors in component_form.errors.as_data().items():
                     # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
-                    parent_field = {"name": "name_pattern", "label": "label_pattern"}.get(field, field)
+                    parent_field = {
+                        "name": "name_pattern",
+                        "label": "label_pattern",
+                        "breakout_position": "breakout_position_pattern",
+                    }.get(field, field)
                     for e in errors:
                         err_str = ", ".join(e)
                         create_form.add_error(parent_field, f"{name}: {err_str}")

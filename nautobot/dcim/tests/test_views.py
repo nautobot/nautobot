@@ -3918,6 +3918,29 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertHttpStatus(response, 200)
         self.assertIn("Virtual and wireless interfaces cannot have a port type.", response_content)
 
+    def test_create_with_breakout_position_pattern_but_no_parent_interface_fails_gracefully(self):
+        """A breakout_position_pattern without a parent_interface must surface as a form error, not a
+        traceback (the per-component `breakout_position` error has no field on the create form, so it
+        is remapped onto `breakout_position_pattern`)."""
+        self.add_permissions("dcim.add_interface")
+        form_data = self.form_data.copy()
+        del form_data["name"]
+        del form_data["lag"]
+        form_data["name_pattern"] = "Breakout [1-2]"
+        # Matching counts so validation reaches per-component creation rather than failing earlier on a
+        # name/position count mismatch. No parent_interface is supplied.
+        form_data["breakout_position_pattern"] = "[1-2]"
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("A breakout position can only be set on an interface that has a parent interface.", response_content)
+        # Nothing was created.
+        self.assertFalse(Interface.objects.filter(name__startswith="Breakout ").exists())
+
 
 class BulkDisconnectViewTestCase(ModelViewTestCase):
     """Behavioral tests for `BulkDisconnectView` via its `InterfaceBulkDisconnectView` subclass.

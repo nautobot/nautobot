@@ -6,3 +6,5 @@ Fixed missing validation that allowed a multi-connector (breakout) cable type to
 Fixed the cable edit form disallowing all cable types for cables with non-breakout-eligible terminations; single-connector cable types are now permitted.
 Fixed the per-row cable actions (mark cable connected/planned, detach cable) not working in the device-component list views (interfaces, console/power ports, front/rear ports).
 Fixed cable-status row coloring not being applied in the device-component list views.
+Fixed an exception when attempting to improperly create an Interface with a `breakout_position` but no `parent_interface`.
+Fixed missing `breakout_position` form field when editing an existing Interface.
