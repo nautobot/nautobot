@@ -1903,6 +1903,23 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
             mid.validated_save()
 
+    def test_narrowing_prefix_that_would_orphan_range_is_rejected_on_bare_save(self):
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        prefix.prefix = "10.0.0.0/26"
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            prefix.save()
+
     def test_deleting_parentless_prefix_with_ranges_is_protected(self):
         """A top-level Prefix (parent=None) containing IP Address Ranges cannot be deleted."""
         # self.root is 101.102.0.0/16, parent=None (top-level container)

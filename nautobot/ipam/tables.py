@@ -205,47 +205,53 @@ IPADDRESS_OR_RANGE_ACTIONS = """\
             {% with request.path|default:"" as request_path %}
                 {% if record.start_address %}
                     <li>
+                        <a href="{{ record.get_absolute_url }}" class="dropdown-item">
+                            <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                            Details
+                        </a>
+                    </li>
+                    <li>
                         <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
-                            <span class="mdi mdi-history" aria-hidden="true"></span>
-                            Change Log
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
                         </a>
                     </li>
                     {% if perms.ipam.change_iprange %}
                         <li>
                             <a href="{% url 'ipam:ipaddressrange_edit' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-warning">
-                                <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                                Edit
+                                <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit IP address range
                             </a>
                         </li>
                     {% endif %}
                     {% if perms.ipam.delete_iprange %}
                         <li>
                             <a href="{% url 'ipam:ipaddressrange_delete' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-danger">
-                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                                Delete
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete IP address range
                             </a>
                         </li>
                     {% endif %}
                 {% else %}
                     <li>
-                        <a href="{% url 'ipam:ipaddress_changelog' pk=record.pk %}" class="dropdown-item">
-                            <span class="mdi mdi-history" aria-hidden="true"></span>
-                            Change Log
+                        <a href="{{ record.get_absolute_url }}" class="dropdown-item">
+                            <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                            Details
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
                         </a>
                     </li>
                     {% if perms.ipam.change_ipaddress %}
                         <li>
                             <a href="{% url 'ipam:ipaddress_edit' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-warning">
-                                <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                                Edit
+                                <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit IP address
                             </a>
                         </li>
                     {% endif %}
                     {% if perms.ipam.delete_ipaddress %}
                         <li>
                             <a href="{% url 'ipam:ipaddress_delete' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-danger">
-                                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                                Delete
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete IP address
                             </a>
                         </li>
                     {% endif %}

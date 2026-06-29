@@ -1,5 +1,5 @@
-from collections import namedtuple
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from django.core.exceptions import ValidationError
 from django.utils.html import format_html, format_html_join
@@ -10,7 +10,7 @@ from nautobot.core.templatetags.helpers import add_html_id, HTML_NONE, hyperlink
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import RelationshipAssociation
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressRange, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.virtualization.models import VMInterface
 
 
@@ -41,16 +41,18 @@ def get_add_available_prefixes_callback(show_available: bool, parent: Prefix):
     return lambda prefixes: prefixes
 
 
-# A single positioned entry, used only while ordering the rows:
-#   - position : the host value, which sets the vertical order
-#   - rank     : tie-breaker when two entries share a position (see RANGE_ROW/ADDRESS/GAP inside)
-#   - item     : the thing the table renders — one of:
-#       IPAddress                  -> a real address row
-#       IPRange                    -> a range row
-#       (count, first_ip)          -> an "N available" block (outer, not nested)
-#       (count, first_ip, range)   -> an "N available" block nested inside `range`
-#   The 2-/3-tuple item shapes are the contract the table renderer relies on; don't change them.
-_Entry = namedtuple("_Entry", ["position", "rank", "item"])
+@dataclass(frozen=True)
+class _Entry:
+    """A positioned entry, used only while ordering the rows.
+
+    `position` is the host value setting the vertical order; `rank` breaks
+    ties at the same position (see RANGE_ROW/ADDRESS/GAP). `item` is what the
+    table renders; don't change the tuple shapes.
+    """
+
+    position: int
+    rank: int
+    item: IPAddress | IPAddressRange | tuple[int, str] | tuple[int, str, IPAddressRange]
 
 
 def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False, ip_ranges=None, show_available=True):

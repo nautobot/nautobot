@@ -575,16 +575,19 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # The range row is present and links to the range's detail view
         self.assertIn(ip_range.get_absolute_url(), content)
 
-        # Exclusive range row is rendered yellow (table-warning)
-        self.assertBodyContains(response, "table-warning")
+        # Extract the <tr>...</tr> block from `content` that contains ip address range."""
+        idx = content.index(f'data-pk="{ip_range.pk}"')
+        start = content.rindex("<tr", 0, idx)
+        end = content.index("</tr>", idx) + len("</tr>")
+        range_row = content[start:end]
+        self.assertIn("table-warning", range_row)
+        self.assertNotIn("table-info", range_row)
         self.assertInHTML(
             f'<td class="nb-tree-element text-nowrap" data-pk="{ip_range.pk}">'
             f'<a href="{ip_range.get_absolute_url()}">{ip_range}</a>'
             f"</td>",
-            content,
+            range_row,
         )
-        # exclusive must NOT be blue
-        self.assertBodyContains(response, "table-info", count=0)
 
         add_ip_path = reverse("ipam:ipaddress_add")
 
@@ -595,6 +598,16 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertIn(f"{add_ip_path}?address=10.0.0.5/29", content)
 
         # Two available buttons total (before + after the range), none nested
+        self.assertInHTML(
+            f'<a href="{add_ip_path}?address=10.0.0.1/29&namespace={self.namespace.pk}" '
+            f'class="btn btn-xs btn-success">2 IPs available</a>',
+            content,
+        )
+        self.assertInHTML(
+            f'<a href="{add_ip_path}?address=10.0.0.5/29&namespace={self.namespace.pk}" '
+            f'class="btn btn-xs btn-success">2 IPs available</a>',
+            content,
+        )
         self.assertBodyContains(response, "btn btn-xs btn-success", count=2)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
