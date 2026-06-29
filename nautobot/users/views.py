@@ -56,11 +56,10 @@ class LoginView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
-    def show_edition_badge(self):
+    def show_edition_badge(self, edition):
         """Show the edition badge only for a commercial edition with no custom branding logo overriding the stock logo."""
-        edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
         has_custom_logo = bool(settings.BRANDING_FILEPATHS.get("logo"))
-        is_commercial_edition = edition in (NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE)
+        is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
         return is_commercial_edition and not has_custom_logo
 
     def get(self, request):
@@ -72,7 +71,7 @@ class LoginView(View):
 
         edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
         edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
-        is_commercial_edition = edition in (NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE)
+        is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
 
         return render(
             request,
@@ -83,7 +82,7 @@ class LoginView(View):
                 "nautobot_edition": edition_display,
                 "is_commercial_edition": is_commercial_edition,
                 "edition_url": NAUTOBOT_EDITION_URLS.get(edition, "https://nautobot.com"),
-                "show_edition_badge": self.show_edition_badge(),
+                "show_edition_badge": self.show_edition_badge(edition),
             },
         )
 
@@ -108,7 +107,7 @@ class LoginView(View):
 
         edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
         edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
-        is_commercial_edition = edition in (NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE)
+        is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
 
         return render(
             request,
@@ -119,7 +118,7 @@ class LoginView(View):
                 "nautobot_edition": edition_display,
                 "is_commercial_edition": is_commercial_edition,
                 "edition_url": NAUTOBOT_EDITION_URLS.get(edition, "https://nautobot.com"),
-                "show_edition_badge": self.show_edition_badge(),
+                "show_edition_badge": self.show_edition_badge(edition),
             },
         )
 

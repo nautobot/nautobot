@@ -161,6 +161,7 @@ class NautobotEditionChoices(ChoiceSet):
     ENTERPRISE = "enterprise"
 
     DEFAULT = COMMUNITY
+    COMMERCIAL_EDITIONS = (PROFESSIONAL, ENTERPRISE)
 
     CHOICES = (
         (COMMUNITY, "Community"),
