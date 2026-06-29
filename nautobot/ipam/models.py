@@ -2097,6 +2097,16 @@ class IPAddressRange(PrimaryModel):
     def end_address(self, address):
         self._deconstruct_end_address(address)
 
+    @property
+    def ip_addresses(self):
+        """IPAddresses whose host falls within this range (same namespace)."""
+        return IPAddress.objects.filter(
+            parent__namespace_id=self.parent.namespace_id,
+            ip_version=self.ip_version,
+            host__gte=self.start_host,
+            host__lte=self.end_host,
+        )
+
     # Namespace resolution (copied from IPAddress; TODO: extract to shared mixin)
 
     @property
@@ -2132,18 +2142,16 @@ class IPAddressRange(PrimaryModel):
                 {"namespace": f"No suitable parent Prefix for {host} exists in Namespace {self._namespace}"}
             ) from e
 
-    def get_percent_utilized(self) -> float:
-        """Percentage of addresses in the range that have an IPAddress object."""
-        if self.count_as_utilized or self.is_exclusive:
-            return 100.0
-        size = netaddr.IPRange(self.start_address, self.end_address).size
+    def get_utilization(self):
+        """Utilization of this range as a UtilizationData object (numerator, denominator)."""
+        size = netaddr.IPRange(self.start_host, self.end_host).size
         count = IPAddress.objects.filter(
-            parent__namespace=self.parent.namespace,
+            parent__namespace_id=self.parent.namespace_id,
             ip_version=self.ip_version,
-            host__gte=self.start_address,
-            host__lte=self.end_address,
+            host__gte=self.start_host,
+            host__lte=self.end_host,
         ).count()
-        return (count / size) * 100
+        return UtilizationData(numerator=count, denominator=size)
 
 
 @extras_features(

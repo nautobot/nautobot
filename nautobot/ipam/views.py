@@ -1408,7 +1408,7 @@ class IPAddressRangeUIViewSet(NautobotUIViewSet):
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            ui.IPAddressRangeObjectFieldsPanel(
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields=[
@@ -1423,7 +1423,19 @@ class IPAddressRangeUIViewSet(NautobotUIViewSet):
                     "count_as_utilized",
                     "is_exclusive",
                     "description",
+                    "utilization",
                 ],
+                ignore_nonexistent_fields=True,  # utilization it's not a field
+            ),
+            ui.IPAddressRangeIPAddressesPanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=200,
+                table_class=tables.IPAddressTable,
+                table_title="IP Addresses",
+                order_by_fields=["host"],
+                exclude_columns=["parent"],
+                max_display_count=10,
+                enable_bulk_actions=True,
             ),
         ),
     )
