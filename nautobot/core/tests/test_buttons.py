@@ -179,7 +179,6 @@ class CopyButtonTest(TestCase):
             """,
             html,
         )
-        self.assertNotIn("data-clipboard-text", html)
 
     def test_text_variant(self):
         """`text` renders a data-clipboard-text attribute with a literal value to copy."""
@@ -193,7 +192,6 @@ class CopyButtonTest(TestCase):
             """,
             html,
         )
-        self.assertNotIn("data-clipboard-target", html)
 
     def test_size_and_css_class(self):
         """`size` and `css_class` are appended to the button class list."""

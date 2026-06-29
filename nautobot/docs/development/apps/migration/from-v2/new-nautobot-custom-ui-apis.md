@@ -237,7 +237,7 @@ After:
 
 ### Reusable `copy_button` template tag
 
-+++ 3.1.5
++++ 3.2.0
 
 Rather than hand-writing the markup above, use the reusable `copy_button` template tag from the `buttons` template tag library. It renders the canonical hover-copy button markup for you, and the global ClipboardJS handler (initialized once in `nautobot.js`) automatically wires up the copy behavior and a transient "Copied!" feedback tooltip — no per-page `new ClipboardJS(...)` initialization is required.
 
