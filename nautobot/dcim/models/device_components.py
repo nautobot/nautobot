@@ -1175,7 +1175,11 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
     objects = CableTerminationManager()
 
     class Meta(ModularComponentModel.Meta):
-        ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
+        ordering = (
+            "device_id",
+            "module_id",
+            CollateAsChar("_name"),
+        )  # Module.ordering is complex; don't order by module
         constraints = [
             *ModularComponentModel.Meta.constraints,
             # A given trunk position can be claimed by at most one child interface. Rows without a
