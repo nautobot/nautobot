@@ -21,6 +21,28 @@ class MappingEntry:
     b_position: int
 
 
+@dataclass(frozen=True)
+class TerminationLabel:
+    """A connector's termination label, rendered as a pair of (optionally clickable) segments.
+
+    `term_text`/`term_url` describe the CableTermination's termination object (e.g. an interface);
+    `parent_text`/`parent_url` describe its parent (e.g. a device). A URL of "" renders that
+    segment as plain text rather than a link, and an empty `parent_text` omits the parent entirely.
+    """
+
+    term_text: str
+    term_url: str = ""
+    parent_text: str = ""
+    parent_url: str = ""
+
+    @property
+    def display_text(self):
+        """Combined 'Parent / Termination' text, used for width estimation."""
+        if self.parent_text:
+            return f"{self.parent_text} / {self.term_text}"
+        return self.term_text
+
+
 class BreakoutDiagramSVG:
     """
     Generate an SVG diagram showing the lane mapping of a cable breakout type.
@@ -37,7 +59,6 @@ class BreakoutDiagramSVG:
     LANE_Y_SPACING = 14  # minimum vertical spacing between lane endpoints within a connector
     LANE_LABEL_HEIGHT = constants.FONT_SIZE_SM + 4
     TERMINATION_LABEL_GAP = 8  # gap between connector edge and termination label
-    TERMINATION_LABEL_MAX_CHARS = 40  # truncate visible labels longer than this
 
     def __init__(
         self,
@@ -51,8 +72,8 @@ class BreakoutDiagramSVG:
             mapping: list of dicts describing each lane, e.g. from `CableType.mapping`.
                 Each entry must contain keys: `label`, `a_connector`, `a_position`, `b_connector`, `b_position`.
             show_status: if True, color connected lanes/connectors as green
-            a_termination_labels: dict {connector_num: "Device / Interface"} for A-side connector labels
-            b_termination_labels: dict {connector_num: "Device / Interface"} for B-side connector labels
+            a_termination_labels: dict {connector_num: TerminationLabel} for A-side connector labels
+            b_termination_labels: dict {connector_num: TerminationLabel} for B-side connector labels
         """
         mapping, self.a_connectors, self.b_connectors, self.total_lanes = validate_cable_breakout_mapping(mapping)
         self.a_positions = self.total_lanes // self.a_connectors
@@ -93,7 +114,7 @@ class BreakoutDiagramSVG:
         """Pixel width to reserve for the visible termination labels on one side."""
         if not labels:
             return 0
-        longest = max(labels.values(), key=len)[: self.TERMINATION_LABEL_MAX_CHARS]
+        longest = max((label.display_text for label in labels.values()), key=len, default="")
         return self.TERMINATION_LABEL_GAP + estimate_text_width(longest, constants.FONT_SIZE_SM)
 
     def _y_offset(self, position, total_positions, connector_height):
@@ -181,27 +202,38 @@ class BreakoutDiagramSVG:
             )
             drawing.add(group)
 
-            # Visible termination label outside the connector box (left for A, right for B).
-            termination_label = labels.get(connector)
-            if termination_label:
-                if len(termination_label) > self.TERMINATION_LABEL_MAX_CHARS:
-                    termination_label = termination_label[: self.TERMINATION_LABEL_MAX_CHARS - 1] + "…"
+            # Visible termination label outside the connector box (left for A, right for B),
+            # rendered as a pair of links to the termination and its parent.
+            label = labels.get(connector)
+            if label:
                 if side == "A":
                     text_x = x - self.TERMINATION_LABEL_GAP
                     text_anchor = "end"
                 else:
                     text_x = x + self.CONNECTOR_WIDTH + self.TERMINATION_LABEL_GAP
                     text_anchor = "start"
-                drawing.add(
-                    drawing.text(
-                        termination_label,
-                        insert=(text_x, y_center + constants.FONT_SIZE_SM / 3),
-                        text_anchor=text_anchor,
-                        fill=constants.COLOR_BODY,
-                        font_size=f"{constants.FONT_SIZE_SM}px",
-                        font_family=constants.FONT_FAMILY,
-                    )
+                text = drawing.text(
+                    "",
+                    insert=(text_x, y_center + constants.FONT_SIZE_SM / 3),
+                    text_anchor=text_anchor,
+                    fill=constants.COLOR_BODY,
+                    font_size=f"{constants.FONT_SIZE_SM}px",
+                    font_family=constants.FONT_FAMILY,
                 )
+                if label.parent_text:
+                    self._add_label_segment(drawing, text, label.parent_text, label.parent_url)
+                    text.add(drawing.tspan(" / ", fill=constants.COLOR_SECONDARY))
+                self._add_label_segment(drawing, text, label.term_text, label.term_url)
+                drawing.add(text)
+
+    def _add_label_segment(self, drawing, text, segment_text, url):
+        """Append a label segment to `text`, as a same-tab hyperlink when a URL is known."""
+        if url:
+            link = drawing.a(href=url, target="_self")
+            link.add(drawing.tspan(segment_text, fill=constants.COLOR_LINK, style="cursor: pointer;"))
+            text.add(link)
+        else:
+            text.add(drawing.tspan(segment_text))
 
     def _render_lane_lines(self, drawing, a_connector_y_centers, b_connector_y_centers, total_width):
         lines = []

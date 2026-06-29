@@ -23,7 +23,7 @@ from nautobot.dcim.models import (
     RearPort,
 )
 from nautobot.dcim.svg import constants as svg_constants
-from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
+from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG, TerminationLabel
 from nautobot.dcim.svg.path_trace import CableTraceSVG
 from nautobot.dcim.svg.utils import estimate_text_width, fit_text
 from nautobot.dcim.utils import generate_cable_breakout_mapping
@@ -278,6 +278,88 @@ class BreakoutDiagramSVGTest(SimpleTestCase):
             entry["label"] = f"VERY_LONG_LANE_LABEL_{i}"
         long_diagram = BreakoutDiagramSVG(mapping, show_status=False)
         self.assertGreater(long_diagram.line_area_width, BreakoutDiagramSVG.MINIMUM_LINE_AREA_WIDTH)
+
+    def test_termination_label_renders_clickable_parent_and_termination_links(self):
+        """A connected connector's label renders the parent and termination as separate hyperlinks."""
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        svg = BreakoutDiagramSVG(
+            mapping,
+            show_status=True,
+            a_termination_labels={
+                1: TerminationLabel(
+                    term_text="Eth1/1",
+                    term_url="/dcim/interfaces/iface-uuid/",
+                    parent_text="switch-01",
+                    parent_url="/dcim/devices/device-uuid/",
+                )
+            },
+        ).render()
+        # Both objects are linked...
+        self.assertIn('xlink:href="/dcim/devices/device-uuid/"', svg)
+        self.assertIn('xlink:href="/dcim/interfaces/iface-uuid/"', svg)
+        # ...with their respective text, separated by a non-link " / ".
+        self.assertIn(">switch-01</tspan>", svg)
+        self.assertIn(">Eth1/1</tspan>", svg)
+        self.assertIn("> / </tspan>", svg)
+
+    def test_termination_label_without_parent_renders_only_termination(self):
+        """A label with no parent renders just the termination, with no separator."""
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        svg = BreakoutDiagramSVG(
+            mapping,
+            show_status=True,
+            a_termination_labels={1: TerminationLabel(term_text="Eth1/1", term_url="/dcim/interfaces/iface-uuid/")},
+        ).render()
+        self.assertIn('xlink:href="/dcim/interfaces/iface-uuid/"', svg)
+        self.assertIn(">Eth1/1</tspan>", svg)
+        self.assertNotIn("> / </tspan>", svg)
+
+    def test_termination_label_without_url_renders_plain_text(self):
+        """A label segment with no URL is rendered as plain (non-link) text rather than a hyperlink."""
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        svg = BreakoutDiagramSVG(
+            mapping,
+            show_status=True,
+            a_termination_labels={
+                1: TerminationLabel(term_text="NoUrlIface", term_url="", parent_text="dev2", parent_url="")
+            },
+        ).render()
+        self.assertNotIn("xlink:href", svg)
+        self.assertIn(">dev2</tspan>", svg)
+        self.assertIn(">NoUrlIface</tspan>", svg)
+
+    def test_termination_label_renders_full_text_without_truncation(self):
+        """Long labels are rendered in full (no ellipsis); width is handled by the scrollable card."""
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        long_term = "GigabitEthernet" + "0" * 60
+        svg = BreakoutDiagramSVG(
+            mapping,
+            show_status=True,
+            a_termination_labels={1: TerminationLabel(term_text=long_term, parent_text="router-01")},
+        ).render()
+        self.assertIn(f">{long_term}</tspan>", svg)
+        self.assertIn(">router-01</tspan>", svg)
+        self.assertNotIn("…", svg)
+
+    def test_termination_label_area_width_grows_to_fit_labels(self):
+        """Reserving space for visible labels widens the diagram, and longer labels widen it further."""
+        mapping = generate_cable_breakout_mapping(a_connectors=1, b_connectors=2, total_lanes=2)
+        bare = BreakoutDiagramSVG(mapping, show_status=False)
+        labeled = BreakoutDiagramSVG(
+            mapping,
+            show_status=True,
+            a_termination_labels={1: TerminationLabel(term_text="Eth1/1", parent_text="switch-01")},
+        )
+        longer = BreakoutDiagramSVG(
+            mapping,
+            show_status=True,
+            a_termination_labels={1: TerminationLabel(term_text="Eth1/1", parent_text="switch-01" * 10)},
+        )
+        self.assertEqual(bare.a_label_area_width, 0)
+        self.assertGreater(labeled.a_label_area_width, 0)
+        self.assertGreater(labeled._total_width(), bare._total_width())
+        # Full labels are never truncated, so a longer label always reserves more width.
+        self.assertGreater(longer.a_label_area_width, labeled.a_label_area_width)
 
 
 class CableTraceSVGTestCase(TestCase):

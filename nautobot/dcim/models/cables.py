@@ -9,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.db.models import Sum
+from django.urls import NoReverseMatch
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -25,7 +26,7 @@ from nautobot.dcim.constants import (
     TERMINATION_FK_TO_CONTENT_TYPE,
 )
 from nautobot.dcim.fields import JSONPathField
-from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
+from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG, TerminationLabel
 from nautobot.dcim.utils import (
     build_connector_row_layout,
     decompile_path_node,
@@ -56,6 +57,16 @@ __all__ = (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_absolute_url(obj):
+    """Return `obj.get_absolute_url()` or "" if the object exposes no resolvable URL."""
+    if obj is None:
+        return ""
+    try:
+        return obj.get_absolute_url()
+    except (AttributeError, NoReverseMatch):
+        return ""
 
 
 @dataclass(frozen=True)
@@ -563,7 +574,12 @@ class Cable(PrimaryModel):
             termination = endpoint.termination
             if termination:
                 parent = getattr(termination, "parent", None)
-                label = f"{parent} / {termination}" if parent else str(termination)
+                label = TerminationLabel(
+                    term_text=str(termination),
+                    term_url=_safe_absolute_url(termination),
+                    parent_text=str(parent) if parent else "",
+                    parent_url=_safe_absolute_url(parent),
+                )
                 if endpoint.cable_end == "A":
                     connected_a.add(endpoint.connector)
                     a_labels[endpoint.connector] = label
@@ -573,7 +589,7 @@ class Cable(PrimaryModel):
         return connected_a, connected_b, a_labels, b_labels
 
     def get_mapping_diagram_svg(self):
-        """Return SVG string for the breakout lane mapping diagram with connection status and tooltips."""
+        """Return SVG string for the breakout lane mapping diagram with connection status and termination links."""
         if not self.cable_type_id:
             return ""
 

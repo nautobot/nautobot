@@ -4909,6 +4909,19 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         post = count_queries()
         self.assertLessEqual(post, baseline, msg=f"baseline={baseline} post={post}")
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_breakout_cable_detail_renders_mapping_diagram_links(self):
+        """A breakout cable's detail view renders its lane mapping diagram, linking each connected
+        termination and its parent to their detail pages."""
+        cable = Cable.objects.filter(cable_type=self.breakout_cable_type).first()
+        response = self.client.get(cable.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        for endpoint in cable.terminations.all():
+            termination = endpoint.termination
+            self.assertIn(f'xlink:href="{termination.get_absolute_url()}"', content)
+            self.assertIn(f'xlink:href="{termination.parent.get_absolute_url()}"', content)
+
     def test_delete_a_cable_which_has_a_peer_connection(self):
         """Test for https://github.com/nautobot/nautobot/issues/1694."""
         self.add_permissions("dcim.delete_cable")
