@@ -1254,10 +1254,15 @@ class CableTraceSVG:
         if len(self.fanout_paths) > 1:
             return [(f"Breakout fan-out — {len(self.fanout_paths)} branches", constants.FONT_SIZE, "bold", None, None)]
 
-        if cable_path is not None and cable_path.is_split:
+        # A split path forks into multiple onward segments the user must choose between. A
+        # disconnected breakout lane is also flagged `is_split` but has no onward segments (see
+        # `CablePath.get_split_nodes`); that's an incomplete trace, not a fork, so fall through to
+        # the completion summary below rather than rendering an empty "select a node" prompt.
+        split_nodes = list(cable_path.get_split_nodes()) if cable_path is not None and cable_path.is_split else []
+        if split_nodes:
             lines.append(("Path split!", constants.FONT_SIZE, "bold", constants.COLOR_DANGER, None))
             lines.append(("Select a node below to continue:", constants.FONT_SIZE_SM, "normal", None, None))
-            for next_node in cable_path.get_split_nodes():
+            for next_node in split_nodes:
                 next_cable = getattr(next_node, "cable", None)
                 # A node with an onward cable links to its trace view, naming that cable inline; a
                 # node with no cable can't be continued, so it stays plain muted text.

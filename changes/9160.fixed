@@ -8,3 +8,4 @@ Fixed the per-row cable actions (mark cable connected/planned, detach cable) not
 Fixed cable-status row coloring not being applied in the device-component list views.
 Fixed an exception when attempting to improperly create an Interface with a `breakout_position` but no `parent_interface`.
 Fixed missing `breakout_position` form field when editing an existing Interface.
+Fixed an exception when tracing a path including a partially-disconnected cable.

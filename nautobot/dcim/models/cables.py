@@ -1495,7 +1495,7 @@ class CablePath(BaseModel):
         """
         Return all available next segments in a split cable path.
 
-        A split path ends on one of two port types:
+        A split path ends on one of three terminal nodes:
 
         - A RearPort: the trace arrived on the rear face of a patch panel and the signal fans out
           internally to the panel's front ports, so those front ports are the next segments.
@@ -1503,8 +1503,13 @@ class CablePath(BaseModel):
           multiple lanes (see `CablePath.from_origin`), so the next segments are that cable's
           far-side lane terminations — onward across the cable, not the rear port behind the front
           port (which the trace has already traversed).
+        - A Cable: the origin sits on a breakout cable whose requested lane has no far-side
+          termination (a disconnected lane; `path=[cable]`, see `from_origin`). There is nowhere to
+          continue, so there are no next segments.
         """
         next_port = path_node_to_object(self.path[-1])
+        if isinstance(next_port, Cable):
+            return []
         if isinstance(next_port, RearPort):
             return FrontPort.objects.filter(rear_port=next_port)
         return next_port.get_cable_peers()

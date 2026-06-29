@@ -1362,6 +1362,14 @@ class CablePathTestCase(TestCase):
         )
         self.assertEqual(lane1_reverse.destination, if_trunk)
 
+        # A disconnected lane's split path ends on the Cable itself (`path=[cable]`), which has no
+        # cable peers to continue through. `get_split_nodes()` must handle this terminal node
+        # rather than raising AttributeError (Cable has no `get_cable_peers`).
+        for connector in (2, 3, 4):
+            partial = trunk_paths.get(peer_connector=connector)
+            self.assertIsInstance(path_node_to_object(partial.path[-1]), Cable)
+            self.assertEqual(list(partial.get_split_nodes()), [])
+
     def test_207c_mid_path_breakout_lane_traverses_to_trunk(self):
         """
         A breakout lane reached mid-path leads deterministically back to its single trunk endpoint,

@@ -716,6 +716,48 @@ class CableTraceSVGTestCase(TestCase):
         self.assertIn(str(uncabled_front), next_hops)
         self.assertIsNone(next_hops[str(uncabled_front)])
 
+    def test_disconnected_breakout_lane_renders_incomplete_not_split(self):
+        """Tracing from a breakout child (sub)interface whose lane has no far-side termination yields
+        a single-leg trace over a `CablePath` flagged `is_split` with `path=[cable]` and no onward
+        nodes (see `CablePath.get_split_nodes`). Rendering must not raise (regression: `Cable` has no
+        `get_cable_peers`), and the footer must report an incomplete trace rather than an empty
+        "Path split! Select a node below to continue" prompt that has nothing to select.
+
+        [IF_trunk] --C (breakout 1:2, lane 1)-- [IF_leaf]; trunk child on lane 2 is disconnected.
+        """
+        breakout = CableType(name="SVG disconnected 1x2", a_connectors=1, b_connectors=2, total_lanes=2)
+        breakout.validated_save()  # populates `mapping` via clean()
+        trunk = Interface.objects.create(
+            device=self.device,
+            name="disc-trunk",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=self.interface_status,
+        )
+        leaf = Interface.objects.create(device=self.device, name="disc-leaf", status=self.interface_status)
+        # Only lane 1 is cabled (trunk A1 ↔ leaf B1); lane 2 has no far-side termination.
+        Cable(termination_a=trunk, termination_b=leaf, cable_type=breakout, status=self.connected).save()
+        # A child subinterface on the disconnected lane 2.
+        child = Interface.objects.create(
+            device=self.device,
+            name="disc-trunk.2",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=self.interface_status,
+            parent_interface=trunk,
+            breakout_position=2,
+        )
+
+        cable_path = child.get_breakout_lane_cable_path()
+        self.assertTrue(cable_path.is_split)
+        self.assertEqual(list(cable_path.get_split_nodes()), [])
+
+        diagram = CableTraceSVG(child)
+        self.assertEqual(diagram.trunk_origin, trunk)
+        self.assertEqual(len(diagram.fanout_paths), 1)
+        svg = diagram.render()
+        self.assertIn("Trace incomplete", svg)
+        self.assertNotIn("Path split!", svg)
+        self.assertNotIn("Select a node below to continue", svg)
+
     def test_long_cable_label_fits_within_canvas_width(self):
         """The canvas must be wide enough that a long cable label is not clipped on the right."""
         iface_a = Interface.objects.create(device=self.device, name="wide-a", status=self.interface_status)
