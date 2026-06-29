@@ -131,7 +131,7 @@ class ModularComponentModel(ComponentModel):
 
     class Meta:
         abstract = True
-        ordering = ("device", "module__id", "_name")  # Module.ordering is complex/expensive so don't order by module
+        ordering = ("device_id", "module_id", "_name")  # Module.ordering is complex/expensive so don't order by module
         constraints = [
             models.UniqueConstraint(
                 fields=("module", "name"),
