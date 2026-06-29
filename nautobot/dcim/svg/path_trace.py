@@ -139,6 +139,7 @@ class CableTraceSVG:
             {
                 "termination": far_end,
                 "connector_label": "",
+                "child_label": "",
                 "trace": self._expand_trace_segments(self.traced_path[1:]),
             }
         ]
@@ -231,13 +232,13 @@ class CableTraceSVG:
                 if position in child_interface_by_position
             ]
             connector_label = f"{opposite_side}{far_connector}"
-            if child_interfaces:
-                connector_label += " (" + ", ".join(str(child) for child in child_interfaces) + ")"
+            child_label = ", ".join(str(child) for child in child_interfaces)
 
             fanout_legs.append(
                 {
                     "termination": termination,
                     "connector_label": connector_label,
+                    "child_label": child_label,
                     "trace": leg_trace,
                 }
             )
@@ -407,6 +408,7 @@ class CableTraceSVG:
                     "cable": cable_obj,
                     "cable_color": str,
                     "connector_labels": [str, ...],
+                    "child_labels": [str, ...],
                 },
                 "columns": int,
                 "col_centers": [float, ...],    # X center for each column
@@ -444,6 +446,7 @@ class CableTraceSVG:
             "cable_color": cable_color,
             "far_end": far_end,
             "connector_labels": [leg["connector_label"] for leg in self.fanout_paths],
+            "child_labels": [leg["child_label"] for leg in self.fanout_paths],
         }
 
         # Step 1: Build raw per-column entry lists, merging node+passthrough into passthrough_node.
@@ -664,7 +667,21 @@ class CableTraceSVG:
                 self._draw_cable_fan(dwg, segments, cable_color, is_connected)
                 self._draw_cable_label(dwg, trunk_cx, y, self.BREAKOUT_TRUNK_H, cable)
 
-                # Label each branch's landing column, just below the foot of its line.
+                # A branch's mapped child (sub)interface, if any, rides on a pill along the line —
+                # styled like the lane labels in the cable-breakout diagram. The position alternates
+                # between two fractions along the branch so neighboring pills are offset both
+                # vertically and horizontally, keeping them from colliding for long child names.
+                _, fan_apex_y = fan_origin
+                for col_idx, cx in enumerate(col_centers):
+                    child_label = header["child_labels"][col_idx]
+                    if child_label:
+                        fraction = 0.35 if col_idx % 2 == 0 else 0.65
+                        lx = trunk_cx + fraction * (cx - trunk_cx)
+                        ly = fan_apex_y + fraction * (fan_end_y - fan_apex_y)
+                        self._draw_branch_label(dwg, lx, ly, child_label, cable_color)
+
+                # The connector (e.g. "B2") is labeled at the foot of each branch, identifying the
+                # landing connector right above its column's terminations.
                 connector_labels = header["connector_labels"]
                 y = fan_end_y + self.GAP_Y
                 if any(connector_labels):
@@ -1095,6 +1112,34 @@ class CableTraceSVG:
                 if dashoffset:
                     line["stroke-dashoffset"] = dashoffset
                 dwg.add(line)
+
+    def _draw_branch_label(self, dwg, cx, cy, label, color):
+        """Draw a breakout branch's connector label centered at `(cx, cy)` on a rounded, line-colored
+        pill — matching how lanes are labeled in the cable-breakout diagram (`BreakoutDiagramSVG`)."""
+        label_h = constants.FONT_SIZE_SM + 4
+        label_w = constants.FONT_SIZE_SM / 2 * (1 + len(label))
+        dwg.add(
+            dwg.rect(
+                insert=(cx - label_w / 2, cy - label_h / 2),
+                size=(label_w, label_h),
+                rx=label_h / 2,
+                ry=label_h / 2,
+                fill=constants.COLOR_BODY_BG,
+                stroke=color,
+                stroke_width=1,
+            )
+        )
+        dwg.add(
+            dwg.text(
+                label,
+                insert=(cx, cy + constants.FONT_SIZE_SM / 3),
+                text_anchor="middle",
+                fill=constants.COLOR_BODY,
+                font_size=f"{constants.FONT_SIZE_SM}px",
+                font_family=constants.FONT_FAMILY,
+                font_weight="bolder",
+            )
+        )
 
     def _draw_passthrough_node(self, dwg, cx, y, arriving_termination, departing_termination):
         """Draw a device node with arriving port at top and departing port at bottom."""
