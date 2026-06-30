@@ -54,15 +54,20 @@ def cable_status_color_css(record):
     Given a record such as an Interface, return the CSS needed to apply appropriate coloring to it.
     """
     if not record.cable:
+        # A breakout child (sub)interface has no cable of its own; color it after its parent trunk's
+        # cable when its lane is connected. `parent_interface` / `get_breakout_lane` are Interface-only,
+        # so guard for other cable-terminable types (console/power ports, etc.).
+        if getattr(record, "parent_interface_id", None) and record.get_breakout_lane().far_termination:
+            return cable_status_color_css(record.parent_interface)
         return ""
-    else:
-        CABLE_STATUS_TO_CSS_CLASS = {
-            ColorChoices.COLOR_GREEN: "table-success",
-            ColorChoices.COLOR_AMBER: "table-warning",
-            ColorChoices.COLOR_CYAN: "table-info",
-        }
-        status_color = record.cable.get_status_color().strip("#")
-        return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
+
+    CABLE_STATUS_TO_CSS_CLASS = {
+        ColorChoices.COLOR_GREEN: "table-success",
+        ColorChoices.COLOR_AMBER: "table-warning",
+        ColorChoices.COLOR_CYAN: "table-info",
+    }
+    status_color = record.cable.get_status_color().strip("#")
+    return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
 def get_network_driver_mapping_tool_names():
@@ -331,6 +336,49 @@ def validate_cable_breakout_mapping(mapping: list, a_connectors=None, b_connecto
         seen_labels.add(label)
 
     return mapping, a_connectors, b_connectors, total_lanes
+
+
+def _distribute_rowspans(num_cells, num_rows):
+    """Split `num_rows` rows into `num_cells` contiguous chunks as evenly as possible.
+
+    Returns a list of `num_cells` rowspans summing to `num_rows`, with any remainder spread
+    across the leading chunks (e.g. `(2, 3)` → `[2, 1]`, `(3, 3)` → `[1, 1, 1]`).
+    """
+    base, remainder = divmod(num_rows, num_cells)
+    return [base + (1 if i < remainder else 0) for i in range(num_cells)]
+
+
+def build_connector_row_layout(mapping):
+    """Build the row/rowspan layout for rendering a cable's connector-to-connector connections.
+
+    Given a `CableType.mapping` (a list of dicts with `a_connector`/`b_connector` keys), return a
+    flat list of row layout dicts::
+
+        {"a_connector": int|None, "b_connector": int|None, "a_rowspan": int, "b_rowspan": int}
+
+    A rowspan of 0 means that side's cell is covered by an earlier row's rowspan and should be
+    skipped when rendering. Both the cable detail view and the HTMX connection-edit form consume
+    this layout, so the structure stays consistent between them.
+
+    Each side's distinct connectors are laid out independently down their own column, spread evenly
+    over `max(#A connectors, #B connectors)` rows. This yields the familiar nested rowspan layout
+    for breakouts (1xN, Nx1, straight NxN) while staying structurally valid for a mesh — e.g. a
+    polarity-shuffled 2x2 where each A connector wires to *both* B connectors and no rowspan
+    grouping could represent the crossings without overlapping cells and corrupting the table.
+    """
+    distinct_a = sorted({entry["a_connector"] for entry in mapping})
+    distinct_b = sorted({entry["b_connector"] for entry in mapping})
+    num_rows = max(len(distinct_a), len(distinct_b))
+
+    rows = [{"a_connector": None, "b_connector": None, "a_rowspan": 0, "b_rowspan": 0} for _ in range(num_rows)]
+    for side, connectors in (("a", distinct_a), ("b", distinct_b)):
+        row_index = 0
+        for connector, span in zip(connectors, _distribute_rowspans(len(connectors), num_rows)):
+            rows[row_index][f"{side}_connector"] = connector
+            rows[row_index][f"{side}_rowspan"] = span
+            row_index += span
+
+    return rows
 
 
 # Cable validation utilities
