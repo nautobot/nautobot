@@ -17,7 +17,6 @@ A standard, connected, point-to-point cable would have two cable to cable termin
 | `console_port` | [console port](consoleport.md) | No | |
 | `console_server_port` | [console server port](consoleserverport.md) | No | |
 | `front_port` | [front port](frontport.md) | No | |
-| `rear_port` | [rear port](rearport.md) | No | |
 | `interface` | [interface](interface.md) | No | |
 | `power_feed` | [power feed](powerfeed.md) | No | |
 | `power_outlet` | [power outlet](poweroutlet.md) | No | |
@@ -41,3 +40,10 @@ A standard, connected, point-to-point cable would have two cable to cable termin
 |----------|------|-------------|
 | `termination` | record | The termination object (interface, circuit termination, etc.) to which this object terminates the cable |
 | `termination_type` | content type | The type of the `termination` record |
+| `termination_id` | UUID | The primary key of the `termination` record |
+
+## REST API
+
+Cable to cable termination records are exposed at `/api/dcim/cables-to-cable-terminations/`. Each record corresponds to a single connector/termination row as described above.
+
+While individual records can be created, updated, and deleted through this endpoint, most consumers will find it more convenient to manage a cable's terminations as a set through the `terminations` field of the [cable](cable.md) REST API. This endpoint is primarily useful for querying the per-connector rows of a cable directly (for example via `/api/dcim/cables-to-cable-terminations/?cable=<cable-uuid>`), including for CSV export, since the cable endpoint's nested `terminations` field cannot be flattened into CSV. See the [Breakout Cables feature guide](../../feature-guides/breakout-cables.md) for more on the cable `terminations` field.

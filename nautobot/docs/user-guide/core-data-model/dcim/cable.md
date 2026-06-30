@@ -27,6 +27,18 @@ Cables may be terminated to the following "cable termination" objects:
 +++ 3.2.0 "Cable to Cable Termination model"
     The database representation of the associations between a cable and its terminations is implemented by the [Cable to Cable Termination](cabletocabletermination.md) model. This intermediary model was introduced in Nautobot 3.2 to support breakout cables (see below) that may have more than two terminations. For backwards compatibility purposes, the cable model still provides some capabilities similar to the previously-present `termination_a` and `termination_b` fields, particularly in the REST API and GraphQL, but code (Apps or Jobs) that interact with cables may need to be updated to account for the changed data model.
 
+## Partially-Connected, Disconnected, and Repurposed Cables
+
++++ 3.2.0
+
+Prior to Nautobot 3.2, every cable was required to have both of its endpoints defined at all times, and a cable's terminations could not be changed once created (the cable had to be deleted and recreated instead). As of Nautobot 3.2, a cable's terminations are no longer fixed at creation, which enables several new modeling capabilities:
+
+* A **partially-connected** cable may have a termination on only one of its sides (for example, a patch cable that has been plugged into a switch port but whose far end is not yet connected). For a breakout cable, any subset of its connectors may be terminated.
+* A **fully-disconnected** cable may exist with no terminations at all, for example to pre-stage a planned cable or to retain a cable record whose endpoints have both been removed.
+* A cable's terminations may be **added, changed, or removed** after the cable is created, without deleting and recreating the cable. This can be done through the cable edit form, the REST API `terminations` field, or programmatically (see [Cable to Cable Termination](cabletocabletermination.md)).
+
+A cable that is missing one or both terminations is fully valid, but any [path trace](#tracing-cables) through it will naturally halt at the missing termination.
+
 ## Breakout Cables
 
 +++ 3.2.0

@@ -2,7 +2,7 @@
 
 +++ 3.2
 
-While the definition and usage of cable types is optional when modeling simple point-to-point [cables](cable.md), cable types are primarily required when modeling [breakout cables](../../feature-guides/breakout-cables.md) in Nautobot. A cable type defines the physical connectivity of cables using this type, including the number of connectors at each side, the number of internal lanes within the the cable, and the mapping between connectors and lanes.
+While the definition and usage of cable types is optional when modeling simple point-to-point [cables](cable.md), cable types are primarily required when modeling [breakout cables](../../feature-guides/breakout-cables.md) in Nautobot. A cable type defines the physical connectivity of cables using this type, including the number of connectors at each side, the number of internal lanes within the cable, and the mapping between connectors and lanes.
 
 ## Fields
 
@@ -14,7 +14,7 @@ A cable type has the following fields:
 | `a_connectors` | integer | Yes | Number of physical connectors on the "A" side of the cable |
 | `b_connectors` | integer | Yes | Number of physical connectors on the "B" side of the cable |
 | `total_lanes` | integer | Yes | Total number of logical lanes within the cable |
-| `mapping` | JSON | Yes | Array of `total_lanes` entries describing the relations among `a_connectors` `b_connectors`, and individual lanes within the cable |
+| `mapping` | JSON | Yes | Array of `total_lanes` entries describing the relations among `a_connectors`, `b_connectors`, and individual lanes within the cable |
 | `description` | string | No | Descriptive details |
 | `manufacturer` | [Manufacturer](manufacturer.md) | No | Manufacturer information |
 | `part_number` | string | No | Part number |

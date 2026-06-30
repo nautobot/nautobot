@@ -36,6 +36,12 @@ Interfaces now have an optional `port_type` field which describes the physical c
 
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
 
+### Subinterfaces and breakout cables
+
++++ 3.2.0
+
+Sub-interfaces associated to a `parent_interface` may now optionally define a `breakout_position` value. This field is intended to reflect interface breakout configuration, such as a 400G parent interface broken out into four 100G subinterfaces with `breakout_position` 1 through 4. When this field is populated, and the parent interface is connected to the trunk side of a breakout [cable type](cabletype.md), the Nautobot UI for interfaces, cables, and cable path traces will display additional information reflecting this relationship.
+
 ## LAGs
 
 Physical interfaces may be arranged into a link aggregation group (LAG) and associated with a parent LAG (virtual) interface. LAG interfaces can be recursively nested to model bonding of trunk groups. Like all virtual interfaces, LAG interfaces cannot be connected physically. Interfaces can be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.

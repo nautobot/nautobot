@@ -9,7 +9,7 @@ Breakout cables are multi-lane cable assemblies where a single physical cable sp
 - An **MPO-12** trunk fanning out to **twelve individual LC duplex** connections at a fiber distribution frame
 - Two **MPO-8** trunks (4 lanes each) fanning out to **8 individual legs** across multiple devices
 
-In Nautobot, a breakout cable is simply a [cable](../core-data-model/dcim/cable.md) with a breakout [cable type](../core-data-model/dcim/cabletype.md) assigned. Standard cables and breakout cables appear in the same cable list — the breakout behavior is unlocked by the assigned cable type.
+In Nautobot, a breakout cable is simply a [cable](../core-data-model/dcim/cable.md) with a breakout [cable type](../core-data-model/dcim/cabletype.md) assigned. Standard cables and breakout cables appear in the same cable list - the breakout behavior is unlocked by the assigned cable type.
 
 ## Terminology
 
@@ -17,11 +17,11 @@ These terms describe the physical parts of a breakout cable and how they relate 
 
 ### Naming Convention
 
-Throughout Nautobot, a specific endpoint on a cable is referenced as **`{Side}{Connector}`** — for example, `A1` or `B3`. The side is a single letter (`A` or `B`), and the connector is a 1-based number. Position (the lane within a connector) is internal detail and not shown in the primary label — it appears in tooltips or expanded views when relevant.
+Throughout Nautobot, a specific endpoint on a cable is referenced as **`{Side}{Connector}`** -- for example, `A1` or `B3`. The side is a single letter (`A` or `B`), and the connector is a 1-based number. Position (the lane within a connector) is internal detail and not shown in the primary label -- it appears in tooltips or expanded views when relevant.
 
 ### Connector
 
-A **connector** is a physical plug or receptacle at one end of a cable. A standard point-to-point cable has one connector on each end. A breakout cable may have a different number of connectors on each end — for example, one MPO connector on the trunk side and four LC connectors on the leg side.
+A **connector** is a physical plug or receptacle at one end of a cable. A standard point-to-point cable has one connector on each end. A breakout cable may have a different number of connectors on each end -- for example, one MPO connector on the trunk side and four LC connectors on the leg side.
 
 The number of connectors on each side of a cable in Nautobot is defined by its selected cable type, if any. (A simple point-to-point cable with no specified cable type implicitly has one connector on each side.) As a matter of self-consistency, Nautobot enforces that breakout cable types designate the "A" side as the trunk (fewer connectors) and the "B" side as the breakout legs (more connectors).
 
@@ -29,8 +29,8 @@ The number of connectors on each side of a cable in Nautobot is defined by its s
 
 A **position** is a single path within a connector. A connector may carry one or more positions. Each position represents one logical channel through that connector.
 
-- A simple SFP connector has **1 position** — one path in, one path out.
-- A QSFP connector has **4 positions** — four parallel paths.
+- A simple SFP connector has **1 position** -- one path in, one path out.
+- A QSFP connector has **4 positions** -- four parallel paths.
 - An MPO-12 connector used for duplex fiber has **6 positions** (12 strands ÷ 2 strands per position).
 
 In the cable type definition, the total number of lanes is defined, and the `a_positions` and `b_positions` are derived from the `total_lanes ÷ a_connectors` and `total_lanes ÷ b_connectors`. All connectors on the same side of a cable are assumed to be the same type with the same number of positions. For example, if Side B has 4 connectors with 1 position each, all 4 are the same connector type (e.g., all LC). Mixed connector types on the same side are not supported.
@@ -63,7 +63,7 @@ A **strand** is a single physical fiber or conductor within a cable. A lane may 
 | Duplex fiber (standard) | 2 | One strand transmits, one receives (Tx/Rx) |
 | Parallel optics (PSM4, SR4) | 8 | Multiple strands per lane for higher bandwidth |
 
-The `strands_per_lane` field on the cable type captures this. The total physical strand count is `total_lanes × strands_per_lane`. This is useful for fiber plant documentation and capacity planning — for example, an MPO-12 cable with 6 duplex lanes has 12 total strands.
+The `strands_per_lane` field on the cable type captures this. The total physical strand count is `total_lanes × strands_per_lane`. This is useful for fiber plant documentation and capacity planning -- for example, an MPO-12 cable with 6 duplex lanes has 12 total strands.
 
 ### Polarity
 
@@ -71,7 +71,7 @@ The `strands_per_lane` field on the cable type captures this. The total physical
 
 #### Straight-through (Method A / TIA-568)
 
-Strand 1 at end A connects to strand 1 at end B. Strand 2 at A connects to strand 2 at B, and so on. The Tx/Rx swap happens at the connector — one end uses a "key up" orientation and the other uses "key down," which provides the crossover.
+Strand 1 at end A connects to strand 1 at end B. Strand 2 at A connects to strand 2 at B, and so on. The Tx/Rx swap happens at the connector -- one end uses a "key up" orientation and the other uses "key down," which provides the crossover.
 
 This is the most common method for MPO trunk cables. It requires that one end of the cable has the connector installed in the opposite orientation (key up to key down).
 
@@ -87,12 +87,12 @@ Strands are swapped in adjacent pairs rather than fully reversed. Strand 1 conne
 
 This is less common but used in specific high-density applications where pair-level polarity management is needed.
 
-#### Custom
+#### Other
 
 Any non-standard polarity arrangement that doesn't fit the above methods. The actual strand mapping is defined by the lane mapping in the breakout template; the polarity method field is informational only and does not affect tracing or validation.
 
 !!! note
-    The `polarity_method` field is informational — Nautobot does not validate or enforce strand-level polarity. It is intended for documentation and compliance purposes. The lane-level mapping (connector+position to connector+position) is what Nautobot uses for path tracing.
+    The `polarity_method` field is informational -- Nautobot does not validate or enforce strand-level polarity. It is intended for documentation and compliance purposes. The lane-level mapping (connector+position to connector+position) is what Nautobot uses for path tracing.
 
 ## Creating a Breakout Cable Type
 
@@ -111,23 +111,23 @@ Describe the cable type:
 
 Define the physical structure of the cable:
 
-- **A connectors** — number of physical connectors on the A side (e.g., 1 for a single trunk port)
-- **B connectors** — number of physical connectors on the B side (e.g., 4 for four individual legs)
+- **A connectors** - number of physical connectors on the A side (e.g., 1 for a single trunk port)
+- **B connectors** - number of physical connectors on the B side (e.g., 4 for four individual legs)
 - **Total lanes** - number of lanes within the cable, must be a multiple of both connector counts (e.g., 4 for a basic 1x4 breakout cable type)
-- **Strands Per Lane** — number of physical strands per logical lane, informational only (1 for copper/DAC, 2 for duplex fiber, 8 for parallel optics)
+- **Strands Per Lane** - number of physical strands per logical lane, informational only (1 for copper/DAC, 2 for duplex fiber, 8 for parallel optics)
 
 ### Fiber-Specific Fields
 
 For fiber optic cable types, with more than one strand per lane:
 
-- **Polarity Method** — the fiber polarity method (Straight-through, Reversed, Pair-reversed, Custom). Informational only.
+- **Polarity Method** - the fiber polarity method (Straight-through, Reversed, Pair-reversed, Other). Informational only.
 
 ### Lane Mapping
 
 The mapping defines how each lane connects the A-side and B-side connectors. By default, after you enter a valid combination of values for the "A connectors", "B connectors", and "Total lanes", Nautobot will auto-generate a likely mapping for you. This will likely suffice for most real-world breakout cables, but should you need to override it for a specific cable type, the create/edit form presents the mapping in two modes:
 
-- **Table editor** — a table of form fields with one row per lane, allowing you to visually customize individual position assignments and/or lane labels. Use this for polarity shuffles or non-standard mappings.
-- **JSON editor** — click the "JSON" button to switch to a raw JSON representation of the mapping. You can use this for advanced editing or pasting data from external sources.
+- **Table editor** - a table of form fields with one row per lane, allowing you to visually customize individual position assignments and/or lane labels. Use this for polarity shuffles or non-standard mappings.
+- **JSON editor** - click the "JSON" button to switch to a raw JSON representation of the mapping. You can use this for advanced editing or pasting data from external sources.
 
 #### Mapping JSON Format
 
@@ -161,11 +161,11 @@ When a cable type is assigned, the cable edit form dynamically updates to show t
 
 On the cable edit form, each connector row has three fields:
 
-1. **Type** — select the termination type (Interface, Front Port, Rear Port, etc.)
-2. **Parent** — select the parent object (Device, Circuit, etc.), filtered by type
-3. **Termination** — select the specific termination object, filtered by parent
+1. **Type** - select the termination type (Interface, Front Port, Rear Port, etc.)
+2. **Parent** - select the parent object (Device, Circuit, etc.), filtered by type
+3. **Termination** - select the specific termination object, filtered by parent
 
-Changing the type dynamically swaps the parent and termination picker fields. Mixed termination types are supported, within logical limits — for example, some lanes can connect to device interfaces while others connect to circuit terminations; however it would not make sense to mix interfaces and power outlets on the same cable.
+Changing the type dynamically swaps the parent and termination picker fields. Mixed termination types are supported, within logical limits -- for example, some lanes can connect to device interfaces while others connect to circuit terminations; however it would not make sense to mix interfaces and power outlets on the same cable.
 
 ## Understanding Cable Connections
 
@@ -182,9 +182,9 @@ The cable detail view shows a **Connections** table with Side A on the left and 
 
 Below the connections table, the cable detail view shows much the same information, this time as an SVG lane mapping diagram:
 
-- **Green nodes** — connectors with a termination assigned
-- **Gray nodes** — unconnected connectors
-- **Lines** — show the mapping between A-side and B-side connectors
+- **Green nodes** - connectors with a termination assigned
+- **Gray nodes** - unconnected connectors
+- **Lines** - show the mapping between A-side and B-side connectors
 
 ## Cable Path Tracing
 
@@ -233,13 +233,23 @@ POST /api/dcim/cables/
 
 Note that the fourth B-side termination is null, representing an unconnected leg.
 
+### Reading Cable Terminations
+
+In API responses, the cable's `terminations` field is rendered in the same `{"a": {...}, "b": {...}}` shape, keyed by side and then by 1-indexed connector number. Each slot value is a brief representation of the termination (or the full nested serializer when `?depth=1` or greater is requested), and uncabled connectors on a breakout cable appear as explicit `null` slots.
+
+The legacy `termination_a` / `termination_b` (and `termination_a_type` / `termination_a_id`, etc.) fields remain on the cable serializer for backward compatibility, and refer to connector 1 on each side.
+
+!!! note
+    The nested `terminations` field cannot be flattened into CSV, so it is omitted from CSV exports of cables. To export per-connector termination rows as CSV, use the [Cable to Cable Termination](../core-data-model/dcim/cabletocabletermination.md) endpoint instead, e.g. `/api/dcim/cables-to-cable-terminations/?cable=<cable-uuid>&format=csv`.
+
 ### Filtering
 
-- `?cable_type=<uuid>` — cables using a specific clble type
-- `?cable_type__isnull=true` — standard cables only
-- `?termination_a_type=dcim.interface` — cables with A-side interfaces
-- `?termination_b_type=dcim.interface` — cables with B-side interfaces
-- `?termination_type=dcim.interface` — cables with an interface on A and/or B side
+- `?cable_type=<uuid>` - cables using a specific cable type
+- `?has_cable_type=false` - standard cables only
+- `?termination_a_type=dcim.interface` - cables with A-side interfaces
+- `?termination_b_type=dcim.interface` - cables with B-side interfaces
+- `?termination_type=dcim.interface` - cables with an interface on A and/or B side
+- `?is_disconnected=true` - cables with at least one disconnected connector
 
 ## Demo Data
 
