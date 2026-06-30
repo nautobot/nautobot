@@ -2239,7 +2239,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
-        model_form = self.get_component_model_form(request)
+        # Pass `data` through: some model forms (e.g. VMInterfaceForm) resolve a required parent
+        # (virtual_machine) in __init__ from the bound data / GET initial, so instantiating with no
+        # data at all would raise DoesNotExist.
+        model_form = self.get_component_model_form(request, data=data)
         # Carry the grouping metadata so the extras template can render custom-field/relationship panels.
         for attr in ("custom_fields", "relationships"):
             if not getattr(create_form, attr, None):
@@ -2263,7 +2266,7 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             for attr in parent_attrs:
                 parent = getattr(selected_object, attr, None)
                 if parent:
-                    return parent.name if attr == "virtual_machine" else parent.display
+                    return parent.display
         return ""
 
     def get_component_model_form(self, request, data=None):
@@ -2302,7 +2305,7 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         # Propagate "extras" fields (custom fields, relationships, object note, dynamic groups) from
         # the POST into the per-instance form data. They aren't part of the pattern form's
         # cleaned_data, so without this each created component would lose those values.
-        model_form = self.get_component_model_form(request)
+        model_form = self.get_component_model_form(request, data=request.POST)
         extras_field_names = set(getattr(model_form, "custom_fields", [])) | set(
             getattr(model_form, "relationships", [])
         )
