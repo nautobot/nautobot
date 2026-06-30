@@ -18,6 +18,16 @@ from nautobot.core.views.utils import get_obj_from_context
 logger = logging.getLogger(__name__)
 
 
+def render_utilization(value):
+    """Renders a utilization graph, or a placeholder if none exist."""
+    if value is None:
+        return helpers.placeholder(None)
+    return render_to_string(
+        "utilities/templatetags/utilization_graph.html",
+        helpers.utilization_graph(value),
+    )
+
+
 class AddChildPrefixButton(Button):
     """Custom button to add a child prefix inside a Prefix detail view."""
 
@@ -115,15 +125,6 @@ class PrefixKeyValueOverrideValueTablePanel(KeyValueTablePanel):
             verbose_name_plural=key,
         )
 
-    def render_utilization(self, value):
-        """Renders a utilization graph, or a placeholder if none exist."""
-        if value is None:
-            return helpers.placeholder(None)
-        return render_to_string(
-            "utilities/templatetags/utilization_graph.html",
-            helpers.utilization_graph(value),
-        )
-
 
 class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTablePanel):
     """
@@ -150,14 +151,14 @@ class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTabl
     def render_value(self, key, value, context):
         instance = get_obj_from_context(context)
         if key == "utilization":
-            return self.render_utilization(value)
+            return render_utilization(value)
         if key == "locations":
             return self.render_locations_list(key, value, instance)
 
         return super().render_value(key, value, context)
 
 
-class IPAddressRangeObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTablePanel):
+class IPAddressRangeObjectFieldsPanel(ObjectFieldsPanel):
     def get_data(self, context):
         data = super().get_data(context)
         instance = get_obj_from_context(context, self.context_object_key)
@@ -167,7 +168,7 @@ class IPAddressRangeObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideV
 
     def render_value(self, key, value, context):
         if key == "utilization":
-            return self.render_utilization(value)
+            return render_utilization(value)
         return super().render_value(key, value, context)
 
 
@@ -186,15 +187,6 @@ class IPAddressRangeIPAddressesPanel(ObjectsTablePanel):
             return False
         instance = get_obj_from_context(context)
         return instance is not None and not instance.is_exclusive
-
-    def _get_table_add_url(self, context):
-        obj = get_obj_from_context(context)
-        request = context["request"]
-        if not request.user.has_perm("ipam.add_ipaddress"):
-            return None
-        add_route = reverse("ipam:ipaddress_add")
-        return_url = context.get("return_url", obj.get_absolute_url())
-        return f"{add_route}?namespace={obj.parent.namespace_id}&return_url={return_url}"
 
     def _get_table_add_url(self, context):
         obj = get_obj_from_context(context)
