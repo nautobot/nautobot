@@ -2914,10 +2914,6 @@ class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
 class CableTypeTestCase(ModelTestCases.BaseModelTestCase):
     model = CableType
 
-    def test_get_docs_url(self):
-        """Docs page for this model doesn't exist yet."""
-        # TODO: remove this override once a docs page is added for CableType.
-
     def test_derived_properties(self):
         breakout = CableType(
             name="Test 1-to-4",
@@ -4182,10 +4178,6 @@ class CableToCableTerminationTestCase(ModelTestCases.BaseModelTestCase):
             termination_b=Interface.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).last(),
             status=cls.status,
         )
-
-    def test_get_docs_url(self):
-        """Docs page for this model doesn't exist yet."""
-        # TODO: remove this override once a docs page is added for CableToCableTermination.
 
     def test_properties_handle_invalid_data(self):
         """The database permits a null `termination` (no FK set), make sure it doesn't error out various cases."""
