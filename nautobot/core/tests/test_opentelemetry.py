@@ -5,7 +5,7 @@ import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-from django.test import RequestFactory
+from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from opentelemetry import trace as otel_trace
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
@@ -301,6 +301,7 @@ class RequestsInstrumentationTraceparentTest(testing.TestCase):
         )
 
 
+@override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
 class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
     """Verify GraphQLOpenTelemetryMiddleware emits correct OTel spans and structured log entries."""
 
@@ -406,6 +407,31 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         self.assertIn("duration_ms", log, "duration_ms must be present in the log entry.")
         self.assertIsInstance(log["duration_ms"], float)
         self.assertGreaterEqual(log["duration_ms"], 0.0)
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=False)
+    def test_disabled_emits_no_span_or_log(self):
+        """Regression: with OTel disabled (the default), a GraphQL request must produce no span and no log.
+
+        GraphQLOpenTelemetryMiddleware is unconditionally present in MIDDLEWARE, so without an enablement
+        guard it would span and log every /graphql request -- leaking the query/variables into INFO logs in
+        deployments that never enabled OTel. This asserts the opt-in guard: no span, no graphql.request log,
+        and the response still passes through. Removing the guard makes this test fail.
+        """
+        mock_response = MagicMock(status_code=200)
+        middleware = GraphQLOpenTelemetryMiddleware(MagicMock(return_value=mock_response))
+        request = self._build_request(variables=self._SAMPLE_VARIABLES)
+
+        with structlog.testing.capture_logs() as captured:
+            response = middleware(request)
+
+        self.assertIs(response, mock_response, "Response must still pass through when OTel is disabled.")
+        self.assertEqual(
+            len(self._exporter.get_finished_spans()), 0, "No span should be emitted when OTel is disabled."
+        )
+        graphql_logs = [e for e in captured if e.get("event") == "graphql.request"]
+        self.assertEqual(
+            graphql_logs, [], f"No graphql.request log should be emitted when OTel is disabled; got: {captured!r}"
+        )
 
 
 class MainInstrumentGatingTest(testing.TestCase):

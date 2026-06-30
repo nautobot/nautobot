@@ -158,7 +158,6 @@ class ExceptionHandlingMiddleware:
             # case seems to never be called.
             # [0] https://docs.djangoproject.com/en/4.2/topics/http/middleware/#process-exception
             if "django_structlog.middlewares.RequestMiddleware" in settings.MIDDLEWARE:
-                logger = structlog.getLogger(__name__)
                 log_kwargs = {
                     "code": 500,
                     "request": RequestMiddleware.format_request(request),
@@ -210,6 +209,10 @@ class GraphQLOpenTelemetryMiddleware:
     Django middleware that creates an OpenTelemetry span and emits a structured INFO log
     for every request to the /graphql and /api/graphql endpoints.
 
+    Opt-in: this is a no-op pass-through unless ``OTEL_PYTHON_DJANGO_INSTRUMENT`` is enabled,
+    matching the rest of the OpenTelemetry feature (disabled by default). This prevents the
+    GraphQL query/variables from being logged in deployments that never enabled OTel.
+
     Span attributes set:
     - ``enduser.id``            - authenticated username
     - ``http.client_ip``        - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
@@ -229,6 +232,12 @@ class GraphQLOpenTelemetryMiddleware:
 
     def __call__(self, request):
         if request.path.rstrip("/") not in _GRAPHQL_PATHS:
+            return self.get_response(request)
+
+        # Opt-in only: when OpenTelemetry is disabled (the default) this middleware is a pass-through.
+        # Without this guard it would span and log every GraphQL request, leaking the query and variables
+        # into INFO logs in deployments that never enabled OTel.
+        if not settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
             return self.get_response(request)
 
         client_ip = self._get_client_ip(request)
