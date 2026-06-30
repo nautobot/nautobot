@@ -2778,7 +2778,7 @@ class DeviceComponentPageMixin:
 
     view_titles = Titles(
         titles={
-            "detail": "{% if object.device %}{{ object.device }}{% else %}{{ object.module.display }}{% endif %} / {{ object }}",
+            "detail": "{% if object.device %}{{ object.device }}{% else %}{{ object.module.display }}{% endif %} / {{ object }}"
         }
     )
 
