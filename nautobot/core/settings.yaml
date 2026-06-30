@@ -1552,6 +1552,7 @@ properties:
     format: "uri"
     default: ""
     description: "OTLP Exporter Endpoint."
+    environment_variable: "OTEL_EXPORTER_OTLP_ENDPOINT"
     version_added: "3.2.0"
   OTEL_EXPORTER_OTLP_INSECURE:
     type: "boolean"
