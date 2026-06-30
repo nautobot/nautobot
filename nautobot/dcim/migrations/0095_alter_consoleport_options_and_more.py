@@ -7,7 +7,7 @@ import nautobot.core.models.query_functions
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("dcim", "0093_backpopulate_device_on_modular_component"),
+        ("dcim", "0094_alter_cable__abs_length"),
     ]
 
     operations = [
