@@ -2,6 +2,7 @@
 
 import json
 import os
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from django.test import RequestFactory
@@ -25,6 +26,30 @@ from nautobot.core.cli.opentelemetry import instrument
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
 
 
+def _fake_otel_config(**overrides):
+    """Build a stand-in for the loaded ``nautobot_config`` module that ``instrument()`` reads.
+
+    ``instrument()`` reads its config from ``sys.modules["nautobot_config"]`` (registered by
+    ``load_settings()``), not from ``nautobot.core.settings``. Tests inject this fake via
+    ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``. It must carry every
+    attribute ``instrument()`` reads, with real types: ``DATABASES`` is a real dict so the
+    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int.
+    Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
+    """
+    defaults = {
+        "OTEL_TRACES_EXPORTER": ["none"],
+        "OTEL_METRICS_EXPORTER": ["none"],
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "",
+        "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+        "OTEL_EXPORTER_OTLP_INSECURE": False,
+        "OTEL_PYTHON_LOG_CORRELATION": False,
+        "OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT": 8192,
+        "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}},
+    }
+    defaults.update(overrides)
+    return SimpleNamespace(**defaults)
+
+
 class InstrumentFunctionTest(testing.TestCase):
     """Verify that instrument() correctly sets up the global TracerProvider."""
 
@@ -46,16 +71,10 @@ class InstrumentFunctionTest(testing.TestCase):
 
     def test_instrument_sets_tracer_provider(self):
         """instrument() should configure a TracerProvider as the global provider."""
-        # instrument() reads `from nautobot.core import settings` directly because it runs before
-        # django.setup() (see instrument()'s docstring for why that ordering is required), so
-        # django.conf.settings is not configured and override_settings() would have no effect here.
-        # Patch the module attribute that instrument() actually reads.
-        with patch.multiple(
-            "nautobot.core.cli.opentelemetry.settings",
-            OTEL_TRACES_EXPORTER=["none"],
-            OTEL_METRICS_EXPORTER=["none"],
-            OTEL_PYTHON_LOG_CORRELATION=False,
-        ):
+        # instrument() reads the loaded `nautobot_config` from sys.modules (registered by load_settings())
+        # because it runs before django.setup(), so django.conf.settings is not configured and
+        # override_settings() would have no effect here. Replace the whole sys.modules entry with a fake.
+        with patch.dict("sys.modules", {"nautobot_config": _fake_otel_config()}):
             instrument()
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
@@ -77,22 +96,13 @@ class InstrumentExporterBranchTest(testing.TestCase):
         super().tearDown()
 
     def _patch_settings(self, **overrides):
-        """Patch instrument()'s view of settings with sensible defaults that disable noisy layers.
+        """Patch instrument()'s view of config with sensible defaults that disable noisy layers.
 
-        instrument() reads `from nautobot.core import settings` directly because it runs before
-        django.setup() (see instrument()'s docstring for why), so override_settings() does not reach
-        it; we patch the module attribute that instrument() reads.
+        instrument() reads the loaded `nautobot_config` from sys.modules (registered by load_settings())
+        because it runs before django.setup(), so override_settings() does not reach it. We replace the
+        whole sys.modules["nautobot_config"] entry with a fake carrying the requested overrides.
         """
-        defaults = {
-            "OTEL_TRACES_EXPORTER": ["none"],
-            "OTEL_METRICS_EXPORTER": ["none"],
-            "OTEL_EXPORTER_OTLP_ENDPOINT": "",
-            "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
-            "OTEL_EXPORTER_OTLP_INSECURE": False,
-            "OTEL_PYTHON_LOG_CORRELATION": False,
-        }
-        defaults.update(overrides)
-        return patch.multiple("nautobot.core.cli.opentelemetry.settings", **defaults)
+        return patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(**overrides)})
 
     def test_otlp_trace_exporter_skipped_when_endpoint_unset(self):
         """The OTLP trace exporter must be skipped (with a warning) when the endpoint is empty."""
@@ -125,6 +135,24 @@ class InstrumentExporterBranchTest(testing.TestCase):
                 instrument()
 
         mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=True)
+
+    def test_otlp_endpoint_override_from_nautobot_config_is_honored(self):
+        """Regression: an OTEL_EXPORTER_OTLP_ENDPOINT set in nautobot_config.py must be honored.
+
+        The base nautobot.core.settings module defaults OTEL_EXPORTER_OTLP_ENDPOINT to "" (no env var).
+        Here the endpoint is set ONLY on the loaded nautobot_config (as a user override would be), not on
+        nautobot.core.settings. Before the fix, instrument() read the base module's empty endpoint, logged
+        "endpoint is not set", and skipped the exporter; after the fix it reads the loaded nautobot_config
+        and builds the exporter. This is the exact scenario from the PR review comment.
+        """
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            with self._patch_settings(
+                OTEL_TRACES_EXPORTER=["otlp"],
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
+            ):
+                instrument()
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=False)
 
     def test_console_trace_exporter_used_without_endpoint(self):
         """The console trace exporter does not require an endpoint and must be attached regardless."""

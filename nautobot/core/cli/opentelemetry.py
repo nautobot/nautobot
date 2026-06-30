@@ -19,10 +19,6 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExport
 
 from nautobot import __version__
 
-# Read the settings module directly rather than django.conf.settings: instrument() runs before
-# django.setup() (see the instrument() docstring for why), so django.conf.settings is not yet configured.
-from nautobot.core import settings
-
 logger = logging.getLogger(__name__)
 
 
@@ -37,54 +33,61 @@ def instrument():
     registry, middleware, and DB engine, so instrumenting after it would silently miss
     those already-bound code paths. Running first guarantees every layer is wrapped.
 
-    A consequence of running pre-``django.setup()`` is that ``django.conf.settings`` is not
-    yet configured here, which is why this module reads ``nautobot.core.settings`` directly.
+    A consequence of running pre-``django.setup()`` is that ``django.conf.settings`` is not yet
+    configured here. Instead this reads the already-loaded ``nautobot_config`` module, which
+    ``main()`` registers in ``sys.modules`` via ``load_settings()`` before calling ``instrument()``.
+    Unlike ``nautobot.core.settings`` (env-var defaults only), that module reflects any overrides the
+    user set in their ``nautobot_config.py``.
     """
+    # Resolve to the loaded config registered by load_settings(); honors nautobot_config.py overrides
+    # (e.g. OTEL_EXPORTER_OTLP_ENDPOINT), unlike the base nautobot.core.settings module.
+    import nautobot_config  # runtime module registered by load_settings(), only available here
+
     resource = Resource(attributes={SERVICE_NAME: "nautobot", SERVICE_VERSION: __version__})
     # Cap attribute value length so large values (e.g. GraphQL queries) don't bloat spans. The OTEL
-    # SDK is unbounded by default; OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT defaults to 8192 (settings.py).
-    span_limits = SpanLimits(max_attribute_length=settings.OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT)
+    # SDK is unbounded by default; OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT defaults to 8192 (see settings.py).
+    span_limits = SpanLimits(max_attribute_length=nautobot_config.OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT)
     provider = TracerProvider(resource=resource, span_limits=span_limits)
     trace.set_tracer_provider(provider)
 
-    if "none" not in settings.OTEL_TRACES_EXPORTER:
-        if "console" in settings.OTEL_TRACES_EXPORTER:
+    if "none" not in nautobot_config.OTEL_TRACES_EXPORTER:
+        if "console" in nautobot_config.OTEL_TRACES_EXPORTER:
             trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
 
-        if "otlp" in settings.OTEL_TRACES_EXPORTER:
-            if not settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+        if "otlp" in nautobot_config.OTEL_TRACES_EXPORTER:
+            if not nautobot_config.OTEL_EXPORTER_OTLP_ENDPOINT:
                 logger.warning(
                     "OTEL_TRACES_EXPORTER includes 'otlp' but OTEL_EXPORTER_OTLP_ENDPOINT is not set; "
                     "skipping the OTLP trace exporter to avoid connection errors."
                 )
             else:
-                otlp_settings = {"endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT}
-                if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
+                otlp_settings = {"endpoint": nautobot_config.OTEL_EXPORTER_OTLP_ENDPOINT}
+                if nautobot_config.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
                     from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
                 else:
                     from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 
-                    otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
+                    otlp_settings["insecure"] = nautobot_config.OTEL_EXPORTER_OTLP_INSECURE
                 trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(OTLPSpanExporter(**otlp_settings)))
 
-    if settings.OTEL_METRICS_EXPORTER and "none" not in settings.OTEL_METRICS_EXPORTER:
+    if nautobot_config.OTEL_METRICS_EXPORTER and "none" not in nautobot_config.OTEL_METRICS_EXPORTER:
         readers = []
-        if "otlp" in settings.OTEL_METRICS_EXPORTER:
-            if not settings.OTEL_EXPORTER_OTLP_ENDPOINT:
+        if "otlp" in nautobot_config.OTEL_METRICS_EXPORTER:
+            if not nautobot_config.OTEL_EXPORTER_OTLP_ENDPOINT:
                 logger.warning(
                     "OTEL_METRICS_EXPORTER includes 'otlp' but OTEL_EXPORTER_OTLP_ENDPOINT is not set; "
                     "skipping the OTLP metric exporter to avoid connection errors."
                 )
             else:
-                otlp_settings = {"endpoint": settings.OTEL_EXPORTER_OTLP_ENDPOINT}
-                if settings.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
+                otlp_settings = {"endpoint": nautobot_config.OTEL_EXPORTER_OTLP_ENDPOINT}
+                if nautobot_config.OTEL_EXPORTER_OTLP_PROTOCOL == "http":
                     from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
                 else:
                     from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 
-                    otlp_settings["insecure"] = settings.OTEL_EXPORTER_OTLP_INSECURE
+                    otlp_settings["insecure"] = nautobot_config.OTEL_EXPORTER_OTLP_INSECURE
                 readers.append(PeriodicExportingMetricReader(OTLPMetricExporter(**otlp_settings)))
-        if "console" in settings.OTEL_METRICS_EXPORTER:
+        if "console" in nautobot_config.OTEL_METRICS_EXPORTER:
             readers.append(PeriodicExportingMetricReader(ConsoleMetricExporter()))
         meter_provider = MeterProvider(resource=resource, metric_readers=readers)
         metrics.set_meter_provider(meter_provider)
@@ -94,10 +97,10 @@ def instrument():
     RedisInstrumentor().instrument(tracer_provider=provider)
     CeleryInstrumentor().instrument(tracer_provider=provider)
 
-    if settings.OTEL_PYTHON_LOG_CORRELATION:
+    if nautobot_config.OTEL_PYTHON_LOG_CORRELATION:
         LoggingInstrumentor().instrument(tracer_provider=provider, set_logging_format=True)
 
-    if "mysql" in settings.DATABASES["default"]["ENGINE"]:
+    if "mysql" in nautobot_config.DATABASES["default"]["ENGINE"]:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
 
         MySQLClientInstrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
