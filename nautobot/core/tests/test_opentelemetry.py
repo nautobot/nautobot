@@ -33,7 +33,7 @@ def _fake_otel_config(**overrides):
     ``load_settings()``), not from ``nautobot.core.settings``. Tests inject this fake via
     ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``. It must carry every
     attribute ``instrument()`` reads, with real types: ``DATABASES`` is a real dict so the
-    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int.
+    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int.
     Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
     """
     defaults = {
@@ -43,7 +43,7 @@ def _fake_otel_config(**overrides):
         "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
         "OTEL_EXPORTER_OTLP_INSECURE": False,
         "OTEL_PYTHON_LOG_CORRELATION": False,
-        "OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT": 8192,
+        "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT": 8192,
         "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}},
     }
     defaults.update(overrides)

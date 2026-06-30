@@ -175,7 +175,7 @@ service:
       processors: [attributes]
 ```
 
-As a coarse, SDK-side safety net you can also cap how much of any single attribute value is recorded by setting the standard `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` environment variable (an integer character limit; unlimited by default). This truncates long values such as large query documents before they leave the process, but it does not selectively redact - use collector-side processors for targeted redaction.
+As a coarse, SDK-side safety net you can also cap how much of any single span attribute value is recorded via the `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` setting (an integer character limit). Nautobot defaults this to 8192 characters; the OpenTelemetry SDK itself is unlimited by default. Configure it through the `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` environment variable or by overriding the setting in `nautobot_config.py`. This truncates long values such as large query documents before they leave the process, but it does not selectively redact - use collector-side processors for targeted redaction.
 
 ### Outbound propagation to untrusted services
 
