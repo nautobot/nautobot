@@ -85,7 +85,7 @@ dependencies = [
     # Template rendering engine
     "Jinja2 (>=3.1.6,<3.2)",
     # Optional data validation of config contexts - loose dependency as our usage is light but apps may be more specific
-    "jsonschema (>=4.7.0,<5)",
+    "jsonschema (>=4.26.0,<5)",
     # Library to access Kubernetes API used to develop K8s integration
     "kubernetes (>=35.0.0,<36)",
     # Rendering of markdown files to HTML
@@ -95,11 +95,11 @@ dependencies = [
     # Library of network related utilities including network driver mappings and Jinja Filters
     # Note: netutils is limited in scope, dependencies, and observes semver, as such
     #       we permit a looser (^) version constraint here.
-    "netutils (>=1.14.0,<2)",
+    "netutils (>=1.17.2,<2)",
     # HTML sanitization
-    "nh3 (>=0.3.5,<0.4)",
+    "nh3 (>=0.3.6,<0.4)",
     # Handling of version numbers
-    "packaging (>=23.1)",
+    "packaging (>=23.2)",
     # Image processing library
     "pillow (>=12.2.0,<13)",
     # Custom prometheus metrics
@@ -136,7 +136,7 @@ ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
 # MySQL database adapter
 mysql = [ "mysqlclient (>=2.2.8,<2.3)" ]
 # NAPALM automation library
-napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
+napalm = [ "napalm (>=5.1.0,<6.0.0)" ]
 # External Storage support (i.e. S3)
 remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
@@ -209,7 +209,7 @@ mkdocs-section-index = "~0.3.12"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~1.0.4"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~2.0.4"
+mkdocstrings-python = "~2.0.5"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
@@ -217,13 +217,13 @@ djhtml = "~3.0.11"
 # Django template files linter and formatter
 djlint = "~1.36.4"
 # Code static analysis
-pylint = "~4.0.5"
+pylint = "~4.0.6"
 # Pylint extensions for Django
 pylint-django = "~2.7.0"
 # Python implementation of markdownlint
-pymarkdownlnt = "~0.9.37"
+pymarkdownlnt = "~0.9.38"
 # Combination linter and code formatter
-ruff = "~0.15.16"
+ruff = "~0.15.20"
 # YAML linting
 yamllint = "~1.38.0"
 
