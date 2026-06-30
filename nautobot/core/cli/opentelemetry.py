@@ -25,19 +25,19 @@ logger = logging.getLogger(__name__)
 def instrument():
     """Instrument Nautobot with OpenTelemetry.
 
-    This must run during CLI startup *before* ``django.setup()`` (invoked by
-    ``execute_from_command_line()`` in ``nautobot.core.cli.main``). The OpenTelemetry
+    This must run during CLI startup *before* `django.setup()` (invoked by
+    `execute_from_command_line()` in `nautobot.core.cli.main`). The OpenTelemetry
     auto-instrumentors (Django, psycopg2/MySQL, Redis, Celery, requests, ...) work by
     monkeypatching their target libraries; the patch only takes effect for code imported
-    *after* the instrumentor is installed. ``django.setup()`` imports and binds the app
+    *after* the instrumentor is installed. `django.setup()` imports and binds the app
     registry, middleware, and DB engine, so instrumenting after it would silently miss
     those already-bound code paths. Running first guarantees every layer is wrapped.
 
-    A consequence of running pre-``django.setup()`` is that ``django.conf.settings`` is not yet
-    configured here. Instead this reads the already-loaded ``nautobot_config`` module, which
-    ``main()`` registers in ``sys.modules`` via ``load_settings()`` before calling ``instrument()``.
-    Unlike ``nautobot.core.settings`` (env-var defaults only), that module reflects any overrides the
-    user set in their ``nautobot_config.py``.
+    A consequence of running pre-`django.setup()` is that `django.conf.settings` is not yet
+    configured here. Instead this reads the already-loaded `nautobot_config` module, which
+    `main()` registers in `sys.modules` via `load_settings()` before calling `instrument()`.
+    Unlike `nautobot.core.settings` (env-var defaults only), that module reflects any overrides the
+    user set in their `nautobot_config.py`.
     """
     # Resolve to the loaded config registered by load_settings(); honors nautobot_config.py overrides
     # (e.g. OTEL_EXPORTER_OTLP_ENDPOINT), unlike the base nautobot.core.settings module.
