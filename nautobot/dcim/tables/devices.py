@@ -417,6 +417,13 @@ class CableTerminationTable(BaseTable):
         verbose_name="Cable Peer",
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # The `cable_peer` column's prefetch is expensive (it walks the cable's terminations), so
+        # only apply it when that column is actually visible for this table/user.
+        for prefetch in self.Meta.model.cable_peer_prefetch_related_fields():  # pylint: disable=no-member
+            self.add_conditional_prefetch("cable_peer", prefetch=prefetch)
+
 
 class PathEndpointTable(CableTerminationTable):
     # The far-end of each CablePath originating from this endpoint (one per breakout lane).
@@ -429,6 +436,12 @@ class PathEndpointTable(CableTerminationTable):
         orderable=False,
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Likewise, only prefetch the `connection` column's path destinations when it's visible.
+        for prefetch in self.Meta.model.connection_prefetch_related_fields():  # pylint: disable=no-member
+            self.add_conditional_prefetch("connection", prefetch=prefetch)
+
 
 class ConsolePortTable(ModularDeviceComponentTable, PathEndpointTable):
     tags = TagColumn(url_name="dcim:consoleport_list")
@@ -436,6 +449,7 @@ class ConsolePortTable(ModularDeviceComponentTable, PathEndpointTable):
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = ConsolePort
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",
@@ -493,6 +507,7 @@ class ConsoleServerPortTable(ModularDeviceComponentTable, PathEndpointTable):
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = ConsoleServerPort
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",
@@ -550,6 +565,7 @@ class PowerPortTable(ModularDeviceComponentTable, PathEndpointTable):
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = PowerPort
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",
@@ -625,6 +641,7 @@ class PowerOutletTable(ModularDeviceComponentTable, PathEndpointTable):
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = PowerOutlet
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",
@@ -721,6 +738,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",
@@ -866,6 +884,7 @@ class FrontPortTable(ModularDeviceComponentTable, CableTerminationTable):
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = FrontPort
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",
@@ -942,6 +961,7 @@ class RearPortTable(ModularDeviceComponentTable, CableTerminationTable):
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = RearPort
+        row_attrs = {"class": cable_status_color_css}
         fields = (
             "pk",
             "device",

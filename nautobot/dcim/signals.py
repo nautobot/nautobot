@@ -13,6 +13,7 @@ from nautobot.core.signals import disable_for_loaddata
 from .models import (
     Cable,
     CablePath,
+    CableTermination,
     CableToCableTermination,
     ControllerManagedDeviceGroup,
     Device,
@@ -26,95 +27,93 @@ from .models import (
     RackGroup,
     VirtualChassis,
 )
-from .models.device_components import CableTermination
 from .utils import validate_interface_tagged_vlans
 
+#
+# Cables
+#
 
-def create_cablepath(node, rebuild=True):
+
+def create_cablepath(path_endpoint: PathEndpoint, rebuild=True):
     """
-    Create CablePaths for all paths originating from the specified node.
+    Create CablePaths for all paths originating from the specified PathEndpoint (Interface, etc.).
 
-    For breakout cables, creates one CablePath per fan-out lane mapped to this
-    node's connector via the template.
+    For breakouts, creates one CablePath per fan-out lane mapped to this path_endpoint's connector via the template.
 
-    rebuild (bool) - Used to refresh paths where this node is not an endpoint.
+    Args:
+        rebuild (bool): If True, `rebuild_paths(path_endpoint)` will be called to refresh related paths as well.
     """
-    my_endpoint = getattr(node, "cable_termination", None)
-    if my_endpoint is None:
-        if rebuild:
-            rebuild_paths(node)
-        return
+    cable_to_cable_termination = getattr(path_endpoint, "cable_termination", None)
+    if cable_to_cable_termination is not None:
+        # path_endpoint is connected to a Cable.
+        cable = cable_to_cable_termination.cable
 
-    cable = my_endpoint.cable
+        if cable.cable_type_id and cable.cable_type.is_breakout:
+            # Breakout cable: fan out one CablePath per distinct peer-side connector mapped from this
+            # origin's connector. Multiple mapping entries that share a peer-side connector represent
+            # internal lanes terminating at the same far-end object, so they collapse to one path.
+            origin_side_key = "a_connector" if cable_to_cable_termination.cable_end == "A" else "b_connector"
+            peer_side_key = "b_connector" if cable_to_cable_termination.cable_end == "A" else "a_connector"
 
-    # Breakout cable: fan out one CablePath per distinct peer-side connector mapped from this
-    # origin's connector. Multiple mapping entries that share a peer-side connector represent
-    # internal lanes terminating at the same far-end object, so they collapse to one path.
-    if cable.cable_type_id and cable.cable_type.is_breakout:
-        origin_side_key = "a_connector" if my_endpoint.cable_end == "A" else "b_connector"
-        peer_side_key = "b_connector" if my_endpoint.cable_end == "A" else "a_connector"
+            seen_peer_connectors = set()
+            for mapping_entry in cable.cable_type.mapping:
+                if mapping_entry[origin_side_key] != cable_to_cable_termination.connector:
+                    continue
+                peer_connector = mapping_entry[peer_side_key]
+                if peer_connector in seen_peer_connectors:
+                    continue
+                seen_peer_connectors.add(peer_connector)
 
-        seen_peer_connectors = set()
-        for mapping_entry in cable.cable_type.mapping:
-            if mapping_entry[origin_side_key] != my_endpoint.connector:
-                continue
-            peer_connector = mapping_entry[peer_side_key]
-            if peer_connector in seen_peer_connectors:
-                continue
-            seen_peer_connectors.add(peer_connector)
-
-            # `node` is cabled (checked via `my_endpoint` above), so `from_origin` won't return None.
-            cable_path = CablePath.from_origin(node, peer_connector=peer_connector)
-            # Guard against re-entry: a parallel signal path (e.g. two `rebuild_paths` calls
-            # landing on the same origin) may have already inserted the row for this
-            # (origin, peer_connector). Check before saving so unrelated save failures still
-            # propagate instead of being swallowed by a catch-all.
-            already_exists = CablePath.objects.filter(
-                origin_type_id=cable_path.origin_type_id,
-                origin_id=cable_path.origin_id,
-                peer_connector=peer_connector,
-            ).exists()
-            if not already_exists:
+                cable_path = CablePath.from_origin(path_endpoint, peer_connector=peer_connector)
+                # Guard against re-entry: a parallel signal path (e.g. two `rebuild_paths` calls
+                # landing on the same origin) may have already inserted the row for this
+                # (origin, peer_connector). Check before saving so unrelated save failures still
+                # propagate instead of being swallowed by a catch-all.
+                if not CablePath.objects.filter(
+                    origin_type_id=cable_path.origin_type_id,
+                    origin_id=cable_path.origin_id,
+                    peer_connector=peer_connector,
+                ).exists():
+                    cable_path.save()
+        else:
+            # Standard cable or no breakout endpoint found — single path
+            cable_path = CablePath.from_origin(path_endpoint)
+            if (
+                cable_path
+                and not CablePath.objects.filter(
+                    origin_type_id=cable_path.origin_type_id,
+                    origin_id=cable_path.origin_id,
+                    peer_connector=cable_path.peer_connector,
+                ).exists()
+            ):
                 cable_path.save()
 
-        if rebuild:
-            rebuild_paths(node)
-        return
-
-    # Standard cable or no breakout endpoint found — single path
-    cable_path = CablePath.from_origin(node)
-    if cable_path:
-        try:
-            cable_path.save()
-        except Exception as e:
-            print(node, node.pk)
-            raise e
     if rebuild:
-        rebuild_paths(node)
+        rebuild_paths(path_endpoint)
 
 
-def rebuild_paths(obj):
+def rebuild_paths(obj: Cable | CableTermination | CableToCableTermination):
     """
     Rebuild all CablePaths affected by a change to the specified path node.
 
     Accepted input types and how each is interpreted:
 
-    - **`Cable`** — rebuild every path that touches this cable. Origins are collected from
-      three sources:
+    - `Cable`: rebuild every path that touches this cable. Origins are collected from three sources:
+
         * Existing CablePaths whose `path` JSON contains the cable.
-        * Existing CablePaths whose `path` JSON contains any termination on the cable (catches
-          partial paths that end *at* a termination but don't yet cross the cable — needed
-          when a newly-added cable extends a previously-stranded path).
-        * The cable's PathEndpoint terminations themselves (seeds for newly-cabled
-          terminations that don't yet have any path row).
+        * Existing CablePaths whose `path` JSON contains any termination on the cable
+          (catches partial paths that end *at* a termination but don't yet cross the cable;
+          needed when a newly-added cable extends a previously-incomplete path).
+        * The cable's PathEndpoint terminations themselves
+          (seeds for newly-cabled terminations that don't yet have any path row).
+
       All affected paths are deleted and rebuilt from the collected origins.
-    - **`CableToCableTermination`** — resolved to its parent cable; same semantics as `Cable`.
-      Used by the `post_save`/`post_delete` signal handlers on the join model so any row
-      change (form, REST API, ORM, shell, job) automatically refreshes affected paths.
-    - **`CableTermination` subclass** (Interface, ConsolePort, FrontPort, RearPort, PowerFeed,
-      PowerOutlet, PowerPort, ConsoleServerPort, CircuitTermination) — rebuild only paths
-      currently *traversing* this node, using each path's existing origin. No fresh origin
-      seeding from the cable's other terminations, since the caller is signaling "this
+
+    - `CableToCableTermination`: resolved to its parent cable; same semantics as `Cable`.
+      Used by the `post_save`/`post_delete` signal handlers for CableToCableTermination.
+
+    - `CableTermination`: rebuild only paths currently *traversing* this node, using each path's existing origin.
+      No fresh origin seeding from the cable's other terminations, since the caller is signaling "this
       specific node was touched" rather than "this whole cable was touched." Useful when
       something happens to a termination that doesn't (yet) involve modifying any
       CableToCableTermination row.
@@ -177,17 +176,6 @@ def rebuild_paths(obj):
             create_cablepath(origin, rebuild=False)
 
 
-# CableToCableTermination → CablePath auto-rebuild plumbing
-#
-# Any row INSERT/UPDATE/DELETE on the join table triggers a `rebuild_paths(cable)` for the affected
-# cable, via the signal handler below. ORM/REST/form/job/shell callers all get path rebuilds for
-# free without remembering to call `rebuild_paths` themselves.
-#
-# Bulk row-replacement flows (e.g. CableForm._save_connection_terminations, REST API termination
-# updates) can use the `defer_cable_path_rebuilds()` context manager to coalesce per-row signal
-# fires into a single per-cable flush at context exit. Not a public-facing API — apps doing
-# normal one-off ORM modifications don't need it.
-
 _batch_state = threading.local()
 
 
@@ -197,10 +185,13 @@ def _batching_active():
 
 @contextlib.contextmanager
 def defer_cable_path_rebuilds():
-    """Coalesce CableToCableTermination signal-driven path rebuilds into one flush per affected
-    cable at context exit, inside a transaction so the row changes and the resulting rebuild
-    commit (or roll back) as a unit. Nestable: nested entries share the dirty set and only the
-    outermost exit fires the flush.
+    """
+    Performance/atomicity contextmanager for use when making multiple CableToCableTermination table updates.
+
+    Coalesce CableToCableTermination signal-driven CablePath rebuilds into one flush per affected cable at context exit,
+    inside a transaction so the row changes and the resulting rebuild commit (or roll back) as a unit.
+
+    Nestable: nested entries share the dirty set and only the outermost exit fires the flush.
     """
     _batch_state.depth = getattr(_batch_state, "depth", 0) + 1
     if _batch_state.depth == 1:
@@ -224,11 +215,11 @@ def defer_cable_path_rebuilds():
 
 @receiver(post_save, sender=CableToCableTermination)
 @receiver(post_delete, sender=CableToCableTermination)
-def _rebuild_paths_on_join_change(sender, instance, **kwargs):
-    """Rebuild affected CablePaths when a CableToCableTermination row changes.
+def rebuild_paths_on_join_change(sender, instance, **kwargs):
+    """
+    Rebuild affected CablePaths when a CableToCableTermination row changes or is deleted.
 
-    Within a `defer_cable_path_rebuilds()` block, just record the cable as dirty; the outer
-    context flushes once on exit.
+    Within a `defer_cable_path_rebuilds()`, just record the cable as dirty; the outer context flushes once on exit.
     """
     if _batching_active():
         _batch_state.dirty_cables.add(instance.cable_id)
@@ -378,20 +369,6 @@ def clear_virtualchassis_members(instance, **kwargs):
         device.vc_priority = None
         device.save()
 
-
-#
-# Cables
-#
-
-
-# Cable deletion handling is now driven entirely by the `CableToCableTermination` post_delete
-# signal: the cascade-delete fires `_rebuild_paths_on_join_change` for each join row, which
-# rebuilds the affected paths. No bespoke Cable pre_delete handler is needed.
-
-
-# Termination object deletion is handled implicitly: deleting an Interface (or any other
-# CableTermination subclass) CASCADE-deletes the join row via its OneToOneField, which fires
-# `_rebuild_paths_on_join_change` to rebuild the affected paths. The Cable itself survives.
 
 #
 # Interface tagged VLAMs
