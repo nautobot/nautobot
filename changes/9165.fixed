@@ -1,0 +1,2 @@
+Fixed `invoke lint --fix` to continue running in the event of a linting failure.
+Removed proper name fix from the markdownlint fix command.
