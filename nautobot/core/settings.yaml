@@ -1490,13 +1490,13 @@ properties:
   NAUTOBOT_EDITION:
     default: "community"
     description: >-
-      The installed Nautobot edition.
+      The installed Nautobot edition. This is a deploy-time setting only and cannot be
+      changed at runtime through the admin configuration UI.
     enum:
     - "community"
     - "professional"
     - "enterprise"
     environment_variable: "NAUTOBOT_EDITION"
-    is_constance_config: true
     type: "string"
     version_added: "3.2.0"
   NAUTOBOT_ROOT:

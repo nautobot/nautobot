@@ -105,8 +105,9 @@ if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UN
 
 # The Nautobot edition ('community', 'professional', or 'enterprise'), used to determine
 # edition-specific branding such as the favicon when no custom branding has been configured.
-if "NAUTOBOT_EDITION" in os.environ and os.environ["NAUTOBOT_EDITION"] != "":
-    NAUTOBOT_EDITION = os.environ["NAUTOBOT_EDITION"]
+# This is a deploy-time setting only - it is intentionally NOT exposed as a Constance config
+# value, so it cannot be changed by users at runtime through the admin configuration UI.
+NAUTOBOT_EDITION = os.environ.get("NAUTOBOT_EDITION") or "professional"
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -799,17 +800,6 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
-    "nautobot_edition_field": [
-        "django.forms.fields.ChoiceField",
-        {
-            "widget": "nautobot.core.forms.widgets.StaticSelect2",
-            "choices": (
-                ("community", "Community"),
-                ("professional", "Professional"),
-                ("enterprise", "Enterprise"),
-            ),
-        },
-    ],
 }
 
 CONSTANCE_CONFIG = {
@@ -879,11 +869,6 @@ CONSTANCE_CONFIG = {
         help_text="Maximum number of objects that a user can list in one UI page or one API call.\n"
         "If set to 0, a user can retrieve an unlimited number of objects.",
         field_type=int,
-    ),
-    "NAUTOBOT_EDITION": ConstanceConfigItem(
-        default="community",
-        help_text="The installed Nautobot edition: community, professional, or enterprise.",
-        field_type="nautobot_edition_field",
     ),
     "PAGINATE_COUNT": ConstanceConfigItem(
         default=_PAGINATE_COUNT_DEFAULT,
@@ -997,7 +982,7 @@ CONSTANCE_CONFIG_FIELDSETS = {
         "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
     ],
     "Release Checking": ["RELEASE_CHECK_URL", "RELEASE_CHECK_TIMEOUT"],
-    "User Interface": ["NAUTOBOT_EDITION", "SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
+    "User Interface": ["SUPPORT_MESSAGE", "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"],
     "Debugging": ["ALLOW_REQUEST_PROFILING"],
 }
 
