@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.urls import reverse
 from django.utils.html import mark_safe
 from django.utils.http import urlencode
 from rest_framework.decorators import action
@@ -9,10 +10,21 @@ from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views import generic
+from nautobot.core.views.mixins import (
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectDetailViewMixin,
+    ObjectListViewMixin,
+    ObjectNotesViewMixin,
+)
 from nautobot.core.views.utils import common_detail_view_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.tables import DeviceTable
 from nautobot.dcim.utils import render_software_version_and_image_files
+from nautobot.dcim.views import ComponentCreateViewMixin
 from nautobot.extras.models import ConfigContext
 from nautobot.ipam.tables import InterfaceIPAddressTable, InterfaceVLANTable, ServiceTable, VRFDeviceAssignmentTable
 from nautobot.ipam.utils import render_ip_with_nat
@@ -302,95 +314,144 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
 #
 
 
-class VMInterfaceListView(generic.ObjectListView):
+class VMInterfaceUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectChangeLogViewMixin,
+    ObjectNotesViewMixin,
+):
     queryset = VMInterface.objects.all()
-    filterset = filters.VMInterfaceFilterSet
-    filterset_form = forms.VMInterfaceFilterForm
-    table = tables.VMInterfaceTable
+    filterset_class = filters.VMInterfaceFilterSet
+    filterset_form_class = forms.VMInterfaceFilterForm
+    table_class = tables.VMInterfaceTable
+    serializer_class = serializers.VMInterfaceSerializer
+    form_class = forms.VMInterfaceForm
+    create_form_class = forms.VMInterfaceCreateForm
+    bulk_update_form_class = forms.VMInterfaceBulkEditForm
     action_buttons = ("export",)
 
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve" and instance is not None:
+            # Get assigned IP addresses
+            context["ipaddress_table"] = InterfaceIPAddressTable(
+                data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
+                orderable=False,
+            )
+            # Get child interfaces
+            context["child_interfaces_table"] = tables.VMInterfaceTable(
+                instance.child_interfaces.restrict(request.user, "view"),
+                orderable=False,
+            )
+            # Equivalent to exclude=("virtual_machine",):
+            context["child_interfaces_table"].columns.hide("virtual_machine")
+            # Get assigned VLANs and annotate whether each is tagged or untagged
+            vlans = []
+            if instance.untagged_vlan is not None:
+                vlans.append(instance.untagged_vlan)
+                vlans[0].tagged = False
+            for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
+                vlan.tagged = True
+                vlans.append(vlan)
+            context["vlan_table"] = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+        return context
 
-class VMInterfaceView(generic.ObjectView):
-    queryset = VMInterface.objects.all()
+    class ChildInterfacesTablePanel(object_detail.ObjectsTablePanel):
+        """Table panel whose right-aligned "Add" button targets the VM interface create form with the
+        parent VM and parent interface pre-filled.
 
-    def get_extra_context(self, request, instance):
-        # Get assigned IP addresses
-        ipaddress_table = InterfaceIPAddressTable(
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
-            orderable=False,
-        )
+        The default add button can only pass a single `{field}={obj.pk}` param, but a child interface
+        needs both `virtual_machine` (from the parent VM) and `parent_interface` (the interface being
+        viewed). Overriding `_get_table_add_url` lets the native (right-side) add button carry both.
+        """
 
-        # Get child interfaces
-        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-        child_interfaces_tables = tables.VMInterfaceTable(
-            child_interfaces, orderable=False, exclude=("virtual_machine",)
-        )
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("virtualization.add_vminterface"):
+                return None
+            instance = object_detail.get_obj_from_context(context)
+            return_url = context.get("return_url", instance.get_absolute_url())
+            return (
+                reverse("virtualization:vminterface_add")
+                + "?"
+                + urlencode(
+                    {
+                        "virtual_machine": instance.virtual_machine.pk,
+                        "parent_interface": instance.pk,
+                        "return_url": return_url,
+                    }
+                )
+            )
 
-        # Get assigned VLANs and annotate whether each is tagged or untagged
-        vlans = []
-        if instance.untagged_vlan is not None:
-            vlans.append(instance.untagged_vlan)
-            vlans[0].tagged = False
+    class IPAddressesTablePanel(object_detail.ObjectsTablePanel):
+        """Table panel whose right-aligned "Add" button opens the IP address create form pre-assigned to
+        this VM interface.
 
-        for vlan in instance.tagged_vlans.restrict(request.user).select_related("vlan_group", "tenant", "role"):
-            vlan.tagged = True
-            vlans.append(vlan)
-        vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+        Uses the `?vminterface=<pk>` param the IP address edit view expects (singular, and distinct from
+        the `vm_interfaces` list filter used for the "view all" link).
+        """
 
-        return {
-            "ipaddress_table": ipaddress_table,
-            "child_interfaces_table": child_interfaces_tables,
-            "vlan_table": vlan_table,
-            **super().get_extra_context(request, instance),
-        }
+        def _get_table_add_url(self, context):
+            request = context["request"]
+            if not request.user.has_perm("ipam.add_ipaddress"):
+                return None
+            instance = object_detail.get_obj_from_context(context)
+            return_url = context.get("return_url", instance.get_absolute_url())
+            return (
+                reverse("ipam:ipaddress_add") + "?" + urlencode({"vminterface": instance.pk, "return_url": return_url})
+            )
 
-
-class VMInterfaceCreateView(generic.ComponentCreateView):
-    queryset = VMInterface.objects.all()
-    form = forms.VMInterfaceCreateForm
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/virtualmachine_component_add.html"
-
-
-class VMInterfaceEditView(generic.ObjectEditView):
-    queryset = VMInterface.objects.all()
-    model_form = forms.VMInterfaceForm
-    template_name = "virtualization/vminterface_edit.html"
-
-
-class VMInterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = VMInterface.objects.all()
-    template_name = "virtualization/virtual_machine_vminterface_delete.html"
-
-
-class VMInterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-
-
-class VMInterfaceBulkEditView(generic.BulkEditView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    form = forms.VMInterfaceBulkEditForm
-    filterset = filters.VMInterfaceFilterSet
-
-
-class VMInterfaceBulkRenameView(generic.BulkRenameView):
-    queryset = VMInterface.objects.all()
-    form = forms.VMInterfaceBulkRenameForm
-
-    def get_selected_objects_parents_name(self, selected_objects):
-        selected_object = selected_objects.first()
-        if selected_object:
-            return selected_object.virtual_machine.name
-        return ""
-
-
-class VMInterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = VMInterface.objects.all()
-    table = tables.VMInterfaceTable
-    template_name = "virtualization/vminterface_bulk_delete.html"
-    filterset = filters.VMInterfaceFilterSet
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=[
+            object_detail.ObjectFieldsPanel(
+                label="Interface",
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                key_transforms={
+                    "mode": "802.1Q Mode",
+                    "vrf": "VRF",
+                },
+                exclude_fields=["untagged_vlan"],
+            ),
+            # IP addresses
+            IPAddressesTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=300,
+                context_table_key="ipaddress_table",
+                # The right-aligned Add button is built by the overridden `_get_table_add_url` (uses the
+                # singular `vminterface` param); `related_field_name` below is only for the "view all" link.
+                related_list_url_name="ipam:ipaddress_list",
+                related_field_name="vm_interfaces",
+            ),
+            # Tagged + untagged VLANs. Per-row edit lives in the table's actions column (see
+            # InterfaceVLANTable); a VLAN isn't created from an interface, so no Add button here.
+            object_detail.ObjectsTablePanel(
+                section=SectionChoices.FULL_WIDTH,
+                weight=400,
+                context_table_key="vlan_table",
+                add_button_route=None,  # VLANs aren't added from here; hide the default Add button
+                # "View all" links to the VLAN list filtered by this VM interface (tagged or untagged),
+                # using the `vm_interfaces` filter added to VLANFilterSet.
+                related_list_url_name="ipam:vlan_list",
+                related_field_name="vm_interfaces",
+            ),
+            ChildInterfacesTablePanel(
+                table_title="Child Interfaces",
+                section=SectionChoices.FULL_WIDTH,
+                weight=500,
+                context_table_key="child_interfaces_table",
+                # The right-aligned Add button is built by the overridden `_get_table_add_url`, so it
+                # carries both `virtual_machine` and `parent_interface`.
+                related_list_url_name="virtualization:vminterface_list",
+                related_field_name="parent_interface",
+            ),
+        ]
+    )
 
 
 #

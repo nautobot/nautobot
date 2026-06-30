@@ -809,6 +809,7 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
     address = tables.TemplateColumn(template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address")
     # vrf = tables.TemplateColumn(template_code=VRF_LINK, verbose_name="VRF")
     tenant = TenantColumn()
+    actions = ButtonsColumn(IPAddress)
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -1045,6 +1046,9 @@ class InterfaceVLANTable(StatusTableMixin, RoleTableMixin, BaseTable):
         url_params={"vlans": "pk"},
         verbose_name="Locations",
     )
+    # Per-row edit of the VLAN object (edit only -- a delete here would remove the global VLAN, not the
+    # interface assignment). Shown on both the device Interface and VM interface detail VLAN panels.
+    actions = ButtonsColumn(VLAN)
 
     class Meta(BaseTable.Meta):
         model = VLAN

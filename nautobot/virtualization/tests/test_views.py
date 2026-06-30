@@ -385,3 +385,28 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         data = self.bulk_create_data.copy()
         data["name_pattern"] = "BRIDGE"
         return data
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_includes_untagged_and_tagged_vlans_in_vlan_table(self):
+        """
+        Cover both branches of VMInterfaceUIViewSet.get_extra_context:
+          - `if instance.untagged_vlan is not None:` body
+          - `for vlan in instance.tagged_vlans.restrict(...)...:` body
+        """
+        interface = VMInterface.objects.filter(virtual_machine__name="Virtual Machine 1").first()
+
+        # Use VLANs created in setUpTestData at "Location 1" so the
+        # `tagged_vlans` location-match validation passes.
+        location_vlans = VLAN.objects.filter(location__name="Location 1")
+        untagged = location_vlans.get(name="VLAN1")
+        tagged = location_vlans.get(name="VLAN101")
+
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.untagged_vlan = untagged
+        interface.save()
+        interface.tagged_vlans.set([tagged])
+
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, untagged.name)
+        self.assertBodyContains(response, tagged.name)

@@ -449,6 +449,8 @@ class FilterTestCases:
 
         def test_tenant(self):
             tenants = list(models.Tenant.objects.filter(**{f"{self.tenancy_related_name}__isnull": False}))[:2]
+            if len(tenants) < 2:
+                self.skipTest("Need at least 2 tenants with related objects to test the tenant filter")
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
             self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
@@ -464,6 +466,8 @@ class FilterTestCases:
                     tenants__isnull=False, **{f"tenants__{self.tenancy_related_name}__isnull": False}
                 ).distinct()
             )[:2]
+            if len(tenant_groups) < 2:
+                self.skipTest("Need at least 2 tenant groups with related objects to test the tenant group filter")
             tenant_groups_including_children = []
             for tenant_group in tenant_groups:
                 tenant_groups_including_children += tenant_group.descendants(include_self=True)

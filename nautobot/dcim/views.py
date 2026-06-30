@@ -2228,17 +2228,41 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
     create_template_name = "dcim/device_component_add.html"
 
     def get_component_create_form(self, request, data=None):
-        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields)."""
-        return self.create_form_class(  # pylint: disable=not-callable
+        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields).
+
+        The "extras" fields (custom fields, relationships, object note, dynamic groups) are declared
+        on the per-instance model form, not on the create form. Borrow them onto the create form so
+        they render (and validate) on the single bulk-create form, without redeclaring them on every
+        *CreateForm and without passing a separate `model_form` to the template.
+        """
+        create_form = self.create_form_class(  # pylint: disable=not-callable
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
+        # Pass `data` through: some model forms (e.g. VMInterfaceForm) resolve a required parent
+        # (virtual_machine) in __init__ from the bound data / GET initial, so instantiating with no
+        # data at all would raise DoesNotExist.
+        model_form = self.get_component_model_form(request, data=data)
+        # Carry the grouping metadata so the extras template can render custom-field/relationship panels.
+        for attr in ("custom_fields", "relationships"):
+            if not getattr(create_form, attr, None):
+                setattr(create_form, attr, list(getattr(model_form, attr, [])))
+        extras_field_names = [
+            *getattr(model_form, "custom_fields", []),
+            *getattr(model_form, "relationships", []),
+            "object_note",
+            "dynamic_groups",
+        ]
+        for name in extras_field_names:
+            if name in model_form.fields and name not in create_form.fields:
+                create_form.fields[name] = model_form.fields[name]
+        return create_form
 
     def get_selected_objects_parents_name(self, selected_objects):
         """Return the display name of the parent object that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent_attrs = ("device", "device_type", "module", "module_type")
+            parent_attrs = ("device", "device_type", "module", "module_type", "virtual_machine")
             for attr in parent_attrs:
                 parent = getattr(selected_object, attr, None)
                 if parent:
@@ -2276,7 +2300,23 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             return self.render_component_create_response(request, create_form)
 
         new_components = []
-        data = deepcopy(request.POST)
+        data = deepcopy(create_form.cleaned_data)
+
+        # Propagate "extras" fields (custom fields, relationships, object note, dynamic groups) from
+        # the POST into the per-instance form data. They aren't part of the pattern form's
+        # cleaned_data, so without this each created component would lose those values.
+        model_form = self.get_component_model_form(request, data=request.POST)
+        extras_field_names = set(getattr(model_form, "custom_fields", [])) | set(
+            getattr(model_form, "relationships", [])
+        )
+        extras_field_names |= {"object_note", "dynamic_groups"}.intersection(model_form.fields)
+        for field_name in extras_field_names:
+            if field_name not in request.POST:
+                continue
+            if getattr(model_form.fields[field_name].widget, "allow_multiple_selected", False):
+                data[field_name] = request.POST.getlist(field_name)
+            else:
+                data[field_name] = request.POST.get(field_name)
 
         # Support for bulk creation using name_pattern and label_pattern
         names = create_form.cleaned_data["name_pattern"]
@@ -2297,11 +2337,16 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                 new_components.append(component_form)
             else:
                 for field, errors in component_form.errors.as_data().items():
-                    # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
+                    # Map the child form's name/label errors onto name_pattern/label_pattern.
                     parent_field = {"name": "name_pattern", "label": "label_pattern"}.get(field, field)
                     for e in errors:
                         err_str = ", ".join(e)
-                        create_form.add_error(parent_field, f"{name}: {err_str}")
+                        if parent_field not in create_form.fields:
+                            # Field is on the model form but not the create form (e.g. namespace/address):
+                            # surface it as a non-field error so add_error() doesn't raise "has no field named ...".
+                            create_form.add_error(None, f"{name}: {field}: {err_str}")
+                        else:
+                            create_form.add_error(parent_field, f"{name}: {err_str}")
 
         if create_form.errors:
             return self.render_component_create_response(request, create_form)
@@ -2337,14 +2382,11 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                 request, data=request.POST if request.method == "POST" else None
             )
 
-        model_form = self.get_component_model_form(request, data=request.POST if request.method == "POST" else None)
-
         return Response(
             {
                 "template": self.create_template_name,
                 "component_type": self.queryset.model._meta.verbose_name,
                 "form": create_form,
-                "model_form": model_form,
                 "return_url": self.get_return_url(request),
             },
         )

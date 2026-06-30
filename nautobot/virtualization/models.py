@@ -247,6 +247,10 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
     def __str__(self):
         return self.name
 
+    @property
+    def display(self):
+        return self.name
+
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a VM assigned to the same Cluster and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
