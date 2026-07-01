@@ -592,7 +592,7 @@ class LiveSearchView(AccessMixin, View):
             return render(
                 request,
                 "components/htmx/live_search_results.html",
-                {"table": table},
+                {"href": f"/{path}?{request.GET.urlencode()}", "table": table},
             )
 
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
