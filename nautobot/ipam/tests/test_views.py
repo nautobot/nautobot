@@ -548,6 +548,455 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         for child in pfx_with_children.children.all():
             self.assertBodyContains(response, str(child.pk))
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_exclusive_range(self):
+        """Exclusive IPAddressRange: yellow row, available buttons only before/after, no nested interior."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.3",
+            end_address="10.0.0.4",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=True,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # The range row is present and links to the range's detail view
+        self.assertIn(ip_range.get_absolute_url(), content)
+
+        # Extract the <tr>...</tr> block from `content` that contains ip address range."""
+        idx = content.index(f'data-pk="{ip_range.pk}"')
+        start = content.rindex("<tr", 0, idx)
+        end = content.index("</tr>", idx) + len("</tr>")
+        range_row = content[start:end]
+        self.assertIn("table-warning", range_row)
+        self.assertNotIn("table-info", range_row)
+        self.assertInHTML(
+            f'<td class="nb-tree-element text-nowrap" data-pk="{ip_range.pk}">'
+            f'<a href="{ip_range.get_absolute_url()}">{ip_range}</a>'
+            f"</td>",
+            range_row,
+        )
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+
+        # Available BEFORE the range starts at .1 (first usable after network .0)
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/29", content)
+
+        # Available AFTER the range starts at .5 (first free past the excluded .3-.4)
+        self.assertIn(f"{add_ip_path}?address=10.0.0.5/29", content)
+
+        # Two available buttons total (before + after the range), none nested
+        self.assertInHTML(
+            f'<a href="{add_ip_path}?address=10.0.0.1/29&namespace={self.namespace.pk}" '
+            f'class="btn btn-xs btn-success">2 IPs available</a>',
+            content,
+        )
+        self.assertInHTML(
+            f'<a href="{add_ip_path}?address=10.0.0.5/29&namespace={self.namespace.pk}" '
+            f'class="btn btn-xs btn-success">2 IPs available</a>',
+            content,
+        )
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=2)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_address_outside_exclusive_range_not_nested(self):
+        """An IP created from the 'after' button (outside an exclusive range) renders as a normal,
+        un-nested list row — it must NOT be pulled into the range's subtree."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.3",
+            end_address="10.0.0.4",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=True,
+        )
+        # Simulate the user clicking the "after the range" available button (.5) and creating that IP.
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        addr = IPAddress.objects.create(
+            address="10.0.0.5/29",
+            namespace=self.namespace,
+            status=ip_status,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # Range row still yellow and present
+        self.assertIn(ip_range.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-warning")
+
+        # The created address renders as its own normal row, linking to its detail view
+        self.assertIn(addr.get_absolute_url(), content)
+        self.assertInHTML(
+            f'<a href="{addr.get_absolute_url()}" id="copy_{addr.id}">{addr.address}</a>',
+            content,
+        )
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+        # Before the range: .1 (2 available)
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/29", content)
+        # After the new address .5, the remaining available starts at .6
+        self.assertIn(f"{add_ip_path}?address=10.0.0.6/29", content)
+
+        # Two available buttons (before .1 and after-the-address .6); the address is NOT a button
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=2)
+
+        # the address is NOT nested — no subtree indentation anywhere
+        # (exclusive range has no interior, and .5 is outside its span)
+        self.assertBodyContains(response, "nb-subtree", count=0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_non_exclusive_range(self):
+        """Non-exclusive IPAddressRange: blue row, nested interior button, plus before/after buttons."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.3",
+            end_address="10.0.0.4",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # The range row is present, blue (table-info), and links to the range's detail view
+        self.assertIn(ip_range.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")
+        self.assertInHTML(
+            f'<td class="nb-tree-element text-nowrap" data-pk="{ip_range.pk}">'
+            f'<a href="{ip_range.get_absolute_url()}">{ip_range}</a>'
+            f"</td>",
+            content,
+        )
+        # Non-exclusive must NOT be yellow
+        self.assertBodyContains(response, "table-warning", count=0)
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+
+        # Available BEFORE the range: .1
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/29", content)
+        # Nested interior INSIDE the range: .3
+        self.assertIn(f"{add_ip_path}?address=10.0.0.3/29", content)
+        # Available AFTER the range: .5
+        self.assertIn(f"{add_ip_path}?address=10.0.0.5/29", content)
+
+        # Three available buttons total (before + nested + after)
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=3)
+
+        # The nested interior button is indented (nb-subtree); exactly one nb-subtree span
+        self.assertBodyContains(response, '<span class="nb-subtree"></span>', html=True, count=1)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_non_exclusive_range_at_end(self):
+        """Non-exclusive range ending at the last usable address: nested + before button, no after."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.4",
+            end_address="10.0.0.6",  # .6 is the last usable in /29
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(ip_range.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+        # Before the range: .1
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/29", content)
+        # Nested interior: .4
+        self.assertIn(f"{add_ip_path}?address=10.0.0.4/29", content)
+        # No "after" button — range touches the end of the pool
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=2)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_non_exclusive_range_at_start(self):
+        """Non-exclusive range starting at the first usable address: nested + after button, no before."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.1",  # first usable in /29
+            end_address="10.0.0.3",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(ip_range.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+        # Nested interior: .1
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/29", content)
+        # After the range: .4
+        self.assertIn(f"{add_ip_path}?address=10.0.0.4/29", content)
+        # No "before" button — range touches the start of the pool
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=2)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_non_exclusive_range_fills_pool(self):
+        """Non-exclusive range covering the entire usable pool: only the nested button, no before/after."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.1",  # first usable
+            end_address="10.0.0.6",  # last usable
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertIn(ip_range.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+        # Only the nested interior button starting at .1
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/29", content)
+        # Exactly one available button (nested), no before/after
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=1)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_non_exclusive_range_with_two_addresses_and_gap(self):
+        """Non-exclusive range with an address at start_address, a gap, then another address:
+        two nested available buttons (the interior gaps), one button before and one after the range."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/28",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.5",
+            end_address="10.0.0.12",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        addr1 = IPAddress.objects.create(  # at start_address
+            address="10.0.0.5/28",
+            namespace=self.namespace,
+            status=ip_status,
+        )
+        addr2 = IPAddress.objects.create(  # after a gap of two (.6, .7)
+            address="10.0.0.8/28",
+            namespace=self.namespace,
+            status=ip_status,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # Range row is blue and present
+        self.assertIn(ip_range.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")
+
+        # Both addresses render and belong to the range (tooltip "Part of IP Range")
+        self.assertIn(addr1.get_absolute_url(), content)
+        self.assertIn(addr2.get_absolute_url(), content)
+
+        add_ip_path = reverse("ipam:ipaddress_add")
+        # Before the range: .1
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/28", content)
+        # First nested gap inside range: .6 (.6, .7 free)
+        self.assertIn(f"{add_ip_path}?address=10.0.0.6/28", content)
+        # Second nested gap inside range: .9 (.9-.12 free)
+        self.assertIn(f"{add_ip_path}?address=10.0.0.9/28", content)
+        # After the range: .13
+        self.assertIn(f"{add_ip_path}?address=10.0.0.13/28", content)
+
+        # Four available buttons total: before + two nested + after
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=4)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_mixed_ranges_show_and_hide_available(self):
+        """Combo: non-exclusive + exclusive ranges with buttons inside and outside.
+        Show Available => all buttons present; Hide Available => all buttons gone, ranges/addresses remain."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/27",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        non_excl = IPAddressRange.objects.create(
+            start_address="10.0.0.5",
+            end_address="10.0.0.10",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+        excl = IPAddressRange.objects.create(
+            start_address="10.0.0.20",
+            end_address="10.0.0.25",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=True,
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        addr = IPAddress.objects.create(  # inside the non-exclusive range
+            address="10.0.0.7/27",
+            namespace=self.namespace,
+            status=ip_status,
+        )
+
+        self.add_permissions("ipam.add_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        add_ip_path = reverse("ipam:ipaddress_add")
+
+        # ---------- SHOW AVAILABLE ----------
+        response = self.client.get(url)  # default show_available=true
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # Both range rows present, correct colors
+        self.assertIn(non_excl.get_absolute_url(), content)
+        self.assertIn(excl.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")  # non-exclusive blue
+        self.assertBodyContains(response, "table-warning")  # exclusive yellow
+
+        # Address inside non-exclusive renders
+        self.assertIn(addr.get_absolute_url(), content)
+
+        # Five available buttons at the expected start addresses
+        self.assertIn(f"{add_ip_path}?address=10.0.0.1/27", content)  # before non-excl
+        self.assertIn(f"{add_ip_path}?address=10.0.0.5/27", content)  # nested: .5,.6
+        self.assertIn(f"{add_ip_path}?address=10.0.0.8/27", content)  # nested: .8-.10
+        self.assertIn(f"{add_ip_path}?address=10.0.0.11/27", content)  # between ranges
+        self.assertIn(f"{add_ip_path}?address=10.0.0.26/27", content)  # after exclusive
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=5)
+
+        # ---------- HIDE AVAILABLE ----------
+        response = self.client.get(url + "?show_available=false")
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # Range rows and colors STILL present (ranges are real objects, not "available")
+        self.assertIn(non_excl.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-info")
+        self.assertIn(excl.get_absolute_url(), content)
+        self.assertBodyContains(response, "table-warning")
+
+        # Real address STILL present
+        self.assertIn(addr.get_absolute_url(), content)
+
+        # ALL available buttons gone — outer AND nested
+        self.assertBodyContains(response, "btn btn-xs btn-success", count=0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_table_pk_checkbox_only_for_ipaddresses(self):
+        """The bulk-select checkbox renders only for real IPAddress rows, not for IPRange or available rows."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.3",
+            end_address="10.0.0.4",
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+        ip_status = Status.objects.get_for_model(IPAddress).first()
+        addr = IPAddress.objects.create(
+            address="10.0.0.6/29",
+            namespace=self.namespace,
+            status=ip_status,
+        )
+
+        self.add_permissions("ipam.change_ipaddress", "ipam.delete_ipaddress")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertInHTML(
+            f'<input type="checkbox" name="pk" value="{addr.pk}" '
+            f'class="form-check-input nb-form-check-input-sm mt-2" />',
+            content,
+        )
+
+        # Real IPAddress row HAS a select checkbox carrying its pk
+        self.assertIn(f'name="pk" value="{addr.pk}"', content)
+
+        # Exactly one such checkbox — none for the IPRange row, none for available rows
+        self.assertBodyContains(response, 'name="pk" value=', count=1)
+
+        # The IPRange's pk never appears as a checkbox value
+        self.assertNotIn(f'name="pk" value="{ip_range.pk}"', content)
+
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
@@ -1322,6 +1771,85 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status_code=200,
         )
         self.assertFalse(IPAddressRange.objects.filter(start_host="192.0.2.60").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_shows_utilization_for_count_as_utilized(self):
+        """A count_as_utilized range renders a utilization bar in its detail view."""
+        ip_range = IPAddressRange.objects.create(
+            name="util-shown",
+            start_address="192.0.2.60",
+            end_address="192.0.2.65",
+            namespace=self.namespace,
+            status=self.statuses[0],
+            count_as_utilized=True,
+        )
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Utilization")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_utilization_for_exclusive(self):
+        """An exclusive range does not render the utilization row (per panel condition)."""
+        ip_range = IPAddressRange.objects.create(
+            name="util-hidden-exclusive",
+            start_address="192.0.2.70",
+            end_address="192.0.2.75",
+            namespace=self.namespace,
+            status=self.statuses[0],
+            count_as_utilized=True,
+            is_exclusive=True,
+        )
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn(b"Utilization", response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_shows_ip_table_for_non_exclusive(self):
+        """A non-exclusive range renders the inline IP Addresses table, listing contained IPs."""
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10
+        IPAddress.objects.create(address="192.0.2.3/24", namespace=self.namespace, status=self.prefix_status)
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "IP Addresses")
+        self.assertBodyContains(response, "192.0.2.3")
+
+    def test_detail_view_add_ip_button_with_permission(self):
+        """With ipam.add_ipaddress, the inline table renders an Add link prefilled into the range."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # non-exclusive, empty, first free = .1
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        add_url = reverse("ipam:ipaddress_add")
+        self.assertBodyContains(response, add_url)
+        self.assertBodyContains(response, f"namespace={ip_range.parent.namespace_id}")
+        self.assertBodyContains(response, "192.0.2.1")
+
+    def test_detail_view_no_add_button_without_add_permission(self):
+        """Without ipam.add_ipaddress, no Add IP Address link is rendered in the panel."""
+        self.add_permissions("ipam.view_ipaddressrange")  # view only
+        ip_range = self.ip_ranges[0]
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # add route should not appear as a link target for the inline table
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_add_button_when_range_is_full(self):
+        """If in range there is no any free address then button `Add` is not rendered."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10, nie-exclusive
+
+        for i in range(1, 11):
+            IPAddress.objects.create(
+                address=f"192.0.2.{i}/24",
+                namespace=self.namespace,
+                status=self.prefix_status,
+            )
+
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # If _get_table_add_url return None then address to add ipaddress shouldn't be rendered
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
 
 
 class VLANGroupTestCase(
