@@ -821,7 +821,8 @@ class GitTest(TransactionTestCase):
         self.assertTrue(repos, "expected a Git repo object to have been created")
         for repo in repos:
             # `repo` may be a GitRepo wrapper or a raw git.Repo; reach the underlying Git command object.
-            git_cmd = getattr(repo, "repo", repo).git
+            git_repo = repo.repo if isinstance(repo, GitRepo) else repo
+            git_cmd = git_repo.git
             for cmd in (git_cmd.cat_file_header, git_cmd.cat_file_all):
                 self.assertTrue(
                     cmd is None or cmd.proc is None or cmd.proc.poll() is not None,
