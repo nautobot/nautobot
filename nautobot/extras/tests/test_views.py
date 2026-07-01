@@ -2153,6 +2153,18 @@ class CustomFieldTestCase(
             "remove_content_types": [device_ct.pk],
         }
 
+    def test_customfield_description_rendered_as_markdown(self):
+        """The description field is rendered as Markdown on the CustomField detail view."""
+        self.add_permissions("extras.view_customfield")
+        custom_field = CustomField.objects.create(
+            key="markdown_description_cf",
+            label="Markdown Description CF",
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            description="**bold description**",
+        )
+        response = self.client.get(custom_field.get_absolute_url())
+        self.assertBodyContains(response, "<strong>bold description</strong>", html=True)
+
     def test_create_object_without_permission(self):
         # Can't have two CustomFields with the same "key"
         self.form_data = self.form_data.copy()

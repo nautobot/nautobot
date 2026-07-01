@@ -1380,6 +1380,7 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
                 exclude_fields=["content_types", "validation_minimum", "validation_maximum", "validation_regex"],
+                value_transforms={"description": [helpers.render_markdown, helpers.placeholder]},
             ),
             object_detail.DataTablePanel(
                 weight=200,
