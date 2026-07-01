@@ -1,0 +1,4 @@
+Changed `Cable.get_lanes()` and `Interface.get_breakout_lane()` to return `CableLane` and `BreakoutLane` dataclasses instead of dicts.
+Removed redundant tooltip from Cable breakout diagram.
+Made the termination labels in the Cable breakout diagram clickable, linking each connector to its connected termination and its parent.
+Refined rendering of breakout cables in trace SVG.
