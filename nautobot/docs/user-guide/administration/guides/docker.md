@@ -84,7 +84,7 @@ In addition to all tags described in the previous section, the following additio
 Nautobot requires a MySQL or PostgreSQL database and Redis instance before it will start. Because of this the quickest and easiest way to get Nautobot running is with [Docker Compose](https://docs.docker.com/compose/), which will install and configure PostgreSQL and Redis containers for you automatically.
 
 !!! tip
-    Whether you're using the Docker CLI, Docker Compose, or [Kubernetes](https://kubernetes.io/), in any case you'll want to set up appropriate [health checks](health-checks.md) for your containers.
+    Whether you're using the Docker CLI, Docker Compose, or [Kubernetes](https://kubernetes.io/), in any case you'll want to set up appropriate [health checks](../monitoring/health-checks.md) for your containers.
 
 ## Configuration
 
