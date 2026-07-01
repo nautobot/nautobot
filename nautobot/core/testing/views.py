@@ -1963,7 +1963,7 @@ class ViewTestCases:
             self.add_permissions("extras.view_jobresult")
             response = self.client.post(self._get_url("bulk_delete"), data)
             mock_enqueue_job.assert_called_once()
-            job_kwargs = mock_enqueue_job.call_args.kwargs
+            job_kwargs = mock_enqueue_job.call_args.kwargs["job_kwargs"]
             self.assertEqual(job_kwargs.get("pk_list", []), [str(pk) for pk in pk_list])
 
             self.assertRedirects(
