@@ -79,7 +79,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
-from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_FK_FIELDS
+from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_CABLE_COLUMN_FK_FIELDS
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import (
     generate_cable_breakout_mapping,
@@ -165,6 +165,8 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .svg.path_trace import CableTraceSVG
+from .termination_field_set import CableTerminationFieldSet
 from .utils import disconnect_termination
 
 logger = logging.getLogger(__name__)
@@ -2298,7 +2300,11 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             else:
                 for field, errors in component_form.errors.as_data().items():
                     # Assign errors on the child form's name/label field to name_pattern/label_pattern on the parent form
-                    parent_field = {"name": "name_pattern", "label": "label_pattern"}.get(field, field)
+                    parent_field = {
+                        "name": "name_pattern",
+                        "label": "label_pattern",
+                        "breakout_position": "breakout_position_pattern",
+                    }.get(field, field)
                     for e in errors:
                         err_str = ", ".join(e)
                         create_form.add_error(parent_field, f"{name}: {err_str}")
@@ -3342,8 +3348,11 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleInterfaceTable,
                         table_attribute="vc_interfaces",
                         order_by_fields=["_name"],
-                        prefetch_related_fields=Interface.cable_columns_prefetch_related_fields(),
                         select_related_fields=[*Interface.cable_columns_select_related_fields(), "lag"],
+                        # Unconditional prefetch (breakout-lane resolution for the always-on cable-status
+                        # row coloring); the `cable_peer` / `connection` column prefetches are applied
+                        # conditionally by the table itself when those columns are visible.
+                        prefetch_related_fields=Interface.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="interfaces",
                         enable_bulk_actions=True,
@@ -3371,7 +3380,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleFrontPortTable,
                         table_attribute="all_front_ports",
                         select_related_fields=[*FrontPort.cable_columns_select_related_fields(), "rear_port"],
-                        prefetch_related_fields=FrontPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="front_ports",
                         enable_bulk_actions=True,
@@ -3398,7 +3406,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleRearPortTable,
                         table_attribute="all_rear_ports",
                         select_related_fields=RearPort.cable_columns_select_related_fields(),
-                        prefetch_related_fields=RearPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="rear_ports",
                         enable_bulk_actions=True,
@@ -3423,7 +3430,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleConsolePortTable,
                         table_attribute="all_console_ports",
                         select_related_fields=ConsolePort.cable_columns_select_related_fields(),
-                        prefetch_related_fields=ConsolePort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="console_ports",
                         enable_bulk_actions=True,
@@ -3450,7 +3456,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModuleConsoleServerPortTable,
                         table_attribute="all_console_server_ports",
                         select_related_fields=ConsoleServerPort.cable_columns_select_related_fields(),
-                        prefetch_related_fields=ConsoleServerPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="console_server_ports",
                         enable_bulk_actions=True,
@@ -3477,7 +3482,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModulePowerPortTable,
                         table_attribute="all_power_ports",
                         select_related_fields=PowerPort.cable_columns_select_related_fields(),
-                        prefetch_related_fields=PowerPort.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="power_ports",
                         enable_bulk_actions=True,
@@ -3504,7 +3508,6 @@ class DeviceUIViewSet(NautobotUIViewSet):
                         table_class=tables.DeviceModulePowerOutletTable,
                         table_attribute="all_power_outlets",
                         select_related_fields=[*PowerOutlet.cable_columns_select_related_fields(), "power_port"],
-                        prefetch_related_fields=PowerOutlet.cable_columns_prefetch_related_fields(),
                         related_field_name="device",
                         tab_id="power_outlets",
                         enable_bulk_actions=True,
@@ -4664,11 +4667,22 @@ class PowerOutletUIViewSet(
     device_breadcrumb_url = "dcim:device_poweroutlets"
     module_breadcrumb_url = "dcim:module_poweroutlets"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:poweroutlet_trace",
+            ),
+            *get_connected_endpoint_panels("poweroutlet"),
+        )
+    )
 
 
 #
@@ -4685,6 +4699,9 @@ class InterfaceListView(generic.ObjectListView):
     filterset_form = forms.InterfaceFilterForm
     table = tables.InterfaceTable
     action_buttons = ("import", "export")
+    # Load `connection_toggles.js` so the per-row cable actions (mark connected/planned, detach)
+    # function in the list view.
+    template_name = "dcim/device_component_list.html"
 
 
 class InterfaceView(
@@ -4821,6 +4838,7 @@ class FrontPortListView(generic.ObjectListView):
     filterset_form = forms.FrontPortFilterForm
     table = tables.FrontPortTable
     action_buttons = ("import", "export")
+    template_name = "dcim/device_component_list.html"
 
 
 class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
@@ -4889,6 +4907,7 @@ class RearPortListView(generic.ObjectListView):
     filterset_form = forms.RearPortFilterForm
     table = tables.RearPortTable
     action_buttons = ("import", "export")
+    template_name = "dcim/device_component_list.html"
 
 
 class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
@@ -5507,9 +5526,10 @@ class CableUIViewSet(NautobotUIViewSet):
     queryset = Cable.objects.select_related("cable_type").prefetch_related(
         Prefetch(
             "terminations",
-            # `select_related`-ing the per-type FK columns lets the table's `terminations_a` /
-            # `terminations_b` columns render every FK without an extra query per row.
-            queryset=CableToCableTermination.objects.select_related(*TERMINATION_FK_FIELDS),
+            # `select_related`-ing the per-type FK columns (plus each termination's parent and the
+            # FKs its display string needs) lets the table's `terminations_a` / `terminations_b` and
+            # `*_parent` columns render every FK without an extra query per row.
+            queryset=CableToCableTermination.objects.select_related(*TERMINATION_CABLE_COLUMN_FK_FIELDS),
         ),
     )
     action_buttons = ("add", "import", "export")
@@ -5573,8 +5593,6 @@ class CableUIViewSet(NautobotUIViewSet):
         The current cable's pk is not needed since the response only depends on the selected
         termination type, side, and connector — not on any existing cable state.
         """
-        from nautobot.dcim.termination_field_set import CableTerminationFieldSet
-
         connector = request.GET.get("connector", "1")
         side = request.GET.get("side", "a")
         prefix = f"{side}_conn_{connector}"
@@ -5674,8 +5692,6 @@ class PathTraceView(generic.ObjectView):
         trace_svg = ""
         subinterface_origin = None
         if path is not None and getattr(path, "origin", None) is not None:
-            from nautobot.dcim.svg.path_trace import CableTraceSVG
-
             # When a single lane of a breakout trunk was selected, originate the trace from the
             # trunk's child (sub)interface mapped to that lane so the SVG renders it atop the trunk.
             subinterface_origin = self._breakout_subinterface_origin(path) if cablepath_id is not None else None

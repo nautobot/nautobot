@@ -1472,6 +1472,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
                             field = "name_pattern"
                         elif field == "label":
                             field = "label_pattern"
+                        elif field == "breakout_position":
+                            field = "breakout_position_pattern"
                         for e in errors:
                             err_str = ", ".join(e)
                             form.add_error(field, f"{name}: {err_str}")
