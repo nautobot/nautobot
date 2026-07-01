@@ -7,9 +7,10 @@ Breakout cables are multi-lane cable assemblies where a single physical cable sp
 - A **400G QSFP-DD** port broken out into **4×100G SFP** lanes, each connecting to a different leaf switch
 - A **40GE** interface broken out into **4×10GE** lanes terminating on four separate server NICs
 - An **MPO-12** trunk fanning out to **twelve individual LC duplex** connections at a fiber distribution frame
-- Two **MPO-8** trunks (4 lanes each) fanning out to **8 individual legs** across multiple devices
 
 In Nautobot, a breakout cable is simply a [cable](../core-data-model/dcim/cable.md) with a breakout [cable type](../core-data-model/dcim/cabletype.md) assigned. Standard cables and breakout cables appear in the same cable list - the breakout behavior is unlocked by the assigned cable type.
+
+While not a "breakout" cable per se, a cable type could also be used with a cable that is a **single MPO connection on both sides** containing 8 lanes. (Note: you could also use a standard cable without lanes to have the same effect when connecting a rear port to another rear port).
 
 ## Terminology
 
