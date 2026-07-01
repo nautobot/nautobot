@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
 from nautobot.dcim.utils import (
+    build_connector_row_layout,
     disconnect_termination,
     generate_cable_breakout_mapping,
     validate_cable_breakout_mapping,
@@ -177,3 +178,47 @@ class ValidateCableBreakoutMappingTestCase(TestCase):
         self.assertEqual(a_connectors, 1)
         self.assertEqual(b_connectors, 1)
         self.assertEqual(total_lanes, 2)
+
+
+class BuildConnectorRowLayoutTestCase(TestCase):
+    """Test the build_connector_row_layout utility function."""
+
+    @staticmethod
+    def _mapping(pairs):
+        return [{"a_connector": a, "b_connector": b} for a, b in pairs]
+
+    @staticmethod
+    def _spans(rows):
+        """Reduce rows to (a_connector, a_rowspan, b_connector, b_rowspan) tuples for assertions."""
+        return [(r["a_connector"], r["a_rowspan"], r["b_connector"], r["b_rowspan"]) for r in rows]
+
+    def test_1xn_breakout(self):
+        # A single A connector fans out to four B connectors: A1 spans all four rows.
+        rows = build_connector_row_layout(self._mapping([(1, 1), (1, 2), (1, 3), (1, 4)]))
+        self.assertEqual(
+            self._spans(rows),
+            [(1, 4, 1, 1), (None, 0, 2, 1), (None, 0, 3, 1), (None, 0, 4, 1)],
+        )
+
+    def test_nx1_reverse(self):
+        rows = build_connector_row_layout(self._mapping([(1, 1), (2, 1), (3, 1), (4, 1)]))
+        self.assertEqual(
+            self._spans(rows),
+            [(1, 1, 1, 4), (2, 1, None, 0), (3, 1, None, 0), (4, 1, None, 0)],
+        )
+
+    def test_straight_2x2(self):
+        rows = build_connector_row_layout(self._mapping([(1, 1), (2, 2)]))
+        self.assertEqual(self._spans(rows), [(1, 1, 1, 1), (2, 1, 2, 1)])
+
+    def test_shuffled_2x2_mesh(self):
+        # Polarity-shuffled 2x2: each A connector wires to BOTH B connectors (a mesh). The layout
+        # must stay a structurally valid 2-row table — never overlapping rowspans — even though no
+        # rowspan grouping can represent the crossings.
+        rows = build_connector_row_layout(
+            self._mapping([(1, 1), (1, 1), (1, 2), (1, 2), (2, 1), (2, 1), (2, 2), (2, 2)])
+        )
+        self.assertEqual(self._spans(rows), [(1, 1, 1, 1), (2, 1, 2, 1)])
+        # Every column is fully tiled: rowspans on each side sum to the row count, with no overlap.
+        self.assertEqual(sum(r["a_rowspan"] for r in rows), len(rows))
+        self.assertEqual(sum(r["b_rowspan"] for r in rows), len(rows))

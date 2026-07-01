@@ -10,7 +10,6 @@ from .models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceBay,
     FrontPort,
     Interface,
     Location,
@@ -31,6 +30,8 @@ router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
 router.register("console-server-port-templates", views.ConsoleServerPortTemplateUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
+router.register("device-bays", views.DeviceBayUIViewSet)
+router.register("device-bay-templates", views.DeviceBayTemplateUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
@@ -157,37 +158,6 @@ urlpatterns = [
             url="/dcim/module-bay-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/module-bays/"
         ),
         name="devicetype_modulebaytemplate_add",
-    ),
-    # Device bay templates
-    path(
-        "device-bay-templates/add/",
-        views.DeviceBayTemplateCreateView.as_view(),
-        name="devicebaytemplate_add",
-    ),
-    path(
-        "device-bay-templates/edit/",
-        views.DeviceBayTemplateBulkEditView.as_view(),
-        name="devicebaytemplate_bulk_edit",
-    ),
-    path(
-        "device-bay-templates/rename/",
-        views.DeviceBayTemplateBulkRenameView.as_view(),
-        name="devicebaytemplate_bulk_rename",
-    ),
-    path(
-        "device-bay-templates/delete/",
-        views.DeviceBayTemplateBulkDeleteView.as_view(),
-        name="devicebaytemplate_bulk_delete",
-    ),
-    path(
-        "device-bay-templates/<uuid:pk>/edit/",
-        views.DeviceBayTemplateEditView.as_view(),
-        name="devicebaytemplate_edit",
-    ),
-    path(
-        "device-bay-templates/<uuid:pk>/delete/",
-        views.DeviceBayTemplateDeleteView.as_view(),
-        name="devicebaytemplate_delete",
     ),
     # Devices
     path(
@@ -589,61 +559,6 @@ urlpatterns = [
         name="device_bulk_add_rearport",
     ),
     # Device bays
-    path("device-bays/", views.DeviceBayListView.as_view(), name="devicebay_list"),
-    path("device-bays/add/", views.DeviceBayCreateView.as_view(), name="devicebay_add"),
-    path(
-        "device-bays/import/",
-        views.DeviceBayBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="devicebay_import",
-    ),
-    path(
-        "device-bays/edit/",
-        views.DeviceBayBulkEditView.as_view(),
-        name="devicebay_bulk_edit",
-    ),
-    path(
-        "device-bays/rename/",
-        views.DeviceBayBulkRenameView.as_view(),
-        name="devicebay_bulk_rename",
-    ),
-    path(
-        "device-bays/delete/",
-        views.DeviceBayBulkDeleteView.as_view(),
-        name="devicebay_bulk_delete",
-    ),
-    path("device-bays/<uuid:pk>/", views.DeviceBayView.as_view(), name="devicebay"),
-    path(
-        "device-bays/<uuid:pk>/edit/",
-        views.DeviceBayEditView.as_view(),
-        name="devicebay_edit",
-    ),
-    path(
-        "device-bays/<uuid:pk>/delete/",
-        views.DeviceBayDeleteView.as_view(),
-        name="devicebay_delete",
-    ),
-    path(
-        "device-bays/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="devicebay_changelog",
-        kwargs={"model": DeviceBay},
-    ),
-    path(
-        "device-bays/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="devicebay_notes",
-        kwargs={"model": DeviceBay},
-    ),
-    path(
-        "device-bays/<uuid:pk>/populate/",
-        views.DeviceBayPopulateView.as_view(),
-        name="devicebay_populate",
-    ),
-    path(
-        "device-bays/<uuid:pk>/depopulate/",
-        views.DeviceBayDepopulateView.as_view(),
-        name="devicebay_depopulate",
-    ),
     path(
         "devices/device-bays/add/",
         views.DeviceBulkAddDeviceBayView.as_view(),
