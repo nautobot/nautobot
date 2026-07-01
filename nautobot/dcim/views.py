@@ -4596,8 +4596,6 @@ class ConsoleServerPortUIViewSet(
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
-        context["device_breadcrumb_url"] = self.device_breadcrumb_url
-        context["module_breadcrumb_url"] = self.module_breadcrumb_url
         if self.action == "retrieve":
             context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
         return context
