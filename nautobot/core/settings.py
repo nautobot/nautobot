@@ -103,10 +103,6 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
-# The Nautobot edition ('community', 'professional', or 'enterprise'), used to determine
-# edition-specific branding such as the favicon when no custom branding has been configured.
-if "NAUTOBOT_EDITION" in os.environ and os.environ["NAUTOBOT_EDITION"] != "":
-    NAUTOBOT_EDITION = os.environ["NAUTOBOT_EDITION"]
 
 # Event Brokers
 EVENT_BROKERS = {}
@@ -799,15 +795,17 @@ CONSTANCE_ADDITIONAL_FIELDS = {
             "required": False,
         },
     ],
+    # HiddenInput hides it from the config UI. disabled=True pins the value on POST so users can't change it.
     "nautobot_edition_field": [
         "django.forms.fields.ChoiceField",
         {
-            "widget": "nautobot.core.forms.widgets.StaticSelect2",
+            "widget": "django.forms.HiddenInput",
             "choices": (
                 ("community", "Community"),
                 ("professional", "Professional"),
                 ("enterprise", "Enterprise"),
             ),
+            "disabled": True,
         },
     ],
 }

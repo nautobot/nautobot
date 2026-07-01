@@ -88,7 +88,7 @@
                                                 if you want to manage it via this interface instead.
                                             </div>
                                             {{ item.form_field.as_hidden }}
-                                        {% else %}
+                                        {% elif not item.form_field.is_hidden %}
                                             <div class="mb-10 d-md-flex align-content-start justify-content-between{% if item.form_field.errors %} has-error{% endif %}">
                                                 <label class="col-12 col-md-3 d-flex d-md-block col-form-label" for="{{ item.form_field.id_for_label }}">
                                                     {{ item.name | split:"_" | join:" " }}
