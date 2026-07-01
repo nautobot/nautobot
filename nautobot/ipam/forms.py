@@ -291,7 +291,6 @@ class PrefixForm(NautobotModelForm, TenancyForm, PrefixFieldMixin):
         queryset=Location.objects.all(),
         required=False,
         label="Locations",
-        null_option="None",
         query_params={"content_type": Prefix._meta.label_lower},
     )
     vlan_group = DynamicModelChoiceField(
