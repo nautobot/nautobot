@@ -33,6 +33,7 @@ In this directory you'll find the following core files:
 - `docker-compose.final-dev.yml` - Docker compose override file used to start/build the `final-dev` (app development environment) Docker images for local testing.
 - `docker-compose.keycloak.yml` - Docker compose override file used to setup an SSO auth backend for Nautobot.
 - `docker-compose.mysql.yml` - Docker compose override file used to add a MySQL container as the database backend for Nautobot.
+- `docker-compose.observability.yml` - Docker compose override file that runs a local Grafana observability stack (OpenTelemetry Collector, Tempo, Mimir, Loki, Promtail, and Grafana) for viewing the traces, metrics, and logs emitted by Nautobot. See [Local Observability Stack](#local-observability-stack).
 - `docker-compose.postgres.yml` - Docker compose override file used to add a Postgres container as the database backend for Nautobot.
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
@@ -146,6 +147,41 @@ Keycloak admin console is reachable via `http://localhost:8087/admin/` with user
 | `nautobot_unpriv`  | `unpriv123` |
 | `nautobot_admin`   | `admin123`  |
 | `nautobot_auditor` | `audit123`  |
+
+### Local Observability Stack
+
+Nautobot can emit OpenTelemetry traces, metrics, and logs. To exercise that instrumentation locally - for example when developing or debugging tracing behavior - the `docker-compose.observability.yml` override starts a self-contained [Grafana](https://grafana.com/) observability stack alongside Nautobot: an OpenTelemetry Collector (`otel`), [Tempo](https://grafana.com/oss/tempo/) (traces), [Mimir](https://grafana.com/oss/mimir/) (metrics), [Loki](https://grafana.com/oss/loki/) (logs), Promtail (ships container logs to Loki), and Grafana (the UI). It is opt-in and is not part of the default development environment. For production configuration and security considerations, see the [OpenTelemetry](../../user-guide/administration/guides/opentelemetry.md) administration guide.
+
+#### Enabling the Stack
+
+Add `docker-compose.observability.yml` to the `compose_files` setting in your `invoke.yml`:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.postgres.yml"
+    - "docker-compose.dev.yml"
+    - "docker-compose.observability.yml"
+```
+
+Then rebuild and start the environment:
+
+```no-highlight
+invoke build
+invoke start
+```
+
+#### Instrumenting Nautobot
+
+Starting the stack only stands up the observability backends; Nautobot must also be instrumented to send data to them. The `development/dev.env` file already points Nautobot at the collector (`OTEL_EXPORTER_OTLP_ENDPOINT="http://otel:4317"`, `OTEL_EXPORTER_OTLP_PROTOCOL="grpc"`), so the only change required is enabling instrumentation, which is off by default. Set `OTEL_PYTHON_DJANGO_INSTRUMENT=True` - for example via a `docker-compose.override.yml` environment override - and run `invoke start` for the change to take effect.
+
+#### Viewing Traces, Metrics, and Logs
+
+Open Grafana at `http://localhost:3000` (anonymous access is enabled for local development, so no login is required). Tempo, Mimir, and Loki are pre-provisioned as data sources, and dashboards - including a GraphQL tracing dashboard - are provisioned from `development/configs/grafana/dashboards/`. The individual backends are also exposed on the host for direct access or debugging: Grafana on `3000`, the collector's OTLP receivers on `4317` (gRPC) and `4318` (HTTP), Mimir on `9009`, and Loki on `3100`.
+
+To stop the stack, use `invoke stop`. The `grafana_data` and `mimir_data` volumes persist across restarts; use `invoke destroy` to remove them along with the rest of the environment.
 
 ## Microsoft Visual Studio Code Integration
 
