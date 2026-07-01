@@ -205,7 +205,6 @@ __all__ = (
     "NoteForm",
     "ObjectChangeFilterForm",
     "ObjectMetadataFilterForm",
-    "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
     "RelationshipBulkEditForm",
     "RelationshipFilterForm",
@@ -1266,21 +1265,6 @@ class ExternalIntegrationFilterForm(NautobotFilterForm):
 
 def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
-
-
-class PasswordInputWithPlaceholder(forms.PasswordInput):
-    """PasswordInput that is populated with a placeholder value if any existing value is present."""
-
-    def __init__(self, attrs=None, placeholder="", render_value=False):
-        if placeholder:
-            render_value = True
-        self._placeholder = placeholder
-        super().__init__(attrs=attrs, render_value=render_value)
-
-    def get_context(self, name, value, attrs):
-        if value:
-            value = self._placeholder
-        return super().get_context(name, value, attrs)
 
 
 class GitRepositoryForm(NautobotModelForm):
