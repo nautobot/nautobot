@@ -1833,6 +1833,24 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # add route should not appear as a link target for the inline table
         self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_add_button_when_range_is_full(self):
+        """If in range there is no any free address then button `Add` is not rendered."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10, nie-exclusive
+
+        for i in range(1, 11):
+            IPAddress.objects.create(
+                address=f"192.0.2.{i}/24",
+                namespace=self.namespace,
+                status=self.prefix_status,
+            )
+
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # If _get_table_add_url return None then address to add ipaddress shouldn't be rendered
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
+
 
 class VLANGroupTestCase(
     ViewTestCases.OrganizationalObjectViewTestCase,

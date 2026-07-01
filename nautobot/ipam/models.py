@@ -2145,12 +2145,7 @@ class IPAddressRange(PrimaryModel):
     def get_utilization(self):
         """Utilization of this range as a UtilizationData object (numerator, denominator)."""
         size = netaddr.IPRange(self.start_host, self.end_host).size
-        count = IPAddress.objects.filter(
-            parent__namespace_id=self.parent.namespace_id,
-            ip_version=self.ip_version,
-            host__gte=self.start_host,
-            host__lte=self.end_host,
-        ).count()
+        count = self.ip_addresses.count()
         return UtilizationData(numerator=count, denominator=size)
 
 

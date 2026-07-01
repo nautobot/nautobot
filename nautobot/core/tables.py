@@ -460,7 +460,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                 <li>
                     <a href="{{% url '{detail_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
                         <span class="mdi mdi-information-outline" aria-hidden="true"></span>
-                        {verbose_name} Details
+                        View {verbose_name} Details
                     </a>
                 </li>
             {{% endif %}}
