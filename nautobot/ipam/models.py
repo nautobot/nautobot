@@ -716,8 +716,18 @@ class Prefix(PrimaryModel):
                     protected_objects=self.ip_addresses.all(),
                 )
 
+            if self.parent is None and self.ip_address_ranges.exists():
+                raise models.ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {self} because it has child IPAddressRanges objects that "
+                        "would no longer have a valid parent."
+                    ),
+                    protected_objects=self.ip_address_ranges.all(),
+                )
+
             self.children.update(parent=self.parent)
             self.ip_addresses.update(parent=self.parent)
+            self.ip_address_ranges.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
     def get_parent(self):
@@ -895,6 +905,7 @@ class Prefix(PrimaryModel):
                 # Claim and/or un-claim child prefixes and IPs
                 self.reparent_subnets()
                 self.reparent_ips()
+                self.reparent_ip_address_ranges()
 
         self._network = self.network
         self._broadcast = self.broadcast
@@ -1055,6 +1066,65 @@ class Prefix(PrimaryModel):
 
     reparent_ips.alters_data = True
 
+    def reparent_ip_address_ranges(self):
+        """
+        Handle changes to the parentage of IPAddressRanges as a consequence of this Prefix's
+        creation or update (analogous to reparent_ips()). Unlike an IP, which is a single host,
+        a range spans two endpoints, so when picking a new parent we only reparent a range to a
+        Prefix that wholly contains its span (both endpoints), never one that covers just part of it.
+
+        - Former child ranges of ours that no longer fit our new network can be reparented to our former parent.
+        - Former child ranges that we are no longer the closest parent of can be reparented to one of our new descendants.
+        - Ranges that we are now the closest parent of can be reparented to us.
+
+        Called automatically by save(); generally not intended for use outside of that context.
+        """
+        if self._networking_values_changed:
+            # Ranges that no longer fit our new network move up to our former parent, which is
+            # guaranteed to contain them (they were inside our old network, which was inside that
+            # parent). The only failure is having no former parent — Prefix.clean() rejects that
+            # case first, so this raise is just a safety net.
+            reparentable_ranges = self.ip_address_ranges.exclude(
+                ip_version=self.ip_version,
+                start_host__gte=self.network,
+                end_host__lte=self.broadcast,
+            )
+            if self._parent_id is None and reparentable_ranges.exists():
+                raise ValidationError(
+                    {
+                        "__all__": f"{reparentable_ranges.count()} existing IP Address Ranges would no longer "
+                        "have a valid parent Prefix after this change."
+                    }
+                )
+            reparentable_ranges.update(parent_id=self._parent_id)
+
+            # Former child ranges that we are no longer closest parent of can be reparented to one of our new descendants.
+            ranges_to_reparent = []
+            for ip_range in self.ip_address_ranges.all():
+                # A child fully contains the range iff it's the closest parent of BOTH endpoints.
+                try:
+                    closest_start = self.children.get_closest_parent(ip_range.start_host, include_self=True)  # pylint: disable=no-member
+                    closest_end = self.children.get_closest_parent(ip_range.end_host, include_self=True)  # pylint: disable=no-member
+                    closest = closest_start if closest_start == closest_end else self
+                except Prefix.DoesNotExist:
+                    closest = self
+                if closest != self:
+                    ip_range.parent = closest
+                    ranges_to_reparent.append(ip_range)
+
+            IPAddressRange.objects.bulk_update(ranges_to_reparent, ["parent"], batch_size=1000)
+
+        # Ranges that we are now the closest parent of can be reparented to us.
+        IPAddressRange.objects.filter(
+            parent__namespace_id=self.namespace_id,
+            ip_version=self.ip_version,
+            start_host__gte=self.network,
+            end_host__lte=self.broadcast,
+            parent__prefix_length__lt=self.prefix_length,
+        ).select_for_update().update(parent=self)
+
+    reparent_ip_address_ranges.alters_data = True
+
     def supernets(self, direct=False, include_self=False, for_update=False):
         """
         Return supernets of this Prefix.
@@ -1209,6 +1279,12 @@ class Prefix(PrimaryModel):
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
         available_ips = prefix - child_ips
 
+        # Subtract addresses covered by exclusive IP Ranges
+        for ip_range in self.ip_address_ranges.filter(is_exclusive=True):
+            start = netaddr.IPAddress(ip_range.start_address)
+            end = netaddr.IPAddress(ip_range.end_address)
+            available_ips -= netaddr.IPSet(netaddr.IPRange(start, end))
+
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
             [
@@ -1332,6 +1408,12 @@ class Prefix(PrimaryModel):
             child_prefixes = netaddr.IPSet(p.prefix for p in self.children.all())
 
         numerator_set = child_ips | child_prefixes
+
+        # Add count_as_utilized IP Ranges to the numerator (each range counts as fully utilized)
+        for ip_range in self.ip_address_ranges.filter(count_as_utilized=True):
+            start = netaddr.IPAddress(ip_range.start_address)
+            end = netaddr.IPAddress(ip_range.end_address)
+            numerator_set |= netaddr.IPSet(netaddr.IPRange(start, end))
 
         # Exclude network and broadcast IPs from the denominator unless they're assigned to an IPAddress or child pool.
         # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
@@ -2049,6 +2131,19 @@ class IPAddressRange(PrimaryModel):
             raise ValidationError(
                 {"namespace": f"No suitable parent Prefix for {host} exists in Namespace {self._namespace}"}
             ) from e
+
+    def get_percent_utilized(self) -> float:
+        """Percentage of addresses in the range that have an IPAddress object."""
+        if self.count_as_utilized or self.is_exclusive:
+            return 100.0
+        size = netaddr.IPRange(self.start_address, self.end_address).size
+        count = IPAddress.objects.filter(
+            parent__namespace=self.parent.namespace,
+            ip_version=self.ip_version,
+            host__gte=self.start_address,
+            host__lte=self.end_address,
+        ).count()
+        return (count / size) * 100
 
 
 @extras_features(

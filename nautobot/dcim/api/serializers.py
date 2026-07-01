@@ -219,10 +219,12 @@ class ModularDeviceComponentTemplateSerializerMixin:
 class ModularDeviceComponentSerializerMixin:
     def validate(self, data):
         """Validate device and module field constraints for modular device components."""
-        if data.get("device") and data.get("module"):
-            raise serializers.ValidationError("Only one of device or module must be set")
-        if data.get("device"):
-            validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("device", "name"))
+        if data.get("device") and (data.get("module") and data["module"].device != data["device"]):
+            raise serializers.ValidationError("module is installed in a different device")
+        if data.get("device") and not data.get("module"):
+            validator = UniqueTogetherValidator(
+                queryset=self.Meta.model.objects.filter(module__isnull=True), fields=("device", "name")
+            )
             validator(data, self)
         if data.get("module"):
             validator = UniqueTogetherValidator(queryset=self.Meta.model.objects.all(), fields=("module", "name"))
@@ -1419,10 +1421,11 @@ class ModuleBaySerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     def validate(self, attrs):
         """Validate device and module field constraints for module bay."""
         if attrs.get("parent_device") and attrs.get("parent_module"):
-            raise serializers.ValidationError("Only one of parent_device or parent_module must be set")
+            if attrs["parent_device"] != attrs["parent_module"].device:
+                raise serializers.ValidationError("parent_module is installed in a different parent_device")
         if attrs.get("parent_device"):
             validator = UniqueTogetherValidator(
-                queryset=self.Meta.model.objects.all(), fields=("parent_device", "name")
+                queryset=self.Meta.model.objects.filter(parent_module__isnull=True), fields=("parent_device", "name")
             )
             validator(attrs, self)
         if attrs.get("parent_module"):
