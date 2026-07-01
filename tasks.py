@@ -1028,7 +1028,9 @@ def hadolint(context):
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if fix:
-        command = "pymarkdown fix --recurse nautobot/docs examples *.md"
+        # Disable md044 (proper-names) only while fixing: its fixer over-applies
+        # proper-name capitalization to URLs, link/image targets, icons, etc.
+        command = "pymarkdown --disable-rules md044 fix --recurse nautobot/docs examples *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
@@ -1256,18 +1258,27 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
 )
 def lint(context, fix=False):
     """Run all linters."""
-    hadolint(context)
-    markdownlint(context, fix=fix)
-    yamllint(context)
-    ruff(context, fix=fix)
-    pylint(context)
-    eslint(context, fix=fix)
-    prettier(context, fix=fix)
-    djhtml(context, fix=fix)
-    djlint(context)
-    check_migrations(context)
-    check_schema(context)
-    build_and_check_docs(context)
+    linters = (
+        lambda: hadolint(context),
+        lambda: markdownlint(context, fix=fix),
+        lambda: yamllint(context),
+        lambda: ruff(context, fix=fix),
+        lambda: pylint(context),
+        lambda: eslint(context, fix=fix),
+        lambda: prettier(context, fix=fix),
+        lambda: djhtml(context, fix=fix),
+        lambda: djlint(context),
+        lambda: check_migrations(context),
+        lambda: check_schema(context),
+        lambda: build_and_check_docs(context),
+    )
+    # Run each linter even if preceeding linter has failure
+    for linter in linters:
+        try:
+            linter()
+        except Exception:  # noqa: S110
+            # Left empty in order to run all linters, logging already performed
+            pass
 
 
 @task(help={"version": "The version number or the rule to update the version."})
