@@ -199,10 +199,10 @@ class HomeViewTestCase(TestCase):
                     hx-swap="none"
                     hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
                 >
-                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
-                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
-                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
-                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-0 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-1 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-0 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-1 order-xl-0"></div>
                 </div>
             """,
             html=True,
