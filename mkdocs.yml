@@ -406,6 +406,7 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+              - Homepage Panels: "user-guide/feature-guides/getting-started/homepage-panels.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields:
