@@ -4,7 +4,7 @@
 
 A "Cable to Cable Termination" is a record linking a specific connector of a given [cable](cable.md) to a terminating object (such as an [interface](interface.md), [front port](frontport.md), [circuit termination](../circuits/circuittermination.md), etc.)
 
-A standard, connected, point-to-point cable would have two cable to cable termination records, one for the "A" side and one for the "B" side. If the cable is connected at only one end, it would only have one such record, and a fully disconnected cable in isolation would have none. Conversely, a breakout cable could have zero, one, two, or many such records, depending on its [cable type](cabletype.md) and how it's used.
+A standard, connected, point-to-point cable would have two cable to cable termination records, one for the "A" side and one for the "B" side. If the cable is connected at only one end, it would only have one such record, and a fully disconnected cable in isolation would have none. Conversely, a breakout cable could have zero, one, two, or many such records, depending on its [cable type](cabletype.md) and how it's connected.
 
 ## Fields
 

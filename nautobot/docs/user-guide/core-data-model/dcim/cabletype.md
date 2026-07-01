@@ -14,7 +14,7 @@ A cable type has the following fields:
 | `a_connectors` | integer | Yes | Number of physical connectors on the "A" side of the cable |
 | `b_connectors` | integer | Yes | Number of physical connectors on the "B" side of the cable |
 | `total_lanes` | integer | Yes | Total number of logical lanes within the cable |
-| `mapping` | JSON | Yes | Array of `total_lanes` entries describing the relations among `a_connectors`, `b_connectors`, and individual lanes within the cable |
+| `mapping` | JSON | Yes | Array of `total_lanes` entries describing the relations among `a_connectors`, `b_connectors`, and individual lane definitions within the cable |
 | `description` | string | No | Descriptive details |
 | `manufacturer` | [Manufacturer](manufacturer.md) | No | Manufacturer information |
 | `part_number` | string | No | Part number |
