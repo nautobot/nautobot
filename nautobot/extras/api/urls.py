@@ -94,6 +94,9 @@ router.register("object-metadata", views.ObjectMetadataViewSet)
 # Notes
 router.register("notes", views.NoteViewSet)
 
+# Object Locks
+router.register("object-locks", views.ObjectLockViewSet)
+
 # Change logging
 router.register("object-changes", views.ObjectChangeViewSet)
 

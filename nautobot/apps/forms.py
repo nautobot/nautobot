@@ -92,6 +92,7 @@ from nautobot.extras.forms import (
 from nautobot.extras.forms.base import NautobotFilterForm
 from nautobot.extras.forms.forms import (
     get_git_datasource_content_choices,
+    LockedFieldsFormMixin,
     provider_choices,
     provider_choices_with_blank,
 )
@@ -152,6 +153,7 @@ __all__ = (
     "LocatableModelBulkEditFormMixin",
     "LocatableModelFilterFormMixin",
     "LocatableModelFormMixin",
+    "LockedFieldsFormMixin",
     "MACAddressField",
     "MultiMatchModelMultipleChoiceField",
     "MultiValueCharField",

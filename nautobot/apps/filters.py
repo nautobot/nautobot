@@ -40,7 +40,7 @@ from nautobot.extras.filter_mixins import (
     StatusFilter,
     StatusModelFilterSetMixin,
 )
-from nautobot.extras.filters import NautobotFilterSet
+from nautobot.extras.filters import NautobotFilterSet, ObjectLockableFilterSetMixin
 from nautobot.extras.plugins import FilterExtension
 from nautobot.ipam.filter_mixins import PrefixFilter
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
@@ -73,6 +73,7 @@ __all__ = (
     "NaturalKeyOrPKMultipleChoiceFilter",
     "NautobotFilterSet",
     "NumericArrayFilter",
+    "ObjectLockableFilterSetMixin",
     "PrefixFilter",
     "RelatedMembershipBooleanFilter",
     "RelationshipFilter",

@@ -16,13 +16,14 @@ from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableData, TableQuerysetData
 from django_tables2.rows import BoundRows
-from django_tables2.utils import Accessor, OrderBy, OrderByTuple
+from django_tables2.utils import Accessor, call_with_appropriate, OrderBy, OrderByTuple
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
 from nautobot.core.utils.lookup import get_model_for_view_name, get_related_field_for_models, get_route_for_model
 from nautobot.core.utils.querysets import maybe_prefetch_related, maybe_select_related
 from nautobot.extras import choices, models
+from nautobot.extras.object_lock_ui import lock_state_for_objects, render_lock_glyph, user_can_view_lock_metadata
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,14 @@ class BaseTable(django_tables2.Table):
 
         # Init table
         super().__init__(*args, order_by=order_by, orderable=orderable, row_attrs=row_attrs, **kwargs)
+
+        # --- Object Lock: one bulk lookup per page; prepend a lock glyph to the primary link column. ---
+        # _object_lock_states is always a dict; _object_lock_states_loaded memoizes the single bulk
+        # lookup, since an empty dict can't distinguish "all unlocked" from "not yet loaded".
+        self._object_lock_states = {}
+        self._object_lock_states_loaded = False
+        self._object_lock_user = user
+        self._wrap_primary_column_with_lock_glyph()
 
         if not isinstance(self.data, TableQuerysetData):
             # LinkedCountColumns don't work properly if the data is a list of dicts instead of a queryset,
@@ -330,6 +339,74 @@ class BaseTable(django_tables2.Table):
             self.data = TableData.from_data(data_transform_callback(self.data.data))
             self.data.set_table(self)
             self.rows = BoundRows(data=self.data, table=self, pinned_data=self.pinned_data)
+
+    def _load_object_lock_states(self):
+        """Populate ``self._object_lock_states`` from the page's records (single query).
+
+        Loads at most once per table instance, guarded by the ``_object_lock_states_loaded`` sentinel.
+
+        Only saved ``BaseModel`` instances can be locked, so this skips both non-model "fake" rows
+        (e.g. the tuple/dict "available" rows IPAM injects) *and* unsaved model instances. The latter
+        matters because ``BaseModel.id`` defaults to ``uuid.uuid4``: the unsaved ``Prefix`` rows that
+        ``add_available_prefixes`` injects carry a random UUID ``pk`` despite never hitting the DB, so a
+        ``pk``-only filter would feed those phantom PKs into the lookup. Keying off ``present_in_database``
+        keeps the page's single query scoped to real, saved rows.
+        """
+        if self._object_lock_states_loaded:
+            return
+        self._object_lock_states_loaded = True
+        records = [row.record for row in self.page.object_list] if getattr(self, "page", None) else list(self.data)
+        records = [r for r in records if hasattr(r, "_meta") and getattr(r, "present_in_database", False)]
+        self._object_lock_states = lock_state_for_objects(records) if records else {}
+
+    def _wrap_primary_column_with_lock_glyph(self):
+        """Prepend a lock glyph to the primary column so locked objects show it before their link.
+
+        The primary column is the ``"name"`` column when present, else the first visible, linkified
+        column (detected via ``column.link``; see the selection logic below).
+
+        We wrap the per-instance ``BoundColumn.render`` (which ``django_tables2`` snapshots from the
+        shared ``Column.render`` for each fresh ``BoundColumn`` at table construction), never the
+        class-level ``Column.render`` itself, so wrapping can't stack across requests. A sentinel on
+        the wrapper prevents re-wrapping.
+        """
+        primary_name = "name" if "name" in self.columns.names() else None
+        if primary_name is None:
+            # Fall back to the first visible, linkified column. django_tables2 does NOT keep a ``linkify``
+            # attribute: ``Column(linkify=...)`` builds a ``LinkTransform`` stored on ``column.link`` (and
+            # mirrored onto ``BoundColumn.link``), leaving it ``None`` otherwise -- so ``column.link`` is the
+            # signal. NOTE: columns linkified via ``TemplateColumn`` (e.g. IPAM ``PrefixTable.prefix``,
+            # ``IPAddressTable.address``) embed their own ``<a>`` and set no ``link``, so they are not
+            # detected here and show no glyph yet -- a known limitation.
+            for column in self.columns:
+                if column.visible and getattr(column.column, "link", None) is not None:
+                    primary_name = column.name
+                    break
+        if primary_name is None:
+            return
+
+        bound_column = self.columns[primary_name]
+        original_render = bound_column.render
+        if getattr(original_render, "_object_lock_wrapped", False):
+            return
+
+        def render_with_glyph(record=None, value=None, table=None, **kwargs):
+            # ``table`` is the live instance for *this* render pass, supplied by django_tables2.
+            table = table if table is not None else self
+            table._load_object_lock_states()
+            # Delegate to the original render with only the kwargs its signature accepts, exactly as
+            # django_tables2 itself does. This works whether the wrapped render is a plain
+            # ``Column.render(value)`` or a ``BaseLinkColumn.render(record, value)``.
+            render_kwargs = {"record": record, "value": value, "table": table, **kwargs}
+            base = call_with_appropriate(original_render, render_kwargs)
+            state = table._object_lock_states.get(getattr(record, "pk", None))
+            if state is None:
+                return base
+            include = user_can_view_lock_metadata(table._object_lock_user)
+            return format_html("{}{}", render_lock_glyph(state, include_metadata=include), base)
+
+        render_with_glyph._object_lock_wrapped = True
+        bound_column.render = render_with_glyph
 
     @property
     def configurable_columns(self):

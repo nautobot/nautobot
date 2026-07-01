@@ -1,0 +1,10 @@
+/* Object Lock UI styles. */
+
+/*
+ * Visually dim a blocked Edit/Delete control so "blocked" reads at a glance. The control must stay
+ * focusable and keep firing its click handler (which reveals the lock explanation for AT users), so
+ * Bootstrap's `.disabled` / `pointer-events: none` is deliberately NOT used here — only opacity.
+ */
+a[data-nb-object-lock-blocked][aria-disabled="true"] {
+    opacity: 0.65;
+}

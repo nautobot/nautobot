@@ -76,3 +76,8 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
+
+        # Register the Object Lock detail-view banner + per-model detail-panel TemplateExtensions.
+        from nautobot.extras.template_content import register_object_lock_ui
+
+        register_object_lock_ui()

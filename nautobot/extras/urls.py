@@ -34,6 +34,7 @@ router.register("job-results", views.JobResultUIViewSet)
 router.register("jobs", views.JobUIViewSet)
 router.register("metadata-types", views.MetadataTypeUIViewSet)
 router.register("object-changes", views.ObjectChangeUIViewSet)
+router.register("object-locks", views.ObjectLockUIViewSet)
 router.register("notes", views.NoteUIViewSet)
 router.register("object-metadata", views.ObjectMetadataUIViewSet)
 router.register("relationship-associations", views.RelationshipAssociationUIViewSet)
@@ -102,6 +103,9 @@ urlpatterns = [
         views.SecretProviderParametersFormView.as_view(),
         name="secret_provider_parameters_form",
     ),
+    # Object Lock bulk actions
+    path("object-locks/bulk-lock/", views.ObjectLockBulkLockView.as_view(), name="objectlock_bulk_lock"),
+    path("object-locks/bulk-release/", views.ObjectLockBulkReleaseView.as_view(), name="objectlock_bulk_release"),
 ]
 
 urlpatterns += router.urls

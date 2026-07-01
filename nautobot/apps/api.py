@@ -46,6 +46,7 @@ from nautobot.core.api.views import (
 )
 from nautobot.extras.api.fields import MultipleChoiceJSONField
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
+from nautobot.extras.api.object_locks import ObjectLockableModelViewSetMixin, ObjectLockableSerializerMixin
 from nautobot.extras.api.views import CustomFieldModelViewSet, NautobotModelViewSet, NotesViewSetMixin
 
 __all__ = (
@@ -68,6 +69,8 @@ __all__ = (
     "NautobotModelViewSet",
     "NotesSerializerMixin",
     "NotesViewSetMixin",
+    "ObjectLockableModelViewSetMixin",
+    "ObjectLockableSerializerMixin",
     "ObjectTypeField",
     "OptInFieldsMixin",
     "OrderedDefaultRouter",

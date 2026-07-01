@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import json
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -19,6 +20,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.dcim.models import Manufacturer
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
@@ -41,6 +43,7 @@ from nautobot.extras.models import (
     MetadataChoice,
     MetadataType,
     ObjectChange,
+    ObjectLock,
     ObjectMetadata,
     Role,
     SavedView,
@@ -480,6 +483,27 @@ class ObjectChangeFactory(BaseModelFactory):
                 end = datetime(2025, 1, 1, tzinfo=timezone.utc)
                 seconds_range = int((end - start).total_seconds())
                 self.time = start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range))
+
+
+class ObjectLockFactory(BaseModelFactory):
+    """Create random ObjectLock instances, each targeting a freshly-created Manufacturer, for tests."""
+
+    class Meta:
+        model = ObjectLock
+
+    class Params:
+        has_reason = factory.Faker("pybool")
+        has_expiry = factory.Faker("pybool")
+
+    content_type = factory.LazyFunction(lambda: ContentType.objects.get_for_model(Manufacturer))
+    # Manufacturer.name is unique; use a UUID-suffixed name so repeated factory runs never collide.
+    object_id = factory.LazyFunction(lambda: Manufacturer.objects.create(name=f"Object Lock Target {uuid.uuid4()}").pk)
+    prevent_delete = True
+    prevent_update = factory.Faker("pybool")
+    source_context = ObjectChangeEventContextChoices.CONTEXT_ORM
+    source_key = factory.Sequence(lambda n: f"factory-{n}")
+    reason = factory.Maybe("has_reason", factory.Faker("sentence"), "")
+    expires = factory.Maybe("has_expiry", factory.Faker("future_datetime", tzinfo=timezone.utc), None)
 
 
 class RoleFactory(OrganizationalModelFactory):

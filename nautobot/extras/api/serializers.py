@@ -37,6 +37,10 @@ from nautobot.extras import choices, models
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
+
+# Re-export for get_serializer_for_model(), which resolves <app>.api.serializers.<Model>Serializer;
+# the class is defined alongside its viewset mixin in object_locks.py.
+from nautobot.extras.api.object_locks import ObjectLockSerializer  # noqa: F401
 from nautobot.extras.choices import (
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,

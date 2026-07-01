@@ -197,6 +197,7 @@ __all__ = (
     "LocalContextFilterForm",
     "LocalContextModelBulkEditForm",
     "LocalContextModelForm",
+    "LockedFieldsFormMixin",
     "MetadataChoiceFormSet",
     "MetadataTypeBulkEditForm",
     "MetadataTypeFilterForm",
@@ -2693,3 +2694,51 @@ class WebhookFilterForm(BootstrapMixin, forms.Form):
     type_update = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     type_delete = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+
+
+DEFAULT_FROZEN_FIELD_EXPLANATION = "This field is frozen by an Object Lock and cannot be edited here."
+
+
+class LockedFieldsFormMixin:
+    """Disable form fields that an Object Lock has frozen, leaving the rest editable.
+
+    Mix into a model's edit form. For a bound instance, the frozen fields are resolved from the
+    object's active update locks and set ``disabled=True`` (so Django ignores any submitted value and
+    keeps the initial one) and ``required=False`` (so a frozen, previously-blank field does not block
+    submission) — a UX layer over the signal-level enforcement — and each frozen field's help text
+    explains the lock. Callers may instead pass an explicit ``frozen_fields`` (an iterable of names, or
+    the ``ALL_FIELDS_FROZEN`` sentinel).
+    """
+
+    def __init__(self, *args, frozen_fields=None, frozen_field_explanations=None, **kwargs):
+        self._frozen_field_explanations = frozen_field_explanations or {}
+        super().__init__(*args, **kwargs)
+        if frozen_fields is None:
+            frozen_fields = self._frozen_fields_for_instance()
+        self._frozen_fields = frozen_fields or set()
+        for name, field in self.fields.items():
+            if self.is_field_frozen(name):
+                field.disabled = True  # submitted value is ignored; the initial value is kept
+                field.required = False
+                explanation = self.frozen_field_explanation(name)
+                field.help_text = f"{field.help_text} {explanation}".strip() if field.help_text else explanation
+
+    def _frozen_fields_for_instance(self):
+        """Resolve frozen field names from the bound instance's active update locks (empty set if none)."""
+        instance = getattr(self, "instance", None)
+        if instance is None or getattr(instance, "pk", None) is None:
+            return set()
+        from nautobot.extras.locking import get_frozen_fields_for_object
+
+        return get_frozen_fields_for_object(ContentType.objects.get_for_model(instance).pk, instance.pk)
+
+    def is_field_frozen(self, field_name):
+        """Return True if ``field_name`` is frozen for this form's target object (or all fields are)."""
+        try:
+            return field_name in self._frozen_fields
+        except TypeError:
+            return False
+
+    def frozen_field_explanation(self, field_name):
+        """Return the per-field explanation string for a frozen field (a per-field override or the default)."""
+        return self._frozen_field_explanations.get(field_name, DEFAULT_FROZEN_FIELD_EXPLANATION)

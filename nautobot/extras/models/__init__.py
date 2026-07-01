@@ -41,6 +41,7 @@ from .models import (
     UserSavedViewAssociation,
     Webhook,
 )
+from .object_locks import ObjectLock, ObjectLockBypassAudit, ObjectLockGeneration
 from .relationships import Relationship, RelationshipAssociation, RelationshipModel
 from .roles import Role, RoleField
 from .secrets import Secret, SecretsGroup, SecretsGroupAssociation
@@ -89,6 +90,9 @@ __all__ = (
     "MetadataType",
     "Note",
     "ObjectChange",
+    "ObjectLock",
+    "ObjectLockBypassAudit",
+    "ObjectLockGeneration",
     "ObjectMetadata",
     "Relationship",
     "RelationshipAssociation",

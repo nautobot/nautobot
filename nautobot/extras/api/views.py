@@ -69,6 +69,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectLock,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -538,6 +539,40 @@ class ContactAssociationViewSet(NautobotModelViewSet):
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
     filterset_class = filters.ContactAssociationFilterSet
+
+
+#
+# Object Locks
+#
+
+
+class ObjectLockViewSet(NautobotModelViewSet):
+    """REST endpoint for listing, viewing, and releasing (DELETE) ObjectLocks.
+
+    Locks are created via ObjectLock.objects.lock() or the per-object ``lock`` action, never via raw
+    POST/PUT here. PATCH is also disabled: a claim's mode, field scope, and expiry are security-relevant
+    and are not editable in place — re-run the idempotent ``lock`` action to adjust your own claim.
+    DELETE releases a claim and enforces the same ownership rule as every other surface.
+    """
+
+    # Only GET (list/detail) and DELETE (release) are exposed. POST/PUT/PATCH are disabled so a
+    # change_objectlock holder cannot neuter/re-scope/re-target another source's claim in place.
+    http_method_names = ["get", "head", "options", "delete"]
+
+    queryset = ObjectLock.objects.all()
+    serializer_class = serializers.ObjectLockSerializer
+    filterset_class = filters.ObjectLockFilterSet
+
+    def perform_destroy(self, instance):
+        """Release a claim; releasing another source's claim requires force_release_objectlock.
+
+        Mirrors the per-object ``release`` action and the UI viewset so the generic REST DELETE cannot
+        bypass the attributable, reference-counted ownership model.
+        """
+        user = self.request.user
+        if instance.created_by_id != user.pk and not user.has_perm("extras.force_release_objectlock"):
+            raise PermissionDenied("Releasing a lock created by another source requires force_release_objectlock.")
+        super().perform_destroy(instance)
 
 
 #

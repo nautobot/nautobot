@@ -164,6 +164,20 @@ if "NAUTOBOT_METRICS_DISABLED_APPS" in os.environ and os.environ["NAUTOBOT_METRI
     METRICS_DISABLED_APPS = os.getenv("NAUTOBOT_METRICS_DISABLED_APPS", "").split(_CONFIG_SETTING_SEPARATOR)
 METRICS_EXPERIMENTAL_CACHING_DURATION = int(os.getenv("NAUTOBOT_METRICS_EXPERIMENTAL_CACHING_DURATION", "0"))
 
+# Object Lock: enforce locking on signal-firing, change-context-bearing writes (UI/API/Jobs).
+# This is the kill switch — set to False to disable enforcement (takes effect on restart; the flag is
+# checked before any cache access). Guard against an empty-string env var (a common container idiom)
+# silently disabling enforcement.
+OBJECT_LOCK_ENFORCED = True
+if "NAUTOBOT_OBJECT_LOCK_ENFORCED" in os.environ and os.environ["NAUTOBOT_OBJECT_LOCK_ENFORCED"] != "":
+    OBJECT_LOCK_ENFORCED = is_truthy(os.environ["NAUTOBOT_OBJECT_LOCK_ENFORCED"])
+# Default TTL (in seconds) applied to programmatically-created locks when `expires` is omitted.
+# A trusted caller may override with an explicit value (including None for indefinite).
+# Guard against an empty-string env var raising ValueError from int("") at startup.
+OBJECT_LOCK_DEFAULT_TTL = 86400  # 24 hours
+if "NAUTOBOT_OBJECT_LOCK_DEFAULT_TTL" in os.environ and os.environ["NAUTOBOT_OBJECT_LOCK_DEFAULT_TTL"] != "":
+    OBJECT_LOCK_DEFAULT_TTL = int(os.environ["NAUTOBOT_OBJECT_LOCK_DEFAULT_TTL"])
+
 # Napalm
 NAPALM_ARGS = {}
 NAPALM_PASSWORD = os.getenv("NAUTOBOT_NAPALM_PASSWORD", "")

@@ -252,6 +252,14 @@ class Command(BaseCommand):
             else:
                 # Only fetch urls from relevant apps
                 if pattern.lookup_str.startswith(("nautobot.", *settings.PLUGINS)):
+                    # Skip non-GET endpoints. A DRF viewset route advertises its HTTP methods via
+                    # ``callback.actions``; POST-only ``@action`` routes (e.g. Object Lock's per-object
+                    # ``lock`` / ``release``) have no ``get`` handler and would 405 under a GET probe.
+                    # The view-name heuristic below can't catch these because API action names are
+                    # hyphenated (no underscore), so derive the truth from the route itself.
+                    callback_actions = getattr(pattern.callback, "actions", None)
+                    if callback_actions is not None and "get" not in callback_actions:
+                        continue
                     url_pattern, view_name, is_api_endpoint = self.construct_view_name_and_url_pattern(pattern)
                     # We do not need to test the ?format=<json,csv,api> endpoints and non-GET endpoints
                     if (

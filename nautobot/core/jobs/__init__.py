@@ -29,6 +29,7 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.jobs.object_lock_bulk import BulkLockObjects, BulkReleaseObjects
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.data_validation import models
@@ -55,6 +56,7 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
+from nautobot.extras.jobs_object_lock_sweep import ObjectLockSweep
 from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
@@ -593,6 +595,8 @@ class ValidateModelData(Job):
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
+    BulkLockObjects,
+    BulkReleaseObjects,
     CleanupCustomFieldsData,
     DeleteCustomFieldData,
     ExportObjectList,
@@ -600,6 +604,7 @@ jobs = [
     GitRepositoryDryRun,
     ImportObjects,
     LogsCleanup,
+    ObjectLockSweep,
     ProvisionCustomField,
     RefreshDynamicGroupCaches,
     RefreshDynamicGroupCacheJobButtonReceiver,

@@ -320,8 +320,21 @@ class ModelViewSetMixin:
     def dispatch(self, request, *args, **kwargs):
         try:
             return super().dispatch(request, *args, **kwargs)
-        except ProtectedError as e:
-            protected_objects = list(e.protected_objects)
+        except ProtectedError as exc:
+            # ObjectLockedError is a ProtectedError subclass. perform_destroy() and perform_update()
+            # wrap the DB operation in transaction.atomic() (with savepoint=True by default), so by
+            # the time this except clause runs the savepoint has already been rolled back cleanly and
+            # the transaction is in a usable state. Build and return the 409 response.
+            from nautobot.extras.locking import ObjectLockedError
+
+            if isinstance(exc, ObjectLockedError):
+                self.logger.warning("Write blocked by Object Lock: %s", exc)
+                # Thin hook: the 409-body logic lives in extras (lazy import — core must not import extras at module load).
+                from nautobot.extras.api.object_locks import build_object_locked_response
+
+                return self.finalize_response(request, build_object_locked_response(exc, request), *args, **kwargs)
+
+            protected_objects = list(exc.protected_objects)
             msg = f"Unable to delete object. {len(protected_objects)} dependent objects were found: "
             msg += ", ".join([f"{obj} ({obj.pk})" for obj in protected_objects])
             self.logger.warning(msg)
@@ -390,7 +403,13 @@ class ModelViewSet(
         model = self.queryset.model
         self.logger.info(f"Deleting {model._meta.verbose_name} {instance} (PK: {instance.pk})")
 
-        return super().perform_destroy(instance)
+        # Run the delete inside a savepoint (matching perform_create / perform_update) so that an
+        # ObjectLockedError raised by a pre_delete receiver — which propagates out of Django's
+        # Collector.delete(), itself an atomic(savepoint=False) block — rolls back only this savepoint.
+        # Otherwise that inner block marks any enclosing transaction (e.g. an ATOMIC_REQUESTS request)
+        # needs_rollback, leaving the connection unusable for the 409 response that dispatch() builds.
+        with transaction.atomic():
+            return super().perform_destroy(instance)
 
 
 class ReadOnlyModelViewSet(NautobotAPIVersionMixin, ModelViewSetMixin, ReadOnlyModelViewSet_):
