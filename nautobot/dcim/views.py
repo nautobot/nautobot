@@ -4749,20 +4749,127 @@ class InterfaceUIViewSet(
     device_breadcrumb_url = "dcim:device_interfaces"
     module_breadcrumb_url = "dcim:module_interfaces"
 
+    class InterfaceBreakoutLaneConnectionPanel(object_detail.Panel):
+        """ "Connections" panel for a breakout child (sub)interface."""
+
+        body_content_template_path = "dcim/inc/connection_subinterface_body.html"
+
+        def should_render(self, context):
+            return get_obj_from_context(context).get_breakout_lane_cable_path() is not None
+
+    class InterfaceLAGMembersPanel(object_detail.Panel):
+        """ "LAG Members" panel listing the member interfaces of a LAG interface; hidden otherwise."""
+
+        body_content_template_path = "dcim/inc/interface_lag_members.html"
+        body_wrapper_template_path = "components/panel/body_wrapper_table.html"
+
+        def should_render(self, context):
+            return get_obj_from_context(context).is_lag
+
+    class InterfaceVPNEndpointsPanel(object_detail.Panel):
+        """ "VPN Endpoints" panel, shown only when this interface is a VPN tunnel endpoint source."""
+
+        body_content_template_path = "dcim/inc/interface_vpn_endpoints.html"
+        body_wrapper_template_path = "components/panel/body_wrapper_table.html"
+
+        def should_render(self, context):
+            return hasattr(get_obj_from_context(context), "vpn_tunnel_endpoints_src_int")
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+                exclude_fields=("cable_termination", "untagged_vlan", "mgmt_only"),
+                hide_if_unset=("device", "module", "breakout_position"),
+                value_transforms={"speed": [helpers.humanize_speed, helpers.placeholder]},
+                key_transforms={
+                    "port_type": "Port Type",
+                    "vrf": "VRF",
+                    "mtu": "MTU",
+                    "lag": "LAG",
+                    "mac_address": "MAC Address",
+                    "mode": "802.1Q Mode",
+                },
+            ),
+            object_detail.ConnectionPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                trace_url_name="dcim:interface_trace",
+            ),
+            InterfaceBreakoutLaneConnectionPanel(
+                weight=200,
+                section=SectionChoices.RIGHT_HALF,
+                label="Connections",
+            ),
+            InterfaceLAGMembersPanel(
+                weight=300,
+                section=SectionChoices.RIGHT_HALF,
+                label="LAG Members",
+            ),
+            InterfaceVPNEndpointsPanel(
+                weight=400,
+                section=SectionChoices.RIGHT_HALF,
+                label="VPN Endpoints",
+            ),
+            *get_connected_endpoint_panels("interface"),
+            object_detail.ObjectsTablePanel(
+                weight=300,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=InterfaceIPAddressTable,
+                table_attribute="ip_addresses",
+                related_field_name="interfaces",
+                select_related_fields=["tenant"],
+                table_title="IP Addresses",
+                add_button_route=None,
+                enable_related_link=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=400,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="vlan_table",
+                table_title="VLANs",
+                add_button_route=None,
+                enable_related_link=False,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=500,
+                section=SectionChoices.FULL_WIDTH,
+                context_table_key="redundancy_table",
+                table_title="Interface Redundancy Groups",
+                related_field_name="interface",
+                enable_related_link=False,
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=600,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.InterfaceTable,
+                table_attribute="child_interfaces",
+                related_field_name="parent_interface",
+                exclude_columns=["device"],
+                table_title="Child Interfaces",
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=700,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.VirtualDeviceContextTable,
+                table_attribute="virtual_device_contexts",
+                related_field_name="interfaces",
+                select_related_fields=["device", "tenant", "primary_ip4", "primary_ip6"],
+                exclude_columns=["device"],
+                table_title="Virtual Device Contexts",
+                add_button_route=None,
+                enable_related_link=False,
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
-            # Get assigned IP addresses
-            ipaddress_table = InterfaceIPAddressTable(
-                # data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
-                data=instance.ip_addresses.restrict(request.user, "view").select_related("tenant"),
-                orderable=False,
-            )
-
-            # Get child interfaces
-            child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-            child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
-
             # Get assigned VLANs and annotate whether each is tagged or untagged
             vlans = []
             if instance.untagged_vlan is not None:
@@ -4776,24 +4883,11 @@ class InterfaceUIViewSet(
             ):
                 vlan.tagged = True
                 vlans.append(vlan)
-            vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
-            redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
-            virtual_device_contexts_table = tables.VirtualDeviceContextTable(
-                instance.virtual_device_contexts.restrict(request.user, "view").select_related(
-                    "device", "tenant", "primary_ip4", "primary_ip6"
-                ),
-                orderable=False,
-                exclude=("device",),
-            )
             context.update(
                 {
-                    "ipaddress_table": ipaddress_table,
-                    "vlan_table": vlan_table,
-                    "child_interfaces_table": child_interfaces_tables,
-                    "redundancy_table": redundancy_table,
-                    "virtual_device_contexts_table": virtual_device_contexts_table,
-                    "connected_endpoint_tables": get_connected_endpoint_tables(instance),
+                    "vlan_table": InterfaceVLANTable(interface=instance, data=vlans, orderable=False),
+                    "redundancy_table": self._get_interface_redundancy_groups_table(request, instance),
                 }
             )
         return context
