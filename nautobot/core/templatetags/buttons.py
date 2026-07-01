@@ -94,6 +94,38 @@ def delete_button(instance, use_pk=False, key="slug"):
 
 
 #
+# Copy button
+#
+
+
+@register.inclusion_tag("buttons/copy.html")
+def copy_button(target=None, text=None, label="Copy", size=None, css_class=None):
+    """Render a reusable hover "copy to clipboard" button.
+
+    Renders the standard Nautobot hover-copy button markup (see the v2->v3 migration guide,
+    "Hover Copy Buttons"). The button is hidden until its immediate parent is hovered and copies
+    to the clipboard via ClipboardJS, which is initialized globally in `nautobot.js`.
+
+    Provide exactly one of `target` or `text`:
+
+    Args:
+        target (str, optional): CSS selector (e.g. `"#my_value_id"`) of the element whose text content
+            should be copied. Maps to ClipboardJS's `data-clipboard-target`.
+        text (str, optional): A literal string to copy. Maps to ClipboardJS's `data-clipboard-text`.
+        label (str, optional): Accessible label / tooltip text for the button. Defaults to "Copy".
+        size (str, optional): Bootstrap-style size suffix (e.g. `"sm"`, `"xs"`) applied as `btn-{size}`.
+        css_class (str, optional): Additional CSS class(es) to append to the button.
+    """
+    return {
+        "target": target,
+        "text": text,
+        "label": label,
+        "size": size,
+        "css_class": css_class,
+    }
+
+
+#
 # List buttons
 #
 

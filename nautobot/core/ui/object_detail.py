@@ -1655,21 +1655,15 @@ class KeyValueTablePanel(Panel):
                 if value_display is HTML_NONE:
                     value_tag = value_display
                 else:
+                    # key might not be globally unique in a page, but is unique to a panel;
+                    # Hence we add the panel label to make it globally unique to the page
+                    value_id = f"{panel_label}_value_{slugify(key)}"
+                    copy_button = render_to_string("buttons/copy.html", {"target": f"#{value_id}", "label": "Copy"})
                     value_tag = format_html(
-                        """
-                            <span>
-                                <span id="{unique_id}_value_{key}">{value}</span>
-                                <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#{unique_id}_value_{key}">
-                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-                                    <span class="visually-hidden">Copy</span>
-                                </button>
-                            </span>
-                        """,
-                        # key might not be globally unique in a page, but is unique to a panel;
-                        # Hence we add the panel label to make it globally unique to the page
-                        unique_id=panel_label,
-                        key=slugify(key),
+                        '<span><span id="{value_id}">{value}</span>{copy_button}</span>',
+                        value_id=value_id,
                         value=value_display,
+                        copy_button=copy_button,
                     )
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
