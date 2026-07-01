@@ -55,7 +55,8 @@
         hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
     >
         {% for panel_group in homepage_layout_panels %}
-            <div class="col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group">
+            {% comment %}Special flex order is used for unorthodox wrapping in two-column layout (`md` breakpoint) in which the elements are wrapped: 1-2 | 3-4, instead of default 1-3 | 2-4.{% endcomment %}
+            <div class="col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group order-xl-0 order-md-{% if forloop.counter0|divisibleby:'2' %}0{% else %}1{% endif %}">
                 {% for panel_name, panel_details in panel_group.items %}
                     <div class="card nb-draggable" id="{{ panel_name|slugify }}" data-panel-weight="{{ panel_details.weight }}">
                         <div class="card-header nb-draggable-handle">
@@ -165,10 +166,7 @@
                 const columns = [...draggableHomepagePanels.children];
 
                 const collapseVerticalWhitespace = () => {
-                    const firstRightmostColumn = columns.reduce((firstRightmostColumn, column) =>
-                        column.offsetLeft > firstRightmostColumn.offsetLeft ? column : firstRightmostColumn,
-                    );
-                    const firstRightmostColumnIndex = columns.indexOf(firstRightmostColumn);
+                    const firstColumnOffsetTop = columns[0]?.offsetTop;
 
                     // Reset all columns `marginBlockStart` to start offset calculations from scratch.
                     columns.forEach((column) => (column.style.marginBlockStart = 0));
@@ -181,19 +179,29 @@
 
                         const columnOffsetTopTargets = columns.map((column, index) => {
                             /*
-                             * `column` must be wrapped in case it is rendered after the first rightmost column
-                             * encountered, i.e. when its `index` is higher than `firstRightmostColumnIndex`.
+                             * `column` must be wrapped in case when its `offsetTop` property is greater than that of
+                             * the first column.
                              */
-                            const isColumnWrapped = index > firstRightmostColumnIndex;
+                            const isColumnWrapped = column.offsetTop > firstColumnOffsetTop;
                             if (isColumnWrapped) {
                                 /*
-                                 * `columnAbove` is assumed to be the first preceding column with the same `offsetLeft`
-                                 * value as currently iterated `column`, so essentially with the same X coordinate.
+                                 * `columnAbove` is assumed to be another column with the same `offsetLeft` and the
+                                 * lowest positive `offsetTop` difference, so essentially having the same X coordinate
+                                 * and being the closest preceding vertical neighbor.
                                  */
                                 const columnAbove = columns
-                                    .slice(0, index)
-                                    .reverse()
-                                    .find(({ offsetLeft }) => offsetLeft === column.offsetLeft);
+                                    .filter((anotherColumn) => anotherColumn !== column)
+                                    .reduce(
+                                        (acc, anotherColumn) => {
+                                            const offsetTopDifference = column.offsetTop - anotherColumn.offsetTop;
+                                            return anotherColumn.offsetLeft === column.offsetLeft &&
+                                            offsetTopDifference > 0 &&
+                                            offsetTopDifference < acc.offsetTopDifference
+                                                ? { anotherColumn, offsetTopDifference }
+                                                : acc;
+                                        },
+                                        { anotherColumn: null, offsetTopDifference: Infinity },
+                                    ).anotherColumn;
                                 const columnAboveLastChild =
                                     // Fall back to the `columnAbove` itself here, in case it has no children.
                                 columnAbove.children[columnAbove.children.length - 1] ?? columnAbove;
