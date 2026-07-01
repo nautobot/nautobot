@@ -27,7 +27,7 @@ A standard, connected, point-to-point cable would have two cable to cable termin
 
 * The fields `cable`, `cable_end`, and `connector` must form a unique set (in other words, only one termination per physical connector per cable).
 * Exactly one of the termination foreign keys (`circuit_termination`, `console_port`, etc.) must be set - the `termination` property (see below) must identify exactly one termination object that terminates this cable connector.
-* The `connector` must be a valid in-range value for the given `cable_end` of its `cable`'s [cable type](cabletype.md), or must be exactly 1 for an untyped point-to-point cable.
+* The `connector` must be a valid in-range value (`1 <= connector <= cable_type.[a|b]_connectors`) for the given `cable_end` of its `cable`'s [cable type](cabletype.md), or must be exactly 1 for an untyped point-to-point cable.
 * A cable cannot be terminated to virtual or wireless interfaces.
 * A cable cannot be terminated to a circuit termination of a [provider network](../circuits/providernetwork.md).
 * Multiple cables or connectors cannot be terminated to the same object.

@@ -31,12 +31,11 @@ A **position** is a single path within a connector. A connector may carry one or
 
 - A simple SFP connector has **1 position** -- one path in, one path out.
 - A QSFP connector has **4 positions** -- four parallel paths.
-- An MPO-12 connector used for duplex fiber has **6 positions** (12 strands ÷ 2 strands per position).
+- An MPO-12 connector used for duplex fiber has **6 positions** (12 strands ÷ 2 strands per lane).
 
-In the cable type definition, the total number of lanes is defined, and the `a_positions` and `b_positions` are derived from the `total_lanes ÷ a_connectors` and `total_lanes ÷ b_connectors`. All connectors on the same side of a cable are assumed to be the same type with the same number of positions. For example, if Side B has 4 connectors with 1 position each, all 4 are the same connector type (e.g., all LC). Mixed connector types on the same side are not supported.
+In the cable type definition, the total number of lanes, A side connectors, and B side connectors is defined, and the `a_positions` and `b_positions` properties are derived from the `total_lanes ÷ a_connectors` and `total_lanes ÷ b_connectors`. All connectors on the same side of a cable are assumed to have the same number of positions; varying the number of positions per individual connector on a side is not permitted.
 
-- A 1×4 DAC breakout: 1 QSFP-DD connector on Side A (4 positions), 4 SFP28 connectors on Side B (1 position each)
-- A 2×4 MPO trunk: 2 MPO-8 connectors on each side (4 positions each)
+For example, a 1x4 DAC breakout cable type would have 4 `total_lanes` and include 1 QSFP-DD connector (`a_connectors = 1` and therefore 4 positions, `a_positions = 4`) on Side A, and 4 SFP28 connectors (`b_connectors = 4` and therefore 1 position each, `b_positions = 1`) on Side B.
 
 ### Lane
 

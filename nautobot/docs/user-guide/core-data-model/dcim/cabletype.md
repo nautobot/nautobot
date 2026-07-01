@@ -1,8 +1,10 @@
 # Cable Types
 
-+++ 3.2
++++ 3.2.0
 
 While the definition and usage of cable types is optional when modeling simple point-to-point [cables](cable.md), cable types are primarily required when modeling [breakout cables](../../feature-guides/breakout-cables.md) in Nautobot. A cable type defines the physical connectivity of cables using this type, including the number of connectors at each side, the number of internal lanes within the cable, and the mapping between connectors and lanes.
+
+When initially installed or upgraded to v3.2.0 or later, Nautobot automatically creates a number of pre-defined basic cable types by default. These are not protected records and will not be auto-recreated later; feel free to use, modify, or delete them as suits your needs. You are also free to create as many custom cable types as you like.
 
 ## Fields
 
@@ -21,7 +23,7 @@ A cable type has the following fields:
 | `has_embedded_transceivers` | Boolean | No | Informational - whether transceivers such as SFPs are built in to the cable |
 | `is_shuffle` | Boolean | No | Informational - whether the lane mapping is non-linear, polarity-shuffled, etc. |
 | `strands_per_lane` | integer | No | Informational - number of physical strands per logical lane |
-| `polarity_method` | string | No | Informational - fiber polarity method |
+| `polarity_method` | string (enum) | No | Informational - fiber polarity method, if relevant. One of `straight-through`, `reversed`, `pair-reversed`, or `other`. |
 
 ### Validation
 
