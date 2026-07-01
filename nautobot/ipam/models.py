@@ -52,6 +52,88 @@ logger = logging.getLogger(__name__)
 default_namespace_pk = contextvars.ContextVar("default_namespace_pk", default=None)
 
 
+class NamespaceParentedModelMixin:
+    """
+    Shared behavior for models that live inside a Namespace and whose parent Prefix
+    is auto-resolved from one or more bare host values (IPAddress, IPAddressRange).
+
+    Handles namespace resolution, closest-parent lookup, and change-tracking
+    snapshots of parent_id plus the host fields declared by the subclass.
+    """
+
+    #: VarbinaryIP field names to snapshot for change detection. parent_id is always tracked.
+    _change_tracked_host_fields = ()
+
+    def __init__(self, *args, namespace=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._parent_id = None
+        self._closest_parent_cache = {}
+        for field_name in self._change_tracked_host_fields:
+            setattr(self, f"_{field_name}", None)
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        # Cache original values so clean()/save() can detect edits to immutable fields.
+        tracked = set(cls._change_tracked_host_fields)
+        for field_name, value in zip(field_names, values):
+            if field_name == "parent_id":
+                instance._parent_id = value
+            elif field_name in tracked:
+                setattr(instance, f"_{field_name}", value)
+        return instance
+
+    def save(self, *args, **kwargs):
+        self.clean()  # MUST do data fixup (parent resolution, normalization) before saving
+        super().save(*args, **kwargs)
+        self._snapshot_tracked_fields()
+
+    def _snapshot_tracked_fields(self):
+        """Re-cache field values after save so later edits to immutable fields are detectable."""
+        self._parent_id = self.parent_id
+        for field_name in self._change_tracked_host_fields:
+            setattr(self, f"_{field_name}", getattr(self, field_name))
+
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent_id is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
+
+    def _get_closest_parent(self, host):
+        """
+        Return the narrowest Prefix in this object's namespace containing `host`.
+        Returns None for an empty host; raises ValidationError when no containing
+        Prefix exists in the namespace. Memoized per (namespace, host).
+        """
+        empty_values = [None, b"", ""]
+        if host in empty_values:
+            return None
+        namespace = self._namespace
+        cache_key = (namespace.pk, host)
+        if cache_key in self._closest_parent_cache:
+            return self._closest_parent_cache[cache_key]
+        try:
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(host, include_self=True)
+        except Prefix.DoesNotExist as e:
+            raise ValidationError(
+                {"namespace": f"No suitable parent Prefix for {host} exists in Namespace {namespace}"}
+            ) from e
+        self._closest_parent_cache[cache_key] = parent
+        return parent
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -1452,7 +1534,7 @@ class PrefixLocationAssignment(BaseModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel):
+class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -1528,6 +1610,8 @@ class IPAddress(PrimaryModel):
 
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
+    _change_tracked_host_fields = ("host",)
+
     class Meta:
         ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
@@ -1538,27 +1622,9 @@ class IPAddress(PrimaryModel):
         ]
 
     def __init__(self, *args, address=None, namespace=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._parent = None
-        self._host = None
-
-        if namespace is not None and not self.present_in_database:
-            self._provided_namespace = namespace
-
+        super().__init__(*args, namespace=namespace, **kwargs)
         if address is not None and not self.present_in_database:
             self._deconstruct_address(address)
-
-    @classmethod
-    def from_db(cls, db, field_names, values):
-        instance = super().from_db(db, field_names, values)
-        # These cached values are used to detect changes during save
-        for field_name, value in zip(field_names, values):
-            if field_name == "host":
-                instance._host = value
-            elif field_name == "parent":
-                instance._parent = value
-        return instance
 
     def __str__(self):
         return str(self.address)
@@ -1574,25 +1640,6 @@ class IPAddress(PrimaryModel):
     _deconstruct_address.alters_data = True
 
     natural_key_field_names = ["parent__namespace", "host"]
-
-    def _get_closest_parent(self):
-        # TODO: Implement proper caching of `closest_parent` and ensure the cache is invalidated when
-        #  `_namespace` changes. Currently, `_get_closest_parent` is called twice, in the `clean` and `save` methods.
-        #  Caching would improve performance.
-
-        # Host and maxlength are required to get the closest_parent
-        empty_values = [None, b"", ""]
-        if self.host in empty_values or self.mask_length in empty_values:
-            return None
-        try:
-            closest_parent = Prefix.objects.filter(namespace=self._namespace).get_closest_parent(
-                self.host, include_self=True
-            )
-            return closest_parent
-        except Prefix.DoesNotExist as e:
-            raise ValidationError(
-                {"namespace": f"No suitable parent Prefix for {self.host} exists in Namespace {self._namespace}"}
-            ) from e
 
     def clean(self):
         self._deconstruct_address(self.address)
@@ -1626,14 +1673,12 @@ class IPAddress(PrimaryModel):
                     }
                 )
 
-        closest_parent = self._get_closest_parent()
+        closest_parent = None
+        if self.mask_length not in (None, b"", ""):
+            closest_parent = self._get_closest_parent(self.host)
         if closest_parent is not None:
             # If `parent` was explicitly set or changed, validate it and reject if invalid.
-            if (
-                self.parent is not None
-                and (self.parent != self._parent or not self.present_in_database)
-                and self.parent != closest_parent
-            ):
+            if self.parent is not None and self.parent != closest_parent:
                 raise ValidationError(
                     {
                         "parent": (
@@ -1653,14 +1698,6 @@ class IPAddress(PrimaryModel):
         super().clean()
 
     clean.alters_data = True
-
-    def save(self, *args, **kwargs):
-        self.clean()  # MUST do data fixup as above
-
-        super().save(*args, **kwargs)
-
-        self._parent = self.parent
-        self._host = self.host
 
     @property
     def address(self):
@@ -1707,22 +1744,6 @@ class IPAddress(PrimaryModel):
             query = query.exclude(id=self.id)
 
         return query
-
-    @property
-    def _namespace(self):
-        # if a namespace was explicitly set, use it
-        if getattr(self, "_provided_namespace", None):
-            return self._provided_namespace
-        if self.parent is not None:
-            return self.parent.namespace
-        return get_default_namespace()
-
-    @_namespace.setter
-    def _namespace(self, namespace):
-        # unset parent when namespace is changed
-        if namespace:
-            self.parent = None
-        self._provided_namespace = namespace
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
@@ -1794,7 +1815,7 @@ class IPAddressToInterface(BaseModel):
     "statuses",
     "webhooks",
 )
-class IPAddressRange(PrimaryModel):
+class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
     """
     An IPAddressRange represents a contiguous span of IP addresses defined by a start host and an end host,
     both contained within the same parent Prefix. Unlike a Prefix or IPAddress, a range is not a network and
@@ -1869,7 +1890,7 @@ class IPAddressRange(PrimaryModel):
         "is_exclusive",
     ]
 
-    # objects = BaseManager.from_queryset(IPAddressRangeQuerySet)() # maybe we will need this in future
+    _change_tracked_host_fields = ("start_host", "end_host")
 
     class Meta:
         ordering = ("parent__namespace", "ip_version", "start_host")
@@ -1888,31 +1909,11 @@ class IPAddressRange(PrimaryModel):
     natural_key_field_names = ["parent__namespace", "start_host"]
 
     def __init__(self, *args, start_address=None, end_address=None, namespace=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._parent_id = None
-        self._start_host = None
-        self._end_host = None
-
-        if namespace is not None and not self.present_in_database:
-            self._provided_namespace = namespace
-
+        super().__init__(*args, namespace=namespace, **kwargs)
         if start_address is not None and not self.present_in_database:
             self._deconstruct_start_address(start_address)
         if end_address is not None and not self.present_in_database:
             self._deconstruct_end_address(end_address)
-
-    @classmethod
-    def from_db(cls, db, field_names, values):
-        instance = super().from_db(db, field_names, values)
-        for field_name, value in zip(field_names, values):
-            if field_name == "start_host":
-                instance._start_host = value
-            elif field_name == "end_host":
-                instance._end_host = value
-            elif field_name == "parent_id":
-                instance._parent_id = value
-        return instance
 
     def __str__(self):
         if self.parent_id is not None:
@@ -1997,11 +1998,7 @@ class IPAddressRange(PrimaryModel):
                 }
             )
 
-        if (
-            self.parent_id is not None
-            and (self.parent_id != self._parent_id or not self.present_in_database)
-            and self.parent_id != closest_start.pk
-        ):
+        if self.parent_id is not None and self.parent_id != closest_start.pk:
             raise ValidationError(
                 {
                     "parent": (
@@ -2068,15 +2065,6 @@ class IPAddressRange(PrimaryModel):
                     }
                 )
 
-    def save(self, *args, **kwargs):
-        self.clean()  # MUST do data fixup as above
-
-        super().save(*args, **kwargs)
-
-        self._parent_id = self.parent_id
-        self._start_host = self.start_host
-        self._end_host = self.end_host
-
     @property
     def start_address(self):
         if self.start_host is not None:
@@ -2106,41 +2094,6 @@ class IPAddressRange(PrimaryModel):
             host__gte=self.start_host,
             host__lte=self.end_host,
         )
-
-    # Namespace resolution (copied from IPAddress; TODO: extract to shared mixin)
-
-    @property
-    def _namespace(self):
-        # if a namespace was explicitly set, use it
-        if getattr(self, "_provided_namespace", None):
-            return self._provided_namespace
-        if self.parent_id is not None:
-            return self.parent.namespace
-        return get_default_namespace()
-
-    @_namespace.setter
-    def _namespace(self, namespace):
-        # unset parent when namespace is changed
-        if namespace:
-            self.parent = None
-        self._provided_namespace = namespace
-
-    # Closest-parent resolution (copied from IPAddress; TODO: extract to shared mixin)
-
-    def _get_closest_parent(self, host):
-        """
-        Return the narrowest Prefix in this range's namespace containing `host`,
-        or None if `host` is empty. Raises ValidationError if no parent exists.
-        """
-        empty_values = [None, b"", ""]
-        if host in empty_values:
-            return None
-        try:
-            return Prefix.objects.filter(namespace=self._namespace).get_closest_parent(host, include_self=True)
-        except Prefix.DoesNotExist as e:
-            raise ValidationError(
-                {"namespace": f"No suitable parent Prefix for {host} exists in Namespace {self._namespace}"}
-            ) from e
 
     def get_utilization(self):
         """Utilization of this range as a UtilizationData object (numerator, denominator)."""

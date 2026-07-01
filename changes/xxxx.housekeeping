@@ -1,0 +1,1 @@
+Extracted shared namespace and parent-Prefix resolution logic from `IPAddress` and `IPAddressRange` into a reusable `NamespaceParentedModelMixin`.
