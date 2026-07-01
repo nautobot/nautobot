@@ -4957,6 +4957,22 @@ class RearPortUIViewSet(
     device_breadcrumb_url = "dcim:device_rearports"
     module_breadcrumb_url = "dcim:module_rearports"
 
+    def get_extra_context(self, request, instance):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            front_ports = FrontPort.optimize_queryset_for_cable_columns(
+                instance.front_ports.restrict(request.user, "view").select_related("device", "module")
+            )
+            front_port_table = tables.FrontPortTable(front_ports, orderable=False)
+            front_port_table.columns.hide("rear_port")
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(front_port_table)
+            context["front_port_table"] = front_port_table
+        return context
+
 
 #
 # Device bays

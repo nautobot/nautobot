@@ -43,3 +43,12 @@
 {% block content_right_page %}
     {% include 'dcim/inc/connection.html' with trace_url_name='dcim:rearport_trace' %}
 {% endblock content_right_page %}
+
+{% block content_full_width_page %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <strong>Front Ports</strong>
+        </div>
+        {% include 'responsive_table.html' with table=front_port_table %}
+    </div>
+{% endblock content_full_width_page %}
