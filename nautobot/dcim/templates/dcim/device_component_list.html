@@ -1,0 +1,14 @@
+{% extends 'generic/object_list.html' %}
+{% load helpers %}
+
+{% comment %}
+Shared list template for cabled device components (interfaces, console/power ports, front/rear
+ports). Loads `connection_toggles.js` so the per-row "Mark cable as ...", "Detach cable", and
+similar actions work in the list view. The JS delegates clicks from `document`, so it keeps working
+after the list table is reloaded via HTMX.
+{% endcomment %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% versioned_static 'js/connection_toggles.js' %}"></script>
+{% endblock javascript %}

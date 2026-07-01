@@ -122,6 +122,26 @@ class InterfaceTableRenderMixin:
 
                 self.assertEqual(rendered_duplex, expected_output)
 
+    def test_row_attrs_color_by_cable_status(self):
+        """A cabled interface's row carries a cable-status color class; an uncabled one does not.
+
+        Runs for both the list table and the device/module tab table, guarding against the list
+        table missing the `cable_status_color_css` row coloring its tab counterpart has.
+        """
+        uncabled = Interface.objects.create(device=self.device, name="uncabled", status=self.interface_status)
+        cabled_a = Interface.objects.create(device=self.device, name="cabled-a", status=self.interface_status)
+        cabled_b = Interface.objects.create(device=self.device, name="cabled-b", status=self.interface_status)
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        Cable.objects.create(termination_a=cabled_a, termination_b=cabled_b, status=cable_status)
+
+        cabled_table = self.table_class(Interface.objects.filter(pk=cabled_a.pk))  # pylint: disable=not-callable
+        cabled_class = str(cabled_table.rows[0].attrs.get("class", ""))
+        # "Connected" cable status is green → table-success.
+        self.assertIn("table-success", cabled_class)
+
+        uncabled_table = self.table_class(Interface.objects.filter(pk=uncabled.pk))  # pylint: disable=not-callable
+        self.assertNotIn("table-success", str(uncabled_table.rows[0].attrs.get("class", "")))
+
     def _make_breakout_trunk_with_children(self, count):
         """Create a 1xN breakout trunk with `count` far interfaces and matching child interfaces.
 
@@ -213,7 +233,29 @@ class InterfaceTableRenderMixin:
                     row.get_cell(column)
             return len(ctx.captured_queries)
 
+        # Warm one-time caches (notably the `ContentType` cache that `GenericPrefetch` resolves)
+        # so their constant cost doesn't skew the *marginal* per-row count measured below.
+        render_query_count(pks)
         return (render_query_count(pks) - render_query_count(pks[:1])) / (len(pks) - 1)
+
+    def test_cable_column_prefetch_skipped_when_columns_hidden(self):
+        """Hiding the `cable_peer` / `connection` columns skips their (conditional) prefetch queries.
+
+        Their prefetch is applied by the table only when the column is visible, so a table that hides
+        them evaluates its queryset with strictly fewer queries than one that shows them.
+        """
+        self._make_cabled_interfaces(4)
+        queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
+
+        def prefetch_query_count(**table_kwargs):
+            table = self.table_class(queryset, **table_kwargs)  # pylint: disable=not-callable
+            with CaptureQueriesContext(connection) as ctx:
+                list(table.data.data)  # force the prefetch_related lookups to execute
+            return len(ctx.captured_queries)
+
+        shown = prefetch_query_count(exclude=())
+        hidden = prefetch_query_count(exclude=("cable_peer", "connection"))
+        self.assertLess(hidden, shown)
 
     def test_render_breakout_subinterface_columns_no_extra_n_plus_one(self):
         """The breakout connection/cable_peer fallbacks add no per-row queries beyond normal cabling.
