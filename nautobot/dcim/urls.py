@@ -37,6 +37,7 @@ router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("devices", views.DeviceUIViewSet)
+router.register("front-ports", views.FrontPortUIViewSet)
 router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
@@ -426,57 +427,6 @@ urlpatterns = [
         "devices/interfaces/add/",
         views.DeviceBulkAddInterfaceView.as_view(),
         name="device_bulk_add_interface",
-    ),
-    # Front ports
-    path("front-ports/", views.FrontPortListView.as_view(), name="frontport_list"),
-    path("front-ports/add/", views.FrontPortCreateView.as_view(), name="frontport_add"),
-    path(
-        "front-ports/import/",
-        views.FrontPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="frontport_import",
-    ),
-    path(
-        "front-ports/edit/",
-        views.FrontPortBulkEditView.as_view(),
-        name="frontport_bulk_edit",
-    ),
-    path(
-        "front-ports/rename/",
-        views.FrontPortBulkRenameView.as_view(),
-        name="frontport_bulk_rename",
-    ),
-    path(
-        "front-ports/disconnect/",
-        views.FrontPortBulkDisconnectView.as_view(),
-        name="frontport_bulk_disconnect",
-    ),
-    path(
-        "front-ports/delete/",
-        views.FrontPortBulkDeleteView.as_view(),
-        name="frontport_bulk_delete",
-    ),
-    path("front-ports/<uuid:pk>/", views.FrontPortView.as_view(), name="frontport"),
-    path(
-        "front-ports/<uuid:pk>/edit/",
-        views.FrontPortEditView.as_view(),
-        name="frontport_edit",
-    ),
-    path(
-        "front-ports/<uuid:pk>/delete/",
-        views.FrontPortDeleteView.as_view(),
-        name="frontport_delete",
-    ),
-    path(
-        "front-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="frontport_changelog",
-        kwargs={"model": FrontPort},
-    ),
-    path(
-        "front-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="frontport_notes",
-        kwargs={"model": FrontPort},
     ),
     path(
         "front-ports/<uuid:pk>/trace/",
