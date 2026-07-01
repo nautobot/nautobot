@@ -4594,11 +4594,23 @@ class ConsoleServerPortUIViewSet(
     device_breadcrumb_url = "dcim:device_consoleserverports"
     module_breadcrumb_url = "dcim:module_consoleserverports"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Console Server Port",
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:consoleserverport_trace",
+            ),
+            *get_connected_endpoint_panels("consoleserverport"),
+        )
+    )
 
 
 #
