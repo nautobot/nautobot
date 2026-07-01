@@ -1644,7 +1644,7 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
     def clean(self):
         self._deconstruct_address(self.address)
 
-        if self.present_in_database and self._host != self.host:
+        if self.present_in_database and self._host != self.host:  # pylint: disable=no-member
             raise ValidationError({"__all__": "Host address cannot be changed once created"})
 
         # Validate IP status selection
