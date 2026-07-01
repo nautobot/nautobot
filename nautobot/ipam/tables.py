@@ -207,12 +207,12 @@ IPADDRESS_OR_RANGE_ACTIONS = """\
                     <li>
                         <a href="{{ record.get_absolute_url }}" class="dropdown-item">
                             <span class="mdi mdi-information-outline" aria-hidden="true"></span>
-                            Details
+                            IP address range Details
                         </a>
                     </li>
                     <li>
                         <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
-                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View IP address range change log
                         </a>
                     </li>
                     {% if perms.ipam.change_iprange %}
@@ -233,12 +233,12 @@ IPADDRESS_OR_RANGE_ACTIONS = """\
                     <li>
                         <a href="{{ record.get_absolute_url }}" class="dropdown-item">
                             <span class="mdi mdi-information-outline" aria-hidden="true"></span>
-                            Details
+                            IP address Details
                         </a>
                     </li>
                     <li>
                         <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
-                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View IP address change log
                         </a>
                     </li>
                     {% if perms.ipam.change_ipaddress %}
