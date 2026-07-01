@@ -1,5 +1,7 @@
 from collections import defaultdict
+from dataclasses import dataclass
 import logging
+from typing import Optional
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -7,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.db.models import Sum
+from django.urls import NoReverseMatch
 from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -23,8 +26,9 @@ from nautobot.dcim.constants import (
     TERMINATION_FK_TO_CONTENT_TYPE,
 )
 from nautobot.dcim.fields import JSONPathField
-from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG
+from nautobot.dcim.svg.cable_breakout import BreakoutDiagramSVG, TerminationLabel
 from nautobot.dcim.utils import (
+    build_connector_row_layout,
     decompile_path_node,
     generate_cable_breakout_mapping,
     object_to_path_node,
@@ -41,16 +45,72 @@ from nautobot.extras.utils import extras_features
 # would be the much more invasive but much more "correct" fix.
 from nautobot.core.models.generics import BaseModel, PrimaryModel  # isort: skip
 
-from .device_components import FrontPort, RearPort
+from .device_components import CableTermination, FrontPort, RearPort
 
 __all__ = (
     "Cable",
+    "CableLane",
+    "CableLaneSide",
     "CablePath",
     "CableToCableTermination",
     "CableType",
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _safe_absolute_url(obj):
+    """Return `obj.get_absolute_url()` or "" if the object exposes no resolvable URL."""
+    if obj is None:
+        return ""
+    try:
+        return obj.get_absolute_url()
+    except (AttributeError, NoReverseMatch):
+        return ""
+
+
+@dataclass(frozen=True)
+class CableLaneSide:
+    """One side (A or B) of a `CableLane`: its connector/position and resolved termination.
+
+    `termination` is the actual termination object (e.g. an `Interface`) or `None` when that
+    side of the lane is unconnected.
+    """
+
+    connector: int
+    position: int
+    termination: Optional[CableTermination]
+
+
+@dataclass(frozen=True)
+class CableLane:
+    """A single logical lane of a cable's connector mapping, with both sides' terminations resolved.
+
+    Note that multiple lanes which share a far-/near-side connector resolve to the same termination
+    object — the cable's mapping is what makes them distinct logical lanes, not the termination row.
+
+    Use `side()` to access a side by `cable_end` ("A"/"B") rather than reaching for the
+    `a_*`/`b_*` attributes by name; this keeps callers that work relative to a trunk/fan-out
+    side from constructing attribute names from strings.
+    """
+
+    lane: int
+    label: Optional[str]
+    a_connector: int
+    a_position: int
+    b_connector: int
+    b_position: int
+    a_termination: Optional[CableTermination]
+    b_termination: Optional[CableTermination]
+
+    def side(self, cable_end):
+        """Return the `CableLaneSide` for `cable_end` ("A" or "B", case-insensitive)."""
+        end = cable_end.lower()
+        return CableLaneSide(
+            connector=getattr(self, f"{end}_connector"),
+            position=getattr(self, f"{end}_position"),
+            termination=getattr(self, f"{end}_termination"),
+        )
 
 
 #
@@ -162,6 +222,17 @@ class CableType(PrimaryModel):
     def is_breakout(self):
         """True if A-side and B-side connector counts differ."""
         return self.a_connectors != self.b_connectors
+
+    @property
+    def is_multi_connector(self):
+        """True if either side has more than one connector (i.e. multiple terminations per side).
+
+        Broader than `is_breakout`, which requires *differing* connector counts: a symmetric
+        multi-connector type such as a polarity-shuffled 2x2 is multi-connector but not a breakout.
+        Multi-connector cable types model per-lane terminations and therefore require breakout-eligible
+        termination types (see `Cable.breakout_eligible`).
+        """
+        return self.a_connectors > 1 or self.b_connectors > 1
 
     @property
     def trunk_end(self):
@@ -279,7 +350,8 @@ class Cable(PrimaryModel):
         blank=True,
     )
     # Stores the normalized length (in meters) for database ordering
-    _abs_length = models.DecimalField(max_digits=10, decimal_places=4, blank=True, null=True)
+    # max(length) = 65535, max(length_unit) = "km" --> max(_abs_length) = 65535000.0000
+    _abs_length = models.DecimalField(max_digits=13, decimal_places=4, blank=True, null=True)
 
     # Typed many-to-many accessors for each terminating model. The through model is
     # CableToCableTermination, which carries the cable_end / connector lane attributes.
@@ -502,7 +574,12 @@ class Cable(PrimaryModel):
             termination = endpoint.termination
             if termination:
                 parent = getattr(termination, "parent", None)
-                label = f"{parent} / {termination}" if parent else str(termination)
+                label = TerminationLabel(
+                    term_text=str(termination),
+                    term_url=_safe_absolute_url(termination),
+                    parent_text=str(parent) if parent else "",
+                    parent_url=_safe_absolute_url(parent),
+                )
                 if endpoint.cable_end == "A":
                     connected_a.add(endpoint.connector)
                     a_labels[endpoint.connector] = label
@@ -512,7 +589,7 @@ class Cable(PrimaryModel):
         return connected_a, connected_b, a_labels, b_labels
 
     def get_mapping_diagram_svg(self):
-        """Return SVG string for the breakout lane mapping diagram with connection status and tooltips."""
+        """Return SVG string for the breakout lane mapping diagram with connection status and termination links."""
         if not self.cable_type_id:
             return ""
 
@@ -556,9 +633,9 @@ class Cable(PrimaryModel):
 
     def get_lanes(self):
         """
-        Return a list of lane dicts, each containing lane number, connector/position info, and
-        actual termination objects (or None for unconnected). Standard (non-breakout) cables
-        return a single-element list representing the implicit one-lane connection.
+        Return a list of `CableLane` instances, each carrying the lane number, connector/position
+        info, and actual termination objects (or None for unconnected). Standard (non-breakout)
+        cables return a single-element list representing the implicit one-lane connection.
 
         Note that multiple lanes which share a far-/near-side connector resolve to the same
         termination object — the cable's mapping is what makes them distinct logical lanes,
@@ -572,16 +649,16 @@ class Cable(PrimaryModel):
             a_endpoint = endpoint_lookup.get(("A", entry["a_connector"]))
             b_endpoint = endpoint_lookup.get(("B", entry["b_connector"]))
             lanes.append(
-                {
-                    "lane": lane_number,
-                    "label": entry.get("label"),
-                    "a_connector": entry["a_connector"],
-                    "a_position": entry["a_position"],
-                    "b_connector": entry["b_connector"],
-                    "b_position": entry["b_position"],
-                    "a_termination": a_endpoint.termination if a_endpoint else None,
-                    "b_termination": b_endpoint.termination if b_endpoint else None,
-                }
+                CableLane(
+                    lane=lane_number,
+                    label=entry.get("label"),
+                    a_connector=entry["a_connector"],
+                    a_position=entry["a_position"],
+                    b_connector=entry["b_connector"],
+                    b_position=entry["b_position"],
+                    a_termination=a_endpoint.termination if a_endpoint else None,
+                    b_termination=b_endpoint.termination if b_endpoint else None,
+                )
             )
         return lanes
 
@@ -603,6 +680,8 @@ class Cable(PrimaryModel):
         cable_type = self.cable_type if self.cable_type_id else None
 
         def _build_connector_info(side, connector_number, position_count):
+            if connector_number is None:
+                return None
             endpoint = endpoint_by_connector.get((side, connector_number))
             return {
                 "connector": connector_number,
@@ -622,50 +701,15 @@ class Cable(PrimaryModel):
                 "b_connector_count": 1,
             }
 
-        # Build the mapping: which A connectors map to which B connectors
-        a_to_b_connectors = {}
-        b_to_a_connectors = {}
-        for entry in cable_type.mapping:
-            a_to_b_connectors.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
-            b_to_a_connectors.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
-
-        # Build a flat row list from the mapping, assigning rowspans.
-        # Each unique (a_connector, b_connector) pair gets one row.
-        rows = []
-        seen_a_connectors = {}  # a_connector → first row index
-        seen_b_connectors = {}  # b_connector → first row index
-        seen_pairs = set()
-
-        for entry in cable_type.mapping:
-            a_connector = entry["a_connector"]
-            b_connector = entry["b_connector"]
-            pair = (a_connector, b_connector)
-            if pair in seen_pairs:
-                continue
-            seen_pairs.add(pair)
-
-            a_info = _build_connector_info("A", a_connector, cable_type.a_positions)
-            b_info = _build_connector_info("B", b_connector, cable_type.b_positions)
-
-            a_rowspan = 0  # 0 = skip (covered by previous rowspan)
-            b_rowspan = 0
-
-            if a_connector not in seen_a_connectors:
-                a_rowspan = len(a_to_b_connectors.get(a_connector, []))
-                seen_a_connectors[a_connector] = len(rows)
-
-            if b_connector not in seen_b_connectors:
-                b_rowspan = len(b_to_a_connectors.get(b_connector, []))
-                seen_b_connectors[b_connector] = len(rows)
-
-            rows.append(
-                {
-                    "a": a_info,
-                    "b": b_info,
-                    "a_rowspan": a_rowspan,
-                    "b_rowspan": b_rowspan,
-                }
-            )
+        rows = [
+            {
+                "a": _build_connector_info("A", layout["a_connector"], cable_type.a_positions),
+                "b": _build_connector_info("B", layout["b_connector"], cable_type.b_positions),
+                "a_rowspan": layout["a_rowspan"],
+                "b_rowspan": layout["b_rowspan"],
+            }
+            for layout in build_connector_row_layout(cable_type.mapping)
+        ]
 
         return {
             "rows": rows,
@@ -1147,6 +1191,21 @@ class CableToCableTermination(BaseModel):
         if term is not None:
             validate_cable_termination(term, cable_id=self.cable_id)
 
+        # A multi-connector cable type models per-lane terminations, which only certain termination
+        # types support; reject e.g. a console or power termination on a breakout cable. Single-
+        # connector cable types (and standard cables with no cable_type) impose no such restriction.
+        if (
+            term is not None
+            and self.cable is not None
+            and self.cable.cable_type_id is not None
+            and self.cable.cable_type.is_multi_connector
+            and term._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES
+        ):
+            raise ValidationError(
+                f"A {term._meta.verbose_name} cannot terminate a multi-connector cable type; only "
+                "interfaces, front ports, rear ports, and circuit terminations support breakout."
+            )
+
         # `connector` must be in the range defined by the parent cable's CableType. Standard cables
         # (no CableType) have a single connector on each end, so `connector` must be 1; breakout
         # cables have `a_connectors`/`b_connectors` valid positions per side.
@@ -1436,7 +1495,7 @@ class CablePath(BaseModel):
         """
         Return all available next segments in a split cable path.
 
-        A split path ends on one of two port types:
+        A split path ends on one of three terminal nodes:
 
         - A RearPort: the trace arrived on the rear face of a patch panel and the signal fans out
           internally to the panel's front ports, so those front ports are the next segments.
@@ -1444,8 +1503,13 @@ class CablePath(BaseModel):
           multiple lanes (see `CablePath.from_origin`), so the next segments are that cable's
           far-side lane terminations — onward across the cable, not the rear port behind the front
           port (which the trace has already traversed).
+        - A Cable: the origin sits on a breakout cable whose requested lane has no far-side
+          termination (a disconnected lane; `path=[cable]`, see `from_origin`). There is nowhere to
+          continue, so there are no next segments.
         """
         next_port = path_node_to_object(self.path[-1])
+        if isinstance(next_port, Cable):
+            return []
         if isinstance(next_port, RearPort):
             return FrontPort.objects.filter(rear_port=next_port)
         return next_port.get_cable_peers()
