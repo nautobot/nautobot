@@ -1903,6 +1903,23 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
             mid.validated_save()
 
+    def test_narrowing_prefix_that_would_orphan_range_is_rejected_on_bare_save(self):
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        prefix.prefix = "10.0.0.0/26"
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            prefix.save()
+
     def test_deleting_parentless_prefix_with_ranges_is_protected(self):
         """A top-level Prefix (parent=None) containing IP Address Ranges cannot be deleted."""
         # self.root is 101.102.0.0/16, parent=None (top-level container)
@@ -2693,21 +2710,21 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "overlaps with child Prefix"):
             ip_range.validated_save()
 
-    def test_percent_utilized_no_ips(self):
-        """Range with no IP addresses has 0% utilization."""
+    def test_get_utilization_no_ips(self):
+        """Empty range: no addresses occupied."""
         ip_range = IPAddressRange.objects.create(
             start_address="10.99.0.200",
-            end_address="10.99.0.209",
+            end_address="10.99.0.209",  # 10 addresses
             namespace=self.namespace,
             status=self.status,
         )
-        self.assertEqual(ip_range.get_percent_utilized(), 0.0)
+        self.assertEqual(ip_range.get_utilization(), (0, 10))
 
-    def test_percent_utilized_partial(self):
-        """Range with some IP addresses shows correct utilization."""
+    def test_get_utilization_partial(self):
+        """Range with some addresses occupied by IPAddress objects."""
         ip_range = IPAddressRange.objects.create(
             start_address="10.99.0.100",
-            end_address="10.99.0.109",
+            end_address="10.99.0.109",  # 10 addresses
             namespace=self.namespace,
             status=self.status,
         )
@@ -2716,10 +2733,10 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
             namespace=self.namespace,
             status=self.status,
         )
-        self.assertAlmostEqual(ip_range.get_percent_utilized(), 10.0)
+        self.assertEqual(ip_range.get_utilization(), (1, 10))
 
-    def test_percent_utilized_full(self):
-        """Range where every address has an IP object shows 100%."""
+    def test_get_utilization_full(self):
+        """Range where every address has an IPAddress object."""
         ip_range = IPAddressRange.objects.create(
             start_address="10.99.0.110",
             end_address="10.99.0.112",  # 3 addresses
@@ -2732,29 +2749,7 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
                 namespace=self.namespace,
                 status=self.status,
             )
-        self.assertAlmostEqual(ip_range.get_percent_utilized(), 100.0)
-
-    def test_percent_utilized_count_as_utilized_is_full(self):
-        """A count_as_utilized range reports 100% regardless of actual IPs."""
-        ip_range = IPAddressRange.objects.create(
-            start_address="10.0.0.50",
-            end_address="10.0.0.60",
-            status=self.status,
-            namespace=self.namespace,
-            count_as_utilized=True,
-        )
-        self.assertEqual(ip_range.get_percent_utilized(), 100.0)
-
-    def test_percent_utilized_exclusive_is_full(self):
-        """An exclusive range reports 100% (no IPs can be created within it)."""
-        ip_range = IPAddressRange.objects.create(
-            start_address="10.0.0.70",
-            end_address="10.0.0.80",
-            status=self.status,
-            namespace=self.namespace,
-            is_exclusive=True,
-        )
-        self.assertEqual(ip_range.get_percent_utilized(), 100.0)
+        self.assertEqual(ip_range.get_utilization(), (3, 3))
 
 
 class TestRIR(ModelTestCases.BaseModelTestCase):
