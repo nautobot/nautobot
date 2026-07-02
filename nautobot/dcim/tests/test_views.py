@@ -120,6 +120,7 @@ from nautobot.dcim.views import (
     ConsolePortUIViewSet,
     DeviceBayUIViewSet,
     DeviceUIViewSet,
+    FrontPortUIViewSet,
     InterfaceConnectionsListView,
     ModuleTypeComponentAddButton,
     PowerConnectionsListView,
@@ -4349,6 +4350,11 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     @unittest.skip("No DeviceBulkAddFrontPortView exists at present")
     def test_bulk_add_component(self):
         pass
+
+    def test_get_selected_objects_parents_name_empty(self):
+        """Covers the empty-queryset branch (`return ""`) in get_selected_objects_parents_name."""
+        viewset = FrontPortUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(FrontPort.objects.none()), "")
 
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
