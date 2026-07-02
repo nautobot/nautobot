@@ -1,0 +1,1 @@
+Fixed Provider `noc_contact` and `admin_contact` fields no longer being rendered as Markdown on the Provider detail view.
