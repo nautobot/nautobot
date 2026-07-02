@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http import HTTPStatus
 import re
 from unittest import mock
@@ -16,6 +16,7 @@ from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
@@ -4296,14 +4297,16 @@ class ScheduledJobTestCase(
     def test_detail_view_renders_datetime_in_non_default_timezone(self):
         """When the schedule's time zone differs from the server default, both renderings are shown."""
         self.add_permissions("extras.view_scheduledjob")
-        # The default server time zone is UTC; using a different zone exercises the dual-rendering branch.
-        sj = self._make_scheduled_job("non_default_tz_detail", time_zone="America/New_York")
+        start_time = timezone.make_aware(datetime(2021, 6, 15, 18, 30))
+        sj = self._make_scheduled_job("non_default_tz_detail", time_zone="America/New_York", start_time=start_time)
 
         response = self.client.get(sj.get_absolute_url())
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
         # The schedule's zone name is only emitted when it differs from the server default.
         self.assertIn("America/New_York", body)
+        expected_local = date_format(start_time.astimezone(sj.time_zone), "SHORT_DATETIME_FORMAT")
+        self.assertIn(expected_local, body)
 
     def test_user_inputs_panel_render_value(self):
         """UserInputsPanel renders values as inline code, and renders a placeholder for unset values."""

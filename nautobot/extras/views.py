@@ -3295,8 +3295,7 @@ class ScheduledJobUIViewSet(
             if key in ("start_time", "last_run_at"):
                 if not value:
                     return helpers.HTML_NONE
-                default_tz = context.get("default_time_zone") or get_current_timezone()
-                return self._render_datetime(value, obj.time_zone, default_tz)
+                return self._render_datetime(value, obj.time_zone, context["default_time_zone"])
             return super().render_value(key, value, context)
 
     class UserInputsPanel(object_detail.KeyValueTablePanel):
