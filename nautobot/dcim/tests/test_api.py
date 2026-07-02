@@ -3513,11 +3513,11 @@ class CableTest(Mixins.BaseComponentTestMixin):
 
         self.assertIsNotNone(terminations["a1"])
         self.assertIsInstance(terminations["a1"], dict)
-        self.assertEqual(set(terminations["a1"]), {'id', 'object_type', 'url'})
+        self.assertEqual(set(terminations["a1"]), {"id", "object_type", "url"})
 
         self.assertIsNotNone(terminations["b1"])
         self.assertIsInstance(terminations["b1"], dict)
-        self.assertEqual(set(terminations["b1"]), {'id', 'object_type', 'url'})
+        self.assertEqual(set(terminations["b1"]), {"id", "object_type", "url"})
 
         # Slots 2-4 weren't cabled — expect explicit nulls, not absent keys.
         self.assertIsNone(terminations["b2"])
@@ -3690,7 +3690,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
                     # Replace B-connector-1 with a different interface.
                     "b1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
                     # Delete B-connector-2 (already has a termination from setUpTestData).
-                    "b2": None
+                    "b2": None,
                 },
             },
             format="json",

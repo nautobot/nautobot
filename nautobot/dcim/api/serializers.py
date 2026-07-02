@@ -1033,7 +1033,11 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             match = re.fullmatch(r"(?P<side>[ab])(?P<connector>\d+)", side_connector_key)
             if not match:
                 raise serializers.ValidationError(
-                    {"terminations": {side_connector_key: "Key must be a side ('a'/'b') followed by a connector number, e.g. 'a1'."}}
+                    {
+                        "terminations": {
+                            side_connector_key: "Key must be a side ('a'/'b') followed by a connector number, e.g. 'a1'."
+                        }
+                    }
                 )
             side_key, connector = match.group("side"), int(match.group("connector"))
             entry = {"cable_end": side_key.upper(), "connector": connector}
@@ -1065,9 +1069,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                 raise serializers.ValidationError(
                     {
                         "terminations": {
-                            side_connector_key: {
-                                "object_type": f"{object_type} is not a valid cable termination type."
-                            }
+                            side_connector_key: {"object_type": f"{object_type} is not a valid cable termination type."}
                         }
                     }
                 )
