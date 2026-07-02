@@ -3552,9 +3552,26 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         status_active = statuses[0]
         role = Role.objects.get_for_model(Interface).first()
         interfaces = (
-            Interface.objects.create(device=device, name="Interface A1", status=status_active, role=role),
-            Interface.objects.create(device=device, name="Interface A2", status=status_active),
-            Interface.objects.create(device=device, name="Interface A3", status=status_active, role=role),
+            Interface.objects.create(
+                device=device,
+                name="Interface A1",
+                status=status_active,
+                role=role,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface.objects.create(
+                device=device,
+                name="Interface A2",
+                status=status_active,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
+            Interface.objects.create(
+                device=device,
+                name="Interface A3",
+                status=status_active,
+                role=role,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            ),
             Interface.objects.create(
                 device=device,
                 name="LAG",
@@ -3765,6 +3782,41 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertBodyContains(response, valid_ipaddress_link)
         response_content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn(invalid_ipaddress_link, response_content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_interface_detail_shows_assigned_vlans(self):
+        """The detail view's VLAN table lists both the untagged and tagged VLANs assigned to the interface."""
+        interface = Interface.objects.first()
+        vlan_status = Status.objects.get_for_model(VLAN).first()
+        vlan_group = VLANGroup.objects.first()
+        untagged_vlan = VLAN.objects.create(
+            vid=200,
+            name="Untagged VLAN",
+            location=interface.device.location,
+            status=vlan_status,
+            vlan_group=vlan_group,
+        )
+        tagged_vlans = [
+            VLAN.objects.create(
+                vid=201 + i,
+                name=f"Tagged VLAN {i}",
+                location=interface.device.location,
+                status=vlan_status,
+                vlan_group=vlan_group,
+            )
+            for i in range(2)
+        ]
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.untagged_vlan = untagged_vlan
+        interface.validated_save()
+        interface.tagged_vlans.set(tagged_vlans)
+
+        self.add_permissions("dcim.view_interface", "ipam.view_vlan")
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, untagged_vlan.get_absolute_url())
+        for tagged_vlan in tagged_vlans:
+            self.assertBodyContains(response, tagged_vlan.get_absolute_url())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_all_breakout_cable_peers(self):
@@ -4079,7 +4131,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_initial_render_shows_selected_objects(self):
         """A POST with `pk` values but no `_confirm` flag re-renders the page with the selection list."""
-        self.add_permissions("dcim.change_interface")
+        self.add_permissions("dcim.change_interface", "dcim.change_cable")
         response = self.client.post(self._disconnect_url(), data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)]})
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
@@ -4092,7 +4144,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_disconnects_selected_cables(self):
         """Confirming the bulk-disconnect form deletes the join rows for *each selected* termination ONLY."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         response = self.client.post(
             self._disconnect_url(),
             data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)], "_confirm": "yes", "confirm": "true"},
@@ -4116,7 +4168,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_aggregates_survivor_cable_message_with_bullet_list(self):
         """The post-disconnect "cable still exists" notice is a *single* info message containing a bullet list."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         response = self.client.post(
             self._disconnect_url(),
             data={"pk": [str(self.iface_a1.pk), str(self.iface_a2.pk)], "_confirm": "yes", "confirm": "true"},
@@ -4134,7 +4186,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_skips_uncabled_selections(self):
         """Selecting an uncabled termination alongside cabled ones is harmless — the view silently skips it."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         response = self.client.post(
             self._disconnect_url(),
             data={
@@ -4165,7 +4217,7 @@ class BulkDisconnectViewTestCase(ModelViewTestCase):
 
     def test_confirm_redirects_to_return_url(self):
         """When `return_url` is supplied (e.g. by the panel-footer JS), the view redirects there."""
-        self.add_permissions("dcim.change_interface", "dcim.view_interface")
+        self.add_permissions("dcim.change_interface", "dcim.view_interface", "dcim.change_cable")
         device_tab_url = reverse("dcim:device_interfaces", kwargs={"pk": self.iface_a1.device.pk})
         response = self.client.post(
             self._disconnect_url() + f"?return_url={device_tab_url}",
