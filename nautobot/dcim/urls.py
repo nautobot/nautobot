@@ -37,6 +37,7 @@ router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("devices", views.DeviceUIViewSet)
+router.register("front-ports", views.FrontPortUIViewSet)
 router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
@@ -59,6 +60,7 @@ router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-ports", views.RearPortUIViewSet)
 router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
@@ -426,57 +428,6 @@ urlpatterns = [
         views.DeviceBulkAddInterfaceView.as_view(),
         name="device_bulk_add_interface",
     ),
-    # Front ports
-    path("front-ports/", views.FrontPortListView.as_view(), name="frontport_list"),
-    path("front-ports/add/", views.FrontPortCreateView.as_view(), name="frontport_add"),
-    path(
-        "front-ports/import/",
-        views.FrontPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="frontport_import",
-    ),
-    path(
-        "front-ports/edit/",
-        views.FrontPortBulkEditView.as_view(),
-        name="frontport_bulk_edit",
-    ),
-    path(
-        "front-ports/rename/",
-        views.FrontPortBulkRenameView.as_view(),
-        name="frontport_bulk_rename",
-    ),
-    path(
-        "front-ports/disconnect/",
-        views.FrontPortBulkDisconnectView.as_view(),
-        name="frontport_bulk_disconnect",
-    ),
-    path(
-        "front-ports/delete/",
-        views.FrontPortBulkDeleteView.as_view(),
-        name="frontport_bulk_delete",
-    ),
-    path("front-ports/<uuid:pk>/", views.FrontPortView.as_view(), name="frontport"),
-    path(
-        "front-ports/<uuid:pk>/edit/",
-        views.FrontPortEditView.as_view(),
-        name="frontport_edit",
-    ),
-    path(
-        "front-ports/<uuid:pk>/delete/",
-        views.FrontPortDeleteView.as_view(),
-        name="frontport_delete",
-    ),
-    path(
-        "front-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="frontport_changelog",
-        kwargs={"model": FrontPort},
-    ),
-    path(
-        "front-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="frontport_notes",
-        kwargs={"model": FrontPort},
-    ),
     path(
         "front-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
@@ -491,56 +442,6 @@ urlpatterns = [
     ),
     # path('devices/front-ports/add/', views.DeviceBulkAddFrontPortView.as_view(), name='device_bulk_add_frontport'),
     # Rear ports
-    path("rear-ports/", views.RearPortListView.as_view(), name="rearport_list"),
-    path("rear-ports/add/", views.RearPortCreateView.as_view(), name="rearport_add"),
-    path(
-        "rear-ports/import/",
-        views.RearPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="rearport_import",
-    ),
-    path(
-        "rear-ports/edit/",
-        views.RearPortBulkEditView.as_view(),
-        name="rearport_bulk_edit",
-    ),
-    path(
-        "rear-ports/rename/",
-        views.RearPortBulkRenameView.as_view(),
-        name="rearport_bulk_rename",
-    ),
-    path(
-        "rear-ports/disconnect/",
-        views.RearPortBulkDisconnectView.as_view(),
-        name="rearport_bulk_disconnect",
-    ),
-    path(
-        "rear-ports/delete/",
-        views.RearPortBulkDeleteView.as_view(),
-        name="rearport_bulk_delete",
-    ),
-    path("rear-ports/<uuid:pk>/", views.RearPortView.as_view(), name="rearport"),
-    path(
-        "rear-ports/<uuid:pk>/edit/",
-        views.RearPortEditView.as_view(),
-        name="rearport_edit",
-    ),
-    path(
-        "rear-ports/<uuid:pk>/delete/",
-        views.RearPortDeleteView.as_view(),
-        name="rearport_delete",
-    ),
-    path(
-        "rear-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rearport_changelog",
-        kwargs={"model": RearPort},
-    ),
-    path(
-        "rear-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rearport_notes",
-        kwargs={"model": RearPort},
-    ),
     path(
         "rear-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
