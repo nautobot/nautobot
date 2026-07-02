@@ -2240,11 +2240,11 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         """Return the display name of the parent object that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent_attrs = ("device", "device_type", "module", "module_type")
+            parent_attrs = ("device", "device_type", "module", "module_type", "virtual_machine")
             for attr in parent_attrs:
                 parent = getattr(selected_object, attr, None)
                 if parent:
-                    return parent.display
+                    return parent.name if attr == "virtual_machine" else parent.display
         return ""
 
     def get_component_model_form(self, request, data=None):
@@ -4854,68 +4854,23 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class FrontPortListView(generic.ObjectListView):
+class FrontPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = FrontPort.optimize_queryset_for_cable_columns(FrontPort.objects.all())
-    filterset = filters.FrontPortFilterSet
-    filterset_form = forms.FrontPortFilterForm
-    table = tables.FrontPortTable
+    filterset_class = filters.FrontPortFilterSet
+    filterset_form_class = forms.FrontPortFilterForm
+    form_class = forms.FrontPortForm
+    create_form_class = forms.FrontPortCreateForm
+    bulk_update_form_class = forms.FrontPortBulkEditForm
+    serializer_class = serializers.FrontPortSerializer
+    table_class = tables.FrontPortTable
     action_buttons = ("import", "export")
-    template_name = "dcim/device_component_list.html"
-
-
-class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = FrontPort.objects.all()
     device_breadcrumb_url = "dcim:device_frontports"
     module_breadcrumb_url = "dcim:module_frontports"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class FrontPortCreateView(generic.ComponentCreateView):
-    queryset = FrontPort.objects.all()
-    form = forms.FrontPortCreateForm
-    model_form = forms.FrontPortForm
-
-
-class FrontPortEditView(generic.ObjectEditView):
-    queryset = FrontPort.objects.all()
-    model_form = forms.FrontPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class FrontPortDeleteView(generic.ObjectDeleteView):
-    queryset = FrontPort.objects.all()
-
-
-class FrontPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = FrontPort.objects.all()
-    table = tables.FrontPortTable
-
-
-class FrontPortBulkEditView(generic.BulkEditView):
-    queryset = FrontPort.objects.all()
-    filterset = filters.FrontPortFilterSet
-    table = tables.FrontPortTable
-    form = forms.FrontPortBulkEditForm
-
-
-class FrontPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = FrontPort.objects.all()
-
-
-class FrontPortBulkDisconnectView(BulkDisconnectView):
-    queryset = FrontPort.objects.all()
-
-
-class FrontPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = FrontPort.objects.all()
-    filterset = filters.FrontPortFilterSet
-    table = tables.FrontPortTable
 
 
 #
@@ -4923,68 +4878,39 @@ class FrontPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RearPortListView(generic.ObjectListView):
+class RearPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = RearPort.optimize_queryset_for_cable_columns(RearPort.objects.all())
-    filterset = filters.RearPortFilterSet
-    filterset_form = forms.RearPortFilterForm
-    table = tables.RearPortTable
+    bulk_update_form_class = forms.RearPortBulkEditForm
+    create_form_class = forms.RearPortCreateForm
+    filterset_class = filters.RearPortFilterSet
+    filterset_form_class = forms.RearPortFilterForm
+    form_class = forms.RearPortForm
+    serializer_class = serializers.RearPortSerializer
+    table_class = tables.RearPortTable
     action_buttons = ("import", "export")
-    template_name = "dcim/device_component_list.html"
-
-
-class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = RearPort.objects.all()
     device_breadcrumb_url = "dcim:device_rearports"
     module_breadcrumb_url = "dcim:module_rearports"
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RearPortCreateView(generic.ComponentCreateView):
-    queryset = RearPort.objects.all()
-    form = forms.RearPortCreateForm
-    model_form = forms.RearPortForm
-
-
-class RearPortEditView(generic.ObjectEditView):
-    queryset = RearPort.objects.all()
-    model_form = forms.RearPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class RearPortDeleteView(generic.ObjectDeleteView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RearPort.objects.all()
-    table = tables.RearPortTable
-
-
-class RearPortBulkEditView(generic.BulkEditView):
-    queryset = RearPort.objects.all()
-    filterset = filters.RearPortFilterSet
-    table = tables.RearPortTable
-    form = forms.RearPortBulkEditForm
-
-
-class RearPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkDisconnectView(BulkDisconnectView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = RearPort.objects.all()
-    filterset = filters.RearPortFilterSet
-    table = tables.RearPortTable
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            front_ports = FrontPort.optimize_queryset_for_cable_columns(
+                instance.front_ports.restrict(request.user, "view").select_related("device", "module")
+            )
+            front_port_table = tables.FrontPortTable(front_ports, orderable=False)
+            front_port_table.columns.hide("rear_port")
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(front_port_table)
+            context["front_port_table"] = front_port_table
+        return context
 
 
 #
