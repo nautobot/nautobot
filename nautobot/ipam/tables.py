@@ -134,17 +134,18 @@ IPADDRESS_LINK = """
 """
 
 IPADDRESS_COPY_LINK = """
-{% if record.present_in_database %}
-    <span>
-        <a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}">
-            {{ record.address }}</a>
-        <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
-            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-            <span class="visually-hidden">Copy</span>
-        </button>
-    </span>
+{% if record.start_address %}
+    <a href="{{ record.get_absolute_url }}">{{ record }}</a>
+{% elif record.present_in_database %}
+    {% if record.containing_ip_range %}<span class="nb-subtree {% if record.range_has_next_sibling %}nb-subtree-next-sibling{% else %}nb-subtree-no-next-sibling{% endif %}"></span>{% endif %}
+    <a href="{{ record.get_absolute_url }}" id="copy_{{record.id}}"{% if record.containing_ip_range %} title="Part of IP Range {{ record.containing_ip_range.start_address }} &ndash; {{ record.containing_ip_range.end_address }}"{% endif %}>
+        {{ record.address }}</a>
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#copy_{{record.id}}">
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">Copy</span>
+    </button>
 {% elif perms.ipam.add_ipaddress %}
-    <a href="\
+    {% if record.2 %}<span class="nb-subtree"></span>{% endif %}<a href="\
 {% url 'ipam:ipaddress_add' %}\
 ?address={{ record.1 }}&namespace={{ object.namespace.pk }}\
 {% if object.vrf %}&vrf={{ object.vrf.pk }}{% endif %}\
@@ -152,7 +153,7 @@ IPADDRESS_COPY_LINK = """
 " class="btn btn-xs btn-success">\
 {% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available</a>
 {% else %}
-    {% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available
+    {% if record.2 %}<span class="nb-subtree"></span>{% endif %}{% if record.0 <= 65536 %}{{ record.0 }}{% else %}Many{% endif %} IP{{ record.0|pluralize }} available
 {% endif %}
 """
 
@@ -191,6 +192,74 @@ IPADDRESSRANGE_COPY = """
         <span class="visually-hidden">Copy</span>
     </button>
 </span>
+"""
+
+IPADDRESS_OR_RANGE_ACTIONS = """\
+{% if record.present_in_database %}
+    <div class="dropdown">
+        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="mdi mdi-dots-vertical" aria-hidden="true"></span>
+            <span class="visually-hidden">Toggle Dropdown</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            {% with request.path|default:"" as request_path %}
+                {% if record.start_address %}
+                    <li>
+                        <a href="{{ record.get_absolute_url }}" class="dropdown-item">
+                            <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                            IP address range Details
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View IP address range change log
+                        </a>
+                    </li>
+                    {% if perms.ipam.change_iprange %}
+                        <li>
+                            <a href="{% url 'ipam:ipaddressrange_edit' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-warning">
+                                <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit IP address range
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.ipam.delete_iprange %}
+                        <li>
+                            <a href="{% url 'ipam:ipaddressrange_delete' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-danger">
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete IP address range
+                            </a>
+                        </li>
+                    {% endif %}
+                {% else %}
+                    <li>
+                        <a href="{{ record.get_absolute_url }}" class="dropdown-item">
+                            <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                            IP address Details
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View IP address change log
+                        </a>
+                    </li>
+                    {% if perms.ipam.change_ipaddress %}
+                        <li>
+                            <a href="{% url 'ipam:ipaddress_edit' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-warning">
+                                <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit IP address
+                            </a>
+                        </li>
+                    {% endif %}
+                    {% if perms.ipam.delete_ipaddress %}
+                        <li>
+                            <a href="{% url 'ipam:ipaddress_delete' pk=record.pk %}?return_url={{ return_url|default:request_path }}" class="dropdown-item text-danger">
+                                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete IP address
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
+            {% endwith %}
+        </ul>
+    </div>
+{% endif %}
 """
 
 VRF_LINK = """
@@ -542,7 +611,15 @@ class PrefixDetailTable(PrefixTable):
 class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     address = tables.TemplateColumn(
-        template_code=IPADDRESS_COPY_LINK, verbose_name="IP Address", order_by=("host", "mask_length")
+        template_code=IPADDRESS_COPY_LINK,
+        verbose_name="IP Address",
+        attrs={
+            "td": {
+                "class": "nb-tree-element text-nowrap",
+                "data-pk": lambda record: str(record.pk) if hasattr(record, "pk") else "",
+            }
+        },
+        order_by=("host", "mask_length"),
     )
     tenant = TenantColumn()
     parent__namespace = tables.Column(linkify=True)
@@ -567,7 +644,21 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         distinct=True,
         verbose_name="Virtual Machines",
     )
-    actions = ButtonsColumn(IPAddress)
+    actions = tables.TemplateColumn(
+        template_code=IPADDRESS_OR_RANGE_ACTIONS,
+        attrs={
+            "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
+            "th": {"class": "nb-actionable nb-w-0"},
+        },
+        orderable=False,
+        verbose_name="",
+    )
+
+    def render_pk(self, value, record):
+        """Suppress the bulk-select checkbox for non-IPAddress rows (e.g. IPRange or available-IP rows)."""
+        if not isinstance(record, IPAddress):
+            return mark_safe("")
+        return self.columns["pk"].column.render(value=value, bound_column=self.columns["pk"], record=record)
 
     class Meta(BaseTable.Meta):
         model = IPAddress
@@ -588,7 +679,15 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "actions",
         )
         row_attrs = {
-            "class": lambda record: "table-success" if not isinstance(record, IPAddress) else "",
+            "class": lambda record: (
+                "table-warning"
+                if isinstance(record, IPAddressRange) and record.is_exclusive
+                else "table-info"
+                if isinstance(record, IPAddressRange)
+                else "table-success"
+                if not isinstance(record, IPAddress)
+                else ""
+            ),
         }
 
 
