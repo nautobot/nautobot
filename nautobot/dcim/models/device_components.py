@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from decimal import Decimal
 import re
 from typing import Optional
-import warnings
 
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.prefetch import GenericPrefetch
@@ -21,6 +20,7 @@ from nautobot.core.models.query_functions import CollateAsChar
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.utils.data import UtilizationData
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceDuplexChoices,
@@ -249,11 +249,9 @@ class CableTerminationQuerySet(RestrictedQuerySet):
 
     @staticmethod
     def _warn(old, new):
-        warnings.warn(
+        warn_deprecated_at_caller(
             f"Querying CableTermination subclasses by `{old}` is deprecated; use `{new}` instead. "
-            "The `cable` field has been replaced with the `cable_termination` reverse OneToOneField.",
-            DeprecationWarning,
-            stacklevel=4,
+            "The `cable` field has been replaced with the `cable_termination` reverse OneToOneField."
         )
 
     @classmethod

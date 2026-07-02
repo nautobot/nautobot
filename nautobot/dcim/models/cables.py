@@ -14,7 +14,10 @@ from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
+from nautobot.core.models.managers import BaseManager
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import to_meters
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, CableTypePolarityMethodChoices
 from nautobot.dcim.constants import (
     BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
@@ -313,6 +316,123 @@ class CableType(PrimaryModel):
 #
 
 
+class CableQuerySet(RestrictedQuerySet):
+    """
+    Add backward-compat translation for legacy `termination_[a|b]_type` / `termination_[a|b]_id` lookups.
+
+    This queryset rewrites those lookup kwargs on `filter()` and `exclude()` (and therefore `get()`,
+    which filters internally) into the equivalent `terminations__...` join lookups, constrained to
+    `connector=1` to mirror the Cable properties, emitting a `DeprecationWarning` for each. This keeps
+    `Cable.objects.get_or_create(termination_a_type=..., termination_a_id=..., ...)` and
+    `Cable.objects.filter(termination_a_id=...)` working for legacy callers: the lookup half is
+    translated here and, for `get_or_create()`, the create half flows through `Cable.__init__` into
+    `_materialize_initial_terminations`.
+
+    Supported lookup kwargs (exact-match only):
+
+    - `termination_a_type` / `termination_b_type` (`ContentType`),
+    - `termination_a_id` / `termination_b_id` (UUID). A bare `*_id` without a matching `*_type` is matched against
+      every per-type FK (termination PKs are UUIDs, so this stays unambiguous).
+
+    NOT translated -- use the explicit `terminations__...` form for these:
+
+    - extended lookups such as `termination_a_id__in=...`
+    - `Q(termination_a_id=...)` and similar expressions
+    - `order_by("termination_a_type")` and similar
+    - `values("termination_a_id") / `values_list("termination_a_type")` and similar
+    - `select_related("termination_a_id")` / `prefetch_related("termination_a")` and similar
+    - `exclude(termination_a_id=..., termination_b_id=...)` - while accepted, combining both ends is applied per end
+      (`exclude(A) AND exclude(B)`), which is not identical to negating the combined condition.
+    """
+
+    _SIDES = {"a": "A", "b": "B"}
+
+    @staticmethod
+    def _warn(old, new):
+        warn_deprecated_at_caller(
+            f"Querying Cable by `{old}` is deprecated; use `{new}` instead. The `termination_a` / "
+            "`termination_b` generic foreign keys have been replaced by the `terminations` "
+            "(CableToCableTermination) relation."
+        )
+
+    @classmethod
+    def _extract_side_spec(cls, side, working):
+        """
+        Pop legacy `termination_<side>_type` / `termination_<side>_id` kwargs from `working` and return the
+        matching `terminations__...` Q, or None if the side isn't referenced by a translatable kwarg.
+
+        The legacy `*_type` / `*_id` columns were non-nullable, so `None` is not a supported lookup value here.
+        """
+        type_key = f"termination_{side}_type"
+        id_key = f"termination_{side}_id"
+        if not any(key in working for key in (type_key, id_key)):
+            return None
+
+        cable_end = cls._SIDES[side]
+        # All constraints for one side share a single join (built up in one `.filter()`/`.exclude()`
+        # call) so they match the *same* CableToCableTermination row.
+        base = models.Q(terminations__cable_end=cable_end, terminations__connector=1)
+
+        term_type = working.pop(type_key, None)
+        term_id = working.pop(id_key, None)
+
+        if term_type is not None:
+            try:
+                fk_field = CONTENT_TYPE_TO_TERMINATION_FK[(term_type.app_label, term_type.model)]
+            except KeyError:
+                raise TypeError(
+                    f"{term_type.app_label}.{term_type.model} is not a valid Cable termination type"
+                ) from None
+            if term_id is not None:
+                cls._warn(
+                    f"{type_key}=..., {id_key}=...",
+                    f"terminations__{fk_field}_id=... with terminations__cable_end={cable_end!r}",
+                )
+                return base & models.Q(**{f"terminations__{fk_field}_id": term_id})
+            cls._warn(
+                f"{type_key}=...", f"terminations__{fk_field}__isnull=False with terminations__cable_end={cable_end!r}"
+            )
+            return base & models.Q(**{f"terminations__{fk_field}__isnull": False})
+
+        # A bare id (no type): match it against every per-type FK; termination PKs are UUIDs so at
+        # most one FK on at most one row can match.
+        if term_id is not None:
+            cls._warn(f"{id_key}=...", f"terminations__<type>_id=... with terminations__cable_end={cable_end!r}")
+            match = models.Q()
+            for fk_field in TERMINATION_FK_FIELDS:
+                match |= models.Q(**{f"terminations__{fk_field}_id": term_id})
+            return base & match
+
+        return None
+
+    @classmethod
+    def _translate_termination_kwargs(cls, kwargs):
+        """Split `kwargs` into (passthrough field lookups, list of per-side `terminations__...` Q objects)."""
+        working = dict(kwargs)
+        side_qs = [q for side in cls._SIDES if (q := cls._extract_side_spec(side, working)) is not None]
+        return working, side_qs
+
+    def filter(self, *args, **kwargs):
+        passthrough, side_qs = self._translate_termination_kwargs(kwargs)
+        qs = super().filter(*args, **passthrough)
+        # Apply each side as its own call so the multi-valued `terminations` relation gets a separate
+        # join per side -- a single call would force one row to be both the A- and B-side termination.
+        for q in side_qs:
+            qs = qs.filter(q)
+        return qs
+
+    def exclude(self, *args, **kwargs):
+        passthrough, side_qs = self._translate_termination_kwargs(kwargs)
+        qs = super().exclude(*args, **passthrough) if (args or passthrough) else self.all()
+        for q in side_qs:
+            qs = qs.exclude(q)
+        return qs
+
+
+# Manager wired to the translation queryset; set as `Cable.objects` below.
+CableManager = BaseManager.from_queryset(CableQuerySet)
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -329,6 +449,8 @@ class Cable(PrimaryModel):
     properties retrieve the A-side and B-side termination on connector 1 respectively for backward
     compatibility; use `terminations_a` / `terminations_b` to access all terminations on each side.
     """
+
+    objects = CableManager()
 
     cable_type = models.ForeignKey(
         to=CableType,

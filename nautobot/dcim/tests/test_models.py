@@ -3449,6 +3449,86 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(via_type_id_setters.termination_b_id, self.rear_port1.pk)
         assert_round_trip(via_type_id_setters)
 
+    def test_termination_backward_compat_queryset_lookups(self):
+        """`Cable.objects` translates legacy `termination_[ab]_type`/`_id` lookups to `terminations__...`."""
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        power_port_ct = ContentType.objects.get_for_model(PowerPort)
+
+        # type + id form (the shape serializers/Jobs use), on each side.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(
+                Cable.objects.get(termination_a_type=interface_ct, termination_a_id=self.interface1.pk),
+                self.cable,
+            )
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(
+                Cable.objects.get(termination_b_type=interface_ct, termination_b_id=self.interface2.pk),
+                self.cable,
+            )
+
+        # Both ends together (separate joins so A and B don't collide on one row).
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(
+                list(
+                    Cable.objects.filter(
+                        termination_a_type=interface_ct,
+                        termination_a_id=self.interface1.pk,
+                        termination_b_type=interface_ct,
+                        termination_b_id=self.interface2.pk,
+                    )
+                ),
+                [self.cable],
+            )
+
+        # Bare id (no type) is matched across every per-type FK.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(Cable.objects.get(termination_a_id=self.interface1.pk), self.cable)
+
+        # Type alone (no id) matches any cable whose named side terminates on that type.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(Cable.objects.get(termination_a_type=interface_ct), self.cable)
+        with self.assertWarns(DeprecationWarning):
+            self.assertFalse(Cable.objects.filter(termination_a_type=power_port_ct).exists())
+
+        # Non-matching lookups return nothing.
+        with self.assertWarns(DeprecationWarning):
+            self.assertFalse(
+                Cable.objects.filter(termination_a_type=power_port_ct, termination_a_id=self.power_port1.pk).exists()
+            )
+
+        # exclude() drops the matching cable.
+        with self.assertWarns(DeprecationWarning):
+            self.assertNotIn(
+                self.cable,
+                Cable.objects.exclude(termination_a_type=interface_ct, termination_a_id=self.interface1.pk),
+            )
+
+        # get_or_create: legacy lookup finds the existing cable (no create), and the create branch
+        # materializes join rows for a new one.
+        with self.assertWarns(DeprecationWarning):
+            found, created = Cable.objects.get_or_create(
+                termination_a_type=interface_ct,
+                termination_a_id=self.interface1.pk,
+                termination_b_type=interface_ct,
+                termination_b_id=self.interface2.pk,
+                defaults={"status": self.status},
+            )
+        self.assertFalse(created)
+        self.assertEqual(found, self.cable)
+
+        rear_port_ct = ContentType.objects.get_for_model(RearPort)
+        with self.assertWarns(DeprecationWarning):
+            made, created = Cable.objects.get_or_create(
+                termination_a_type=interface_ct,
+                termination_a_id=self.interface3.pk,
+                termination_b_type=rear_port_ct,
+                termination_b_id=self.rear_port1.pk,
+                defaults={"status": self.status},
+            )
+        self.assertTrue(created)
+        self.assertEqual(made.termination_a, self.interface3)
+        self.assertEqual(made.termination_b, self.rear_port1)
+
     def test_cable_deletion(self):
         """
         When a Cable is deleted, the `cable` field on its termination points must be nullified. The str() method

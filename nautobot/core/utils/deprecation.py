@@ -1,13 +1,40 @@
 """Utilities for handling deprecation of code and features."""
 
 from functools import wraps
+import inspect
 import logging
+import os
 import traceback
 import warnings
 
 from nautobot.core.settings import LOG_DEPRECATION_WARNINGS
 
 logger = logging.getLogger(__name__)
+
+
+def warn_deprecated_at_caller(message, *, category=DeprecationWarning):
+    """Emit a deprecation warning attributed to the calling application code rather than to Nautobot internals.
+
+    A fixed `stacklevel` cannot attribute a warning correctly when the emitting shim is reached through
+    varying call depths -- e.g. a `QuerySet` method invoked directly versus through `get()` /
+    `get_or_create()` / a manager proxy. This walks out from the immediate caller (the deprecation shim
+    that calls this function) past every frame in that shim's own module and Django's ORM internals, and
+    reports the warning against the first frame beyond them (the querying app/job code).
+
+    As with the other helpers here, a matching `logger.warning` is also emitted when
+    `LOG_DEPRECATION_WARNINGS` is set, since `DeprecationWarning`s are silenced by default.
+    """
+    shim_frame = inspect.currentframe().f_back
+    shim_file = shim_frame.f_code.co_filename
+    django_orm = f"{os.sep}django{os.sep}db{os.sep}"
+    stacklevel = 2  # 1 == the warn() call below; 2 == the shim frame (this function's caller)
+    frame = shim_frame
+    while frame is not None and (frame.f_code.co_filename == shim_file or django_orm in frame.f_code.co_filename):
+        frame = frame.f_back
+        stacklevel += 1
+    warnings.warn(message, category, stacklevel=stacklevel)
+    if LOG_DEPRECATION_WARNINGS:
+        logger.warning(message, stacklevel=stacklevel)
 
 
 def class_deprecated(message):
