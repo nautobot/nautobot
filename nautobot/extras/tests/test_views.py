@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http import HTTPStatus
 import re
 from unittest import mock
@@ -16,12 +16,13 @@ from django.db.models import Q
 from django.test import override_settings, tag
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.templatetags.helpers import bettertitle, HTML_NONE
 from nautobot.core.testing import (
     extract_form_failures,
     extract_page_body,
@@ -114,6 +115,7 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.views import ScheduledJobUIViewSet
 from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -4277,6 +4279,48 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_renders_custom_interval_with_crontab(self):
+        """The Scheduling panel appends the crontab expression for custom-interval schedules."""
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job(
+            "custom_interval_detail",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="*/15 9,17 3 * 1-5",
+        )
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"{JobExecutionType.TYPE_CUSTOM} (*/15 9,17 3 * 1-5)", body)
+
+    def test_detail_view_renders_datetime_in_non_default_timezone(self):
+        """When the schedule's time zone differs from the server default, both renderings are shown."""
+        self.add_permissions("extras.view_scheduledjob")
+        start_time = timezone.make_aware(datetime(2021, 6, 15, 18, 30))
+        sj = self._make_scheduled_job("non_default_tz_detail", time_zone="America/New_York", start_time=start_time)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        # The schedule's zone name is only emitted when it differs from the server default.
+        self.assertIn("America/New_York", body)
+        expected_local = date_format(start_time.astimezone(sj.time_zone), "SHORT_DATETIME_FORMAT")
+        self.assertIn(expected_local, body)
+
+    def test_user_inputs_panel_render_value(self):
+        """UserInputsPanel renders values as inline code, and renders a placeholder for unset values."""
+        panel = ScheduledJobUIViewSet.UserInputsPanel(weight=100)
+        self.assertEqual(panel.render_value("var_a", "some-value", {}), format_html("<code>{}</code>", "some-value"))
+        self.assertEqual(panel.render_value("var_b", None, {}), HTML_NONE)
+
+    def test_render_state_falls_back_for_unknown_state(self):
+        """render_state renders a neutral, title-cased badge for any state outside the known set."""
+        rendered = ScheduledJobUIViewSet.render_state("some_future_state")
+        self.assertEqual(
+            rendered,
+            format_html('<span class="badge bg-body-secondary border">{}</span>', bettertitle("some_future_state")),
+        )
 
     def test_detail_view_shows_assume_ownership_button_with_perms(self):
         self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")

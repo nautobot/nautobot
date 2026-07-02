@@ -21,6 +21,7 @@ from django.urls.exceptions import NoReverseMatch
 from django.utils.cache import patch_vary_headers
 from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
@@ -3256,6 +3257,99 @@ class ScheduledJobUIViewSet(
             weight=100,
         )
     ]
+
+    @staticmethod
+    def render_state(value):
+        badges = {
+            ScheduledJobStateChoices.DENIED: ("bg-danger", "Approval Denied"),
+            ScheduledJobStateChoices.CANCELED: ("bg-danger", "Approval Canceled"),
+            ScheduledJobStateChoices.PENDING: ("bg-warning border", "Pending Approval"),
+            ScheduledJobStateChoices.ACTIVE: ("bg-info", "Active"),
+            ScheduledJobStateChoices.COMPLETED: ("bg-success", "Completed"),
+            ScheduledJobStateChoices.ERRORED: ("bg-danger", "Errored"),
+        }
+        if value in badges:
+            css_class, label = badges[value]
+            return format_html('<span class="badge {}">{}</span>', css_class, label)
+        return format_html('<span class="badge bg-body-secondary border">{}</span>', bettertitle(value))
+
+    class ScheduledJobFieldsPanel(object_detail.ObjectFieldsPanel):
+        """Object fields panel that renders the scheduled-job-specific fields with their custom formatting."""
+
+        @staticmethod
+        def _render_datetime(value, obj_tz, default_tz):
+            obj_local = date_format(value.astimezone(obj_tz), "SHORT_DATETIME_FORMAT")
+            if str(obj_tz) == str(default_tz):
+                return format_html("{}", obj_local)
+            default_local = date_format(value.astimezone(default_tz), "SHORT_DATETIME_FORMAT")
+            return format_html("{} {}<br>{} {}", obj_local, obj_tz, default_local, default_tz)
+
+        def render_value(self, key, value, context):
+            if key == "task":
+                return format_html("<code>{}</code>", value)
+            obj = get_obj_from_context(context)
+            if key == "interval":
+                if value == JobExecutionType.TYPE_CUSTOM and obj.crontab:
+                    return format_html("{} ({})", value, obj.crontab)
+                return value
+            if key in ("start_time", "last_run_at"):
+                if not value:
+                    return helpers.HTML_NONE
+                return self._render_datetime(value, obj.time_zone, context["default_time_zone"])
+            return super().render_value(key, value, context)
+
+    class UserInputsPanel(object_detail.KeyValueTablePanel):
+        def should_render(self, context):
+            return bool(context.get("job_class_found"))
+
+        def get_data(self, context):
+            obj = get_obj_from_context(context)
+            labels = context.get("labels", {})
+            return {labels.get(key, key): value for key, value in obj.kwargs.items()}
+
+        def render_value(self, key, value, context):
+            if value is None:
+                return helpers.HTML_NONE
+            return format_html("<code>{}</code>", value)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ScheduledJobFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=("name", "description", "task", "job_model", "user", "approval_required", "decision_date"),
+                key_transforms={"decision_date": "Decision Date", "user": "Requester"},
+            ),
+            ScheduledJobFieldsPanel(
+                label="Scheduling",
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                fields=(
+                    "enabled",
+                    "state",
+                    "job_queue",
+                    "interval",
+                    "one_off",
+                    "start_time",
+                    "last_run_at",
+                    "total_run_count",
+                ),
+                value_transforms={"state": [render_state]},
+            ),
+            UserInputsPanel(
+                label="User Inputs",
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+            ),
+            object_detail.ObjectTextPanel(
+                weight=200,
+                label="Celery Keyword Arguments",
+                section=SectionChoices.RIGHT_HALF,
+                object_field="celery_kwargs",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
