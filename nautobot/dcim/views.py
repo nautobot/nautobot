@@ -4895,22 +4895,28 @@ class RearPortUIViewSet(
     action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_rearports"
     module_breadcrumb_url = "dcim:module_rearports"
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            front_ports = FrontPort.optimize_queryset_for_cable_columns(
-                instance.front_ports.restrict(request.user, "view").select_related("device", "module")
-            )
-            front_port_table = tables.FrontPortTable(front_ports, orderable=False)
-            front_port_table.columns.hide("rear_port")
-            paginate = {
-                "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request),
-            }
-            RequestConfig(request, paginate).configure(front_port_table)
-            context["front_port_table"] = front_port_table
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                trace_url_name="dcim:rearport_trace",
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=200,
+                section=SectionChoices.FULL_WIDTH,
+                table_class=tables.FrontPortTable,
+                table_filter="rear_port",
+                exclude_columns=["rear_port"],
+            ),
+        ),
+    )
 
 
 #
