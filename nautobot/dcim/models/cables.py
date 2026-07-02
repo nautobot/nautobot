@@ -2,7 +2,6 @@ from collections import defaultdict
 from dataclasses import dataclass
 import logging
 from typing import Optional
-import warnings
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +17,7 @@ from nautobot.core.models.fields import ColorField
 from nautobot.core.models.managers import BaseManager
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import to_meters
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, CableTypePolarityMethodChoices
 from nautobot.dcim.constants import (
     BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
@@ -349,12 +349,10 @@ class CableQuerySet(RestrictedQuerySet):
 
     @staticmethod
     def _warn(old, new):
-        warnings.warn(
+        warn_deprecated_at_caller(
             f"Querying Cable by `{old}` is deprecated; use `{new}` instead. The `termination_a` / "
             "`termination_b` generic foreign keys have been replaced by the `terminations` "
-            "(CableToCableTermination) relation.",
-            DeprecationWarning,
-            stacklevel=4,  # caller -> filter/exclude -> _translate_termination_kwargs -> _extract_side_spec -> _warn
+            "(CableToCableTermination) relation."
         )
 
     @classmethod
