@@ -3273,20 +3273,11 @@ class ScheduledJobUIViewSet(
             return format_html('<span class="badge {}">{}</span>', css_class, label)
         return format_html('<span class="badge bg-body-secondary border">{}</span>', bettertitle(value))
 
-    class ScheduleJobFieldsPanel(object_detail.ObjectFieldsPanel):
-        """Object fields panel that renders the schedulejob-specific fields with their custom formatting."""
-
-        def render_value(self, key, value, context):
-            if key == "task":
-                return format_html("<code>{}</code>", value)
-            return super().render_value(key, value, context)
-
-    class SchedulingFieldsPanel(object_detail.ObjectFieldsPanel):
-        """Object fields panel that renders the schedule-specific fields with their custom formatting."""
+    class ScheduledJobFieldsPanel(object_detail.ObjectFieldsPanel):
+        """Object fields panel that renders the scheduled-job-specific fields with their custom formatting."""
 
         @staticmethod
-        def _render_datetime(value, obj_tz):
-            default_tz = get_current_timezone()
+        def _render_datetime(value, obj_tz, default_tz):
             obj_local = date_format(value.astimezone(obj_tz), "SHORT_DATETIME_FORMAT")
             if str(obj_tz) == str(default_tz):
                 return format_html("{}", obj_local)
@@ -3294,6 +3285,8 @@ class ScheduledJobUIViewSet(
             return format_html("{} {}<br>{} {}", obj_local, obj_tz, default_local, default_tz)
 
         def render_value(self, key, value, context):
+            if key == "task":
+                return format_html("<code>{}</code>", value)
             obj = get_obj_from_context(context)
             if key == "interval":
                 if value == JobExecutionType.TYPE_CUSTOM and obj.crontab:
@@ -3302,7 +3295,8 @@ class ScheduledJobUIViewSet(
             if key in ("start_time", "last_run_at"):
                 if not value:
                     return helpers.HTML_NONE
-                return self._render_datetime(value, obj.time_zone)
+                default_tz = context.get("default_time_zone") or get_current_timezone()
+                return self._render_datetime(value, obj.time_zone, default_tz)
             return super().render_value(key, value, context)
 
     class UserInputsPanel(object_detail.KeyValueTablePanel):
@@ -3321,13 +3315,13 @@ class ScheduledJobUIViewSet(
 
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            ScheduleJobFieldsPanel(
+            ScheduledJobFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields=("name", "description", "task", "job_model", "user", "approval_required", "decision_date"),
                 key_transforms={"decision_date": "Decision Date", "user": "Requester"},
             ),
-            SchedulingFieldsPanel(
+            ScheduledJobFieldsPanel(
                 label="Scheduling",
                 weight=200,
                 section=SectionChoices.LEFT_HALF,
@@ -3341,7 +3335,6 @@ class ScheduledJobUIViewSet(
                     "last_run_at",
                     "total_run_count",
                 ),
-                key_transforms={"last_run_at": "Last Run At", "start_time": "Start Time", "job_queue": "Job Queue"},
                 value_transforms={"state": [render_state]},
             ),
             UserInputsPanel(
