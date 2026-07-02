@@ -1673,9 +1673,7 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
                     }
                 )
 
-        closest_parent = None
-        if self.mask_length not in (None, b"", ""):
-            closest_parent = self._get_closest_parent(self.host)
+        closest_parent = self._get_closest_parent(self.host)
         if closest_parent is not None:
             # If `parent` was explicitly set or changed, validate it and reject if invalid.
             if self.parent is not None and self.parent != closest_parent:
