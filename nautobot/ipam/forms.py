@@ -660,7 +660,32 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
 
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
-    pattern = ExpandableIPAddressField(label="Address pattern")
+    """
+    Pattern form for bulk-creating IPAddresses via `ComponentCreateViewMixin`.
+
+    `ComponentCreateViewMixin` is built for device/module components: it reads the expanded values
+    from `name_pattern` and, if present, calls `get_iterative_data()` for each entry. IPAddress has
+    no `name` field, so we expose the address pattern as `name_pattern` and map each expanded value
+    onto the `address` field via `get_iterative_data()` (equivalent to the legacy
+    `IPAddressBulkCreateView.pattern_target = "address"`).
+    """
+
+    name_pattern = ExpandableIPAddressField(label="Address pattern")
+
+    def get_iterative_data(self, iteration):
+        return {"address": self.cleaned_data["name_pattern"][iteration]}
+
+    def add_error(self, field, error):
+        # ComponentCreateViewMixin reports each expanded per-instance form's errors against this
+        # parent pattern form (e.g. a "namespace"/"address" error when an address has no parent
+        # Prefix). This form only defines `name_pattern`, so re-route any error for a field it does
+        # not define to a non-field error instead of raising "has no field named ...".
+        # NOTE: it must NOT be routed onto `name_pattern` -- Form.add_error() deletes the field from
+        # cleaned_data, and the mixin re-reads cleaned_data["name_pattern"] later in the same loop
+        # (get_iterative_data), which would then raise KeyError.
+        if field is not None and field not in self.fields:
+            field = None
+        super().add_error(field, error)
 
 
 class IPAddressBulkAddForm(IPAddressFormMixin):

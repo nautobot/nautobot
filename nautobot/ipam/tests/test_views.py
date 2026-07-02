@@ -1,9 +1,12 @@
 import datetime
 import random
+from unittest import mock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db.models import Count, ProtectedError, QuerySet
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import escape, strip_tags
@@ -32,6 +35,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     Status,
     Tag,
 )
@@ -1126,9 +1130,11 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_bulk_create_ips(self):
         """"""
         self.add_permissions("ipam.add_ipaddress")
+        # GET renders the bulk-add form (covers the GET branch of IPAddressUIViewSet.bulk_add).
+        self.assertHttpStatus(self.client.get(reverse("ipam:ipaddress_bulk_add")), 200)
         form_data = {
             "namespace": self.namespace.pk,
-            "pattern": "192.0.2.[4-6]/24",
+            "name_pattern": "192.0.2.[4-6]/24",
             "status": self.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
         }
@@ -1141,6 +1147,87 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.4/24").exists())
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.5/24").exists())
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_no_parent_prefix(self):
+        """Bulk-add into a namespace with no containing prefix: the per-instance 'no parent' errors are
+        re-rendered on the form (covers IPAddressBulkCreateForm.add_error re-routing), not a 500/KeyError."""
+        self.add_permissions("ipam.add_ipaddress")
+        empty_namespace = Namespace.objects.create(name="bulk-add-no-parent")
+        form_data = {
+            "namespace": empty_namespace.pk,
+            "name_pattern": "192.0.2.[4-6]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        # Errors are surfaced on the form (HTTP 200), and nothing is created.
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(IPAddress.objects.filter(parent__namespace=empty_namespace).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_without_interface_redirects(self):
+        """GET on the assign endpoint with no interface/vminterface redirects to the add page."""
+        self.add_permissions("ipam.add_ipaddress")
+        response = self.client.get(reverse("ipam:ipaddress_assign"))
+        self.assertHttpStatus(response, 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_with_invalid_interface_redirects(self):
+        """GET on the assign endpoint with a non-existent interface warns and redirects to the add page."""
+        self.add_permissions("ipam.add_ipaddress")
+        response = self.client.get(reverse("ipam:ipaddress_assign") + "?interface=00000000-0000-0000-0000-000000000000")
+        self.assertHttpStatus(response, 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @override_config(MAX_PAGE_SIZE=10)
+    def test_assign_search_renders_results(self):
+        """GET assign with a valid interface + q runs the candidate search (and the oversized per_page warning)."""
+        self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
+        interface = Interface.objects.first()
+        self.assertIsNotNone(interface)
+        # per_page (50) above the configured MAX_PAGE_SIZE (10) exercises the warning branch.
+        response = self.client.get(
+            reverse("ipam:ipaddress_assign") + f"?interface={interface.pk}&q=192.0.2.0/24&per_page=50"
+        )
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_with_saved_view_table_config(self):
+        """A saved_view's table_config drives the assigned_count annotation in alter_queryset()."""
+        list_url = reverse("ipam:ipaddress_list")
+        # A saved view for this list whose table_config selects the "assigned" column
+        # exercises the successful-lookup path (get + view_table_config + columns).
+        saved_view = SavedView.objects.create(
+            name="IP SV assigned",
+            owner=self.user,
+            view="ipam:ipaddress_list",
+            config={"table_config": {"IPAddressDetailTable": {"columns": ["assigned", "status"]}}},
+        )
+        self.assertHttpStatus(
+            self.client.get(f"{list_url}?saved_view={saved_view.pk}", headers={"HX-Request": "true"}), 200
+        )
+        # A saved_view registered for a different list -> alter_queryset's (view, pk) lookup raises
+        # ObjectDoesNotExist, exercising the except branch (get_filter_params' by-pk lookup still succeeds).
+        other_view = SavedView.objects.create(name="Prefix SV", owner=self.user, view="ipam:prefix_list", config={})
+        self.assertHttpStatus(
+            self.client.get(f"{list_url}?saved_view={other_view.pk}", headers={"HX-Request": "true"}), 200
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_parent_inconsistency_warnings(self):
+        """Cover the 'parent appears incorrect' diagnostic branches in the detail get_extra_context()."""
+        ip = IPAddress.objects.filter(parent__isnull=False).first()
+        self.assertIsNotNone(ip)
+        detail_url = reverse("ipam:ipaddress", kwargs={"pk": ip.pk})
+
+        with self.subTest("stored parent differs from computed closest parent"):
+            with mock.patch.object(IPAddress, "_get_closest_parent", return_value=None):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
+
+        with self.subTest("no valid containing prefix, parent set"):
+            with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
 
 
 class IPAddressMergeTestCase(ModelViewTestCase):
@@ -1373,6 +1460,58 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         for device in self.devices:
             device.refresh_from_db()
             self.assertEqual(merged_ip, device.primary_ip4)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_without_optional_fields(self):
+        """Merge without tenant/role/tags to cover the None/empty (else) branches in _perform_merge."""
+        self.add_permissions("ipam.change_ipaddress")
+        merge_data = {**self.merge_data, "tenant": "", "role": "", "tags": ""}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        merged_ip = IPAddress.objects.get(parent__namespace=self.namespace_2)
+        self.assertIsNone(merged_ip.tenant)
+        self.assertIsNone(merged_ip.role)
+        self.assertEqual(merged_ip.tags.count(), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_with_nat_inside(self):
+        """Merge with a nat_inside set to cover the nat_inside lookup branch in _perform_merge."""
+        self.add_permissions("ipam.change_ipaddress")
+        nat_ip = IPAddress.objects.exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk]).first()
+        self.assertIsNotNone(nat_ip)
+        merge_data = {**self.merge_data, "nat_inside": str(nat_ip.pk)}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        merged_ip = IPAddress.objects.get(parent__namespace=self.namespace_2)
+        self.assertEqual(merged_ip.nat_inside, nat_ip)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_delete_failure_aborts(self):
+        """A ProtectedError or IntegrityError while deleting the collapsed IPs aborts the merge cleanly.
+
+        ProtectedError is raised by the collector before the SQL; an IntegrityError stands in for a
+        DEFERRABLE INITIALLY DEFERRED FK that fails at COMMIT. Both must redirect and merge nothing.
+        """
+        self.add_permissions("ipam.change_ipaddress")
+        real_delete = QuerySet.delete
+        cases = [
+            ("ProtectedError", ProtectedError("Cannot delete", IPAddress.objects.none())),
+            ("IntegrityError", IntegrityError("still referenced")),
+        ]
+        for label, exc in cases:
+            with self.subTest(error=label):
+                num_before = IPAddress.objects.count()
+
+                def fake_delete(qs, *args, _exc=exc, **kwargs):
+                    if qs.model is IPAddress:
+                        raise _exc
+                    return real_delete(qs, *args, **kwargs)
+
+                with mock.patch.object(QuerySet, "delete", new=fake_delete):
+                    response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+                self.assertHttpStatus(response, 302)
+                # Transaction rolled back: nothing was deleted or merged.
+                self.assertEqual(num_before, IPAddress.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):
