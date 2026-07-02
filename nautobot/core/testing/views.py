@@ -33,7 +33,7 @@ from nautobot.core.forms import (
     NumericArrayField,
     TagFilterField,
 )
-from nautobot.core.jobs.bulk_actions import BulkEditObjects
+from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import buttons, helpers
@@ -1923,10 +1923,10 @@ class ViewTestCases:
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
+        @mock.patch.object(JobResult, "enqueue_job")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_bulk_delete_objects_with_constrained_permission(self):
-            pk_list = self.get_deletable_object_pks()
-            initial_count = self._get_queryset().count()
+        def test_bulk_delete_objects_with_constrained_permission(self, mock_enqueue_job):
+            pk_list = list(self.get_deletable_object_pks())
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -1943,9 +1943,17 @@ class ViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Attempt to bulk delete non-permitted objects
+            job_model = BulkDeleteObjects().job_model
+            job_result = JobResult.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                user=self.user,
+            )
+            mock_enqueue_job.return_value = job_result
+
+            # Attempt to bulk delete non-permitted objects; the constraint denies all, so nothing is deleted.
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), initial_count)
+            mock_enqueue_job.assert_not_called()
 
             # Update permission constraints
             obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
@@ -1954,8 +1962,10 @@ class ViewTestCases:
             # User would be redirected to Job Result therefore user needs to have permission to view Job Result
             self.add_permissions("extras.view_jobresult")
             response = self.client.post(self._get_url("bulk_delete"), data)
-            job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
-            self.assertIsNotNone(job_result)
+            mock_enqueue_job.assert_called_once()
+            job_kwargs = mock_enqueue_job.call_args.kwargs["job_kwargs"]
+            self.assertEqual(job_kwargs.get("pk_list", []), [str(pk) for pk in pk_list])
+
             self.assertRedirects(
                 response,
                 reverse("extras:jobresult", args=[job_result.pk]),

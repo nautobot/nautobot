@@ -2240,11 +2240,11 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         """Return the display name of the parent object that owns the selected components or templates."""
         selected_object = selected_objects.first()
         if selected_object:
-            parent_attrs = ("device", "device_type", "module", "module_type")
+            parent_attrs = ("device", "device_type", "module", "module_type", "virtual_machine")
             for attr in parent_attrs:
                 parent = getattr(selected_object, attr, None)
                 if parent:
-                    return parent.display
+                    return parent.name if attr == "virtual_machine" else parent.display
         return ""
 
     def get_component_model_form(self, request, data=None):
@@ -2508,36 +2508,20 @@ class RearPortTemplateUIViewSet(
 #
 
 
-class DeviceBayTemplateCreateView(generic.ComponentCreateView):
+class DeviceBayTemplateUIViewSet(
+    ComponentCreateViewMixin,
+    ObjectBulkRenameViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+):
+    bulk_update_form_class = forms.DeviceBayTemplateBulkEditForm
+    filterset_class = filters.DeviceBayTemplateFilterSet
+    form_class = forms.DeviceBayTemplateForm
+    serializer_class = serializers.DeviceBayTemplateSerializer
+    table_class = tables.DeviceBayTemplateTable
     queryset = DeviceBayTemplate.objects.all()
-    form = forms.DeviceBayTemplateCreateForm
-    model_form = forms.DeviceBayTemplateForm
-
-
-class DeviceBayTemplateEditView(generic.ObjectEditView):
-    queryset = DeviceBayTemplate.objects.all()
-    model_form = forms.DeviceBayTemplateForm
-
-
-class DeviceBayTemplateDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceBayTemplate.objects.all()
-
-
-class DeviceBayTemplateBulkEditView(generic.BulkEditView):
-    queryset = DeviceBayTemplate.objects.all()
-    table = tables.DeviceBayTemplateTable
-    form = forms.DeviceBayTemplateBulkEditForm
-    filterset = filters.DeviceBayTemplateFilterSet
-
-
-class DeviceBayTemplateBulkRenameView(BaseDeviceComponentTemplatesBulkRenameView):
-    queryset = DeviceBayTemplate.objects.all()
-
-
-class DeviceBayTemplateBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceBayTemplate.objects.all()
-    table = tables.DeviceBayTemplateTable
-    filterset = filters.DeviceBayTemplateFilterSet
+    create_form_class = forms.DeviceBayTemplateCreateForm
 
 
 #
@@ -4830,68 +4814,23 @@ class InterfaceBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class FrontPortListView(generic.ObjectListView):
+class FrontPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = FrontPort.optimize_queryset_for_cable_columns(FrontPort.objects.all())
-    filterset = filters.FrontPortFilterSet
-    filterset_form = forms.FrontPortFilterForm
-    table = tables.FrontPortTable
+    filterset_class = filters.FrontPortFilterSet
+    filterset_form_class = forms.FrontPortFilterForm
+    form_class = forms.FrontPortForm
+    create_form_class = forms.FrontPortCreateForm
+    bulk_update_form_class = forms.FrontPortBulkEditForm
+    serializer_class = serializers.FrontPortSerializer
+    table_class = tables.FrontPortTable
     action_buttons = ("import", "export")
-    template_name = "dcim/device_component_list.html"
-
-
-class FrontPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = FrontPort.objects.all()
     device_breadcrumb_url = "dcim:device_frontports"
     module_breadcrumb_url = "dcim:module_frontports"
-
-    def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class FrontPortCreateView(generic.ComponentCreateView):
-    queryset = FrontPort.objects.all()
-    form = forms.FrontPortCreateForm
-    model_form = forms.FrontPortForm
-
-
-class FrontPortEditView(generic.ObjectEditView):
-    queryset = FrontPort.objects.all()
-    model_form = forms.FrontPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class FrontPortDeleteView(generic.ObjectDeleteView):
-    queryset = FrontPort.objects.all()
-
-
-class FrontPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = FrontPort.objects.all()
-    table = tables.FrontPortTable
-
-
-class FrontPortBulkEditView(generic.BulkEditView):
-    queryset = FrontPort.objects.all()
-    filterset = filters.FrontPortFilterSet
-    table = tables.FrontPortTable
-    form = forms.FrontPortBulkEditForm
-
-
-class FrontPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = FrontPort.objects.all()
-
-
-class FrontPortBulkDisconnectView(BulkDisconnectView):
-    queryset = FrontPort.objects.all()
-
-
-class FrontPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = FrontPort.objects.all()
-    filterset = filters.FrontPortFilterSet
-    table = tables.FrontPortTable
 
 
 #
@@ -4899,68 +4838,39 @@ class FrontPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class RearPortListView(generic.ObjectListView):
+class RearPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = RearPort.optimize_queryset_for_cable_columns(RearPort.objects.all())
-    filterset = filters.RearPortFilterSet
-    filterset_form = forms.RearPortFilterForm
-    table = tables.RearPortTable
+    bulk_update_form_class = forms.RearPortBulkEditForm
+    create_form_class = forms.RearPortCreateForm
+    filterset_class = filters.RearPortFilterSet
+    filterset_form_class = forms.RearPortFilterForm
+    form_class = forms.RearPortForm
+    serializer_class = serializers.RearPortSerializer
+    table_class = tables.RearPortTable
     action_buttons = ("import", "export")
-    template_name = "dcim/device_component_list.html"
-
-
-class RearPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = RearPort.objects.all()
     device_breadcrumb_url = "dcim:device_rearports"
     module_breadcrumb_url = "dcim:module_rearports"
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class RearPortCreateView(generic.ComponentCreateView):
-    queryset = RearPort.objects.all()
-    form = forms.RearPortCreateForm
-    model_form = forms.RearPortForm
-
-
-class RearPortEditView(generic.ObjectEditView):
-    queryset = RearPort.objects.all()
-    model_form = forms.RearPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class RearPortDeleteView(generic.ObjectDeleteView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = RearPort.objects.all()
-    table = tables.RearPortTable
-
-
-class RearPortBulkEditView(generic.BulkEditView):
-    queryset = RearPort.objects.all()
-    filterset = filters.RearPortFilterSet
-    table = tables.RearPortTable
-    form = forms.RearPortBulkEditForm
-
-
-class RearPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkDisconnectView(BulkDisconnectView):
-    queryset = RearPort.objects.all()
-
-
-class RearPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = RearPort.objects.all()
-    filterset = filters.RearPortFilterSet
-    table = tables.RearPortTable
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            front_ports = FrontPort.optimize_queryset_for_cable_columns(
+                instance.front_ports.restrict(request.user, "view").select_related("device", "module")
+            )
+            front_port_table = tables.FrontPortTable(front_ports, orderable=False)
+            front_port_table.columns.hide("rear_port")
+            paginate = {
+                "paginator_class": EnhancedPaginator,
+                "per_page": get_paginate_count(request),
+            }
+            RequestConfig(request, paginate).configure(front_port_table)
+            context["front_port_table"] = front_port_table
+        return context
 
 
 #
@@ -4968,146 +4878,102 @@ class RearPortBulkDeleteView(generic.BulkDeleteView):
 #
 
 
-class DeviceBayListView(generic.ObjectListView):
+class DeviceBayUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    NautobotUIViewSet,
+):
     queryset = DeviceBay.objects.all()
-    filterset = filters.DeviceBayFilterSet
-    filterset_form = forms.DeviceBayFilterForm
-    table = tables.DeviceBayTable
+    filterset_class = filters.DeviceBayFilterSet
+    filterset_form_class = forms.DeviceBayFilterForm
+    bulk_update_form_class = forms.DeviceBayBulkEditForm
+    create_form_class = forms.DeviceBayCreateForm
+    form_class = forms.DeviceBayForm
+    serializer_class = serializers.DeviceBaySerializer
+    table_class = tables.DeviceBayTable
     action_buttons = ("import", "export")
-
-
-class DeviceBayView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = DeviceBay.objects.all()
     device_breadcrumb_url = "dcim:device_devicebays"
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                weight=100, section=SectionChoices.LEFT_HALF, exclude_fields=("installed_device",)
+            ),
+            object_detail.KeyValueTablePanel(
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+                label="Installed Device",
+                context_data_key="installed_device_data",
+                hide_if_unset=["device_type"],
+            ),
+        )
+    )
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            **super().get_extra_context(request, instance),
-        }
+        context = super().get_extra_context(request, instance)
 
+        if self.action == "retrieve":
+            installed_device = instance.installed_device
+            context["installed_device_data"] = {
+                "device": installed_device,
+                "device_type": installed_device.device_type if installed_device else None,
+            }
 
-class DeviceBayCreateView(generic.ComponentCreateView):
-    queryset = DeviceBay.objects.all()
-    form = forms.DeviceBayCreateForm
-    model_form = forms.DeviceBayForm
+        return context
 
+    @action(detail=True, methods=["GET", "POST"], custom_view_base_action="change")
+    def populate(self, request, *args, **kwargs):
+        device_bay = self.get_object()
 
-class DeviceBayEditView(generic.ObjectEditView):
-    queryset = DeviceBay.objects.all()
-    model_form = forms.DeviceBayForm
-    template_name = "dcim/device_component_edit.html"
+        if request.method == "POST":
+            form = forms.PopulateDeviceBayForm(device_bay, request.POST)
+            restrict_form_fields(form, request.user)
+            if form.is_valid():
+                device_bay.installed_device = form.cleaned_data["installed_device"]
+                device_bay.validated_save()
+                messages.success(
+                    request,
+                    f"Added {device_bay.installed_device} to {device_bay}.",
+                )
+                return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
+        else:
+            form = forms.PopulateDeviceBayForm(device_bay)
+            restrict_form_fields(form, request.user)
 
-
-class DeviceBayDeleteView(generic.ObjectDeleteView):
-    queryset = DeviceBay.objects.all()
-
-
-class DeviceBayPopulateView(generic.ObjectEditView):
-    queryset = DeviceBay.objects.all()
-
-    def get(self, request, *args, **kwargs):
-        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = forms.PopulateDeviceBayForm(device_bay)
-
-        return render(
-            request,
-            "dcim/devicebay_populate.html",
+        return Response(
             {
+                "template": "dcim/devicebay_populate.html",
                 "device_bay": device_bay,
                 "form": form,
                 "return_url": self.get_return_url(request, device_bay),
             },
         )
 
-    def post(self, request, *args, **kwargs):
-        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = forms.PopulateDeviceBayForm(device_bay, request.POST)
+    @action(detail=True, methods=["GET", "POST"], custom_view_base_action="change")
+    def depopulate(self, request, *args, **kwargs):
+        device_bay = self.get_object()
 
-        if form.is_valid():
-            device_bay.installed_device = form.cleaned_data["installed_device"]
-            device_bay.save()
-            messages.success(
-                request,
-                f"Added {device_bay.installed_device} to {device_bay}.",
-            )
+        if request.method == "POST":
+            form = ConfirmationForm(request.POST)
+            if form.is_valid():
+                removed_device = device_bay.installed_device
+                device_bay.installed_device = None
+                device_bay.validated_save()
+                messages.success(
+                    request,
+                    f"Removed {removed_device} from {device_bay}.",
+                )
+                return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
+        else:
+            form = ConfirmationForm()
 
-            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
-
-        return render(
-            request,
-            "dcim/devicebay_populate.html",
+        return Response(
             {
+                "template": "dcim/devicebay_depopulate.html",
                 "device_bay": device_bay,
                 "form": form,
                 "return_url": self.get_return_url(request, device_bay),
             },
         )
-
-
-class DeviceBayDepopulateView(generic.ObjectEditView):
-    queryset = DeviceBay.objects.all()
-
-    def get(self, request, *args, **kwargs):
-        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = ConfirmationForm()
-
-        return render(
-            request,
-            "dcim/devicebay_depopulate.html",
-            {
-                "device_bay": device_bay,
-                "form": form,
-                "return_url": self.get_return_url(request, device_bay),
-            },
-        )
-
-    def post(self, request, *args, **kwargs):
-        device_bay = get_object_or_404(self.queryset, pk=kwargs["pk"])
-        form = ConfirmationForm(request.POST)
-
-        if form.is_valid():
-            removed_device = device_bay.installed_device
-            device_bay.installed_device = None
-            device_bay.save()
-            messages.success(
-                request,
-                f"Removed {removed_device} from {device_bay}.",
-            )
-
-            return redirect("dcim:device_devicebays", pk=device_bay.device.pk)
-
-        return render(
-            request,
-            "dcim/devicebay_depopulate.html",
-            {
-                "device_bay": device_bay,
-                "form": form,
-                "return_url": self.get_return_url(request, device_bay),
-            },
-        )
-
-
-class DeviceBayBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = DeviceBay.objects.all()
-    table = tables.DeviceBayTable
-
-
-class DeviceBayBulkEditView(generic.BulkEditView):
-    queryset = DeviceBay.objects.all()
-    filterset = filters.DeviceBayFilterSet
-    table = tables.DeviceBayTable
-    form = forms.DeviceBayBulkEditForm
-
-
-class DeviceBayBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = DeviceBay.objects.all()
-
-
-class DeviceBayBulkDeleteView(generic.BulkDeleteView):
-    queryset = DeviceBay.objects.all()
-    filterset = filters.DeviceBayFilterSet
-    table = tables.DeviceBayTable
 
 
 #
