@@ -5092,70 +5092,50 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
 #
 
 
-class InventoryItemListView(generic.ObjectListView):
-    queryset = InventoryItem.objects.all()
-    filterset = filters.InventoryItemFilterSet
-    filterset_form = forms.InventoryItemFilterForm
-    table = tables.InventoryItemTable
+class InventoryItemFieldsPanel(object_detail.ObjectFieldsPanel):
+    """ObjectFieldsPanel with context-aware rendering of `software_version` and its image files."""
+
+    def render_value(self, key, value, context):
+        if key == "software_version":
+            instance = get_obj_from_context(context, self.context_object_key)
+            return render_software_version_and_image_files(instance, value, context)
+        return super().render_value(key, value, context)
+
+
+class InventoryItemUIViewSet(DeviceComponentPageMixin, ComponentCreateViewMixin, NautobotUIViewSet):
+    queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version")
+    filterset_class = filters.InventoryItemFilterSet
+    filterset_form_class = forms.InventoryItemFilterForm
+    bulk_update_form_class = forms.InventoryItemBulkEditForm
+    create_form_class = forms.InventoryItemCreateForm
+    form_class = forms.InventoryItemForm
+    serializer_class = serializers.InventoryItemSerializer
+    table_class = tables.InventoryItemTable
+    create_template_name = "dcim/inventoryitem_add.html"
     action_buttons = ("import", "export")
-
-
-class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
     device_breadcrumb_url = "dcim:device_inventory"
 
-    def get_extra_context(self, request, instance):
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
-        else:
-            software_version_images = []
-
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "software_version_images": software_version_images,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class InventoryItemEditView(generic.ObjectEditView):
-    queryset = InventoryItem.objects.all()
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_edit.html"
-
-
-class InventoryItemCreateView(generic.ComponentCreateView):
-    queryset = InventoryItem.objects.all()
-    form = forms.InventoryItemCreateForm
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_add.html"
-
-
-class InventoryItemDeleteView(generic.ObjectDeleteView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = InventoryItem.objects.all()
-    table = tables.InventoryItemTable
-
-
-class InventoryItemBulkEditView(generic.BulkEditView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    filterset = filters.InventoryItemFilterSet
-    table = tables.InventoryItemTable
-    form = forms.InventoryItemBulkEditForm
-
-
-class InventoryItemBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkDeleteView(generic.BulkDeleteView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    table = tables.InventoryItemTable
-    template_name = "dcim/inventoryitem_bulk_delete.html"
-    filterset = filters.InventoryItemFilterSet
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            InventoryItemFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Inventory Item",
+                fields=[
+                    "device",
+                    "parent",
+                    "name",
+                    "label",
+                    "manufacturer",
+                    "part_id",
+                    "serial",
+                    "asset_tag",
+                    "software_version",
+                    "description",
+                ],
+            ),
+        ),
+    )
 
 
 #
