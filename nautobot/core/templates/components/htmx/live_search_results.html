@@ -3,5 +3,15 @@
 {% if table %}
     <div class="nb-live-search-results" data-nb-results-type="live-search">
         {% render_table table table_inc_template|default:'inc/table.html' %}
+        {% if table.page.has_next %}
+            <ul class="nb-search-list-group">
+                <li>
+                    <a class="nb-search-list-group-item text-secondary" href="{{ href }}">
+                        {% widthratio table.paginator.per_page 1 -1 as negative_per_page %}
+                        More... ({{ table.paginator.count|add:negative_per_page }})
+                    </a>
+                </li>
+            </ul>
+        {% endif %}
     </div>
 {% endif %}

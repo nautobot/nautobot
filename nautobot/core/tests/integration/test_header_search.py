@@ -191,9 +191,9 @@ class HeaderSearchTestCase(SeleniumTestCase):
         # Type a "lo" phrase in the search popup input.
         input_field.fill("lo")
 
-        # There should always be no more than ten live results displayed at a time.
+        # There should always be no more than ten live results displayed at a time (+1 for the "More..." button).
         results = self.get_search_popup_results()
-        self.assertLessEqual(len(results), 10)
+        self.assertLessEqual(len(results), 11)
 
         # Assert that none of the live search results is currently selected.
         for result in results:
@@ -210,9 +210,18 @@ class HeaderSearchTestCase(SeleniumTestCase):
         for index, result in enumerate(results):
             self.assertIs(result.has_class("active"), index == 2)
 
-        # Press arrow up key thrice and assert that the last (tenth) result is now selected.
+        # Press arrow up key thrice and assert that the "More..." button is now selected.
         input_field.type(Keys.ARROW_UP)
         input_field.type(Keys.ARROW_UP)
+        input_field.type(Keys.ARROW_UP)
+        for index, result in enumerate(results):
+            if result.has_class("active"):
+                anchor_link = result.find_by_tag("a").first
+                self.assertEqual(index, 10)
+                self.assertEqual(anchor_link.href, "/dcim/locations/?q=lo")
+                self.assertEqual(anchor_link.text, "More... (10)")
+
+        # Press arrow up key once and assert that the last (tenth) result is now selected.
         input_field.type(Keys.ARROW_UP)
         for index, result in enumerate(results):
             self.assertIs(result.has_class("active"), index == 9)
