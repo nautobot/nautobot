@@ -121,6 +121,18 @@ dependencies = [
     "svgwrite (>=1.4.3,<1.5)",
     # Enhanced HTTP client library
     "urllib3 (>=2.7.0,<3.0.0)",
+    # OpenTelemetry
+    "opentelemetry-sdk (>=1.39.1,<1.40)",
+    "opentelemetry-exporter-otlp (>=1.39.1,<1.40)",
+    "opentelemetry-instrumentation-django (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-celery (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-psycopg2 (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-dbapi (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-redis (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-logging (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-mysqlclient (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-wsgi (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-requests (>=0.60b1,<0.61)",
 ]
 
 [project.optional-dependencies]

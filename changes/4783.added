@@ -1,0 +1,1 @@
+Added opt-in support for [OpenTelemetry](https://opentelemetry.io/) traces, metrics, and logs, disabled by default and enabled via the `OTEL_PYTHON_DJANGO_INSTRUMENT` setting.

@@ -1,12 +1,16 @@
 import graphene
 
+from nautobot.core.utils.otel import traced_span
+
 from .schema import generate_query_mixin
 
-DynamicGraphQL = generate_query_mixin()
+with traced_span("nautobot.graphql", "graphql.schema.generate"):
+    DynamicGraphQL = generate_query_mixin()
 
 
 class Query(graphene.ObjectType, DynamicGraphQL):
     """Contains the entire GraphQL Schema definition for Nautobot."""
 
 
-schema = graphene.Schema(query=Query, auto_camelcase=False)
+with traced_span("nautobot.graphql", "graphql.schema.build"):
+    schema = graphene.Schema(query=Query, auto_camelcase=False)
