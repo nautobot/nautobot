@@ -4560,69 +4560,29 @@ class ConsolePortUIViewSet(
 #
 
 
-class ConsoleServerPortListView(generic.ObjectListView):
+class ConsoleServerPortUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     queryset = ConsoleServerPort.optimize_queryset_for_cable_columns(ConsoleServerPort.objects.all())
-    filterset = filters.ConsoleServerPortFilterSet
-    filterset_form = forms.ConsoleServerPortFilterForm
-    table = tables.ConsoleServerPortTable
+    bulk_update_form_class = forms.ConsoleServerPortBulkEditForm
+    create_form_class = forms.ConsoleServerPortCreateForm
+    filterset_class = filters.ConsoleServerPortFilterSet
+    filterset_form_class = forms.ConsoleServerPortFilterForm
+    form_class = forms.ConsoleServerPortForm
+    serializer_class = serializers.ConsoleServerPortSerializer
+    table_class = tables.ConsoleServerPortTable
     action_buttons = ("import", "export")
-    template_name = "dcim/device_component_list.html"
-
-
-class ConsoleServerPortView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = ConsoleServerPort.objects.all()
     device_breadcrumb_url = "dcim:device_consoleserverports"
     module_breadcrumb_url = "dcim:module_consoleserverports"
 
     def get_extra_context(self, request, instance):
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
-
-
-class ConsoleServerPortCreateView(generic.ComponentCreateView):
-    queryset = ConsoleServerPort.objects.all()
-    form = forms.ConsoleServerPortCreateForm
-    model_form = forms.ConsoleServerPortForm
-
-
-class ConsoleServerPortEditView(generic.ObjectEditView):
-    queryset = ConsoleServerPort.objects.all()
-    model_form = forms.ConsoleServerPortForm
-    template_name = "dcim/device_component_edit.html"
-
-
-class ConsoleServerPortDeleteView(generic.ObjectDeleteView):
-    queryset = ConsoleServerPort.objects.all()
-
-
-class ConsoleServerPortBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = ConsoleServerPort.objects.all()
-    table = tables.ConsoleServerPortTable
-
-
-class ConsoleServerPortBulkEditView(generic.BulkEditView):
-    queryset = ConsoleServerPort.objects.all()
-    filterset = filters.ConsoleServerPortFilterSet
-    table = tables.ConsoleServerPortTable
-    form = forms.ConsoleServerPortBulkEditForm
-
-
-class ConsoleServerPortBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = ConsoleServerPort.objects.all()
-
-
-class ConsoleServerPortBulkDisconnectView(BulkDisconnectView):
-    queryset = ConsoleServerPort.objects.all()
-
-
-class ConsoleServerPortBulkDeleteView(generic.BulkDeleteView):
-    queryset = ConsoleServerPort.objects.all()
-    filterset = filters.ConsoleServerPortFilterSet
-    table = tables.ConsoleServerPortTable
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
+        return context
 
 
 #
