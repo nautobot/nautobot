@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import F, Q
-from django.test import override_settings
+from django.test import override_settings, RequestFactory
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils.html import strip_spaces_between_tags
@@ -113,10 +113,14 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import cable_status_color_css
 from nautobot.dcim.views import (
+    CableCreateView,
     ConsoleConnectionsListView,
     ConsolePortUIViewSet,
+    DeviceBayUIViewSet,
     DeviceUIViewSet,
+    FrontPortUIViewSet,
     InterfaceConnectionsListView,
     ModuleTypeComponentAddButton,
     PowerConnectionsListView,
@@ -3827,6 +3831,103 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertIn(trunk.get_absolute_url(), content)
         self.assertIn(child.get_absolute_url(), content)
 
+    def test_breakout_subinterface_connected_endpoint_parent_is_prefetched(self):
+        """Resolving a breakout child (sub)interface's connected endpoint and its `parent` (the
+        `connection` column on the device Interfaces tab) must be query-free once the cable-column
+        prefetch chain is applied — guarding the per-row N+1 that the chain is meant to eliminate.
+        """
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        local = create_test_device("Breakout Subiface Local")
+        remote = create_test_device("Breakout Subiface Remote")
+        breakout_type = CableType.objects.create(
+            name="1x4 breakout (device-iface N+1)", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        trunk = Interface.objects.create(
+            device=local, name="Trunk", type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS, status=status_active
+        )
+        leaves = [Interface.objects.create(device=remote, name=f"Leaf {i}", status=status_active) for i in range(1, 5)]
+        cable = Cable(termination_a=trunk, termination_b=leaves[0], cable_type=breakout_type, status=cable_status)
+        cable.save()
+        for connector, leaf in enumerate(leaves[1:], start=2):
+            cable.add_termination(leaf, "B", connector=connector)
+        for position in range(1, 5):
+            Interface.objects.create(
+                device=local,
+                name=f"Trunk.{position}",
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=status_active,
+                parent_interface=trunk,
+                breakout_position=position,
+            )
+
+        # Mirror what a table does when the `connection` column is visible: the cheap select_related,
+        # the unconditional (row-coloring / breakout-lane) prefetch, and the conditional `connection`
+        # prefetch. Force the prefetches to run up front.
+        queryset = (
+            Interface.objects.filter(device=local)
+            .select_related(*Interface.cable_columns_select_related_fields())
+            .prefetch_related(
+                *Interface.cable_columns_prefetch_related_fields(),
+                *Interface.connection_prefetch_related_fields(),
+            )
+        )
+        subinterfaces = [iface for iface in queryset if iface.breakout_position is not None]
+        self.assertEqual(len(subinterfaces), 4)
+
+        # Resolving each subinterface's n-hop connected endpoint and its parent device must not
+        # trigger any further query (the destination's `device` is select_related in the prefetch).
+        with self.assertNumQueries(0):
+            for subinterface in subinterfaces:
+                endpoint = subinterface.get_breakout_connected_endpoint()
+                self.assertIsNotNone(endpoint)
+                self.assertEqual(endpoint.parent, remote)
+
+    def test_interface_cabled_to_circuit_termination_columns_are_prefetched(self):
+        """Rendering an interface cabled to a CircuitTermination must be query-free: the cable-status
+        row coloring (`cable.status`), the circuit-termination display (`location` / `provider_network`
+        / `cloud_network`), and the parent `circuit` all come from the cable-column prefetch chain.
+        """
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        local = create_test_device("Circuit Peer Local")
+        iface = Interface.objects.create(device=local, name="Eth-circuit", status=status_active)
+        circuit = Circuit.objects.create(
+            provider=Provider.objects.first(),
+            circuit_type=CircuitType.objects.first(),
+            cid="N+1 Probe Circuit",
+            status=Status.objects.get_for_model(Circuit).first(),
+        )
+        circuit_termination = CircuitTermination.objects.create(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=local.location
+        )
+        Cable.objects.create(termination_a=iface, termination_b=circuit_termination, status=cable_status)
+
+        # Mirror what a table does when the `cable_peer` and `connection` columns are visible: the
+        # cheap select_related, the unconditional prefetch, and both columns' conditional prefetches.
+        queryset = (
+            Interface.objects.filter(device=local)
+            .select_related(*Interface.cable_columns_select_related_fields())
+            .prefetch_related(
+                *Interface.cable_columns_prefetch_related_fields(),
+                *Interface.cable_peer_prefetch_related_fields(),
+                *Interface.connection_prefetch_related_fields(),
+            )
+        )
+        record = next(iface for iface in queryset if iface.name == "Eth-circuit")
+
+        # Reproduce what the table render touches per row: cable-status coloring, the `cable_peer`
+        # column (`get_cable_peers` → peer + its parent), and the `connection` column
+        # (`get_connected_endpoints` → endpoint + its parent). None may issue a further query.
+        with self.assertNumQueries(0):
+            cable_status_color_css(record)
+            for peer in record.get_cable_peers():
+                self.assertEqual(str(peer.parent), str(circuit))
+                str(peer)  # CircuitTermination.__str__ reads location / provider_network / cloud_network
+            for endpoint in record.get_connected_endpoints():
+                self.assertEqual(endpoint.parent, circuit)
+                str(endpoint)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_breakout_trunk_child_interface_through_patch_panel(self):
         """A leaf cabled to a breakout trunk through a patch panel still shows the trunk child as its connection.
@@ -3916,6 +4017,31 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         response_content = extract_page_body(response.content.decode(response.charset))
         self.assertHttpStatus(response, 200)
         self.assertIn("Virtual and wireless interfaces cannot have a port type.", response_content)
+
+    def test_create_with_breakout_position_pattern_but_no_parent_interface_fails_gracefully(self):
+        """A breakout_position_pattern without a parent_interface must surface as a form error, not a
+        traceback (the per-component `breakout_position` error has no field on the create form, so it
+        is remapped onto `breakout_position_pattern`)."""
+        self.add_permissions("dcim.add_interface")
+        form_data = self.form_data.copy()
+        del form_data["name"]
+        del form_data["lag"]
+        form_data["name_pattern"] = "Breakout [1-2]"
+        # Matching counts so validation reaches per-component creation rather than failing earlier on a
+        # name/position count mismatch. No parent_interface is supplied.
+        form_data["breakout_position_pattern"] = "[1-2]"
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        response_content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(
+            "A breakout position can only be set on an interface that has a parent interface.", response_content
+        )
+        # Nothing was created.
+        self.assertFalse(Interface.objects.filter(name__startswith="Breakout ").exists())
 
 
 class BulkDisconnectViewTestCase(ModelViewTestCase):
@@ -4173,6 +4299,11 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def test_bulk_add_component(self):
         pass
 
+    def test_get_selected_objects_parents_name_empty(self):
+        """Covers the empty-queryset branch (`return ""`) in get_selected_objects_parents_name."""
+        viewset = FrontPortUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(FrontPort.objects.none()), "")
+
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
@@ -4307,6 +4438,79 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    def test_parents_name_empty_selection(self):
+        """`get_selected_objects_parents_name` returns an empty string when no objects are selected."""
+        viewset = DeviceBayUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(DeviceBay.objects.none()), "")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_populate_device_bay(self):
+        """Populating a device bay installs the selected child device (UIViewSet `populate` action)."""
+        self.add_permissions("dcim.change_devicebay")
+
+        parent_device = Device.objects.get(name="Device 1")
+        device_bay = DeviceBay.objects.create(device=parent_device, name="Populate Bay")
+
+        # A child device is only eligible if its device type has u_height=0 and a child subdevice role.
+        child_device_type = DeviceType.objects.create(
+            manufacturer=parent_device.device_type.manufacturer,
+            model="Child Device Type",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            device_type=child_device_type,
+            role=parent_device.role,
+            status=parent_device.status,
+            location=parent_device.location,
+        )
+
+        url = reverse("dcim:devicebay_populate", kwargs={"pk": device_bay.pk})
+
+        # GET renders the populate form.
+        self.assertHttpStatus(self.client.get(url), 200)
+
+        # POST installs the child device and redirects back to the device's device bays tab.
+        response = self.client.post(url, data={"installed_device": child_device.pk})
+        self.assertHttpStatus(response, 302)
+        device_bay.refresh_from_db()
+        self.assertEqual(device_bay.installed_device, child_device)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_depopulate_device_bay(self):
+        """Depopulating a device bay removes the installed child device (UIViewSet `depopulate` action)."""
+        self.add_permissions("dcim.change_devicebay")
+
+        parent_device = Device.objects.get(name="Device 1")
+        child_device_type = DeviceType.objects.create(
+            manufacturer=parent_device.device_type.manufacturer,
+            model="Child Device Type",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            device_type=child_device_type,
+            role=parent_device.role,
+            status=parent_device.status,
+            location=parent_device.location,
+        )
+        device_bay = DeviceBay.objects.create(
+            device=parent_device, name="Depopulate Bay", installed_device=child_device
+        )
+
+        url = reverse("dcim:devicebay_depopulate", kwargs={"pk": device_bay.pk})
+
+        # GET renders the depopulate confirmation form.
+        self.assertHttpStatus(self.client.get(url), 200)
+
+        # POST removes the installed device and redirects back to the device's device bays tab.
+        response = self.client.post(url, data={"confirm": True})
+        self.assertHttpStatus(response, 302)
+        device_bay.refresh_from_db()
+        self.assertIsNone(device_bay.installed_device)
 
 
 class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
@@ -4863,14 +5067,13 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "length_unit": CableLengthUnitChoices.UNIT_METER,
         }
 
-    @unittest.skipIf(
-        connection.vendor == "mysql",
-        "A residual N+1 from `term.parent` rendering appears on MySQL but not PostgreSQL. "
-        "Deferred until the upcoming device-component parent/device FK refactor, at which point "
-        "the cable-list prefetch chain can be extended through each per-type FK's device/module.",
-    )
     def test_list_view_query_count_does_not_grow_with_cable_count(self):
-        """Rendering the Cable list view must not run an extra query per cable (or per termination row)."""
+        """Rendering the Cable list view must not run an extra query per cable (or per termination row).
+
+        Covers the `*_parent` columns too: the list queryset extends each per-type termination FK
+        through to its parent (`TERMINATION_PARENT_FK_FIELDS`), so `termination.parent` rendering
+        stays query-free per row.
+        """
         self.add_permissions("dcim.view_cable")
         list_url = self._get_url("list")
 
@@ -4907,6 +5110,19 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         post = count_queries()
         self.assertLessEqual(post, baseline, msg=f"baseline={baseline} post={post}")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_breakout_cable_detail_renders_mapping_diagram_links(self):
+        """A breakout cable's detail view renders its lane mapping diagram, linking each connected
+        termination and its parent to their detail pages."""
+        cable = Cable.objects.filter(cable_type=self.breakout_cable_type).first()
+        response = self.client.get(cable.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        for endpoint in cable.terminations.all():
+            termination = endpoint.termination
+            self.assertIn(f'xlink:href="{termination.get_absolute_url()}"', content)
+            self.assertIn(f'xlink:href="{termination.parent.get_absolute_url()}"', content)
 
     def test_delete_a_cable_which_has_a_peer_connection(self):
         """Test for https://github.com/nautobot/nautobot/issues/1694."""
@@ -5143,10 +5359,6 @@ class CableTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_cable_create_view_missing_kwargs_returns_400(self):
         """Direct invocation with missing `termination_a_type`/`termination_a_id` returns 400.
         The URL patterns always supply both, so this only fires for programmatic misuse."""
-        from django.test import RequestFactory
-
-        from nautobot.dcim.views import CableCreateView
-
         request = RequestFactory().get("/")
         request.user = self.user
         response = CableCreateView.as_view()(request)  # no kwargs
@@ -6051,7 +6263,7 @@ class PathTraceViewTestCase(ModelViewTestCase):
 
         # The lane's CablePath is one of the trunk's; select it explicitly via cablepath_id.
         lane = child.get_breakout_lane()
-        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane["far_connector"])
+        path = next(p for p in trunk.cable_paths.all() if p.peer_connector == lane.far_connector)
 
         url = reverse("dcim:interface_trace", args=[trunk.pk])
         response = self.client.get(url + f"?cablepath_id={path.pk}")

@@ -3839,6 +3839,40 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertIn("a", body["terminations"])
         self.assertIn("1", body["terminations"]["a"])
 
+    def test_create_cable_multi_connector_type_rejects_ineligible_termination(self):
+        """A multi-connector cable type with a non-breakout-eligible termination is rejected with a 400.
+
+        The same `CableToCableTermination.clean()` rule enforced for the UI form is exercised here
+        via the API's nested termination serializer — no separate API-side logic.
+        """
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_cabletype",
+            "dcim.view_consoleport",
+            "extras.view_status",
+        )
+        breakout_type = CableType.objects.get(name="Cable API breakout 1x2")
+        console_port = ConsolePort.objects.create(
+            device=Device.objects.get(name="Device 2"), name="cp-api-reject", type=ConsolePortTypeChoices.TYPE_RJ45
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        url = reverse("dcim-api:cable-list")
+        payload = {
+            "status": cable_status.pk,
+            "label": "Cable console breakout reject",
+            "cable_type": breakout_type.pk,
+            "terminations": {
+                "a": {"1": {"object_type": "dcim.consoleport", "id": str(console_port.pk)}},
+            },
+        }
+        response = self.client.post(url, payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("multi-connector cable type", str(response.json()))
+        # The cable was not created (the create() transaction rolled back).
+        self.assertFalse(Cable.objects.filter(label="Cable console breakout reject").exists())
+
     def test_typed_m2m_fields_absent_from_response(self):
         """The auto-generated typed M2M fields (`interfaces`, `front_ports`, etc.) must not appear in the GET response."""
         self.add_permissions("dcim.view_cable")
