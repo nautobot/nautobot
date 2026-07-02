@@ -78,6 +78,11 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False, ip_ranges=N
     else:
         first_value, last_value = prefix.first, prefix.last
 
+    # Precompute integer bounds once. start_address/end_address are properties that rebuild a
+    # netaddr.IPAddress on every read, so reading them inside range_containing() was O(addresses
+    # x ranges) constructions.
+    range_bounds = [(int(r.start_address), int(r.end_address), r) for r in ip_ranges]
+
     def host_value(address):
         return address.address.ip.value
 
@@ -92,8 +97,8 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False, ip_ranges=N
 
     def range_containing(host):
         """Range whose span includes `host`, or None (first match wins; overlaps are a validation error)."""
-        for ip_range in ip_ranges:
-            if ip_range.start_address.value <= host <= ip_range.end_address.value:
+        for start_val, end_val, ip_range in range_bounds:
+            if start_val <= host <= end_val:
                 return ip_range
         return None
 
