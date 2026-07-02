@@ -118,7 +118,9 @@ from nautobot.dcim.views import (
     CableCreateView,
     ConsoleConnectionsListView,
     ConsolePortUIViewSet,
+    DeviceBayUIViewSet,
     DeviceUIViewSet,
+    FrontPortUIViewSet,
     InterfaceConnectionsListView,
     ModuleTypeComponentAddButton,
     PowerConnectionsListView,
@@ -4349,6 +4351,11 @@ class FrontPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     def test_bulk_add_component(self):
         pass
 
+    def test_get_selected_objects_parents_name_empty(self):
+        """Covers the empty-queryset branch (`return ""`) in get_selected_objects_parents_name."""
+        viewset = FrontPortUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(FrontPort.objects.none()), "")
+
 
 class RearPortTestCase(ViewTestCases.DeviceComponentViewTestCase):
     model = RearPort
@@ -4483,6 +4490,79 @@ class DeviceBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
             "label": "new test label",
             "description": "new test description",
         }
+
+    def test_parents_name_empty_selection(self):
+        """`get_selected_objects_parents_name` returns an empty string when no objects are selected."""
+        viewset = DeviceBayUIViewSet()
+        self.assertEqual(viewset.get_selected_objects_parents_name(DeviceBay.objects.none()), "")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_populate_device_bay(self):
+        """Populating a device bay installs the selected child device (UIViewSet `populate` action)."""
+        self.add_permissions("dcim.change_devicebay")
+
+        parent_device = Device.objects.get(name="Device 1")
+        device_bay = DeviceBay.objects.create(device=parent_device, name="Populate Bay")
+
+        # A child device is only eligible if its device type has u_height=0 and a child subdevice role.
+        child_device_type = DeviceType.objects.create(
+            manufacturer=parent_device.device_type.manufacturer,
+            model="Child Device Type",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            device_type=child_device_type,
+            role=parent_device.role,
+            status=parent_device.status,
+            location=parent_device.location,
+        )
+
+        url = reverse("dcim:devicebay_populate", kwargs={"pk": device_bay.pk})
+
+        # GET renders the populate form.
+        self.assertHttpStatus(self.client.get(url), 200)
+
+        # POST installs the child device and redirects back to the device's device bays tab.
+        response = self.client.post(url, data={"installed_device": child_device.pk})
+        self.assertHttpStatus(response, 302)
+        device_bay.refresh_from_db()
+        self.assertEqual(device_bay.installed_device, child_device)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_depopulate_device_bay(self):
+        """Depopulating a device bay removes the installed child device (UIViewSet `depopulate` action)."""
+        self.add_permissions("dcim.change_devicebay")
+
+        parent_device = Device.objects.get(name="Device 1")
+        child_device_type = DeviceType.objects.create(
+            manufacturer=parent_device.device_type.manufacturer,
+            model="Child Device Type",
+            u_height=0,
+            subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+        )
+        child_device = Device.objects.create(
+            name="Child Device 1",
+            device_type=child_device_type,
+            role=parent_device.role,
+            status=parent_device.status,
+            location=parent_device.location,
+        )
+        device_bay = DeviceBay.objects.create(
+            device=parent_device, name="Depopulate Bay", installed_device=child_device
+        )
+
+        url = reverse("dcim:devicebay_depopulate", kwargs={"pk": device_bay.pk})
+
+        # GET renders the depopulate confirmation form.
+        self.assertHttpStatus(self.client.get(url), 200)
+
+        # POST removes the installed device and redirects back to the device's device bays tab.
+        response = self.client.post(url, data={"confirm": True})
+        self.assertHttpStatus(response, 302)
+        device_bay.refresh_from_db()
+        self.assertIsNone(device_bay.installed_device)
 
 
 class ModuleBayTestCase(ViewTestCases.DeviceComponentViewTestCase):
