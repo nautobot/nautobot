@@ -1035,7 +1035,16 @@ CACHES = {
 CONTENT_TYPE_CACHE_TIMEOUT = int(os.getenv("NAUTOBOT_CONTENT_TYPE_CACHE_TIMEOUT", "0"))
 
 #
-# Celery (used for background processing)
+# Task Backend (selects the engine used to execute Nautobot Jobs)
+#
+# Set NAUTOBOT_TASK_BACKEND=procrastinate to use the Procrastinate-based backend
+# (PostgreSQL LISTEN/NOTIFY, no Redis broker required) instead of the default Celery.
+# Custom backends may be supplied as a dotted import path to a TaskBackend subclass.
+# See nautobot/docs/fork/procrastinate/ for the design overview.
+TASK_BACKEND = os.getenv("NAUTOBOT_TASK_BACKEND", "celery")
+
+#
+# Celery (used for background processing when TASK_BACKEND == "celery")
 #
 
 # Celery Beat heartbeat file path - will be touched by Beat each time it wakes up as a proof-of-health.
