@@ -3456,12 +3456,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
         # Side/connector keying — non-breakout cables have exactly one A- and one B-side connector.
-        self.assertEqual(set(terminations), {"a", "b"})
-        self.assertEqual(set(terminations["a"]), {"1"})
-        self.assertEqual(set(terminations["b"]), {"1"})
+        self.assertEqual(set(terminations), {"a1", "b1"})
         # Each slot at default depth is the brief rep of the termination (mirrors termination_a/b).
-        a_slot = terminations["a"]["1"]
-        b_slot = terminations["b"]["1"]
+        a_slot = terminations["a1"]
+        b_slot = terminations["b1"]
         self.assertEqual(a_slot["object_type"], "dcim.interface")
         self.assertEqual(b_slot["object_type"], "dcim.interface")
         for key in ("id", "url"):
@@ -3477,10 +3475,19 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
         # 1 A-side connector + 2 B-side connectors (from setUpTestData) — all slots present, fully cabled.
-        self.assertEqual(set(terminations["a"]), {"1"})
-        self.assertEqual(set(terminations["b"]), {"1", "2"})
-        self.assertIsNotNone(terminations["b"]["1"])
-        self.assertIsNotNone(terminations["b"]["2"])
+        self.assertEqual(set(terminations), {"a1", "b1", "b2"})
+
+        self.assertIsNotNone(terminations["a1"])
+        self.assertIsInstance(terminations["a1"], dict)
+        self.assertEqual(set(terminations["a1"]), {"object_type", "url", "id"})
+
+        self.assertIsNotNone(terminations["b1"])
+        self.assertIsInstance(terminations["b1"], dict)
+        self.assertEqual(set(terminations["b1"]), {"object_type", "url", "id"})
+
+        self.assertIsNotNone(terminations["b2"])
+        self.assertIsInstance(terminations["b2"], dict)
+        self.assertEqual(set(terminations["b2"]), {"object_type", "url", "id"})
 
     def test_terminations_field_uncabled_breakout_slot_is_null(self):
         """An uncabled connector on a breakout cable surfaces as an explicit `null` slot."""
@@ -3502,11 +3509,20 @@ class CableTest(Mixins.BaseComponentTestMixin):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
-        self.assertEqual(set(terminations["b"]), {"1", "2", "3", "4"})
-        self.assertIsNotNone(terminations["b"]["1"])
+        self.assertEqual(set(terminations), {"a1", "b1", "b2", "b3", "b4"})
+
+        self.assertIsNotNone(terminations["a1"])
+        self.assertIsInstance(terminations["a1"], dict)
+        self.assertEqual(set(terminations["a1"]), {'id', 'object_type', 'url'})
+
+        self.assertIsNotNone(terminations["b1"])
+        self.assertIsInstance(terminations["b1"], dict)
+        self.assertEqual(set(terminations["b1"]), {'id', 'object_type', 'url'})
+
         # Slots 2-4 weren't cabled — expect explicit nulls, not absent keys.
-        for connector in ("2", "3", "4"):
-            self.assertIsNone(terminations["b"][connector])
+        self.assertIsNone(terminations["b2"])
+        self.assertIsNone(terminations["b3"])
+        self.assertIsNone(terminations["b4"])
 
     def test_terminations_field_respects_depth(self):
         """`?depth>=1` expands each slot from a brief rep into the full nested termination serializer."""
@@ -3516,9 +3532,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
+        self.assertEqual(set(terminations), {"a1", "b1"})
         # Depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
         # serializer payload (which carries fields like `name`).
-        a_slot = terminations["a"]["1"]
+        a_slot = terminations["a1"]
         self.assertIsInstance(a_slot, dict)
         self.assertIn("name", a_slot)
 
@@ -3636,8 +3653,8 @@ class CableTest(Mixins.BaseComponentTestMixin):
             "status": cable_status.pk,
             "label": "Cable via terminations",
             "terminations": {
-                "a": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[0].pk)}},
-                "b": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[1].pk)}},
+                "a1": {"object_type": "dcim.interface", "id": str(free_ifaces[0].pk)},
+                "b1": {"object_type": "dcim.interface", "id": str(free_ifaces[1].pk)},
             },
         }
         response = self.client.post(url, payload, format="json", **self.header)
@@ -3670,12 +3687,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
             url,
             {
                 "terminations": {
-                    "b": {
-                        # Replace B-connector-1 with a different interface.
-                        "1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
-                        # Delete B-connector-2 (already has a termination from setUpTestData).
-                        "2": None,
-                    },
+                    # Replace B-connector-1 with a different interface.
+                    "b1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
+                    # Delete B-connector-2 (already has a termination from setUpTestData).
+                    "b2": None
                 },
             },
             format="json",
@@ -3781,7 +3796,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
             url,
             {
                 "terminations": {
-                    "a": {"1": {"object_type": "dcim.rearport", "id": str(rear_port.pk)}},
+                    "a1": {"object_type": "dcim.rearport", "id": str(rear_port.pk)},
                 },
             },
             format="json",
