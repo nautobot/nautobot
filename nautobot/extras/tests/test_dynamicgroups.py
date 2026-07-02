@@ -847,6 +847,39 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         self.assertQuerySetEqual(group_qs, process_qs, ordered=False)
 
+    def test_get_group_queryset_conjoined_tags(self):
+        """A `tags` filter with multiple values must match objects tagged with ALL of them (match-ALL).
+
+        Regression test: previously `_get_group_queryset()` folded the conjoined per-tag predicates into a
+        single `Q`, collapsing them onto one JOIN (`tags__name == A AND tags__name == B`) and matching zero
+        objects. Membership must instead agree with the FilterSet's own `.qs`, which JOINs once per tag value.
+        """
+        tag_a, tag_b = Tag.objects.create(name="DG Tag A"), Tag.objects.create(name="DG Tag B")
+        for tag_obj in (tag_a, tag_b):
+            tag_obj.content_types.add(self.device_ct)
+
+        device_both = self.devices[0]  # tagged with both A and B -> should match
+        device_a_only = self.devices[1]  # tagged with only A -> should NOT match
+        device_both.tags.set([tag_a, tag_b])
+        device_a_only.tags.set([tag_a])
+
+        filter_data = {"tags": [tag_a.name, tag_b.name]}
+        group = DynamicGroup.objects.create(
+            name="Conjoined Tags",
+            filter=filter_data,
+            content_type=self.device_ct,
+        )
+
+        group_qs = group._get_group_queryset()
+        # Membership must exactly match the FilterSet the UI/REST use.
+        self.assertQuerySetEqualAndNotEmpty(
+            group_qs,
+            DeviceFilterSet(filter_data, Device.objects.all()).qs,
+            ordered=False,
+        )
+        self.assertIn(device_both, group_qs)
+        self.assertNotIn(device_a_only, group_qs)
+
     def test_get_ancestors(self):
         """Test `DynamicGroup.get_ancestors()`."""
         expected = ["Third Child", "Parent"]
