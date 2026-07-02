@@ -3484,6 +3484,12 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertWarns(DeprecationWarning):
             self.assertEqual(Cable.objects.get(termination_a_id=self.interface1.pk), self.cable)
 
+        # Type alone (no id) matches any cable whose named side terminates on that type.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(Cable.objects.get(termination_a_type=interface_ct), self.cable)
+        with self.assertWarns(DeprecationWarning):
+            self.assertFalse(Cable.objects.filter(termination_a_type=power_port_ct).exists())
+
         # Non-matching lookups return nothing.
         with self.assertWarns(DeprecationWarning):
             self.assertFalse(
