@@ -56,9 +56,12 @@ def cable_status_color_css(record):
     if not record.cable:
         # A breakout child (sub)interface has no cable of its own; color it after its parent trunk's
         # cable when its lane is connected. `parent_interface` / `get_breakout_lane` are Interface-only,
-        # so guard for other cable-terminable types (console/power ports, etc.).
-        if getattr(record, "parent_interface_id", None) and record.get_breakout_lane().far_termination:
-            return cable_status_color_css(record.parent_interface)
+        # so guard for other cable-terminable types (console/power ports, etc.). A regular (non-breakout)
+        # subinterface has no lane -- `get_breakout_lane()` returns None -- and gets no coloring.
+        if getattr(record, "parent_interface_id", None):
+            lane = record.get_breakout_lane()
+            if lane is not None and lane.far_termination:
+                return cable_status_color_css(record.parent_interface)
         return ""
 
     CABLE_STATUS_TO_CSS_CLASS = {
