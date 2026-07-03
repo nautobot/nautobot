@@ -412,10 +412,6 @@ class VMInterfaceUIViewSet(
                 label="Interface",
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
-                key_transforms={
-                    "mode": "802.1Q Mode",
-                    "vrf": "VRF",
-                },
                 exclude_fields=["untagged_vlan"],
             ),
             # IP addresses

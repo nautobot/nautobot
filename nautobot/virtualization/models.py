@@ -359,6 +359,7 @@ class VMInterface(PrimaryModel, BaseInterface):
         blank=True,
         null=True,
         on_delete=models.SET_NULL,
+        verbose_name="VRF",
     )
     ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",

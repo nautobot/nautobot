@@ -1002,7 +1002,7 @@ class BaseInterface(RelationshipModel):
         verbose_name="MTU",
     )
     role = RoleField(blank=True, null=True)
-    mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True)
+    mode = models.CharField(max_length=50, choices=InterfaceModeChoices, blank=True, verbose_name="802.1Q Mode")
     parent_interface = models.ForeignKey(
         to="self",
         on_delete=models.CASCADE,
