@@ -481,7 +481,7 @@ class LiveSearchViewTestCase(TestCase):
         self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
 
     def test_live_search_results(self):
-        """GET with ?q renders table with no more than 10 matching search results."""
+        """GET with ?q renders table with no more than 10 matching search results, with "More..." button."""
         response = self.client.get(
             reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #"}),
             headers={"HX-Request": "true"},
@@ -493,9 +493,15 @@ class LiveSearchViewTestCase(TestCase):
         # Even when there are more matches, there should no more than 10 results displayed at once.
         for location in self.locations[10:]:
             self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # In case when there are more results than just the 10 displayed, expect "More..." button to be rendered.
+        self.assertContains(
+            response,
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%23">More... (10)</a>',
+            html=True,
+        )
 
     def test_live_search_single_result(self):
-        """GET with a very specific ?q renders table with a single matching result."""
+        """GET with a very specific ?q renders table with a single matching result, without "More..." button."""
         response = self.client.get(
             reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #0"}),
             headers={"HX-Request": "true"},
@@ -507,6 +513,12 @@ class LiveSearchViewTestCase(TestCase):
         # Make sure all other non-matching results are not displayed.
         for location in self.locations[1:]:
             self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # In case when there are no more results than those displayed, expect "More..." button not to be rendered.
+        self.assertNotContains(
+            response,
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%230">More... (10)</a>',
+            html=True,
+        )
 
     def test_live_search_empty(self):
         """GET with ?q with no matches response is empty."""

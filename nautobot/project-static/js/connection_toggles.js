@@ -59,17 +59,21 @@ function disconnectTermination(elem) {
     return false;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.cable-toggle').forEach(function(elem) {
-        elem.addEventListener('click', function(event) {
-            event.preventDefault();
-            toggleConnection(elem);
-        });
-    });
-    document.querySelectorAll('.cable-disconnect').forEach(function(elem) {
-        elem.addEventListener('click', function(event) {
-            event.preventDefault();
-            disconnectTermination(elem);
-        });
-    });
+// Delegate from `document` rather than binding each `.cable-toggle`/`.cable-disconnect` element
+// directly: object-list tables (and UIViewSet list views) render their rows via HTMX, replacing
+// the table after page load, so per-element listeners bound on `DOMContentLoaded` would be lost on
+// every swap. A single delegated listener keeps working for swapped-in rows. (Matches the
+// delegation pattern already used in cable_update.html and generic/object_list.html.)
+document.addEventListener('click', function(event) {
+    const toggle = event.target.closest('.cable-toggle');
+    if (toggle) {
+        event.preventDefault();
+        toggleConnection(toggle);
+        return;
+    }
+    const disconnect = event.target.closest('.cable-disconnect');
+    if (disconnect) {
+        event.preventDefault();
+        disconnectTermination(disconnect);
+    }
 });

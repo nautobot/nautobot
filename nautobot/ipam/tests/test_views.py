@@ -1772,6 +1772,85 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         )
         self.assertFalse(IPAddressRange.objects.filter(start_host="192.0.2.60").exists())
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_shows_utilization_for_count_as_utilized(self):
+        """A count_as_utilized range renders a utilization bar in its detail view."""
+        ip_range = IPAddressRange.objects.create(
+            name="util-shown",
+            start_address="192.0.2.60",
+            end_address="192.0.2.65",
+            namespace=self.namespace,
+            status=self.statuses[0],
+            count_as_utilized=True,
+        )
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Utilization")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_utilization_for_exclusive(self):
+        """An exclusive range does not render the utilization row (per panel condition)."""
+        ip_range = IPAddressRange.objects.create(
+            name="util-hidden-exclusive",
+            start_address="192.0.2.70",
+            end_address="192.0.2.75",
+            namespace=self.namespace,
+            status=self.statuses[0],
+            count_as_utilized=True,
+            is_exclusive=True,
+        )
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn(b"Utilization", response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_shows_ip_table_for_non_exclusive(self):
+        """A non-exclusive range renders the inline IP Addresses table, listing contained IPs."""
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10
+        IPAddress.objects.create(address="192.0.2.3/24", namespace=self.namespace, status=self.prefix_status)
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "IP Addresses")
+        self.assertBodyContains(response, "192.0.2.3")
+
+    def test_detail_view_add_ip_button_with_permission(self):
+        """With ipam.add_ipaddress, the inline table renders an Add link prefilled into the range."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # non-exclusive, empty, first free = .1
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        add_url = reverse("ipam:ipaddress_add")
+        self.assertBodyContains(response, add_url)
+        self.assertBodyContains(response, f"namespace={ip_range.parent.namespace_id}")
+        self.assertBodyContains(response, "192.0.2.1")
+
+    def test_detail_view_no_add_button_without_add_permission(self):
+        """Without ipam.add_ipaddress, no Add IP Address link is rendered in the panel."""
+        self.add_permissions("ipam.view_ipaddressrange")  # view only
+        ip_range = self.ip_ranges[0]
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # add route should not appear as a link target for the inline table
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_add_button_when_range_is_full(self):
+        """If in range there is no any free address then button `Add` is not rendered."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10, nie-exclusive
+
+        for i in range(1, 11):
+            IPAddress.objects.create(
+                address=f"192.0.2.{i}/24",
+                namespace=self.namespace,
+                status=self.prefix_status,
+            )
+
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # If _get_table_add_url return None then address to add ipaddress shouldn't be rendered
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
+
 
 class VLANGroupTestCase(
     ViewTestCases.OrganizationalObjectViewTestCase,
