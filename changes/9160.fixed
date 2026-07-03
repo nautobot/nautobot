@@ -1,0 +1,11 @@
+Fixed errors when creating extremely long cables.
+Fixed the `trace_paths` management command (run by `nautobot-server post_upgrade`) not regenerating missing breakout cable fan-out lane paths.
+Fixed the `trace_paths` management command aborting partway through when it encountered inconsistent existing cable data (such as a cabling loop); it now skips the affected origin and continues.
+Fixed layout of connection tables (in both the cable detail view and the HTMX connection-edit form) for breakout cables with a meshed connector mapping, such as a polarity-shuffled 2x2.
+Fixed missing validation that allowed a multi-connector (breakout) cable type to be attached to termination types that don't support breakout (such as console or power terminations).
+Fixed the cable edit form disallowing all cable types for cables with non-breakout-eligible terminations; single-connector cable types are now permitted.
+Fixed the per-row cable actions (mark cable connected/planned, detach cable) not working in the device-component list views (interfaces, console/power ports, front/rear ports).
+Fixed cable-status row coloring not being applied in the device-component list views.
+Fixed an exception when attempting to improperly create an Interface with a `breakout_position` but no `parent_interface`.
+Fixed missing `breakout_position` form field when editing an existing Interface.
+Fixed an exception when tracing a path including a partially-disconnected cable.
