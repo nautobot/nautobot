@@ -565,6 +565,27 @@ class DeviceSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
                     }
                 )
 
+            # Child devices must be assigned to the same location/rack as the parent device (mirrors the
+            # PopulateDeviceBayForm queryset used by the UI).
+            if "location" in attrs or self.instance is None:
+                device_location = attrs.get("location")
+            else:
+                device_location = self.instance.location
+            if "rack" in attrs or self.instance is None:
+                device_rack = attrs.get("rack")
+            else:
+                device_rack = self.instance.rack
+            if device_location != parent_bay.device.location or device_rack != parent_bay.device.rack:
+                raise ValidationError(
+                    {
+                        "parent_bay": (
+                            "Cannot install device; child devices must first be assigned to the location/rack "
+                            f"of the parent device (location: {parent_bay.device.location}, "
+                            f"rack: {parent_bay.device.rack})"
+                        )
+                    }
+                )
+
             if self.instance:
                 parent_bay.installed_device = self.instance
                 parent_bay.full_clean()
