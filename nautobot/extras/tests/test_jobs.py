@@ -44,7 +44,14 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
-from nautobot.extras.jobs_revoke import CeleryStrategy, JobLiveness, K8sStrategy, RevokeFactory, UnknownStrategy
+from nautobot.extras.jobs_revoke import (
+    CeleryStrategy,
+    JobAlreadyTerminal,
+    JobLiveness,
+    K8sStrategy,
+    RevokeFactory,
+    UnknownStrategy,
+)
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 
@@ -2407,7 +2414,8 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
 
     @mock.patch("nautobot.extras.jobs_revoke.celery_app.control.revoke")
     def test_perform_termination_skips_when_job_in_ready_state(self, mock_celery_revoke):
-        """When the job is already terminal, perform_termination must not send a revoke or touch the JobResult fields."""
+        """When the job is already terminal, perform_termination raises JobAlreadyTerminal
+        without sending a revoke or touching the JobResult fields."""
 
         for status in JobResultStatusChoices.READY_STATES:
             with self.subTest(status=status):
@@ -2415,6 +2423,7 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
 
                 with (
                     self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm,
+                    self.assertRaises(JobAlreadyTerminal),
                 ):
                     self.strategy.perform_termination(job_result, self.user)
 
@@ -2430,13 +2439,13 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 self.assertIsNone(job_result.date_revoked)
 
                 self.assertTrue(
-                    any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),
+                    any(f"Job {job_result.pk} is already in terminal state" in msg for msg in log_cm.output),
                     f"Expected an info log about no action taken, got: {log_cm.output}",
                 )
                 self.assertTrue(
                     JobLogEntry.objects.filter(
                         job_result=job_result,
-                        message__contains=f"Job {job_result.pk} is already in terminated state",
+                        message__contains=f"Job {job_result.pk} is already in terminal state",
                     ).exists()
                 )
 
@@ -2457,13 +2466,13 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 self.assertFalse(result["revoked"])
 
                 self.assertTrue(
-                    any(f"Job {job_result.pk} is already in terminated state" in msg for msg in log_cm.output),
+                    any(f"Job {job_result.pk} is already in terminal state" in msg for msg in log_cm.output),
                     f"Expected an info log about no action taken, got: {log_cm.output}",
                 )
                 self.assertTrue(
                     JobLogEntry.objects.filter(
                         job_result=job_result,
-                        message__contains=f"Job {job_result.pk} is already in terminated state",
+                        message__contains=f"Job {job_result.pk} is already in terminal state",
                     ).exists()
                 )
 
