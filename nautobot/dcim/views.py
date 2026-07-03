@@ -4913,6 +4913,7 @@ class RearPortUIViewSet(
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.FrontPortTable,
                 table_filter="rear_port",
+                select_related_fields=[*FrontPort.cable_columns_select_related_fields(), "device", "module"],
                 exclude_columns=["rear_port"],
             ),
         ),
