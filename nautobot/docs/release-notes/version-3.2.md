@@ -45,6 +45,25 @@ The following patterns are **not** translated and will break — rewrite them ex
 | `.order_by("cable")` | `.order_by("cable_termination__cable")` |
 | `.values("cable")` / `.values_list("cable")` | `cable_termination__cable` |
 
+**Querying `Cable` by its terminations:** in the same way, the legacy `termination_a_type` / `termination_a_id` (and b-side) fields are no longer database columns on `Cable` — the terminations now live on the `terminations` (`CableToCableTermination`) relation. `Cable.objects` translates lookups using the old `*_type` / `*_id` names into the equivalent `terminations__...` join paths (constrained to connector 1 to match the properties), emitting a `DeprecationWarning` for each, so `Cable.objects.filter(...)`, `.get(...)`, and `.get_or_create(...)` continue to work for legacy callers. The lookup half is translated by the queryset and, for `get_or_create()`, the same kwargs flow through `Cable(...)` and are materialized into `CableToCableTermination` rows on save.
+
+| Deprecated | Translated to |
+|------------|---------------|
+| `Cable.objects.get(termination_a_type=<ct>, termination_a_id=<pk>)` | `terminations__<fk>_id=<pk>` with `terminations__cable_end="A"` |
+| `.filter(termination_a_id=<pk>)` (no `_type` given) | `<pk>` matched against every per-type termination FK |
+| `Cable.objects.get_or_create(termination_a_type=..., termination_a_id=..., ...)` | lookup translated as above; creation flows through `Cable(...)` |
+
+The following are **not** translated — rewrite them against the `terminations` relation explicitly:
+
+| Not translated | Use instead |
+|----------------|-------------|
+| `Q(termination_a_id=...)`, `.order_by("termination_a_id")`, `.values("termination_a_id")` | `terminations__...` equivalents |
+| transformed lookups, e.g. `.filter(termination_a_id__in=[...])` | `terminations__<fk>_id__in=[...]` with `terminations__cable_end="A"` |
+| `.exclude(termination_a_id=..., termination_b_id=...)` combining **both** ends | separate `.exclude()` calls, or an explicit `terminations__...` `Q`. The shim applies each end independently (`exclude(A) AND exclude(B)`), which is **not** equivalent to negating the combined condition, because the A-side and B-side match different `CableToCableTermination` rows. Single-end `exclude()` is exact. |
+
+!!! warning
+    Queries using `termination_[a|b]_[id|type]` **only match the first connector on each side of a Cable by design**. Code that needs to support any additional connectors on a breakout cable **must** use the new access patterns.
+
 **Cable paths:** the private `_path` `ForeignKey` on `PathEndpoint` has been replaced with a `cable_paths` `GenericRelation` (resolving through `CablePath.origin`). The public `path`, `trace()`, and `connected_endpoint` accessors are unchanged. Rewrite any `_path__...` query usages as `cable_paths__...`; because this is now a multi-row reverse relation (one `CablePath` per breakout lane), `distinct()` is typically required on `filter()` / `count()` / `exclude()`.
 
 **Other notes:**
@@ -58,7 +77,9 @@ The following patterns are **not** translated and will break — rewrite them ex
 
 #### Cable Data Model Changes
 
-To support breakout cables (see below), the way a [`Cable`](../user-guide/core-data-model/dcim/cable.md) associates to its terminations has changed. The `cable` `ForeignKey` previously present on each `CableTermination` (`Interface`, `FrontPort`, etc.) has been replaced by a new [`CableToCableTermination`](../user-guide/core-data-model/dcim/cabletocabletermination.md) join model, allowing a cable to have more than two terminations. Backward-compatibility shims are provided for the most common access patterns, but App and Job authors who interact with cables programmatically will likely need to make updates. See [Upgrade Actions for App Developers](#app-developers) below for details.
+To support breakout cables (see below), the way a [`Cable`](../user-guide/core-data-model/dcim/cable.md) associates to its terminations has changed. The `cable` `ForeignKey` previously present on each `CableTermination` (`Interface`, `FrontPort`, etc.) has been replaced by a new [`CableToCableTermination`](../user-guide/core-data-model/dcim/cabletocabletermination.md) join model, allowing a cable to have more than two terminations. Similarly, the `Cable.termination_a` and `Cable.termination_b` `GenericForeignKey` fields have been similarly migrated to use the reverse-foreign-key-relation `Cable.terminations` to `CableToCableTermination` records.
+
+Backward-compatibility shims are provided for the most common access patterns (including ongoing support for the REST API and UI query parameters `?termination_a_type=`, `?termination_a_id=`, etc.), but App and Job authors who interact with cables programmatically may need to make updates to support the updated data model. See [Upgrade Actions for App Developers](#app-developers) above for details.
 
 ### Added
 
