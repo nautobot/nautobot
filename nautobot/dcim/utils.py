@@ -161,7 +161,6 @@ def convert_watts_to_va(watts, power_factor):
 def render_software_version_and_image_files(instance, software_version, context):
     display = hyperlinked_object(software_version)
     overridden_software_image_files = instance.software_image_files.all()
-    has_overrides = overridden_software_image_files.exists()
     if software_version is not None:
         display += format_html(
             '<ul class="software-image-hierarchy">{}</ul>',
@@ -171,13 +170,13 @@ def render_software_version_and_image_files(instance, software_version, context)
                 [
                     [
                         hyperlinked_object(img, "image_file_name"),
-                        " (overridden)" if has_overrides else "",
+                        " (overridden)" if overridden_software_image_files.exists() else "",
                     ]
                     for img in software_version.software_image_files.restrict(context["request"].user, "view")
                 ],
             ),
         )
-    if has_overrides:
+    if overridden_software_image_files.exists():
         display += format_html(
             "<br><strong>Software Image Files Overridden:</strong>\n<ul>{}</ul>",
             format_html_join(
