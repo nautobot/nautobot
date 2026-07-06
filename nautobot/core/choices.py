@@ -154,11 +154,12 @@ class ColorChoices(ChoiceSet):
 
 
 class NautobotEditionChoices(ChoiceSet):
-    """The installed Nautobot edition (see the `NAUTOBOT_EDITION` setting)."""
+    """The active Nautobot edition (see `nautobot.core.utils.config.get_nautobot_edition`)."""
 
     COMMUNITY = "community"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
+    CLOUD = "cloud"
 
     DEFAULT = COMMUNITY
 
@@ -166,7 +167,16 @@ class NautobotEditionChoices(ChoiceSet):
         (COMMUNITY, "Community"),
         (PROFESSIONAL, "Professional"),
         (ENTERPRISE, "Enterprise"),
+        (CLOUD, "Cloud"),
     )
+
+    # Relative precedence of each edition.
+    WEIGHTS = {
+        COMMUNITY: 10,
+        PROFESSIONAL: 20,
+        ENTERPRISE: 30,
+        CLOUD: 40,
+    }
 
 
 #

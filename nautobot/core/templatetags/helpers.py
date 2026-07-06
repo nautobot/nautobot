@@ -1293,7 +1293,7 @@ def custom_branding_or_static(branding_asset, static_asset=None):
     Return the URL of an asset, honoring the following precedence:
 
     1. Custom branding configured via `settings.BRANDING_FILEPATHS` (relative to MEDIA_ROOT/MEDIA_URL).
-    2. The static asset for the active `NAUTOBOT_EDITION`, falling back to the "community" asset for any
+    2. The static asset for the active nautobot edition, falling back to the "community" asset for any
        branding key the edition does not override.
     3. The caller-provided `static_asset`, used as a backup for branding keys not defined for any edition.
     """
@@ -1304,9 +1304,7 @@ def custom_branding_or_static(branding_asset, static_asset=None):
     elif branding_asset == "navbar_icon" and settings.BRANDING_FILEPATHS.get("icon_32"):
         url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get('icon_32')}"
     else:
-        nautobot_edition_for_asset = config.get_settings_or_config(
-            "NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT
-        )
+        nautobot_edition_for_asset = config.get_nautobot_edition()
         assets_for_edition = NAUTOBOT_STATIC_ASSETS.get(
             nautobot_edition_for_asset, NAUTOBOT_STATIC_ASSETS[NautobotEditionChoices.DEFAULT]
         )
