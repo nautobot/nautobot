@@ -167,15 +167,15 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 ### Fixed in v3.1.7
 
-- [#xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Fixed `prefix_length__lte` filter value being corrupted (e.g. `['16']`) when adding another filter in the Prefix list view.
-- [#xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Fixed `within_include` filter field in `PrefixFilterForm` not supporting multiple values.
-- [#xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Fixed `MultiValueCharField` splitting a bare string value into per-character choices.
 - [#8287](https://github.com/nautobot/nautobot/issues/8287) - Fixed Git repository synchronization to not leave lingering `git` subprocesses.
 - [#9047](https://github.com/nautobot/nautobot/issues/9047) - Fixed a bug that caused the application to crash when creating an Interface with a required Custom Field despite providing a value for it.
 - [#9047](https://github.com/nautobot/nautobot/issues/9047) - Fixed application crashes from errors on fields that are not declared in some forms.
 - [#9113](https://github.com/nautobot/nautobot/issues/9113) - Fixed an `IntegrityError` raised on every request after the first when `EXTERNAL_AUTH_DEFAULT_PERMISSIONS` is configured for externally-authenticated users.
 - [#9117](https://github.com/nautobot/nautobot/issues/9117) - Fixed edit/delete actions on a Dynamic Group's Members tab returning the user to the group's detail page instead of the Members tab.
 - [#9132](https://github.com/nautobot/nautobot/issues/9132) - Moved the charset declaration to be the first tag in `<head>`.
+- [#9186](https://github.com/nautobot/nautobot/issues/9186) - Fixed `prefix_length__lte` filter value being corrupted (e.g. `['16']`) when adding another filter in the Prefix list view.
+- [#9186](https://github.com/nautobot/nautobot/issues/9186) - Fixed `within_include` filter field in `PrefixFilterForm` not supporting multiple values.
+- [#9186](https://github.com/nautobot/nautobot/issues/9186) - Fixed `MultiValueCharField` splitting a bare string value into per-character choices.
 
 ### Dependencies in v3.1.7
 
