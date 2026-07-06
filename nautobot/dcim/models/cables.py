@@ -361,11 +361,17 @@ class CableQuerySet(RestrictedQuerySet):
         Pop legacy `termination_<side>_type` / `termination_<side>_id` kwargs from `working` and return the
         matching `terminations__...` Q, or None if the side isn't referenced by a translatable kwarg.
 
-        The legacy `*_type` / `*_id` columns were non-nullable, so `None` is not a supported lookup value here.
+        The legacy `*_type` / `*_id` columns were non-nullable, so an explicit `None` on either key never
+        matched a row -- even combined with a real value on the other key (`type IS NULL AND id = <pk>`).
+        We preserve that in this deprecated code path (even though `terminations` is now nullable): any
+        present `None` yields a match-nothing Q for the side rather than being dropped (which would
+        silently widen the result set) or leaking a now-nonexistent field through to the queryset.
         """
         type_key = f"termination_{side}_type"
         id_key = f"termination_{side}_id"
-        if not any(key in working for key in (type_key, id_key)):
+        has_type = type_key in working
+        has_id = id_key in working
+        if not (has_type or has_id):
             return None
 
         cable_end = cls._SIDES[side]
@@ -375,6 +381,12 @@ class CableQuerySet(RestrictedQuerySet):
 
         term_type = working.pop(type_key, None)
         term_id = working.pop(id_key, None)
+
+        # A present `None` reproduces the old `<col> IS NULL` on a non-nullable column -> matched
+        # nothing, and did so even alongside a real value on the other key. Empty the whole side so
+        # `filter()` returns empty (and `get()` raises `DoesNotExist`) as before.
+        if (has_type and term_type is None) or (has_id and term_id is None):
+            return base & models.Q(pk__in=[])
 
         if term_type is not None:
             try:
@@ -394,16 +406,12 @@ class CableQuerySet(RestrictedQuerySet):
             )
             return base & models.Q(**{f"terminations__{fk_field}__isnull": False})
 
-        # A bare id (no type): match it against every per-type FK; termination PKs are UUIDs so at
-        # most one FK on at most one row can match.
-        if term_id is not None:
-            cls._warn(f"{id_key}=...", f"terminations__<type>_id=... with terminations__cable_end={cable_end!r}")
-            match = models.Q()
-            for fk_field in TERMINATION_FK_FIELDS:
-                match |= models.Q(**{f"terminations__{fk_field}_id": term_id})
-            return base & match
-
-        return None
+        # Else, a bare id (no type): match it against every per-type FK.
+        cls._warn(f"{id_key}=...", f"terminations__<type>_id=... with terminations__cable_end={cable_end!r}")
+        match = models.Q()
+        for fk_field in TERMINATION_FK_FIELDS:
+            match |= models.Q(**{f"terminations__{fk_field}_id": term_id})
+        return base & match
 
     @classmethod
     def _translate_termination_kwargs(cls, kwargs):

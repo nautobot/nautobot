@@ -3529,6 +3529,33 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(made.termination_a, self.interface3)
         self.assertEqual(made.termination_b, self.rear_port1)
 
+    def test_termination_backward_compat_queryset_none_matches_nothing(self):
+        """A referenced side with any explicit `None` legacy kwarg matches nothing (old non-nullable columns).
+
+        The kwarg must be popped rather than passed through -- `termination_a_type` / `termination_a_id`
+        are no longer real fields, so leaking one to the underlying queryset would raise `FieldError`, and
+        dropping it silently would widen `filter()` to every Cable. Instead we mirror the old
+        `... IS NULL`-on-a-non-nullable-column behavior: empty result, and `DoesNotExist` from `.get()`.
+        A `None` on one key empties the side even alongside a real value on the other key
+        (`type IS NULL AND id = <pk>` matched nothing).
+        """
+        interface_ct = ContentType.objects.get_for_model(Interface)
+        self.assertTrue(Cable.objects.exists())  # there is something to (fail to) match
+        empty_lookups = (
+            {"termination_a_type": None},
+            {"termination_a_id": None},
+            {"termination_b_id": None},
+            {"termination_a_type": None, "termination_a_id": self.interface1.pk},  # None alongside a real id
+            {"termination_a_type": interface_ct, "termination_a_id": None},  # None alongside a real type
+        )
+        for kwargs in empty_lookups:
+            with self.subTest(kwargs=kwargs):
+                self.assertFalse(Cable.objects.filter(**kwargs).exists())
+                with self.assertRaises(Cable.DoesNotExist):
+                    Cable.objects.get(**kwargs)
+        # `exclude()` inverts to the full set, matching `exclude(<col> IS NULL)` over non-nullable columns.
+        self.assertQuerySetEqual(Cable.objects.exclude(termination_a_type=None), Cable.objects.all())
+
     def test_cable_deletion(self):
         """
         When a Cable is deleted, the `cable` field on its termination points must be nullified. The str() method
