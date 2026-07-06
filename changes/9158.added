@@ -1,0 +1,2 @@
+Added a utilization bar to the IP Address Range detail view, showing the percentage of addresses in the range that are assigned to IPAddress objects.
+Added a table of contained IP Addresses to the IP Address Range detail view, with an "Add IP Address" button pre-filled with the first available address in the range; the table is hidden for exclusive ranges and button "Add IP Address" is hidden when no addresses remain available.

@@ -169,25 +169,60 @@ TERMINATION_FK_FIELDS = tuple(TERMINATION_FK_TO_CONTENT_TYPE)
 # form / serializer code that needs to write to the right per-type FK given a termination instance.
 CONTENT_TYPE_TO_TERMINATION_FK = {ct: fk for fk, ct in TERMINATION_FK_TO_CONTENT_TYPE.items()}
 
-# AOC Ethernet Breakouts (strands_per_lane=1)
-# Fiber MPO Fanouts (strands_per_lane=2, duplex)
+# Per-type FK field on `CableToCableTermination` → the FK on that termination model that resolves
+# its `parent` (e.g. an Interface's parent is its `device`, a CircuitTermination's is its `circuit`,
+# a PowerFeed's is its `power_panel`). Used to extend `select_related` so that rendering
+# `termination.parent` for cable / cable-peer / connection columns stays query-free per row.
+TERMINATION_FK_TO_PARENT_FK = {
+    "circuit_termination": "circuit",
+    "console_port": "device",
+    "console_server_port": "device",
+    "front_port": "device",
+    "interface": "device",
+    "power_feed": "power_panel",
+    "power_outlet": "device",
+    "power_port": "device",
+    "rear_port": "device",
+}
+# `select_related` paths joining each termination through to its parent, e.g. "interface__device".
+TERMINATION_PARENT_FK_FIELDS = tuple(
+    f"{termination_fk}__{parent_fk}" for termination_fk, parent_fk in TERMINATION_FK_TO_PARENT_FK.items()
+)
+
+# Extra `select_related` paths needed to render a termination's display string without a query.
+# Only `CircuitTermination` has a non-trivial `__str__` — it names its location / provider network /
+# cloud network — so those FKs must be joined; every other termination renders as its (already
+# loaded) name.
+TERMINATION_DISPLAY_FK_FIELDS = (
+    "circuit_termination__location",
+    "circuit_termination__provider_network",
+    "circuit_termination__cloud_network",
+)
+
+# Everything a `CableToCableTermination` row needs `select_related` so that rendering each mapped
+# termination's cable columns — the termination itself, its `parent`, and its display string — is
+# query-free. Use this wherever `cable.terminations` is prefetched for table / detail renders.
+TERMINATION_CABLE_COLUMN_FK_FIELDS = (
+    *TERMINATION_FK_FIELDS,
+    *TERMINATION_PARENT_FK_FIELDS,
+    *TERMINATION_DISPLAY_FK_FIELDS,
+)
+
 DEFAULT_CABLE_TYPES = {
-    # ── AOC Ethernet Breakouts ──
-    "1x2 AOC Fanout": {
+    "1x2 Breakout": {
         "description": "1 trunk connector broken out to 2 individual legs",
         "a_connectors": 1,
         "b_connectors": 2,
         "total_lanes": 2,
         "mapping": [
-            {"label": "1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
-            {"label": "2", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
+            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 3)
         ],
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
-        "has_embedded_transceivers": True,
+        "has_embedded_transceivers": False,
     },
-    "1x4 AOC Fanout": {
+    "1x4 Breakout": {
         "description": "1 trunk connector broken out to 4 individual legs",
         "a_connectors": 1,
         "b_connectors": 4,
@@ -198,9 +233,22 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
-        "has_embedded_transceivers": True,
+        "has_embedded_transceivers": False,
     },
-    "1x8 AOC Fanout": {
+    "1x6 Breakout": {
+        "description": "1 trunk connector broken out to 6 individual legs",
+        "a_connectors": 1,
+        "b_connectors": 6,
+        "total_lanes": 6,
+        "mapping": [
+            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)
+        ],
+        "strands_per_lane": 1,
+        "polarity_method": "",
+        "is_shuffle": False,
+        "has_embedded_transceivers": False,
+    },
+    "1x8 Breakout": {
         "description": "1 trunk connector broken out to 8 individual legs",
         "a_connectors": 1,
         "b_connectors": 8,
@@ -211,107 +259,7 @@ DEFAULT_CABLE_TYPES = {
         "strands_per_lane": 1,
         "polarity_method": "",
         "is_shuffle": False,
-        "has_embedded_transceivers": True,
-    },
-    "2x4 AOC Fanout": {
-        "description": "2 trunk connectors (4 lanes each) broken out to 8 individual legs",
-        "a_connectors": 2,
-        "b_connectors": 8,
-        "total_lanes": 8,
-        "mapping": [
-            {"label": "1", "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1},
-            {"label": "2", "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1},
-            {"label": "3", "a_connector": 1, "a_position": 3, "b_connector": 3, "b_position": 1},
-            {"label": "4", "a_connector": 1, "a_position": 4, "b_connector": 4, "b_position": 1},
-            {"label": "5", "a_connector": 2, "a_position": 1, "b_connector": 5, "b_position": 1},
-            {"label": "6", "a_connector": 2, "a_position": 2, "b_connector": 6, "b_position": 1},
-            {"label": "7", "a_connector": 2, "a_position": 3, "b_connector": 7, "b_position": 1},
-            {"label": "8", "a_connector": 2, "a_position": 4, "b_connector": 8, "b_position": 1},
-        ],
-        "strands_per_lane": 1,
-        "polarity_method": "",
-        "is_shuffle": False,
-        "has_embedded_transceivers": True,
-    },
-    # ── Fiber MPO Fanouts ──
-    "MPO-8 → 4xLC Duplex": {
-        "description": "MPO-8 trunk fanning out to 4 LC duplex connections",
-        "a_connectors": 1,
-        "b_connectors": 4,
-        "total_lanes": 4,
-        "mapping": [
-            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)
-        ],
-        "strands_per_lane": 2,
-        "polarity_method": "straight-through",
-        "is_shuffle": False,
-    },
-    "MPO-12 → 6xLC Duplex": {
-        "description": "MPO-12 trunk fanning out to 6 LC duplex connections",
-        "a_connectors": 1,
-        "b_connectors": 6,
-        "total_lanes": 6,
-        "mapping": [
-            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)
-        ],
-        "strands_per_lane": 2,
-        "polarity_method": "straight-through",
-        "is_shuffle": False,
-    },
-    "MPO-24 → 12xLC Duplex": {
-        "description": "MPO-24 trunk fanning out to 12 LC duplex connections",
-        "a_connectors": 1,
-        "b_connectors": 12,
-        "total_lanes": 12,
-        "mapping": [
-            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1}
-            for i in range(1, 13)
-        ],
-        "strands_per_lane": 2,
-        "polarity_method": "straight-through",
-        "is_shuffle": False,
-    },
-    "MPO-24 → 2xMPO-12": {
-        "description": "MPO-24 trunk split into 2 MPO-12 trunks (6 lanes each)",
-        "a_connectors": 1,
-        "b_connectors": 2,
-        "total_lanes": 12,
-        "mapping": [
-            # A1 positions 1-6 → B1 positions 1-6
-            *[
-                {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": 1, "b_position": i}
-                for i in range(1, 7)
-            ],
-            # A1 positions 7-12 → B2 positions 1-6
-            *[
-                {"label": str(i + 6), "a_connector": 1, "a_position": i + 6, "b_connector": 2, "b_position": i}
-                for i in range(1, 7)
-            ],
-        ],
-        "strands_per_lane": 2,
-        "polarity_method": "straight-through",
-        "is_shuffle": False,
-    },
-    "2xMPO-12 → 12xLC Duplex": {
-        "description": "2 MPO-12 trunks (6 lanes each) fanning out to 12 LC duplex connections",
-        "a_connectors": 2,
-        "b_connectors": 12,
-        "total_lanes": 12,
-        "mapping": [
-            # A1 positions 1-6 → B connectors 1-6
-            *[
-                {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1}
-                for i in range(1, 7)
-            ],
-            # A2 positions 1-6 → B connectors 7-12
-            *[
-                {"label": str(i + 6), "a_connector": 2, "a_position": i, "b_connector": i + 6, "b_position": 1}
-                for i in range(1, 7)
-            ],
-        ],
-        "strands_per_lane": 2,
-        "polarity_method": "straight-through",
-        "is_shuffle": False,
+        "has_embedded_transceivers": False,
     },
 }
 

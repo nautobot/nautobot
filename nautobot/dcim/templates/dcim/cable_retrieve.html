@@ -121,10 +121,28 @@
                     <strong>Lane Mapping</strong>
                     <span class="float-end">{{ object.cable_type|hyperlinked_object }}</span>
                 </div>
-                <div class="card-body">
-                    {{ object.get_mapping_diagram_svg }}
+                <div id="lane-mapping-scroll" class="card-body" style="overflow-x: auto;">
+                    {# Wrapper shrink-wraps the diagram so it centers when it fits and scrolls when it doesn't. #}
+                    <div style="width: max-content; margin-inline: auto;">
+                        {{ object.get_mapping_diagram_svg }}
+                    </div>
                 </div>
             </div>
         {% endif %}
     {% endwith %}
 {% endblock content_right_page %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% if object.cable_type %}
+        <script>
+            // Start the lane-mapping diagram scrolled to its center when it's wider than its card.
+            (function () {
+                const container = document.getElementById("lane-mapping-scroll");
+                if (container) {
+                    container.scrollLeft = (container.scrollWidth - container.clientWidth) / 2;
+                }
+            })();
+        </script>
+    {% endif %}
+{% endblock javascript %}
