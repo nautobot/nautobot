@@ -272,9 +272,9 @@ class GitRepository(PrimaryModel):
 
         try:
             remote_url = get_repo_access_url(self)
-            repo_helper = GitRepo(path_name, remote_url, depth=depth, branch=branch)
-            if head:
-                repo_helper.checkout(branch, head)
+            with GitRepo(path_name, remote_url, depth=depth, branch=branch) as repo_helper:
+                if head:
+                    repo_helper.checkout(branch, head)
         except Exception as e:
             logger.error(f"Failed to clone repository {self.name} to {path_name}: {e}")
             raise e

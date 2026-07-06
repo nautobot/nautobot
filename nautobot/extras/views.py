@@ -115,6 +115,7 @@ from . import filters, forms, jobs_ui, tables
 from .api import serializers
 from .choices import (
     ApprovalWorkflowStateChoices,
+    CustomFieldTypeChoices,
     DynamicGroupTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
@@ -1413,6 +1414,9 @@ class CustomFieldUIViewSet(NautobotUIViewSet):
         context = super().get_extra_context(request, instance)
 
         if self.action in ("create", "update"):
+            context["custom_field_min_max_types"] = list(CustomFieldTypeChoices.MIN_MAX_TYPES)
+            context["custom_field_regex_types"] = list(CustomFieldTypeChoices.REGEX_TYPES)
+
             if request.POST:
                 context["choices"] = forms.CustomFieldChoiceFormSet(data=request.POST, instance=instance)
 
@@ -1687,7 +1691,16 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 add_button_route=None,
                 related_list_url_name="extras:dynamicgroup_list",
             ),
-        ]
+        ],
+        extra_tabs=(
+            object_detail.DistinctViewTab(
+                weight=object_detail.Tab.WEIGHT_DATACOMPLIANCE_TAB + 50,
+                tab_id="members",
+                label="Members",
+                url_name="extras:dynamicgroup_members",
+                related_object_attribute="members",
+            ),
+        ),
     )
 
     def get_extra_context(self, request, instance):
@@ -1708,6 +1721,34 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
             context["children"] = forms.DynamicGroupMembershipFormSet(**formset_kwargs)
 
         elif self.action == "retrieve":
+            # Descendants table
+            descendants_memberships = instance.membership_tree()
+            descendants_table = tables.NestedDynamicGroupDescendantsTable(
+                descendants_memberships,
+                orderable=False,
+            )
+            descendants_tree = {m.pk: m.depth for m in descendants_memberships}
+
+            # Ancestors table
+            ancestors = instance.get_ancestors()
+            ancestors_table = tables.NestedDynamicGroupAncestorsTable(
+                ancestors,
+                orderable=False,
+            )
+            ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
+
+            context.update(
+                {
+                    "ancestors_table": ancestors_table,
+                    "ancestors_tree": ancestors_tree,
+                    "descendants_table": descendants_table,
+                    "descendants_tree": descendants_tree,
+                }
+            )
+
+        elif self.action == "members":
+            # Members tab
+            context["base_template"] = get_base_template(self.base_template, instance.model)
             model = instance.model
             table_class = get_table_for_model(model)
             members = instance.members
@@ -1727,21 +1768,9 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 }
                 RequestConfig(request, paginate).configure(members_table)
 
-                # Descendants table
-                descendants_memberships = instance.membership_tree()
-                descendants_table = tables.NestedDynamicGroupDescendantsTable(
-                    descendants_memberships,
-                    orderable=False,
-                )
-                descendants_tree = {m.pk: m.depth for m in descendants_memberships}
+                if "actions" in members_table.columns:
+                    members_table.columns["actions"].column.extra_context["return_url"] = ""
 
-                # Ancestors table
-                ancestors = instance.get_ancestors()
-                ancestors_table = tables.NestedDynamicGroupAncestorsTable(
-                    ancestors,
-                    orderable=False,
-                )
-                ancestors_tree = instance.flatten_ancestors_tree(instance.ancestors_tree())
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
                     context["members_list_url"] = None
                 else:
@@ -1749,19 +1778,18 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                         context["members_list_url"] = reverse(get_route_for_model(instance.model, "list"))
                     except NoReverseMatch:
                         context["members_list_url"] = None
-
                 context.update(
                     {
-                        "members_verbose_name_plural": instance.model._meta.verbose_name_plural,
+                        "members_verbose_name_plural": model._meta.verbose_name_plural,
                         "members_table": members_table,
-                        "ancestors_table": ancestors_table,
-                        "ancestors_tree": ancestors_tree,
-                        "descendants_table": descendants_table,
-                        "descendants_tree": descendants_tree,
                     }
                 )
 
         return context
+
+    @action(detail=True, url_path="members", url_name="members", custom_view_base_action="view")
+    def members(self, request, pk=None):
+        return Response({})
 
     def form_save(self, form, commit=True, **kwargs):
         obj = form.save(commit=False)
@@ -2506,12 +2534,39 @@ class JobUIViewSet(NautobotUIViewSet):
 
     def _handle_approval_workflow_response(self, request, scheduled_job, return_url):
         """Handle response for jobs requiring approval workflow."""
+        approval_url = reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk])
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        if request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+            messages.success(
+                request,
+                format_html(
+                    "Job '{}' successfully submitted for approval. <a href=\"{}\">View Approval Request</a>",
+                    scheduled_job.name,
+                    approval_url,
+                ),
+            )
+            response = render(request, "extras/htmx/job_modal_close.html")
+            patch_vary_headers(response, ["HX-Request"])
+            return response
         messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
-        return redirect(return_url or reverse("extras:scheduledjob_approvalworkflow", args=[scheduled_job.pk]))
+        return redirect(return_url or approval_url)
 
     def _handle_scheduled_job_response(self, request, scheduled_job, return_url):
         """Handle response for successfully scheduled jobs."""
-        messages.success(request, f"Job {scheduled_job.name} successfully scheduled")
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        if request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+            messages.success(
+                request,
+                format_html(
+                    "Job '{}' successfully scheduled. <a href=\"{}\">View Scheduled Job</a>",
+                    scheduled_job.name,
+                    scheduled_job.get_absolute_url(),
+                ),
+            )
+            response = render(request, "extras/htmx/job_modal_close.html")
+            patch_vary_headers(response, ["HX-Request"])
+            return response
+        messages.success(request, f"Job '{scheduled_job.name}' successfully scheduled")
         return redirect(return_url or "extras:scheduledjob_list")
 
     def _handle_immediate_execution(
@@ -2590,6 +2645,22 @@ class JobUIViewSet(NautobotUIViewSet):
                 )
         return template_name
 
+    def _resolve_enable_scheduling(self, request, job_model):
+        """Determine whether the job modal should render the scheduling form.
+
+        The setting is sourced exclusively from the server-side `_JobModalButton` component, looked up from
+        the registry using the `button_id` carried in the request. The request payload's `enable_scheduling`
+        value is never trusted: an unregistered (or missing) `button_id` resolves to `False`. Scheduling is
+        always disabled for jobs flagged with sensitive variables, regardless of the component setting.
+        """
+        if job_model.has_sensitive_variables:
+            return False
+        button_id = request.POST.get("job_modal_button", "")
+        job_modal_button = registry["job_modal_buttons"].get(button_id) if button_id else None
+        if job_modal_button is None:
+            return False
+        return bool(job_modal_button.enable_scheduling)
+
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
@@ -2603,7 +2674,21 @@ class JobUIViewSet(NautobotUIViewSet):
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
             advanced_field_names = request.POST.getlist("advanced_fields")
             advanced_fields = [job_form[name] for name in advanced_field_names if name in job_form.fields]
+            enable_scheduling = self._resolve_enable_scheduling(request, job_model)
             template_name = self._get_template_name(job_class=job_class, htmx_modal=True)
+            hx_vals_dict = {
+                "job_modal_button": job_modal_button_registry_id,
+                "job_form_modal": True,
+                "job_result_key": job_result_key,
+                "run_button_label": run_button_label,
+                "refresh_on_close_if_done": refresh_on_close_if_done,
+                "advanced_fields": advanced_field_names,
+            }
+            # When scheduling is disabled, force immediate execution by injecting _schedule_type into hx-vals.
+            # When scheduling is enabled, omit it so that the form's <select> value is submitted unchanged
+            # (hx-vals would override the form field with the same name if present).
+            if not enable_scheduling:
+                hx_vals_dict["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
             response = render(
                 request,
                 template_name,
@@ -2617,17 +2702,8 @@ class JobUIViewSet(NautobotUIViewSet):
                     "advanced_field_names": advanced_field_names,
                     "job_execution_form": job_execution_form,
                     "schedule_form": schedule_form,
-                    "hx_vals": json.dumps(
-                        {
-                            "job_modal_button": job_modal_button_registry_id,
-                            "job_form_modal": True,
-                            "job_result_key": job_result_key,
-                            "run_button_label": run_button_label,
-                            "refresh_on_close_if_done": refresh_on_close_if_done,
-                            "advanced_fields": advanced_field_names,
-                            "_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
-                        }
-                    ),
+                    "enable_scheduling": enable_scheduling,
+                    "hx_vals": json.dumps(hx_vals_dict),
                 },
             )
         else:
@@ -2665,9 +2741,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     job_queue = None
                     if task_queue is not None:
                         try:
-                            job_queue = JobQueue.objects.get(
-                                name=task_queue, queue_type=JobQueueTypeChoices.TYPE_CELERY
-                            )
+                            job_queue = JobQueue.objects.get(name=task_queue)
                         except JobQueue.DoesNotExist:
                             pass
                     initial["_job_queue"] = job_queue
@@ -2707,7 +2781,10 @@ class JobUIViewSet(NautobotUIViewSet):
             initial_form_data = normalize_querydict(request.POST, form_class=job_class.as_form_class())
             job_form = job_class.as_form(initial=initial_form_data)
             job_execution_form = job_class.as_execution_form(initial=initial_form_data)
-            schedule_form = None
+            if self._resolve_enable_scheduling(request, job_model):
+                schedule_form = forms.JobScheduleForm(initial=initial_form_data)
+            else:
+                schedule_form = None
             return self._render_response(request, job_model, job_class, job_form, job_execution_form, schedule_form)
 
         if job_execution_form is not None:
@@ -3245,9 +3322,11 @@ class ScheduledJobUIViewSet(
         ):
             messages.error(request, f"You do not have permission to run the job '{obj.job_model}'.")
             return redirect(obj.get_absolute_url())
+
         obj.user = request.user
-        obj.enabled = True
-        obj.state = ScheduledJobStateChoices.ACTIVE
+        if obj.state == ScheduledJobStateChoices.ERRORED:
+            obj.enabled = True
+            obj.state = ScheduledJobStateChoices.ACTIVE
         obj.validated_save()
         messages.success(request, f"You are now the owner of scheduled job '{obj.name}'.")
         return redirect(obj.get_absolute_url())

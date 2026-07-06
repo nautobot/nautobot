@@ -1,1 +1,0 @@
-The `_JobModalButton` now uses POST requests instead of GET requests for the job modal flow.

@@ -1,1 +1,0 @@
-Added `urllib3 (>=2.7.0,<3.0.0)` as a direct dependency as Nautobot now directly uses it. (Previously it was an indirect dependency.)

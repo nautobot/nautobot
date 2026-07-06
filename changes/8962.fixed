@@ -1,1 +1,0 @@
-Fixed a case where the Run/Re-Run button on the Job Result detail view wouldn't correctly refresh once task kwargs became available.

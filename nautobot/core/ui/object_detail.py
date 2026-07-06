@@ -1123,6 +1123,28 @@ class ObjectsTablePanel(Panel):
         if self.footer_buttons:
             yield from self.footer_buttons
 
+    def _get_tab_return_url_suffix(self, obj):
+        """Return the URL suffix (relative to `obj`'s detail URL) for `self.tab_id`'s tab.
+
+        The suffix is resolved from the matching tab's declared `url_name`, not from an assumption that
+        `tab_id` matches a view action method name. Falls back to the legacy `?tab=` query format when the
+        tab cannot be resolved to a distinct-view URL.
+        """
+        view = get_view_for_model(obj._meta.model)
+        content = getattr(view, "object_detail_content", None)
+        if content is not None:
+            for tab in content.tabs:
+                if tab.tab_id == self.tab_id and isinstance(tab, DistinctViewTab) and tab.url_name:
+                    try:
+                        tab_url = reverse(tab.url_name, kwargs={"pk": obj.pk})
+                    except NoReverseMatch:
+                        break
+                    base_url = obj.get_absolute_url()
+                    if tab_url.startswith(base_url):
+                        return tab_url[len(base_url) :]
+                    break
+        return f"?tab={self.tab_id}"
+
     def _get_table_add_url(self, context: Context):
         """Generate the URL for the "Add" button in the table panel.
 
@@ -1142,12 +1164,7 @@ class ObjectsTablePanel(Panel):
 
         return_url = context.get("return_url", obj.get_absolute_url())
         if self.tab_id:
-            try:
-                # Check to see if the this is a NautobotUIViewset action
-                view = get_view_for_model(obj._meta.model)
-                return_url += getattr(view, self.tab_id).url_path + "/"
-            except AttributeError:
-                return_url += f"?tab={self.tab_id}"
+            return_url += self._get_tab_return_url_suffix(obj)
 
         if self.add_button_route is not None:
             add_permissions = self.add_permissions
@@ -1247,9 +1264,8 @@ class ObjectsTablePanel(Panel):
                 table_kwargs["extra_columns"] = self.extra_columns
             body_content_table = body_content_table_class(body_content_table_queryset, **table_kwargs)  # pylint: disable=not-callable
             if self.tab_id and "actions" in body_content_table.columns:
-                # Use the `self.tab_id`, if it exists, to determine the correct return URL for the table
-                # to redirect the user back to the correct tab after editing/deleteing an object
-                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = f"?tab={self.tab_id}"
+                return_url_extra = self._get_tab_return_url_suffix(instance)
+                body_content_table.columns["actions"].column.extra_context["return_url_extra"] = return_url_extra
 
         if self.exclude_columns:
             for column in body_content_table.columns:
@@ -2680,6 +2696,7 @@ class _JobModalButton(Button):
     refresh_on_close_if_done = False
     redirect_button_callback = None
     button_id = ""
+    enable_scheduling = False
 
     def __init__(self, **kwargs):
         """
@@ -2704,6 +2721,12 @@ class _JobModalButton(Button):
             button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
                 Required when using redirect_button_callback.
                 Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
+            enable_scheduling (bool, optional): If True, renders the job schedule form inside the modal,
+                allowing the job to be scheduled for future or recurring execution in addition to immediate
+                execution. Requires button_id to be set, since the view resolves this setting from the
+                registered component (never from request data). Jobs with `has_sensitive_variables = True`
+                cannot be scheduled regardless of this flag. Defaults to `False` (immediate-only, backward
+                compatible).
             redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
                 modal footer after the job completes. Requires button_id to be set.
                 Signature: `callback(job_result, request) -> dict`.
@@ -2744,6 +2767,8 @@ class _JobModalButton(Button):
             raise TypeError("class_path is required")
         if self.redirect_button_callback and not self.button_id:
             raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
+        if self.enable_scheduling and not self.button_id:
+            raise ValueError("A globally unique button_id is required when enable_scheduling is True.")
 
         if self.button_id:
             if self.button_id in registry["job_modal_buttons"]:

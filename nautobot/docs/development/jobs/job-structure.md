@@ -53,7 +53,7 @@ register_jobs(CleanupDevices, SyncInventory)
 ### Where to Register
 
 - For files in `JOBS_ROOT`, register Jobs directly in the file or from a top-level `__init__.py` that imports submodules.
-- For Git-based Jobs, use the `jobs/__init__.py` file in the repo to register all your Job classes.
+- For Git-based Jobs, registering all Job classes from `jobs/__init__.py` is the recommended pattern, since it gives the repository a single source of truth for which Jobs it exposes.
 - For App-based Jobs, register them in the module defined by your App's `NautobotAppConfig.jobs` property (default: `jobs`).
 
 If you don't call `register_jobs()`, Nautobot will skip your class during startup, even if it's defined correctly.

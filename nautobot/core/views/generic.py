@@ -1450,6 +1450,26 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             new_components = []
             data = deepcopy(form.cleaned_data)
 
+            # The component create form (`self.form`) is a plain form that does not declare the "extras" fields
+            # (custom fields, relationships, notes, dynamic group assignments) that are added dynamically
+            # to the model form (`self.model_form`) and rendered alongside it. Those fields are therefore
+            # absent from `form.cleaned_data`, so we copy their values directly from the POST data; otherwise a
+            # required custom field or relationship rendered from the model form has nowhere to flow through
+            # and component creation fails. We are being explicit here about which fields are copied
+            # so that model fields deliberately omitted from the create UI cannot be set
+            # (intentionally or inadvertently) via a crafted POST request.
+            extras_field_names = set(getattr(model_form, "custom_fields", [])) | set(
+                getattr(model_form, "relationships", [])
+            )
+            extras_field_names |= {"object_note", "dynamic_groups"}.intersection(model_form.fields)
+            for field_name in extras_field_names:
+                if field_name not in request.POST:
+                    continue
+                if getattr(model_form.fields[field_name].widget, "allow_multiple_selected", False):
+                    data[field_name] = request.POST.getlist(field_name)
+                else:
+                    data[field_name] = request.POST.get(field_name)
+
             names = form.cleaned_data["name_pattern"]
             labels = form.cleaned_data.get("label_pattern")
             for i, name in enumerate(names):
@@ -1474,7 +1494,11 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
                             field = "label_pattern"
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+                            if field not in form.fields:
+                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                form.add_error(None, f"{name}: {field}: {err_str}")
+                            else:
+                                form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
@@ -1598,10 +1622,11 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
                                     ) in component_form.errors.as_data().items():
                                         for e in errors:
                                             err_str = ", ".join(e)
-                                            form.add_error(
-                                                field,
-                                                f"{obj} {name}: {err_str}",
-                                            )
+                                            if field not in form.fields:
+                                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                                form.add_error(None, f"{obj} {name}: {field}: {err_str}")
+                                            else:
+                                                form.add_error(field, f"{obj} {name}: {err_str}")
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(

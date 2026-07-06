@@ -7,6 +7,7 @@
 <!DOCTYPE html>
 <html lang="en"{% if request.COOKIES|get_item:"theme" == 'dark' %} data-theme="dark"{% endif %}>
     <head>
+        <meta charset="UTF-8">
         <title>{% block title %}Admin Home{% endblock %} - Nautobot</title>
         {% include 'inc/media.html' %}
         {% block extrahead %}{% endblock %}
@@ -33,6 +34,10 @@
                 width: 100%;
             }
             .related-widget-wrapper > select {
+                width: 100%;
+            }
+            /* Select2 inits with width: 'off', so the generated container must be sized via CSS. */
+            .nautobot-select2-static + .select2-container {
                 width: 100%;
             }
             .form-horizontal .control-label {

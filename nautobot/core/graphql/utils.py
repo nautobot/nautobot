@@ -1,3 +1,4 @@
+import inspect
 import logging
 
 from django_filters.filters import BooleanFilter, MultipleChoiceFilter, NumberFilter
@@ -12,6 +13,40 @@ from nautobot.core.filters import (
 from nautobot.core.models.fields import slugify_dashes_to_underscores
 
 logger = logging.getLogger(__name__)
+
+
+def _build_reserved_graphene_field_kwargs():
+    """Build the set of filter names that must not be splatted as top-level `graphene.Field` kwargs.
+
+    Filter arguments are passed into `graphene.List(schema_type, **search_params)` and mounted as a
+    `graphene.Field`. Any filter whose name matches a reserved `graphene.Field.__init__` keyword
+    argument would be consumed as that Field attribute instead of being mounted as a GraphQL argument.
+    Such names are instead relocated into the nested `args` mapping.
+
+    The set is derived dynamically from the signature so reserved kwargs added in future graphene
+    releases are handled automatically (see #9021).
+    """
+    signature = inspect.signature(graphene.types.field.Field.__init__)
+    params = {
+        name
+        for name, param in signature.parameters.items()
+        if param.kind in (param.POSITIONAL_OR_KEYWORD, param.KEYWORD_ONLY)
+    }
+    excluded_names = {
+        # `args` is the key of the nested GraphQL-arguments mapping itself (see `args = {"args": {}}`
+        # below), so it must never be relocated -- doing so would pop that container mid-loop.
+        "args",
+        # Graphene already auto-handles `Argument` values for name and source, and relocating them would change
+        # schema behavior for the many models that expose a `name` or `source` filter (and break existing tests).
+        "name",
+        "source",
+    }
+    # Any other reserved name that is probably not a real filter (e.g. `self`, `type_`, `_creation_counter`)
+    # stays in the set but simply doesn't match; if one ever did, relocating it is the safer outcome.
+    return params - excluded_names
+
+
+RESERVED_GRAPHENE_FIELD_KWARGS = _build_reserved_graphene_field_kwargs()
 
 
 def str_to_var_name(verbose_name):
@@ -81,9 +116,14 @@ def get_filtering_args_from_filterset(filterset_class):
             required=False,
         )
 
-    # Hack to avoid conflict with `graphene.types.field.Field.description`.
-    if "description" in args:
-        args["args"].update({"description": args.pop("description")})
+    # Relocate filters whose names collide with reserved `graphene.Field.__init__` kwargs into the
+    # nested `args` mapping (the field's GraphQL arguments) instead of letting them be splatted as
+    # top-level kwargs, which graphene would otherwise consume as Field attributes.
+    # Ref: https://docs.graphene-python.org/en/latest/types/objecttypes/#resolverparamgraphqlarguments
+    for reserved_name in RESERVED_GRAPHENE_FIELD_KWARGS:
+        if reserved_name in args:
+            args["args"][reserved_name] = args.pop(reserved_name)
+
     if "type" in args:
         # for backwards compatibility with our filters in graphene v2 where `type` was a reserved keyword
         args["args"].update({"_type": args["type"]})

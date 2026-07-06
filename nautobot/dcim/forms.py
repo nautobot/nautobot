@@ -213,6 +213,23 @@ class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
     )
 
 
+class DeviceComponentTemplateFilterForm(NautobotFilterForm):
+    q = forms.CharField(required=False, label="Search")
+    device_type = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(),
+        required=False,
+        label="Device Type",
+    )
+
+
+class ModularDeviceComponentTemplateFilterForm(DeviceComponentTemplateFilterForm):
+    module_type = DynamicModelMultipleChoiceField(
+        queryset=ModuleType.objects.all(),
+        required=False,
+        label="Module Type",
+    )
+
+
 class InterfaceCommonForm(forms.Form):
     def clean(self):
         super().clean()
@@ -1261,6 +1278,10 @@ class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["label", "type", "description"]
 
 
+class ConsolePortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ConsolePortTemplate
+
+
 class ConsoleServerPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ConsoleServerPortTemplate
@@ -1303,6 +1324,10 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["label", "type", "description"]
+
+
+class ConsoleServerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ConsoleServerPortTemplate
 
 
 class PowerPortTemplateForm(ModularComponentTemplateForm):
@@ -1378,6 +1403,10 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
             "allocated_draw",
             "description",
         ]
+
+
+class PowerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = PowerPortTemplate
 
 
 class PowerOutletTemplateForm(ModularComponentTemplateForm):
@@ -1470,6 +1499,10 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
             self.fields["power_port_template"].widget.attrs["disabled"] = True
 
 
+class PowerOutletTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = PowerOutletTemplate
+
+
 class InterfaceTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = InterfaceTemplate
@@ -1546,6 +1579,10 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["label", "port_type", "speed", "duplex", "description"]
+
+
+class InterfaceTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = InterfaceTemplate
 
 
 class FrontPortTemplateForm(ModularComponentTemplateForm):
@@ -1671,6 +1708,10 @@ class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
+class FrontPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = FrontPortTemplate
+
+
 class RearPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = RearPortTemplate
@@ -1726,6 +1767,10 @@ class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
+class RearPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = RearPortTemplate
+
+
 class DeviceBayTemplateForm(ComponentTemplateForm):
     class Meta:
         model = DeviceBayTemplate
@@ -1753,6 +1798,10 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ("label", "description")
+
+
+class DeviceBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = DeviceBayTemplate
 
 
 class ModuleBayTemplateForm(ModularComponentTemplateForm):
@@ -1866,6 +1915,10 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ("label", "description", "module_family")
+
+
+class ModuleBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ModuleBayTemplate
 
 
 #

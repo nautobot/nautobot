@@ -7,6 +7,7 @@ applying a filter does not produce a query-count explosion proportional to the n
 import uuid
 
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
 from django.test.client import RequestFactory
 from graphene_django.settings import graphene_settings
@@ -18,6 +19,10 @@ from graphql.type import (
 )
 
 from nautobot.core.testing import AssertNoRepeatedQueries, TestCase
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.models import Controller, Device, DeviceType, Interface, Location, Manufacturer, Module
+from nautobot.extras.models import Role, Status, Tag
+from nautobot.ipam.models import IPAddress
 
 User = get_user_model()
 
@@ -152,3 +157,81 @@ class GraphQLNPlusOneTest(TestCase):
                     for err in result.errors:
                         if not isinstance(err.original_error, Exception):
                             self.fail(f"Unexpected hard error for {parent_name}.{nested_name}: {err}")
+
+
+class GraphQLTagsAndConfigContextNPlusOneTest(TestCase):
+    """Regression tests for N+1 query patterns on the `tags` and `config_context` resolvers (issue #9015).
+
+    These resolvers are added dynamically and are not "filterable nested list fields", so they are not covered
+    by `GraphQLNPlusOneTest` above.
+    """
+
+    DEVICE_COUNT = 15
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create(username="n_plus_one_tags_test_user", is_active=True, is_superuser=True)
+
+        # Make the device list deterministic by removing pre-existing fixture objects that reference devices.
+        IPAddress.objects.all().delete()
+        Controller.objects.filter(controller_device__isnull=False).delete()
+        Device.objects.all().delete()
+        Module.objects.all().delete()
+
+        manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="n+1 test device_type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        location = Location.objects.filter(location_type__name="Campus").first()
+        interface_status = Status.objects.get_for_model(Interface).first()
+
+        interface_tag = Tag.objects.create(name="n+1 test interface tag")
+        interface_tag.content_types.add(ContentType.objects.get_for_model(Interface))
+
+        # One tagged interface per device. With DEVICE_COUNT > threshold, an un-prefetched `tags` resolver
+        # issues one extras_tag query per interface, and an un-annotated `config_context` resolver issues one
+        # extras_configcontext query per device - both detectable as N+1.
+        for i in range(cls.DEVICE_COUNT):
+            device = Device.objects.create(
+                name=f"n+1-device-{i}",
+                device_type=device_type,
+                role=device_role,
+                location=location,
+                status=device_status,
+            )
+            interface = Interface.objects.create(
+                device=device,
+                name="Vlan4094",
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=interface_status,
+            )
+            interface.tags.add(interface_tag)
+
+    def setUp(self):
+        super().setUp()
+        self.schema = graphene_settings.SCHEMA.graphql_schema
+
+    def _execute(self, query):
+        """Execute a GraphQL query with a fresh request context (empty filter cache)."""
+        request = RequestFactory().request(SERVER_NAME="WebRequestContext")
+        request.id = uuid.uuid4()
+        request.user = self.user
+        return execute(schema=self.schema, document=parse(query), context_value=request)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_no_n_plus_one_on_nested_tags(self):
+        """`{ devices { interfaces { tags } } }` must prefetch tags rather than query per interface."""
+        query = "{ devices { interfaces { tags { name } } } }"
+        self._execute(query)  # Prewarm caches (ContentType, etc.)
+        with AssertNoRepeatedQueries(self, threshold=N_PLUS_ONE_THRESHOLD):
+            result = self._execute(query)
+        self.assertFalse(result.errors, msg=str(result.errors))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_no_n_plus_one_on_config_context(self):
+        """`{ devices { config_context } }` must annotate config context rather than query per device."""
+        query = "{ devices { config_context } }"
+        self._execute(query)  # Prewarm caches (ContentType, etc.)
+        with AssertNoRepeatedQueries(self, threshold=N_PLUS_ONE_THRESHOLD):
+            result = self._execute(query)
+        self.assertFalse(result.errors, msg=str(result.errors))
