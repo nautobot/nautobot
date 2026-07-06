@@ -162,6 +162,7 @@ class NautobotEditionChoices(ChoiceSet):
     CLOUD = "cloud"
 
     DEFAULT = COMMUNITY
+    COMMERCIAL_EDITIONS = (PROFESSIONAL, ENTERPRISE)
 
     CHOICES = (
         (COMMUNITY, "Community"),
