@@ -148,6 +148,48 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.7 (2026-07-06)
+
+### Added in v3.1.7
+
+- [#6614](https://github.com/nautobot/nautobot/issues/6614) - Added nested lookup support to LinkedCountColumn, allowing it to display a single related object rather than a count when a single object is present.
+- [#7946](https://github.com/nautobot/nautobot/issues/7946) - Added the `obj` Jinja2 variable to data validation regex rules to align with Nautobot's conventions.
+- [#9145](https://github.com/nautobot/nautobot/issues/9145) - Added missing filter forms for various models to make them usable with Dynamic Groups.
+
+### Changed in v3.1.7
+
+- [#6614](https://github.com/nautobot/nautobot/issues/6614) - Updated the IP address table to display the device or virtual machine names when an IP address is assigned to an interface on a single device/VM, rather than always showing a count.
+- [#6614](https://github.com/nautobot/nautobot/issues/6614) - Updated the cloud network Circuits column to display the circuit ID when a cloud network is related to a single circuit, rather than always showing a count.
+
+### Deprecated in v3.1.7
+
+- [#7946](https://github.com/nautobot/nautobot/issues/7946) - Deprecated the `object` Jinja2 variable in data validation regex rules in favor of `obj`; `object` will be removed in Nautobot 4.0.
+
+### Fixed in v3.1.7
+
+- [#xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Fixed `prefix_length__lte` filter value being corrupted (e.g. `['16']`) when adding another filter in the Prefix list view.
+- [#xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Fixed `within_include` filter field in `PrefixFilterForm` not supporting multiple values.
+- [#xxxx](https://github.com/nautobot/nautobot/issues/xxxx) - Fixed `MultiValueCharField` splitting a bare string value into per-character choices.
+- [#8287](https://github.com/nautobot/nautobot/issues/8287) - Fixed Git repository synchronization to not leave lingering `git` subprocesses.
+- [#9047](https://github.com/nautobot/nautobot/issues/9047) - Fixed a bug that caused the application to crash when creating an Interface with a required Custom Field despite providing a value for it.
+- [#9047](https://github.com/nautobot/nautobot/issues/9047) - Fixed application crashes from errors on fields that are not declared in some forms.
+- [#9113](https://github.com/nautobot/nautobot/issues/9113) - Fixed an `IntegrityError` raised on every request after the first when `EXTERNAL_AUTH_DEFAULT_PERMISSIONS` is configured for externally-authenticated users.
+- [#9117](https://github.com/nautobot/nautobot/issues/9117) - Fixed edit/delete actions on a Dynamic Group's Members tab returning the user to the group's detail page instead of the Members tab.
+- [#9132](https://github.com/nautobot/nautobot/issues/9132) - Moved the charset declaration to be the first tag in `<head>`.
+
+### Dependencies in v3.1.7
+
+- [#9081](https://github.com/nautobot/nautobot/issues/9081) - Updated dependency `nh3` to `>=0.3.6,<0.4`
+
+### Housekeeping in v3.1.7
+
+- [#9081](https://github.com/nautobot/nautobot/issues/9081) - Updated documentation dependency `mkdocstrings-python` to `~2.0.5`.
+- [#9081](https://github.com/nautobot/nautobot/issues/9081) - Updated development dependency `pylint` to `~4.0.6`.
+- [#9081](https://github.com/nautobot/nautobot/issues/9081) - Updated development dependency `pymarkdownlnt` to `~0.9.38`.
+- [#9081](https://github.com/nautobot/nautobot/issues/9081) - Updated development dependency `ruff` to `~0.15.20`.
+- [#9146](https://github.com/nautobot/nautobot/issues/9146) - Changed `lint` task to support `--fix` flag in order to apply fixes for all.
+- [#9163](https://github.com/nautobot/nautobot/issues/9163) - Fixed some incorrect logic in the generic bulk delete view test.
+
 ## v3.1.6 (2026-06-23)
 
 ### Fixed in v3.1.6
