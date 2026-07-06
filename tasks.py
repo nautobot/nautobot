@@ -19,6 +19,7 @@ import platform
 import re
 import shlex
 import time
+from functools import partial
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit, Failure
@@ -1259,18 +1260,18 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
 def lint(context, fix=False):
     """Run all linters."""
     linters = (
-        lambda: hadolint(context),
-        lambda: markdownlint(context, fix=fix),
-        lambda: yamllint(context),
-        lambda: ruff(context, fix=fix),
-        lambda: pylint(context),
-        lambda: eslint(context, fix=fix),
-        lambda: prettier(context, fix=fix),
-        lambda: djhtml(context, fix=fix),
-        lambda: djlint(context),
-        lambda: check_migrations(context),
-        lambda: check_schema(context),
-        lambda: build_and_check_docs(context),
+        partial(hadolint, context),
+        partial(markdownlint, context, fix=fix),
+        partial(yamllint, context),
+        partial(ruff, context, fix=fix),
+        partial(pylint, context),
+        partial(eslint, context, fix=fix),
+        partial(prettier, context, fix=fix),
+        partial(djhtml, context, fix=fix),
+        partial(djlint, context),
+        partial(check_migrations, context),
+        partial(check_schema, context),
+        partial(build_and_check_docs, context),
     )
 
     exception_group = []
@@ -1280,11 +1281,16 @@ def lint(context, fix=False):
         try:
             linter()
         except Exception as exception:
-            exception_group.append(exception)
+            exception_group.append((linter.func.__name__, exception))
 
     if len(exception_group) > 0:
-        raise ExceptionGroup("Linting Errors Encountered", exception_group)
-
+        exception_messages = [f"----- {linter_name} -----\n" + str(exception)
+                                for linter_name, exception in exception_group]
+        output_string = "\n".join(exception_messages)
+        print("-" * 80)
+        print("Lint Errors Detected")
+        print("-" * 80)
+        raise Exit(output_string)
 
 @task(help={"version": "The version number or the rule to update the version."})
 def version(context, version=None):  # pylint: disable=redefined-outer-name
