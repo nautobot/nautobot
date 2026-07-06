@@ -1272,13 +1272,18 @@ def lint(context, fix=False):
         lambda: check_schema(context),
         lambda: build_and_check_docs(context),
     )
+
+    exception_group = []
+
     # Run each linter even if preceeding linter has failure
     for linter in linters:
         try:
             linter()
-        except Exception:  # noqa: S110
-            # Left empty in order to run all linters, logging already performed
-            pass
+        except Exception as exception:
+            exception_group.append(exception)
+
+    if len(exception_group) > 0:
+        raise ExceptionGroup("Linting Errors Encountered", exception_group)
 
 
 @task(help={"version": "The version number or the rule to update the version."})
