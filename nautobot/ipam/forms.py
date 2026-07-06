@@ -460,7 +460,7 @@ class PrefixFilterForm(
         required=False,
         widget=MultiValueCharInput(
             attrs={
-                "placeholder": "Prefix",
+                "data-placeholder": "Prefix",
             }
         ),
         label="Search within",
