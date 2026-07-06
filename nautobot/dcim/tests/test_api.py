@@ -3864,7 +3864,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
             "label": "Cable console breakout reject",
             "cable_type": breakout_type.pk,
             "terminations": {
-                "a": {"1": {"object_type": "dcim.consoleport", "id": str(console_port.pk)}},
+                "a1": {"object_type": "dcim.consoleport", "id": str(console_port.pk)},
             },
         }
         response = self.client.post(url, payload, format="json", **self.header)
