@@ -101,7 +101,7 @@ A [`Cable`](../user-guide/core-data-model/dcim/cable.md) is no longer required t
 
 The [`Cable`](../user-guide/core-data-model/dcim/cable.md) REST API serializer adds a single `terminations` field keyed by side (`a`/`b`) and then by 1-indexed connector number, mirroring the physical structure of the cable. This field is writable on POST and PATCH, and uncabled connectors on breakout cables are surfaced as explicit `null` slots. The legacy `termination_a` / `termination_b` (and `*_type` / `*_id`) fields remain for backward compatibility and refer to connector 1 on each side. The nested `terminations` field is omitted from CSV exports; use the [`CableToCableTermination`](../user-guide/core-data-model/dcim/cabletocabletermination.md) endpoint for per-connector CSV detail.
 
-### Device Component Default Ordering
+#### Device Component Default Ordering
 
 The default sort ordering of device-component models (Interface, Front Port, Rear Port, Console Port, etc.) has been changed to group and sort records by their associated `device_id` (UUID) rather than by the associated device's `name`, as the prior behavior (requiring a join across database tables) performed poorly at high data scale. This change affects the default behavior of the following:
 
