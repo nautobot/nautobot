@@ -1231,7 +1231,7 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
             RequestConfig(request, paginate).configure(related_ips_table)
 
             try:
-                parent = instance._get_closest_parent()
+                parent = instance._get_closest_parent(instance.host)
                 if instance.parent != parent:
                     messages.warning(
                         request,
