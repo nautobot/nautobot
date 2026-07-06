@@ -31,11 +31,8 @@ from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
 
-# Reverse relations through which a filterset filter can read the StaticGroupAssociation table (i.e., read the
-# *cached members* of dynamic groups): `static_group_association_set` on group-associable models and
-# `static_group_associations` on DynamicGroup itself. Used by `DynamicGroup._is_cache_substitution_safe()` to
-# detect filters (such as `dynamic_groups`, defined in `nautobot.core.filters`) whose results depend on other
-# groups' caches rather than solely on member-object data.
+# Reverse relations through which a filterset filter can read the StaticGroupAssociation table, i.e. dynamic
+# group *cached members*; see `DynamicGroup._is_cache_substitution_safe()`.
 _STATIC_GROUP_ASSOCIATION_ACCESSORS = ("static_group_association_set", "static_group_associations")
 
 
@@ -308,11 +305,8 @@ class DynamicGroup(PrimaryModel):
         """
         Return a queryset of this group's cached member PKs, suitable for use as a subquery.
 
-        The `all_objects` manager is required here: the default StaticGroupAssociation manager filters to
-        static-type groups only, and so would silently return no records for filter- or set-defined groups.
+        The `all_objects` manager is required; the default manager only covers static-type groups.
         """
-        # Since associated_object is a GenericForeignKey, we can't just do:
-        #     return self.static_group_associations.values_list("associated_object", flat=True)
         # pylint: disable-next=no-member  # false positive about self.static_group_associations
         return self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
 
@@ -489,27 +483,16 @@ class DynamicGroup(PrimaryModel):
         """
         Return True if this group's membership definition does not read other groups' cached members.
 
-        A cache-update cascade rewrites StaticGroupAssociation records as it proceeds from a saved group up
-        through its ancestors. A group's just-refreshed cache is only a valid substitute for re-evaluating its
-        filter(s) if those filters depend solely on member-object data, which the cascade never modifies. A
-        filter that reads the StaticGroupAssociation table itself (such as `dynamic_groups`) is invalidated by
-        the cascade's own writes: its results at the time this group was refreshed may differ from its results
-        after other groups' caches have been rewritten later in the same cascade.
-
-        Rather than hard-coding the names of known cache-reading filters, inspect each filter's declared
-        `field_name` for a traversal of a StaticGroupAssociation reverse relation. This also detects
-        functionally-equivalent filters registered under other names, e.g. by an App via `FilterExtension`.
-        Filters that cannot be resolved on the filterset are conservatively treated as unsafe, which merely
-        declines the optimization in favor of (always-correct) live evaluation.
-
-        Limitation: a filter whose StaticGroupAssociation traversal is implemented inside a filter *method*
-        rather than declared via `field_name` cannot be detected this way; no such filter exists in core.
+        A cache-update cascade rewrites StaticGroupAssociation records as it goes, so a group's just-refreshed
+        cache can only substitute for re-evaluating its filter(s) if those filters never read that table.
+        Cache-reading filters (such as `dynamic_groups`) are detected by their declared `field_name` rather
+        than by name, which also covers equivalent filters registered under other names by Apps; a filter
+        *method* hiding such a traversal in code is not detectable (none exists in core). Unresolvable filters
+        are conservatively unsafe — declining substitution just falls back to (always-correct) live evaluation.
 
         Args:
-            safety_by_pk (dict, optional): Memoization of results, keyed by group PK. Safety is a pure function
-                of group *definitions* (filters and membership edges), which a cache-update cascade never
-                modifies, so a caller evaluating multiple related groups within a single operation should share
-                one dict across its calls to avoid re-walking overlapping subtrees.
+            safety_by_pk (dict, optional): Memoized results keyed by group PK. Safety cannot change during a
+                cache-update operation, so callers should share one dict across all of an operation's checks.
         """
         if safety_by_pk is None:
             safety_by_pk = {}
@@ -532,8 +515,7 @@ class DynamicGroup(PrimaryModel):
                     return False
             return True
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
-            # select_related("content_type"): each filter-type child's safety check resolves its filterset via
-            # its content-type; without this, that's an extra query per child.
+            # select_related: each filter-type child's safety check resolves its filterset via its content-type.
             return all(
                 child._is_cache_substitution_safe(safety_by_pk=safety_by_pk)
                 for child in self.children.select_related("content_type")
@@ -544,9 +526,8 @@ class DynamicGroup(PrimaryModel):
         """
         Refresh this group's cached members, then those of each of its unique ancestors.
 
-        Ancestors are processed in a children-before-parents order so that each refresh can reuse the caches
-        already refreshed within this operation (see `generate_query()`) instead of re-evaluating those groups'
-        filters, except where `_is_cache_substitution_safe()` determines that reuse could change the results.
+        Ancestors are refreshed children-before-parents so that each refresh can safely reuse the caches
+        already refreshed within this operation (see `generate_query()`) instead of re-evaluating filters.
         """
         self.update_cached_members()
         ancestors = self._ordered_unique_ancestors()
@@ -865,9 +846,8 @@ class DynamicGroup(PrimaryModel):
         Return a `Q` object generated recursively from this dynamic group.
 
         Args:
-            fresh_group_pks (frozenset, optional): PKs of groups whose cached members are already known to be
-                up-to-date within the current operation; their caches will be queried directly rather than
-                re-evaluating their filters.
+            fresh_group_pks (frozenset, optional): PKs of groups whose caches are up-to-date within the current
+                operation; their caches are queried directly instead of re-evaluating their filters.
         """
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
             return self._generate_filter_based_query()
@@ -882,8 +862,7 @@ class DynamicGroup(PrimaryModel):
                 logger.debug("Processing group %s...", group)
 
                 if group.pk in fresh_group_pks:
-                    # This child's cache was refreshed within the current operation, so it's identical to what
-                    # re-evaluating its filter(s) would produce; query the cache directly instead.
+                    # This child's cache was refreshed within the current operation; query it directly.
                     next_set = models.Q(pk__in=group._cached_member_pks())
                 else:
                     if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
@@ -993,10 +972,9 @@ class DynamicGroup(PrimaryModel):
         """
         Return the unique ancestors of this group, ordered such that every group precedes its own ancestors.
 
-        `get_ancestors()` enumerates every distinct path upward, so a group reachable via multiple paths (a
-        "diamond") appears multiple times. Keeping only the *last* occurrence of each group yields a valid
-        children-before-parents (topological) ordering, since in the depth-first traversal every parent
-        occurrence follows the expansion of the child it was reached through.
+        `get_ancestors()` lists a group once per path to it; keeping only the *last* occurrence yields a valid
+        children-before-parents ordering, since in its depth-first output every parent occurrence follows the
+        expansion of the child it was reached through.
         """
         ordered = {}
         for ancestor in self.get_ancestors():
@@ -1294,9 +1272,8 @@ class DynamicGroupMembership(BaseModel):
         # For backwards compatibility
         if self.parent_group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER and not self.parent_group.filter:
             self.parent_group.group_type = DynamicGroupTypeChoices.TYPE_DYNAMIC_SET
-            # If we're going to refresh the parent group's cached members below anyway, don't redundantly
-            # refresh them here; if the caller opted out of the refresh below, preserve the legacy behavior
-            # of refreshing them as a side effect of this save.
+            # Skip the redundant refresh here when the cascade below will run anyway; when the caller opted
+            # out of that cascade, preserve the legacy behavior of refreshing as a side effect of this save.
             self.parent_group.save(update_cached_members=not update_cached_members)
 
         super().save(*args, **kwargs)
