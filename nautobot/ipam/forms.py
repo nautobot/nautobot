@@ -10,6 +10,8 @@ from nautobot.core.forms import (
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
     ExpandableIPAddressField,
+    MultiValueCharField,
+    MultiValueCharInput,
     NumericArrayField,
     PrefixFieldMixin,
     ReturnURLForm,
@@ -449,13 +451,16 @@ class PrefixFilterForm(
         "tenant",
         "rir",
     ]
-    prefix_length__lte = forms.IntegerField(widget=forms.HiddenInput(), required=False)
-    q = forms.CharField(required=False, label="Search")
-    within_include = forms.CharField(
+    prefix_length__lte = MultiValueCharField(
+        widget=forms.MultipleHiddenInput,
         required=False,
-        widget=forms.TextInput(
+    )
+    q = forms.CharField(required=False, label="Search")
+    within_include = MultiValueCharField(
+        required=False,
+        widget=MultiValueCharInput(
             attrs={
-                "placeholder": "Prefix",
+                "data-placeholder": "Prefix",
             }
         ),
         label="Search within",
