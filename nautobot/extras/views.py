@@ -1768,6 +1768,9 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 }
                 RequestConfig(request, paginate).configure(members_table)
 
+                if "actions" in members_table.columns:
+                    members_table.columns["actions"].column.extra_context["return_url"] = ""
+
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
                     context["members_list_url"] = None
                 else:

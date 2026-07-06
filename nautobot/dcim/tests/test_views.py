@@ -3706,6 +3706,38 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_component_with_required_relationship_does_not_crash(self):
+        """A required relationship the create form can't render yields a graceful error, not a 500 ValueError (#9047).
+
+        The custom-field happy path is covered generically by
+        ViewTestCases.DeviceComponentViewTestCase.test_create_components_with_required_custom_field; this case
+        exercises the error-attribution guard for a field that exists only on the per-component model form.
+        """
+        relationship = Relationship(
+            label="Interface requires a device relationship",
+            key="test_interface_required_device",
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+            source_type=ContentType.objects.get_for_model(Interface),
+            destination_type=ContentType.objects.get_for_model(Device),
+            required_on="source",
+        )
+        relationship.validated_save()
+
+        self.add_permissions("dcim.add_interface")
+
+        # Single-component add (ComponentCreateView): the required `cr_*` field exists only on the
+        # model form, so leaving it empty previously raised ValueError from form.add_error.
+        response = self.client.post(self._get_url("add"), data=post_data(self.bulk_create_data.copy()))
+        self.assertHttpStatus(response, 200)
+
+        # Bulk-add to devices (BulkComponentCreateView): same guard.
+        bulk_data = self.bulk_create_data.copy()
+        bulk_data["pk"] = bulk_data.pop("device")
+        bulk_data["_create"] = ""
+        response = self.client.post(reverse("dcim:device_bulk_add_interface"), data=post_data(bulk_data))
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_create_virtual_interface_with_port_type_fails(self):
         """Test that a virtual interface cannot have a port type"""
         self.add_permissions("dcim.add_interface")
