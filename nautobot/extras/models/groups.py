@@ -532,7 +532,12 @@ class DynamicGroup(PrimaryModel):
                     return False
             return True
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
-            return all(child._is_cache_substitution_safe(safety_by_pk=safety_by_pk) for child in self.children.all())
+            # select_related("content_type"): each filter-type child's safety check resolves its filterset via
+            # its content-type; without this, that's an extra query per child.
+            return all(
+                child._is_cache_substitution_safe(safety_by_pk=safety_by_pk)
+                for child in self.children.select_related("content_type")
+            )
         return False
 
     def _refresh_cached_members_and_ancestors(self):
