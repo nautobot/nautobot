@@ -169,6 +169,45 @@ TERMINATION_FK_FIELDS = tuple(TERMINATION_FK_TO_CONTENT_TYPE)
 # form / serializer code that needs to write to the right per-type FK given a termination instance.
 CONTENT_TYPE_TO_TERMINATION_FK = {ct: fk for fk, ct in TERMINATION_FK_TO_CONTENT_TYPE.items()}
 
+# Per-type FK field on `CableToCableTermination` → the FK on that termination model that resolves
+# its `parent` (e.g. an Interface's parent is its `device`, a CircuitTermination's is its `circuit`,
+# a PowerFeed's is its `power_panel`). Used to extend `select_related` so that rendering
+# `termination.parent` for cable / cable-peer / connection columns stays query-free per row.
+TERMINATION_FK_TO_PARENT_FK = {
+    "circuit_termination": "circuit",
+    "console_port": "device",
+    "console_server_port": "device",
+    "front_port": "device",
+    "interface": "device",
+    "power_feed": "power_panel",
+    "power_outlet": "device",
+    "power_port": "device",
+    "rear_port": "device",
+}
+# `select_related` paths joining each termination through to its parent, e.g. "interface__device".
+TERMINATION_PARENT_FK_FIELDS = tuple(
+    f"{termination_fk}__{parent_fk}" for termination_fk, parent_fk in TERMINATION_FK_TO_PARENT_FK.items()
+)
+
+# Extra `select_related` paths needed to render a termination's display string without a query.
+# Only `CircuitTermination` has a non-trivial `__str__` — it names its location / provider network /
+# cloud network — so those FKs must be joined; every other termination renders as its (already
+# loaded) name.
+TERMINATION_DISPLAY_FK_FIELDS = (
+    "circuit_termination__location",
+    "circuit_termination__provider_network",
+    "circuit_termination__cloud_network",
+)
+
+# Everything a `CableToCableTermination` row needs `select_related` so that rendering each mapped
+# termination's cable columns — the termination itself, its `parent`, and its display string — is
+# query-free. Use this wherever `cable.terminations` is prefetched for table / detail renders.
+TERMINATION_CABLE_COLUMN_FK_FIELDS = (
+    *TERMINATION_FK_FIELDS,
+    *TERMINATION_PARENT_FK_FIELDS,
+    *TERMINATION_DISPLAY_FK_FIELDS,
+)
+
 # AOC Ethernet Breakouts (strands_per_lane=1)
 # Fiber MPO Fanouts (strands_per_lane=2, duplex)
 DEFAULT_CABLE_TYPES = {
