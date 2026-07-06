@@ -10,7 +10,6 @@ from .models import (
     ConsolePort,
     ConsoleServerPort,
     Device,
-    DeviceBay,
     FrontPort,
     Interface,
     InventoryItem,
@@ -29,13 +28,17 @@ router.register("cables", views.CableUIViewSet)
 router.register("cable-types", views.CableTypeUIViewSet)
 router.register("console-ports", views.ConsolePortUIViewSet)
 router.register("console-port-templates", views.ConsolePortTemplateUIViewSet)
+router.register("console-server-ports", views.ConsoleServerPortUIViewSet)
 router.register("console-server-port-templates", views.ConsoleServerPortTemplateUIViewSet)
 router.register("controller-managed-device-groups", views.ControllerManagedDeviceGroupUIViewSet)
 router.register("controllers", views.ControllerUIViewSet)
+router.register("device-bays", views.DeviceBayUIViewSet)
+router.register("device-bay-templates", views.DeviceBayTemplateUIViewSet)
 router.register("device-families", views.DeviceFamilyUIViewSet)
 router.register("device-redundancy-groups", views.DeviceRedundancyGroupUIViewSet)
 router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("devices", views.DeviceUIViewSet)
+router.register("front-ports", views.FrontPortUIViewSet)
 router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
@@ -58,6 +61,7 @@ router.register("power-port-templates", views.PowerPortTemplateUIViewSet)
 router.register("racks", views.RackUIViewSet)
 router.register("rack-groups", views.RackGroupUIViewSet)
 router.register("rack-reservations", views.RackReservationUIViewSet)
+router.register("rear-ports", views.RearPortUIViewSet)
 router.register("rear-port-templates", views.RearPortTemplateUIViewSet)
 router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
@@ -158,37 +162,6 @@ urlpatterns = [
         ),
         name="devicetype_modulebaytemplate_add",
     ),
-    # Device bay templates
-    path(
-        "device-bay-templates/add/",
-        views.DeviceBayTemplateCreateView.as_view(),
-        name="devicebaytemplate_add",
-    ),
-    path(
-        "device-bay-templates/edit/",
-        views.DeviceBayTemplateBulkEditView.as_view(),
-        name="devicebaytemplate_bulk_edit",
-    ),
-    path(
-        "device-bay-templates/rename/",
-        views.DeviceBayTemplateBulkRenameView.as_view(),
-        name="devicebaytemplate_bulk_rename",
-    ),
-    path(
-        "device-bay-templates/delete/",
-        views.DeviceBayTemplateBulkDeleteView.as_view(),
-        name="devicebaytemplate_bulk_delete",
-    ),
-    path(
-        "device-bay-templates/<uuid:pk>/edit/",
-        views.DeviceBayTemplateEditView.as_view(),
-        name="devicebaytemplate_edit",
-    ),
-    path(
-        "device-bay-templates/<uuid:pk>/delete/",
-        views.DeviceBayTemplateDeleteView.as_view(),
-        name="devicebaytemplate_delete",
-    ),
     # Devices
     path(
         "devices/<uuid:pk>/console-ports/add/",
@@ -273,68 +246,6 @@ urlpatterns = [
         name="device_bulk_add_consoleport",
     ),
     # Console server ports
-    path(
-        "console-server-ports/",
-        views.ConsoleServerPortListView.as_view(),
-        name="consoleserverport_list",
-    ),
-    path(
-        "console-server-ports/add/",
-        views.ConsoleServerPortCreateView.as_view(),
-        name="consoleserverport_add",
-    ),
-    path(
-        "console-server-ports/import/",
-        views.ConsoleServerPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="consoleserverport_import",
-    ),
-    path(
-        "console-server-ports/edit/",
-        views.ConsoleServerPortBulkEditView.as_view(),
-        name="consoleserverport_bulk_edit",
-    ),
-    path(
-        "console-server-ports/rename/",
-        views.ConsoleServerPortBulkRenameView.as_view(),
-        name="consoleserverport_bulk_rename",
-    ),
-    path(
-        "console-server-ports/disconnect/",
-        views.ConsoleServerPortBulkDisconnectView.as_view(),
-        name="consoleserverport_bulk_disconnect",
-    ),
-    path(
-        "console-server-ports/delete/",
-        views.ConsoleServerPortBulkDeleteView.as_view(),
-        name="consoleserverport_bulk_delete",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/",
-        views.ConsoleServerPortView.as_view(),
-        name="consoleserverport",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/edit/",
-        views.ConsoleServerPortEditView.as_view(),
-        name="consoleserverport_edit",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/delete/",
-        views.ConsoleServerPortDeleteView.as_view(),
-        name="consoleserverport_delete",
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="consoleserverport_changelog",
-        kwargs={"model": ConsoleServerPort},
-    ),
-    path(
-        "console-server-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="consoleserverport_notes",
-        kwargs={"model": ConsoleServerPort},
-    ),
     path(
         "console-server-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
@@ -456,57 +367,6 @@ urlpatterns = [
         views.DeviceBulkAddInterfaceView.as_view(),
         name="device_bulk_add_interface",
     ),
-    # Front ports
-    path("front-ports/", views.FrontPortListView.as_view(), name="frontport_list"),
-    path("front-ports/add/", views.FrontPortCreateView.as_view(), name="frontport_add"),
-    path(
-        "front-ports/import/",
-        views.FrontPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="frontport_import",
-    ),
-    path(
-        "front-ports/edit/",
-        views.FrontPortBulkEditView.as_view(),
-        name="frontport_bulk_edit",
-    ),
-    path(
-        "front-ports/rename/",
-        views.FrontPortBulkRenameView.as_view(),
-        name="frontport_bulk_rename",
-    ),
-    path(
-        "front-ports/disconnect/",
-        views.FrontPortBulkDisconnectView.as_view(),
-        name="frontport_bulk_disconnect",
-    ),
-    path(
-        "front-ports/delete/",
-        views.FrontPortBulkDeleteView.as_view(),
-        name="frontport_bulk_delete",
-    ),
-    path("front-ports/<uuid:pk>/", views.FrontPortView.as_view(), name="frontport"),
-    path(
-        "front-ports/<uuid:pk>/edit/",
-        views.FrontPortEditView.as_view(),
-        name="frontport_edit",
-    ),
-    path(
-        "front-ports/<uuid:pk>/delete/",
-        views.FrontPortDeleteView.as_view(),
-        name="frontport_delete",
-    ),
-    path(
-        "front-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="frontport_changelog",
-        kwargs={"model": FrontPort},
-    ),
-    path(
-        "front-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="frontport_notes",
-        kwargs={"model": FrontPort},
-    ),
     path(
         "front-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
@@ -521,56 +381,6 @@ urlpatterns = [
     ),
     # path('devices/front-ports/add/', views.DeviceBulkAddFrontPortView.as_view(), name='device_bulk_add_frontport'),
     # Rear ports
-    path("rear-ports/", views.RearPortListView.as_view(), name="rearport_list"),
-    path("rear-ports/add/", views.RearPortCreateView.as_view(), name="rearport_add"),
-    path(
-        "rear-ports/import/",
-        views.RearPortBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="rearport_import",
-    ),
-    path(
-        "rear-ports/edit/",
-        views.RearPortBulkEditView.as_view(),
-        name="rearport_bulk_edit",
-    ),
-    path(
-        "rear-ports/rename/",
-        views.RearPortBulkRenameView.as_view(),
-        name="rearport_bulk_rename",
-    ),
-    path(
-        "rear-ports/disconnect/",
-        views.RearPortBulkDisconnectView.as_view(),
-        name="rearport_bulk_disconnect",
-    ),
-    path(
-        "rear-ports/delete/",
-        views.RearPortBulkDeleteView.as_view(),
-        name="rearport_bulk_delete",
-    ),
-    path("rear-ports/<uuid:pk>/", views.RearPortView.as_view(), name="rearport"),
-    path(
-        "rear-ports/<uuid:pk>/edit/",
-        views.RearPortEditView.as_view(),
-        name="rearport_edit",
-    ),
-    path(
-        "rear-ports/<uuid:pk>/delete/",
-        views.RearPortDeleteView.as_view(),
-        name="rearport_delete",
-    ),
-    path(
-        "rear-ports/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="rearport_changelog",
-        kwargs={"model": RearPort},
-    ),
-    path(
-        "rear-ports/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="rearport_notes",
-        kwargs={"model": RearPort},
-    ),
     path(
         "rear-ports/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
@@ -589,61 +399,6 @@ urlpatterns = [
         name="device_bulk_add_rearport",
     ),
     # Device bays
-    path("device-bays/", views.DeviceBayListView.as_view(), name="devicebay_list"),
-    path("device-bays/add/", views.DeviceBayCreateView.as_view(), name="devicebay_add"),
-    path(
-        "device-bays/import/",
-        views.DeviceBayBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="devicebay_import",
-    ),
-    path(
-        "device-bays/edit/",
-        views.DeviceBayBulkEditView.as_view(),
-        name="devicebay_bulk_edit",
-    ),
-    path(
-        "device-bays/rename/",
-        views.DeviceBayBulkRenameView.as_view(),
-        name="devicebay_bulk_rename",
-    ),
-    path(
-        "device-bays/delete/",
-        views.DeviceBayBulkDeleteView.as_view(),
-        name="devicebay_bulk_delete",
-    ),
-    path("device-bays/<uuid:pk>/", views.DeviceBayView.as_view(), name="devicebay"),
-    path(
-        "device-bays/<uuid:pk>/edit/",
-        views.DeviceBayEditView.as_view(),
-        name="devicebay_edit",
-    ),
-    path(
-        "device-bays/<uuid:pk>/delete/",
-        views.DeviceBayDeleteView.as_view(),
-        name="devicebay_delete",
-    ),
-    path(
-        "device-bays/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="devicebay_changelog",
-        kwargs={"model": DeviceBay},
-    ),
-    path(
-        "device-bays/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="devicebay_notes",
-        kwargs={"model": DeviceBay},
-    ),
-    path(
-        "device-bays/<uuid:pk>/populate/",
-        views.DeviceBayPopulateView.as_view(),
-        name="devicebay_populate",
-    ),
-    path(
-        "device-bays/<uuid:pk>/depopulate/",
-        views.DeviceBayDepopulateView.as_view(),
-        name="devicebay_depopulate",
-    ),
     path(
         "devices/device-bays/add/",
         views.DeviceBulkAddDeviceBayView.as_view(),

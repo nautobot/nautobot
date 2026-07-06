@@ -44,6 +44,13 @@
                 </div>
                 <table class="table table-hover card-body attr-table">
                     <tr>
+                        <td>Edition</td>
+                        <td>
+                            <a href="{{ edition_url }}">{{ nautobot_edition }}</a>
+                        </td>
+
+                    </tr>
+                    <tr>
                         <td>Support Contract Status</td>
                         <td>{{ support_contract_active | render_boolean }}</td>
                     </tr>
