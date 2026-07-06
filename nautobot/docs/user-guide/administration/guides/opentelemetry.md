@@ -12,6 +12,9 @@ See the [Install Guide](../configuration/opentelemetry.md) for installation inst
 
 Nautobot's OpenTelemetry support is structured in layers. Each layer can be enabled or disabled independently, allowing administrators to balance observability value against performance impact.
 
+!!! tip
+    App, Job, and SSoT authors can add their own spans, metrics, and log correlation on top of these layers. See [Instrumenting Your App with OpenTelemetry](../../../development/apps/api/platform-features/opentelemetry.md) in the App Developer Guide.
+
 | Layer | Controls | Default |
 | --- | --- | --- |
 | Distributed tracing (requests + logging) | `OTEL_PYTHON_DJANGO_INSTRUMENT` | `False` |
