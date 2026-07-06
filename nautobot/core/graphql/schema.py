@@ -11,6 +11,7 @@ from django.db.models import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 import graphene
 from graphene.types import generic
+import graphene_django_optimizer as gql_optimizer
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.generators import (
@@ -342,6 +343,7 @@ def extend_schema_type_tags(schema_type, model):
     if "tags" not in fields_name:
         return schema_type
 
+    @gql_optimizer.resolver_hints(prefetch_related="tags")
     def resolve_tags(self, args):
         return self.tags.all()
 

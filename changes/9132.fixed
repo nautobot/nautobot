@@ -1,0 +1,1 @@
+Moved the charset declaration to be the first tag in `<head>`.

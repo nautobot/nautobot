@@ -19,6 +19,28 @@ RESOLVER_PREFIX = "resolve_"
 LIST_SEARCH_PARAMS_BY_SCHEMA_TYPE = {}
 
 
+def _graphql_selection_requests_field(info, field_name):
+    """Return True if the immediate selection set of this GraphQL field requests `field_name`."""
+    for node in info.field_nodes:
+        if not node.selection_set:
+            continue
+        for selection in node.selection_set.selections:
+            if getattr(selection, "name", None) and selection.name.value == field_name:
+                return True
+    return False
+
+
+def optimize_config_context(queryset, info):
+    """Annotate config context data on the root queryset when GraphQL requests config_context.
+
+    ConfigContextModel.get_config_context() short-circuits when config_context_data is annotated,
+    so this eliminates a per-object ConfigContext.get_for_object() query (and its related FK lookups).
+    """
+    if hasattr(queryset, "annotate_config_context_data") and _graphql_selection_requests_field(info, "config_context"):
+        return queryset.annotate_config_context_data()
+    return queryset
+
+
 def generate_restricted_queryset():
     """
     Generate a function to return a restricted queryset compatible with the internal permissions system.
@@ -305,6 +327,7 @@ def generate_single_item_resolver(schema_type, resolver_name):
             queryset = model.objects.all()
             if hasattr(queryset, "restrict"):
                 queryset = queryset.restrict(info.context.user, "view")
+            queryset = optimize_config_context(queryset, info)
             return gql_optimizer.query(queryset.filter(pk=obj_id), info).first()
         return None
 
@@ -341,6 +364,8 @@ def generate_list_resolver(schema_type, resolver_name):
         queryset = model.objects.all()
         if hasattr(queryset, "restrict"):
             queryset = queryset.restrict(info.context.user, "view")
+
+        queryset = optimize_config_context(queryset, info)
 
         if filterset_class is not None:
             resolved_obj = filterset_class(kwargs, queryset)

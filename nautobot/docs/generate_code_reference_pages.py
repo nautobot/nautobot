@@ -4,7 +4,7 @@ from pathlib import Path
 
 import mkdocs_gen_files
 
-for file_path in sorted(Path("nautobot", "apps").rglob("*.py")):
+for file_path in sorted(Path("nautobot", "apps").glob("*.py")):
     module_path = file_path.with_suffix("")
     doc_path = file_path.with_suffix(".md")
     full_doc_path = Path("code-reference", doc_path)

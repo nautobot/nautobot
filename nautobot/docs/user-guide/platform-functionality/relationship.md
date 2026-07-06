@@ -21,6 +21,9 @@ Additionally, there are two _symmetric_ relationship types that can be used when
 !!! note
     A symmetric many-to-many relationship can be, but is not necessarily, a _complete graph_ or _full mesh_. For example, in the routing topology example above, if Device _A_ and Device _B_ are peers, and Device _B_ and Device _C_ are peers, this does not automatically imply a relationship between Devices _A_ and _C_ -- they **might or might not** also be peers, depending on how you define and populate the specific associations for this relationship.
 
+!!! note
+    When a symmetric relationship type is selected in the relationship create/edit UI, destination-side attributes are automatically synchronized from source-side values and are not directly editable.
+
 ## Required Relationships
 
 Relationships can be marked as being required. By default, relationships are not marked as being required.

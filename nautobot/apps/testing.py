@@ -1,5 +1,7 @@
 """Utilities for apps to implement test automation."""
 
+from typing import TYPE_CHECKING
+
 from nautobot.core.testing import (
     AssertNoRepeatedQueries,
     create_job_result_and_run_job,
@@ -10,13 +12,6 @@ from nautobot.core.testing import (
 from nautobot.core.testing.api import APITestCase, APITransactionTestCase, APIViewTestCases
 from nautobot.core.testing.filters import FilterTestCases
 from nautobot.core.testing.forms import FormTestCases
-from nautobot.core.testing.integration import (
-    BulkOperationsMixin,
-    BulkOperationsTestCases,
-    ObjectDetailsMixin,
-    ObjectsListMixin,
-    SeleniumTestCase,
-)
 from nautobot.core.testing.migrations import NautobotDataMigrationTest
 from nautobot.core.testing.mixins import NautobotTestCaseMixin, NautobotTestClient
 from nautobot.core.testing.models import ModelTestCases
@@ -31,6 +26,43 @@ from nautobot.core.testing.utils import (
     post_data,
 )
 from nautobot.core.testing.views import ModelTestCase, ModelViewTestCase, TestCase, ViewTestCases
+
+# The following imports from nautobot.core.testing.integration are lazy-loaded below because they depend on
+# having selenium and splinter installed, which is not guaranteed in non-developer environments outside of type-checks.
+if TYPE_CHECKING:
+    from nautobot.core.testing.integration import (
+        BulkOperationsMixin,
+        BulkOperationsTestCases,
+        ObjectDetailsMixin,
+        ObjectsListMixin,
+        SeleniumTestCase,
+    )
+
+_INTEGRATION_NAMES = frozenset(
+    {
+        "BulkOperationsMixin",
+        "BulkOperationsTestCases",
+        "ObjectDetailsMixin",
+        "ObjectsListMixin",
+        "SeleniumTestCase",
+    }
+)
+
+
+def __getattr__(name):
+    """Lazy-import (PEP 562) of selenium-backed integration test helpers."""
+    if name in _INTEGRATION_NAMES:
+        import nautobot.core.testing.integration
+
+        value = getattr(nautobot.core.testing.integration, name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(__all__)
+
 
 __all__ = (
     "APITestCase",

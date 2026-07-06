@@ -378,6 +378,9 @@ class VRFDeviceAssignment(BaseModel):
 
     class Meta:
         verbose_name = "VRF-device assignment"
+        # Use the local FK columns so the default ordering does not join into
+        # the vrf/device/vm/vdc tables to evaluate their own orderings.
+        ordering = ["vrf_id", "device_id", "virtual_machine_id", "virtual_device_context_id"]
         unique_together = [
             ["vrf", "device"],
             ["vrf", "virtual_machine"],
@@ -433,6 +436,9 @@ class VRFPrefixAssignment(BaseModel):
 
     class Meta:
         verbose_name = "VRF-prefix assignment"
+        # Use the local FK columns so the default ordering does not join into
+        # the vrf/prefix/namespace tables to evaluate their own orderings.
+        ordering = ["vrf_id", "prefix_id"]
         unique_together = ["vrf", "prefix"]
 
     def __str__(self):

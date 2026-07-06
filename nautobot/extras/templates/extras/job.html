@@ -130,16 +130,11 @@
                  */
                 const toggleExecutionType = () => {
                     const dryrun = (() => {
-                        switch (document.querySelector('#id_dryrun')?.getAttribute('type')) {
-                            case 'checkbox':
-                                return Boolean(input.checked);
-
-                            case 'hidden':
-                                return input.value === 'True';
-
-                            default:
-                                return false;
-                        }
+                        const dryrunInput = document.querySelector('#id_dryrun');
+                        if (!dryrunInput) return false;
+                        if (dryrunInput.type === 'checkbox') return dryrunInput.checked;
+                        if (dryrunInput.type === 'hidden') return dryrunInput.value === 'True';
+                        return false;
                     })();
 
                     const schedule_type = document.querySelector('#id__schedule_type').selectedOptions[0]?.value;

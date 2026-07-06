@@ -1,0 +1,2 @@
+Fixed a bug that caused the application to crash when creating an Interface with a required Custom Field despite providing a value for it.
+Fixed application crashes from errors on fields that are not declared in some forms.

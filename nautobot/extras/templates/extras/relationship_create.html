@@ -1,7 +1,9 @@
 {% extends 'generic/object_create.html' %}
+{% load helpers %}
 
 {% block javascript %}
     {{ block.super }}
+    <script src="{% versioned_static 'js/relationship_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
     <script type="text/javascript">
         /*
          * Deliberately use `var` instead of `const` or `let` here to prevent JavaScript engine from throwing an
