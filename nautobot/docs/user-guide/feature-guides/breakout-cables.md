@@ -44,12 +44,12 @@ A **lane** is one discrete end-to-end path through the entire cable, from an A-s
 
 For a 1×4 breakout cable, there are 4 lanes in the mapping:
 
-| Lane | A-Side | B-Side |
-|------|--------|--------|
-| 1 | Connector 1, Position 1 | Connector 1, Position 1 |
-| 2 | Connector 1, Position 2 | Connector 2, Position 1 |
-| 3 | Connector 1, Position 3 | Connector 3, Position 1 |
-| 4 | Connector 1, Position 4 | Connector 4, Position 1 |
+| Lane | A-Side                  | B-Side                  |
+| ---- | ----------------------- | ----------------------- |
+| 1    | Connector 1, Position 1 | Connector 1, Position 1 |
+| 2    | Connector 1, Position 2 | Connector 2, Position 1 |
+| 3    | Connector 1, Position 3 | Connector 3, Position 1 |
+| 4    | Connector 1, Position 4 | Connector 4, Position 1 |
 
 The total lane count equals the length of the mapping array: `a_connectors × a_positions` (which must equal `b_connectors × b_positions`).
 
@@ -57,11 +57,11 @@ The total lane count equals the length of the mapping array: `a_connectors × a_
 
 A **strand** is a single physical fiber or conductor within a cable. A lane may require one or more strands depending on the transmission technology:
 
-| Technology | Strands Per Lane | Example |
-|------------|-----------------|---------|
-| Copper / DAC | 1 | One copper pair per lane |
-| Duplex fiber (standard) | 2 | One strand transmits, one receives (Tx/Rx) |
-| Parallel optics (PSM4, SR4) | 8 | Multiple strands per lane for higher bandwidth |
+| Technology                  | Strands Per Lane | Example                                        |
+| --------------------------- | ---------------- | ---------------------------------------------- |
+| Copper / DAC                | 1                | One copper pair per lane                       |
+| Duplex fiber (standard)     | 2                | One strand transmits, one receives (Tx/Rx)     |
+| Parallel optics (PSM4, SR4) | 8                | Multiple strands per lane for higher bandwidth |
 
 The `strands_per_lane` field on the cable type captures this. The total physical strand count is `total_lanes × strands_per_lane`. This is useful for fiber plant documentation and capacity planning -- for example, an MPO-12 cable with 6 duplex lanes has 12 total strands.
 
@@ -92,7 +92,7 @@ This is less common but used in specific high-density applications where pair-le
 Any non-standard polarity arrangement that doesn't fit the above methods. The actual strand mapping is defined by the lane mapping in the breakout template; the polarity method field is informational only and does not affect tracing or validation.
 
 !!! note
-    The `polarity_method` field is informational -- Nautobot does not validate or enforce strand-level polarity. It is intended for documentation and compliance purposes. The lane-level mapping (connector+position to connector+position) is what Nautobot uses for path tracing.
+The `polarity_method` field is informational -- Nautobot does not validate or enforce strand-level polarity. It is intended for documentation and compliance purposes. The lane-level mapping (connector+position to connector+position) is what Nautobot uses for path tracing.
 
 ## Creating a Breakout Cable Type
 
@@ -135,10 +135,10 @@ Each entry in the mapping array maps one A-side connector+position pair to one B
 
 ```json
 [
-  { "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "1" },
-  { "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1, "label": "2" },
-  { "a_connector": 1, "a_position": 3, "b_connector": 3, "b_position": 1, "label": "3" },
-  { "a_connector": 1, "a_position": 4, "b_connector": 4, "b_position": 1, "label": "4" }
+    { "a_connector": 1, "a_position": 1, "b_connector": 1, "b_position": 1, "label": "1" },
+    { "a_connector": 1, "a_position": 2, "b_connector": 2, "b_position": 1, "label": "2" },
+    { "a_connector": 1, "a_position": 3, "b_connector": 3, "b_position": 1, "label": "3" },
+    { "a_connector": 1, "a_position": 4, "b_connector": 4, "b_position": 1, "label": "4" }
 ]
 ```
 
@@ -155,7 +155,7 @@ Edit any cable and select a cable type from the **Cable Type** dropdown. (Note t
 When a cable type is assigned, the cable edit form dynamically updates to show the correct number of connector rows for each side. If the cable already had terminations (a standard A↔B connection), those terminations are preserved as the first connector on each side.
 
 !!! tip
-    Because a breakout cable always designates the "A" side of the cable as the trunk side, when updating an existing point-to-point cable to use a breakout cable type, you may find that the existing terminations of the table are initially on the "wrong" sides. There is a helpful "Swap A/B" button in the form that you can click to easily remedy this.
+Because a breakout cable always designates the "A" side of the cable as the trunk side, when updating an existing point-to-point cable to use a breakout cable type, you may find that the existing terminations of the table are initially on the "wrong" sides. There is a helpful "Swap A/B" button in the form that you can click to easily remedy this.
 
 ### Editing Connections
 
@@ -206,26 +206,23 @@ POST /api/dcim/cables/
     "label": "SRV1-SPINE1-BKO",
     "status": "<status-uuid>",
     "terminations": {
-        "a": {
-            "1": {
-                "object_type": "dcim.interface",
-                "id": "<interface-uuid>"
-            }
+        "a1": {
+            "object_type": "dcim.interface",
+            "id": "<interface-uuid>"
         },
-        "b": {
-            "1": {
-                "object_type": "dcim.interface",
-                "id": "<interface-uuid>"
-            },
-            "2": {
-                "object_type": "dcim.frontport",
-                "id": "<front-port-uuid>"
-            },
-            "3": {
-                "object_type": "circuits.circuittermination",
-                "id": "<circuit-termination-uuid>"
-            },
-            "4": null
+        "b1": {
+            "object_type": "dcim.interface",
+            "id": "<interface-uuid>"
+        },
+        "b2": {
+            "object_type": "dcim.frontport",
+            "id": "<front-port-uuid>"
+        },
+        "b3": {
+            "object_type": "circuits.circuittermination",
+            "id": "<circuit-termination-uuid>"
+        },
+        "b4": null
         }
     }
 }
@@ -235,12 +232,12 @@ Note that the fourth B-side termination is null, representing an unconnected leg
 
 ### Reading Cable Terminations
 
-In API responses, the cable's `terminations` field is rendered in the same `{"a": {...}, "b": {...}}` shape, keyed by side and then by 1-indexed connector number. Each slot value is a brief representation of the termination (or the full nested serializer when `?depth=1` or greater is requested), and uncabled connectors on a breakout cable appear as explicit `null` slots.
+In API responses, the cable's `terminations` field is rendered in the same `{"a1": {...}, "b1": {...}}` shape, keyed by side and then by 1-indexed connector number. Each slot value is a brief representation of the termination (or the full nested serializer when `?depth=1` or greater is requested), and uncabled connectors on a breakout cable appear as explicit `null` slots.
 
 The legacy `termination_a` / `termination_b` (and `termination_a_type` / `termination_a_id`, etc.) fields remain on the cable serializer for backward compatibility, and refer to connector 1 on each side.
 
 !!! note
-    The nested `terminations` field cannot be flattened into CSV, so it is omitted from CSV exports of cables. To export per-connector termination rows as CSV, use the [Cable to Cable Termination](../core-data-model/dcim/cabletocabletermination.md) endpoint instead, e.g. `/api/dcim/cables-to-cable-terminations/?cable=<cable-uuid>&format=csv`.
+The nested `terminations` field cannot be flattened into CSV, so it is omitted from CSV exports of cables. To export per-connector termination rows as CSV, use the [Cable to Cable Termination](../core-data-model/dcim/cabletocabletermination.md) endpoint instead, e.g. `/api/dcim/cables-to-cable-terminations/?cable=<cable-uuid>&format=csv`.
 
 ### Filtering
 
