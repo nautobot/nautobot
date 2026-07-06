@@ -1,0 +1,4 @@
+Updated documentation dependency `mkdocstrings-python` to `~2.0.5`.
+Updated development dependency `pylint` to `~4.0.6`.
+Updated development dependency `pymarkdownlnt` to `~0.9.38`.
+Updated development dependency `ruff` to `~0.15.20`.
