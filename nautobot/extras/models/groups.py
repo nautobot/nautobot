@@ -478,7 +478,7 @@ class DynamicGroup(PrimaryModel):
 
     update_cached_members.alters_data = True
 
-    def _is_cache_substitution_safe(self):
+    def _is_cache_substitution_safe(self, *, safety_by_pk=None):
         """
         Return True if this group's membership definition does not read other groups' cached members.
 
@@ -497,7 +497,21 @@ class DynamicGroup(PrimaryModel):
 
         Limitation: a filter whose StaticGroupAssociation traversal is implemented inside a filter *method*
         rather than declared via `field_name` cannot be detected this way; no such filter exists in core.
+
+        Args:
+            safety_by_pk (dict, optional): Memoization of results, keyed by group PK. Safety is a pure function
+                of group *definitions* (filters and membership edges), which a cache-update cascade never
+                modifies, so a caller evaluating multiple related groups within a single operation should share
+                one dict across its calls to avoid re-walking overlapping subtrees.
         """
+        if safety_by_pk is None:
+            safety_by_pk = {}
+        if self.pk not in safety_by_pk:
+            safety_by_pk[self.pk] = self._compute_cache_substitution_safety(safety_by_pk)
+        return safety_by_pk[self.pk]
+
+    def _compute_cache_substitution_safety(self, safety_by_pk):
+        """Uncached implementation of `_is_cache_substitution_safe()`; do not call directly."""
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
             filterset_class = self.filterset_class
             if filterset_class is None:
@@ -511,8 +525,32 @@ class DynamicGroup(PrimaryModel):
                     return False
             return True
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
-            return all(child._is_cache_substitution_safe() for child in self.children.all())
+            return all(child._is_cache_substitution_safe(safety_by_pk=safety_by_pk) for child in self.children.all())
         return False
+
+    def _refresh_cached_members_and_ancestors(self):
+        """
+        Refresh this group's cached members, then those of each of its unique ancestors.
+
+        Ancestors are processed in a children-before-parents order so that each refresh can reuse the caches
+        already refreshed within this operation (see `generate_query()`) instead of re-evaluating those groups'
+        filters, except where `_is_cache_substitution_safe()` determines that reuse could change the results.
+        """
+        self.update_cached_members()
+        ancestors = self._ordered_unique_ancestors()
+        if not ancestors:
+            return
+        # Safety cannot change during the cascade, so share one memo across all of its safety checks.
+        safety_by_pk = {}
+        fresh_group_pks = set()
+        if self._is_cache_substitution_safe(safety_by_pk=safety_by_pk):
+            fresh_group_pks.add(self.pk)
+        for ancestor in ancestors:
+            ancestor.update_cached_members(fresh_group_pks=frozenset(fresh_group_pks))
+            if ancestor._is_cache_substitution_safe(safety_by_pk=safety_by_pk):
+                fresh_group_pks.add(ancestor.pk)
+
+    _refresh_cached_members_and_ancestors.alters_data = True
 
     def has_member(self, obj, use_cache=False):
         """
@@ -688,14 +726,7 @@ class DynamicGroup(PrimaryModel):
         super().save(*args, **kwargs)
 
         if update_cached_members:
-            self.update_cached_members()
-            fresh_group_pks = set()
-            if self._is_cache_substitution_safe():
-                fresh_group_pks.add(self.pk)
-            for ancestor in self._ordered_unique_ancestors():
-                ancestor.update_cached_members(fresh_group_pks=frozenset(fresh_group_pks))
-                if ancestor._is_cache_substitution_safe():
-                    fresh_group_pks.add(ancestor.pk)
+            self._refresh_cached_members_and_ancestors()
 
     def _generate_query_for_filter(self, filter_field, value):
         """
@@ -1263,14 +1294,7 @@ class DynamicGroupMembership(BaseModel):
         super().save(*args, **kwargs)
 
         if update_cached_members:
-            self.parent_group.update_cached_members()
-            fresh_group_pks = set()
-            if self.parent_group._is_cache_substitution_safe():
-                fresh_group_pks.add(self.parent_group.pk)
-            for ancestor in self.parent_group._ordered_unique_ancestors():
-                ancestor.update_cached_members(fresh_group_pks=frozenset(fresh_group_pks))
-                if ancestor._is_cache_substitution_safe():
-                    fresh_group_pks.add(ancestor.pk)
+            self.parent_group._refresh_cached_members_and_ancestors()
 
 
 class StaticGroupAssociationManager(BaseManager.from_queryset(RestrictedQuerySet)):

@@ -1349,6 +1349,27 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
         )
         self.assertFalse(unresolvable_group._is_cache_substitution_safe())
 
+    def test_is_cache_substitution_safe_memoization(self):
+        """A shared memo dict is populated for the whole subtree and short-circuits repeat evaluations."""
+        safety_by_pk = {}
+        self.assertTrue(self.parent._is_cache_substitution_safe(safety_by_pk=safety_by_pk))
+        # The walk memoized the result for every group in the subtree, not just the entry point.
+        self.assertEqual(
+            set(safety_by_pk),
+            {
+                self.parent.pk,
+                self.first_child.pk,
+                self.second_child.pk,
+                self.third_child.pk,
+                self.nested_child.pk,
+            },
+        )
+        self.assertTrue(all(safety_by_pk.values()))
+        # Re-evaluating any group in the subtree against the shared memo issues no further queries.
+        with self.assertNumQueries(0):
+            self.assertTrue(self.parent._is_cache_substitution_safe(safety_by_pk=safety_by_pk))
+            self.assertTrue(self.nested_child._is_cache_substitution_safe(safety_by_pk=safety_by_pk))
+
     def test_fresh_substitution_skipped_for_dynamic_groups_filter(self):
         """Groups whose filter reads other groups' caches must always be re-evaluated live."""
         base_group = DynamicGroup.objects.create(
