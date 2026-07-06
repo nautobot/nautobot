@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
+from django.db.models.constants import LOOKUP_SEP
 from django.db.models.signals import pre_delete
 from django.utils.functional import cached_property
 import django_filters
@@ -29,6 +30,13 @@ from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGro
 from nautobot.extras.utils import extras_features, FeatureQuery
 
 logger = logging.getLogger(__name__)
+
+# Reverse relations through which a filterset filter can read the StaticGroupAssociation table (i.e., read the
+# *cached members* of dynamic groups): `static_group_association_set` on group-associable models and
+# `static_group_associations` on DynamicGroup itself. Used by `DynamicGroup._is_cache_substitution_safe()` to
+# detect filters (such as `dynamic_groups`, defined in `nautobot.core.filters`) whose results depend on other
+# groups' caches rather than solely on member-object data.
+_STATIC_GROUP_ASSOCIATION_ACCESSORS = ("static_group_association_set", "static_group_associations")
 
 
 @extras_features(
@@ -474,12 +482,34 @@ class DynamicGroup(PrimaryModel):
         """
         Return True if this group's membership definition does not read other groups' cached members.
 
-        Filters such as `dynamic_groups` derive their results from other groups' caches, which may themselves be
-        rewritten later within the same cache-update cascade; the cached members of any group depending on such a
-        filter cannot safely substitute for re-evaluating its filter(s).
+        A cache-update cascade rewrites StaticGroupAssociation records as it proceeds from a saved group up
+        through its ancestors. A group's just-refreshed cache is only a valid substitute for re-evaluating its
+        filter(s) if those filters depend solely on member-object data, which the cascade never modifies. A
+        filter that reads the StaticGroupAssociation table itself (such as `dynamic_groups`) is invalidated by
+        the cascade's own writes: its results at the time this group was refreshed may differ from its results
+        after other groups' caches have been rewritten later in the same cascade.
+
+        Rather than hard-coding the names of known cache-reading filters, inspect each filter's declared
+        `field_name` for a traversal of a StaticGroupAssociation reverse relation. This also detects
+        functionally-equivalent filters registered under other names, e.g. by an App via `FilterExtension`.
+        Filters that cannot be resolved on the filterset are conservatively treated as unsafe, which merely
+        declines the optimization in favor of (always-correct) live evaluation.
+
+        Limitation: a filter whose StaticGroupAssociation traversal is implemented inside a filter *method*
+        rather than declared via `field_name` cannot be detected this way; no such filter exists in core.
         """
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-            return "dynamic_groups" not in self.filter
+            filterset_class = self.filterset_class
+            if filterset_class is None:
+                return False
+            for filter_name in self.filter:
+                filter_field = filterset_class.base_filters.get(filter_name)
+                if filter_field is None:
+                    return False
+                field_path = (filter_field.field_name or "").split(LOOKUP_SEP)
+                if any(accessor in field_path for accessor in _STATIC_GROUP_ASSOCIATION_ACCESSORS):
+                    return False
+            return True
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
             return all(child._is_cache_substitution_safe() for child in self.children.all())
         return False

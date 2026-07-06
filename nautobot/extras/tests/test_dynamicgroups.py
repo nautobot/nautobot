@@ -9,6 +9,7 @@ from django.db.models import ProtectedError, QuerySet
 from django.test import tag
 from django.urls import reverse
 
+from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.core.forms.fields import (
     DynamicModelMultipleChoiceField,
     MultiValueCharField,
@@ -1317,6 +1318,36 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
             evaluations,
             Counter({self.nested_child.pk: 1, self.first_child.pk: 1, self.second_child.pk: 1}),
         )
+
+    def test_is_cache_substitution_safe_detects_filters_by_target(self):
+        """The safety guard detects cache-reading filters by the relation they traverse, not by name."""
+        # Filters over member-object data are safe.
+        self.assertTrue(self.first_child._is_cache_substitution_safe())
+
+        # A functional equivalent of the `dynamic_groups` filter registered under a different name
+        # (e.g. by an App via FilterExtension) must still be detected as unsafe, because it reads
+        # other groups' cached members via StaticGroupAssociation.
+        lookalike_filter = NaturalKeyOrPKMultipleChoiceFilter(
+            queryset=DynamicGroup.objects.all(),
+            field_name="static_group_association_set__dynamic_group",
+            to_field_name="name",
+        )
+        lookalike_group = DynamicGroup(
+            name="App Lookalike Filter",
+            filter={"app_in_group": [self.first_child.name]},
+            content_type=self.device_ct,
+        )
+        with mock.patch.dict(DeviceFilterSet.base_filters, {"app_in_group": lookalike_filter}):
+            self.assertFalse(lookalike_group._is_cache_substitution_safe())
+
+        # A filter that can't be resolved on the filterset is conservatively unsafe: substitution is
+        # declined and the group simply remains on the (always-correct) live-evaluation path.
+        unresolvable_group = DynamicGroup(
+            name="Unresolvable Filter",
+            filter={"no_such_filter": ["irrelevant"]},
+            content_type=self.device_ct,
+        )
+        self.assertFalse(unresolvable_group._is_cache_substitution_safe())
 
     def test_fresh_substitution_skipped_for_dynamic_groups_filter(self):
         """Groups whose filter reads other groups' caches must always be re-evaluated live."""
