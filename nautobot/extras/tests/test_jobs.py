@@ -2476,6 +2476,38 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                     ).exists()
                 )
 
+    @mock.patch("nautobot.extras.jobs_revoke.celery_app.control.revoke")
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.liveness")
+    def test_revoke_terminate_swallows_job_already_terminal_race(self, mock_liveness, mock_celery_revoke):
+        """RUNNING -> perform_termination, but the row is terminal under the lock -> no-op, no SIGKILL."""
+        mock_liveness.return_value = JobLiveness.RUNNING
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                # Diverge in-memory (unready) from DB (terminal) to hit the locked re-fetch.
+                JobResult.objects.filter(pk=job_result.pk).update(status=JobResultStatusChoices.STATUS_SUCCESS)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
+
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNone(result["error"])
+                self.assertFalse(result["revoked"])
+
+                # No kill signal for a job that already finished.
+                mock_celery_revoke.assert_not_called()
+
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+                self.assertIsNone(job_result.revoked_by)
+                self.assertFalse(job_result.revoked_by_user_name)
+                self.assertIsNone(job_result.date_revoked)
+
+                self.assertTrue(
+                    any(f"Job {job_result.pk} is already in terminal state" in msg for msg in log_cm.output),
+                    f"Expected an info log about no action taken, got: {log_cm.output}",
+                )
+
     # ------------------------------------------------------------------ #
     # 1. Reap path: PENDING/STARTED + worker absent -> mark revoked,
     #    no SIGKILL sent.
@@ -2503,6 +2535,60 @@ class CeleryStrategyTestCase(_JobRevokeTestBase):
                 self.assertEqual(job_result.status, "REVOKED")
                 self.assertEqual(job_result.revoked_by, self.user)
                 self.assertIsNotNone(job_result.date_revoked)
+
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.liveness")
+    def test_revoke_reap_swallows_job_already_terminal_race(self, mock_liveness):
+        """NOT_RUNNING -> perform_reap, but the row is terminal under the lock -> no-op, no reaped payload."""
+        mock_liveness.return_value = JobLiveness.NOT_RUNNING
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                JobResult.objects.filter(pk=job_result.pk).update(status=JobResultStatusChoices.STATUS_SUCCESS)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
+
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNone(result["error"])
+                self.assertFalse(result["revoked"])
+
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+                self.assertIsNone(job_result.revoked_by)
+                self.assertFalse(job_result.revoked_by_user_name)
+                self.assertIsNone(job_result.date_revoked)
+
+                self.assertTrue(
+                    any(f"Job {job_result.pk} is already in terminal state" in msg for msg in log_cm.output),
+                    f"Expected an info log about no action taken, got: {log_cm.output}",
+                )
+
+    @mock.patch("nautobot.extras.jobs_revoke.CeleryStrategy.liveness")
+    def test_revoke_abandon_swallows_job_already_terminal_race(self, mock_liveness):
+        """UNKNOWN -> perform_abandon, but the row is terminal under the lock -> no-op."""
+        mock_liveness.return_value = JobLiveness.UNKNOWN
+        for status in JobResultStatusChoices.UNREADY_STATES:
+            with self.subTest(status=status):
+                job_result = self._make_job_result(status)
+                JobResult.objects.filter(pk=job_result.pk).update(status=JobResultStatusChoices.STATUS_SUCCESS)
+
+                with self.assertLogs("nautobot.extras.jobs_revoke", level="INFO") as log_cm:
+                    result = self.strategy.revoke(job_result, self.user)
+
+                self.assertEqual(result["job_result"], job_result)
+                self.assertIsNone(result["error"])
+                self.assertFalse(result["revoked"])
+
+                job_result.refresh_from_db()
+                self.assertEqual(job_result.status, JobResultStatusChoices.STATUS_SUCCESS)
+                self.assertIsNone(job_result.revoked_by)
+                self.assertFalse(job_result.revoked_by_user_name)
+                self.assertIsNone(job_result.date_revoked)
+
+                self.assertTrue(
+                    any(f"Job {job_result.pk} is already in terminal state" in msg for msg in log_cm.output),
+                    f"Expected an info log about no action taken, got: {log_cm.output}",
+                )
 
 
 class UnknownStrategyTestCase(_JobRevokeTestBase):
