@@ -92,7 +92,7 @@ This is less common but used in specific high-density applications where pair-le
 Any non-standard polarity arrangement that doesn't fit the above methods. The actual strand mapping is defined by the lane mapping in the breakout template; the polarity method field is informational only and does not affect tracing or validation.
 
 !!! note
-The `polarity_method` field is informational -- Nautobot does not validate or enforce strand-level polarity. It is intended for documentation and compliance purposes. The lane-level mapping (connector+position to connector+position) is what Nautobot uses for path tracing.
+    The `polarity_method` field is informational -- Nautobot does not validate or enforce strand-level polarity. It is intended for documentation and compliance purposes. The lane-level mapping (connector+position to connector+position) is what Nautobot uses for path tracing.
 
 ## Creating a Breakout Cable Type
 
@@ -155,7 +155,7 @@ Edit any cable and select a cable type from the **Cable Type** dropdown. (Note t
 When a cable type is assigned, the cable edit form dynamically updates to show the correct number of connector rows for each side. If the cable already had terminations (a standard A↔B connection), those terminations are preserved as the first connector on each side.
 
 !!! tip
-Because a breakout cable always designates the "A" side of the cable as the trunk side, when updating an existing point-to-point cable to use a breakout cable type, you may find that the existing terminations of the table are initially on the "wrong" sides. There is a helpful "Swap A/B" button in the form that you can click to easily remedy this.
+    Because a breakout cable always designates the "A" side of the cable as the trunk side, when updating an existing point-to-point cable to use a breakout cable type, you may find that the existing terminations of the table are initially on the "wrong" sides. There is a helpful "Swap A/B" button in the form that you can click to easily remedy this.
 
 ### Editing Connections
 
@@ -237,7 +237,7 @@ In API responses, the cable's `terminations` field is rendered in the same `{"a1
 The legacy `termination_a` / `termination_b` (and `termination_a_type` / `termination_a_id`, etc.) fields remain on the cable serializer for backward compatibility, and refer to connector 1 on each side.
 
 !!! note
-The nested `terminations` field cannot be flattened into CSV, so it is omitted from CSV exports of cables. To export per-connector termination rows as CSV, use the [Cable to Cable Termination](../core-data-model/dcim/cabletocabletermination.md) endpoint instead, e.g. `/api/dcim/cables-to-cable-terminations/?cable=<cable-uuid>&format=csv`.
+    The nested `terminations` field cannot be flattened into CSV, so it is omitted from CSV exports of cables. To export per-connector termination rows as CSV, use the [Cable to Cable Termination](../core-data-model/dcim/cabletocabletermination.md) endpoint instead, e.g. `/api/dcim/cables-to-cable-terminations/?cable=<cable-uuid>&format=csv`.
 
 ### Filtering
 
