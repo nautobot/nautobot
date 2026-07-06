@@ -159,7 +159,6 @@ class NautobotEditionChoices(ChoiceSet):
     COMMUNITY = "community"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
-    CLOUD = "cloud"
 
     DEFAULT = COMMUNITY
     COMMERCIAL_EDITIONS = (PROFESSIONAL, ENTERPRISE)
@@ -168,7 +167,6 @@ class NautobotEditionChoices(ChoiceSet):
         (COMMUNITY, "Community"),
         (PROFESSIONAL, "Professional"),
         (ENTERPRISE, "Enterprise"),
-        (CLOUD, "Cloud"),
     )
 
     # Relative precedence of each edition.
@@ -176,7 +174,6 @@ class NautobotEditionChoices(ChoiceSet):
         COMMUNITY: 10,
         PROFESSIONAL: 20,
         ENTERPRISE: 30,
-        CLOUD: 40,
     }
 
 
