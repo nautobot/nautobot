@@ -1293,7 +1293,7 @@ def custom_branding_or_static(branding_asset, static_asset=None):
     Return the URL of an asset, honoring the following precedence:
 
     1. Custom branding configured via `settings.BRANDING_FILEPATHS` (relative to MEDIA_ROOT/MEDIA_URL).
-    2. The static asset for the active nautobot edition, falling back to the "community" asset for any
+    2. The static asset for the active Nautobot edition, falling back to the "community" asset for any
        branding key the edition does not override.
     3. The caller-provided `static_asset`, used as a backup for branding keys not defined for any edition.
     """
