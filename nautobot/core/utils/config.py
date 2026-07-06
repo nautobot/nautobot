@@ -1,18 +1,16 @@
 """Helper code for loading values that may be defined in settings.py/nautobot_config.py *or* in django-constance."""
 
 import contextlib
+from functools import lru_cache
 import logging
 
 from constance import config
 from django.apps import apps
 from django.conf import settings
-from django.core.cache import cache
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError
-import redis.exceptions
 
 from nautobot.core.choices import NautobotEditionChoices
-from nautobot.core.utils.cache import construct_cache_key
 
 logger = logging.getLogger(__name__)
 
@@ -45,22 +43,13 @@ def get_settings_or_config(variable_name, fallback=None):
     return fallback
 
 
+@lru_cache(maxsize=None)
 def get_nautobot_edition():
     """Return the active Nautobot edition: the highest-weighted `nautobot_edition` declared by any installed app."""
-    cache_key = construct_cache_key(get_nautobot_edition, branch_aware=False)
-    current_edition = None
-    with contextlib.suppress(redis.exceptions.ConnectionError):
-        current_edition = cache.get(cache_key)
-    if current_edition is None:
-        current_edition = NautobotEditionChoices.COMMUNITY
-        editions_by_weight = NautobotEditionChoices.WEIGHTS
-        for app_config in apps.get_app_configs():
-            app_edition = getattr(app_config, "nautobot_edition", None)
-            if (
-                app_edition in editions_by_weight
-                and editions_by_weight[app_edition] > editions_by_weight[current_edition]
-            ):
-                current_edition = app_edition
-        with contextlib.suppress(redis.exceptions.ConnectionError):
-            cache.set(cache_key, current_edition, timeout=None)
+    current_edition = NautobotEditionChoices.COMMUNITY
+    editions_by_weight = NautobotEditionChoices.WEIGHTS
+    for app_config in apps.get_app_configs():
+        app_edition = getattr(app_config, "nautobot_edition", None)
+        if app_edition in editions_by_weight and editions_by_weight[app_edition] > editions_by_weight[current_edition]:
+            current_edition = app_edition
     return current_edition

@@ -4,13 +4,11 @@ from types import SimpleNamespace
 from unittest import mock
 
 from constance.test import override_config
-from django.core.cache import cache
 from django.test import override_settings, tag, TestCase
 
 from nautobot.apps import config as app_config
 from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.utils import config
-from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.config import get_nautobot_edition
 
 
@@ -48,10 +46,10 @@ class GetNautobotEditionTestCase(TestCase):
     """Test get_nautobot_edition(), which derives the active edition from the installed apps."""
 
     def setUp(self):
-        cache.delete(construct_cache_key(get_nautobot_edition, branch_aware=False))
+        get_nautobot_edition.cache_clear()
 
     def tearDown(self):
-        cache.delete(construct_cache_key(get_nautobot_edition, branch_aware=False))
+        get_nautobot_edition.cache_clear()
 
     @staticmethod
     def _apps_declaring(editions):
@@ -70,7 +68,7 @@ class GetNautobotEditionTestCase(TestCase):
     def test_highest_weighted_edition_wins_regardless_of_order(self):
         with self._apps_declaring([NautobotEditionChoices.ENTERPRISE, NautobotEditionChoices.PROFESSIONAL]):
             self.assertEqual(get_nautobot_edition(), NautobotEditionChoices.ENTERPRISE)
-        cache.delete(construct_cache_key(get_nautobot_edition, branch_aware=False))
+        get_nautobot_edition.cache_clear()
         with self._apps_declaring([NautobotEditionChoices.PROFESSIONAL, NautobotEditionChoices.ENTERPRISE]):
             self.assertEqual(get_nautobot_edition(), NautobotEditionChoices.ENTERPRISE)
 
