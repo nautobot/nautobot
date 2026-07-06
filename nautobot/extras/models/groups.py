@@ -304,6 +304,18 @@ class DynamicGroup(PrimaryModel):
 
         return self._map_filter_fields
 
+    def _cached_member_pks(self):
+        """
+        Return a queryset of this group's cached member PKs, suitable for use as a subquery.
+
+        The `all_objects` manager is required here: the default StaticGroupAssociation manager filters to
+        static-type groups only, and so would silently return no records for filter- or set-defined groups.
+        """
+        # Since associated_object is a GenericForeignKey, we can't just do:
+        #     return self.static_group_associations.values_list("associated_object", flat=True)
+        # pylint: disable-next=no-member  # false positive about self.static_group_associations
+        return self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
+
     @property
     def members(self):
         """
@@ -311,12 +323,7 @@ class DynamicGroup(PrimaryModel):
 
         If up-to-the-minute accuracy is needed, call `update_cached_members()` instead.
         """
-        # Since associated_object is a GenericForeignKey, we can't just do:
-        #     return self.static_group_associations.values_list("associated_object", flat=True)
-        return self.model.objects.filter(
-            # pylint: disable=no-member  # false positive about self.static_group_associations
-            pk__in=self.static_group_associations(manager="all_objects").values_list("associated_object_id", flat=True)
-        )
+        return self.model.objects.filter(pk__in=self._cached_member_pks())
 
     @members.setter
     def members(self, value):
@@ -872,11 +879,7 @@ class DynamicGroup(PrimaryModel):
                 if group.pk in fresh_group_pks:
                     # This child's cache was refreshed within the current operation, so it's identical to what
                     # re-evaluating its filter(s) would produce; query the cache directly instead.
-                    next_set = models.Q(
-                        pk__in=group.static_group_associations(manager="all_objects").values_list(
-                            "associated_object_id", flat=True
-                        )
-                    )
+                    next_set = models.Q(pk__in=group._cached_member_pks())
                 else:
                     if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
                         logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
