@@ -91,7 +91,7 @@ from nautobot.dcim.utils import (
 )
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
     InterfaceVLANTable,
@@ -4709,9 +4709,13 @@ class InterfaceUIViewSet(
 
             # Get assigned VLANs and annotate whether each is tagged or untagged
             vlans = []
-            if instance.untagged_vlan is not None:
-                vlans.append(instance.untagged_vlan)
-                vlans[0].tagged = False
+            # Restrict `untagged_vlan` (a single FK) the same way `tagged_vlans` is restricted below,
+            # so a user without view permission on that VLAN doesn't see it in the table.
+            if instance.untagged_vlan_id is not None:
+                untagged_vlan = VLAN.objects.restrict(request.user, "view").filter(pk=instance.untagged_vlan_id).first()
+                if untagged_vlan is not None:
+                    untagged_vlan.tagged = False
+                    vlans.append(untagged_vlan)
 
             for vlan in (
                 instance.tagged_vlans.restrict(request.user)
