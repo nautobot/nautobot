@@ -3609,7 +3609,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
 
     def _expected_cables_by_device(self, suffix, values=None, include_null=False):
         """Cables expected from the device-family filters, mirroring `CableFilterSet`: a cable matches
-        if any of its terminations' ``device<suffix>`` is in ``values`` (and/or is null). Spans every
+        if any of its terminations' `device<suffix>` is in `values` (and/or is null). Spans every
         device-bearing termination type (interface, console port, front port, ...), not just
         interfaces, since the cable test data also terminates on console ports.
         """
