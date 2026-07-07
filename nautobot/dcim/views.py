@@ -1,4 +1,4 @@
-from collections import OrderedDict
+from collections import defaultdict, OrderedDict
 from copy import deepcopy
 from functools import partial
 import json
@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import F, Prefetch, ProtectedError
+from django.db.models import Case, F, IntegerField, Prefetch, ProtectedError, When
 from django.forms import (
     Form,
     modelformset_factory,
@@ -3055,6 +3055,88 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 ),
             )
 
+    class DeviceModuleBaysTablePanel(object_detail.ObjectsTablePanel):
+        """Device module bays panel with a collapsible tree (default) and an "expand all" mode.
+
+        By default only the device's top-level bays render, and nested bays load on demand via HTMX
+        (`MODULEBAY_TREE_LINK` + the `dcim:modulebay_children` action). When `?expand_all=true` is present,
+        the panel instead renders the *entire* bay hierarchy as a single pre-order (depth-first) list,
+        which the standard paginator then slices at the normal page size (so page 1 shows the first root
+        and its descendants before any later root). The "Expand all"/"Collapse all" toggle lives in the
+        panel header and swaps the panel via HTMX while pushing `expand_all` into the URL.
+        """
+
+        header_extra_content_template_path = "dcim/inc/modulebay_panel_header.html"
+
+        def _expanded_module_bay_pks(self, instance, request):
+            """Return this device's module bay pks in pre-order (depth-first) tree traversal order.
+
+            All of a device's descendant bays carry `parent_device`, so they are fetched in one query and
+            the tree is reassembled in memory: a bay's children are the bays whose `parent_module` is the
+            module installed in that bay.
+            """
+            bays = list(instance.module_bays.restrict(request.user, "view"))
+            children_by_parent_module = defaultdict(list)
+            roots = []
+            for bay in bays:
+                if bay.parent_module_id is None:
+                    roots.append(bay)
+                else:
+                    children_by_parent_module[bay.parent_module_id].append(bay)
+            # Map each bay to the module installed in it (that module's bays are the bay's children).
+            installed_module_pk_by_bay_pk = dict(
+                Module.objects.filter(parent_module_bay__in=bays).values_list("parent_module_bay_id", "pk")
+            )
+            ordered_pks = []
+            stack = list(reversed(roots))
+            while stack:
+                bay = stack.pop()
+                ordered_pks.append(bay.pk)
+                installed_module_pk = installed_module_pk_by_bay_pk.get(bay.pk)
+                if installed_module_pk is not None:
+                    stack.extend(reversed(children_by_parent_module.get(installed_module_pk, [])))
+            return ordered_pks
+
+        def get_table_data_queryset(self, instance, request):
+            if request.GET.get("expand_all"):
+                # Full hierarchy, flattened in pre-order; `Case`/`When` preserves the traversal order
+                # through the paginator so pagination cuts the tree depth-first rather than by root.
+                ordered_pks = self._expanded_module_bay_pks(instance, request)
+                if not ordered_pks:
+                    return instance.module_bays.none()
+                preserved_order = Case(
+                    *(When(pk=pk, then=position) for position, pk in enumerate(ordered_pks)),
+                    output_field=IntegerField(),
+                )
+                return ModuleBay.objects.filter(pk__in=ordered_pks).order_by(preserved_order)
+            # `parent_device` is propagated to *all* descendant bays, so filter to only those installed
+            # directly in the device; deeper bays are revealed by expanding their parent bay's row.
+            return instance.module_bays.filter(parent_module__isnull=True)
+
+        def get_extra_context(self, context):
+            # `table_expandable` gates the per-row expand button in `MODULEBAY_TREE_LINK`; it is inert when
+            # `hide_hierarchy_ui` is set (e.g. once the user sorts the table). `badge_count_override` reports
+            # the full count of module bays at every level (the collapsed view only renders top-level rows),
+            # since `parent_device` is set on all descendant bays.
+            instance = get_obj_from_context(context)
+            request = context["request"]
+            expand_all = bool(request.GET.get("expand_all"))
+            context_data = {
+                **super().get_extra_context(context),
+                "expand_all": expand_all,
+                "badge_count_override": instance.module_bays.restrict(request.user, "view").count(),
+                "module_bays_have_nesting": instance.module_bays.restrict(request.user, "view")
+                .filter(parent_module__isnull=False)
+                .exists(),
+            }
+            if expand_all:
+                # Static fully-expanded tree: rows indent by their own depth, with no per-row toggles.
+                context_data["table_expandable"] = False
+            else:
+                context_data["table_expandable"] = True
+                context_data["tree_depth"] = 0
+            return context_data
+
     class DeviceInterfacesTablePanel(object_detail.ObjectsTablePanel):
         """ObjectsTablePanel for device interfaces; shows the "Device" column if the device is a VirtualChassis master."""
 
@@ -3301,13 +3383,13 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 related_object_attribute="module_bays",
                 hide_if_empty=True,
                 panels=(
-                    object_detail.ObjectsTablePanel(
+                    DeviceModuleBaysTablePanel(
                         weight=100,
                         section=SectionChoices.FULL_WIDTH,
                         table_title="Module Bays",
                         table_class=tables.DeviceModuleBayTable,
                         prefetch_related_fields=["installed_module", "installed_module__status"],
-                        table_filter="parent_device",  # TODO: is this right or should we use table_attribute=module_bays?
+                        related_field_name="parent_device",
                         tab_id="module_bays",
                         enable_bulk_actions=True,
                         form_id="module-bays-form",
@@ -4387,7 +4469,7 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             "installed_module__status", "installed_module"
         )
         modulebay_table = tables.ModuleModuleBayTable(
-            data=modulebays, user=request.user, orderable=False, configurable=True
+            data=modulebays, user=request.user, orderable=False, configurable=True, hide_hierarchy_ui=False
         )
         if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
             modulebay_table.columns.show("pk")
@@ -4396,6 +4478,11 @@ class ModuleUIViewSet(BulkComponentCreateUIViewSetMixin, NautobotUIViewSet):
             {
                 "modulebay_table": modulebay_table,
                 "active_tab": "module-bays",
+                # Enable the same HTMX expandable-tree as the Device "Module Bays" tab. These are the
+                # module's own bays, so they render at depth 0; deeper bays load via the `children` action.
+                "table_expandable": True,
+                "tree_depth": 0,
+                "return_url": reverse("dcim:module_modulebays", kwargs={"pk": instance.pk}),
             }
         )
 
@@ -5085,6 +5172,57 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
             parent = selected_object.parent_device or selected_object.parent_module
             return parent.display
         return ""
+
+    @action(
+        detail=True,
+        custom_view_base_action="view",
+    )
+    def children(self, request, *args, **kwargs):
+        """Render the child module bays of this bay's installed module, for HTMX expandable-tree rows."""
+        instance = self.get_object()
+        children = instance.installed_module_bays.restrict(request.user, "view").prefetch_related(
+            "installed_module", "installed_module__status"
+        )
+        return_url = request.GET.get("return_url", None)
+        saved_view_pk = request.GET.get("saved_view", None)
+        table_changes_pending = request.GET.get("table_changes_pending", False)
+        # Depth (relative to the display root) at which these child rows should be indented. The expanding
+        # row's tree link passes its own depth + 1; fall back to the bay's absolute depth for direct access.
+        try:
+            tree_depth = int(request.GET.get("tree_depth"))
+        except (TypeError, ValueError):
+            tree_depth = instance.hierarchy_depth + 1
+        children_table = tables.DeviceModuleBayTable(
+            children,
+            table_changes_pending=table_changes_pending,
+            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
+            user=request.user,
+            hide_hierarchy_ui=False,
+            configurable=True,
+        )
+        if request.user.has_perm("dcim.change_modulebay") or request.user.has_perm("dcim.delete_modulebay"):
+            children_table.columns.show("pk")
+
+        paginate = {
+            "paginator_class": EnhancedPaginator,
+            "per_page": get_paginate_count(request),
+        }
+        RequestConfig(request, paginate).configure(children_table)
+
+        return Response(
+            {
+                "instance": instance,
+                "request": request,
+                "return_url": return_url,
+                "next_page_url": reverse("dcim:modulebay_children", kwargs={"pk": instance.pk}),
+                "table_inc_template": "components/htmx/subtree_children.html",
+                "template": "panel_table.html",
+                "table": children_table,
+                "table_expandable": True,
+                "tree_depth": tree_depth,
+                "additional_count": max(0, children.count() - (paginate["per_page"] * children_table.page.number)),
+            }
+        )
 
 
 #

@@ -2732,6 +2732,66 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertInHTML("1/4", response_body)
 
+        # Only the device's top-level bays render initially; nested bays load on demand via HTMX.
+        self.assertIn("Test View Module Bay 1", response_body)
+        self.assertNotIn("Test View Nested Module Bay 1", response_body)
+        # The bay with an installed module exposes an expand button targeting the `children` action.
+        children_url = reverse("dcim:modulebay_children", kwargs={"pk": nested_parent_bay.pk})
+        self.assertIn(children_url, response_body)
+
+        # The panel header badge reports the full count of module bays at all levels (4), not just the
+        # three top-level rows rendered before expansion.
+        self.assertRegex(response_body, r'badge bg-(?:primary|secondary)">\s*4\s*<')
+
+        # The `children` action returns the nested module bay(s) of the bay's installed module.
+        children_response = self.client.get(children_url)
+        self.assertHttpStatus(children_response, 200)
+        children_body = extract_page_body(children_response.content.decode(children_response.charset))
+        self.assertIn("Test View Nested Module Bay 1", children_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_device_modulebays_expand_all(self):
+        device = Device.objects.filter(module_bays__isnull=True).first()
+        mtype = ModuleType.objects.create(manufacturer=device.device_type.manufacturer, model="EXPAND VENDOR")
+        module = Module.objects.create(module_type=mtype, status=Status.objects.get(name="Active"))
+
+        # Two root bays; the first has an installed module containing a nested bay.
+        # Pre-order (depth-first) traversal is therefore: Root 1, Nested 1, Root 2.
+        root1 = ModuleBay.objects.create(parent_device=device, name="Expand Root Bay 1")
+        ModuleBay.objects.create(parent_device=device, name="Expand Root Bay 2")
+        ModuleBay.objects.create(parent_module=module, name="Expand Nested Bay 1")
+        module.parent_module_bay = root1
+        module.validated_save()
+
+        url = reverse("dcim:device_modulebays", kwargs={"pk": device.pk})
+
+        with self.subTest("Collapsed (default) view shows only root bays and an Expand All control"):
+            response = self.client.get(url)
+            body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Expand Root Bay 1", body)
+            self.assertIn("Expand Root Bay 2", body)
+            self.assertNotIn("Expand Nested Bay 1", body)
+            self.assertIn("Expand All", body)
+            # The toggle must target the module-bays distinct-view URL (the tab's panels only render
+            # when the request path matches it) and swap just this panel component in place.
+            self.assertIn(f'hx-get="{url}?expand_all=true"', body)
+            self.assertRegex(body, r'hx-select="#component-[^"]+"')
+
+        with self.subTest("Expand all paginates the flattened tree depth-first"):
+            # per_page=2 -> page 1 is the first root and its descendant, before the second root.
+            response = self.client.get(url, {"expand_all": "true", "per_page": 2})
+            body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Expand Root Bay 1", body)
+            self.assertIn("Expand Nested Bay 1", body)
+            self.assertNotIn("Expand Root Bay 2", body)
+            self.assertIn("Collapse All", body)
+
+            # Page 2 continues the traversal with the next root.
+            response = self.client.get(url, {"expand_all": "true", "per_page": 2, "page": 2})
+            body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Expand Root Bay 2", body)
+            self.assertNotIn("Expand Nested Bay 1", body)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
         device = Device.objects.first()
@@ -3247,6 +3307,37 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
                 sorted(ipaddresses),
                 sorted(interface_ips),
             )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_module_modulebays(self):
+        module = Module.objects.filter(module_bays__isnull=True).first()
+        status_active = Status.objects.get_for_model(Module).first()
+
+        # A bay on this module, containing a submodule that itself has a nested bay.
+        bay = ModuleBay.objects.create(parent_module=module, name="Module View Bay A")
+        ModuleBay.objects.create(parent_module=module, name="Module View Bay B")
+        submodule = Module.objects.create(
+            module_type=module.module_type, status=status_active, parent_module_bay=bay
+        )
+        ModuleBay.objects.create(parent_module=submodule, name="Module View Nested Bay")
+
+        url = reverse("dcim:module_modulebays", kwargs={"pk": module.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+
+        # Only the module's own bays render initially; nested bays load on demand via HTMX.
+        self.assertIn("Module View Bay A", response_body)
+        self.assertNotIn("Module View Nested Bay", response_body)
+        # The bay with an installed submodule exposes an expand button targeting the `children` action.
+        children_url = reverse("dcim:modulebay_children", kwargs={"pk": bay.pk})
+        self.assertIn(children_url, response_body)
+
+        # The `children` action returns the submodule's nested module bay.
+        children_response = self.client.get(children_url)
+        self.assertHttpStatus(children_response, 200)
+        children_body = extract_page_body(children_response.content.decode(children_response.charset))
+        self.assertIn("Module View Nested Bay", children_body)
 
 
 class ConsolePortTestCase(ViewTestCases.DeviceComponentViewTestCase):
