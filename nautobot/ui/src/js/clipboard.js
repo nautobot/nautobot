@@ -1,5 +1,5 @@
-import ClipboardJS from 'clipboard';
 import { Tooltip } from 'bootstrap';
+import ClipboardJS from 'clipboard';
 
 /**
  * Initialize a single global ClipboardJS instance covering every "copy to clipboard" button on the page.
