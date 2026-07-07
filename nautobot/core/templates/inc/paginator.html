@@ -54,6 +54,15 @@
     {% endif %}
     {% if paginator.num_pages > 1 and not exclude_controls %}
         <div class="vr border-start my-8 nb-paginator-divider"></div>
+        <div class="align-items-center d-flex gap-4">
+            <label for="paginator-go-to">Go to</label>
+            <input type="number" name="page" id="paginator-go-to" class="form-control" placeholder="page"
+            min="1" max="{{ paginator.num_pages }}" aria-label="Go to page"
+            {% if htmx_enabled|default:False %}
+                hx-get="{% django_querystring page=None %}"
+                hx-trigger="keyup[key=='Enter']"
+            {% endif %}>
+        </div>
         <nav>
             <ul class="pagination mb-0">
                 {% if page.has_previous %}

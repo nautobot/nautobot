@@ -2183,7 +2183,11 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
   padding-inline-end: 1.9375rem; /* 31px */
   width: 4.5rem; /* 72px */
 }
-
+#paginator-go-to {
+  display: inline-block;
+  width: 4.5rem;
+  font-size: 1em;
+}
 /* Draggable */
 .nb-draggable-container {
   /*

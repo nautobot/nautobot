@@ -339,6 +339,26 @@ function jsify_form(context) {
     initializeInputs(this_context)
 }
 
+function initializePaginatorGoTo() {
+    $(document).on('keydown', '#paginator-go-to', function(event) {
+        if (event.key !== 'Enter') return;
+        if (this.hasAttribute('hx-get')) return;
+        event.preventDefault();
+
+        let page = parseInt(this.value, 10);
+        const max = parseInt(this.max, 10) || Infinity;
+        if (!Number.isInteger(page)) return;
+        if (page < 1)
+            page = 1
+        if (page > max)
+            page = max
+
+        const url = new URL(window.location);
+        url.searchParams.set('page', page);
+        window.location.assign(url);
+    });
+}
+
 /* =======
 *  Input Creators
 */
@@ -356,6 +376,7 @@ function submitOnEnter(event) {
 $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
+    initializePaginatorGoTo();
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 });
 
