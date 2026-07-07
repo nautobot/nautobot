@@ -2307,7 +2307,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                     }.get(field, field)
                     for e in errors:
                         err_str = ", ".join(e)
-                        create_form.add_error(parent_field, f"{name}: {err_str}")
+                        if parent_field in create_form.fields:
+                            create_form.add_error(parent_field, f"{name}: {err_str}")
+                        else:
+                            create_form.add_error(None, f"{name} ({field}): {err_str}")
 
         if create_form.errors:
             return self.render_component_create_response(request, create_form)
