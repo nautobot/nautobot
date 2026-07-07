@@ -65,7 +65,7 @@ from nautobot.core.releases import get_latest_release
 from nautobot.core.templatetags.helpers import has_one_or_more_perms, slugify
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.config import get_nautobot_edition, get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
     get_model_for_view_name,
@@ -808,7 +808,7 @@ class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
         support_contract_active = support_expiration_date and support_expiration_date >= datetime.date.today()
 
         # Installed edition
-        nautobot_edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        nautobot_edition = get_nautobot_edition()
         nautobot_edition_display = NautobotEditionChoices.as_dict().get(nautobot_edition, nautobot_edition)
         edition_url = NAUTOBOT_EDITION_URLS.get(nautobot_edition, "https://nautobot.com")
 
