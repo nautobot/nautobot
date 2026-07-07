@@ -1313,7 +1313,9 @@ class IPAddressInterfacesView(generic.ObjectView):
 
     def get_extra_context(self, request, instance):
         interfaces = Interface.optimize_queryset_for_cable_columns(instance.interfaces.restrict(request.user, "view"))
-        interface_table = tables.IPAddressInterfaceTable(data=interfaces, user=request.user, orderable=False)
+        interface_table = tables.IPAddressInterfaceTable(
+            data=interfaces, user=request.user, orderable=False, configurable=True
+        )
         if request.user.has_perm("dcim.change_interface") or request.user.has_perm("dcim.delete_interface"):
             interface_table.columns.show("pk")
 
