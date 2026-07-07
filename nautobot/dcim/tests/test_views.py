@@ -3783,7 +3783,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         response_content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn(invalid_ipaddress_link, response_content)
 
-    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_assigned_vlans(self):
         """The detail view's VLAN table lists both the untagged and tagged VLANs assigned to the interface."""
         interface = Interface.objects.first()
