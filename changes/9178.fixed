@@ -1,0 +1,2 @@
+Added backward-compatibility translation of legacy `termination_[a|b]_type`/`termination_[a|b]_id`) lookups on `Cable.objects` queries such as `filter()`, `get()`, and `get_or_create()`.
+Corrected incorrect `stacklevel` value for DeprecationWarnings emitted by cable-query backwards-compatibility logic.

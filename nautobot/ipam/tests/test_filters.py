@@ -1362,33 +1362,33 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
     def test_contains(self):
         # address inside a v4 range
         with self.subTest("inside v4 range"):
-            params = {"contains": ["10.0.0.15"]}
+            params = {"contains": ["10.0.0.15"], "namespace": [self.namespace.id]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
             )
 
         # inclusive on both boundaries
         with self.subTest("start boundary is inclusive"):
-            params = {"contains": [self.v4_range1[0]]}
+            params = {"contains": [self.v4_range1[0]], "namespace": [self.namespace.id]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
             )
         with self.subTest("end boundary is inclusive"):
-            params = {"contains": [self.v4_range1[1]]}
+            params = {"contains": [self.v4_range1[1]], "namespace": [self.namespace.id]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
             )
 
         # address inside a v6 range
         with self.subTest("inside v6 range"):
-            params = {"contains": ["2001:db8::150"]}
+            params = {"contains": ["2001:db8::150"], "namespace": [self.namespace.id]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range2_v6.pk)
             )
 
         # multiple values OR'd together
         with self.subTest("multiple values"):
-            params = {"contains": ["10.0.0.15", "2001:db8::150"]}
+            params = {"contains": ["10.0.0.15", "2001:db8::150"], "namespace": [self.namespace.id]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(pk__in=[self.ip_address_range1_v4.pk, self.ip_address_range2_v6.pk]),
@@ -1396,12 +1396,12 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
 
         # address outside every range
         with self.subTest("outside all ranges"):
-            params = {"contains": ["10.0.0.200"]}
+            params = {"contains": ["10.0.0.200"], "namespace": [self.namespace.id]}
             self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
 
         # invalid input -> empty queryset (no error)
         with self.subTest("invalid input"):
-            params = {"contains": ["not-an-address"]}
+            params = {"contains": ["not-an-address"], "namespace": [self.namespace.id]}
             self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
 
         with self.subTest("empty value returns none, not all"):
