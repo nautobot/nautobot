@@ -81,12 +81,12 @@ class HomeTestCase(SeleniumTestCase):
 
         self.browser.visit(self.live_server_url)
 
-        for panel_name, panel_details in self.layout.items():
+        for panel_index, (panel_name, panel_details) in enumerate(self.layout.items()):
             if any(perm in self.get_panel_permissions(panel_details) for perm in user_permissions):
                 for item_name, item_details in panel_details.items():
                     panel_element_to_search = self.browser.find_by_xpath(
                         f"//div[@id='draggable-homepage-panels']"
-                        f"/div[@class='col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group']"
+                        f"/div[@class='col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group order-xl-0 order-md-{panel_index // 2}']"
                         f"/div[@class='card nb-draggable']"
                         f"/div[@class='card-header nb-draggable-handle']"
                         f"/strong[contains(text(), '{panel_name}')]"
