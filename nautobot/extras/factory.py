@@ -38,6 +38,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -48,6 +49,7 @@ from nautobot.extras.models import (
     StaticGroupAssociation,
     Status,
     Tag,
+    TaggedItem,
     Team,
 )
 from nautobot.extras.utils import (
@@ -164,11 +166,16 @@ class JobQueueFactory(PrimaryModelFactory):
     @factory.post_generation
     def jobs(self, create, extracted, **kwargs):
         jobs = get_random_instances(Job)
-        self.jobs.set(jobs)
         for job in jobs:
+            JobQueueAssignmentFactory.create(job=job, job_queue=self)
             if not job.job_queues_override:
                 job.job_queues_override = True
                 job.validated_save()
+
+
+class JobQueueAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = JobQueueAssignment
 
 
 class JobResultFactory(BaseModelFactory):
@@ -691,3 +698,8 @@ class TagFactory(OrganizationalModelFactory):
                 self.content_types.set(extracted)
             else:
                 self.content_types.set(get_random_instances(lambda: TaggableClassesQuery().as_queryset(), minimum=2))
+
+
+class TaggedItemFactory(BaseModelFactory):
+    class Meta:
+        model = TaggedItem

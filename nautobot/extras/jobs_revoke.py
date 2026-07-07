@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from datetime import datetime
 from enum import Enum
 import logging
@@ -23,6 +24,19 @@ from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
 
 logger = logging.getLogger(__name__)
+
+
+class JobAlreadyTerminal(Exception):
+    """Control-flow signal: the `JobResult` has already left the `unready`
+    state, so there is nothing to revoke.
+
+    Raised from `locked_unready_job_result` when the freshly-locked row is no longer
+    in an unready state.
+    """
+
+    def __init__(self, job_result: JobResult):
+        self.job_result = job_result
+        super().__init__(f"Job {job_result.pk} already in terminal state {job_result.status}")
 
 
 class JobLiveness(Enum):
@@ -80,6 +94,43 @@ class JobRevokeStrategy(ABC):
         self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_ABANDONED)
         return True
 
+    @contextmanager
+    def locked_unready_job_result(self, job_result: JobResult):
+        """Yield the `JobResult` re-fetched and locked with SELECT FOR UPDATE,
+        guaranteed to be in the `unready` state.
+
+        If the row has already settled into a terminal state, this raises
+        `JobAlreadyTerminal` instead of yielding, so callers never operate on
+        a terminal job. The no-op is logged only after the lock is released,
+        since `job_result.log()` writes via a separate connection and would
+        deadlock against the held row lock. The lock is held until the
+        surrounding transaction commits.
+
+        Raises:
+            JobAlreadyTerminal: The locked row is no longer in an unready state.
+        """
+        try:
+            with transaction.atomic():
+                locked = JobResult.objects.select_for_update().get(pk=job_result.pk)
+                if not locked.is_unready_state:
+                    raise JobAlreadyTerminal(locked)
+                yield locked
+        except JobAlreadyTerminal as e:
+            self._log_already_terminal(e.job_result)
+            raise
+
+    def _log_already_terminal(self, job_result: JobResult) -> None:
+        """Single place that phrases the 'already in a terminal state' no-op."""
+        logger.info(
+            "Job %s is already in terminal state `%s`, no action was taken.",
+            job_result.pk,
+            job_result.status,
+        )
+        job_result.log(
+            f"Job {job_result.pk} is already in terminal state `{job_result.status}`, no action was taken",
+            grouping="revoking",
+        )
+
     def _apply_revoke_metadata(
         self, job_result: JobResult, user: User, revocation_type: str, now_timestamp: None | datetime = None
     ) -> set[str]:
@@ -126,18 +177,18 @@ class JobRevokeStrategy(ABC):
 
         return changed
 
-    def _mark_revoked(self, job_result: JobResult, user: User, revocation_type: str) -> tuple[JobResult, bool]:
-        """Mark a `JobResult` as revoked, filling in only fields that aren't already set."""
-        with transaction.atomic():
-            job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            changed = self._apply_revoke_metadata(job_result, user, revocation_type)
+    def _mark_revoked(self, job_result: JobResult, user: User, revocation_type: str) -> JobResult:
+        """Mark a `JobResult` as revoked, filling in only fields that aren't already set.
 
-            job_result.status = JobResultStatusChoices.STATUS_REVOKED
+        Re-fetches and locks the row via `locked_unready_job_result`; if the job has
+        already settled into a terminal state, `JobAlreadyTerminal` propagates
+        """
+        with self.locked_unready_job_result(job_result) as locked_job_result:
+            changed = self._apply_revoke_metadata(locked_job_result, user, revocation_type)
+            locked_job_result.status = JobResultStatusChoices.STATUS_REVOKED
             changed |= {"status"}
-
-            job_result.save(update_fields=list(changed))
-
-        return job_result
+            locked_job_result.save(update_fields=list(changed))
+            return locked_job_result
 
     def _resolve_action(self, liveness: JobLiveness) -> tuple[Callable, str]:
         """Map liveness to the matching `perform_*` method and revocation type.
@@ -183,13 +234,7 @@ class JobRevokeStrategy(ABC):
         }
 
         if not job_result.is_unready_state:
-            logger.info(
-                "Job %s is already in terminated state `%s` no action was taken.", job_result.pk, job_result.status
-            )
-            job_result.log(
-                f"Job {job_result.pk} is already in terminated state `{job_result.status}` no action was taken",
-                grouping="revoking",
-            )
+            self._log_already_terminal(job_result)
             return base
 
         job_liveness_state = self.liveness(job_result)
@@ -197,6 +242,8 @@ class JobRevokeStrategy(ABC):
 
         try:
             revoked = action(job_result, user)
+        except JobAlreadyTerminal:
+            return base
         except Exception as e:
             revocation_label = {"terminated": "Termination", "reaped": "Reap", "abandoned": "Abandon"}
             logger.error("%s failed for %s: %s", revocation_label[revocation_type], job_result.pk, e)
@@ -296,21 +343,10 @@ class CeleryStrategy(JobRevokeStrategy):
                 Celery task ID.
             user: The user requesting termination, recorded on `revoked_by`.
         """
-        if not job_result.is_unready_state:
-            logger.info(
-                "Job %s is already in terminated state `%s` no action was taken.", job_result.pk, job_result.status
-            )
-            job_result.log(
-                f"Job {job_result.pk} is already in terminated state `{job_result.status}` no action was taken",
-                grouping="revoking",
-            )
-            return False
-
         task_id = str(job_result.pk)
-        with transaction.atomic():
-            job_result = JobResult.objects.select_for_update().get(pk=job_result.pk)
-            changed = self._apply_revoke_metadata(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
-            job_result.save(update_fields=list(changed))
+        with self.locked_unready_job_result(job_result) as locked_job_result:
+            changed = self._apply_revoke_metadata(locked_job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
+            locked_job_result.save(update_fields=list(changed))
             celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
 
         logger.info("Job %s terminated by %s", job_result.pk, user)
@@ -482,9 +518,7 @@ class K8sStrategy(JobRevokeStrategy):
                 )
                 return False
 
-        with transaction.atomic():
-            job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
-
+        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
         logger.info("Job %s terminated by %s", job_result.pk, user)
         job_result.log(
             f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"

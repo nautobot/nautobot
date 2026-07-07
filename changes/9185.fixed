@@ -1,0 +1,1 @@
+Fixed job revocation incorrectly overwriting an already-completed job's status (e.g. SUCCESS to REVOKED); the revoke write is now guarded against the job's terminal state under a row lock.
