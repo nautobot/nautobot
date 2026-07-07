@@ -3,6 +3,7 @@ import sys
 import tempfile
 from unittest import mock
 import uuid
+import warnings
 
 from django import forms as django_forms
 from django.apps import apps
@@ -19,7 +20,7 @@ from nautobot.core.api import utils as api_utils
 from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
-from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
+from nautobot.core.utils import data as data_utils, deprecation, filtering, lookup, querysets, requests
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.core.utils.module_loading import (
@@ -570,6 +571,69 @@ class IsTruthyTest(TestCase):
         self.assertFalse(settings_funcs.is_truthy("n"))
         self.assertFalse(settings_funcs.is_truthy(0))
         self.assertFalse(settings_funcs.is_truthy("0"))
+
+
+class WarnDeprecatedAtCallerTest(TestCase):
+    """Tests for `warn_deprecated_at_caller()`."""
+
+    @staticmethod
+    def _make_shim():
+        """Build a deprecation shim that lives in a *different* file than this test module.
+
+        `warn_deprecated_at_caller()` walks out of its immediate caller's module (the shim) before
+        attributing the warning, so exercising that walk correctly requires the shim's `co_filename`
+        to differ from this test's -- otherwise the walk would step over the test frame too.
+        `compile()` with an explicit filename gives us that distinct frame without a second source
+        file on disk. The returned `shim(message)` simply forwards to `warn_deprecated_at_caller()`.
+        """
+        namespace = {"warn_deprecated_at_caller": deprecation.warn_deprecated_at_caller}
+        code = compile(
+            "def shim(message):\n    warn_deprecated_at_caller(message)\n",
+            "<deprecation-shim-stand-in>",
+            "exec",
+        )
+        exec(code, namespace)  # noqa: S102  # pylint: disable=exec-used  # controlled, test-only source
+        return namespace["shim"]
+
+    def test_emits_deprecation_warning(self):
+        """The message is emitted as a `DeprecationWarning`."""
+        with self.assertWarns(DeprecationWarning) as cm:
+            deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
+        self.assertEqual(str(cm.warning), "legacy thing is deprecated")
+
+    def test_warning_is_attributed_to_caller_of_shim(self):
+        """`stacklevel` skips the shim frame so the warning points at the app code that called it."""
+        shim = self._make_shim()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+            shim("legacy thing is deprecated")
+        self.assertEqual(len(caught), 1)
+        # Blamed here (the shim's caller), not on the shim's file or on deprecation.py.
+        self.assertEqual(os.path.basename(caught[0].filename), os.path.basename(__file__))
+        self.assertEqual(caught[0].lineno, expected_lineno)
+
+    def test_logs_warning_with_matching_stacklevel_when_enabled(self):
+        """With `LOG_DEPRECATION_WARNINGS` set, a `logger.warning` fires, attributed to the same caller."""
+        shim = self._make_shim()
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", True):
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                with self.assertLogs(deprecation.logger, level="WARNING") as logs:
+                    expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+                    shim("legacy thing is deprecated")
+        self.assertEqual(len(logs.records), 1)
+        record = logs.records[0]
+        self.assertIn("legacy thing is deprecated", record.getMessage())
+        self.assertEqual(os.path.basename(record.pathname), os.path.basename(__file__))
+        self.assertEqual(record.lineno, expected_lineno)
+
+    def test_does_not_log_when_log_deprecation_warnings_disabled(self):
+        """With the setting off, only the (silenced) warning fires -- no log line."""
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", False):
+            with self.assertWarns(DeprecationWarning):
+                with self.assertNoLogs(deprecation.logger, level="WARNING"):
+                    deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
 
 
 class PrettyPrintQueryTest(TestCase):

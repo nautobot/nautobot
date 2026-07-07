@@ -1,0 +1,1 @@
+Change `CableSerializer` `get_terminations` and `_parse_terminations_payload` Structure. New json structure pushes nested connectors up a level and combine with the side key.
