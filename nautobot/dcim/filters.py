@@ -1644,11 +1644,11 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     @staticmethod
     def _termination_device_cable_ids(suffix, values, include_null):
-        """Cable IDs having a termination whose ``device<suffix>`` matches ``values`` (and/or is null).
+        """Cable IDs having a termination whose `device<suffix>` matches `values` (and/or is null).
 
         Reaches each termination's device directly through the per-type device-component FKs on the
-        join table (``interface__device``, ``front_port__device``, ...). Circuit terminations and
-        power feeds have no device, so they only ever contribute to the ``include_null`` set.
+        join table (`interface__device`, `front_port__device`, ...). Circuit terminations and
+        power feeds have no device, so they only ever contribute to the `include_null` set.
 
         `suffix` is "" (the device itself) or a related lookup such as "__rack" / "__location__name".
         """
