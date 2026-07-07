@@ -285,12 +285,9 @@ MODULEBAY_TREE_LINK = """
                 <span class="nb-subtree nb-subtree-not-expandable"></span>
             {% endif %}
         {% endif %}
-        <span class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}"></span>
-        <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
-    {% else %}
-        <span class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}"></span>
-        <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
     {% endif %}
+    <span class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}"></span>
+    <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
 {% endspaceless %}
 """
 

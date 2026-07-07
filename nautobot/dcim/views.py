@@ -3075,7 +3075,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
             the tree is reassembled in memory: a bay's children are the bays whose `parent_module` is the
             module installed in that bay.
             """
-            bays = list(instance.module_bays.restrict(request.user, "view"))
+            bays = list(instance.module_bays.restrict(request.user, "view").only("pk", "parent_module_id"))
             children_by_parent_module = defaultdict(list)
             roots = []
             for bay in bays:

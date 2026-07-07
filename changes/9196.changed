@@ -1,1 +1,1 @@
-Module Bay list views are rendered partials via HTMX
+Updated Device detail view "Module Bays" tab to render a tree view with interactive expanding and collapsing of child modules and module bays.
