@@ -8,19 +8,19 @@ pushes the URL so the state survives a full reload and is shareable.
 {% endcomment %}
 {% include "components/panel/header_extra_content_table.html" %}
 {% if module_bays_have_nesting or expand_all %}
-<a
-    class="btn btn-sm btn-secondary float-end"
-    role="button"
-    hx-get="{% url 'dcim:device_modulebays' pk=object.pk %}{% if not expand_all %}?expand_all=true{% endif %}"
-    hx-select="#component-{{ component.component_id }}"
-    hx-target="#component-{{ component.component_id }}"
-    hx-swap="outerHTML"
-    hx-push-url="true"
->
-    {% if expand_all %}
-    <span class="mdi mdi-arrow-collapse-vertical" aria-hidden="true"></span>
-    Collapse All {% else %}
-    <span class="mdi mdi-arrow-expand-vertical" aria-hidden="true"></span>
-    Expand All {% endif %}
-</a>
+    <a class="btn btn-sm btn-secondary float-end"
+       role="button"
+       hx-get="{% url 'dcim:device_modulebays' pk=object.pk %}{% if not expand_all %}?expand_all=true{% endif %}"
+       hx-select="#component-{{ component.component_id }}"
+       hx-target="#component-{{ component.component_id }}"
+       hx-swap="outerHTML"
+       hx-push-url="true">
+        {% if expand_all %}
+            <span class="mdi mdi-arrow-collapse-vertical" aria-hidden="true"></span>
+            Collapse All
+        {% else %}
+            <span class="mdi mdi-arrow-expand-vertical" aria-hidden="true"></span>
+            Expand All
+        {% endif %}
+    </a>
 {% endif %}
