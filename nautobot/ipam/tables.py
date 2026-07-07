@@ -631,7 +631,9 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         viewname="dcim:device_list",
         url_params={"ip_addresses": "pk"},
         reverse_lookup="interfaces__ip_addresses",
+        lookup="interfaces__device",
         distinct=True,
+        display_field="name",
         verbose_name="Devices",
     )
     vm_interface_count = LinkedCountColumn(
@@ -641,7 +643,9 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         viewname="virtualization:virtualmachine_list",
         url_params={"ip_addresses": "pk"},
         reverse_lookup="interfaces__ip_addresses",
+        lookup="vm_interfaces__virtual_machine",
         distinct=True,
+        display_field="name",
         verbose_name="Virtual Machines",
     )
     actions = tables.TemplateColumn(
