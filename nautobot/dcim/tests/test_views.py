@@ -3340,9 +3340,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # A bay on this module, containing a submodule that itself has a nested bay.
         bay = ModuleBay.objects.create(parent_module=module, name="Module View Bay A")
         ModuleBay.objects.create(parent_module=module, name="Module View Bay B")
-        submodule = Module.objects.create(
-            module_type=module.module_type, status=status_active, parent_module_bay=bay
-        )
+        submodule = Module.objects.create(module_type=module.module_type, status=status_active, parent_module_bay=bay)
         ModuleBay.objects.create(parent_module=submodule, name="Module View Nested Bay")
 
         url = reverse("dcim:module_modulebays", kwargs={"pk": module.pk})
