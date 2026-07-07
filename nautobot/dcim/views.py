@@ -2227,7 +2227,7 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
 
     create_form_class: type[Form]
     form_class: type[Form]
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
 
     def get_component_create_form(self, request, data=None):
         """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields).
@@ -2302,23 +2302,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             return self.render_component_create_response(request, create_form)
 
         new_components = []
+        # `get_component_create_form` borrows the "extras" fields (custom fields, relationships, object
+        # note, dynamic groups) onto the create form, so `cleaned_data` already carries their validated
+        # values; they flow through to each per-instance form via `data` below.
         data = deepcopy(create_form.cleaned_data)
-
-        # Propagate "extras" fields (custom fields, relationships, object note, dynamic groups) from
-        # the POST into the per-instance form data. They aren't part of the pattern form's
-        # cleaned_data, so without this each created component would lose those values.
-        model_form = self.get_component_model_form(request, data=request.POST)
-        extras_field_names = set(getattr(model_form, "custom_fields", [])) | set(
-            getattr(model_form, "relationships", [])
-        )
-        extras_field_names |= {"object_note", "dynamic_groups"}.intersection(model_form.fields)
-        for field_name in extras_field_names:
-            if field_name not in request.POST:
-                continue
-            if getattr(model_form.fields[field_name].widget, "allow_multiple_selected", False):
-                data[field_name] = request.POST.getlist(field_name)
-            else:
-                data[field_name] = request.POST.get(field_name)
 
         # Support for bulk creation using name_pattern and label_pattern
         names = create_form.cleaned_data["name_pattern"]
@@ -2680,7 +2667,7 @@ class ModuleBayTemplateUIViewSet(
     model_form_class = forms.ModuleBayTemplateForm
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
     object_detail_content = None
 
     def get_selected_objects_parents_name(self, selected_objects):
@@ -5068,7 +5055,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(

@@ -10,16 +10,6 @@ from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views import generic
-from nautobot.core.views.mixins import (
-    ObjectBulkDestroyViewMixin,
-    ObjectBulkRenameViewMixin,
-    ObjectBulkUpdateViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectDetailViewMixin,
-    ObjectListViewMixin,
-    ObjectNotesViewMixin,
-)
 from nautobot.core.views.utils import common_detail_view_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.tables import DeviceTable
@@ -314,17 +304,7 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
 #
 
 
-class VMInterfaceUIViewSet(
-    ComponentCreateViewMixin,
-    ObjectListViewMixin,
-    ObjectDetailViewMixin,
-    ObjectDestroyViewMixin,
-    ObjectBulkDestroyViewMixin,
-    ObjectBulkUpdateViewMixin,
-    ObjectBulkRenameViewMixin,
-    ObjectChangeLogViewMixin,
-    ObjectNotesViewMixin,
-):
+class VMInterfaceUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
     queryset = VMInterface.objects.all()
     filterset_class = filters.VMInterfaceFilterSet
     filterset_form_class = forms.VMInterfaceFilterForm
@@ -388,24 +368,6 @@ class VMInterfaceUIViewSet(
                 )
             )
 
-    class IPAddressesTablePanel(object_detail.ObjectsTablePanel):
-        """Table panel whose right-aligned "Add" button opens the IP address create form pre-assigned to
-        this VM interface.
-
-        Uses the `?vminterface=<pk>` param the IP address edit view expects (singular, and distinct from
-        the `vm_interfaces` list filter used for the "view all" link).
-        """
-
-        def _get_table_add_url(self, context):
-            request = context["request"]
-            if not request.user.has_perm("ipam.add_ipaddress"):
-                return None
-            instance = object_detail.get_obj_from_context(context)
-            return_url = context.get("return_url", instance.get_absolute_url())
-            return (
-                reverse("ipam:ipaddress_add") + "?" + urlencode({"vminterface": instance.pk, "return_url": return_url})
-            )
-
     object_detail_content = object_detail.ObjectDetailContent(
         panels=[
             object_detail.ObjectFieldsPanel(
@@ -415,14 +377,13 @@ class VMInterfaceUIViewSet(
                 exclude_fields=["untagged_vlan"],
             ),
             # IP addresses
-            IPAddressesTablePanel(
+            object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
                 context_table_key="ipaddress_table",
-                # The right-aligned Add button is built by the overridden `_get_table_add_url` (uses the
-                # singular `vminterface` param); `related_field_name` below is only for the "view all" link.
                 related_list_url_name="ipam:ipaddress_list",
                 related_field_name="vm_interfaces",
+                add_button_route=None,
             ),
             # Tagged + untagged VLANs. Per-row edit lives in the table's actions column (see
             # InterfaceVLANTable); a VLAN isn't created from an interface, so no Add button here.
