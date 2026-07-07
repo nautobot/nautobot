@@ -27,7 +27,12 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, VIRTUAL_IFACE_TYPES
+from nautobot.dcim.constants import (
+    NONCONNECTABLE_IFACE_TYPES,
+    TERMINATION_DEVICE_FK_FIELDS,
+    TERMINATION_FK_FIELDS,
+    VIRTUAL_IFACE_TYPES,
+)
 from nautobot.dcim.filters import (
     CableFilterSet,
     CableTypeFilterSet,
@@ -3602,6 +3607,26 @@ class CableTestCase(FilterTestCases.FilterTestCase):
         cables[0].tags.set(Tag.objects.get_for_model(Cable))
         cables[1].tags.set(Tag.objects.get_for_model(Cable)[:3])
 
+    def _expected_cables_by_device(self, suffix, values=None, include_null=False):
+        """Cables expected from the device-family filters, mirroring `CableFilterSet`: a cable matches
+        if any of its terminations' ``device<suffix>`` is in ``values`` (and/or is null). Spans every
+        device-bearing termination type (interface, console port, front port, ...), not just
+        interfaces, since the cable test data also terminates on console ports.
+        """
+        query = Q()
+        if values:
+            for fk in TERMINATION_DEVICE_FK_FIELDS:
+                query |= Q(**{f"terminations__{fk}__device{suffix}__in": values})
+        if include_null:
+            for fk in TERMINATION_DEVICE_FK_FIELDS:
+                query |= Q(
+                    **{f"terminations__{fk}__isnull": False, f"terminations__{fk}__device{suffix}__isnull": True}
+                )
+            for fk in TERMINATION_FK_FIELDS:
+                if fk not in TERMINATION_DEVICE_FK_FIELDS:  # circuit termination / power feed: no device
+                    query |= Q(**{f"terminations__{fk}__isnull": False})
+        return self.queryset.filter(query).distinct()
+
     def test_length_unit(self):
         # TODO: Not a generic_filter_test because this is a single-value filter
         params = {"length_unit": [CableLengthUnitChoices.UNIT_FOOT]}
@@ -3724,28 +3749,24 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"rack_id": [self.racks[0].pk, self.racks[1].pk]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    terminations___termination_device__rack__in=[self.racks[0], self.racks[1]]
-                ).distinct(),
+                self._expected_cables_by_device("__rack", values=[self.racks[0], self.racks[1]]),
             )
             params = {"rack_id": ["null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(terminations___termination_device__rack__isnull=True).distinct(),
+                self._expected_cables_by_device("__rack", include_null=True),
             )
         with self.subTest("rack"):
             params = {"rack": [self.racks[0].name, self.racks[1].name]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    terminations___termination_device__rack__in=[self.racks[0], self.racks[1]]
-                ).distinct(),
+                self._expected_cables_by_device("__rack", values=[self.racks[0], self.racks[1]]),
             )
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), 4)
             params = {"rack": ["null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(terminations___termination_device__rack__isnull=True).distinct(),
+                self._expected_cables_by_device("__rack", include_null=True),
             )
 
     def test_location(self):
@@ -3754,17 +3775,13 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"location": [self.locations[0].name, self.locations[1].name]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    terminations___termination_device__location__in=[self.locations[0], self.locations[1]]
-                ).distinct(),
+                self._expected_cables_by_device("__location", values=[self.locations[0], self.locations[1]]),
             )
         with self.subTest("location_id"):
             params = {"location_id": [self.locations[0].pk, self.locations[1].pk]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    terminations___termination_device__location__in=[self.locations[0], self.locations[1]]
-                ).distinct(),
+                self._expected_cables_by_device("__location", values=[self.locations[0], self.locations[1]]),
             )
 
     def test_tenant(self):
@@ -3774,29 +3791,23 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(terminations___termination_device__tenant__in=tenants).distinct(),
+                self._expected_cables_by_device("__tenant", values=tenants),
             )
             params = {"tenant_id": [tenants[0].pk, "null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    Q(terminations___termination_device__tenant=tenants[0])
-                    | Q(terminations___termination_device__tenant__isnull=True)
-                ).distinct(),
+                self._expected_cables_by_device("__tenant", values=[tenants[0]], include_null=True),
             )
         with self.subTest("tenant"):
             params = {"tenant": [tenants[0].name, tenants[1].name]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(terminations___termination_device__tenant__in=tenants).distinct(),
+                self._expected_cables_by_device("__tenant", values=tenants),
             )
             params = {"tenant": [tenants[0].name, "null"]}
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
-                self.queryset.filter(
-                    Q(terminations___termination_device__tenant=tenants[0])
-                    | Q(terminations___termination_device__tenant__isnull=True)
-                ).distinct(),
+                self._expected_cables_by_device("__tenant", values=[tenants[0]], include_null=True),
             )
 
     def test_termination_type(self):

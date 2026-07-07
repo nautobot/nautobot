@@ -36,6 +36,7 @@ from nautobot.dcim.constants import (
     CONTENT_TYPE_TO_TERMINATION_FK,
     MODULE_RECURSION_DEPTH_LIMIT,
     NONCONNECTABLE_IFACE_TYPES,
+    TERMINATION_DEVICE_FK_FIELDS,
     TERMINATION_FK_FIELDS,
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
@@ -1530,7 +1531,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         method="filter_device_id",
-        field_name="terminations___termination_device",
+        field_name="terminations",
         label="Device (ID)",
     )
     device = extend_schema_field({"type": "string"})(
@@ -1641,46 +1642,59 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             return annotated.filter(Q(_has_a_side=False) | Q(_has_b_side=False))
         return annotated.filter(_has_a_side=True, _has_b_side=True)
 
+    @staticmethod
+    def _termination_device_cable_ids(suffix, values, include_null):
+        """Cable IDs having a termination whose ``device<suffix>`` matches ``values`` (and/or is null).
+
+        Reaches each termination's device directly through the per-type device-component FKs on the
+        join table (``interface__device``, ``front_port__device``, ...). Circuit terminations and
+        power feeds have no device, so they only ever contribute to the ``include_null`` set.
+
+        `suffix` is "" (the device itself) or a related lookup such as "__rack" / "__location__name".
+        """
+        query = Q()
+        if values:
+            for fk in TERMINATION_DEVICE_FK_FIELDS:
+                query |= Q(**{f"{fk}__device{suffix}__in": values})
+        if include_null:
+            # A device-component row whose device (or its `suffix` relation) is null...
+            for fk in TERMINATION_DEVICE_FK_FIELDS:
+                query |= Q(**{f"{fk}__isnull": False, f"{fk}__device{suffix}__isnull": True})
+            # ...or a device-less termination (circuit termination / power feed) has no device at all.
+            for fk in TERMINATION_FK_FIELDS:
+                if fk not in TERMINATION_DEVICE_FK_FIELDS:
+                    query |= Q(**{f"{fk}__isnull": False})
+        if not query:
+            return CableToCableTermination.objects.none()
+        return CableToCableTermination.objects.filter(query).values_list("cable_id", flat=True)
+
     def filter_device(self, queryset, name, value):
-        """Filter cables by device-related fields via the cached `_termination_device` FK on the join table.
+        """Filter cables by device-related fields, resolving each termination's device via its
+        per-type FK on the join table (`<termination_fk>__device...`).
 
         The filter's `field_name` (e.g. "device", "device__rack", "device__location") is translated
-        into a lookup path by replacing the leading "device" segment with `_termination_device`.
+        into the lookup suffix applied after `device` on each termination FK.
         """
         filter_obj = self.filters.get(name)
         field_name = filter_obj.field_name if filter_obj else name
         if field_name == "device":
-            lookup_path = "_termination_device"
+            suffix = ""
         elif field_name.startswith("device__"):
-            lookup_path = "_termination_device__" + field_name[len("device__") :]
+            suffix = "__" + field_name[len("device__") :]
         else:  # pragma: no cover  # should never happen
             raise ValueError(f"filter_device() expects a field_name of 'device' or 'device__*'; got {field_name!r}")
 
         has_null = any(v == "null" for v in value)
-        value = [v for v in value if v != "null"]
-        if value:
-            cable_ids = CableToCableTermination.objects.filter(**{f"{lookup_path}__in": value}).values_list(
-                "cable_id", flat=True
-            )
-            if has_null:
-                null_cable_ids = CableToCableTermination.objects.filter(**{f"{lookup_path}__isnull": True}).values_list(
-                    "cable_id", flat=True
-                )
-                return queryset.filter(Q(pk__in=cable_ids) | Q(pk__in=null_cable_ids))
-            return queryset.filter(pk__in=cable_ids)
-        elif has_null:
-            cable_ids = CableToCableTermination.objects.filter(**{f"{lookup_path}__isnull": True}).values_list(
-                "cable_id", flat=True
-            )
-            return queryset.filter(pk__in=cable_ids)
-        return queryset
+        values = [v for v in value if v != "null"]
+        if not values and not has_null:
+            return queryset
+        cable_ids = self._termination_device_cable_ids(suffix, values, include_null=has_null)
+        return queryset.filter(pk__in=cable_ids)
 
     def generate_query_filter_device_id(self, value):
         if not hasattr(value, "__iter__") or isinstance(value, str):
             value = [value]
-        cable_ids = CableToCableTermination.objects.filter(_termination_device_id__in=value).values_list(
-            "cable_id", flat=True
-        )
+        cable_ids = self._termination_device_cable_ids("", value, include_null=False)
         return Q(pk__in=cable_ids)
 
     def filter_device_id(self, queryset, name, value):

@@ -1101,26 +1101,6 @@ def termination_fk_field(model_or_instance):
         ) from None
 
 
-def _resolve_termination_device(termination):
-    """Return the effective parent Device of a termination, walking through any chain of nested modules."""
-    if termination is None:
-        return None
-    direct_device = getattr(termination, "device", None)
-    if direct_device is not None:
-        return direct_device
-    module = getattr(termination, "module", None)
-    while module is not None:
-        if module.device is not None:
-            return module.device
-        parent_bay = getattr(module, "parent_module_bay", None)
-        if parent_bay is None:
-            return None
-        if getattr(parent_bay, "parent_device", None) is not None:
-            return parent_bay.parent_device
-        module = getattr(parent_bay, "parent_module", None)
-    return None
-
-
 def _at_most_one_termination_q():
     """Build a Q expression that's true iff at most one of the TERMINATION_FK_FIELDS is non-null.
 
@@ -1235,17 +1215,6 @@ class CableToCableTermination(BaseModel):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
         help_text="The connector number on this cable end. Always 1 for standard cables.",
-    )
-
-    # Cached parent Device for filtering (resolved through any chain of nested modules at save time).
-    # Necessary denormalization: the effective device of a modular component is reached through a
-    # recursive parent_module_bay/parent_module chain, which can't be expressed as a single ORM JOIN.
-    _termination_device = models.ForeignKey(
-        to="dcim.Device",
-        on_delete=models.CASCADE,
-        related_name="+",
-        blank=True,
-        null=True,
     )
 
     natural_key_field_names = ["pk"]
@@ -1382,11 +1351,6 @@ class CableToCableTermination(BaseModel):
                     if peer_term is None:
                         continue
                     Cable.validate_termination_pair(term, peer_term)
-
-    def save(self, *args, **kwargs):
-        # Cache the effective parent device for filtering. See `_termination_device` field comment.
-        self._termination_device = _resolve_termination_device(self.termination)
-        super().save(*args, **kwargs)
 
 
 @extras_features("graphql")
