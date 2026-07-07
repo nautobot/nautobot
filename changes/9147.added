@@ -1,0 +1,1 @@
+Added rendering of IP Ranges inline within the IP Addresses tab of the Prefix detail view, including nested available-IP blocks and subtree indentation for contained addresses.

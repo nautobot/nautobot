@@ -44,18 +44,6 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.constants import (
-    CABLE_BREAKOUT_MAX_CONNECTORS,
-    CABLE_BREAKOUT_MAX_LANES,
-    COMPATIBLE_TERMINATION_TYPES,
-    RACK_U_HEIGHT_DEFAULT,
-    RACK_U_HEIGHT_MAXIMUM,
-)
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -121,10 +109,21 @@ from .choices import (
     SubdeviceRoleChoices,
 )
 from .constants import (
+    BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    COMPATIBLE_TERMINATION_TYPES,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
+    RACK_U_HEIGHT_DEFAULT,
+    RACK_U_HEIGHT_MAXIMUM,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
+)
+from .form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
 )
 from .models import (
     Cable,
@@ -174,6 +173,9 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .signals import defer_cable_path_rebuilds
+from .termination_field_set import CableTerminationFieldSet
+from .utils import build_connector_row_layout
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +217,23 @@ class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
         queryset=Module.objects.all(),
         required=False,
         label="Module",
+    )
+
+
+class DeviceComponentTemplateFilterForm(NautobotFilterForm):
+    q = forms.CharField(required=False, label="Search")
+    device_type = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(),
+        required=False,
+        label="Device Type",
+    )
+
+
+class ModularDeviceComponentTemplateFilterForm(DeviceComponentTemplateFilterForm):
+    module_type = DynamicModelMultipleChoiceField(
+        queryset=ModuleType.objects.all(),
+        required=False,
+        label="Module Type",
     )
 
 
@@ -1266,6 +1285,10 @@ class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["label", "type", "description"]
 
 
+class ConsolePortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ConsolePortTemplate
+
+
 class ConsoleServerPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ConsoleServerPortTemplate
@@ -1308,6 +1331,10 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["label", "type", "description"]
+
+
+class ConsoleServerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ConsoleServerPortTemplate
 
 
 class PowerPortTemplateForm(ModularComponentTemplateForm):
@@ -1383,6 +1410,10 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
             "allocated_draw",
             "description",
         ]
+
+
+class PowerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = PowerPortTemplate
 
 
 class PowerOutletTemplateForm(ModularComponentTemplateForm):
@@ -1475,6 +1506,10 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
             self.fields["power_port_template"].widget.attrs["disabled"] = True
 
 
+class PowerOutletTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = PowerOutletTemplate
+
+
 class InterfaceTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = InterfaceTemplate
@@ -1551,6 +1586,10 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["label", "port_type", "speed", "duplex", "description"]
+
+
+class InterfaceTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = InterfaceTemplate
 
 
 class FrontPortTemplateForm(ModularComponentTemplateForm):
@@ -1676,6 +1715,10 @@ class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
+class FrontPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = FrontPortTemplate
+
+
 class RearPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = RearPortTemplate
@@ -1731,6 +1774,10 @@ class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
+class RearPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = RearPortTemplate
+
+
 class DeviceBayTemplateForm(ComponentTemplateForm):
     class Meta:
         model = DeviceBayTemplate
@@ -1758,6 +1805,10 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ("label", "description")
+
+
+class DeviceBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = DeviceBayTemplate
 
 
 class ModuleBayTemplateForm(ModularComponentTemplateForm):
@@ -1871,6 +1922,10 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ("label", "description", "module_family")
+
+
+class ModuleBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ModuleBayTemplate
 
 
 #
@@ -4389,13 +4444,21 @@ class CableForm(NautobotModelForm):
         # submission rather than the form silently falling back to a default layout.
         self._init_warnings: list[tuple] = []
 
-        # Disable cable type field for cables with incompatible termination types
-        # TODO revisit this, should permit non-breakout CableTypes here...
+        # When this cable's existing terminations don't support breakout lane modeling (e.g. console
+        # or power terminations), restrict the cable type choices to single-connector types. Multi-
+        # connector types require breakout-eligible terminations (enforced in
+        # `CableToCableTermination.clean`). Previously the whole field was disabled, which wrongly
+        # blocked valid single-connector cable types too.
         if self.instance and self.instance.present_in_database and not self.instance.breakout_eligible:
-            self.fields["cable_type"].disabled = True
+            self.fields["cable_type"].queryset = self.fields["cable_type"].queryset.filter(
+                a_connectors=1, b_connectors=1
+            )
+            self.fields["cable_type"].widget.add_query_param("a_connectors", 1)
+            self.fields["cable_type"].widget.add_query_param("b_connectors", 1)
             self.fields["cable_type"].help_text = (
-                "Cable types are not available for this cable. "
-                "Only cables with interface, front port, rear port, or circuit termination types support breakout."
+                "Only single-connector cable types are available because this cable's terminations "
+                "do not support breakout. Interfaces, front ports, rear ports, and circuit terminations "
+                "support multi-connector breakout cable types."
             )
 
         # Resolve HTMX endpoint URLs. The lane-form endpoint differs by saved-ness (renders the
@@ -4432,8 +4495,6 @@ class CableForm(NautobotModelForm):
 
     def _init_lane_fields(self):
         """Add connection fields. One picker per connector per side."""
-        from nautobot.dcim.termination_field_set import CableTerminationFieldSet
-
         cable_type = None
 
         # Determine the cable type. Sources, in priority order:
@@ -4484,11 +4545,12 @@ class CableForm(NautobotModelForm):
         if self.instance and self.instance.present_in_database:
             conns = self.instance.get_connections()
             for row in conns["rows"]:
+                # Rows covered by an earlier cell's rowspan carry a None cell on that side — skip them.
                 a = row["a"]
                 b = row["b"]
-                if a["connector"] not in existing_a:
+                if a is not None and a["connector"] not in existing_a:
                     existing_a[a["connector"]] = a["termination"]
-                if b["connector"] not in existing_b:
+                if b is not None and b["connector"] not in existing_b:
                     existing_b[b["connector"]] = b["termination"]
 
         # Pre-populate A-side from URL params (used by the connect flow). Each failure mode here
@@ -4648,39 +4710,20 @@ class CableForm(NautobotModelForm):
                     "b": b_enriched.get(1, {}),
                     "a_rowspan": 1,
                     "b_rowspan": 1,
-                    "_ac": 1,
-                    "_bc": 1,
                 }
             ]
         else:
-            a_to_b = {}
-            b_to_a = {}
-            for entry in cable_type.mapping:
-                a_to_b.setdefault(entry["a_connector"], set()).add(entry["b_connector"])
-                b_to_a.setdefault(entry["b_connector"], set()).add(entry["a_connector"])
-
-            # Build flat rows with rowspan hints (same logic as get_connections)
-            rows = []
-            a_seen = set()
-            b_seen = set()
-            for entry in cable_type.mapping:
-                ac, bc = entry["a_connector"], entry["b_connector"]
-                if (ac, bc) in {(r["_ac"], r["_bc"]) for r in rows}:
-                    continue
-                a_rowspan = len(a_to_b.get(ac, [])) if ac not in a_seen else 0
-                b_rowspan = len(b_to_a.get(bc, [])) if bc not in b_seen else 0
-                a_seen.add(ac)
-                b_seen.add(bc)
-                rows.append(
-                    {
-                        "a": a_enriched.get(ac, {}),
-                        "b": b_enriched.get(bc, {}),
-                        "a_rowspan": a_rowspan,
-                        "b_rowspan": b_rowspan,
-                        "_ac": ac,
-                        "_bc": bc,
-                    }
-                )
+            # Reuse the same layout helper as `Cable.get_connections` so the edit form and the
+            # detail view render identically structured tables.
+            rows = [
+                {
+                    "a": a_enriched.get(layout["a_connector"], {}),
+                    "b": b_enriched.get(layout["b_connector"], {}),
+                    "a_rowspan": layout["a_rowspan"],
+                    "b_rowspan": layout["b_rowspan"],
+                }
+                for layout in build_connector_row_layout(cable_type.mapping)
+            ]
 
         return {
             "rows": rows,
@@ -4734,6 +4777,23 @@ class CableForm(NautobotModelForm):
                 Cable.validate_termination_pair(term_a, term_b)
             except ValidationError as exc:
                 self.add_error(f"b_conn_{entry['b_connector']}_termination", exc)
+
+        # Multi-connector (breakout) cable types only support breakout-eligible termination types.
+        # Surface this as a per-field error here rather than letting `CableToCableTermination.clean()`
+        # raise from `save()`.
+        if cable_type is not None and cable_type.is_multi_connector:
+            for side_info, side_label in ((info["a_side"], "a"), (info["b_side"], "b")):
+                for conn in side_info:
+                    field_name = f"{side_label}_conn_{conn['connector']}_termination"
+                    termination = cleaned_data.get(field_name)
+                    if (
+                        termination is not None
+                        and termination._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES
+                    ):
+                        self.add_error(
+                            field_name,
+                            f"A {termination._meta.verbose_name} cannot terminate a multi-connector cable type.",
+                        )
 
         return cleaned_data
 
@@ -4795,8 +4855,6 @@ class CableForm(NautobotModelForm):
         # `defer_cable_path_rebuilds()` wraps the block in a transaction (so a creation failure
         # mid-loop rolls back the delete) AND coalesces the per-row CableToCableTermination
         # signals into one `rebuild_paths(cable)` at context exit.
-        from nautobot.dcim.signals import defer_cable_path_rebuilds
-
         with defer_cable_path_rebuilds():
             CableToCableTermination.objects.filter(cable=cable).delete()
             for side_label, connector, termination in proposed_rows:

@@ -1,12 +1,16 @@
 """Helper code for loading values that may be defined in settings.py/nautobot_config.py *or* in django-constance."""
 
 import contextlib
+from functools import lru_cache
 import logging
 
 from constance import config
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import OperationalError, ProgrammingError
+
+from nautobot.core.choices import NautobotEditionChoices
 
 logger = logging.getLogger(__name__)
 
@@ -37,3 +41,15 @@ def get_settings_or_config(variable_name, fallback=None):
         'Constance configuration does not include an entry for "%s" - must return %s', variable_name, fallback
     )
     return fallback
+
+
+@lru_cache(maxsize=None)
+def get_nautobot_edition():
+    """Return the active Nautobot edition: the highest-weighted `nautobot_edition` declared by any installed app."""
+    current_edition = NautobotEditionChoices.COMMUNITY
+    editions_by_weight = NautobotEditionChoices.WEIGHTS
+    for app_config in apps.get_app_configs():
+        app_edition = getattr(app_config, "nautobot_edition", None)
+        if app_edition in editions_by_weight and editions_by_weight[app_edition] > editions_by_weight[current_edition]:
+            current_edition = app_edition
+    return current_edition
