@@ -3,7 +3,7 @@ import socket
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F, Prefetch
+from django.db.models import Prefetch
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -19,6 +19,7 @@ from rest_framework.viewsets import GenericViewSet, ViewSet
 
 from nautobot.circuits.models import Circuit
 from nautobot.cloud.models import CloudAccount
+from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.exceptions import ServiceUnavailable
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.serializers import StatsSerializer
@@ -681,6 +682,20 @@ class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
     filterset_class = filters.PowerConnectionFilterSet
 
 
+class InterfaceConnectionPermissions(TokenPermissions):
+    """Gate the interface-connections endpoint on Interface view permission.
+
+    Its queryset is over `CablePath` (an internal model whose `view_cablepath` permission isn't
+    expected to be relevant to anyone), but the endpoint exposes interface-to-interface connections,
+    so it should require `dcim.view_interface` — matching
+    `InterfaceConnectionsListView.get_required_permission()` rather than the `view_cablepath` the
+    queryset's model would otherwise imply.
+    """
+
+    def get_required_permissions(self, method, model_cls):
+        return ["dcim.view_interface"]
+
+
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     """
     Lists interface-to-interface connections.
@@ -690,16 +705,20 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     historically exposed (`interface_a`, `interface_b`, `connected_endpoint_reachable`).
     """
 
-    queryset = CablePath.objects.filter(
-        origin_type__app_label="dcim",
-        origin_type__model="interface",
-        destination_type__app_label="dcim",
-        destination_type__model="interface",
-        # Canonicalize each iface↔iface pair; see InterfaceConnectionsListView for the rationale.
-        origin_id__lt=F("destination_id"),
-    ).prefetch_related("origin", "destination")
+    # Shared with the UI Interface Connections list view via `CablePath.interface_connections()`:
+    # trunk-onto-one-side canonicalization (each breakout lane one row, reverse fan-out rows dropped)
+    # plus consistent ordering.
+    queryset = CablePath.interface_connections()
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
+    permission_classes = [InterfaceConnectionPermissions]
+
+    def get_queryset(self):
+        # Apply Interface object-level view permission to BOTH endpoints of each connection, matching
+        # `InterfaceConnectionsListView.has_permission()`. Restricting on the CablePath model itself
+        # isn't meaningful here (its object permissions aren't expected to be relevant to anyone).
+        visible_ifaces = Interface.objects.restrict(self.request.user, "view").values("pk")
+        return super().get_queryset().filter(origin_id__in=visible_ifaces, destination_id__in=visible_ifaces)
 
 
 #

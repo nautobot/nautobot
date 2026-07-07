@@ -84,6 +84,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
@@ -3963,6 +3964,122 @@ class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
                 "interface": interfaces[8].pk,
             },
         ]
+
+
+class InterfaceConnectionTest(APITestCase):
+    """Coverage for the read-only `/dcim/interface-connections/` REST endpoint.
+
+    Shares `CablePath.interface_connections()` with the UI list view: a breakout cable surfaces as one
+    connection per lane with the trunk canonicalized onto the `interface_a` side, and the endpoint is
+    gated on Interface (not CablePath) view permission with both endpoints restricted per object perms.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        device_type = DeviceType.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        iface_status = Status.objects.get_for_model(Interface).first()
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        def make_device(name):
+            return Device.objects.create(
+                name=name, location=location, device_type=device_type, role=device_role, status=device_status
+            )
+
+        # Point-to-point connection.
+        cls.p2p_a = Interface.objects.create(device=make_device("API Conn A"), name="p2p-a", status=iface_status)
+        cls.p2p_b = Interface.objects.create(device=make_device("API Conn B"), name="p2p-b", status=iface_status)
+        Cable(termination_a=cls.p2p_a, termination_b=cls.p2p_b, status=connected).save()
+
+        # 1x4 breakout: trunk fanning out to four leaf interfaces.
+        breakout_type = CableType.objects.create(name="API 1x4 breakout", a_connectors=1, b_connectors=4, total_lanes=4)
+        cls.trunk = Interface.objects.create(
+            device=make_device("API Conn Trunk"),
+            name="Trunk",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=iface_status,
+        )
+        leaf_device = make_device("API Conn Leaf")
+        cls.leaves = [
+            Interface.objects.create(device=leaf_device, name=f"Leaf {i}", status=iface_status) for i in range(1, 5)
+        ]
+        cable = Cable(termination_a=cls.trunk, termination_b=cls.leaves[0], cable_type=breakout_type, status=connected)
+        cable.save()
+        for connector, leaf in enumerate(cls.leaves[1:], start=2):
+            cable.add_termination(leaf, "B", connector=connector)
+
+        cls.url = reverse("dcim-api:interfaceconnections-list")
+
+    @staticmethod
+    def _ids_a(results):
+        return {str(row["interface_a"]["id"]) for row in results}
+
+    def test_list_gated_on_interface_view_permission(self):
+        # No permissions -> denied.
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        # The queryset-model-derived `view_cablepath` is not the relevant permission and grants nothing.
+        self.add_permissions("dcim.view_cablepath")
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        # `dcim.view_interface` (what the UI view requires) grants access.
+        self.add_permissions("dcim.view_interface")
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+
+    def test_breakout_lanes_listed_with_trunk_on_side_a(self):
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = response.data["results"]
+
+        # All four lanes present, trunk always on interface_a, each leaf as interface_b exactly once.
+        trunk_rows = [row for row in results if str(row["interface_a"]["id"]) == str(self.trunk.pk)]
+        self.assertEqual(len(trunk_rows), 4)
+        self.assertEqual(
+            {str(row["interface_b"]["id"]) for row in trunk_rows},
+            {str(leaf.pk) for leaf in self.leaves},
+        )
+        # Reverse fan-out rows are dropped: no leaf appears on the interface_a side.
+        self.assertFalse(self._ids_a(results) & {str(leaf.pk) for leaf in self.leaves})
+        # The four breakout lanes are returned consecutively (shared canonical ordering).
+        trunk_indexes = [i for i, row in enumerate(results) if str(row["interface_a"]["id"]) == str(self.trunk.pk)]
+        self.assertEqual(trunk_indexes, list(range(trunk_indexes[0], trunk_indexes[0] + 4)))
+        # Point-to-point connection surfaces exactly once, with reachability exposed.
+        p2p_pks = {str(self.p2p_a.pk), str(self.p2p_b.pk)}
+        p2p_rows = [row for row in results if {str(row["interface_a"]["id"]), str(row["interface_b"]["id"])} == p2p_pks]
+        self.assertEqual(len(p2p_rows), 1)
+        self.assertTrue(p2p_rows[0]["connected_endpoint_reachable"])
+
+    def test_object_permission_restricts_both_endpoints(self):
+        # Grant view for the trunk + three of its four leaves only. An ObjectPermission also satisfies
+        # the model-level `view_interface` gate, so no separate add_permissions is needed.
+        visible = [self.trunk, *self.leaves[:3]]
+        obj_perm = ObjectPermission(
+            name="Visible interfaces",
+            constraints={"pk__in": [iface.pk for iface in visible]},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Interface))
+
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = response.data["results"]
+
+        # Only lanes whose far endpoint is visible survive; the lane to the hidden leaf is filtered out.
+        trunk_rows = [row for row in results if str(row["interface_a"]["id"]) == str(self.trunk.pk)]
+        self.assertEqual(len(trunk_rows), 3)
+        self.assertEqual(
+            {str(row["interface_b"]["id"]) for row in trunk_rows},
+            {str(leaf.pk) for leaf in self.leaves[:3]},
+        )
+        self.assertNotIn(str(self.leaves[3].pk), {str(row["interface_b"]["id"]) for row in trunk_rows})
+        # The point-to-point connection (neither endpoint granted) is entirely hidden.
+        p2p_pks = {str(self.p2p_a.pk), str(self.p2p_b.pk)}
+        self.assertFalse(
+            any({str(row["interface_a"]["id"]), str(row["interface_b"]["id"])} == p2p_pks for row in results)
+        )
 
 
 class ConnectedDeviceTest(APITestCase):
