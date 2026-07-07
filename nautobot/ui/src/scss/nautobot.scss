@@ -1641,8 +1641,19 @@ html, body {
 }
 
 body {
-  /* Transition below is Bootstrap `$transition-collapse-width` with `width` replaced by `padding-inline`. */
-  @include transition(padding-inline .35s ease);
+  /*
+   * Transition below is Bootstrap `$transition-collapse-width` with `width` replaced by `padding-inline-start`.
+   *
+   * Only the `-start` (sidenav) side is transitioned on purpose. When a modal opens, Bootstrap compensates for the
+   * removed scrollbar by writing an inline `padding-right` on `<body>` (see `_setScrollbar()` in bootstrap/js/modal).
+   * The scrollbar lives on the viewport because `<html>`'s default `overflow: visible` propagates `<body>`'s
+   * `overflow-y: scroll` up to it, so Bootstrap measures a real width and does adjust the padding. In LTR
+   * `padding-right` is the same box edge as `padding-inline-end`, so transitioning the `padding-inline` shorthand
+   * would animate that modal-driven change and make the whole page slide sideways ("wiggle") on every modal
+   * open/close. Restricting the transition to `padding-inline-start` leaves the sidenav collapse animation intact
+   * while the drawer/modal side (`-end`) updates instantly. See NAPPS-1136.
+   */
+  @include transition(padding-inline-start .35s ease);
   display: grid;
   grid-template-areas:
     "sidenav banner-global-area drawer"
