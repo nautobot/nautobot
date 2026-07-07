@@ -842,9 +842,9 @@ class IPAddressInterfaceTable(InterfaceTable):
         fields = (
             "pk",
             "name",
+            "device",
             "status",
             "role",
-            "device",
             "label",
             "module",
             "enabled",
@@ -873,11 +873,11 @@ class IPAddressInterfaceTable(InterfaceTable):
         )
         default_columns = [
             "pk",
+            "device",
             "name",
             "status",
             "role",
             "label",
-            "device",
             "enabled",
             "type",
             "parent_interface",
