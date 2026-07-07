@@ -475,6 +475,19 @@ class MultiValueCharFieldTest(testing.TestCase):
             ["device-1", "device-2", "rack-1"],
         )
 
+    def test_get_bound_field_with_string_value(self):
+        """A bare string value must render as a single choice, not be iterated character by character."""
+
+        class TestForm(django_forms.Form):
+            test_field = forms.MultiValueCharField(required=False)
+
+        form = TestForm(data={"test_field": "192.168.0.0/16"})
+        bound_field = form["test_field"]
+        self.assertEqual(
+            bound_field.field.widget.choices,
+            [("192.168.0.0/16", "192.168.0.0/16")],
+        )
+
 
 class NumericArrayFieldTest(testing.TestCase):
     def setUp(self):

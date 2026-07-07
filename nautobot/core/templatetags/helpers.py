@@ -220,6 +220,10 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
+    # Gracefully handle null values
+    if value is None:
+        value = ""
+
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 

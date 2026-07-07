@@ -6,6 +6,8 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+# use_directory_urls: false is appropriate for local development and for packaging compiled docs as static files.
+# Note that for deployment to ReadTheDocs, you may want to override this (e.g. `mkdocs build --use-directory-urls`)
 use_directory_urls: false
 strict: true
 theme:
@@ -406,6 +408,7 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+              - Homepage Panels: "user-guide/feature-guides/getting-started/homepage-panels.md"
           - Breakout Cables: "user-guide/feature-guides/breakout-cables.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"

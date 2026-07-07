@@ -54,7 +54,13 @@ from rest_framework.versioning import AcceptHeaderVersioning
 from rest_framework.views import APIView
 
 from nautobot.core.celery import app
-from nautobot.core.constants import HOMEPAGE_PANELS_LAYOUT_COLUMNS, LIVE_SEARCH_MAX_RESULTS, SEARCH_MAX_RESULTS
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import (
+    HOMEPAGE_PANELS_LAYOUT_COLUMNS,
+    LIVE_SEARCH_MAX_RESULTS,
+    NAUTOBOT_EDITION_URLS,
+    SEARCH_MAX_RESULTS,
+)
 from nautobot.core.releases import get_latest_release
 from nautobot.core.templatetags.helpers import has_one_or_more_perms, slugify
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
@@ -801,10 +807,17 @@ class AboutView(AccessMixin, UIComponentsMixin, TemplateView):
         support_expiration_date = get_settings_or_config("NTC_SUPPORT_CONTRACT_EXPIRATION_DATE")
         support_contract_active = support_expiration_date and support_expiration_date >= datetime.date.today()
 
+        # Installed edition
+        nautobot_edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        nautobot_edition_display = NautobotEditionChoices.as_dict().get(nautobot_edition, nautobot_edition)
+        edition_url = NAUTOBOT_EDITION_URLS.get(nautobot_edition, "https://nautobot.com")
+
         context = self.get_context_data()
         context.update(
             {
                 "new_release": new_release,
+                "nautobot_edition": nautobot_edition_display,
+                "edition_url": edition_url,
                 "support_contract_active": support_contract_active,
                 "support_expiration_date": support_expiration_date,
                 "view_titles": self.get_view_titles(),
