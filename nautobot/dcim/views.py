@@ -11,7 +11,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import F, Prefetch, ProtectedError
+from django.db.models import F, Prefetch, ProtectedError, Window
+from django.db.models.functions import RowNumber
 from django.forms import (
     Form,
     modelformset_factory,
@@ -5672,25 +5673,27 @@ class InterfaceConnectionsListView(ConnectionsListView):
         # CablePath view permission (which is the model of the underlying queryset).
         return "dcim.view_interface"
 
-    def get_queryset(self):
+    @staticmethod
+    def base_queryset():
         """
-        Build a CablePath queryset of interface-to-interface connections.
+        Build the canonical CablePath queryset of interface-to-interface connections for the list view.
 
-        Driven from CablePath rather than Interface so each connection is naturally one row (independent
-        of breakout-cable lanes). Lazy-built here so `ContentType.objects.get_for_model` doesn't run at
-        import time.
+        Delegates to `CablePath.interface_connections()` (shared with the REST API so both stay
+        consistent) for the trunk-onto-one-side canonicalization and ordering, then adds the UI-only
+        `group_row` window annotation — the lane index within each origin (1 for the first lane) — so
+        the table can blank the repeated trunk cell on continuation rows of a breakout.
         """
-        iface_ct = ContentType.objects.get_for_model(Interface)
-        qs = CablePath.objects.filter(
-            origin_type=iface_ct,
-            destination_type=iface_ct,
-            # Canonicalize each iface↔iface pair: each connection produces two CablePaths (one per
-            # direction); keep only the one whose origin_id is the lower of the two. Breakout-lane
-            # CablePaths between distinct pairs are independent rows and all survive.
-            origin_id__lt=F("destination_id"),
-        ).prefetch_related("origin", "destination")
+        return CablePath.interface_connections().annotate(
+            group_row=Window(
+                expression=RowNumber(),
+                partition_by=[F("origin_type"), F("origin_id")],
+                order_by=[F("peer_connector")],
+            )
+        )
+
+    def get_queryset(self):
         if self.queryset is None:
-            self.queryset = qs
+            self.queryset = self.base_queryset()
 
         return self.queryset
 
