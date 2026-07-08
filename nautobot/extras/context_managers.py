@@ -285,7 +285,7 @@ def web_request_context(
 
                 last_action = oc.action
                 last_content_type = oc.changed_object_type
-            _span.set_attribute("changelog.object_change_count", object_change_count)
+            _span.set_attribute("nautobot.core.changelog.object_change_count", object_change_count)
 
 
 @contextmanager

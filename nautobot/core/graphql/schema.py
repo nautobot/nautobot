@@ -514,7 +514,7 @@ def generate_query_mixin():
         schema_type = generate_schema_type(app_name=model._meta.app_label, model=model)
         registry["graphql_types"][type_identifier] = schema_type
 
-    _span.set_attribute("graphql.schema.registered_model_count", len(registered_models))
+    _span.set_attribute("nautobot.core.graphql.schema.registered_model_count", len(registered_models))
     logger.debug("Adding plugins' statically defined graphql schema types")
     # After checking for conflict
     for schema_type in registry["plugin_graphql_types"]:

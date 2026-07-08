@@ -472,18 +472,18 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             "nautobot.extras.relationships",
             "relationship_cache.get [source]",
             **{
-                "relationship_cache.model": concrete_model._meta.label_lower,
-                "relationship_cache.hidden": str(hidden),
+                "nautobot.extras.relationship_cache.model": concrete_model._meta.label_lower,
+                "nautobot.extras.relationship_cache.hidden": str(hidden),
             },
         ) as _span:
             if not get_queryset:
                 listing = cache.get(list_cache_key)
                 if listing is not None:
-                    _span.set_attribute("relationship_cache.hit", True)
+                    _span.set_attribute("nautobot.extras.relationship_cache.hit", True)
                     return listing
             queryset = cache.get(cache_key)
             if queryset is None:
-                _span.set_attribute("relationship_cache.hit", False)
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", False)
                 content_type = ContentType.objects.get_for_model(concrete_model)
                 queryset = (
                     self.get_queryset()
@@ -495,7 +495,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
                 cache.set(cache_key, queryset, timeout=None)
             else:
-                _span.set_attribute("relationship_cache.hit", True)
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", True)
             if not get_queryset:
                 listing = list(queryset)
                 # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
@@ -532,18 +532,18 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             "nautobot.extras.relationships",
             "relationship_cache.get [destination]",
             **{
-                "relationship_cache.model": concrete_model._meta.label_lower,
-                "relationship_cache.hidden": str(hidden),
+                "nautobot.extras.relationship_cache.model": concrete_model._meta.label_lower,
+                "nautobot.extras.relationship_cache.hidden": str(hidden),
             },
         ) as _span:
             if not get_queryset:
                 listing = cache.get(list_cache_key)
                 if listing is not None:
-                    _span.set_attribute("relationship_cache.hit", True)
+                    _span.set_attribute("nautobot.extras.relationship_cache.hit", True)
                     return listing
             queryset = cache.get(cache_key)
             if queryset is None:
-                _span.set_attribute("relationship_cache.hit", False)
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", False)
                 content_type = ContentType.objects.get_for_model(concrete_model)
                 queryset = (
                     self.get_queryset()

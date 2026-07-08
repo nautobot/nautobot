@@ -30,10 +30,10 @@ def traced_span(tracer_name: str, span_name: str, **attributes: Any) -> Iterator
         with traced_span(
             "nautobot.extras.relationships",
             "relationship_cache.get [source]",
-            **{"relationship_cache.model": label, "relationship_cache.hidden": str(hidden)},
+            **{"nautobot.core.relationship_cache.model": label, "nautobot.core.relationship_cache.hidden": str(hidden)},
         ) as span:
             result = cache.get(cache_key)
-            span.set_attribute("relationship_cache.hit", result is not None)
+            span.set_attribute("nautobot.core.relationship_cache.hit", result is not None)
         ```
     """
     tracer = trace.get_tracer(tracer_name)

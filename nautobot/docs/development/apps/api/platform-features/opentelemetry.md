@@ -22,7 +22,7 @@ def get_expensive_thing(self, obj):
         **{"expensive_thing.model": obj._meta.label_lower},
     ) as span:
         result = cache.get(obj.pk)
-        span.set_attribute("expensive_thing.hit", result is not None)
+        span.set_attribute("my_namespace.expensive_thing.hit", result is not None)
         if result is None:
             result = self._compute(obj)
         return result
@@ -65,7 +65,7 @@ class SyncDevices(Job):
         with traced_span("my_app.jobs", "sync_devices.load"):
             records = self._load_source()
         with traced_span("my_app.jobs", "sync_devices.reconcile") as span:
-            span.set_attribute("sync_devices.record_count", len(records))
+            span.set_attribute("my_app.sync_devices.record_count", len(records))
             self._reconcile(records)
 
 
