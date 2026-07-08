@@ -755,67 +755,51 @@ Given the data model, what questions would a user ask?
 
 === "Firewall Cluster"
 
-    Firewall Cluster Cisco FTD / SRX
+    Operating systems and technologies include Cisco Secure Firewall (FTD) and Juniper SRX. Cisco FTD inter-chassis clustering is shown as the representative example; the configuration is applied per chassis through the FXOS CLI (Firepower 4100/9300), which bootstraps the clustered FTD logical device. The same data model drives the equivalent Juniper SRX chassis cluster stanzas.
 
-    TODO: Is it FXOS or FTD??
-
-    A config template driven entirely by the GraphQL response above. The chassis `domain` becomes the cluster group id, the lowest-numbered member takes the `control` role, and each LAG becomes a CCL port channel built from its member interfaces.
+    A config template driven entirely by the GraphQL response above. Each member renders as its own chassis: its cluster control link (CCL) port channel is built from the member's own ports that reference the LAG, and the cluster bootstrap assigns `chassis-id` from `vc_position` with the chassis `domain` as the cluster group name.
 
     ```jinja2
     {% set vc = data.virtual_chassis[0] %}
-    ## Physical Interface Configuration
+    {% for member in vc.members %}
+    # ~~~~~ {{ member.name }} (chassis {{ member.vc_position }}) ~~~~~
 
+    ## Cluster Control Link (CCL) Port Channel Configuration
+
+    {% for lag_name in member.interfaces | selectattr("lag") | map(attribute="lag.name") | unique %}
     scope eth-uplink
       scope fabric a
-    {% for member in vc.members %}
-    {% for port in member.interfaces if port.lag %}
-        scope interface {{ port.name }}
+        create port-channel {{ lag_name | replace("Port-Channel", "") }}
           set port-type cluster
-          enable
-          exit
-    {% endfor %}
-    {% endfor %}
-        exit
-      exit
-    !
-    ## CCL Port Channel Configuration
-
-    {% for member in vc.members %}
-    {% for lag in member.interfaces if lag.type == "LAG" %}
-    scope eth-uplink
-      scope fabric a
-        create port-channel {{ lag.name | replace("Port-Channel", "") }}
           set port-channel-mode active
-    {% for m in vc.members %}
-    {% for port in m.interfaces if port.lag and port.lag.name == lag.name %}
+    {% for port in member.interfaces if port.lag and port.lag.name == lag_name %}
           create member-port {{ port.name }}
-    {% endfor %}
+            exit
     {% endfor %}
           exit
         exit
       exit
     {% endfor %}
-    {% endfor %}
-    !
+
     ## Logical Device (Cluster Bootstrap) Configuration
 
     scope ssa
-    {% for member in vc.members %}
-      scope slot {{ member.vc_position }}
-        scope app-instance ftd {{ vc.name }}
-          set cluster-group-id {{ vc.domain }}
-          set cluster-role {{ "control" if member.name == vc.master.name else "data" }}
+      enter logical-device {{ vc.name }} ftd 1 clustered
+        enter cluster-bootstrap
+          set chassis-id {{ member.vc_position }}
+          set cluster-group name {{ vc.domain }}
+          set mode spanned-etherchannel
           exit
         exit
-    {% endfor %}
       exit
+    {% endfor %}
     ```
 
-    > Note: `cluster-role` is set to `control` on the primary chassis slot and `data` on all others; `cluster-group-id` must match across all members
+    > Note: `set chassis-id` is unique per chassis (from `vc_position`); the cluster group name and the CCL port-channel ID must match on all chassis. Use dedicated high-bandwidth interfaces for the CCL.
 
-    > Note: The CCL port channel ID must match on both chassis; use dedicated high-bandwidth interfaces
+    > Note: The control/data role is not configured — the cluster elects the control unit when it forms. The Nautobot `master` field records which member is expected to hold the control role.
 
-The script below renders the templates against GrpahQL query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
+The script below renders the templates against GraphQL query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
 
 ??? example "Config Generation Script"
 

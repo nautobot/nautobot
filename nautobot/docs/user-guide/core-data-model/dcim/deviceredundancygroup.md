@@ -395,7 +395,7 @@ The following [Design Builder](https://docs.nautobot.com/projects/design-builder
 The following query retrieves a device redundancy group by name, without needing to know any of the member hostnames up front. It is built to answer the "Questions to ask of the data model" below in a single call.
 
 !!! note
-    The `failover_links: interfaces(name__ie: "failover-link")` is a convention, this would work in a scenario where you defined your interface to be named `failover-link`. You can choose other methods (such as a tag or role) and would need ot update accordingly.
+    The `failover_links: interfaces(name__ie: "failover-link")` is a convention, this would work in a scenario where you defined your interface to be named `failover-link`. You can choose other methods (such as a tag or role) and would need to update accordingly.
 
 ```graphql
 query ($redundancy_group: [String]) {
@@ -635,29 +635,27 @@ Given the data model, what questions would a user ask?
 
 === "Firewall HA pair"
 
-    Operating systems and technologies include Palo Alto, Fortinet, and Cisco ASA
+    Operating systems and technologies include Palo Alto, Fortinet, and Cisco ASA. Cisco ASA is shown as the representative example; the same data model drives the equivalent Palo Alto (`high-availability`) and Fortinet (`config system ha`) stanzas.
 
     ```jinja2
     {% set group = data.device_redundancy_groups[0] %}
     {% set ordered = group.devices | sort(attribute="device_redundancy_group_priority", reverse=true) %}
     {% set primary = ordered | first %}
+    {% set secondary = ordered | last %}
     {% for device in ordered %}
-    {% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
     # ~~~~~ {{ device.name }} ({{ "Primary/Active" if device.name == primary.name else "Secondary/Standby" }}) ~~~~~
 
     ## Failover Config
 
-    failover
     failover lan unit {{ "primary" if device.name == primary.name else "secondary" }}
-    {% for link in device.failover_links %}
-    failover lan interface FAILOVER {{ link.name }}
-    failover interface ip FAILOVER {{ link.ip_addresses[0].host }} {{ link.ip_addresses[0].mask_length | netmask }} standby {{ peer.failover_links[0].ip_addresses[0].host }}
-    {% endfor %}
+    failover lan interface FAILOVER {{ device.failover_links[0].name }}
+    failover interface ip FAILOVER {{ primary.failover_links[0].ip_addresses[0].host }} {{ primary.failover_links[0].ip_addresses[0].mask_length | netmask }} standby {{ secondary.failover_links[0].ip_addresses[0].host }}
+    failover
     {% endfor %}
     ```
 
     !!! note
-        The secondary unit receives the full running config from the primary after the failover link is established; interface IPs need not be set manually
+        The `failover interface ip` command is identical on both units — the active IP is always the primary's, and `standby` is always the secondary's. Only `failover lan unit` differs per device. Once the failover link is established, the secondary receives the full running config from the primary, so interface IPs need not be set manually.
 
 === "HA pairs"
 
