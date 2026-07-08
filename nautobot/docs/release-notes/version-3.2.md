@@ -91,9 +91,43 @@ Nautobot now models [breakout cables](../user-guide/feature-guides/breakout-cabl
 
 A [`Cable`](../user-guide/core-data-model/dcim/cable.md) is no longer required to have both of its endpoints defined, and its terminations are no longer fixed at creation time. A cable may now be partially-connected (a termination on only one side, or on a subset of a breakout cable's connectors) or fully-disconnected (no terminations at all), and a cable's terminations may be added, changed, or removed after the cable is created — through the UI, the REST API, or programmatically — without deleting and recreating the cable.
 
+#### IP Address Ranges
+
+A new [`IPAddressRange`](../user-guide/core-data-model/ipam/ipaddressrange.md) model represents a contiguous span of IP addresses within a parent Prefix without creating an individual `IPAddress` record for each address in the span. Views include standard (list, detail, edit, delete), "IP Address Ranges" tab on the Prefix detail view, and inline rendering of ranges within the Prefix "IP Addresses" tab.
+
+`IPAddress.clean()` now rejects addresses that fall within an exclusive range, `Prefix.clean()` rejects network edits that would orphan a contained range, and Prefix saves reparent contained ranges to the closest fully-containing Prefix. Utilization calculations of the Prefix is consumed when mark as utilized is set.
+
+!!! tip
+    Setting exclusive may change your workflow, such as expecting to be able to create an IP address that happens to fall into an exclusive IP Range. This is as designed, but may be surprising if the implications of setting this feature was not considered.
+
+#### Job Cancel
+
+Jobs that are running, pending, or abandoned, can now be cancelled, from both the US and REST API with backend-agnostic strategies for Celery and Kubernetes. You will not be able to see a Job Cancel button on the job run or job result page (for jobs not in a terminal state.)
+
+The Job Cancel will perform slightly different actions depending on current state, all of which end up with the Job ending up in a terminal state. For technical details refer to the documentation for [Job cancel](../user-guide/platform-functionality/jobs/job-revocation.md).
+
+Job Cancel requires the `extras.run_job` permission: non-staff users may revoke only jobs they submitted, while staff users may revoke any user's jobs.
+
+#### Homepage Stickiness
+
+The homepage now saves the location and collapsing of each panel. You can re-arrange them to your liking, and see it the same on any browser. The four column system sanely orders the panels as you collapse to three, two, or one column.
+
+#### Modules Hierarchy
+
+Module Bays and modular components (Interfaces, Front Ports, etc.) now set the root device at every level in the hierarchy, and the default sort ordering of modular component models was changed to `device_id`, `module_id`, `_name` for performance reasons.
+
+#### Search Enhancements
+
+The header search bar gains two distinct capabilities. First, model-name typeahead: as you type an `in:` phrase, matching model names are suggested (e.g. typing `in:dev` suggests `in:device`). Second, once you begin searching, live results appear as you type, showing up to the first 10 matches.
+
 #### Object Metadata UI
 
 `ObjectMetadata` records can now be created, edited, and deleted directly through the web UI (previously read-only). Metadata is added from the parent object's **Metadata** tab, which opens a pre-filled create form. The value input adapts to the selected `MetadataType` data type, and detail/list views render values appropriately for each type — clickable links for URLs, parsed HTML for Markdown, pretty-printed JSON for JSON, etc. The primary intent is still that metadata is managed by integrations (SSoTs, REST API), but users with the appropriate permissions can now manage individual records through the UI.
+
+#### Other Additions
+
+* Computed Fields can now optionally be rendered as Markdown.
+* A reusable `copy_button` template tag renders hover copy-to-clipboard buttons.
 
 ### Changed
 
