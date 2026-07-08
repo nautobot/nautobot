@@ -5,7 +5,7 @@
 - Breakout Cables
 - IP Address Range Model
 - Job Cancel
-- Model Search Typeahead 
+- Model Search Typeahead
 - Live Search
 - Homepage Stickiness
 - Modules Hierarchy Refinements

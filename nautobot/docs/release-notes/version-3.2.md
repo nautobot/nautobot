@@ -95,14 +95,14 @@ A [`Cable`](../user-guide/core-data-model/dcim/cable.md) is no longer required t
 
 A new [`IPAddressRange`](../user-guide/core-data-model/ipam/ipaddressrange.md) model represents a contiguous span of IP addresses within a parent Prefix without creating an individual `IPAddress` record for each address in the span. Views include standard (list, detail, edit, delete), "IP Address Ranges" tab on the Prefix detail view, and inline rendering of ranges within the Prefix "IP Addresses" tab.
 
-`IPAddress.clean()` now rejects addresses that fall within an exclusive range, `Prefix.clean()` rejects network edits that would orphan a contained range, and Prefix saves reparent contained ranges to the closest fully-containing Prefix. Utilization calculations of the Prefix is consumed when mark as utilized is set.
+`IPAddress.clean()` now rejects addresses that fall within an exclusive range, `Prefix.clean()` rejects network edits that would orphan a contained range, and `Prefix.save()` reparents contained ranges to the closest fully containing Prefix. Prefix utilization calculations now account for IP address ranges when "mark as utilized" is set.
 
 !!! tip
-    Setting exclusive may change your workflow, such as expecting to be able to create an IP address that happens to fall into an exclusive IP Range. This is as designed, but may be surprising if the implications of setting this feature was not considered.
+    Setting a range to exclusive may change your workflow—for example, you will no longer be able to create an IP address that falls within an exclusive IP address range. This is by design, but may be surprising if the implications of enabling exclusivity were not considered.
 
 #### Job Cancel
 
-Jobs that are running, pending, or abandoned, can now be cancelled, from both the US and REST API with backend-agnostic strategies for Celery and Kubernetes. You will not be able to see a Job Cancel button on the job run or job result page (for jobs not in a terminal state.)
+Jobs that are running, pending, or abandoned, can now be cancelled, from both the UI and REST API with backend-agnostic strategies for Celery and Kubernetes. You will not be able to see a Job Cancel button on the job run or job result page (for jobs not in a terminal state.)
 
 The Job Cancel will perform slightly different actions depending on current state, all of which end up with the Job ending up in a terminal state. For technical details refer to the documentation for [Job cancel](../user-guide/platform-functionality/jobs/job-revocation.md).
 
