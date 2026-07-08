@@ -173,9 +173,6 @@ class JobRevokeStrategy(ABC):
             job_result.revocation_type = revocation_type
             changed.add("revocation_type")
 
-        job_result.result = None
-        changed.add("result")
-
         return changed
 
     def _mark_revoked(self, job_result: JobResult, user: User, revocation_type: str) -> JobResult:
