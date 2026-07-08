@@ -65,7 +65,7 @@ The documentation for each installed Nautobot App is served dynamically through 
 
 ### File Structure
 
-Documentation for an app (e.g., example_app) is expected to be located inside the package:
+Documentation for an app (e.g., `example_app`) is expected to be located inside the package:
 
 ```no-highlight
 example_app/
@@ -81,7 +81,7 @@ example_app/
 If using MkDocs to compile Markdown documentation to HTML, you should ensure that `mkdocs.yml` defines `site_dir` to be the path `<app_name>/docs` so that the compiled HTML is correctly placed in that directory.
 
 ```no-highlight
-mkdocs build --no-directory-urls --strict
+mkdocs build
 ```
 
 ### URL Routing
