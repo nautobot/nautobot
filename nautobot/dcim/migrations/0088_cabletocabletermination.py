@@ -77,16 +77,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "_termination_device",
-                    models.ForeignKey(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="+",
-                        to="dcim.device",
-                    ),
-                ),
-                (
                     "circuit_termination",
                     models.OneToOneField(
                         blank=True,
