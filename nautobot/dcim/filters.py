@@ -107,6 +107,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
+    RelationshipModelFilterSetMixin,
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
@@ -1324,7 +1325,7 @@ class DeviceBayFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
         fields = ["id", "name", "description", "label", "tags"]
 
 
-class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
+class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, RelationshipModelFilterSetMixin, BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
