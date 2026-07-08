@@ -11,6 +11,8 @@ from nautobot.extras.models import Status
 
 
 class PaginatorTestCase(SeleniumTestCase):
+    """Integration tests for the paginator."""
+
     def setUp(self):
         super().setUp()
         self.login_as_superuser()
@@ -23,29 +25,32 @@ class PaginatorTestCase(SeleniumTestCase):
                 for i in range(PAGINATE_COUNT_DEFAULT + 1)
             ]
         )
-    # Test input paginator
-    def test_pagination_input_field(self):
-        # The input is present on a page with enough objects to paginate.
-        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
-        page_input_field = self.browser.find_by_id("paginator-go-to", wait_time=5)
-        self.scroll_element_into_view(element=page_input_field)
-        self.assertTrue(page_input_field.is_visible())
-        # The input is not present on a page with a single page of objects.
-        self.browser.visit(f"{self.live_server_url}/dcim/controllers/")
-        self.assertFalse(self.browser.is_element_present_by_id("paginator-go-to"))
 
     def _assert_input_visible(self):
+        """Ensure page input field is visible."""
         page_input_field = self.browser.find_by_id("paginator-go-to", wait_time=5)
         self.scroll_element_into_view(element=page_input_field)
         self.assertTrue(page_input_field.is_visible())
         return page_input_field
 
+    # Test input paginator
+    def test_pagination_input_field(self):
+        """Ensure the presence of input field for pages with pagination vs no pagination."""
+        # The input is present on a page with enough objects to paginate.
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
+        self._assert_input_visible()
+        # The input is not present on a page with a single page of objects.
+        self.browser.visit(f"{self.live_server_url}/dcim/controllers/")
+        self.assertFalse(self.browser.is_element_present_by_id("paginator-go-to"))
+
     def _assert_page_loads(self, page_num:str):
+        """Assert the page loads correctly on page input submission."""
         WebDriverWait(self.browser.driver, 5).until(ec.url_contains(f"page={page_num}"))
         query_params = parse_qs(urlparse(self.browser.url).query)
         self.assertEqual(query_params.get("page"), [page_num])
 
     def test_pagination_routing(self):
+        """Check that the pate loads correct pages both on Enter/return and button click."""
         self.browser.visit(f"{self.live_server_url}/dcim/locations/")
         page_input_field = self._assert_input_visible()
         field = page_input_field.first
@@ -63,6 +68,7 @@ class PaginatorTestCase(SeleniumTestCase):
 
     # Test button paginator
     def test_page_links_pagination(self):
+        """Check that the main paginator's behavior."""
         self.browser.visit(f"{self.live_server_url}/dcim/locations/")
         # The numbered "2" page link navigates to page 2.
         page_2_link = self.browser.find_by_xpath(

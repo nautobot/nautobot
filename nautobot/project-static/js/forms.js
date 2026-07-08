@@ -362,7 +362,7 @@ function initializePaginatorGoTo() {
         goToPage(this);
     });
 
-    $(document).on('click', '#paginator-go-to-button', function(event) {
+    $(document).on('click', '#paginator-go-to-link', function(event) {
         event.preventDefault();
         const input = document.getElementById('paginator-go-to');
         if (input) goToPage(input);
