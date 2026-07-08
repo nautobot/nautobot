@@ -2005,23 +2005,6 @@ class ModuleBay(PrimaryModel):
             return ModuleBay.objects.none()
         return installed_module.module_bays.all()
 
-    @property
-    def hierarchy_depth(self):
-        """Return the number of ancestor ModuleBays above this bay in the module-nesting hierarchy.
-
-        A bay installed directly in a Device (`parent_module` is None) has a depth of 0. Each additional
-        level of Module nesting increases the depth by 1. Used to indent rows in the expandable-tree UI.
-        """
-        depth = 0
-        parent_module = self.parent_module
-        while parent_module is not None:
-            parent_bay = parent_module.parent_module_bay
-            if parent_bay is None:
-                break
-            depth += 1
-            parent_module = parent_bay.parent_module
-        return depth
-
     def __str__(self):
         if self.parent_device is not None:
             return f"{self.parent_device} ({self.name})"

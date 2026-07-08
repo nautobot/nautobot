@@ -2780,17 +2780,22 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         with self.subTest("Expand all paginates the flattened tree depth-first"):
             # per_page=2 -> page 1 is the first root and its descendant, before the second root.
             response = self.client.get(url, {"expand_all": "true", "per_page": 2})
-            body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Expand Root Bay 1", body)
-            self.assertIn("Expand Nested Bay 1", body)
-            self.assertNotIn("Expand Root Bay 2", body)
-            self.assertIn("Collapse All", body)
+            page1_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Expand Root Bay 1", page1_body)
+            self.assertIn("Expand Nested Bay 1", page1_body)
+            self.assertNotIn("Expand Root Bay 2", page1_body)
+            self.assertIn("Collapse All", page1_body)
 
             # Page 2 continues the traversal with the next root.
             response = self.client.get(url, {"expand_all": "true", "per_page": 2, "page": 2})
-            body = extract_page_body(response.content.decode(response.charset))
-            self.assertIn("Expand Root Bay 2", body)
-            self.assertNotIn("Expand Nested Bay 1", body)
+            page2_body = extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Expand Root Bay 2", page2_body)
+            self.assertNotIn("Expand Nested Bay 1", page2_body)
+
+            # The pre-computed depth map (not a per-row ancestor-chain walk) drives indentation:
+            # page 1 has a depth-1 row (the nested bay) and so more `nb-subtree` spacers than page 2,
+            # which is a single depth-0 root. If the depth lookup were broken, both would be equal.
+            self.assertGreater(page1_body.count('class="nb-subtree"'), page2_body.count('class="nb-subtree"'))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):

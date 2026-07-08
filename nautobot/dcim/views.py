@@ -3068,13 +3068,22 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
         header_extra_content_template_path = "dcim/inc/modulebay_panel_header.html"
 
-        def _expanded_module_bay_pks(self, instance, request):
-            """Return this device's module bay pks in pre-order (depth-first) tree traversal order.
+        def _expanded_module_bay_traversal(self, instance, request):
+            """Return this device's module bays as ``(ordered_pks, depth_by_pk)`` in pre-order (DFS).
 
             All of a device's descendant bays carry `parent_device`, so they are fetched in one query and
             the tree is reassembled in memory: a bay's children are the bays whose `parent_module` is the
-            module installed in that bay.
+            module installed in that bay. `depth_by_pk` maps each bay pk to its depth relative to the device
+            (0 for a top-level bay); rendering reads it instead of walking each row's ancestor chain (which
+            would cost a query per level, for every row).
+
+            Memoized on the request because both `get_table_data_queryset` and `get_extra_context` need it;
+            the cached value is a single list+dict for this device and is freed when the request ends.
             """
+            cache_attr = f"_expanded_module_bay_traversal_{instance.pk}"
+            cached = getattr(request, cache_attr, None)
+            if cached is not None:
+                return cached
             bays = list(instance.module_bays.restrict(request.user, "view").only("pk", "parent_module_id"))
             children_by_parent_module = defaultdict(list)
             roots = []
@@ -3088,20 +3097,25 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 Module.objects.filter(parent_module_bay__in=bays).values_list("parent_module_bay_id", "pk")
             )
             ordered_pks = []
-            stack = list(reversed(roots))
+            depth_by_pk = {}
+            stack = [(bay, 0) for bay in reversed(roots)]
             while stack:
-                bay = stack.pop()
+                bay, depth = stack.pop()
                 ordered_pks.append(bay.pk)
+                depth_by_pk[bay.pk] = depth
                 installed_module_pk = installed_module_pk_by_bay_pk.get(bay.pk)
                 if installed_module_pk is not None:
-                    stack.extend(reversed(children_by_parent_module.get(installed_module_pk, [])))
-            return ordered_pks
+                    children = children_by_parent_module.get(installed_module_pk, [])
+                    stack.extend((child, depth + 1) for child in reversed(children))
+            result = (ordered_pks, depth_by_pk)
+            setattr(request, cache_attr, result)
+            return result
 
         def get_table_data_queryset(self, instance, request):
             if request.GET.get("expand_all"):
                 # Full hierarchy, flattened in pre-order; `Case`/`When` preserves the traversal order
                 # through the paginator so pagination cuts the tree depth-first rather than by root.
-                ordered_pks = self._expanded_module_bay_pks(instance, request)
+                ordered_pks, _ = self._expanded_module_bay_traversal(instance, request)
                 if not ordered_pks:
                     return instance.module_bays.none()
                 preserved_order = Case(
@@ -3130,7 +3144,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
                 .exists(),
             }
             if expand_all:
-                # Static fully-expanded tree: rows indent by their own depth, with no per-row toggles.
+                # Static fully-expanded tree: rows indent by their pre-computed depth (avoiding a per-row
+                # ancestor-chain walk), with no per-row expand toggles.
+                _, depth_by_pk = self._expanded_module_bay_traversal(instance, request)
+                context_data["expanded_depths"] = depth_by_pk
                 context_data["table_expandable"] = False
             else:
                 context_data["table_expandable"] = True
@@ -5154,12 +5171,11 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
         return_url = request.GET.get("return_url", None)
         saved_view_pk = request.GET.get("saved_view", None)
         table_changes_pending = request.GET.get("table_changes_pending", False)
-        # Depth (relative to the display root) at which these child rows should be indented. The expanding
-        # row's tree link passes its own depth + 1; fall back to the bay's absolute depth for direct access.
-        try:
-            tree_depth = int(request.GET.get("tree_depth"))
-        except (TypeError, ValueError):
-            tree_depth = instance.hierarchy_depth + 1
+        # Depth (relative to the display root) at which these child rows should be indented; the expanding
+        # row's tree link always passes its own depth + 1. This endpoint is only reached via that HTMX link,
+        # so a missing/invalid value (e.g. a direct hit, which renders no usable standalone page) is simply
+        # treated as the left margin.
+        tree_depth = int(request.GET.get("tree_depth", 0))
         children_table = tables.DeviceModuleBayTable(
             children,
             table_changes_pending=table_changes_pending,

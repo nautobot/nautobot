@@ -254,14 +254,15 @@ LOCATION_TREE_LINK = """
 #     HTMX `children` response shows one bay's child bays at the parent's depth + 1, passed via the expand
 #     button's `tree_depth` query param).
 #   * `expand_all` mode: the whole hierarchy is rendered as one flat pre-order list containing rows at
-#     mixed depths, so each row indents by its own `record.hierarchy_depth` (this panel is only used for
-#     device-rooted trees, where absolute depth equals display depth). No per-row expand buttons render.
+#     mixed depths, so each row indents by its own depth, looked up from the `expanded_depths` map
+#     ({bay pk: depth}) that the panel pre-computes during traversal — avoiding a per-row
+#     ancestor-chain walk. No per-row expand buttons render in this mode.
 MODULEBAY_TREE_LINK = """
 {% load helpers %}
 {% spaceless %}
     {% if not table.hide_hierarchy_ui %}
         {% if expand_all %}
-            {% for i in record.hierarchy_depth|as_range %}
+            {% for i in expanded_depths|get_item:record.pk|default:0|as_range %}
                 <span class="nb-subtree"></span>
             {% endfor %}
         {% else %}
