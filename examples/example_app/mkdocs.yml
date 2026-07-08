@@ -3,6 +3,8 @@ dev_addr: "127.0.0.1:8001"
 site_dir: "example_app/docs"
 site_name: "Example App Documentation"
 copyright: "Copyright &copy; The Authors"
+# use_directory_urls: false is appropriate for local development and for packaging compiled docs as static files.
+# Note that for deployment to ReadTheDocs, you may want to override this (e.g. `mkdocs build --use-directory-urls`)
 use_directory_urls: false
 strict: true
 theme:

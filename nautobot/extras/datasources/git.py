@@ -161,15 +161,15 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if Path(repository_record.filesystem_path).exists() and str(
-                Repo(repository_record.filesystem_path).rev_parse("HEAD")
-            ) == str(head):
-                return False
+            if Path(repository_record.filesystem_path).exists():
+                with Repo(repository_record.filesystem_path) as repo:
+                    if str(repo.rev_parse("HEAD")) == str(head):
+                        return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
     try:
-        repo_helper = GitRepo(to_path, from_url)
-        head, changed = repo_helper.checkout(from_branch, head)
+        with GitRepo(to_path, from_url) as repo_helper:
+            head, changed = repo_helper.checkout(from_branch, head)
         if repository_record.current_head != head:
             repository_record.current_head = head
             repository_record.save()
@@ -205,9 +205,9 @@ def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefi
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
-        repo_helper = GitRepo(to_path, from_url, clone_initially=False)
-        logger.info("Fetching from origin")
-        modified_files = repo_helper.diff_remote(from_branch)
+        with GitRepo(to_path, from_url, clone_initially=False) as repo_helper:
+            logger.info("Fetching from origin")
+            modified_files = repo_helper.diff_remote(from_branch)
         if modified_files:
             # Log each modified files
             for item in modified_files:
