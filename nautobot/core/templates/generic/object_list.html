@@ -312,12 +312,6 @@
 {% block javascript %}
     <script src="{% static 'jquery/jquery.formset.js' %}"></script>
     <script>
-        var clipboard = new ClipboardJS('.btn');
-
-        clipboard.on('success', function (e) {});
-
-        clipboard.on('error', function (e) {});
-
         // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
         $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {
             const button = $(event.relatedTarget);
