@@ -34,19 +34,32 @@ class PaginatorTestCase(SeleniumTestCase):
         self.browser.visit(f"{self.live_server_url}/dcim/controllers/")
         self.assertFalse(self.browser.is_element_present_by_id("paginator-go-to"))
 
-    def test_pagination_routing(self):
-        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
+    def _assert_input_visible(self):
         page_input_field = self.browser.find_by_id("paginator-go-to", wait_time=5)
         self.scroll_element_into_view(element=page_input_field)
         self.assertTrue(page_input_field.is_visible())
+        return page_input_field
 
+    def _assert_page_loads(self, page_num:str):
+        WebDriverWait(self.browser.driver, 5).until(ec.url_contains(f"page={page_num}"))
+        query_params = parse_qs(urlparse(self.browser.url).query)
+        self.assertEqual(query_params.get("page"), [page_num])
+
+    def test_pagination_routing(self):
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
+        page_input_field = self._assert_input_visible()
         field = page_input_field.first
         field.fill("2")
         field.type(Keys.RETURN)
 
-        WebDriverWait(self.browser.driver, 5).until(ec.url_contains("page=2"))
-        query_params = parse_qs(urlparse(self.browser.url).query)
-        self.assertEqual(query_params.get("page"), ["2"])
+        self._assert_page_loads("2")
+
+        page_input_field = self._assert_input_visible()
+        field = page_input_field.first
+        field.fill("1")
+        go_button = self.browser.find_by_id("paginator-go-to-link", wait_time=5)
+        go_button.click()
+        self._assert_page_loads("1")
 
     # Test button paginator
     def test_page_links_pagination(self):

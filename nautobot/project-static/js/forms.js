@@ -340,13 +340,11 @@ function jsify_form(context) {
 }
 
 function initializePaginatorGoTo() {
-    $(document).on('keydown', '#paginator-go-to', function(event) {
-        if (event.key !== 'Enter') return;
-        if (this.hasAttribute('hx-get')) return;
-        event.preventDefault();
+    function goToPage(input) {
+        if (input.hasAttribute('hx-get')) return;
 
-        let page = parseInt(this.value, 10);
-        const max = parseInt(this.max, 10) || Infinity;
+        let page = parseInt(input.value, 10);
+        const max = parseInt(input.max, 10) || Infinity;
         if (!Number.isInteger(page)) return;
         if (page < 1)
             page = 1
@@ -356,6 +354,18 @@ function initializePaginatorGoTo() {
         const url = new URL(window.location);
         url.searchParams.set('page', page);
         window.location.assign(url);
+    }
+
+    $(document).on('keydown', '#paginator-go-to', function(event) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        goToPage(this);
+    });
+
+    $(document).on('click', '#paginator-go-to-button', function(event) {
+        event.preventDefault();
+        const input = document.getElementById('paginator-go-to');
+        if (input) goToPage(input);
     });
 }
 
