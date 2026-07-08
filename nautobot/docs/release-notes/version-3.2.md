@@ -93,24 +93,24 @@ A [`Cable`](../user-guide/core-data-model/dcim/cable.md) is no longer required t
 
 #### IP Address Ranges
 
-A new [`IPAddressRange`](../user-guide/core-data-model/ipam/ipaddressrange.md) model represents a contiguous span of IP addresses within a parent Prefix without creating an individual `IPAddress` record for each address in the span. Views include standard (list, detail, edit, delete), "IP Address Ranges" tab on the Prefix detail view, and inline rendering of ranges within the Prefix "IP Addresses" tab.
+A new [`IPAddressRange`](../user-guide/core-data-model/ipam/ipaddressrange.md) model represents a contiguous span of IP addresses within a parent Prefix without needing to create an individual `IPAddress` record for each address in the span. Views include standard (list, detail, edit, delete), "IP Address Ranges" tab on the Prefix detail view, and inline rendering of ranges within the Prefix "IP Addresses" tab.
 
-`IPAddress.clean()` now rejects addresses that fall within an exclusive range, `Prefix.clean()` rejects network edits that would orphan a contained range, and `Prefix.save()` reparents contained ranges to the closest fully containing Prefix. Prefix utilization calculations now account for IP address ranges when "mark as utilized" is set.
+`IPAddress.clean()` now rejects addresses that fall within an "exclusive" range, `Prefix.clean()` rejects network edits that would orphan a contained range, and `Prefix.save()` reparents contained ranges to the closest fully containing Prefix. Prefix utilization calculations now account for IP address ranges when "mark as utilized" is set.
 
 !!! tip
-    Setting a range to exclusive may change your workflow—for example, you will no longer be able to create an IP address that falls within an exclusive IP address range. This is by design, but may be surprising if the implications of enabling exclusivity were not considered.
+    Setting a range to "exclusive" may change your workflow — for example, you will no longer be able to create an IP address that falls within an exclusive IP address range. This is by design, but may be surprising if the implications of enabling exclusivity were not considered.
 
-#### Job Cancel
+#### Job Cancellation
 
-Jobs that are running, pending, or abandoned, can now be cancelled, from both the UI and REST API with backend-agnostic strategies for Celery and Kubernetes. You will not be able to see a Job Cancel button on the job run or job result page (for jobs not in a terminal state.)
+Jobs that are actively running, pending a run, or abandoned, can now be cancelled from both the UI and REST API, with support for both Celery and Kubernetes jobs. You will now be able to see a Job Cancel button on the job result list and detail views (for jobs not in a terminal state.)
 
-The Job Cancel will perform slightly different actions depending on current state, all of which end up with the Job ending up in a terminal state. For technical details refer to the documentation for [Job cancel](../user-guide/platform-functionality/jobs/job-revocation.md).
+The "Cancel Job" action will perform slightly different actions depending on the current state of the job, all of which end up with the Job Result in a terminal state. For technical details refer to the documentation for [Job cancellation](../user-guide/platform-functionality/jobs/job-revocation.md).
 
-Job Cancel requires the `extras.run_job` permission: non-staff users may revoke only jobs they submitted, while staff users may revoke any user's jobs.
+Job Cancellation requires the `extras.run_job` permission; additionally, non-staff users with this permission may cancel only jobs they submitted, while staff users with this permission may cancel any user's jobs.
 
 #### Homepage Stickiness
 
-The homepage now saves the location and collapsing of each panel. You can re-arrange them to your liking, and see it the same on any browser. The four column system sanely orders the panels as you collapse to three, two, or one column.
+The homepage now saves the location and collapsing of each panel. You can re-arrange them to your liking, and see it the same on any browser. Additionally, when resizing your browser window, the panels will be automatically and sanely rearranged to four, three, two, or one column as appropriate.
 
 #### Modules Hierarchy
 
@@ -118,7 +118,7 @@ Module Bays and modular components (Interfaces, Front Ports, etc.) now set the r
 
 #### Search Enhancements
 
-The header search bar gains two distinct capabilities. First, model-name typeahead: as you type an `in:` phrase, matching model names are suggested (e.g. typing `in:dev` suggests `in:device`). Second, once you begin searching, live results appear as you type, showing up to the first 10 matches.
+The header search bar gains two distinct capabilities. First, model-name typeahead: as you type an `in:` phrase, matching model names are suggested (e.g. typing `in:dev` suggests `in:devices`). Second, once you begin searching, live results appear as you type, showing up to the first 10 matches.
 
 #### Object Metadata UI
 
