@@ -43,7 +43,7 @@ class PaginatorTestCase(SeleniumTestCase):
         self.browser.visit(f"{self.live_server_url}/dcim/controllers/")
         self.assertFalse(self.browser.is_element_present_by_id("paginator-go-to"))
 
-    def _assert_page_loads(self, page_num:str):
+    def _assert_page_loads(self, page_num: str):
         """Assert the page loads correctly on page input submission."""
         WebDriverWait(self.browser.driver, 5).until(ec.url_contains(f"page={page_num}"))
         query_params = parse_qs(urlparse(self.browser.url).query)
