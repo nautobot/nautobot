@@ -1,0 +1,1 @@
+Added documentation clarifying that `__init__.py` files are required in both the Git repository root and the `custom_validators/` folder for Data Compliance Rules to be discovered from a remote Git repository.
