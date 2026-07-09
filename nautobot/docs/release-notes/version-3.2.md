@@ -22,6 +22,10 @@ Treat any warnings `"Using deprecated **job_kwargs pattern, please instead switc
 
 ### App Developers
 
+#### Review Device Component Lookups
+
+The behavior of the [Device component `device` foreign key](#device-component-device-foreign-key) has been changed, such that components (Interface, etc.) belonging to a Module installed in a Device's Module Bay now automatically set each component's `device` foreign key to point to the Device, instead of leaving it as `NULL`/`None` as it was in previous Nautobot versions. As a result, queries such as `Device.interfaces.all()` will now return records that belong to child Modules as well as those that belong directly to the Device, whereas in previous versions this query would only return records that belong directly to the Device. In many cases the new behavior will be more desirable and more intuitive to App and Job authors, but maintainers of existing App and Job code should review their logic to identify possible impacts.
+
 #### Migrate Cable Termination Queries
 
 To support [breakout cables](../user-guide/feature-guides/breakout-cables.md), the association between a [`Cable`](../user-guide/core-data-model/dcim/cable.md) and its terminations has been re-implemented. The `cable` `ForeignKey` that previously existed on each `CableTermination` subclass (`Interface`, `FrontPort`, `RearPort`, `CircuitTermination`, `PowerPort`, etc.) has been removed in favor of a new [`CableToCableTermination`](../user-guide/core-data-model/dcim/cabletocabletermination.md) join model, exposed on each termination via the `cable_termination` reverse one-to-one relationship. App and Job code that queries or traverses cables may need to be updated.
@@ -91,9 +95,39 @@ Nautobot now models [breakout cables](../user-guide/feature-guides/breakout-cabl
 
 A [`Cable`](../user-guide/core-data-model/dcim/cable.md) is no longer required to have both of its endpoints defined, and its terminations are no longer fixed at creation time. A cable may now be partially-connected (a termination on only one side, or on a subset of a breakout cable's connectors) or fully-disconnected (no terminations at all), and a cable's terminations may be added, changed, or removed after the cable is created — through the UI, the REST API, or programmatically — without deleting and recreating the cable.
 
+#### IP Address Ranges
+
+A new [`IPAddressRange`](../user-guide/core-data-model/ipam/ipaddressrange.md) model represents a contiguous span of IP addresses within a parent Prefix without needing to create an individual `IPAddress` record for each address in the span. Views include standard (list, detail, edit, delete), "IP Address Ranges" tab on the Prefix detail view, and inline rendering of ranges within the Prefix "IP Addresses" tab.
+
+`IPAddress.clean()` now rejects addresses that fall within an "exclusive" range, `Prefix.clean()` rejects network edits that would orphan a contained range, and `Prefix.save()` reparents contained ranges to the closest fully containing Prefix. Prefix utilization calculations now account for IP address ranges when "mark as utilized" is set.
+
+!!! tip
+    Setting a range to "exclusive" may change your workflow — for example, you will no longer be able to create an IP address that falls within an exclusive IP address range. This is by design, but may be surprising if the implications of enabling exclusivity were not considered.
+
+#### Job Cancellation
+
+Jobs that are actively running, pending a run, or abandoned, can now be cancelled from both the UI and REST API, with support for both Celery and Kubernetes jobs. You will now be able to see a Job Cancel button on the job result list and detail views (for jobs not in a terminal state.)
+
+The "Cancel Job" action will perform slightly different actions depending on the current state of the job, all of which end up with the Job Result in a terminal state. For technical details refer to the documentation for [Job cancellation](../user-guide/platform-functionality/jobs/job-revocation.md).
+
+Job Cancellation requires the `extras.run_job` permission; additionally, non-staff users with this permission may cancel only jobs they submitted, while staff users with this permission may cancel any user's jobs.
+
+#### Homepage Stickiness
+
+The homepage now saves the location and collapsing of each panel. You can re-arrange them to your liking, and see it the same on any browser. Additionally, when resizing your browser window, the panels will be automatically and sanely rearranged to four, three, two, or one column as appropriate.
+
+#### Search Enhancements
+
+The header search bar gains two distinct capabilities. First, model-name typeahead: as you type an `in:` phrase, matching model names are suggested (e.g. typing `in:dev` suggests `in:devices`). Second, once you begin searching, live results appear as you type, showing up to the first 10 matches.
+
 #### Object Metadata UI
 
 `ObjectMetadata` records can now be created, edited, and deleted directly through the web UI (previously read-only). Metadata is added from the parent object's **Metadata** tab, which opens a pre-filled create form. The value input adapts to the selected `MetadataType` data type, and detail/list views render values appropriately for each type — clickable links for URLs, parsed HTML for Markdown, pretty-printed JSON for JSON, etc. The primary intent is still that metadata is managed by integrations (SSoTs, REST API), but users with the appropriate permissions can now manage individual records through the UI.
+
+#### Other Additions
+
+* Computed Fields can now optionally be rendered as Markdown.
+* A reusable `copy_button` template tag renders hover copy-to-clipboard buttons.
 
 ### Changed
 
@@ -103,13 +137,17 @@ The [`Cable`](../user-guide/core-data-model/dcim/cable.md) REST API serializer a
 
 #### Device Component Default Ordering
 
-The default sort ordering of device-component models (Interface, Front Port, Rear Port, Console Port, etc.) has been changed to group and sort records by their associated `device_id` (UUID) rather than by the associated device's `name`, as the prior behavior (requiring a join across database tables) performed poorly at high data scale. This change affects the default behavior of the following:
+The default sort ordering of device-component models (Interface, Front Port, Rear Port, Module Bay, etc.) has been changed to group and sort records by their associated `device_id` (UUID) rather than by the associated device's `name`, as the prior behavior (requiring a join across database tables) performed poorly at high data scale. This change affects the default behavior of the following:
 
 * `/dcim/interfaces/` UI list view (and `/dcim/front-ports/`, `/dcim/rear-ports/`, etc.)
 * `/api/dcim/interfaces/` REST API list view (and `/api/dcim/front-ports/`, `/api/dcim/rear-ports/`, etc.)
 * GraphQL query responses that invole listing any of these models
 
 For the UI and REST API list views, if ordering by device name is desired, the prior behavior may be achieved by explicitly specifying a `?sort=device` query parameter when requesting these views, but users are encouraged to be aware of the performance implications of doing so.
+
+#### Device Component `device` Foreign Key
+
+When device components (Interface, Front Port, Rear Port, Module Bay, etc.) belong to a Module, and that Module is installed in a Module Bay belonging to a Device, the `device` foreign key on each such device component is now automatically set to point to the Device in question. This is a behavior change from previous Nautobot versions, in which the `device` foreign key would remain as `NULL`/`None` for device components belonging to a Module even when that Module was installed into a Device's Module Bay. This change was made to improve the performance and self-consistency of Device component lookups, such as the `Device.all_interfaces()` method and `Device.interfaces.all()` queryset manager.
 
 ### Dependencies
 
