@@ -1499,6 +1499,21 @@ properties:
     is_constance_config: true
     type: "string"
     version_added: "3.2.0"
+  NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
+    type: "array"
+    items:
+      type: "string"
+    default: []
+    description: >-
+      A list of dotted import paths to additional OpenTelemetry instrumentor classes for Nautobot to
+      install at startup, for example
+      `opentelemetry.instrumentation.botocore.BotocoreInstrumentor`. Nautobot core installs each one
+      against its own tracer provider, so apps do not need to call `.instrument()` from their
+      `AppConfig.ready()` method (which conflicts when multiple apps enable the same instrumentor).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
+    environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
+    version_added: "3.2.0"
   NAUTOBOT_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/"
