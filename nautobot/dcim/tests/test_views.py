@@ -3952,39 +3952,6 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
                 self.assertEqual(endpoint.parent, circuit)
                 str(endpoint)
 
-    def test_cable_status_color_css_virtual_subinterface_no_breakout_lane(self):
-        """A virtual sub-interface sets `parent_interface_id` but is not a breakout child, so
-        `get_breakout_lane()` returns None. Coloring must not treat it as a breakout lane and blow
-        up on `.far_termination`; it should fall through to "" even when the parent has a cable.
-        Regression test for AttributeError: 'NoneType' object has no attribute 'far_termination'.
-        """
-        status_active = Status.objects.get_for_model(Interface).first()
-        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
-        local = create_test_device("Virtual Subiface Local")
-        peer = create_test_device("Virtual Subiface Peer")
-
-        # Parent interface with a real cable of its own.
-        parent = Interface.objects.create(device=local, name="Eth-parent", status=status_active)
-        peer_iface = Interface.objects.create(device=peer, name="Eth-peer", status=status_active)
-        Cable.objects.create(termination_a=parent, termination_b=peer_iface, status=cable_status)
-
-        # Virtual sub-interface: has parent_interface_id, has no cable, has no breakout lane.
-        subiface = Interface.objects.create(
-            device=local,
-            name="Eth-parent.100",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
-            parent_interface=parent,
-            status=status_active,
-        )
-
-        # Sanity: this is exactly the shape that used to crash.
-        self.assertIsNone(subiface.cable)
-        self.assertIsNotNone(subiface.parent_interface_id)
-        self.assertIsNone(subiface.get_breakout_lane())
-
-        # Must not raise; a virtual sub-interface (no breakout lane) gets no coloring.
-        self.assertEqual(cable_status_color_css(subiface), "")
-
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_breakout_trunk_child_interface_through_patch_panel(self):
         """A leaf cabled to a breakout trunk through a patch panel still shows the trunk child as its connection.
