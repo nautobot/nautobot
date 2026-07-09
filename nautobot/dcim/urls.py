@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectNotesView
+from nautobot.extras.views import ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
