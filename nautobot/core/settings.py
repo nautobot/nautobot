@@ -1340,3 +1340,11 @@ OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 OTEL_EXPORTER_OTLP_PROTOCOL = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
 OTEL_EXPORTER_OTLP_INSECURE = is_truthy(os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "False"))
 OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT = int(os.getenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "8192"))
+# Extra OpenTelemetry instrumentors to enable at startup, as dotted import paths to instrumentor
+# classes (e.g. "opentelemetry.instrumentation.botocore.BotocoreInstrumentor"). Nautobot core installs
+# each one against its own TracerProvider during instrument(), so apps do not need to call
+# .instrument() from AppConfig.ready() (which races when multiple apps enable the same instrumentor).
+# This is a Nautobot-specific setting (not read by the OTEL SDK), so it carries the NAUTOBOT_ prefix.
+NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS = [
+    path for path in os.getenv("NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", "").split(_CONFIG_SETTING_SEPARATOR) if path != ""
+]
