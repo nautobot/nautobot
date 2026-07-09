@@ -1,5 +1,6 @@
 """Enable OTEL Tracing."""
 
+from importlib import import_module
 import logging
 
 from opentelemetry import metrics, trace
@@ -108,3 +109,17 @@ def instrument():
         from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 
         Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
+
+    for path in getattr(nautobot_config, "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", []):
+        module_path, _, class_name = path.rpartition(".")
+        try:
+            instrumentor_cls = getattr(import_module(module_path), class_name)
+        except (ImportError, AttributeError, ValueError):
+            logger.warning("Could not load OTEL instrumentor %s; skipping.", path)
+            continue
+        try:
+            instrumentor = instrumentor_cls()
+            if not instrumentor.is_instrumented_by_opentelemetry:
+                instrumentor.instrument(tracer_provider=provider)
+        except Exception:
+            logger.warning("Failed to enable OTEL instrumentor %s; skipping.", path, exc_info=True)

@@ -479,3 +479,115 @@ class MainInstrumentGatingTest(testing.TestCase):
         """instrument() is skipped when the loaded nautobot_config sets OTEL_PYTHON_DJANGO_INSTRUMENT False."""
         mock_instrument = self._run_main(config_instrument=False)
         mock_instrument.assert_not_called()
+
+
+class ExtraInstrumentorsTest(testing.TestCase):
+    """Verify instrument() installs the instrumentors listed in NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS."""
+
+    def setUp(self):
+        super().setUp()
+        self._original_provider = otel_trace.get_tracer_provider()
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+            instrumentor().uninstrument()
+
+    def tearDown(self):
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+            instrumentor().uninstrument()
+        otel_trace.set_tracer_provider(self._original_provider)
+        super().tearDown()
+
+    @staticmethod
+    def _fake_instrumentor_module(instrumentor_instance):
+        """Return a fake module exposing a FakeInstrumentor class that returns the given instance."""
+        instrumentor_cls = MagicMock(return_value=instrumentor_instance)
+        return SimpleNamespace(FakeInstrumentor=instrumentor_cls), instrumentor_cls
+
+    def test_listed_instrumentor_is_installed_with_provider(self):
+        """A valid dotted path has its instrumentor's .instrument() called once with the core provider."""
+        instance = MagicMock()
+        instance.is_instrumented_by_opentelemetry = False
+        fake_module, instrumentor_cls = self._fake_instrumentor_module(instance)
+
+        with patch.dict("sys.modules", {"fake_otel_pkg": fake_module}):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "nautobot_config": _fake_otel_config(
+                        NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=["fake_otel_pkg.FakeInstrumentor"]
+                    )
+                },
+            ):
+                instrument()
+
+        instrumentor_cls.assert_called_once()
+        instance.instrument.assert_called_once()
+        _, kwargs = instance.instrument.call_args
+        self.assertIsInstance(kwargs["tracer_provider"], TracerProvider)
+
+    def test_already_instrumented_is_skipped(self):
+        """When is_instrumented_by_opentelemetry is True, .instrument() is not called again."""
+        instance = MagicMock()
+        instance.is_instrumented_by_opentelemetry = True
+        fake_module, _ = self._fake_instrumentor_module(instance)
+
+        with patch.dict("sys.modules", {"fake_otel_pkg": fake_module}):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "nautobot_config": _fake_otel_config(
+                        NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=["fake_otel_pkg.FakeInstrumentor"]
+                    )
+                },
+            ):
+                instrument()
+
+        instance.instrument.assert_not_called()
+
+    def test_bad_import_path_warns_and_does_not_raise(self):
+        """A path whose module/class cannot be imported logs a warning and does not abort instrument()."""
+        with patch.dict(
+            "sys.modules",
+            {
+                "nautobot_config": _fake_otel_config(
+                    NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=["nonexistent.module.DoesNotExist"]
+                )
+            },
+        ):
+            with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                instrument()  # must not raise
+
+        self.assertTrue(
+            any("nonexistent.module.DoesNotExist" in message for message in logs.output),
+            f"Expected a warning naming the bad path; got: {logs.output!r}",
+        )
+
+    def test_instrument_error_warns_and_does_not_raise(self):
+        """If an instrumentor's .instrument() raises, it is logged and the rest of startup continues."""
+        instance = MagicMock()
+        instance.is_instrumented_by_opentelemetry = False
+        instance.instrument.side_effect = RuntimeError("boom")
+        fake_module, _ = self._fake_instrumentor_module(instance)
+
+        with patch.dict("sys.modules", {"fake_otel_pkg": fake_module}):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "nautobot_config": _fake_otel_config(
+                        NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=["fake_otel_pkg.FakeInstrumentor"]
+                    )
+                },
+            ):
+                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                    instrument()  # must not raise
+
+        self.assertTrue(
+            any("fake_otel_pkg.FakeInstrumentor" in message for message in logs.output),
+            f"Expected a warning naming the failing instrumentor; got: {logs.output!r}",
+        )
+
+    def test_empty_setting_is_noop(self):
+        """With no extra instrumentors configured, instrument() completes and sets a provider."""
+        with patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=[])}):
+            instrument()
+
+        self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
