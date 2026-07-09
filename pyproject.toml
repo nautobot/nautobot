@@ -29,7 +29,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=49.0.0,<50)",
     # Fundamental web framework for Nautobot
-    "django (>=6.0.7,<6.1)",
+    "django (>=5.2.15,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -48,7 +48,7 @@ dependencies = [
     # Advanced query filters
     "django-filter (>=25.2,<25.3)",
     # Health check endpoint
-    "django-health-check (>=4.4.3,<4.5)",
+    "django-health-check (>=3.20.8,<3.21)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
@@ -129,7 +129,7 @@ all = [
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.8,<2.3)",
     "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.9.1,<4.10)",
+    "social-auth-core[saml] (>=5.0.2,<5.1)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
@@ -140,7 +140,7 @@ napalm = [ "napalm (>=4.1.0,<6.0.0)" ]
 # External Storage support (i.e. S3)
 remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
-# Note that social-auth-app-django (below) is *not* an optional dependency, and it requires social-auth-core in turn.
+# Note that social-auth-app-django is a non-optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
 sso = [ "social-auth-core[saml] (>=5.0.2,<5.1)" ]
 
@@ -235,7 +235,7 @@ django-test-migrations = "~1.5.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.8.5"
 # Integration Tests
-requests = "~2.33.1"
+requests = "~2.34.2"
 # Selenium web drivers for live integration testing
 selenium = "~4.36.0"
 # Abstraction layer for working with Selenium
