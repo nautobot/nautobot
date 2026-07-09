@@ -1,3 +1,3 @@
 Changed the default max_locks_per_transaction for Postgres to 512 for test runs with many parallel workers.
 Backported Django 6.0 fix for parallel test runs with --buffer.
-Added a new VLANGroupFactory parameter unique_name to generate unique names.
+Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
