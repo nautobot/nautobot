@@ -479,7 +479,7 @@ class DynamicGroup(PrimaryModel):
 
     update_cached_members.alters_data = True
 
-    def _is_cache_substitution_safe(self, *, safety_by_pk):
+    def _is_cache_substitution_safe(self, *, safety_by_pk, filterset_filters=None):
         """
         Return True if this group's membership definition does not read other groups' cached members.
 
@@ -493,18 +493,25 @@ class DynamicGroup(PrimaryModel):
         Args:
             safety_by_pk (dict): Memoized results keyed by group PK. Safety cannot change during a cache-update
                 operation, so callers should share one dict across all of an operation's checks.
+            filterset_filters (dict, optional): Instantiated filterset filters to resolve filter names against.
+                All groups in a hierarchy share a content type and therefore a filterset, and instantiating one
+                is relatively expensive, so callers evaluating multiple related groups should instantiate it
+                once (`self.filterset_class().filters`) and share it across all of an operation's checks.
         """
         if self.pk not in safety_by_pk:
-            safety_by_pk[self.pk] = self._compute_cache_substitution_safety(safety_by_pk)
+            safety_by_pk[self.pk] = self._compute_cache_substitution_safety(safety_by_pk, filterset_filters)
         return safety_by_pk[self.pk]
 
-    def _compute_cache_substitution_safety(self, safety_by_pk):
+    def _compute_cache_substitution_safety(self, safety_by_pk, filterset_filters):
         """Uncached implementation of `_is_cache_substitution_safe()`; do not call directly."""
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-            filterset_class = self.filterset_class
-            if filterset_class is None:
-                return False
-            filterset_filters = filterset_class().filters
+            if filterset_filters is None:
+                filterset_class = self.filterset_class
+                if filterset_class is None:
+                    return False
+                # Instantiate the filterset; filters defined by data rather than by code (custom fields,
+                # relationships) are only added to the filterset at instantiation time.
+                filterset_filters = filterset_class().filters
             for filter_name in self.filter:
                 filter_field = filterset_filters.get(filter_name)
                 if filter_field is None:
@@ -514,9 +521,10 @@ class DynamicGroup(PrimaryModel):
                     return False
             return True
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
-            # select_related: each filter-type child's safety check resolves its filterset via its content-type.
+            # select_related: without a shared filterset_filters, each filter-type child's safety check
+            # resolves its own filterset via its content-type.
             return all(
-                child._is_cache_substitution_safe(safety_by_pk=safety_by_pk)
+                child._is_cache_substitution_safe(safety_by_pk=safety_by_pk, filterset_filters=filterset_filters)
                 for child in self.children.select_related("content_type")
             )
         if self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
@@ -537,14 +545,16 @@ class DynamicGroup(PrimaryModel):
             return
         # Safety cannot change during the cascade, so share one memo across all of its safety checks.
         safety_by_pk = {}
+        # All groups in a hierarchy share a content type, so one filterset serves every safety check below.
+        filterset_filters = self.filterset_class().filters if self.filterset_class is not None else None
         fresh_group_pks = set()
         # Guard against circular references: a cache-reading filter (e.g. `dynamic_groups`) may reference an
         # ancestor, so the refreshes below could invalidate even this group's just-refreshed cache.
-        if self._is_cache_substitution_safe(safety_by_pk=safety_by_pk):
+        if self._is_cache_substitution_safe(safety_by_pk=safety_by_pk, filterset_filters=filterset_filters):
             fresh_group_pks.add(self.pk)
         for ancestor in ancestors:
             ancestor.update_cached_members(fresh_group_pks=frozenset(fresh_group_pks))
-            if ancestor._is_cache_substitution_safe(safety_by_pk=safety_by_pk):
+            if ancestor._is_cache_substitution_safe(safety_by_pk=safety_by_pk, filterset_filters=filterset_filters):
                 fresh_group_pks.add(ancestor.pk)
 
     _refresh_cached_members_and_ancestors.alters_data = True
