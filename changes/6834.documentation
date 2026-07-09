@@ -1,0 +1,1 @@
+Fixed the Okta SAML documentation example to set `requestedAuthnContext` via `SOCIAL_AUTH_SAML_SECURITY_CONFIG` instead of the unsupported per-IdP `requested_authn_context`, `force_authn`, and `allow_unsolicited` keys.

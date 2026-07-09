@@ -1,4 +1,4 @@
-"""Additional functions to process an OAuth2/OIDC user."""
+"""Additional functions to process an SSO (OAuth2/OIDC/SAML) user."""
 
 import logging
 
@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 CLAIMS_GROUP_NAME = getattr(settings, "SSO_CLAIMS_GROUP", "groups")
-""" Which claim to look at in the OAuth2/OIDC response
+""" Which claim to look at in the SSO response
 
     For Okta you can look at `Okta -> Authorization Servers -> Claims`. And a reasonable
     default is "groups". For Azure a reasonable default is "roles".
@@ -20,9 +20,15 @@ STAFF_GROUPS = getattr(settings, "SSO_STAFF_GROUPS", [])
 
 
 def group_sync(uid, user=None, response=None, *args, **kwargs):
-    """Sync the users groups from OAuth2/OIDC auth and set staff/superuser as appropriate."""
-    if user and response and CLAIMS_GROUP_NAME and response.get(CLAIMS_GROUP_NAME, False):
+    """Sync the users groups from SSO (OAuth2/OIDC/SAML) auth and set staff/superuser as appropriate."""
+    group_memberships = None
+    if user and response and CLAIMS_GROUP_NAME:
+        # OAuth2/OIDC responses carry group claims at the top level of the response
         group_memberships = response.get(CLAIMS_GROUP_NAME)
+        if not group_memberships and isinstance(response.get("attributes"), dict):
+            # SAML responses nest the assertion attributes under the "attributes" key
+            group_memberships = response["attributes"].get(CLAIMS_GROUP_NAME)
+    if group_memberships:
         is_staff = False
         is_superuser = False
         logger.debug(f"User {uid} is a member of {', '.join(group_memberships)}")
@@ -39,4 +45,4 @@ def group_sync(uid, user=None, response=None, *args, **kwargs):
         user.is_staff = is_staff
         user.save()
     else:
-        logger.debug(f"Did not receive groups from OAuth2/OIDC, response: {response}")
+        logger.debug(f"Did not receive groups from SSO, response: {response}")
