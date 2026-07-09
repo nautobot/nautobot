@@ -157,9 +157,9 @@ TODO
 
 <!-- towncrier release notes start -->
 
-## v3.2.0a0 (2026-07-09)
+## v3.2.0b1 (2026-07-09)
 
-### Added in v3.2.0a0
+### Added in v3.2.0b1
 
 - [#5743](https://github.com/nautobot/nautobot/issues/5743) - Added feature to optionally render Computed-Fields as Markdown
 - [#8610](https://github.com/nautobot/nautobot/issues/8610) - Added UI views for creating, editing, and deleting `ObjectMetadata` records directly in the web UI.
@@ -222,7 +222,7 @@ TODO
 - [#9171](https://github.com/nautobot/nautobot/issues/9171) - Added "More..." button to the live search results list if there are more entries to be displayed.
 - [#9177](https://github.com/nautobot/nautobot/issues/9177) - Updated the login page appearance and added the Nautobot edition to the About page.
 
-### Changed in v3.2.0a0
+### Changed in v3.2.0b1
 
 - [#8610](https://github.com/nautobot/nautobot/issues/8610) - Changed `ObjectMetadata.assigned_object_type` to `on_delete=CASCADE`; deleting a `ContentType` now cascades to its `ObjectMetadata` records instead of nulling them out.
 - [#8911](https://github.com/nautobot/nautobot/issues/8911) - Moved `nautobot.dcim.elevations` module to `nautobot.dcim.svg.rack_elevation`.
@@ -287,16 +287,16 @@ TODO
 - [#9193](https://github.com/nautobot/nautobot/issues/9193) - Re-organized `result` field in JobResult UI to ensure consistency with the API.
 - [#9197](https://github.com/nautobot/nautobot/issues/9197) - Changed the Interface Connections list view and REST API (`/dcim/interface-connections/`) to group a breakout cable's lanes together: the trunk interface is canonicalized onto the A side (shown once in the UI) and its fan-out endpoints are returned as consecutive rows on the B side, instead of being scattered. Added `origin_fans_out` and `destination_fans_out` fields to `CablePath` to support this without per-row queries, and standardized the shared queryset/ordering via `CablePath.interface_connections()`.
 
-### Deprecated in v3.2.0a0
+### Deprecated in v3.2.0b1
 
 - [#8921](https://github.com/nautobot/nautobot/issues/8921) - Deprecated passing job parameters as loose `**extra_kwargs` to `JobResult.enqueue_job()`, `JobResult.execute_job()`, and `nautobot.apps.testing.run_job_for_testing()`. Job parameters must now be passed as a single `job_kwargs` dict argument. The legacy calling style still works for backward compatibility but logs a warning, and will be removed in a future release.
 
-### Removed in v3.2.0a0
+### Removed in v3.2.0b1
 
 - [#8991](https://github.com/nautobot/nautobot/issues/8991) - Removed `should_reap` method from `JobRevokeStrategy` class.
 - [#9199](https://github.com/nautobot/nautobot/issues/9199) - Removed `CableToCableTermination._termination_device`, not needed any more.
 
-### Fixed in v3.2.0a0
+### Fixed in v3.2.0b1
 
 - [#8454](https://github.com/nautobot/nautobot/issues/8454) - Fixed "Too many tables" exception when exporting certain models to CSV from MySQL.
 - [#8911](https://github.com/nautobot/nautobot/issues/8911) - Fixed `BreakoutDiagramSVG` to render multiple lanes between a pair of connectors when appropriate.
@@ -329,13 +329,13 @@ TODO
 - [#9195](https://github.com/nautobot/nautobot/issues/9195) - Fixed inability to scroll horizontally in IP Address detail view "Interfaces" and "VM Interfaces" tabs tables.
 - [#9202](https://github.com/nautobot/nautobot/issues/9202) - Fixed `AttributeError` in `cable_status_color_css()` when rendering a virtual sub-interface whose parent has a cable but which is not a breakout child.
 
-### Dependencies in v3.2.0a0
+### Dependencies in v3.2.0b1
 
 - [#8910](https://github.com/nautobot/nautobot/issues/8910) - Added Fuse.js as a UI dependency.
 - [#8963](https://github.com/nautobot/nautobot/issues/8963) - Added `htmx-ext-json-enc` as a UI dependency.
 - [#8991](https://github.com/nautobot/nautobot/issues/8991) - Updated dependency `kubernetes` to `>=36.0.1,<37`.
 
-### Documentation in v3.2.0a0
+### Documentation in v3.2.0b1
 
 - [#8991](https://github.com/nautobot/nautobot/issues/8991) - Replaced core development guide `Minikube Dev Environment for K8s Jobs` by `Running a Nautobot Job on a Local Kubernetes Cluster` that walks through running a Nautobot Job inside a Kubernetes job pod while the rest of the dev stack (Django, Postgres, Redis) runs locally in Docker Compose.
 - [#9065](https://github.com/nautobot/nautobot/issues/9065) - Added documentation about new `IPAddressRange` model.
@@ -344,7 +344,7 @@ TODO
 - [#9167](https://github.com/nautobot/nautobot/issues/9167) - Added Homepage Panels documentation under User Guide → Getting Started.
 - [#9200](https://github.com/nautobot/nautobot/issues/9200) - Update the 3.2 release documentation with the new features.
 
-### Housekeeping in v3.2.0a0
+### Housekeeping in v3.2.0b1
 
 - [#8610](https://github.com/nautobot/nautobot/issues/8610) - Refactored ObjectMetadataUIViewSet model related UI views to use `NautobotUIViewSet` and `UI Component Framework`.
 - [#8789](https://github.com/nautobot/nautobot/issues/8789) - Refactored ConsolePortTemplate model related UI views to use `NautobotUIViewSet`.
