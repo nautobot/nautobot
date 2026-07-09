@@ -159,8 +159,9 @@ class VLANGroupFactory(OrganizationalModelFactory):
 
     class Params:
         unique_name = UniqueFaker("word", part_of_speech="noun")
+        unique_suffix = UniqueFaker("uuid4")
 
-    name = factory.LazyAttribute(lambda o: o.unique_name.upper())
+    name = factory.LazyAttribute(lambda o: f"{o.unique_name.upper()} {str(o.unique_suffix)[:8]}")
 
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")

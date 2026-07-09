@@ -2,6 +2,12 @@
 services:
   db:
     image: postgres:14
+    command:
+      - "postgres"
+      - "-c"
+      # Default is 64. This ceiling helps cover TransactionTestCase flushes for
+      # test runs with many parallel workers from running OOM.
+      - "max_locks_per_transaction=512"
     env_file:
       - dev.env
     volumes:
