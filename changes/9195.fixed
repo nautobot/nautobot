@@ -1,4 +1,0 @@
-Fixed an exception when rendering IP Address detail view "Interfaces" tab.
-Fixed missing interface-type icons in IP Address detail view "Interfaces" tab table.
-Fixed missing "actions" column in IP Address detail view "Interfaces" tab table.
-Fixed inability to scroll horizontally in IP Address detail view "Interfaces" and "VM Interfaces" tabs tables.
