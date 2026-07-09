@@ -44,6 +44,7 @@ def _fake_otel_config(**overrides):
         "OTEL_EXPORTER_OTLP_INSECURE": False,
         "OTEL_PYTHON_LOG_CORRELATION": False,
         "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT": 8192,
+        "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS": [],
         "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}},
     }
     defaults.update(overrides)
