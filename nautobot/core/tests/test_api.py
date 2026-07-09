@@ -12,7 +12,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, RequestFactory, TestCase
 from django.urls import reverse
-from rest_framework import status
+from rest_framework import serializers as drf_serializers, status
 from rest_framework.exceptions import ParseError
 from rest_framework.settings import api_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
@@ -20,6 +20,7 @@ import yaml
 
 from nautobot.circuits.models import Provider
 from nautobot.core import testing
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
@@ -786,6 +787,29 @@ class WritableNestedSerializerTest(testing.APITestCase):
         vlan = ipam_models.VLAN.objects.get(pk=response.data["id"])
         self.assertEqual(vlan.status, self.statuses.first())
         self.assertEqual(vlan.vlan_group, self.vlan_group1)
+
+
+class NautobotHyperlinkedRelatedFieldTest(TestCase):
+    """Tests for the NautobotHyperlinkedRelatedField class."""
+
+    def test_read_only_field_object_type(self):
+        """A read-only field (no queryset) must derive object_type from the FK target model, not the declaring model.
+
+        https://github.com/nautobot/nautobot/issues/9209
+        """
+
+        class ExampleDeviceSerializer(drf_serializers.ModelSerializer):
+            tenant = NautobotHyperlinkedRelatedField(read_only=True, view_name="tenancy-api:tenant-detail")
+
+            class Meta:
+                model = dcim_models.Device
+                fields = ["tenant"]
+
+        tenant = tenancy_models.Tenant.objects.first()
+        device = dcim_models.Device(tenant=tenant)
+        data = ExampleDeviceSerializer(device, context={"request": None}).data
+        self.assertEqual(data["tenant"]["object_type"], "tenancy.tenant")
+        self.assertEqual(data["tenant"]["id"], tenant.pk)
 
 
 class APIOrderingTestCase(testing.APITestCase):

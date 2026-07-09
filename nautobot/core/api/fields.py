@@ -215,7 +215,7 @@ class NautobotHyperlinkedRelatedField(WritableSerializerMixin, serializers.Hyper
             return self.queryset.model
         # Foreign key where the destination is referenced by string rather than by Python class
         if getattr(self.parent.Meta.model, self.source, False):
-            return getattr(self.parent.Meta.model, self.source).field.model
+            return getattr(self.parent.Meta.model, self.source).field.related_model
 
         logger.warning(
             "Unable to determine model for related field %r; "
