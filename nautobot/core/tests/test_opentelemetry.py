@@ -591,3 +591,41 @@ class ExtraInstrumentorsTest(testing.TestCase):
             instrument()
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
+
+    def test_dotless_path_warns_and_does_not_raise(self):
+        """A path with no dot (empty module) is handled gracefully with a warning, not a crash."""
+        with patch.dict(
+            "sys.modules",
+            {"nautobot_config": _fake_otel_config(NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=["NoDotHere"])},
+        ):
+            with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                instrument()  # must not raise
+
+        self.assertTrue(
+            any("NoDotHere" in message for message in logs.output),
+            f"Expected a warning naming the dotless path; got: {logs.output!r}",
+        )
+
+    def test_failing_instrumentor_does_not_block_later_ones(self):
+        """A load failure on one entry must not prevent a later valid entry from being installed."""
+        good_instance = MagicMock()
+        good_instance.is_instrumented_by_opentelemetry = False
+        good_module, good_cls = self._fake_instrumentor_module(good_instance)
+
+        with patch.dict("sys.modules", {"good_otel_pkg": good_module}):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "nautobot_config": _fake_otel_config(
+                        NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS=[
+                            "nonexistent.module.DoesNotExist",
+                            "good_otel_pkg.FakeInstrumentor",
+                        ]
+                    )
+                },
+            ):
+                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING"):
+                    instrument()
+
+        good_cls.assert_called_once()
+        good_instance.instrument.assert_called_once()
