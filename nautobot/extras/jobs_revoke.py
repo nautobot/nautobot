@@ -5,14 +5,12 @@ from enum import Enum
 import logging
 from typing import Callable
 
-from celery.exceptions import TaskRevokedError
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 import kubernetes.client
 
 from nautobot.core.celery import app as celery_app
-from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -316,16 +314,7 @@ class CeleryStrategy(JobRevokeStrategy):
             grouping="revoking",
         )
 
-        with transaction.atomic():
-            job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
-
-            exc = TaskRevokedError("revoked")
-            job_result.result = {
-                "exc_type": type(exc).__name__,
-                "exc_module": "celery.exceptions",
-                "exc_message": [sanitize(str(exc))],
-            }
-            job_result.save(update_fields=["result"])
+        job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
 
         return True
 

@@ -156,6 +156,20 @@ DEVICE_LINK = """
 </a>
 """
 
+# Interface Connections list: the A-side (origin) device/interface is blanked on all but the first
+# lane of a breakout group so the repeated trunk reads as one visually-merged block. `group_row` is
+# annotated by `InterfaceConnectionsListView.base_queryset()` (1 for the first lane of each origin);
+# it is always 1 for point-to-point connections, which therefore render normally.
+INTERFACE_CONNECTION_DEVICE_A = """
+{% load helpers %}
+{% if record.group_row == 1 %}{{ record.origin.parent|hyperlinked_object }}{% endif %}
+"""
+
+INTERFACE_CONNECTION_INTERFACE_A = """
+{% load helpers %}
+{% if record.group_row == 1 %}{{ record.origin|hyperlinked_object }}{% endif %}
+"""
+
 INTERFACE_IPADDRESSES = """
 {% for ip in record.ip_addresses.all %}
     <a href="{{ ip.get_absolute_url }}">{{ ip }}</a> (<a href="{{ ip.parent.namespace.get_absolute_url }}">{{ ip.parent.namespace }}</a>)<br />
