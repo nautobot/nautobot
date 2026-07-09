@@ -72,8 +72,8 @@ The following are **not** translated — rewrite them against the `terminations`
 
 **Other notes:**
 
-* The private `_cable_peer`, `_cable_peer_type`, and `_cable_peer_id` cache fields have been removed from `CableTermination`. The public peer accessors (`get_cable_peer()`, REST `cable_peer` / `cable_peer_type`, GraphQL `cable_peer_*`) are unchanged; `get_cable_peer()` now accepts an optional `peer_connector` argument for breakout-lane-specific lookups.
-* New helpers are available for working with multi-termination cables: `Cable.add_termination(termination, cable_end, connector=1)`, the typed many-to-many reverse accessors on `Cable` (`cable.interfaces`, `cable.front_ports`, etc.), the singular `cable_termination` reverse accessor on each termination, and `PathEndpoint.get_connected_endpoints()` (returning the resolved destinations of all cable paths, one per breakout lane).
+- The private `_cable_peer`, `_cable_peer_type`, and `_cable_peer_id` cache fields have been removed from `CableTermination`. The public peer accessors (`get_cable_peer()`, REST `cable_peer` / `cable_peer_type`, GraphQL `cable_peer_*`) are unchanged; `get_cable_peer()` now accepts an optional `peer_connector` argument for breakout-lane-specific lookups.
+- New helpers are available for working with multi-termination cables: `Cable.add_termination(termination, cable_end, connector=1)`, the typed many-to-many reverse accessors on `Cable` (`cable.interfaces`, `cable.front_ports`, etc.), the singular `cable_termination` reverse accessor on each termination, and `PathEndpoint.get_connected_endpoints()` (returning the resolved destinations of all cable paths, one per breakout lane).
 
 ## Release Overview
 
@@ -126,8 +126,8 @@ The header search bar gains two distinct capabilities. First, model-name typeahe
 
 #### Other Additions
 
-* Computed Fields can now optionally be rendered as Markdown.
-* A reusable `copy_button` template tag renders hover copy-to-clipboard buttons.
+- Computed Fields can now optionally be rendered as Markdown.
+- A reusable `copy_button` template tag renders hover copy-to-clipboard buttons.
 
 ### Changed
 
@@ -139,9 +139,9 @@ The [`Cable`](../user-guide/core-data-model/dcim/cable.md) REST API serializer a
 
 The default sort ordering of device-component models (Interface, Front Port, Rear Port, Module Bay, etc.) has been changed to group and sort records by their associated `device_id` (UUID) rather than by the associated device's `name`, as the prior behavior (requiring a join across database tables) performed poorly at high data scale. This change affects the default behavior of the following:
 
-* `/dcim/interfaces/` UI list view (and `/dcim/front-ports/`, `/dcim/rear-ports/`, etc.)
-* `/api/dcim/interfaces/` REST API list view (and `/api/dcim/front-ports/`, `/api/dcim/rear-ports/`, etc.)
-* GraphQL query responses that invole listing any of these models
+- `/dcim/interfaces/` UI list view (and `/dcim/front-ports/`, `/dcim/rear-ports/`, etc.)
+- `/api/dcim/interfaces/` REST API list view (and `/api/dcim/front-ports/`, `/api/dcim/rear-ports/`, etc.)
+- GraphQL query responses that invole listing any of these models
 
 For the UI and REST API list views, if ordering by device name is desired, the prior behavior may be achieved by explicitly specifying a `?sort=device` query parameter when requesting these views, but users are encouraged to be aware of the performance implications of doing so.
 
@@ -199,7 +199,7 @@ TODO
 - [#9051](https://github.com/nautobot/nautobot/issues/9051) - Added `nautobot-server create_breakout_demo_data` command.
 - [#9065](https://github.com/nautobot/nautobot/issues/9065) - Added the `IPAddressRange` model to represent a contiguous span of IP addresses within a parent Prefix, without creating individual IPAddress records for each address.
 - [#9078](https://github.com/nautobot/nautobot/issues/9078) - Reworked the "Connection" panel on `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, `PowerOutlet`, `FrontPort`, `RearPort`, `CircuitTermination`, and `PowerFeed` detail views to show *all* cable peers and *all* connected endpoints of a multi-termination ("breakout") cable rather than only the first. Each line shows a type icon and the resolved-path reachability where applicable.
-- [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added per-type "<Type> Endpoints" panels to the `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, and `PowerOutlet` detail views, listing the details of every connected endpoint grouped by type.
+- [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added per-type `<Type> Endpoints` panels to the `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, and `PowerOutlet` detail views, listing the details of every connected endpoint grouped by type.
 - [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added a reusable `nautobot.apps.ui.ConnectionPanel` UI component that renders a `CableTermination`'s cable, cable peers, and connected endpoints as a detail panel.
 - [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added a reusable `nautobot.apps.ui.ConnectedEndpointsPanel` UI component, and used it to add per-type connected-endpoint tables to the `CircuitTermination` detail view.
 - [#9093](https://github.com/nautobot/nautobot/issues/9093) - Added "Cable Peer" and "Connection" columns to `CircuitTerminationTable`.
@@ -251,7 +251,7 @@ TODO
 - [#8974](https://github.com/nautobot/nautobot/issues/8974) - Changed `CableType` to reject edits to `a_connectors`, `b_connectors`, or `total_lanes` (and related breakout attributes) once any `Cable` of that type exists, since changing the connector layout would invalidate existing terminations and paths. The fields remain editable while no cables reference the `CableType`.
 - [#8974](https://github.com/nautobot/nautobot/issues/8974) - Reworked `InterfaceConnectionsListView` (UI), `InterfaceConnectionViewSet` (REST API), `InterfaceConnectionTable`, `InterfaceConnectionFilterSet`, and the homepage "Interfaces" connection counter to operate over `CablePath` rows rather than `Interface` rows. Each breakout-cable lane now surfaces as its own connection row (previously only the primary lane was shown), and filter parameters (`device_id`, `device`, `location`) now match either endpoint of a connection rather than only the canonical "A" side. The REST API JSON response shape (`interface_a`, `interface_b`, `connected_endpoint_reachable`) is unchanged.
 - [#8974](https://github.com/nautobot/nautobot/issues/8974) - Replaced the per-component `ConnectCableTo*Form` classes (one per termination type) and the `dcim/cable_connect.html` template with a single unified `cable_add` form. The per-port `<port>_connect` URLs still exist but now redirect into `cable_add` with A-side identity and an optional B-side type pre-selection. The unified form is HTMX-driven (previously jQuery-based) and selects a B-side termination type compatible with the A-side as the default (e.g. `PowerPort` → `PowerOutlet`) rather than always defaulting to `Interface`.
-- [#8974](https://github.com/nautobot/nautobot/issues/8974) - Consolidated the per-termination-type "Connect to …" entries in device-component row-action dropdowns and in the "Connection" panel of device-component, power-feed, and circuit-termination detail views into a single "Add Cable" action linking into the unified `cable_add` form. The cable-actions dropdown renames "Disconnect" to "Detach cable from <termination>" and refreshes icons to avoid clashes with the surrounding "Edit/Delete <component>" entries.
+- [#8974](https://github.com/nautobot/nautobot/issues/8974) - Consolidated the per-termination-type "Connect to …" entries in device-component row-action dropdowns and in the "Connection" panel of device-component, power-feed, and circuit-termination detail views into a single "Add Cable" action linking into the unified `cable_add` form. The cable-actions dropdown renames `Disconnect` to `Detach cable from <termination>` and refreshes icons to avoid clashes with the surrounding `Edit/Delete <component>` entries.
 - [#8974](https://github.com/nautobot/nautobot/issues/8974) - Reworked the `Cable` list view's `CableTable`: added a `cable_type` column, added multi-termination `terminations_a`/`terminations_b` columns that render every termination on each side of the cable, and added an `actions` column. The single-termination columns `termination_a` (etc.) remain available for backwards compatibility as opt-in column choices.
 - [#8974](https://github.com/nautobot/nautobot/issues/8974) - Changed the UI-framework `components/panel/footer_content_table.html` partial to default the `return_url` on footer-button bulk actions to the current page (preserving query string), so submitting a bulk action from a detail-view panel returns to that panel rather than the model's generic list view. Existing `action-url` values that already specify `return_url` are left untouched.
 - [#8974](https://github.com/nautobot/nautobot/issues/8974) - Changed the seeded default "AOC Fanout" `CableType` records (1x2, 1x4, 1x8, 2x4) to set `has_embedded_transceivers=True`.
