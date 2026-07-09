@@ -150,6 +150,7 @@ class SettingsJSONSchemaTestCase(TestCase):
             "MESSAGE_STORAGE",
             "MESSAGE_TAGS",
             "MIDDLEWARE",
+            "NUMBER_GROUPING",
             "PROMETHEUS_EXPORT_MIGRATIONS",
             "REST_FRAMEWORK",
             "REST_FRAMEWORK_ALLOWED_VERSIONS",
