@@ -37,19 +37,9 @@ def populate_cable_to_cable_terminations(apps, schema_editor):
         return ct_cache[ct_id]
 
     for cable in Cable.objects.all().iterator():
-        for cable_end, type_id, term_id, device_id in (
-            (
-                "A",
-                cable.termination_a_type_id,
-                cable.termination_a_id,
-                getattr(cable, "_termination_a_device_id", None),
-            ),
-            (
-                "B",
-                cable.termination_b_type_id,
-                cable.termination_b_id,
-                getattr(cable, "_termination_b_device_id", None),
-            ),
+        for cable_end, type_id, term_id in (
+            ("A", cable.termination_a_type_id, cable.termination_a_id),
+            ("B", cable.termination_b_type_id, cable.termination_b_id),
         ):
             if not (type_id and term_id):
                 continue
@@ -60,7 +50,6 @@ def populate_cable_to_cable_terminations(apps, schema_editor):
                 cable=cable,
                 cable_end=cable_end,
                 **{fk_field: term_id},
-                defaults={"_termination_device_id": device_id},
             )
 
 

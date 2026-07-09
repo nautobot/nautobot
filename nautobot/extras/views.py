@@ -1771,6 +1771,9 @@ class DynamicGroupUIViewSet(NautobotUIViewSet):
                 }
                 RequestConfig(request, paginate).configure(members_table)
 
+                if "actions" in members_table.columns:
+                    members_table.columns["actions"].column.extra_context["return_url"] = ""
+
                 if instance.group_type != DynamicGroupTypeChoices.TYPE_STATIC:
                     context["members_list_url"] = None
                 else:
@@ -3462,8 +3465,6 @@ class JobResultSummaryPanel(object_detail.ObjectFieldsPanel):
                 return format_html('<div class="spinner-border"><span class="visually-hidden">Loading...</span></div>')
         if key == "result" and value is None:
             return helpers.placeholder(value)  # instead of an explicitly rendered `null`
-        if key == "result" and obj.status != JobResultStatusChoices.STATUS_SUCCESS:
-            return helpers.placeholder(None)  # not render Result Data field
         return super().render_value(key, value, context)
 
 

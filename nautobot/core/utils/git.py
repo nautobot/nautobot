@@ -32,6 +32,14 @@ GIT_ENVIRONMENT = {
     "GIT_TERMINAL_PROMPT": "0",  # never prompt for user input such as credentials - important to avoid hangs!
 }
 
+# Local git config to set on every repository we manage, as (section, option): value.
+GIT_LOCAL_CONFIG = {
+    # Run git's automatic housekeeping (`gc`) synchronously instead of as a detached background process.
+    # A detached `git gc` re-parents to PID 1, and in container deployments whose PID 1 does not reap
+    # children it lingers as a zombie (`[git] <defunct>`) after every fetch. Issue #8287.
+    ("gc", "autoDetach"): "false",
+}
+
 
 def swap_status_initials(data):
     """Swap Git status initials with its equivalent."""
@@ -134,6 +142,25 @@ class GitRepo:
 
         if url not in self.repo.remotes.origin.urls:
             self.repo.remotes.origin.set_url(url)
+
+        # Inject our local git config into the repository.
+        with self.repo.config_writer() as config:
+            for (section, option), value in GIT_LOCAL_CONFIG.items():
+                config.set_value(section, option, value)
+
+    def close(self):
+        """Release the underlying Git subprocess resources.
+
+        GitPython keeps persistent `git cat-file` subprocesses alive for the lifetime of the `Repo`
+        object; closing it interrupts them so they don't accumulate across repeated repository syncs.
+        """
+        self.repo.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.close()
 
     @property
     def head(self):
