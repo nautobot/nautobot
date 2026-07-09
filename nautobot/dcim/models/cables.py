@@ -1101,26 +1101,6 @@ def termination_fk_field(model_or_instance):
         ) from None
 
 
-def _resolve_termination_device(termination):
-    """Return the effective parent Device of a termination, walking through any chain of nested modules."""
-    if termination is None:
-        return None
-    direct_device = getattr(termination, "device", None)
-    if direct_device is not None:
-        return direct_device
-    module = getattr(termination, "module", None)
-    while module is not None:
-        if module.device is not None:
-            return module.device
-        parent_bay = getattr(module, "parent_module_bay", None)
-        if parent_bay is None:
-            return None
-        if getattr(parent_bay, "parent_device", None) is not None:
-            return parent_bay.parent_device
-        module = getattr(parent_bay, "parent_module", None)
-    return None
-
-
 def _at_most_one_termination_q():
     """Build a Q expression that's true iff at most one of the TERMINATION_FK_FIELDS is non-null.
 
@@ -1235,17 +1215,6 @@ class CableToCableTermination(BaseModel):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
         help_text="The connector number on this cable end. Always 1 for standard cables.",
-    )
-
-    # Cached parent Device for filtering (resolved through any chain of nested modules at save time).
-    # Necessary denormalization: the effective device of a modular component is reached through a
-    # recursive parent_module_bay/parent_module chain, which can't be expressed as a single ORM JOIN.
-    _termination_device = models.ForeignKey(
-        to="dcim.Device",
-        on_delete=models.CASCADE,
-        related_name="+",
-        blank=True,
-        null=True,
     )
 
     natural_key_field_names = ["pk"]
@@ -1383,11 +1352,6 @@ class CableToCableTermination(BaseModel):
                         continue
                     Cable.validate_termination_pair(term, peer_term)
 
-    def save(self, *args, **kwargs):
-        # Cache the effective parent device for filtering. See `_termination_device` field comment.
-        self._termination_device = _resolve_termination_device(self.termination)
-        super().save(*args, **kwargs)
-
 
 @extras_features("graphql")
 class CablePath(BaseModel):
@@ -1438,6 +1402,13 @@ class CablePath(BaseModel):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
     )
+    # Whether this path's origin / destination sits on the fan-out (trunk) side of a breakout cable,
+    # i.e. its connector maps to more than one opposite-side connector (see
+    # `CableTermination.breakout_fans_out()`). Stamped at path-build time (a pure function of each
+    # endpoint + its cable type, so recomputed on every rebuild). Lets the Interface Connections list
+    # view canonicalize a breakout's lanes onto one side and group them without per-row subqueries.
+    origin_fans_out = models.BooleanField(default=False)
+    destination_fans_out = models.BooleanField(default=False)
     # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
     # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
     is_metadata_associable_model = False
@@ -1456,6 +1427,39 @@ class CablePath(BaseModel):
     def segment_count(self):
         total_length = 1 + len(self.path) + (1 if self.destination else 0)
         return int(total_length / 3)
+
+    @classmethod
+    def interface_connections(cls):
+        """
+        Canonical queryset of interface-to-interface connections, one CablePath row per lane.
+
+        For a breakout cable the trunk interface is the origin of all N lanes; those are kept
+        (canonicalizing the trunk onto one side) and the reverse fan-out rows are dropped, while
+        point-to-point connections keep a single canonical direction:
+
+        - `origin_fans_out=True` — a trunk-origin lane; keep all N.
+        - `destination_fans_out=True` — a reverse fan-out row (its far endpoint is the trunk); drop it.
+        - Otherwise point-to-point; keep the single canonical direction (`origin_id < destination_id`).
+
+        Both flags are stored (see `from_origin`), so this is a plain indexed column filter with no
+        per-row subqueries. Rows are ordered so a trunk's lanes are consecutive. Shared by the UI
+        Interface Connections list view and the REST API `InterfaceConnectionViewSet` so they stay
+        consistent.
+        """
+        return (
+            cls.objects.filter(
+                origin_type__app_label="dcim",
+                origin_type__model="interface",
+                destination_type__app_label="dcim",
+                destination_type__model="interface",
+            )
+            .filter(
+                models.Q(origin_fans_out=True)
+                | (models.Q(destination_fans_out=False) & models.Q(origin_id__lt=models.F("destination_id")))
+            )
+            .order_by("origin_type", "origin_id", "peer_connector")
+            .prefetch_related("origin", "destination")
+        )
 
     @classmethod
     def from_origin(cls, origin, peer_connector=1):
@@ -1571,6 +1575,9 @@ class CablePath(BaseModel):
             is_active=is_active,
             is_split=is_split,
             peer_connector=peer_connector,
+            # Locally computed from each endpoint's own connector mapping; no sibling-row lookups.
+            origin_fans_out=origin.breakout_fans_out(),
+            destination_fans_out=destination.breakout_fans_out() if destination is not None else False,
         )
 
     def get_path(self):

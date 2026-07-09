@@ -1,9 +1,12 @@
 from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.dcim.utils import (
     build_connector_row_layout,
+    cable_status_color_css,
     disconnect_termination,
     generate_cable_breakout_mapping,
     validate_cable_breakout_mapping,
@@ -222,3 +225,30 @@ class BuildConnectorRowLayoutTestCase(TestCase):
         # Every column is fully tiled: rowspans on each side sum to the row count, with no overlap.
         self.assertEqual(sum(r["a_rowspan"] for r in rows), len(rows))
         self.assertEqual(sum(r["b_rowspan"] for r in rows), len(rows))
+
+
+class CableStatusColorCssTestCase(TestCase):
+    def test_cable_status_color_css_virtual_subinterface_no_breakout_lane(self):
+        """A virtual sub-interface sets `parent_interface_id` but is not a breakout child, so
+        `get_breakout_lane()` returns None. Coloring must not treat it as a breakout lane and blow
+        up on `.far_termination`; it should fall through to "".
+        Regression test for AttributeError: 'NoneType' object has no attribute 'far_termination'.
+        """
+        status_active = Status.objects.get_for_model(Interface).first()
+        local = create_test_device("Virtual Subiface Local")
+
+        parent = Interface.objects.create(device=local, name="Eth-parent", status=status_active)
+        subiface = Interface.objects.create(
+            device=local,
+            name="Eth-parent.100",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            parent_interface=parent,
+            status=status_active,
+        )
+
+        # Exactly the shape that used to crash.
+        self.assertIsNone(subiface.cable)
+        self.assertIsNotNone(subiface.parent_interface_id)
+        self.assertIsNone(subiface.get_breakout_lane())
+
+        self.assertEqual(cable_status_color_css(subiface), "")
