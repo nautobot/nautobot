@@ -789,10 +789,14 @@ class DynamicGroup(PrimaryModel):
 
         # For vanilla multiple-choice filters, we want all values in a set union (boolean OR)
         # because we want ANY of the filter values to match. Unless the filter field is explicitly
-        # conjoining the values, in which case we want a set intersection (boolean AND). We know this isn't right
-        # since the resulting query actually does tag.name == tag_1 AND tag.name == tag_2, but django_filter does
-        # not use Q evaluation for conjoined filters. This function is only used for the display, and the display
-        # is good enough to get the point across.
+        # conjoining the values, in which case we want a set intersection (boolean AND).
+        #
+        # NOTE: for a *conjoined* filter over a many-to-many relationship (e.g. `tags`) this produces a query
+        # that is only correct for *display* purposes, not for evaluation: folding the per-value predicates into
+        # a single `Q` (`tags__name == A AND tags__name == B`) collapses them onto one JOIN, which no row can
+        # satisfy. That is fine here because `generate_query()` is used only to render human-readable filter
+        # logic (see `pretty_print_query`); actual group membership is evaluated by `_generate_membership_queryset()`,
+        # which routes through the FilterSet's own `.qs` and therefore matches the UI/REST behavior exactly.
         elif isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
                 if filter_field.conjoined:
@@ -855,13 +859,9 @@ class DynamicGroup(PrimaryModel):
 
         return query
 
-    def generate_query(self, *, fresh_group_pks=frozenset()):
+    def generate_query(self):
         """
         Return a `Q` object generated recursively from this dynamic group.
-
-        Args:
-            fresh_group_pks (frozenset, optional): PKs of groups whose caches are up-to-date within the current
-                operation; their caches are queried directly instead of re-evaluating their filters.
         """
         if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
             return self._generate_filter_based_query()
@@ -875,14 +875,10 @@ class DynamicGroup(PrimaryModel):
                 operator = membership.operator
                 logger.debug("Processing group %s...", group)
 
-                if group.pk in fresh_group_pks:
-                    # This child's cache was refreshed within the current operation; query it directly.
-                    next_set = models.Q(pk__in=group._cached_member_pks())
-                else:
-                    if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
-                        logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
+                if group.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+                    logger.debug("Query: %s -> %s -> %s", group, group.filter, operator)
 
-                    next_set = group.generate_query(fresh_group_pks=fresh_group_pks)
+                next_set = group.generate_query()
                 query = self._perform_membership_set_operation(operator, query, next_set)
 
             return query
@@ -891,9 +887,70 @@ class DynamicGroup(PrimaryModel):
 
         raise RuntimeError(f"generate_query not implemented for group_type {self.group_type}")
 
+    def _generate_membership_queryset(self, *, fresh_group_pks=frozenset()):
+        """
+        Return the queryset of objects that are members of this group, evaluated correctly for membership.
+
+        Unlike `generate_query()` (which builds a single human-readable `Q` object for display), this routes
+        each `dynamic-filter` leaf group through its FilterSet's own `.qs`, so membership matches the UI/REST
+        filtering behavior exactly -- including conjoined many-to-many filters such as `tags`, which require a
+        separate JOIN per value and cannot be represented correctly in a single `Q` object.
+
+        `dynamic-set` groups recursively combine their children's querysets via subquery-based set operations
+        (`IN`/`NOT EXISTS`) so that the result stays a lazy queryset (no Python-side materialization of member
+        PKs) regardless of how large any individual child's membership is.
+
+        Args:
+            fresh_group_pks (frozenset, optional): PKs of groups whose caches are up-to-date within the current
+                operation; their caches are queried directly instead of re-evaluating their filters.
+        """
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            # The FilterSet is the authoritative source of truth for what this filter means.
+            filterset = self.filterset_class(self.filter, self.model.objects.all())  # pylint: disable=not-callable
+            # An invalid filter must fail *closed* (no members). django_filters' `.qs` fails *open* -- it returns
+            # the unfiltered queryset when the underlying form is invalid -- so we have to guard on `is_valid()`.
+            if not filterset.is_valid():
+                logger.warning("Filter data is not valid for DynamicGroup %s; group has no members", self)
+                return self.model.objects.none()
+            return filterset.qs
+
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+            queryset = None
+            for membership in self.dynamic_group_memberships.all():
+                operator = membership.operator
+                group = membership.group
+                if group.pk in fresh_group_pks:
+                    # This child's cache was refreshed within the current operation; query it directly.
+                    next_queryset = self.model.objects.filter(pk__in=group._cached_member_pks())
+                else:
+                    next_queryset = group._generate_membership_queryset(fresh_group_pks=fresh_group_pks)
+                # Correlated NOT EXISTS anti-join for `difference`; plans more reliably than `NOT IN` at scale.
+                not_in_next = ~models.Exists(next_queryset.filter(pk=models.OuterRef("pk")))
+                if queryset is None:
+                    # Mirror the empty-`Q` seeding of `generate_query()`: the first membership combines against
+                    # "match everything", so `union`/`intersection` reduce to the child itself while `difference`
+                    # reduces to its complement.
+                    if operator == "difference":
+                        queryset = self.model.objects.filter(not_in_next)
+                    else:
+                        queryset = next_queryset
+                    continue
+                if operator == "union":
+                    queryset = self.model.objects.filter(models.Q(pk__in=queryset) | models.Q(pk__in=next_queryset))
+                elif operator == "intersection":
+                    queryset = queryset.filter(pk__in=next_queryset)
+                elif operator == "difference":
+                    queryset = queryset.filter(not_in_next)
+            if queryset is None:
+                # An empty set group matches everything, mirroring `filter(Q())` in the legacy code path.
+                queryset = self.model.objects.all()
+            return queryset
+
+        raise RuntimeError(f"_generate_membership_queryset not implemented for group_type {self.group_type}")
+
     def _get_group_queryset(self, *, fresh_group_pks=frozenset()):
         """Construct the queryset representing dynamic membership of this group."""
-        query = self.generate_query(fresh_group_pks=fresh_group_pks)
+        queryset = self._generate_membership_queryset(fresh_group_pks=fresh_group_pks)
         # https://github.com/nautobot/nautobot/issues/7631
         #     Some queries may result in duplicate records, hence the need for `.distinct()`.
         #     Use of `.distinct()` in general is a code smell and a performance hit, but given the wide variety of
@@ -903,7 +960,7 @@ class DynamicGroup(PrimaryModel):
         #     Additionally, due to the use of `.distinct()`, in combination with our use of `.only("id")`
         #     on this queryset, e.g. in `_set_members()`, we also need to override any default model ordering on the
         #     queryset in order to avoid SQL errors like "each EXCEPT query must have the same number of columns"
-        return self.model.objects.filter(query).order_by("id").distinct()
+        return queryset.order_by("id").distinct()
 
     # TODO: unused in core
     def add_child(self, child, operator, weight):
@@ -1250,8 +1307,8 @@ class DynamicGroupMembership(BaseModel):
         return siblings.exclude(pk=self.pk)
 
     # TODO: unused in core
-    def generate_query(self, *, fresh_group_pks=frozenset()):
-        return self.group.generate_query(fresh_group_pks=fresh_group_pks)
+    def generate_query(self):
+        return self.group.generate_query()
 
     def clean(self):
         super().clean()

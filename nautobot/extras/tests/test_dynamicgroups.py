@@ -850,6 +850,39 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
 
         self.assertQuerySetEqual(group_qs, process_qs, ordered=False)
 
+    def test_get_group_queryset_conjoined_tags(self):
+        """A `tags` filter with multiple values must match objects tagged with ALL of them (match-ALL).
+
+        Regression test: previously `_get_group_queryset()` folded the conjoined per-tag predicates into a
+        single `Q`, collapsing them onto one JOIN (`tags__name == A AND tags__name == B`) and matching zero
+        objects. Membership must instead agree with the FilterSet's own `.qs`, which JOINs once per tag value.
+        """
+        tag_a, tag_b = Tag.objects.create(name="DG Tag A"), Tag.objects.create(name="DG Tag B")
+        for tag_obj in (tag_a, tag_b):
+            tag_obj.content_types.add(self.device_ct)
+
+        device_both = self.devices[0]  # tagged with both A and B -> should match
+        device_a_only = self.devices[1]  # tagged with only A -> should NOT match
+        device_both.tags.set([tag_a, tag_b])
+        device_a_only.tags.set([tag_a])
+
+        filter_data = {"tags": [tag_a.name, tag_b.name]}
+        group = DynamicGroup.objects.create(
+            name="Conjoined Tags",
+            filter=filter_data,
+            content_type=self.device_ct,
+        )
+
+        group_qs = group._get_group_queryset()
+        # Membership must exactly match the FilterSet the UI/REST use.
+        self.assertQuerySetEqualAndNotEmpty(
+            group_qs,
+            DeviceFilterSet(filter_data, Device.objects.all()).qs,
+            ordered=False,
+        )
+        self.assertIn(device_both, group_qs)
+        self.assertNotIn(device_a_only, group_qs)
+
     def test_get_ancestors(self):
         """Test `DynamicGroup.get_ancestors()`."""
         expected = ["Third Child", "Parent"]
@@ -1260,7 +1293,7 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
         for group in (leaf, parent_1, parent_2, grandparent):
             self.assertQuerySetEqualAndNotEmpty(
                 group.members,
-                Device.objects.filter(group.generate_query()).distinct(),
+                group._get_group_queryset(),
                 ordered=False,
             )
         self.assertIn(new_device, grandparent.members)
@@ -1288,52 +1321,54 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
         self.assertGreater(refreshed_pks.index(grandparent.pk), refreshed_pks.index(parent_1.pk))
         self.assertGreater(refreshed_pks.index(grandparent.pk), refreshed_pks.index(parent_2.pk))
 
-    def test_generate_query_fresh_group_pks_substitution(self):
-        """`generate_query(fresh_group_pks=...)` reuses fresh caches without changing the resulting members."""
-        live_query = self.parent.generate_query()
+    def test_get_group_queryset_fresh_group_pks_substitution(self):
+        """`fresh_group_pks` reuses fresh caches without changing the resulting members."""
+        live_queryset = self.parent._get_group_queryset()
+        # The live queryset contains only filter predicates; substitution consults the cached-members table.
+        self.assertNotIn("staticgroupassociation", str(live_queryset.query))
 
         # Substituting a direct child's fresh cache changes the query structure but not its results.
         self.first_child.update_cached_members()
-        substituted_query = self.parent.generate_query(fresh_group_pks=frozenset([self.first_child.pk]))
-        self.assertNotEqual(str(substituted_query), str(live_query))
-        # The live query contains only filter predicates; substitution introduces a cache (pk__in) subquery.
-        self.assertNotIn("pk__in", str(live_query))
-        self.assertIn("pk__in", str(substituted_query))
-        self.assertQuerySetEqualAndNotEmpty(
-            Device.objects.filter(substituted_query).distinct(),
-            Device.objects.filter(live_query).distinct(),
-            ordered=False,
-        )
+        substituted_queryset = self.parent._get_group_queryset(fresh_group_pks=frozenset([self.first_child.pk]))
+        self.assertIn("staticgroupassociation", str(substituted_queryset.query))
+        self.assertQuerySetEqualAndNotEmpty(substituted_queryset, live_queryset, ordered=False)
 
         # Substitution also applies to a fresh group nested inside a live-evaluated child subtree.
         self.nested_child.update_cached_members()
-        deep_query = self.parent.generate_query(fresh_group_pks=frozenset([self.nested_child.pk]))
-        self.assertIn("pk__in", str(deep_query))
-        self.assertQuerySetEqualAndNotEmpty(
-            Device.objects.filter(deep_query).distinct(),
-            Device.objects.filter(live_query).distinct(),
-            ordered=False,
-        )
+        deep_queryset = self.parent._get_group_queryset(fresh_group_pks=frozenset([self.nested_child.pk]))
+        self.assertIn("staticgroupassociation", str(deep_queryset.query))
+        self.assertQuerySetEqualAndNotEmpty(deep_queryset, live_queryset, ordered=False)
 
         # An empty fresh set is the default and must not alter the query at all.
-        self.assertEqual(str(self.parent.generate_query(fresh_group_pks=frozenset())), str(live_query))
+        self.assertEqual(
+            str(self.parent._get_group_queryset(fresh_group_pks=frozenset()).query), str(live_queryset.query)
+        )
 
-    def test_save_evaluates_each_filter_at_most_once(self):
-        """Saving a nested group must not re-evaluate its filter once per ancestor."""
+    def test_save_evaluates_each_group_at_most_once(self):
+        """Saving a nested group must not re-evaluate its membership once per ancestor."""
         with mock.patch.object(
             DynamicGroup,
-            "_generate_filter_based_query",
+            "_generate_membership_queryset",
             autospec=True,
-            side_effect=DynamicGroup._generate_filter_based_query,
+            side_effect=DynamicGroup._generate_membership_queryset,
         ) as mock_generate:
             self.nested_child.save()
 
         evaluations = Counter(call.args[0].pk for call in mock_generate.call_args_list)
         # nested_child is evaluated once for its own refresh and then served from cache during the
-        # third_child and parent refreshes; first_child/second_child are evaluated once (parent refresh).
+        # third_child and parent refreshes; every other group is evaluated once for its own refresh
+        # (or, for first_child/second_child, once within the parent's refresh).
         self.assertEqual(
             evaluations,
-            Counter({self.nested_child.pk: 1, self.first_child.pk: 1, self.second_child.pk: 1}),
+            Counter(
+                {
+                    self.nested_child.pk: 1,
+                    self.third_child.pk: 1,
+                    self.parent.pk: 1,
+                    self.first_child.pk: 1,
+                    self.second_child.pk: 1,
+                }
+            ),
         )
 
     def test_is_cache_substitution_safe_detects_filters_by_target(self):
@@ -1441,9 +1476,9 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
 
         with mock.patch.object(
             DynamicGroup,
-            "_generate_filter_based_query",
+            "_generate_membership_queryset",
             autospec=True,
-            side_effect=DynamicGroup._generate_filter_based_query,
+            side_effect=DynamicGroup._generate_membership_queryset,
         ) as mock_generate:
             dependent_group.save()
 
@@ -1452,7 +1487,7 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
         self.assertEqual(evaluations[dependent_group.pk], 2)
         self.assertQuerySetEqualAndNotEmpty(
             set_group.members,
-            Device.objects.filter(set_group.generate_query()).distinct(),
+            set_group._get_group_queryset(),
             ordered=False,
         )
 
@@ -1493,22 +1528,9 @@ class DynamicGroupMembershipModelTest(DynamicGroupTestBase):  # TODO: BaseModelT
     """DynamicGroupMembership model tests."""
 
     def test_generate_query(self):
-        """Assert `DynamicGroupMembership.generate_query()` delegates to the child group, including fresh_group_pks."""
+        """Assert `DynamicGroupMembership.generate_query()` delegates to the child group."""
         membership = self.memberships[2]  # parent <- third_child (dynamic-set containing nested_child)
         self.assertEqual(str(membership.generate_query()), str(self.third_child.generate_query()))
-
-        # The fresh_group_pks pass-through must produce the same substituted query as the child group itself,
-        # without changing the resulting members.
-        self.nested_child.update_cached_members()
-        fresh = frozenset([self.nested_child.pk])
-        substituted_query = membership.generate_query(fresh_group_pks=fresh)
-        self.assertEqual(str(substituted_query), str(self.third_child.generate_query(fresh_group_pks=fresh)))
-        self.assertIn("pk__in", str(substituted_query))
-        self.assertQuerySetEqualAndNotEmpty(
-            Device.objects.filter(substituted_query).distinct(),
-            Device.objects.filter(membership.generate_query()).distinct(),
-            ordered=False,
-        )
 
     def test_clean_content_type(self):
         """Assert that content_type b/w parent/group must match."""
