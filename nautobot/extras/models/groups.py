@@ -479,7 +479,7 @@ class DynamicGroup(PrimaryModel):
 
     update_cached_members.alters_data = True
 
-    def _is_cache_substitution_safe(self, *, safety_by_pk=None):
+    def _is_cache_substitution_safe(self, *, safety_by_pk):
         """
         Return True if this group's membership definition does not read other groups' cached members.
 
@@ -491,11 +491,9 @@ class DynamicGroup(PrimaryModel):
         are conservatively unsafe — declining substitution just falls back to (always-correct) live evaluation.
 
         Args:
-            safety_by_pk (dict, optional): Memoized results keyed by group PK. Safety cannot change during a
-                cache-update operation, so callers should share one dict across all of an operation's checks.
+            safety_by_pk (dict): Memoized results keyed by group PK. Safety cannot change during a cache-update
+                operation, so callers should share one dict across all of an operation's checks.
         """
-        if safety_by_pk is None:
-            safety_by_pk = {}
         if self.pk not in safety_by_pk:
             safety_by_pk[self.pk] = self._compute_cache_substitution_safety(safety_by_pk)
         return safety_by_pk[self.pk]
@@ -520,6 +518,9 @@ class DynamicGroup(PrimaryModel):
                 child._is_cache_substitution_safe(safety_by_pk=safety_by_pk)
                 for child in self.children.select_related("content_type")
             )
+        if self.group_type == DynamicGroupTypeChoices.TYPE_STATIC:
+            # A static group's cached members *are* its definition; there's nothing to re-evaluate.
+            return True
         return False
 
     def _refresh_cached_members_and_ancestors(self):

@@ -1339,7 +1339,15 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
     def test_is_cache_substitution_safe_detects_filters_by_target(self):
         """The safety guard detects cache-reading filters by the relation they traverse, not by name."""
         # Filters over member-object data are safe.
-        self.assertTrue(self.first_child._is_cache_substitution_safe())
+        self.assertTrue(self.first_child._is_cache_substitution_safe(safety_by_pk={}))
+
+        # A static group's cached members are its definition, so reuse is trivially safe.
+        static_group = DynamicGroup(
+            name="Static Group",
+            group_type=DynamicGroupTypeChoices.TYPE_STATIC,
+            content_type=self.device_ct,
+        )
+        self.assertTrue(static_group._is_cache_substitution_safe(safety_by_pk={}))
 
         # A functional equivalent of the `dynamic_groups` filter registered under a different name
         # (e.g. by an App via FilterExtension) must still be detected as unsafe, because it reads
@@ -1355,7 +1363,7 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
             content_type=self.device_ct,
         )
         with mock.patch.dict(DeviceFilterSet.base_filters, {"app_in_group": lookalike_filter}):
-            self.assertFalse(lookalike_group._is_cache_substitution_safe())
+            self.assertFalse(lookalike_group._is_cache_substitution_safe(safety_by_pk={}))
 
         # A filter that can't be resolved on the filterset is conservatively unsafe: substitution is
         # declined and the group simply remains on the (always-correct) live-evaluation path.
@@ -1364,7 +1372,7 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
             filter={"no_such_filter": ["irrelevant"]},
             content_type=self.device_ct,
         )
-        self.assertFalse(unresolvable_group._is_cache_substitution_safe())
+        self.assertFalse(unresolvable_group._is_cache_substitution_safe(safety_by_pk={}))
 
     def test_is_cache_substitution_safe_memoization(self):
         """A shared memo dict is populated for the whole subtree and short-circuits repeat evaluations."""
@@ -1411,9 +1419,9 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
             operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
         )
 
-        self.assertTrue(base_group._is_cache_substitution_safe())
-        self.assertFalse(dependent_group._is_cache_substitution_safe())
-        self.assertFalse(set_group._is_cache_substitution_safe())
+        self.assertTrue(base_group._is_cache_substitution_safe(safety_by_pk={}))
+        self.assertFalse(dependent_group._is_cache_substitution_safe(safety_by_pk={}))
+        self.assertFalse(set_group._is_cache_substitution_safe(safety_by_pk={}))
 
         with mock.patch.object(
             DynamicGroup,
