@@ -2246,10 +2246,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         # (virtual_machine) in __init__ from the bound data / GET initial, so instantiating with no
         # data at all would raise DoesNotExist.
         model_form = self.get_component_model_form(request, data=data)
-        # Carry the grouping metadata so the extras template can render custom-field/relationship panels.
+        # The *CreateForm is a plain `forms.Form` (no custom-field/relationship support of its own), so copy
+        # the grouping metadata from the model form for the extras template to render its panels.
         for attr in ("custom_fields", "relationships"):
-            if not getattr(create_form, attr, None):
-                setattr(create_form, attr, list(getattr(model_form, attr, [])))
+            setattr(create_form, attr, list(getattr(model_form, attr, [])))
         extras_field_names = [
             *getattr(model_form, "custom_fields", []),
             *getattr(model_form, "relationships", []),
@@ -2257,7 +2257,7 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             "dynamic_groups",
         ]
         for name in extras_field_names:
-            if name in model_form.fields and name not in create_form.fields:
+            if name in model_form.fields:
                 create_form.fields[name] = model_form.fields[name]
         return create_form
 

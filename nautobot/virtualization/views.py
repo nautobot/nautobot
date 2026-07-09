@@ -318,19 +318,6 @@ class VMInterfaceUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve" and instance is not None:
-            # Get assigned IP addresses
-            context["ipaddress_table"] = InterfaceIPAddressTable(
-                data=instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant"),
-                orderable=False,
-            )
-            # Get child interfaces
-            context["child_interfaces_table"] = tables.VMInterfaceTable(
-                instance.child_interfaces.restrict(request.user, "view"),
-                orderable=False,
-            )
-            # Equivalent to exclude=("virtual_machine",):
-            context["child_interfaces_table"].columns.hide("virtual_machine")
-            # Get assigned VLANs and annotate whether each is tagged or untagged
             vlans = []
             if instance.untagged_vlan is not None:
                 vlans.append(instance.untagged_vlan)
@@ -380,13 +367,13 @@ class VMInterfaceUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=300,
-                context_table_key="ipaddress_table",
+                table_class=InterfaceIPAddressTable,
+                table_attribute="ip_addresses",
+                select_related_fields=["role", "status", "tenant"],
                 related_list_url_name="ipam:ipaddress_list",
                 related_field_name="vm_interfaces",
                 add_button_route=None,
             ),
-            # Tagged + untagged VLANs. Per-row edit lives in the table's actions column (see
-            # InterfaceVLANTable); a VLAN isn't created from an interface, so no Add button here.
             object_detail.ObjectsTablePanel(
                 section=SectionChoices.FULL_WIDTH,
                 weight=400,
@@ -401,7 +388,9 @@ class VMInterfaceUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
                 table_title="Child Interfaces",
                 section=SectionChoices.FULL_WIDTH,
                 weight=500,
-                context_table_key="child_interfaces_table",
+                table_class=tables.VMInterfaceTable,
+                table_attribute="child_interfaces",
+                exclude_columns=["virtual_machine"],
                 # The right-aligned Add button is built by the overridden `_get_table_add_url`, so it
                 # carries both `virtual_machine` and `parent_interface`.
                 related_list_url_name="virtualization:vminterface_list",
