@@ -537,6 +537,8 @@ class DynamicGroup(PrimaryModel):
         # Safety cannot change during the cascade, so share one memo across all of its safety checks.
         safety_by_pk = {}
         fresh_group_pks = set()
+        # Guard against circular references: a cache-reading filter (e.g. `dynamic_groups`) may reference an
+        # ancestor, so the refreshes below could invalidate even this group's just-refreshed cache.
         if self._is_cache_substitution_safe(safety_by_pk=safety_by_pk):
             fresh_group_pks.add(self.pk)
         for ancestor in ancestors:
