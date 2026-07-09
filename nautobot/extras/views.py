@@ -3282,7 +3282,7 @@ class ScheduledJobUIViewSet(
         @staticmethod
         def _render_datetime(value, obj_tz, default_tz):
             obj_local = date_format(value.astimezone(obj_tz), "SHORT_DATETIME_FORMAT")
-            if str(obj_tz) == str(default_tz):
+            if obj_tz == default_tz:
                 return format_html("{}", obj_local)
             default_local = date_format(value.astimezone(default_tz), "SHORT_DATETIME_FORMAT")
             return format_html("{} {}<br>{} {}", obj_local, obj_tz, default_local, default_tz)
