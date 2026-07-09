@@ -107,7 +107,29 @@ Metrics are exported only when the operator has enabled a metrics exporter; othe
 
 ## Auto-instrumenting a Library
 
-If your app depends on a library that has an OpenTelemetry instrumentor (for example `botocore`, `elasticsearch`, or another database client), enable it from your `NautobotAppConfig.ready()` method. `ready()` runs after Nautobot has set the global tracer provider, so calling the instrumentor with no arguments binds it to Nautobot's provider:
+If your app depends on a library that has an OpenTelemetry instrumentor (for example `botocore`, `elasticsearch`, or another database client), you can enable it against Nautobot's tracer provider. Enabling an instrumentor is a process-global action, not an app-local one: it patches the target library for the whole process, so whichever code enables it enables it for every app. There are two ways to do this, and the first is preferred.
+
+### Preferred: the `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS` setting
+
+List the instrumentor's dotted import path in the [`NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS`](../../../../user-guide/administration/configuration/settings.md#nautobot_otel_extra_instrumentors) setting. Nautobot core installs each listed instrumentor at startup, binding it to core's tracer provider:
+
+```python
+NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS = [
+    "opentelemetry.instrumentation.botocore.BotocoreInstrumentor",
+]
+```
+
+Or via the environment variable (comma-separated):
+
+```no-highlight
+export NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="opentelemetry.instrumentation.botocore.BotocoreInstrumentor"
+```
+
+Because core owns the provider, the install ordering, and the de-duplication, this avoids the pitfalls of app-driven instrumentation described below. Your app's install instructions should ask the operator to add your instrumentor's path to this setting, the same way apps document additions to `PLUGINS`. This is the right choice whenever the instrumentor is for a shared library that more than one installed app might also enable.
+
+### Fallback: enabling from `AppConfig.ready()`
+
+If you cannot rely on the operator setting `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS` (for example, for a library that is entirely private to your app), you can enable the instrumentor from your `NautobotAppConfig.ready()` method. `ready()` runs after Nautobot has set the global tracer provider, so calling the instrumentor with no arguments binds it to Nautobot's provider:
 
 ```python
 from nautobot.apps import NautobotAppConfig
@@ -123,12 +145,18 @@ class MyAppConfig(NautobotAppConfig):
         if settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
             from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
 
-            BotocoreInstrumentor().instrument()
+            instrumentor = BotocoreInstrumentor()
+            if not instrumentor.is_instrumented_by_opentelemetry:
+                instrumentor.instrument()
 ```
 
 - Guard the call on `settings.OTEL_PYTHON_DJANGO_INSTRUMENT` so your app only instruments when the operator has enabled telemetry.
+- Guard on `instrumentor.is_instrumented_by_opentelemetry` so that if another app (or `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS`) already enabled the same instrumentor, your call is a clean no-op rather than a logged "already instrumented" warning on every process start.
 - Do not call `trace.set_tracer_provider()` yourself - the provider can only be set once per process, and Nautobot has already set it. Your app's job is only to enable its instrumentor against the existing global provider.
 - Most client-library instrumentors patch at call time, so enabling them in `ready()` is early enough to capture calls your Jobs and views make later.
+
+!!! warning "Multiple apps enabling the same instrumentor"
+    An instrumentor can only be installed once per process. If two apps both call `.instrument()` from `ready()` for the same library, only the first call takes effect; the second is a no-op (and, without the `is_instrumented_by_opentelemetry` guard, logs a warning). Any per-instrumentor configuration passed by the losing caller is silently dropped, and which app "wins" depends on app load order. To avoid this entirely, prefer `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS` for any instrumentor that more than one app might enable.
 
 ## Trying It Locally
 
