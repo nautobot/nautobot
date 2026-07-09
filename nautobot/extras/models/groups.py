@@ -504,8 +504,9 @@ class DynamicGroup(PrimaryModel):
             filterset_class = self.filterset_class
             if filterset_class is None:
                 return False
+            filterset_filters = filterset_class().filters
             for filter_name in self.filter:
-                filter_field = filterset_class.base_filters.get(filter_name)
+                filter_field = filterset_filters.get(filter_name)
                 if filter_field is None:
                     return False
                 field_path = (filter_field.field_name or "").split(LOOKUP_SEP)

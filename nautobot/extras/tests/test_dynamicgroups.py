@@ -1365,7 +1365,23 @@ class DynamicGroupCacheUpdateTest(DynamicGroupTestBase):
         with mock.patch.dict(DeviceFilterSet.base_filters, {"app_in_group": lookalike_filter}):
             self.assertFalse(lookalike_group._is_cache_substitution_safe(safety_by_pk={}))
 
-        # A filter that can't be resolved on the filterset is conservatively unsafe: substitution is
+        # Filters defined by data rather than by code (e.g. custom fields) are absent from the class-level
+        # base_filters; the guard must resolve them by instantiating the filterset, and judge them safe.
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT,
+            label="Cache Guard Text Field",
+            key="cache_guard_text_field",
+        )
+        custom_field.content_types.set([self.device_ct])
+        self.assertNotIn("cf_cache_guard_text_field", DeviceFilterSet.base_filters)
+        cf_group = DynamicGroup(
+            name="Custom Field Filter",
+            filter={"cf_cache_guard_text_field": ["irrelevant"]},
+            content_type=self.device_ct,
+        )
+        self.assertTrue(cf_group._is_cache_substitution_safe(safety_by_pk={}))
+
+        # A filter that can't be resolved on the filterset at all is conservatively unsafe: substitution is
         # declined and the group simply remains on the (always-correct) live-evaluation path.
         unresolvable_group = DynamicGroup(
             name="Unresolvable Filter",
