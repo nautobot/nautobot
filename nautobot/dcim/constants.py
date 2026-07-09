@@ -189,6 +189,14 @@ TERMINATION_PARENT_FK_FIELDS = tuple(
     f"{termination_fk}__{parent_fk}" for termination_fk, parent_fk in TERMINATION_FK_TO_PARENT_FK.items()
 )
 
+# Per-type FK fields on `CableToCableTermination` whose termination is a device component (and thus
+# has a `device` FK). Circuit terminations and power feeds are excluded (they have no device). Used
+# to filter cables by the device — and its rack/location/tenant — of any of their terminations,
+# reaching each termination's device directly via `<fk>__device` rather than a denormalized cache.
+TERMINATION_DEVICE_FK_FIELDS = tuple(
+    termination_fk for termination_fk, parent_fk in TERMINATION_FK_TO_PARENT_FK.items() if parent_fk == "device"
+)
+
 # Extra `select_related` paths needed to render a termination's display string without a query.
 # Only `CircuitTermination` has a non-trivial `__str__` — it names its location / provider network /
 # cloud network — so those FKs must be joined; every other termination renders as its (already

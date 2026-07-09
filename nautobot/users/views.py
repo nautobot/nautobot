@@ -24,7 +24,7 @@ from nautobot.core.constants import NAUTOBOT_EDITION_URLS
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.ui.titles import Titles
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.config import get_nautobot_edition
 from nautobot.core.views.generic import GenericView
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -69,7 +69,7 @@ class LoginView(View):
             logger = logging.getLogger("nautobot.auth.login")
             return self.redirect_to_next(request, logger)
 
-        edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        edition = get_nautobot_edition()
         edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
         is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
 
@@ -105,7 +105,7 @@ class LoginView(View):
         else:
             logger.debug("Login form validation failed")
 
-        edition = get_settings_or_config("NAUTOBOT_EDITION", fallback=NautobotEditionChoices.DEFAULT)
+        edition = get_nautobot_edition()
         edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
         is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
 

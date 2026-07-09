@@ -9,7 +9,7 @@ from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
-from django.db.models import F, Q
+from django.db.models import Q
 from django.test import override_settings, RequestFactory
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -5731,13 +5731,9 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:interface_connections_{}"
 
     def _get_queryset(self):
-        # The list view returns CablePath rows; mirror that for accurate count/index-based assertions.
-        iface_ct = ContentType.objects.get_for_model(Interface)
-        return CablePath.objects.filter(
-            origin_type=iface_ct,
-            destination_type=iface_ct,
-            origin_id__lt=F("destination_id"),
-        )
+        # The list view returns canonical CablePath rows; reuse the view's own definition so
+        # count/index-based base assertions align with what the table renders.
+        return InterfaceConnectionsListView.base_queryset()
 
     def get_list_url(self):
         return "/dcim/interface-connections/"
@@ -5908,6 +5904,59 @@ class InterfaceConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
             reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
             page_content,
         )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_breakout_cable_lanes_are_grouped(self):
+        """A breakout cable's lanes are canonicalized onto the A side and clustered.
+
+        The trunk interface becomes the origin of all N lanes (shown once, blanked on continuation
+        rows), each fan-out endpoint appears on its own consecutive row on the B side, and the reverse
+        (leaf-origin) CablePaths are dropped from the list.
+        """
+        status_active = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        local = create_test_device("Breakout Trunk Device")
+        remote = create_test_device("Breakout Leaf Device")
+        breakout_type = CableType.objects.create(
+            name="1x4 breakout (connections list)", a_connectors=1, b_connectors=4, total_lanes=4
+        )
+        trunk = Interface.objects.create(
+            device=local, name="Trunk", type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS, status=status_active
+        )
+        leaves = [Interface.objects.create(device=remote, name=f"Leaf {i}", status=status_active) for i in range(1, 5)]
+        cable = Cable(termination_a=trunk, termination_b=leaves[0], cable_type=breakout_type, status=cable_status)
+        cable.save()
+        for connector, leaf in enumerate(leaves[1:], start=2):
+            cable.add_termination(leaf, "B", connector=connector)
+
+        iface_ct = ContentType.objects.get_for_model(Interface)
+        leaf_pks = [leaf.pk for leaf in leaves]
+
+        # Stored flags: the four trunk-origin lanes fan out; the reverse leaf-origin rows do not (but
+        # their destination -- the trunk -- does).
+        trunk_paths = CablePath.objects.filter(origin_type=iface_ct, origin_id=trunk.pk)
+        self.assertEqual(trunk_paths.count(), 4)
+        self.assertTrue(all(p.origin_fans_out and not p.destination_fans_out for p in trunk_paths))
+        for leaf in leaves:
+            leaf_path = CablePath.objects.get(origin_type=iface_ct, origin_id=leaf.pk)
+            self.assertFalse(leaf_path.origin_fans_out)
+            self.assertTrue(leaf_path.destination_fans_out)
+
+        # Canonical queryset keeps exactly the four trunk-origin lanes for this breakout, ordered and
+        # numbered by peer_connector; no canonical row has a leaf interface on the A side.
+        breakout_rows = list(InterfaceConnectionsListView.base_queryset().filter(origin_id=trunk.pk))
+        self.assertEqual(len(breakout_rows), 4)
+        self.assertEqual([row.group_row for row in breakout_rows], [1, 2, 3, 4])
+        self.assertFalse(InterfaceConnectionsListView.base_queryset().filter(origin_id__in=leaf_pks).exists())
+
+        # Rendered table: the trunk interface link appears once (A side, blanked on continuation rows),
+        # while all four fan-out endpoints appear (B side).
+        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertEqual(content.count(trunk.get_absolute_url()), 1, msg=content)
+        for leaf in leaves:
+            self.assertIn(leaf.get_absolute_url(), content, msg=content)
 
 
 class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):

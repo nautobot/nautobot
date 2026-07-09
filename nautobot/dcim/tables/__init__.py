@@ -66,6 +66,7 @@ from .racks import (
     RackReservationTable,
     RackTable,
 )
+from .template_code import INTERFACE_CONNECTION_DEVICE_A, INTERFACE_CONNECTION_INTERFACE_A
 
 __all__ = (
     "CableTable",
@@ -189,10 +190,19 @@ class PowerConnectionTable(BaseTable):
 
 
 class InterfaceConnectionTable(BaseTable):
-    """Table over `CablePath` rows representing interface-to-interface connections."""
+    """Table over `CablePath` rows representing interface-to-interface connections.
 
-    device_a = tables.Column(accessor=Accessor("origin.parent"), orderable=False, linkify=True, verbose_name="Device A")
-    interface_a = tables.Column(accessor=Accessor("origin"), orderable=False, linkify=True, verbose_name="Interface A")
+    A breakout cable's lanes are canonicalized so the trunk is always the origin (A side) and its N
+    lanes are consecutive rows; the trunk device/interface is shown once (blanked on continuation
+    rows) while each fan-out endpoint appears on its own row on the B side.
+    """
+
+    device_a = tables.TemplateColumn(
+        template_code=INTERFACE_CONNECTION_DEVICE_A, orderable=False, verbose_name="Device A"
+    )
+    interface_a = tables.TemplateColumn(
+        template_code=INTERFACE_CONNECTION_INTERFACE_A, orderable=False, verbose_name="Interface A"
+    )
     device_b = tables.Column(
         accessor=Accessor("destination.parent"), orderable=False, linkify=True, verbose_name="Device B"
     )
