@@ -110,6 +110,8 @@ def instrument():
 
         Psycopg2Instrumentor().instrument(tracer_provider=provider, skip_dep_check=True, enable_commenter=True)
 
+    # getattr with a default (unlike the direct reads above) so a hand-rolled nautobot_config.py that
+    # predates this setting still works; settings.py always defines it, so the default only covers overrides.
     for path in getattr(nautobot_config, "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", []):
         module_path, _, class_name = path.rpartition(".")
         try:
