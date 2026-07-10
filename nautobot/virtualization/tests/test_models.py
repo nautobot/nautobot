@@ -5,7 +5,7 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Device, Location, LocationType
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.factory import VLANGroupFactory
-from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN
+from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -138,6 +138,18 @@ class VMInterfaceTestCase(TestCase):  # TODO: change to BaseModelTestCase
         self.assertEqual(
             err.exception.message_dict["tagged_vlans"][0], "Mode must be set to tagged when specifying tagged_vlans"
         )
+
+    def test_vrf_must_be_assigned_to_parent_virtual_machine(self):
+        """A VM interface may only reference a VRF that is assigned to its parent virtual machine."""
+        vrf = VRF.objects.create(name="VM Interface VRF Test")
+        interface = VMInterface(virtual_machine=self.virtualmachine, name="Int VRF", status=self.int_status, vrf=vrf)
+        with self.assertRaises(ValidationError):
+            interface.validated_save()
+
+        # Assigning the VRF to the parent virtual machine makes the interface valid.
+        self.virtualmachine.vrfs.add(vrf)
+        interface.validated_save()
+        self.assertEqual(interface.vrf, vrf)
 
     def test_add_ip_addresses(self):
         """Test the `add_ip_addresses` helper method on `VMInterface`"""

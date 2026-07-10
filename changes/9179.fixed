@@ -1,0 +1,1 @@
+Fixed dynamic group membership incorrectly returning no members when a filter specified multiple conjoined values (such as multiple `tags`), which should match objects having *all* of the given values.

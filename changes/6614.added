@@ -1,1 +1,0 @@
-Added nested lookup support to LinkedCountColumn, allowing it to display a single related object rather than a count when a single object is present.
