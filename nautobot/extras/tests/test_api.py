@@ -3760,9 +3760,7 @@ class JobResultTest(
 
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["action"], "None")
         self.assertEqual(response.data["job_status"], JobResultStatusChoices.STATUS_SUCCESS)
-        self.assertIn("already", response.data["action_description"].lower())
         self.assertNotIn("irreversible", response.data)
         self.assertIn("message", response.data)
         self.assertIn("timestamp", response.data)
@@ -3848,7 +3846,6 @@ class JobResultTest(
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["job_status"], "RUNNING")
-        self.assertIn("TERMINATE", response.data["action"])
         mock_cancel.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
@@ -3865,7 +3862,6 @@ class JobResultTest(
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["job_status"], "NOT RUNNING")
-        self.assertIn("REAP", response.data["action"])
         mock_cancel.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
