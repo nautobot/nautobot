@@ -77,7 +77,12 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
+from nautobot.core.views.utils import (
+    borrow_extras_fields,
+    common_detail_view_context,
+    get_obj_from_context,
+    handle_protectederror,
+)
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_CABLE_COLUMN_FK_FIELDS
@@ -2246,19 +2251,9 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         # (virtual_machine) in __init__ from the bound data / GET initial, so instantiating with no
         # data at all would raise DoesNotExist.
         model_form = self.get_component_model_form(request, data=data)
-        # The *CreateForm is a plain `forms.Form` (no custom-field/relationship support of its own), so copy
-        # the grouping metadata from the model form for the extras template to render its panels.
-        for attr in ("custom_fields", "relationships"):
-            setattr(create_form, attr, list(getattr(model_form, attr, [])))
-        extras_field_names = [
-            *getattr(model_form, "custom_fields", []),
-            *getattr(model_form, "relationships", []),
-            "object_note",
-            "dynamic_groups",
-        ]
-        for name in extras_field_names:
-            if name in model_form.fields:
-                create_form.fields[name] = model_form.fields[name]
+        # The *CreateForm is a plain `forms.Form` (no custom-field/relationship support of its own); borrow
+        # the extras fields + grouping metadata off the model form so they render/validate on it.
+        borrow_extras_fields(create_form, model_form)
         return create_form
 
     def get_selected_objects_parents_name(self, selected_objects):
@@ -2374,7 +2369,6 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
         return Response(
             {
                 "template": self.create_template_name,
-                "component_type": self.queryset.model._meta.verbose_name,
                 "form": create_form,
                 "return_url": self.get_return_url(request),
             },
@@ -5052,7 +5046,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
     model_form_class = forms.ModuleBayForm
     serializer_class = serializers.ModuleBaySerializer
     table_class = tables.ModuleBayTable
-    create_template_name = "generic/object_create.html"
+    create_template_name = "dcim/device_component_add.html"
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
