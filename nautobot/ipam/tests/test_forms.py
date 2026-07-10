@@ -1,6 +1,9 @@
 """Test IPAM forms."""
 
+import re
+
 from django.forms import Form
+from django.http import QueryDict
 
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.forms import FormTestCases
@@ -79,6 +82,75 @@ class PrefixFormTest(NetworkFormTestCases.BaseNetworkFormTest, FormTestCases.Bas
             "type": "network",
             "rir": models.RIR.objects.first(),
         }
+
+
+class PrefixFilterFormTest(TestCase):
+    """Tests for PrefixFilterForm."""
+
+    form_class = forms.PrefixFilterForm
+
+    def test_all_fields_render_submitted_values(self):
+        """
+        Every field must render its submitted value back in the generated HTML:
+        input-based widgets via the value attribute, select-based widgets via a
+        selected option. Multi-value fields receive list values, as produced by
+        the list view's filter params processing.
+        """
+        namespace = Namespace.objects.first()
+        status = Status.objects.get_for_model(Prefix).first()
+
+        # field name -> submitted data; input widgets checked via value attribute
+        input_cases = {
+            "prefix_length__lte": ["16"],
+            "q": "192.168",
+            "within_include": "192.168.0.0/16",
+            "max_depth": "2",
+        }
+        # field name -> (submitted data, expected selected option value)
+        select_cases = {
+            "ip_version": ("4", "4"),
+            "prefix_length": ("24", "24"),
+            "type": (["container"], "container"),
+            "namespace": ([namespace.name], namespace.name),
+            "status": ([status.name], status.name),
+        }
+
+        for field_name, value in input_cases.items():
+            with self.subTest(field=field_name):
+                form = self.form_class(data={field_name: value})
+                html = str(form[field_name])
+                rendered_value = value[0] if isinstance(value, list) else value
+                self.assertIn(f'value="{rendered_value}"', html)
+
+        for field_name, (value, expected) in select_cases.items():
+            with self.subTest(field=field_name):
+                form = self.form_class(data={field_name: value})
+                html = str(form[field_name])
+                self.assertRegex(html, rf'<option value="{re.escape(expected)}"\s+selected')
+
+    def test_form_valid_with_combined_filters_from_querydict(self):
+        """A realistic multi-filter query string must validate and clean without corruption."""
+        namespace = Namespace.objects.first()
+        query = f"prefix_length__lte=16&type=container&type=network&namespace={namespace.name}&ip_version=4&q=192.168"
+        form = self.form_class(data=QueryDict(query))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["prefix_length__lte"], ["16"])
+        self.assertEqual(form.cleaned_data["type"], ["container", "network"])
+        self.assertEqual(form.cleaned_data["q"], "192.168")
+
+    def test_within_include_handles_list_values(self):
+        """
+        `within_include` is backed by a MultiValueCharFilter, so the form field must
+        accept a list value (as produced by the list view's filter params processing),
+        render it back without corruption, and clean it to a list of values.
+        """
+        form = self.form_class(data={"within_include": ["192.168.0.0/16"]})
+
+        html = str(form["within_include"])
+        self.assertIn('value="192.168.0.0/16"', html)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["within_include"], ["192.168.0.0/16"])
 
 
 class IPAddressFormTest(NetworkFormTestCases.BaseNetworkFormTest):

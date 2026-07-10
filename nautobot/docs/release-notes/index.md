@@ -1,8 +1,14 @@
 # Release Notes
 
-## [3.2 - Summer 2026](version-3.2.md)
+## [3.2 - July 2026](version-3.2.md)
 
-TODO
+- Breakout Cables
+- IP Address Range Model
+- Job Cancellation
+- Model Search Typeahead
+- Live Search
+- Homepage Stickiness
+- Modules Hierarchy Refinements
 
 ## [3.1 - April 2026](version-3.1.md)
 
