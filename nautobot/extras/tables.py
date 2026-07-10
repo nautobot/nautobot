@@ -183,6 +183,13 @@ JOB_RESULT_BUTTONS = """
                 </a>
             </li>
         {% endif %}
+    {% elif record.is_deletable and perms.extras.delete_jobresult %}
+        <li>
+            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
+                <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>
+                Delete job result
+            </a>
+        </li>
     {% endif %}
 {% endif %}
 {% if perms.extras.view_joblogentry %}
@@ -1326,7 +1333,7 @@ class JobResultTable(BaseTable):
         verbose_name="Scheduled Job",
     )
     duration = tables.Column(orderable=False)
-    actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
+    actions = ButtonsColumn(JobResult, buttons=("none",), prepend_template=JOB_RESULT_BUTTONS)
     console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
     queue_name = tables.Column(accessor="queue", verbose_name="Queue Name", order_by=("celery_kwargs__queue",))
     cancel_type = tables.TemplateColumn(

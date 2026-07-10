@@ -27,6 +27,11 @@ def can_change(user, instance):
 
 @register.filter()
 def can_delete(user, instance):
+
+    # Object-level: a model can forbid deletion in certain states.
+    if not getattr(instance, "is_deletable", True):
+        return False
+
     return _check_permission(user, instance, "delete")
 
 

@@ -831,6 +831,11 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         """Return True if job_result is in a not finished state."""
         return self.status in JobResultStatusChoices.UNREADY_STATES
 
+    @property
+    def is_deletable(self):
+        """Running/pending results are canceled, not deleted."""
+        return not self.is_unready_state
+
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
