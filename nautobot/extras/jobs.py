@@ -1325,6 +1325,11 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
         event_payload["job_kwargs"] = kwargs
     publish_event(topic="nautobot.jobs.job.started", payload=event_payload)
     job.logger.info("Running job", extra={"grouping": "initialization", "object": job.job_model})
+    job.logger.debug(
+        "Job source version: %s",
+        job.job_model.source_version or "unknown",
+        extra={"grouping": "initialization", "object": job.job_model},
+    )
 
     # Return the job, ready to run
     return job, event_payload

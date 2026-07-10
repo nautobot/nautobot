@@ -1,0 +1,3 @@
+Added `source_version` property to the `Job` model, exposing the version of the source code providing the job — the Nautobot version for system Jobs, the App version for App-provided Jobs, or the `current_head` commit hash for Jobs provided by a Git repository.
+Added a debug-level log entry recording the Job's source version at the start of each Job run.
+Added display of the Job source version to the Job detail view and as an optional column on the Jobs list view.

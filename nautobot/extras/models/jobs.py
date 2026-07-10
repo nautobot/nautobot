@@ -10,6 +10,7 @@ from typing import Optional, TYPE_CHECKING, Union
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -337,6 +338,29 @@ class Job(PrimaryModel):
             return GitRepository.objects.get(slug=self.module_name.split(".")[0])
         except GitRepository.DoesNotExist:
             return None
+
+    @property
+    def source_version(self) -> str:
+        """
+        Version of the source code that provides this Job, derived from the Job's source.
+
+        - System Jobs (`module_name` in the `nautobot.` namespace): the Nautobot version (`settings.VERSION`).
+        - App-provided Jobs (top-level module in `settings.PLUGINS`): the App's declared `version`, if any.
+        - Git-repository-provided Jobs: the owning GitRepository's `current_head` commit hash
+          (empty string if the repository has never been synced).
+        - `JOBS_ROOT` Jobs: an empty string, as no version information is available.
+
+        Sources are checked in the same order of precedence as `nautobot.extras.jobs.get_job()`:
+        system, then App, then Git repository.
+        """
+        if self.module_name.startswith("nautobot."):
+            return settings.VERSION
+        module_root = self.module_name.split(".")[0]
+        if module_root in settings.PLUGINS:
+            return apps.get_app_config(module_root).version or ""
+        if self.git_repository is not None:
+            return self.git_repository.current_head
+        return ""
 
     @property
     def job_task(self):

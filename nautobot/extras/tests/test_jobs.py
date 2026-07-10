@@ -678,6 +678,18 @@ class JobTransactionTest(TransactionTestCase):
             "This job will fail silently after 5.0 seconds.",
         )
 
+    def test_job_run_logs_source_version(self):
+        """Every job run records a debug-level log entry with the job's source version."""
+        module = "pass_job"
+        name = "TestPassJob"
+        job_result = create_job_result_and_run_job(module, name)
+        log_debug = models.JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_DEBUG, grouping="initialization"
+        ).first()
+        self.assertIsNotNone(log_debug)
+        # pass_job is a JOBS_ROOT-style job, so no version information is available
+        self.assertEqual(log_debug.message, "Job source version: unknown")
+
     def test_job_pass(self):
         """
         Job test with pass result.
@@ -790,8 +802,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 4)
         self.assertIn("Running job", job_logs)
+        self.assertIn("Job source version: unknown", job_logs)
         self.assertIn("Job succeeded.", job_logs)
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
@@ -808,8 +821,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 3)
+        self.assertEqual(len(job_console_logs), 4)
         self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job source version: unknown", job_console_logs)
         self.assertIn("Job succeeded.", job_console_logs)
         self.assertIn("Job completed", job_console_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
@@ -826,8 +840,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 3)
+        self.assertEqual(len(job_logs), 4)
         self.assertIn("Running job", job_logs)
+        self.assertIn("Job source version: unknown", job_logs)
         self.assertIn("Job succeeded.", job_logs)
         self.assertIn("Job completed", job_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_logs)
@@ -844,8 +859,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertTrue(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 3)
+        self.assertEqual(len(job_console_logs), 4)
         self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job source version: unknown", job_console_logs)
         self.assertIn("Job succeeded.", job_console_logs)
         self.assertIn("Job completed", job_console_logs)
         self.assertNotIn("Job failed, all database changes have been rolled back.", job_console_logs)
@@ -862,8 +878,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 2)
+        self.assertEqual(len(job_logs), 3)
         self.assertIn("Running job", job_logs)
+        self.assertIn("Job source version: unknown", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
@@ -879,8 +896,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 1").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 2)
+        self.assertEqual(len(job_console_logs), 3)
         self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job source version: unknown", job_console_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
         self.assertNotIn("Job succeeded.", job_console_logs)
 
@@ -896,8 +914,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job log messages were saved
         job_logs = models.JobLogEntry.objects.filter(job_result=job_result).values_list("message", flat=True)
-        self.assertEqual(len(job_logs), 2)
+        self.assertEqual(len(job_logs), 3)
         self.assertIn("Running job", job_logs)
+        self.assertIn("Job source version: unknown", job_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_logs)
         self.assertNotIn("Job succeeded.", job_logs)
 
@@ -913,8 +932,9 @@ class JobTransactionTest(TransactionTestCase):
         self.assertFalse(models.Status.objects.filter(name="Test database atomic rollback 2").exists())
         # Ensure the correct job console text were saved
         job_console_logs = models.JobConsoleEntry.objects.filter(job_result=job_result).values_list("text", flat=True)
-        self.assertEqual(len(job_console_logs), 2)
+        self.assertEqual(len(job_console_logs), 3)
         self.assertIn("Running job", job_console_logs)
+        self.assertIn("Job source version: unknown", job_console_logs)
         self.assertIn("Job failed, all database changes have been rolled back.", job_console_logs)
         self.assertNotIn("Job succeeded.", job_console_logs)
 
@@ -1015,7 +1035,8 @@ class JobTransactionTest(TransactionTestCase):
 
         self.assertGreater(job_result.job_log_entries.count(), 0)
         self.assertIsNotNone(job_result.debug_log_count)
-        self.assertEqual(job_result.debug_log_count, 0)
+        # 1 = the "Job source version" entry logged at the start of every job run
+        self.assertEqual(job_result.debug_log_count, 1)
         self.assertIsNotNone(job_result.success_log_count)
         self.assertEqual(job_result.success_log_count, 1)
         self.assertIsNotNone(job_result.info_log_count)
@@ -1664,6 +1685,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
+            ("debug", "Job source version: unknown"),
             ("info", f"change: DCIM | location Test Job Hook Location 1 created by {self.user.username}"),
             ("info", "action: create"),
             ("info", f"jobresult.user: {self.user.username}"),
@@ -1690,6 +1712,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.assertIsNotNone(job_result)
         expected_log_messages = [
             ("info", "Running job"),
+            ("debug", "Job source version: unknown"),
             ("info", f"change: DCIM | location Test Job Hook Location 1 updated by {self.user.username}"),
             ("info", "action: update"),
             ("info", f"jobresult.user: {self.user.username}"),
