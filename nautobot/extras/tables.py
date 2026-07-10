@@ -177,9 +177,9 @@ JOB_RESULT_BUTTONS = """
     {% if record.is_unready_state %}
         {% if record.user == request.user or request.user.is_staff %}
             <li>
-                <a href="{% url 'extras:jobresult_revoke_job' pk=record.pk %}" class="dropdown-item text-danger">
+                <a href="{% url 'extras:jobresult_cancel_job' pk=record.pk %}" class="dropdown-item text-danger">
                     <span class="mdi mdi-close-circle" aria-hidden="true"></span>
-                    Revoke Job
+                    Cancel Job
                 </a>
             </li>
         {% endif %}
@@ -1311,7 +1311,7 @@ class JobResultTable(BaseTable):
     date_created = tables.DateTimeColumn(linkify=True, short=True)
     date_started = tables.DateTimeColumn(linkify=True, short=True)
     date_done = tables.DateTimeColumn(linkify=True, short=True)
-    date_revoked = tables.DateTimeColumn(linkify=True, short=True)
+    date_canceled = tables.DateTimeColumn(linkify=True, short=True)
     status = tables.TemplateColumn(
         template_code="{% include 'extras/inc/job_label.html' with result=record %}",
     )
@@ -1329,9 +1329,9 @@ class JobResultTable(BaseTable):
     actions = ButtonsColumn(JobResult, buttons=("delete",), prepend_template=JOB_RESULT_BUTTONS)
     console_log = BooleanColumn(order_by=("celery_kwargs__nautobot_job_console_log",))
     queue_name = tables.Column(accessor="queue", verbose_name="Queue Name", order_by=("celery_kwargs__queue",))
-    revocation_type = tables.TemplateColumn(
-        template_code="{% include 'extras/inc/job_revocation_label.html' with result=record %}",
-        verbose_name="Revocation Type",
+    cancel_type = tables.TemplateColumn(
+        template_code="{% include 'extras/inc/job_cancel_label.html' with result=record %}",
+        verbose_name="Cancel Type",
     )
 
     def render_summary(self, record):
@@ -1369,8 +1369,8 @@ class JobResultTable(BaseTable):
             "date_created",
             "date_started",
             "date_done",
-            "date_revoked",
-            "revoked_by",
+            "date_canceled",
+            "canceled_by",
             "name",
             "job_model",
             "scheduled_job",

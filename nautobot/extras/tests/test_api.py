@@ -57,7 +57,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
-from nautobot.extras.jobs_revoke import CeleryStrategy, JobLiveness
+from nautobot.extras.jobs_cancel import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -3706,33 +3706,33 @@ class JobResultTest(
         cls.pending_job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
 
     @staticmethod
-    def _fake_revoke_success_termination_path(job_result, user):
-        """Simulate a successful revoke by flipping the job to REVOKED.
+    def _fake_cancel_success_termination_path(job_result, user):
+        """Simulate a successful cancel by flipping the job to REVOKED.
 
-        Stand-in for `CeleryStrategy.revoke` in tests of the TERMINATE path,
+        Stand-in for `CeleryStrategy.cancel` in tests of the TERMINATE path,
         where the real code relies on Celery's async catchup to set the
         REVOKED status. Writes the status synchronously so the view's
-        post-revoke check sees the expected terminal state.
+        post-cancel check sees the expected terminal state.
         """
         job_result.status = JobResultStatusChoices.STATUS_REVOKED
         job_result.save(update_fields=["status"])
-        return {"job_result": job_result, "error": None, "revoked": True}
+        return {"job_result": job_result, "error": None, "canceled": True}
 
     @staticmethod
-    def _fake_revoke_no_action_termination_path(job_result, user):
-        """Simulate a revoke that lost the race to natural completion.
+    def _fake_cancel_no_action_termination_path(job_result, user):
+        """Simulate a cancel that lost the race to natural completion.
 
-        Stand-in for `CeleryStrategy.revoke` in tests where the job finishes
+        Stand-in for `CeleryStrategy.cancel` in tests where the job finishes
         between the view's pre-check and the strategy call. Leaves the job
-        in a non-REVOKED terminal state (COMPLETED) so the view's post-revoke
+        in a non-REVOKED terminal state (COMPLETED) so the view's post-cancel
         check trips and returns 409.
         """
         job_result.status = JobResultStatusChoices.STATUS_SUCCESS
         job_result.save(update_fields=["status"])
-        return {"job_result": job_result, "error": None, "revoked": False}
+        return {"job_result": job_result, "error": None, "canceled": False}
 
-    def test_post_revoke_already_finished_returns_409(self):
-        """A finished job cannot be revoked."""
+    def test_post_cancel_already_finished_returns_409(self):
+        """A finished job cannot be canceled."""
         job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
         job_result.user = self.user
         job_result.save()
@@ -3741,13 +3741,13 @@ class JobResultTest(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertIn("already finished", response.data["detail"].lower())
 
-    def test_get_revoke_already_finished(self):
-        """A finished job cannot be revoked: POST returns 409, GET returns a NOOP preview."""
+    def test_get_cancel_already_finished(self):
+        """A finished job cannot be canceled: POST returns 409, GET returns a NOOP preview."""
         job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
         job_result.user = self.user
         job_result.save()
@@ -3756,7 +3756,7 @@ class JobResultTest(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
 
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -3767,8 +3767,8 @@ class JobResultTest(
         self.assertIn("message", response.data)
         self.assertIn("timestamp", response.data)
 
-    def test_revoke_non_owner_non_staff_denied_with_run_job_permission(self):
-        """A user who is neither owner nor staff cannot revoke."""
+    def test_cancel_non_owner_non_staff_denied_with_run_job_permission(self):
+        """A user who is neither owner nor staff cannot cancel."""
         other = User.objects.create_user(username="other-owner")
         job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
         job_result.user = other
@@ -3778,13 +3778,13 @@ class JobResultTest(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("Job can be revoked only by the submitter or by staff users.", response.data["detail"])
+        self.assertIn("Job can be canceled only by the submitter or by staff users.", response.data["detail"])
 
-    def test_revoke_owner_no_staff_without_run_job_permission(self):
-        """A user who is owner but not have `run_job` permission cannot revoke."""
+    def test_cancel_owner_no_staff_without_run_job_permission(self):
+        """A user who is owner but not have `run_job` permission cannot cancel."""
         self.user.is_staff = False
         self.user.save()
         job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
@@ -3794,12 +3794,12 @@ class JobResultTest(
             "extras.view_jobresult",
         )
 
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("Job can not be revoked by user without permission to run jobs.", response.data["detail"])
+        self.assertIn("Job can not be canceled by user without permission to run jobs.", response.data["detail"])
 
-    def test_revoke_staff_without_run_job_permission_denied(self):
+    def test_cancel_staff_without_run_job_permission_denied(self):
         """Staff users still need run_job; staff does not bypass that gate."""
         self.user.is_staff = True
         self.user.save()
@@ -3808,13 +3808,13 @@ class JobResultTest(
         self.add_permissions("extras.view_jobresult")
         self.remove_permissions("extras.run_job")
 
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertIn("Job can not be revoked by user without permission to run jobs.", response.data["detail"])
+        self.assertIn("Job can not be canceled by user without permission to run jobs.", response.data["detail"])
 
     @mock.patch.object(JobResult, "log")
-    def test_revoke_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+    def test_cancel_unsupported_queue_type_should_abandon_job(self, mock_job_log):
         """Unsuporrted queue type should abandon job."""
         self.user.is_staff = True
         self.user.save()
@@ -3822,7 +3822,7 @@ class JobResultTest(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.pending_job_result.refresh_from_db()
@@ -3831,63 +3831,63 @@ class JobResultTest(
         mock_job_log.assert_called_once_with(
             f"Abandoned job {self.pending_job_result.pk} by {self.user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
+            grouping="canceling",
         )
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": None})
-    def test_revoke_get_returns_terminate_preview(self, mock_revoke, mock_liveness):
-        """GET returns the revoke TERMINATE preview payload and does not invoke revoke."""
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": None})
+    def test_cancel_get_returns_terminate_preview(self, mock_cancel, mock_liveness):
+        """GET returns the cancel TERMINATE preview payload and does not invoke cancel."""
         self.pending_job_result.user = self.user
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.pending_job_result.save()
         self.add_permissions("extras.view_jobresult", "extras.run_job")
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
 
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["job_status"], "RUNNING")
         self.assertIn("TERMINATE", response.data["action"])
-        mock_revoke.assert_not_called()
+        mock_cancel.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": None})
-    def test_revoke_get_returns_reap_preview(self, mock_revoke, mock_liveness):
-        """GET returns the revoke REAP preview payload and does not invoke revoke."""
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": None})
+    def test_cancel_get_returns_reap_preview(self, mock_cancel, mock_liveness):
+        """GET returns the cancel REAP preview payload and does not invoke cancel."""
         self.pending_job_result.user = self.user
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.pending_job_result.save()
         self.add_permissions("extras.view_jobresult", "extras.run_job")
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
 
         response = self.client.get(url, **self.header)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["job_status"], "NOT RUNNING")
         self.assertIn("REAP", response.data["action"])
-        mock_revoke.assert_not_called()
+        mock_cancel.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_staff_user_non_owner_with_run_job_permission_can_revoke(self, mock_revoke, mock_liveness):
-        """A staff user non owner with permission can revoke."""
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_staff_user_non_owner_with_run_job_permission_can_cancel(self, mock_cancel, mock_liveness):
+        """A staff user non owner with permission can cancel."""
         self.user.is_staff = True
         self.user.save()
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.pending_job_result.save()
         self.assertNotEqual(self.pending_job_result.user, self.user)
         self.add_permissions("extras.view_jobresult", "extras.run_job")
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
-        mock_revoke.assert_called_once()
+        mock_cancel.assert_called_once()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_owner_run_job_permission_no_staff_user_can_revoke(self, mock_revoke, mock_liveness):
-        """A owner with run_job permission can revoke."""
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_owner_run_job_permission_no_staff_user_can_cancel(self, mock_cancel, mock_liveness):
+        """A owner with run_job permission can cancel."""
         self.user.is_staff = False
         self.user.save()
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -3897,16 +3897,16 @@ class JobResultTest(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
-        mock_revoke.assert_called_once()
+        mock_cancel.assert_called_once()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", return_value={"error": "Revoke failed: worker not responding."})
-    def test_revoke_strategy_error_returns_500(self, mock_revoke, mock_liveness):
-        """When the revoke strategy returns an error, the endpoint returns 500 with the error detail."""
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": "Cancel failed: worker not responding."})
+    def test_cancel_strategy_error_returns_500(self, mock_cancel, mock_liveness):
+        """When the cancel strategy returns an error, the endpoint returns 500 with the error detail."""
         self.user.is_staff = False
         self.user.save()
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
@@ -3916,28 +3916,28 @@ class JobResultTest(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
         response = self.client.post(url, **self.header)
 
         self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.data["detail"], "Revoke failed: worker not responding.")
-        mock_revoke.assert_called_once()
+        self.assertEqual(response.data["detail"], "Cancel failed: worker not responding.")
+        mock_cancel.assert_called_once()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_no_action_termination_path)
-    def test_revoke_status_not_flipped_returns_409(self, mock_revoke, mock_liveness):
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_no_action_termination_path)
+    def test_cancel_status_not_flipped_returns_409(self, mock_cancel, mock_liveness):
         """If the strategy reports success but the job didn't end up REVOKED, return 409."""
         self.user.is_staff = True
         self.user.save()
         self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.pending_job_result.save()
         self.add_permissions("extras.view_jobresult", "extras.run_job")
-        url = reverse("extras-api:jobresult-revoke", kwargs={"pk": self.pending_job_result.pk})
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
 
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertIn(response.data["detail"], "Job finished before it could be revoked. No action was taken.")
-        mock_revoke.assert_called_once()
+        self.assertIn(response.data["detail"], "Job finished before it could be canceled. No action was taken.")
+        mock_cancel.assert_called_once()
 
 
 class JobLogEntryTest(
