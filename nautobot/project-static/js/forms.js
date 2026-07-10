@@ -150,8 +150,11 @@ function initializeBulkEditNullification(context){
             return; // no UI change; _nullify still submitted
         }
 
-        // Existing behavior for other fields
-        $('#id_' + this.value).toggle('disabled');
+        // Select2 hides the original <select> and shows a sibling `.select2-container`,
+        // so toggle that widget when present; otherwise toggle the original control.
+        var $select2 = $field.siblings('.select2-container');
+        var $target = $select2.length ? $select2 : $field;
+        $target.toggle('disabled');
     });
 }
 
