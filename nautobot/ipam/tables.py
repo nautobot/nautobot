@@ -763,7 +763,7 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
 
 class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    name = tables.Column(linkify=True, empty_values=[])
     start_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("start_host",))
     end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
@@ -803,6 +803,9 @@ class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "description",
             "actions",
         )
+
+    def render_name(self, record, value):
+        return value or str(record)
 
 
 class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
