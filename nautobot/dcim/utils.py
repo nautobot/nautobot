@@ -1,4 +1,6 @@
 from copy import deepcopy
+from dataclasses import dataclass
+from string import Formatter
 from typing import Optional
 import uuid
 
@@ -18,6 +20,17 @@ from nautobot.dcim.constants import (
     DEFAULT_CABLE_TYPES,
     NONCONNECTABLE_IFACE_TYPES,
 )
+
+BREAKOUT_SUBINTERFACE_NAME_TOKENS = ("parent", "position", "position_index")
+
+
+@dataclass(frozen=True)
+class _BreakoutSubinterfaceCreationPlan:
+    """A virtual child interface that should be created for a breakout lane."""
+
+    parent_interface: object
+    name: str
+    breakout_position: int
 
 
 def compile_path_node(ct_id, object_id):
@@ -415,6 +428,193 @@ def validate_cable_termination(termination, cable_id=None):
         )
         if current_cable_id and current_cable_id != cable_id:
             raise ValidationError(f"{termination} already has a cable attached (#{current_cable_id})")
+
+
+def get_breakout_subinterface_name_pattern(interface):
+    """Return the DeviceType breakout subinterface naming pattern for an Interface, if any."""
+    if interface.device_id:
+        return interface.device.device_type.breakout_subinterface_name_pattern
+
+    return ""
+
+
+def validate_breakout_subinterface_name_pattern(pattern):
+    """
+    Validate a breakout subinterface naming pattern.
+
+    Args:
+        pattern (str): Naming pattern from the parent interface's DeviceType.
+
+    Supported variables:
+        - {parent}: The parent interface's name.
+        - {position}: The one-based breakout position, matching the stored breakout_position value.
+        - {position_index}: The zero-based breakout position, for platforms that name subinterfaces from zero.
+
+    Raises:
+        ValidationError: If the pattern uses an unsupported variable or contains malformed format syntax.
+    """
+    try:
+        for _, field_name, _, _ in Formatter().parse(pattern):
+            # Literal pattern text has no field name; only validate actual replacement fields.
+            if field_name is not None and field_name not in BREAKOUT_SUBINTERFACE_NAME_TOKENS:
+                raise ValidationError(f"Unsupported breakout subinterface name token: {{{field_name}}}")
+    except ValueError as err:
+        raise ValidationError(f"Invalid breakout subinterface name pattern: {err}") from err
+
+
+def render_breakout_subinterface_name(pattern, parent_interface, position):
+    """
+    Render a child interface name from a validated breakout subinterface naming pattern.
+
+    Args:
+        pattern (str): Naming pattern from the parent interface's DeviceType.
+        parent_interface (Interface): Physical trunk interface that will own the child interface.
+        position (int): One-based breakout position from the CableType mapping.
+
+    Returns:
+        str: Rendered child interface name.
+
+    Example:
+        - Interface (name="Ethernet1")
+        - pattern="{parent}.{position}"
+        - position=1
+
+        The rendered child interface name would be "Ethernet1.1".
+
+    """
+    return pattern.format(
+        parent=parent_interface.name,
+        position=position,
+        position_index=position - 1,
+    )
+
+
+def _interface_name_collision(parent_interface, name):
+    """Return a same-parent-scope Interface with the given name, if one exists."""
+    from nautobot.dcim.models import Interface
+
+    if parent_interface.module_id:
+        return Interface.objects.filter(module=parent_interface.module, name=name).first()
+
+    return Interface.objects.filter(device=parent_interface.device, name=name).first()
+
+
+def get_breakout_subinterface_creation_plan(cable_type, trunk_terminations):
+    """Return virtual child interfaces to create for breakout trunk terminations.
+
+    Args:
+        cable_type (CableType): Breakout cable type whose mapping defines the child positions.
+        trunk_terminations (iterable): ``(termination, connector)`` tuples for the trunk-side
+            terminations. The termination may be any cable termination object; only Interface
+            terminations can produce child interfaces.
+
+    Returns:
+        list[_BreakoutSubinterfaceCreationPlan]: Child interface definitions to create.
+
+    Raises:
+        ValidationError: If a validated pattern renders an empty name or a name that is already in use.
+    """
+    from nautobot.dcim.models import Interface
+
+    planned_interfaces = []
+
+    if cable_type is None or not cable_type.is_breakout:
+        return planned_interfaces
+
+    trunk_side = cable_type.trunk_end.lower()
+
+    for trunk_interface, connector in trunk_terminations:
+        # Breakout cables can terminate on front/rear ports or circuits; only an Interface can own subinterfaces.
+        if not isinstance(trunk_interface, Interface):
+            continue
+
+        pattern = get_breakout_subinterface_name_pattern(trunk_interface)
+        # A blank DeviceType pattern is an explicit opt-out of breakout subinterface creation.
+        if not pattern:
+            continue
+
+        lanes = [lane for lane in cable_type.mapping if lane[f"{trunk_side}_connector"] == connector]
+        # If the mapping has no lanes for this connector, there is nothing to create for this trunk.
+        if not lanes:
+            continue
+
+        for lane in lanes:
+            position = lane[f"{trunk_side}_position"]
+            # Existing children are preserved; the helper only creates missing breakout positions.
+            if trunk_interface.child_interfaces.filter(breakout_position=position).exists():
+                continue
+
+            name = render_breakout_subinterface_name(pattern, trunk_interface, position)
+
+            if not name:
+                raise ValidationError(
+                    f"Rendered breakout subinterface name for {trunk_interface} position {position} is empty."
+                )
+
+            # We've already checked and skipped any child interfaces in this position, so a name
+            # collision here means an interface with this name already exists on the same parent.
+            if _interface_name_collision(trunk_interface, name):
+                raise ValidationError(f"Interface name {name} is already in use on {trunk_interface.parent}.")
+
+            planned_interfaces.append(
+                _BreakoutSubinterfaceCreationPlan(
+                    parent_interface=trunk_interface,
+                    name=name,
+                    breakout_position=position,
+                )
+            )
+
+    return planned_interfaces
+
+
+def create_breakout_subinterfaces(cable):
+    """Create missing virtual child interfaces for trunk-side Interface terminations on a breakout cable.
+
+    The cable type mapping defines the one-based `breakout_position` values. The trunk interface's
+    DeviceType defines the name pattern. DeviceTypes without a pattern do not create child
+    interfaces, which lets users opt out of autocreation for valid operational reasons.
+
+    Returns:
+        list[Interface]: Created child interfaces.
+
+    Raises:
+        ValidationError: If a validated pattern renders an empty name or a name that is already in use.
+    """
+    from nautobot.dcim.choices import InterfaceTypeChoices
+    from nautobot.dcim.models import Interface
+    from nautobot.extras.models import Status
+
+    created_interfaces = []
+
+    if cable.cable_type is None or not cable.cable_type.is_breakout:
+        return created_interfaces
+
+    trunk_rows = cable.terminations.filter(cable_end=cable.cable_type.trunk_end)
+    if not trunk_rows.exists():
+        return created_interfaces
+
+    try:
+        default_status = Status.objects.get_for_model(Interface).get(name="Active")
+    except Status.DoesNotExist:
+        default_status = Status.objects.get_for_model(Interface).first()
+
+    with transaction.atomic():
+        trunk_terminations = ((trunk_row.termination, trunk_row.connector) for trunk_row in trunk_rows)
+        for planned_interface in get_breakout_subinterface_creation_plan(cable.cable_type, trunk_terminations):
+            parent_interface = planned_interface.parent_interface
+            child_interface = Interface(
+                device=parent_interface.device,
+                module=parent_interface.module,
+                name=planned_interface.name,
+                type=InterfaceTypeChoices.TYPE_VIRTUAL,
+                status=default_status,
+                parent_interface=parent_interface,
+                breakout_position=planned_interface.breakout_position,
+            )
+            child_interface.validated_save()
+            created_interfaces.append(child_interface)
+
+    return created_interfaces
 
 
 # Cable disconnect utilities

@@ -112,6 +112,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import create_breakout_subinterfaces as create_breakout_subinterfaces_for_cable
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
@@ -863,6 +864,14 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     type = ChoiceField(choices=CableTypeChoices, allow_blank=True, required=False)
     total_lanes = serializers.IntegerField(read_only=True)
     connected_lanes = serializers.IntegerField(read_only=True)
+    create_breakout_subinterfaces = serializers.BooleanField(
+        write_only=True,
+        required=False,
+        help_text=(
+            "Create missing virtual child interfaces for breakout trunk interfaces using the "
+            "Device Type breakout subinterface name pattern."
+        ),
+    )
     # `SerializerMethodField` (rather than a declared nested field) so the per-request `?depth=N`
     # context drives the brief-vs-nested rendering of each slot. Writes are handled separately by
     # peeking at `self.initial_data` in `validate()` and applying via `_apply_terminations()`; see
@@ -996,6 +1005,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         return self._get_termination(obj, "b")
 
     def validate(self, attrs):
+        create_subinterfaces = attrs.pop("create_breakout_subinterfaces", False)
         attrs = super().validate(attrs)
         # Both the legacy `termination_<side>_type`/`_id` fields and the new `terminations` payload
         # describe the same underlying CableToCableTermination rows; normalize both into a single
@@ -1011,6 +1021,8 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
             payload.extend(self._parse_terminations_payload(self.initial_data["terminations"]))
         if payload:
             attrs["_terminations_payload"] = payload
+        if create_subinterfaces:
+            attrs["create_breakout_subinterfaces"] = create_subinterfaces
         return attrs
 
     def _parse_terminations_payload(self, raw):
@@ -1140,20 +1152,32 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         return entries
 
     def create(self, validated_data):
+        create_subinterfaces = validated_data.pop("create_breakout_subinterfaces", False)
         terminations_payload = validated_data.pop("_terminations_payload", None)
         with transaction.atomic():
             cable = Cable(**validated_data)
             cable.validated_save()
             if terminations_payload:
                 self._apply_terminations(cable, terminations_payload)
+            if create_subinterfaces:
+                try:
+                    create_breakout_subinterfaces_for_cable(cable)
+                except ValidationError as exc:
+                    raise serializers.ValidationError({"create_breakout_subinterfaces": exc.messages}) from exc
         return cable
 
     def update(self, instance, validated_data):
+        create_subinterfaces = validated_data.pop("create_breakout_subinterfaces", False)
         terminations_payload = validated_data.pop("_terminations_payload", None)
         with transaction.atomic():
             cable = super().update(instance, validated_data)
             if terminations_payload:
                 self._apply_terminations(cable, terminations_payload)
+            if create_subinterfaces:
+                try:
+                    create_breakout_subinterfaces_for_cable(cable)
+                except ValidationError as exc:
+                    raise serializers.ValidationError({"create_breakout_subinterfaces": exc.messages}) from exc
         return cable
 
 

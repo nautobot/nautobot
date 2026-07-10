@@ -167,6 +167,16 @@ On the cable edit form, each connector row has three fields:
 
 Changing the type dynamically swaps the parent and termination picker fields. Mixed termination types are supported, within logical limits -- for example, some lanes can connect to device interfaces while others connect to circuit terminations; however it would not make sense to mix interfaces and power outlets on the same cable.
 
+### Creating Breakout Subinterfaces
+
+When saving a breakout cable through the UI, you can select **Create breakout subinterfaces** to create child interfaces for trunk-side interface terminations. Nautobot uses the breakout subinterface name pattern from the trunk interface's [device type](../core-data-model/dcim/devicetype.md) to name the new child interfaces. Module interfaces use the pattern configured on the device type of the parent device in which the module is installed. If no pattern is configured, no child interfaces are created.
+
+Nautobot creates one virtual child interface for each mapped breakout position on the trunk connector. If a breakout cable is only partially cabled, Nautobot still creates child interfaces for all mapped positions on the trunk side; the missing far-side terminations can be added later.
+
+Existing child interfaces are matched by `breakout_position` and preserved. If the trunk interface already has a child for a mapped position, Nautobot leaves that child unchanged and does not evaluate the naming pattern for that position. Names are generated only for missing positions. If a generated name for a missing position is already used by another interface on the same device or module, the cable save is rejected.
+
+Deleting a breakout cable does not delete any child interfaces that were created from it. Child interfaces are independent inventory/configuration objects and may have IP addresses, VLAN assignments, tags, custom fields, relationships, descriptions, or other user-managed data. Any cleanup of child interfaces should be performed explicitly.
+
 ## Understanding Cable Connections
 
 ### Cable Connections Table
@@ -223,12 +233,33 @@ POST /api/dcim/cables/
             "id": "<circuit-termination-uuid>"
         },
         "b4": null
-        }
     }
 }
 ```
 
 Note that the fourth B-side termination is null, representing an unconnected leg.
+
+To create missing breakout subinterfaces while creating or updating a cable, include the write-only `create_breakout_subinterfaces` flag:
+
+```json
+{
+    "cable_type": "<cable-type-uuid>",
+    "status": "<status-uuid>",
+    "terminations": {
+        "a1": {
+            "object_type": "dcim.interface",
+            "id": "<interface-uuid>"
+        },
+        "b1": {
+            "object_type": "dcim.interface",
+            "id": "<interface-uuid>"
+        }
+    },
+    "create_breakout_subinterfaces": true
+}
+```
+
+This flag is not stored on the cable. It only applies to that API request.
 
 ### Reading Cable Terminations
 

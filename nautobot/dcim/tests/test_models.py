@@ -2904,6 +2904,48 @@ class DeviceBayTemplateTestCase(ModelTestCases.BaseModelTestCase):
                 template.full_clean()
 
 
+class DeviceTypeTestCase(ModelTestCases.BaseModelTestCase):
+    model = DeviceType
+
+    def test_valid_breakout_subinterface_name_pattern(self):
+        """Valid breakout subinterface name patterns pass model validation."""
+        device_type = DeviceType(
+            manufacturer=Manufacturer.objects.first(),
+            model="Breakout Pattern Valid",
+            breakout_subinterface_name_pattern="{parent}.{position}-{position_index}",
+        )
+
+        device_type.full_clean()
+
+    def test_unsupported_breakout_subinterface_name_pattern_token(self):
+        """Unsupported breakout subinterface name pattern tokens fail model validation."""
+        device_type = DeviceType(
+            manufacturer=Manufacturer.objects.first(),
+            model="Breakout Pattern Unsupported Token",
+            breakout_subinterface_name_pattern="{parent}.{unsupported_token}",
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            device_type.full_clean()
+
+        self.assertIn("breakout_subinterface_name_pattern", context.exception.message_dict)
+        self.assertIn("Unsupported breakout subinterface name token", str(context.exception))
+
+    def test_malformed_breakout_subinterface_name_pattern(self):
+        """Malformed breakout subinterface name patterns fail model validation."""
+        device_type = DeviceType(
+            manufacturer=Manufacturer.objects.first(),
+            model="Breakout Pattern Malformed",
+            breakout_subinterface_name_pattern="{parent",
+        )
+
+        with self.assertRaises(ValidationError) as context:
+            device_type.full_clean()
+
+        self.assertIn("breakout_subinterface_name_pattern", context.exception.message_dict)
+        self.assertIn("Invalid breakout subinterface name pattern", str(context.exception))
+
+
 class DeviceTypeToSoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceTypeToSoftwareImageFile
 

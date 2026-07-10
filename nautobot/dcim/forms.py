@@ -175,7 +175,11 @@ from .models import (
 )
 from .signals import defer_cable_path_rebuilds
 from .termination_field_set import CableTerminationFieldSet
-from .utils import build_connector_row_layout
+from .utils import (
+    build_connector_row_layout,
+    create_breakout_subinterfaces as create_breakout_subinterfaces_for_cable,
+    get_breakout_subinterface_creation_plan,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -961,6 +965,7 @@ class DeviceTypeForm(NautobotModelForm):
             "device_family",
             "model",
             "part_number",
+            "breakout_subinterface_name_pattern",
             "u_height",
             "is_full_depth",
             "subdevice_role",
@@ -997,6 +1002,7 @@ class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
             "device_family",
             "model",
             "part_number",
+            "breakout_subinterface_name_pattern",
             "u_height",
             "is_full_depth",
             "subdevice_role",
@@ -1009,12 +1015,13 @@ class DeviceTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
     manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
     device_family = DynamicModelChoiceField(queryset=DeviceFamily.objects.all(), required=False)
     software_image_files = DynamicModelMultipleChoiceField(queryset=SoftwareImageFile.objects.all(), required=False)
+    breakout_subinterface_name_pattern = forms.CharField(required=False)
     u_height = forms.IntegerField(required=False, min_value=0)
     is_full_depth = forms.NullBooleanField(required=False, widget=BulkEditNullBooleanSelect(), label="Is full depth")
     comments = CommentField(label="Comments", required=False)
 
     class Meta:
-        nullable_fields = ["device_family", "software_image_files"]
+        nullable_fields = ["device_family", "software_image_files", "breakout_subinterface_name_pattern"]
 
 
 class DeviceTypeFilterForm(NautobotFilterForm):
@@ -4416,11 +4423,20 @@ class CableForm(NautobotModelForm):
         queryset=CableType.objects.all(),
         required=False,
     )
+    create_breakout_subinterfaces = forms.BooleanField(
+        required=False,
+        label="Create breakout subinterfaces",
+        help_text=(
+            "Create missing virtual child interfaces for breakout trunk interfaces using the "
+            "Device Type breakout subinterface name pattern."
+        ),
+    )
 
     class Meta:
         model = Cable
         fields = [
             "cable_type",
+            "create_breakout_subinterfaces",
             "type",
             "status",
             "label",
@@ -4795,6 +4811,9 @@ class CableForm(NautobotModelForm):
                             f"A {termination._meta.verbose_name} cannot terminate a multi-connector cable type.",
                         )
 
+        if cleaned_data.get("create_breakout_subinterfaces"):
+            self._clean_breakout_subinterface_creation()
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -4802,8 +4821,29 @@ class CableForm(NautobotModelForm):
 
         if commit:
             self._save_connection_terminations(cable)
+            if self.cleaned_data.get("create_breakout_subinterfaces"):
+                create_breakout_subinterfaces_for_cable(cable)
 
         return cable
+
+    def _clean_breakout_subinterface_creation(self):
+        """Validate predictable breakout subinterface creation errors before the cable is saved."""
+        cable_type = self.connection_info["cable_type"]
+        if cable_type is None or not cable_type.is_breakout:
+            return
+
+        trunk_side = cable_type.trunk_end.lower()
+        trunk_terminations = (
+            (
+                self.cleaned_data.get(f"{trunk_side}_conn_{conn['connector']}_termination"),
+                conn["connector"],
+            )
+            for conn in self.connection_info[f"{trunk_side}_side"]
+        )
+        try:
+            get_breakout_subinterface_creation_plan(cable_type, trunk_terminations)
+        except ValidationError as exc:
+            self.add_error("create_breakout_subinterfaces", exc)
 
     def _save_connection_terminations(self, cable):
         """Process connector-based form fields — replace this cable's CableToCableTermination rows.
