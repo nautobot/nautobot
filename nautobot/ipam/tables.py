@@ -767,6 +767,7 @@ class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     start_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("start_host",))
     end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
+    namespace = tables.Column(linkify=True, accessor="parent__namespace")
     tenant = TenantColumn()
     count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")
     is_exclusive = BooleanColumn(verbose_name="Exclusive")
@@ -786,7 +787,6 @@ class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "status",
             "role",
             "tenant",
-            "count_as_utilized",
             "is_exclusive",
             "description",
             "tags",
