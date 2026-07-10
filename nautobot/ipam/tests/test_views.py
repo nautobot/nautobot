@@ -1266,6 +1266,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         with self.subTest("no valid containing prefix, parent set"):
             with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
                 self.assertHttpStatus(self.client.get(detail_url), 200)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_interfaces_view_loads(self):
         """The interfaces tab loads and shows all interfaces the user is permitted to view."""
