@@ -1,1 +1,0 @@
-Fixed `AttributeError` in `cable_status_color_css()` when rendering a virtual sub-interface whose parent has a cable but which is not a breakout child.
