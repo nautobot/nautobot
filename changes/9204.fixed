@@ -1,0 +1,1 @@
+Modified serializer and views for IPAM assignment models to create a change log when the object is created or deleted via API.

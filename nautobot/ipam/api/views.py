@@ -61,11 +61,32 @@ class VRFDeviceAssignmentViewSet(ModelViewSet):
     serializer_class = serializers.VRFDeviceAssignmentSerializer
     filterset_class = filters.VRFDeviceAssignmentFilterSet
 
+    def perform_destroy(self, instance):
+        """
+        Remove the assignment through the VRF's M2M managers rather than deleting the
+        VRFDeviceAssignment through instance directly. Routing through `vrf.<devices|virtual_machines|
+        virtual_device_contexts>.remove()` fires m2m_changed and generates a change log entry against the VRF, matching the UI.
+        """
+        vrf = instance.vrf
+        if instance.device_id is not None:
+            vrf.devices.remove(instance.device)
+        elif instance.virtual_machine_id is not None:
+            vrf.virtual_machines.remove(instance.virtual_machine)
+        else:
+            vrf.virtual_device_contexts.remove(instance.virtual_device_context)
+
 
 class VRFPrefixAssignmentViewSet(ModelViewSet):
     queryset = VRFPrefixAssignment.objects.all()
     serializer_class = serializers.VRFPrefixAssignmentSerializer
     filterset_class = filters.VRFPrefixAssignmentFilterSet
+
+    def perform_destroy(self, instance):
+        """
+        Remove the assignment through the VRF's `prefixes` M2M manager rather than deleting the
+        VRFPrefixAssignment through instance directly, so m2m_changed fires and a change log entry is recorded against the VRF, matching the UI.
+        """
+        instance.vrf.prefixes.remove(instance.prefix)
 
 
 #
@@ -391,6 +412,14 @@ class PrefixLocationAssignmentViewSet(ModelViewSet):
     serializer_class = serializers.PrefixLocationAssignmentSerializer
     filterset_class = filters.PrefixLocationAssignmentFilterSet
 
+    def perform_destroy(self, instance):
+        """
+        Remove the assignment through the Prefix's `locations` M2M manager rather than deleting the
+        PrefixLocationAssignment through instance directly, so m2m_changed fires and a change log
+        entry is recorded against the Prefix, matching the UI.
+        """
+        instance.prefix.locations.remove(instance.location)
+
 
 #
 # IP addresses
@@ -412,6 +441,14 @@ class IPAddressToInterfaceViewSet(NautobotModelViewSet):
     queryset = IPAddressToInterface.objects.all()
     serializer_class = serializers.IPAddressToInterfaceSerializer
     filterset_class = filters.IPAddressToInterfaceFilterSet
+
+    def perform_destroy(self, instance):
+        """
+        Remove the assignment through the M2M relationship rather than deleting the
+        IPAddressToInterface through instance directly. Routing through `(vm_)interface.ip_addresses.remove()` fires m2m_changed and generates a change log entry against the (VM)Interface, matching the UI.
+        """
+        parent = instance.interface or instance.vm_interface
+        parent.ip_addresses.remove(instance.ip_address)
 
 
 #
@@ -648,6 +685,13 @@ class VLANLocationAssignmentViewSet(ModelViewSet):
     queryset = VLANLocationAssignment.objects.all()
     serializer_class = serializers.VLANLocationAssignmentSerializer
     filterset_class = filters.VLANLocationAssignmentFilterSet
+
+    def perform_destroy(self, instance):
+        """
+        Remove the assignment through the VLAN's `locations` M2M manager rather than deleting the
+        VLANLocationAssignment through instance directly, so m2m_changed fires and a change log entry is recorded against the VLAN, matching the UI.
+        """
+        instance.vlan.locations.remove(instance.location)
 
 
 #

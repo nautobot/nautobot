@@ -72,11 +72,42 @@ class VRFDeviceAssignmentSerializer(ValidatedModelSerializer):
                 validator(attrs, self)
         return super().validate(attrs)
 
+    def create(self, validated_data):
+        """
+        Create the assignment through the VRF's M2M managers rather than instantiating the
+        VRFDeviceAssignment through model directly. Routing through `vrf.<devices|virtual_machines|
+        virtual_device_contexts>.add()` fires m2m_changed and generates a change log entry against the VRF, matching the UI.
+        """
+        vrf = validated_data.pop("vrf")
+        device = validated_data.pop("device", None)
+        virtual_machine = validated_data.pop("virtual_machine", None)
+        virtual_device_context = validated_data.pop("virtual_device_context", None)
+        if device is not None:
+            vrf.devices.add(device, through_defaults=validated_data)
+        elif virtual_machine is not None:
+            vrf.virtual_machines.add(virtual_machine, through_defaults=validated_data)
+        else:
+            vrf.virtual_device_contexts.add(virtual_device_context, through_defaults=validated_data)
+        return VRFDeviceAssignment.objects.get(
+            vrf=vrf, device=device, virtual_machine=virtual_machine, virtual_device_context=virtual_device_context
+        )
+
 
 class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = VRFPrefixAssignment
         fields = "__all__"
+
+    def create(self, validated_data):
+        """
+        Create the assignment through the VRF's `prefixes` M2M manager rather than instantiating the
+        VRFPrefixAssignment through model directly.Routing through `vrf.prefixes.add()` fires
+        m2m_changed and generates a change log entry against the VRF, matching the UI.
+        """
+        vrf = validated_data.pop("vrf")
+        prefix = validated_data.pop("prefix")
+        vrf.prefixes.add(prefix, through_defaults=validated_data)
+        return VRFPrefixAssignment.objects.get(vrf=vrf, prefix=prefix)
 
 
 #
@@ -186,6 +217,17 @@ class VLANLocationAssignmentSerializer(ValidatedModelSerializer):
         model = VLANLocationAssignment
         fields = "__all__"
 
+    def create(self, validated_data):
+        """
+        Create the assignment through the VLAN's `locations` M2M manager rather than instantiating the
+        VLANLocationAssignment through model directly.  Routing through `vlan.locations.add()` fires
+        m2m_changed and generates a change log entry against the VLAN, matching the UI.
+        """
+        vlan = validated_data.pop("vlan")
+        location = validated_data.pop("location")
+        vlan.locations.add(location, through_defaults=validated_data)
+        return VLANLocationAssignment.objects.get(vlan=vlan, location=location)
+
 
 #
 # Prefixes
@@ -264,6 +306,17 @@ class PrefixLocationAssignmentSerializer(ValidatedModelSerializer):
     class Meta:
         model = PrefixLocationAssignment
         fields = "__all__"
+
+    def create(self, validated_data):
+        """
+        Create the assignment through the Prefix's `locations` M2M manager rather than instantiating
+        the PrefixLocationAssignment through model directly. Routing through
+        `prefix.locations.add()` fires m2m_changed and generates a change log entry against the Prefix, matching the UI.
+        """
+        prefix = validated_data.pop("prefix")
+        location = validated_data.pop("location")
+        prefix.locations.add(location, through_defaults=validated_data)
+        return PrefixLocationAssignment.objects.get(prefix=prefix, location=location)
 
 
 class PrefixLengthSerializer(PrefixLegacySerializer):
@@ -445,6 +498,19 @@ class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
             )
             validator(attrs, self)
         return super().validate(attrs)
+
+    def create(self, validated_data):
+        """
+        Create the assignment through the M2M relationship rather than instantiating the
+        IPAddressToInterface through model directly. Routing through `(vm_)interface.ip_addresses.add()` fires
+        m2m_changed and generates a change log entry against the (VM)Interface, matching the UI.
+        """
+        ip_address = validated_data.pop("ip_address")
+        interface = validated_data.pop("interface", None)
+        vm_interface = validated_data.pop("vm_interface", None)
+        parent = interface or vm_interface
+        parent.ip_addresses.add(ip_address, through_defaults=validated_data)
+        return IPAddressToInterface.objects.get(ip_address=ip_address, interface=interface, vm_interface=vm_interface)
 
 
 #
