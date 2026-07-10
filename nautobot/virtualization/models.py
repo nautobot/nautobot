@@ -386,6 +386,13 @@ class VMInterface(PrimaryModel, BaseInterface):
     def parent(self):
         return self.virtual_machine
 
+    def clean(self):
+        super().clean()
+
+        # VRF validation
+        if self.vrf and self.parent and self.vrf not in self.parent.vrfs.all():
+            raise ValidationError({"vrf": "VRF must be assigned to same Virtual Machine."})
+
     @property
     def ip_address_count(self):
         return self.ip_addresses.count()
