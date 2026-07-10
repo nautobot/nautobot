@@ -1914,8 +1914,6 @@ class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
             self._deconstruct_end_address(end_address)
 
     def __str__(self):
-        if self.parent_id is not None:
-            return f"{self.parent.namespace}: {self.start_address} - {self.end_address}"
         return f"{self.start_address} - {self.end_address}"
 
     def _deconstruct_start_address(self, address):
