@@ -1171,6 +1171,12 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
     def alter_queryset(self, request):
         queryset = super().alter_queryset(request)
 
+        # The assigned_count annotation only feeds the IPAddressDetailTable, so only compute it (and the
+        # SavedView/column lookups it depends on) for the actions that render that table; skip the work
+        # for detail/edit/delete/API and other actions.
+        if self.action not in ["list", "bulk_update", "bulk_destroy"]:
+            return queryset
+
         # All of the below is just to determine whether we are displaying the "assigned_count" column, and if so,
         # perform the relevant queryset annotation. Ref: nautobot/nautobot#6605
         if request.user is None or isinstance(request.user, AnonymousUser):
