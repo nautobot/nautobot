@@ -1,0 +1,3 @@
+Changed the default max_locks_per_transaction for Postgres to 512 for test runs with many parallel workers.
+Backported Django 6.0 fix for parallel test runs with --buffer.
+Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
