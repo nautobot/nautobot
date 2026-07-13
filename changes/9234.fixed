@@ -1,0 +1,1 @@
+Fixed `ObjectsTablePanel` building each detail-view table (and running its pagination query) twice per request.

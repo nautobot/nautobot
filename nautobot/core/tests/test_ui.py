@@ -385,6 +385,58 @@ class ObjectsTablePanelTest(TestCase):
 
         self.assertIn("non-existent column `non_existent_column`", str(context.exception))
 
+    def test_get_extra_context_is_cached_per_request(self):
+        """The table should be built only once per request even though `get_extra_context` is called twice.
+
+        A detail-view render calls `get_extra_context` once via the `render_table_config_forms` templatetag
+        and again when the panel body is rendered; the result must be cached so the table (and its pagination
+        query) is not built twice. Regression test for #9234.
+        """
+        panel = ObjectsTablePanel(
+            weight=100,
+            table_class=DeviceTable,
+            table_attribute="devices_sorted",
+            related_field_name="device_redundancy_group",
+        )
+        redundancy_group = DeviceRedundancyGroup.objects.first()
+        context = {"request": self.request, "object": redundancy_group}
+
+        build_count = 0
+        original_build = ObjectsTablePanel._build_extra_context
+
+        def counting_build(inner_self, inner_context):
+            nonlocal build_count
+            build_count += 1
+            return original_build(inner_self, inner_context)
+
+        with patch.object(ObjectsTablePanel, "_build_extra_context", counting_build):
+            first = panel.get_extra_context(context)
+            second = panel.get_extra_context(context)
+
+        self.assertEqual(build_count, 1)
+        self.assertIs(first, second)
+        self.assertIs(first["body_content_table"], second["body_content_table"])
+
+    def test_get_extra_context_not_cached_across_requests(self):
+        """A subsequent request must rebuild the table rather than reusing another request's cached context."""
+        panel = ObjectsTablePanel(
+            weight=100,
+            table_class=DeviceTable,
+            table_attribute="devices_sorted",
+            related_field_name="device_redundancy_group",
+        )
+        redundancy_group = DeviceRedundancyGroup.objects.first()
+
+        first_request = self.factory.get("/")
+        first_request.user = self.user
+        second_request = self.factory.get("/")
+        second_request.user = self.user
+
+        first = panel.get_extra_context({"request": first_request, "object": redundancy_group})
+        second = panel.get_extra_context({"request": second_request, "object": redundancy_group})
+
+        self.assertIsNot(first["body_content_table"], second["body_content_table"])
+
 
 class EChartsBaseTests(TestCase):
     def setUp(self):
