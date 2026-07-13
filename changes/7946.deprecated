@@ -1,1 +1,0 @@
-Deprecated the `object` Jinja2 variable in data validation regex rules in favor of `obj`; `object` will be removed in Nautobot 4.0.
