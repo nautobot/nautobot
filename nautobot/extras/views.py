@@ -3508,7 +3508,7 @@ def render_jobresult_status(status):
     """
     mapping = {
         "FAILURE": ("bg-danger", "Failed"),
-        "REVOKED": ("bg-danger", "Canceled"),
+        "REVOKED": ("bg-danger", "Revoked"),
         "IGNORED": ("bg-danger", "Ignored"),
         "REJECTED": ("bg-danger", "Rejected"),
         "PENDING": ("bg-body-secondary border", "Pending"),
