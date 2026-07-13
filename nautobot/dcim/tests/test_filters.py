@@ -2584,6 +2584,33 @@ class InterfaceTestCase(PathEndpointModelTestMixin, ModularDeviceComponentTestMi
         vdcs[1].interfaces.set(lag_interfaces)
         vdcs[2].interfaces.set(lag_interfaces)
 
+    def test_available_for_cable(self):
+        """`available_for_cable` returns uncabled terminations plus those already on the given cable."""
+        device = Device.objects.get(name="Device 1")
+        iface_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+
+        def _iface(name):
+            return Interface.objects.create(
+                device=device, name=name, status=iface_status, type=InterfaceTypeChoices.TYPE_1GE_FIXED
+            )
+
+        on_cable_a, on_cable_b = _iface("afc-on-a"), _iface("afc-on-b")
+        other_a, other_b = _iface("afc-other-a"), _iface("afc-other-b")
+        uncabled = _iface("afc-uncabled")
+        cable = Cable.objects.create(termination_a=on_cable_a, termination_b=on_cable_b, status=cable_status)
+        Cable.objects.create(termination_a=other_a, termination_b=other_b, status=cable_status)
+
+        result = self.filterset({"available_for_cable": [str(cable.pk)]}, self.queryset).qs
+        # This cable's own endpoints stay selectable (so they can be swapped between lanes/sides)...
+        self.assertIn(on_cable_a, result)
+        self.assertIn(on_cable_b, result)
+        # ...as do entirely uncabled interfaces...
+        self.assertIn(uncabled, result)
+        # ...but interfaces attached to a different cable are excluded.
+        self.assertNotIn(other_a, result)
+        self.assertNotIn(other_b, result)
+
     def test_enabled(self):
         # TODO: Not a generic_filter_test because this is a boolean filter but not a RelatedMembershipBooleanFilter
         with self.subTest("enabled: True"):

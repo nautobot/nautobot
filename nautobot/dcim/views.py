@@ -5434,17 +5434,19 @@ class CableUIViewSet(NautobotUIViewSet):
     def lane_side_fields(self, request):
         """HTMX endpoint: return parent+termination fields for a specific lane side when the type changes.
 
-        The current cable's pk is not needed since the response only depends on the selected
-        termination type, side, and connector — not on any existing cable state.
+        The only piece of existing cable state the response depends on is the cable pk (forwarded by
+        the type select's `hx-vals`), used to re-apply the `available_for_cable` termination filter so
+        the cable's own endpoints stay pickable after a type change. It's absent when creating a cable.
         """
         connector = request.GET.get("connector", "1")
         side = request.GET.get("side", "a")
+        cable_pk = request.GET.get("cable") or None
         prefix = f"{side}_conn_{connector}"
         # HTMX-only endpoint: the requesting type select sends its value as `<prefix>_type` via hx-include.
         term_type = request.GET.get(f"{prefix}_type", "interface")
 
         fieldset = CableTerminationFieldSet()
-        result = fieldset.get_fields(prefix, term_type=term_type)
+        result = fieldset.get_fields(prefix, term_type=term_type, cable_pk=cable_pk)
 
         # Build a minimal form-like object for template rendering.
         temp_form = Form()
