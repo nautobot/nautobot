@@ -1,0 +1,16 @@
+{% extends 'utilities/confirmation_form.html' %}
+{% load form_helpers %}
+{% load helpers %}
+
+{% block title %}
+    Cancel Job?
+{% endblock %}
+
+{% block message %}
+    <p>Are you sure you want to cancel <strong>{{ object.name }}</strong>?</p>
+    <p>
+        As of {{ timestamp|date:"DATETIME_FORMAT" }} this job is:
+        <strong>{{ job_liveness_state.display }}</strong>
+    </p>
+    <p>Would you like to cancel the job? This action cannot be undone.</p>
+{% endblock %}

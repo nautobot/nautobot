@@ -4,7 +4,7 @@
 
 - Breakout Cables
 - IP Address Range Model
-- Job Cancellation
+- Job Cancel
 - Model Search Typeahead
 - Live Search
 - Homepage Stickiness

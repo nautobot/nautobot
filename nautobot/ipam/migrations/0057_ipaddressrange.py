@@ -15,7 +15,7 @@ import nautobot.ipam.fields
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0146_computedfield_output_type"),
+        ("extras", "0145_objectmetadata_assigned_object_type_cascade"),
         ("ipam", "0056_alter_vrfdeviceassignment_ordering_vrfprefixassignment_ordering"),
         ("tenancy", "0009_update_all_charfields_max_length_to_255"),
     ]
