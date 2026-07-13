@@ -13,13 +13,13 @@ limitations under the License.
 """
 
 import concurrent.futures
+from functools import partial
 import json
 import os
 import platform
 import re
 import shlex
 import time
-from functools import partial
 
 from invoke import Collection, task as invoke_task
 from invoke.exceptions import Exit, Failure
@@ -1284,13 +1284,15 @@ def lint(context, fix=False):
             exception_group.append((linter.func.__name__, exception))
 
     if len(exception_group) > 0:
-        exception_messages = [f"----- {linter_name} -----\n" + str(exception)
-                                for linter_name, exception in exception_group]
+        exception_messages = [
+            f"----- {linter_name} -----\n" + str(exception) for linter_name, exception in exception_group
+        ]
         output_string = "\n".join(exception_messages)
         print("-" * 80)
         print("Lint Errors Detected")
         print("-" * 80)
         raise Exit(output_string)
+
 
 @task(help={"version": "The version number or the rule to update the version."})
 def version(context, version=None):  # pylint: disable=redefined-outer-name
