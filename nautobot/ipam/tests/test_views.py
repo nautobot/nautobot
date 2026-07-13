@@ -1172,7 +1172,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertHttpStatus(self.client.get(reverse("ipam:ipaddress_bulk_add")), 200)
         form_data = {
             "namespace": self.namespace.pk,
-            "name_pattern": "192.0.2.[4-6]/24",
+            "pattern": "192.0.2.[4-6]/24",
             "status": self.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
         }
@@ -1189,12 +1189,12 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_bulk_create_ips_no_parent_prefix(self):
         """Bulk-add into a namespace with no containing prefix: the per-instance 'no parent' errors are
-        re-rendered on the form (covers IPAddressBulkCreateForm.add_error re-routing), not a 500/KeyError."""
+        surfaced on the pattern form and the page re-renders (HTTP 200), not a 500."""
         self.add_permissions("ipam.add_ipaddress")
         empty_namespace = Namespace.objects.create(name="bulk-add-no-parent")
         form_data = {
             "namespace": empty_namespace.pk,
-            "name_pattern": "192.0.2.[4-6]/24",
+            "pattern": "192.0.2.[4-6]/24",
             "status": self.statuses[1].pk,
             "type": IPAddressTypeChoices.TYPE_DHCP,
         }

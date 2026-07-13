@@ -41,7 +41,6 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Device, Interface
-from nautobot.dcim.views import ComponentCreateViewMixin
 from nautobot.extras.models import Role, SavedView, Status, Tag
 from nautobot.ipam.api import serializers
 from nautobot.ipam.choices import PrefixTypeChoices
@@ -870,7 +869,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
 #
 
 
-class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
+class IPAddressUIViewSet(NautobotUIViewSet):
     bulk_update_form_class = forms.IPAddressBulkEditForm
     filterset_class = filters.IPAddressFilterSet
     filterset_form_class = forms.IPAddressFilterForm
@@ -879,33 +878,6 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
     serializer_class = serializers.IPAddressSerializer
     table_class = tables.IPAddressDetailTable
     action_buttons = ("add", "import", "export")
-    create_template_name = "ipam/ipaddress_bulk_add.html"
-
-    # NOTE: create_form_class is intentionally NOT set. get_form_class() reads it for the standard
-    # `create` action (`/add/`), and we want that to fall back to form_class (IPAddressForm). The
-    # bulk pattern form is supplied to the bulk_add flow via get_component_create_form() below.
-
-    def get_component_create_form(self, request, data=None):
-        # Pattern (parent) form for the bulk_add flow.
-        return forms.IPAddressBulkCreateForm(
-            data or None,
-            initial=normalize_querydict(request.GET, form_class=forms.IPAddressBulkCreateForm),
-        )
-
-    def get_component_model_form(self, request, data=None):
-        # ComponentCreateViewMixin defaults the per-instance form to self.form_class (IPAddressForm,
-        # used for single create/update). For the pattern bulk-create flow, use the slimmer
-        # IPAddressBulkAddForm instead, matching the legacy IPAddressBulkCreateView.model_form.
-        return forms.IPAddressBulkAddForm(
-            data or None,
-            initial=normalize_querydict(request.GET, form_class=forms.IPAddressBulkAddForm),
-        )
-
-    def create(self, request, *args, **kwargs):
-        # `/add/` (ipam:ipaddress_add) is the standard single-object create using form_class
-        # (IPAddressForm). Skip ComponentCreateViewMixin.create() so it does NOT hijack `/add/`
-        # into the pattern flow; the pattern bulk create lives in `bulk_add()` below.
-        return super(ComponentCreateViewMixin, self).create(request, *args, **kwargs)
 
     @action(
         detail=False,
@@ -915,11 +887,63 @@ class IPAddressUIViewSet(ComponentCreateViewMixin, NautobotUIViewSet):
         custom_view_base_action="add",
     )
     def bulk_add(self, request, *args, **kwargs):
-        # Pattern bulk create (ipam:ipaddress_bulk_add). Reuses ComponentCreateViewMixin's
-        # pattern-expansion helpers; renders ipaddress_bulk_add.html via create_template_name.
-        if request.method == "POST":
-            return self.process_component_create_form(request, *args, **kwargs)
-        return self.render_component_create_response(request)
+        """
+        Pattern bulk-create of IPAddresses (ipam:ipaddress_bulk_add).
+
+        Self-contained (mirrors the legacy IPAddressBulkCreateView with `pattern_target="address"`)
+        rather than reusing the device/module-oriented ComponentCreateViewMixin. The `pattern` form
+        expands into individual addresses; each is validated through an IPAddressBulkAddForm and, only
+        if every address validates, they are saved together in one transaction.
+        """
+        form = forms.IPAddressBulkCreateForm(request.POST or None)
+        model_form = forms.IPAddressBulkAddForm(
+            request.POST or None,
+            initial=normalize_querydict(request.GET, form_class=forms.IPAddressBulkAddForm),
+        )
+
+        if request.method == "POST" and form.is_valid():
+            validated_forms = []
+            for value in form.cleaned_data["pattern"]:
+                # Reinstantiate the model form for each expanded value on a mutable POST copy so we can
+                # set the address without clobbering a shared instance.
+                addr_form = forms.IPAddressBulkAddForm(request.POST.copy())
+                addr_form.data["address"] = value
+                if addr_form.is_valid():
+                    validated_forms.append(addr_form)
+                else:
+                    # Surface each per-address error on the pattern form: address errors on the `pattern`
+                    # field, everything else (e.g. a "no parent Prefix" namespace error) as a non-field error.
+                    for field, errors in addr_form.errors.as_data().items():
+                        target = "pattern" if field == "address" else None
+                        for error in errors:
+                            form.add_error(target, f"{value}: {', '.join(error.messages)}")
+
+            if not form.errors:
+                try:
+                    with transaction.atomic():
+                        new_objs = [addr_form.save() for addr_form in validated_forms]
+                        # Enforce object-level permissions.
+                        if self.get_queryset().filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
+                            raise ObjectDoesNotExist
+                    msg = f"Added {len(new_objs)} {self.queryset.model._meta.verbose_name_plural}"
+                    logger.info(msg)
+                    messages.success(request, msg)
+                    if "_addanother" in request.POST:
+                        return redirect(request.path)
+                    return redirect(self.get_return_url(request))
+                except ObjectDoesNotExist:
+                    form.add_error(None, "Object creation failed due to object-level permissions violation")
+
+        return render(
+            request,
+            "ipam/ipaddress_bulk_add.html",
+            {
+                "obj_type": self.queryset.model._meta.verbose_name,
+                "form": form,
+                "model_form": model_form,
+                "return_url": self.get_return_url(request),
+            },
+        )
 
     @action(
         detail=False,

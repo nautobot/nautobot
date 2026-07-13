@@ -2306,11 +2306,6 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                         "label": "label_pattern",
                         "breakout_position": "breakout_position_pattern",
                     }.get(field, field)
-                    # The parent pattern form need not define every field the child form does (e.g.
-                    # IPAddressBulkCreateForm only defines `name_pattern`). Route an error for a field
-                    # the parent form lacks to a non-field error instead of raising "has no field named ...".
-                    if parent_field is not None and parent_field not in create_form.fields:
-                        parent_field = None
                     for e in errors:
                         err_str = ", ".join(e)
                         create_form.add_error(parent_field, f"{name}: {err_str}")

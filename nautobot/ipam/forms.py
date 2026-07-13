@@ -666,19 +666,15 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
     """
-    Pattern form for bulk-creating IPAddresses via `ComponentCreateViewMixin`.
+    Pattern form for bulk-creating IPAddresses.
 
-    `ComponentCreateViewMixin` is built for device/module components: it reads the expanded values
-    from `name_pattern` and, if present, calls `get_iterative_data()` for each entry. IPAddress has
-    no `name` field, so we expose the address pattern as `name_pattern` and map each expanded value
-    onto the `address` field via `get_iterative_data()` (equivalent to the legacy
+    The `pattern` field expands into individual addresses (e.g. `192.0.2.[1-5]/24`); the
+    `IPAddressUIViewSet.bulk_add` action maps each expanded value onto the `address` field of a
+    per-instance `IPAddressBulkAddForm` (equivalent to the legacy
     `IPAddressBulkCreateView.pattern_target = "address"`).
     """
 
-    name_pattern = ExpandableIPAddressField(label="Address pattern")
-
-    def get_iterative_data(self, iteration):
-        return {"address": self.cleaned_data["name_pattern"][iteration]}
+    pattern = ExpandableIPAddressField(label="Address pattern")
 
 
 class IPAddressBulkAddForm(IPAddressFormMixin):
