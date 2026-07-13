@@ -1,1 +1,0 @@
-Added a reusable `copy_button` template tag for rendering hover copy-to-clipboard buttons.

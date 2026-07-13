@@ -1,0 +1,1 @@
+Fixed a race condition in the cable type creation form where submitting immediately after changing the connector counts or total lanes could fail validation because the lane mapping table had not finished regenerating.
