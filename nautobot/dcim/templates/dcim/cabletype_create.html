@@ -150,8 +150,28 @@
                 }
             }
 
-            document.getElementById("nb-create-form").addEventListener("submit", () => {
+            // Track in-flight regeneration of the mapping table so we don't submit stale data.
+            // Changing a_connectors/b_connectors/total_lanes fires an HTMX request to rebuild
+            // the mapping; if the user submits before it settles, defer the submit until it does.
+            const createForm = document.getElementById("nb-create-form");
+            let resubmitAfterMappingSettles = false;
+
+            tableEditorContainer.addEventListener("htmx:afterSettle", () => {
+                if (resubmitAfterMappingSettles) {
+                    resubmitAfterMappingSettles = false;
+                    createForm.requestSubmit();
+                }
+            });
+
+            createForm.addEventListener("submit", (event) => {
                 if (currentEditorMode !== "json") {
+                    // If the mapping table is still being regenerated, wait for it to finish
+                    // before reading its values, otherwise we'd submit the stale mapping.
+                    if (tableEditorContainer.classList.contains("htmx-request")) {
+                        event.preventDefault();
+                        resubmitAfterMappingSettles = true;
+                        return;
+                    }
                     populateJsonFromTable();
                 }
             });
