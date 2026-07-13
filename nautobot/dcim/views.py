@@ -77,7 +77,12 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
+from nautobot.core.views.utils import (
+    borrow_extras_fields,
+    common_detail_view_context,
+    get_obj_from_context,
+    handle_protectederror,
+)
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_CABLE_COLUMN_FK_FIELDS
@@ -2228,14 +2233,28 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
 
     create_form_class: type[Form]
     form_class: type[Form]
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
 
     def get_component_create_form(self, request, data=None):
-        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields)."""
-        return self.create_form_class(  # pylint: disable=not-callable
+        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields).
+
+        The "extras" fields (custom fields, relationships, object note, dynamic groups) are declared
+        on the per-instance model form, not on the create form. Borrow them onto the create form so
+        they render (and validate) on the single bulk-create form, without redeclaring them on every
+        *CreateForm and without passing a separate `model_form` to the template.
+        """
+        create_form = self.create_form_class(  # pylint: disable=not-callable
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
+        # Pass `data` through: some model forms (e.g. VMInterfaceForm) resolve a required parent
+        # (virtual_machine) in __init__ from the bound data / GET initial, so instantiating with no
+        # data at all would raise DoesNotExist.
+        model_form = self.get_component_model_form(request, data=data)
+        # The *CreateForm is a plain `forms.Form` (no custom-field/relationship support of its own); borrow
+        # the extras fields + grouping metadata off the model form so they render/validate on it.
+        borrow_extras_fields(create_form, model_form)
+        return create_form
 
     def get_selected_objects_parents_name(self, selected_objects):
         """Return the display name of the parent object that owns the selected components or templates."""
@@ -2279,7 +2298,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             return self.render_component_create_response(request, create_form)
 
         new_components = []
-        data = deepcopy(request.POST)
+        # `get_component_create_form` borrows the "extras" fields (custom fields, relationships, object
+        # note, dynamic groups) onto the create form, so `cleaned_data` already carries their validated
+        # values; they flow through to each per-instance form via `data` below.
+        data = deepcopy(create_form.cleaned_data)
 
         # Support for bulk creation using name_pattern and label_pattern
         names = create_form.cleaned_data["name_pattern"]
@@ -2347,14 +2369,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                 request, data=request.POST if request.method == "POST" else None
             )
 
-        model_form = self.get_component_model_form(request, data=request.POST if request.method == "POST" else None)
-
         return Response(
             {
                 "template": self.create_template_name,
-                "component_type": self.queryset.model._meta.verbose_name,
                 "form": create_form,
-                "model_form": model_form,
                 "return_url": self.get_return_url(request),
             },
         )
@@ -2647,7 +2665,7 @@ class ModuleBayTemplateUIViewSet(
     model_form_class = forms.ModuleBayTemplateForm
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
     object_detail_content = None
 
     def get_selected_objects_parents_name(self, selected_objects):
