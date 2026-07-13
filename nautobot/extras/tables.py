@@ -183,7 +183,7 @@ JOB_RESULT_BUTTONS = """
                 </a>
             </li>
         {% endif %}
-    {% elif record|can_delete:request.user and perms.extras.delete_jobresult %}
+    {% elif request.user|can_delete:record and perms.extras.delete_jobresult %}
         <li>
             <a href="{% url 'extras:jobresult_delete' pk=record.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
                 <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
