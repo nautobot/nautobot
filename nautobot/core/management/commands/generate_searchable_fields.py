@@ -15,6 +15,7 @@ from django.apps import apps as django_apps
 from django.core.management.base import BaseCommand
 import yaml
 
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.utils.lookup import get_searchable_fields_for_model
 
 # The committed artifact lives alongside settings.yaml in nautobot/core/.
@@ -53,7 +54,7 @@ def collect_searchable_fields():
         )
         entry["models"].append(
             {
-                "name": str(model._meta.verbose_name).capitalize(),
+                "name": bettertitle(str(model._meta.verbose_name)),
                 "fields": fields,
             }
         )
