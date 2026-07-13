@@ -693,6 +693,19 @@ class JobTransactionTest(TransactionTestCase):
             ).exists()
         )
 
+        # With a resolvable source version (e.g. a Git-repository-provided job), the version itself is logged
+        with mock.patch.object(models.Job, "source_version", new_callable=mock.PropertyMock) as mock_source_version:
+            mock_source_version.return_value = "0123456789abcdef0123456789abcdef01234567"
+            job_result = create_job_result_and_run_job(module, name)
+        self.assertTrue(
+            models.JobLogEntry.objects.filter(
+                job_result=job_result,
+                log_level=LogLevelChoices.LOG_INFO,
+                grouping="initialization",
+                message="Running job (source version: 0123456789abcdef0123456789abcdef01234567)",
+            ).exists()
+        )
+
     def test_job_pass(self):
         """
         Job test with pass result.
