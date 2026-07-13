@@ -4788,6 +4788,34 @@ class JobResultTestCase(TestCase):
             self.job_result.celery_kwargs = {"queue": "does-not-exist"}
             self.assertIsNone(self.job_result.queue_type)
 
+    def test__is_deletable_property(self):
+        """_is_deletable should be False for unready results and True once the result is finished."""
+
+        with self.subTest("Not deletable while pending"):
+            self.job_result.status = JobResultStatusChoices.STATUS_PENDING
+            self.job_result.save()
+            self.assertFalse(self.job_result._is_deletable)
+
+        with self.subTest("Not deletable while started"):
+            self.job_result.status = JobResultStatusChoices.STATUS_STARTED
+            self.job_result.save()
+            self.assertFalse(self.job_result._is_deletable)
+
+        with self.subTest("Deletable once succeeded"):
+            self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+            self.job_result.save()
+            self.assertTrue(self.job_result._is_deletable)
+
+        with self.subTest("Deletable once failed"):
+            self.job_result.status = JobResultStatusChoices.STATUS_FAILURE
+            self.job_result.save()
+            self.assertTrue(self.job_result._is_deletable)
+
+        with self.subTest("Deletable once revoked"):
+            self.job_result.status = JobResultStatusChoices.STATUS_REVOKED
+            self.job_result.save()
+            self.assertTrue(self.job_result._is_deletable)
+
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):
     model = Webhook

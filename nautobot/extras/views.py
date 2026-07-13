@@ -21,6 +21,7 @@ from django.urls.exceptions import NoReverseMatch
 from django.utils.cache import patch_vary_headers
 from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
@@ -97,7 +98,7 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.jobs_revoke import RevokeFactory
+from nautobot.extras.jobs_cancel import CancelFactory
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -3260,6 +3261,99 @@ class ScheduledJobUIViewSet(
         )
     ]
 
+    @staticmethod
+    def render_state(value):
+        badges = {
+            ScheduledJobStateChoices.DENIED: ("bg-danger", "Approval Denied"),
+            ScheduledJobStateChoices.CANCELED: ("bg-danger", "Approval Canceled"),
+            ScheduledJobStateChoices.PENDING: ("bg-warning border", "Pending Approval"),
+            ScheduledJobStateChoices.ACTIVE: ("bg-info", "Active"),
+            ScheduledJobStateChoices.COMPLETED: ("bg-success", "Completed"),
+            ScheduledJobStateChoices.ERRORED: ("bg-danger", "Errored"),
+        }
+        if value in badges:
+            css_class, label = badges[value]
+            return format_html('<span class="badge {}">{}</span>', css_class, label)
+        return format_html('<span class="badge bg-body-secondary border">{}</span>', bettertitle(value))
+
+    class ScheduledJobFieldsPanel(object_detail.ObjectFieldsPanel):
+        """Object fields panel that renders the scheduled-job-specific fields with their custom formatting."""
+
+        @staticmethod
+        def _render_datetime(value, obj_tz, default_tz):
+            obj_local = date_format(value.astimezone(obj_tz), "SHORT_DATETIME_FORMAT")
+            if obj_tz == default_tz:
+                return format_html("{}", obj_local)
+            default_local = date_format(value.astimezone(default_tz), "SHORT_DATETIME_FORMAT")
+            return format_html("{} {}<br>{} {}", obj_local, obj_tz, default_local, default_tz)
+
+        def render_value(self, key, value, context):
+            if key == "task":
+                return format_html("<code>{}</code>", value)
+            obj = get_obj_from_context(context)
+            if key == "interval":
+                if value == JobExecutionType.TYPE_CUSTOM and obj.crontab:
+                    return format_html("{} ({})", value, obj.crontab)
+                return value
+            if key in ("start_time", "last_run_at"):
+                if not value:
+                    return helpers.HTML_NONE
+                return self._render_datetime(value, obj.time_zone, context["default_time_zone"])
+            return super().render_value(key, value, context)
+
+    class UserInputsPanel(object_detail.KeyValueTablePanel):
+        def should_render(self, context):
+            return bool(context.get("job_class_found"))
+
+        def get_data(self, context):
+            obj = get_obj_from_context(context)
+            labels = context.get("labels", {})
+            return {labels.get(key, key): value for key, value in obj.kwargs.items()}
+
+        def render_value(self, key, value, context):
+            if value is None:
+                return helpers.HTML_NONE
+            return format_html("<code>{}</code>", value)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ScheduledJobFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=("name", "description", "task", "job_model", "user", "approval_required", "decision_date"),
+                key_transforms={"decision_date": "Decision Date", "user": "Requester"},
+            ),
+            ScheduledJobFieldsPanel(
+                label="Scheduling",
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                fields=(
+                    "enabled",
+                    "state",
+                    "job_queue",
+                    "interval",
+                    "one_off",
+                    "start_time",
+                    "last_run_at",
+                    "total_run_count",
+                ),
+                value_transforms={"state": [render_state]},
+            ),
+            UserInputsPanel(
+                label="User Inputs",
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+            ),
+            object_detail.ObjectTextPanel(
+                weight=200,
+                label="Celery Keyword Arguments",
+                section=SectionChoices.RIGHT_HALF,
+                object_field="celery_kwargs",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -3432,12 +3526,12 @@ def render_jobresult_status(status):
     )
 
 
-def render_jobresult_revocation_type(revocation_type):
+def render_jobresult_cancel_type(cancel_type):
     """
-    Render a Bootstrap-style label for a JobRevocationType.
+    Render a Bootstrap-style label for a JobCancelType.
 
     Args:
-        revocation_type (str): The job result revocation type (e.g., "terminated", "reaped", etc.).
+        cancel_type (str): The job result cancel type (e.g., "terminated", "reaped", etc.).
 
     Returns:
         str: Safe HTML string for a styled label with a fixed ID so tests work.
@@ -3448,9 +3542,9 @@ def render_jobresult_revocation_type(revocation_type):
         "abandoned": ("bg-body-secondary border", "Abandoned"),
     }
 
-    css_class, text = mapping.get(revocation_type, ("bg-body-secondary border", f"{revocation_type} (unrecognized)"))
+    css_class, text = mapping.get(cancel_type, ("bg-body-secondary border", f"{cancel_type} (unrecognized)"))
     return format_html(
-        '<span id="revocation-type-label"><span class="badge {}">{}</span></span>',
+        '<span id="cancel-type-label"><span class="badge {}">{}</span></span>',
         css_class,
         text,
     )
@@ -3523,7 +3617,7 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
         return False
 
 
-class RevocationPanel(object_detail.ObjectFieldsPanel):
+class JobResultCancelPanel(object_detail.ObjectFieldsPanel):
     def should_render(self, context):
         return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
 
@@ -3625,19 +3719,19 @@ class JobResultUIViewSet(
             ),
             JobResultButton(
                 weight=140,
-                label="Revoke Job",
+                label="Cancel Job",
                 color=ButtonActionColorChoices.DELETE,
                 icon="mdi-close-circle",
                 required_permissions=["extras.run_job"],
                 link_name=lambda ctx: (
-                    reverse("extras:jobresult_revoke_job", kwargs={"pk": ctx["object"].pk})
+                    reverse("extras:jobresult_cancel_job", kwargs={"pk": ctx["object"].pk})
                     if (
                         ctx["object"].is_unready_state
                         and (ctx["object"].user == ctx["request"].user or ctx["request"].user.is_staff)
                     )
                     else None
                 ),
-                template_path="extras/inc/jobresult_revokejobbutton.html",
+                template_path="extras/inc/jobresult_canceljobbutton.html",
             ),
         ),
         extra_tabs=[
@@ -3678,17 +3772,17 @@ class JobResultUIViewSet(
             object_field="celery_kwargs",
             render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
         ),
-        RevocationPanel(
-            label="Revocation",
+        JobResultCancelPanel(
+            label="Cancel Details",
             section=SectionChoices.RIGHT_HALF,
             weight=100,
             fields=[
-                "date_revoked",
-                "revoked_by_user_name",
-                "revocation_type",
+                "date_canceled",
+                "canceled_by_user_name",
+                "cancel_type",
             ],
             value_transforms={
-                "revocation_type": [render_jobresult_revocation_type],
+                "cancel_type": [render_jobresult_cancel_type],
             },
         ),
         object_detail.ObjectFieldsPanel(
@@ -3937,23 +4031,23 @@ class JobResultUIViewSet(
     @action(
         detail=True,
         methods=["get", "post"],
-        url_path="revoke-job",
-        url_name="revoke_job",
+        url_path="cancel-job",
+        url_name="cancel_job",
         custom_view_base_action="view",
     )
-    def revoke_job(self, request, pk=None):
+    def cancel_job(self, request, pk=None):
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
         if not request.user.has_perm("extras.run_job"):
-            messages.error(request, "Job can not be revoked by user without permission to run jobs.")
+            messages.error(request, "Job can not be canceled by user without permission to run jobs.")
             return redirect(job_result.get_absolute_url())
 
         if job_result.user != request.user and not request.user.is_staff:
-            messages.error(request, "Job can be revoked only by the submitter or by staff users.")
+            messages.error(request, "Job can be canceled only by the submitter or by staff users.")
             return redirect(job_result.get_absolute_url())
 
-        strategy = RevokeFactory.get_strategy(job_result.queue_type)
+        strategy = CancelFactory.get_strategy(job_result.queue_type)
 
         if not job_result.is_unready_state:
             messages.info(request, "Job is already finished. Nothing to do.")
@@ -3963,7 +4057,7 @@ class JobResultUIViewSet(
         if request.method == "GET":
             return render(
                 request,
-                "extras/job_revoke.html",
+                "extras/job_cancel.html",
                 {
                     "object": job_result,
                     "job_liveness_state": job_liveness_state,
@@ -3972,14 +4066,14 @@ class JobResultUIViewSet(
                 },
             )
 
-        result = strategy.revoke(job_result, user=request.user)
+        result = strategy.cancel(job_result, user=request.user)
         if result["error"]:
             messages.error(request, result["error"])
         else:
-            if result["revoked"]:
-                messages.success(request, "Job revoked.")
+            if result["canceled"]:
+                messages.success(request, "Job canceled.")
             else:
-                messages.info(request, "Job finished before it could be revoked. No action was taken.")
+                messages.info(request, "Job finished before it could be canceled. No action was taken.")
 
         return redirect(job_result.get_absolute_url())
 

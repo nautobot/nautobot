@@ -8,6 +8,7 @@ from drf_spectacular.plumbing import (
     build_array_type,
     build_basic_type,
     build_media_type_object,
+    follow_field_source,
     get_doc,
     is_serializer,
     list_hash,
@@ -338,6 +339,18 @@ class NautobotFilterExtension(DjangoFilterExtension):
     """
 
     target_class = "nautobot.core.api.filter_backends.NautobotFilterBackend"
+
+    priority = 1
+
+    def _get_model_field(self, filter_field, model):
+        """Work around a regression (https://github.com/tfranzel/drf-spectacular/issues/1475) in drf-spectacular."""
+        if not filter_field.field_name:
+            return None
+        path = filter_field.field_name.split("__")
+        to_field_name = filter_field.extra.get("to_field_name")
+        if to_field_name is not None and path[-1] != to_field_name:  # the fix - upstream is missing the != check
+            path.append(to_field_name)
+        return follow_field_source(model, path, emit_warnings=False)
 
 
 class NautobotPolymorphicProxySerializerExtension(PolymorphicProxySerializerExtension):
