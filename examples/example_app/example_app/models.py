@@ -23,6 +23,31 @@ class ExampleModel(OrganizationalModel):
 
 
 @extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "relationships",
+    "webhooks",
+)
+class ProxyExampleModel(ExampleModel):
+    """Proxy of `ExampleModel` used to exercise proxy-model ContentType behavior.
+
+    Setting `for_concrete_model = False` makes this proxy resolve to its own ContentType, so
+    relationships (and, as future fixes land, other ContentType-keyed features) assigned to the
+    proxy are distinct from those assigned to the concrete `ExampleModel`. A real app would
+    typically also implement a manager that partitions the proxy's rows from the concrete model's
+    rows; this example keeps the full row set visible for simplicity.
+    """
+
+    for_concrete_model = False
+
+    class Meta:
+        proxy = True
+        verbose_name = "Proxy Example"
+        verbose_name_plural = "Proxy Examples"
+
+
+@extras_features(
     "custom_validators",
     "export_templates",
     # "graphql", Not specified here as we have a custom type for this model, see example_app.graphql.types

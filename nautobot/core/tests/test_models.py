@@ -26,6 +26,12 @@ class BaseModelTest(TestCase):
         def clean(self):
             raise ValidationError("validation error")
 
+    class ProxyFakeBaseModel(FakeBaseModel):
+        for_concrete_model = False
+
+        class Meta:
+            proxy = True
+
     def test_validated_save_calls_full_clean(self):
         with self.assertRaises(ValidationError):
             self.FakeBaseModel().validated_save()
@@ -119,6 +125,22 @@ class NaturalKeyTestCase(BaseModelTest):
         Verify that the ContentType of the object is cached.
         """
         self.assertEqual(self.FakeBaseModel._content_type, self.FakeBaseModel._content_type_cached)
+
+    def test__content_type_honors_for_concrete_model_policy(self):
+        """
+        Verify that BaseModel._content_type honors proxy model ContentType policy.
+        """
+        cache.delete(self.ProxyFakeBaseModel._content_type_cache_key)
+
+        concrete_content_type = ContentType.objects.get_for_model(self.FakeBaseModel)
+        proxy_content_type = ContentType.objects.get_for_model(
+            self.ProxyFakeBaseModel,
+            for_concrete_model=False,
+        )
+
+        self.assertNotEqual(proxy_content_type, concrete_content_type)
+        self.assertEqual(self.ProxyFakeBaseModel._content_type, proxy_content_type)
+        self.assertEqual(self.ProxyFakeBaseModel._content_type_cached, proxy_content_type)
 
     @override_settings(CONTENT_TYPE_CACHE_TIMEOUT=2)
     def test__content_type_caching_enabled(self):

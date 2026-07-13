@@ -2,7 +2,7 @@ import django_filters
 
 from nautobot.apps.filters import BaseFilterSet, SearchFilter
 
-from example_app.models import AnotherExampleModel, ExampleModel
+from example_app.models import AnotherExampleModel, ExampleModel, ProxyExampleModel
 
 
 class ExampleModelFilterSet(BaseFilterSet):
@@ -23,6 +23,24 @@ class ExampleModelFilterSet(BaseFilterSet):
 
     class Meta:
         model = ExampleModel
+        fields = [
+            "name",
+            "number",
+        ]
+
+
+class ProxyExampleModelFilterSet(BaseFilterSet):
+    """API filter for filtering proxy example model objects."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "number": "icontains",
+        },
+    )
+
+    class Meta:
+        model = ProxyExampleModel
         fields = [
             "name",
             "number",

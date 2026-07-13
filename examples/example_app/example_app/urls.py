@@ -12,6 +12,7 @@ base_url = getattr(app_config, "base_url", None) or app_config.label
 router = NautobotUIViewSetRouter()
 # ExampleModel is registered using the ViewSet
 router.register("models", views.ExampleModelUIViewSet)
+router.register("proxy-models", views.ProxyExampleModelUIViewSet)
 router.register("other-models", views.AnotherExampleModelUIViewSet)
 
 urlpatterns = [

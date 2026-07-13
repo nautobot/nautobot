@@ -4,7 +4,6 @@ from typing import ClassVar, Optional, Type, Union
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
     ImproperlyConfigured,
@@ -45,6 +44,7 @@ from nautobot.core.forms import (
 from nautobot.core.ui.breadcrumbs import Breadcrumbs
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils import lookup, permissions
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
     get_filterable_params_from_filter_params,
@@ -926,7 +926,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
         clear_view = request.GET.get("clear_view", False)
         if "export" in request.GET:  # 3.0 TODO: remove, irrelevant after #4746
             model = queryset.model
-            content_type = ContentType.objects.get_for_model(model)
+            content_type = get_content_type_for_model(model)
             response = self.check_for_export(request, model, content_type)
             if response is not None:
                 return response
@@ -1162,6 +1162,10 @@ class BulkEditAndBulkDeleteModelMixin:
 
     logger = logging.getLogger(__name__)
 
+    def get_bulk_content_type(self, model):
+        """Return the model-policy ContentType used for bulk edit/delete object selection."""
+        return get_content_type_for_model(model)
+
     def send_bulk_delete_objects_to_job(self, request):
         """Prepare and enqueue bulk delete job."""
         from nautobot.core.jobs import BulkDeleteObjects
@@ -1247,7 +1251,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": self.get_bulk_content_type(model),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,
@@ -1289,7 +1293,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         saved_view_id = request.GET.get("saved_view", "")
         data = {}
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": self.get_bulk_content_type(model),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,
@@ -1401,7 +1405,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": self.get_bulk_content_type(model),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,
@@ -1503,7 +1507,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": self.get_bulk_content_type(model),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,

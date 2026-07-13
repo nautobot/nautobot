@@ -2,10 +2,17 @@ from django.urls import include, path
 
 from nautobot.apps.api import OrderedDefaultRouter
 
-from example_app.api.views import AnotherExampleModelViewSet, ErrorView, ExampleModelViewSet, ExampleModelWebhook
+from example_app.api.views import (
+    AnotherExampleModelViewSet,
+    ErrorView,
+    ExampleModelViewSet,
+    ExampleModelWebhook,
+    ProxyExampleModelViewSet,
+)
 
 router = OrderedDefaultRouter(view_name="Example App")
 router.register("models", ExampleModelViewSet)
+router.register("proxy-models", ProxyExampleModelViewSet)
 router.register("other-models", AnotherExampleModelViewSet)
 
 urlpatterns = [

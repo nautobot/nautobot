@@ -10,9 +10,13 @@ from rest_framework.views import APIView
 
 from nautobot.apps.api import NautobotModelViewSet
 
-from example_app.api.serializers import AnotherExampleModelSerializer, ExampleModelSerializer
-from example_app.filters import AnotherExampleModelFilterSet, ExampleModelFilterSet
-from example_app.models import AnotherExampleModel, ExampleModel
+from example_app.api.serializers import (
+    AnotherExampleModelSerializer,
+    ExampleModelSerializer,
+    ProxyExampleModelSerializer,
+)
+from example_app.filters import AnotherExampleModelFilterSet, ExampleModelFilterSet, ProxyExampleModelFilterSet
+from example_app.models import AnotherExampleModel, ExampleModel, ProxyExampleModel
 
 
 class AnotherExampleModelViewSet(NautobotModelViewSet):
@@ -25,6 +29,12 @@ class ExampleModelViewSet(NautobotModelViewSet):
     queryset = ExampleModel.objects.all()
     serializer_class = ExampleModelSerializer
     filterset_class = ExampleModelFilterSet
+
+
+class ProxyExampleModelViewSet(NautobotModelViewSet):
+    queryset = ProxyExampleModel.objects.all()
+    serializer_class = ProxyExampleModelSerializer
+    filterset_class = ProxyExampleModelFilterSet
 
 
 #

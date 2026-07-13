@@ -6,7 +6,7 @@ from nautobot.apps.tables import (
     ToggleColumn,
 )
 
-from example_app.models import AnotherExampleModel, ExampleModel
+from example_app.models import AnotherExampleModel, ExampleModel, ProxyExampleModel
 
 
 class ExampleModelTable(BaseTable):
@@ -18,6 +18,18 @@ class ExampleModelTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = ExampleModel
+        fields = ["pk", "name", "number"]
+
+
+class ProxyExampleModelTable(BaseTable):
+    """Table for list view of `ProxyExampleModel` objects."""
+
+    pk = ToggleColumn()
+    name = tables.LinkColumn()
+    actions = ButtonsColumn(ProxyExampleModel)
+
+    class Meta(BaseTable.Meta):
+        model = ProxyExampleModel
         fields = ["pk", "name", "number"]
 
 

@@ -19,6 +19,7 @@ from nautobot.core.models.querysets import (
 )
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.lookup import get_route_for_model
 
 __all__ = (
@@ -62,6 +63,8 @@ class BaseModel(models.Model):
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
     is_approval_workflow_model = False  # ApprovableModelMixin overrides this to default True
+    # Default ContentType policy. Models (including proxies) can override to False to use proxy ContentType.
+    for_concrete_model = True
 
     associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",
@@ -125,7 +128,7 @@ class BaseModel(models.Model):
         """
         Return the ContentType of the object, never cached.
         """
-        return ContentType.objects.get_for_model(cls)
+        return get_content_type_for_model(cls)
 
     @classproperty  # https://github.com/PyCQA/pylint-django/issues/240
     def _content_type_cache_key(cls):  # pylint: disable=no-self-argument
