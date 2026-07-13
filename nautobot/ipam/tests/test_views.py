@@ -2057,6 +2057,24 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_unnamed_range_links_using_str(self):
+        """A range with no name still renders a link in the name column, falling back to its string representation."""
+        ip_range = IPAddressRange.objects.create(
+            name="",
+            start_address="192.0.2.80",
+            end_address="192.0.2.90",
+            namespace=self.namespace,
+            status=self.statuses[0],
+        )
+        # The table rows are rendered in the HTMX partial response.
+        response = self.client.get(reverse("ipam:ipaddressrange_list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # The empty name falls back to str(record), rendered as a link to the object.
+        self.assertIn(f'href="{ip_range.get_absolute_url()}"', content)
+        self.assertIn(escape(str(ip_range)), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_detail_view_no_add_button_when_range_is_full(self):
         """If in range there is no any free address then button `Add` is not rendered."""
         self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
