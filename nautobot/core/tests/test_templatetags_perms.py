@@ -121,5 +121,5 @@ class NautobotTemplatetagsPermsTest(TestCase):
         self.assertFalse(perms.can_delete(self.user, self.finished_result))
 
     def test_can_delete_falls_through_for_models_without_is_deletable(self):
-        """A model without is_deletable is gated by permission only, not state-vetoed."""
+        """A model without _is_deletable is gated by permission only, not state-vetoed."""
         self.assertTrue(perms.can_delete(self.superuser, self.job_model))

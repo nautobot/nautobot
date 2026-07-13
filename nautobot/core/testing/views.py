@@ -301,7 +301,7 @@ class ViewTestCases:
             object_delete_url = buttons.delete_button(instance)["url"]
             object_clone_url = buttons.clone_button(instance)["url"]
             render_edit_button = bool(object_edit_url)
-            render_delete_button = bool(object_delete_url and getattr(instance, "is_deletable", True))
+            render_delete_button = bool(object_delete_url and getattr(instance, "_is_deletable", True))
             render_clone_button = bool(hasattr(instance, "clone_fields") and object_clone_url)
             action_buttons = []
             if render_edit_button:

@@ -726,7 +726,6 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         related_name="terminated_job_results",
         help_text="The user who initiated the cancel action.",
     )
-    # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
     canceled_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
     cancel_type = models.CharField(
         max_length=30,
@@ -832,8 +831,14 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
         return self.status in JobResultStatusChoices.UNREADY_STATES
 
     @property
-    def is_deletable(self):
+    def _is_deletable(self):
         """Running/pending results are canceled, not deleted."""
+        # Private: used only to decide whether the delete button/action renders for this
+        # JobResult (a running or pending result offers Cancel instead of Delete). Not part
+        # of the public model API.
+        # TODO: revisit this. The rendering flag assigned to a specific model raises some concerns
+        # consider moving it to a more view-oriented layer, or generalizing it onto BaseModel
+        # so any model can declare when it is deletable, rather than special-casing here.
         return not self.is_unready_state
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
