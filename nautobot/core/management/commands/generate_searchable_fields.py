@@ -15,8 +15,7 @@ from django.apps import apps as django_apps
 from django.core.management.base import BaseCommand
 import yaml
 
-from nautobot.core.filters import SearchFilter
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_searchable_fields_for_model
 
 # The committed artifact lives alongside settings.yaml in nautobot/core/.
 SEARCHABLE_FIELDS_YAML = Path(__file__).resolve().parents[2] / "searchable_fields.yaml"
@@ -43,11 +42,8 @@ def collect_searchable_fields():
         if not app_config.name.startswith("nautobot."):
             continue
 
-        filterset = get_filterset_for_model(model)
-        if filterset is None:
-            continue
-        q_filter = filterset.base_filters.get("q")
-        if not isinstance(q_filter, SearchFilter):
+        fields = get_searchable_fields_for_model(model)
+        if not fields:
             continue
 
         app_label = model._meta.app_label
@@ -58,7 +54,7 @@ def collect_searchable_fields():
         entry["models"].append(
             {
                 "name": str(model._meta.verbose_name).capitalize(),
-                "fields": sorted(q_filter.filter_predicates.keys()),
+                "fields": fields,
             }
         )
 

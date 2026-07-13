@@ -43,10 +43,12 @@
                             {{ request.GET.q }}
                         {% endif %}
                     </span>
+                    {% searchable_fields_for_content_type content_type as searchable_fields %}
                     <a class="align-items-center d-inline-flex ms-auto pe-auto"
                        href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
                        target="_blank"
                        rel="noopener"
+                       {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
                     >
                         <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
                     </a>
