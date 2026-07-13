@@ -1,3 +1,0 @@
-Fixed `prefix_length__lte` filter value being corrupted (e.g. `['16']`) when adding another filter in the Prefix list view.
-Fixed `within_include` filter field in `PrefixFilterForm` not supporting multiple values.
-Fixed `MultiValueCharField` splitting a bare string value into per-character choices.
