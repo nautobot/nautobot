@@ -2425,6 +2425,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     "module_name",
                     "job_class_name",
                     "class_path",
+                    "source_version",
                     "installed",
                     "is_job_hook_receiver",
                     "is_job_button_receiver",
