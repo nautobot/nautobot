@@ -2916,6 +2916,7 @@ class ModuleBulkAddComponentForm(DeviceBulkAddComponentForm):
 class ConsolePortFilterForm(ModularDeviceComponentFilterForm):
     model = ConsolePort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -2978,6 +2979,7 @@ class ConsolePortBulkEditForm(
 class ConsoleServerPortFilterForm(ModularDeviceComponentFilterForm):
     model = ConsoleServerPort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3043,6 +3045,7 @@ class ConsoleServerPortBulkEditForm(
 class PowerPortFilterForm(ModularDeviceComponentFilterForm):
     model = PowerPort
     type = forms.MultipleChoiceField(choices=PowerPortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3147,6 +3150,7 @@ class PowerPortBulkEditForm(
 class PowerOutletFilterForm(ModularDeviceComponentFilterForm):
     model = PowerOutlet
     type = forms.MultipleChoiceField(choices=PowerOutletTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3274,6 +3278,7 @@ class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormM
     untagged_vlan = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Untagged VLAN")
     mac_address = forms.CharField(required=False, label="MAC address")
     breakout_position = forms.IntegerField(required=False, min_value=1, label="Breakout position")
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3834,6 +3839,7 @@ class InterfaceBulkEditForm(
 class FrontPortFilterForm(ModularDeviceComponentFilterForm):
     model = FrontPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3968,6 +3974,7 @@ class FrontPortBulkEditForm(
 class RearPortFilterForm(ModularDeviceComponentFilterForm):
     model = RearPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -4593,6 +4600,10 @@ class CableForm(NautobotModelForm):
 
         # Create form fields using CableTerminationFieldSet
         fieldset = CableTerminationFieldSet()
+        # When editing a saved cable, its own endpoints must stay pickable (and swappable); when
+        # creating, only uncabled endpoints are offered. `cable_pk` drives the fieldset's
+        # `available_for_cable` / `has_cable` termination filtering.
+        cable_pk = self.instance.pk if self.instance.present_in_database else None
         self.connection_info = {
             "a_side": [],
             "b_side": [],
@@ -4615,7 +4626,7 @@ class CableForm(NautobotModelForm):
                 # existing termination still take precedence.
                 if submitted_type is None and term is None and side == "b":
                     submitted_type = initial_b_type_name or default_b_type_name
-                result = fieldset.get_fields(prefix, existing_term=term, term_type=submitted_type)
+                result = fieldset.get_fields(prefix, existing_term=term, term_type=submitted_type, cable_pk=cable_pk)
                 self.fields.update(result["fields"])
                 self.initial.update(result["initial"])
                 # Wire HTMX onto the type selector: changing it fetches fresh parent + termination
@@ -4627,7 +4638,11 @@ class CableForm(NautobotModelForm):
                         "hx-target": f"#{prefix}_termination_fields",
                         "hx-swap": "innerHTML",
                         "hx-include": "this",
-                        "hx-vals": json.dumps({"connector": str(c), "side": side}),
+                        # Forward the cable pk so the lane-side-fields HTMX partial re-applies the
+                        # same `available_for_cable` filtering when the user changes the type.
+                        "hx-vals": json.dumps(
+                            {"connector": str(c), "side": side, **({"cable": str(cable_pk)} if cable_pk else {})}
+                        ),
                     }
                 )
                 self.connection_info[side_info_key].append(
@@ -5398,6 +5413,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
         required=False,
         widget=StaticSelect2(),
     )
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
