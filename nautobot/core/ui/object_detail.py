@@ -1221,11 +1221,9 @@ class ObjectsTablePanel(Panel):
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
 
-        The result is cached per-request because this method is called twice for each panel during a
-        single detail-view render -- once by the `render_table_config_forms` templatetag and once when the
-        panel body is rendered -- and rebuilding the table (including its pagination count query) both
-        times is wasteful. The cache is stored on the request rather than on the panel because panels are
-        defined as view-class attributes and are therefore shared across all requests.
+        There are two callers in a single web request -- the `render_table_config_forms` templatetag and
+        the detail-view template itself -- so we cache the result on the request: build and store it on the
+        first call, then return the cached value on the second instead of rebuilding the table.
         """
         request = context["request"]
         context_cache = getattr(request, "_objects_table_panel_extra_context", None)
