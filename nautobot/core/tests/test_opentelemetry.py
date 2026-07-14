@@ -306,7 +306,7 @@ class RequestsInstrumentationTraceparentTest(testing.TestCase):
 class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
     """Verify GraphQLOpenTelemetryMiddleware emits correct OTel spans and structured log entries."""
 
-    _SAMPLE_QUERY = "query GetSites { sites { id name } }"
+    _SAMPLE_QUERY = "query GetLocations { locations { id name } }"
     _SAMPLE_VARIABLES = {"limit": 10}
 
     def setUp(self):
@@ -375,7 +375,7 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         limited_provider.add_span_processor(SimpleSpanProcessor(self._exporter))
         self._mock_trace.get_tracer.return_value = limited_provider.get_tracer("nautobot.graphql")
 
-        long_query = "query Big { sites { " + ("name " * 200) + "} }"
+        long_query = "query Big { roles { " + ("name " * 200) + "} }"
         middleware = self._make_middleware(status_code=200)
         request = self._build_request(query=long_query)
 
