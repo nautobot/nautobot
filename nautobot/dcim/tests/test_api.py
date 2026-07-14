@@ -84,6 +84,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
 
 # Use the proper swappable User model
@@ -3456,12 +3457,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
         # Side/connector keying — non-breakout cables have exactly one A- and one B-side connector.
-        self.assertEqual(set(terminations), {"a", "b"})
-        self.assertEqual(set(terminations["a"]), {"1"})
-        self.assertEqual(set(terminations["b"]), {"1"})
+        self.assertEqual(set(terminations), {"a1", "b1"})
         # Each slot at default depth is the brief rep of the termination (mirrors termination_a/b).
-        a_slot = terminations["a"]["1"]
-        b_slot = terminations["b"]["1"]
+        a_slot = terminations["a1"]
+        b_slot = terminations["b1"]
         self.assertEqual(a_slot["object_type"], "dcim.interface")
         self.assertEqual(b_slot["object_type"], "dcim.interface")
         for key in ("id", "url"):
@@ -3477,10 +3476,19 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
         # 1 A-side connector + 2 B-side connectors (from setUpTestData) — all slots present, fully cabled.
-        self.assertEqual(set(terminations["a"]), {"1"})
-        self.assertEqual(set(terminations["b"]), {"1", "2"})
-        self.assertIsNotNone(terminations["b"]["1"])
-        self.assertIsNotNone(terminations["b"]["2"])
+        self.assertEqual(set(terminations), {"a1", "b1", "b2"})
+
+        self.assertIsNotNone(terminations["a1"])
+        self.assertIsInstance(terminations["a1"], dict)
+        self.assertEqual(set(terminations["a1"]), {"object_type", "url", "id"})
+
+        self.assertIsNotNone(terminations["b1"])
+        self.assertIsInstance(terminations["b1"], dict)
+        self.assertEqual(set(terminations["b1"]), {"object_type", "url", "id"})
+
+        self.assertIsNotNone(terminations["b2"])
+        self.assertIsInstance(terminations["b2"], dict)
+        self.assertEqual(set(terminations["b2"]), {"object_type", "url", "id"})
 
     def test_terminations_field_uncabled_breakout_slot_is_null(self):
         """An uncabled connector on a breakout cable surfaces as an explicit `null` slot."""
@@ -3502,11 +3510,20 @@ class CableTest(Mixins.BaseComponentTestMixin):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
-        self.assertEqual(set(terminations["b"]), {"1", "2", "3", "4"})
-        self.assertIsNotNone(terminations["b"]["1"])
+        self.assertEqual(set(terminations), {"a1", "b1", "b2", "b3", "b4"})
+
+        self.assertIsNotNone(terminations["a1"])
+        self.assertIsInstance(terminations["a1"], dict)
+        self.assertEqual(set(terminations["a1"]), {"id", "object_type", "url"})
+
+        self.assertIsNotNone(terminations["b1"])
+        self.assertIsInstance(terminations["b1"], dict)
+        self.assertEqual(set(terminations["b1"]), {"id", "object_type", "url"})
+
         # Slots 2-4 weren't cabled — expect explicit nulls, not absent keys.
-        for connector in ("2", "3", "4"):
-            self.assertIsNone(terminations["b"][connector])
+        self.assertIsNone(terminations["b2"])
+        self.assertIsNone(terminations["b3"])
+        self.assertIsNone(terminations["b4"])
 
     def test_terminations_field_respects_depth(self):
         """`?depth>=1` expands each slot from a brief rep into the full nested termination serializer."""
@@ -3516,9 +3533,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
         response = self.client.get(url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
+        self.assertEqual(set(terminations), {"a1", "b1"})
         # Depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
         # serializer payload (which carries fields like `name`).
-        a_slot = terminations["a"]["1"]
+        a_slot = terminations["a1"]
         self.assertIsInstance(a_slot, dict)
         self.assertIn("name", a_slot)
 
@@ -3636,8 +3654,8 @@ class CableTest(Mixins.BaseComponentTestMixin):
             "status": cable_status.pk,
             "label": "Cable via terminations",
             "terminations": {
-                "a": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[0].pk)}},
-                "b": {"1": {"object_type": "dcim.interface", "id": str(free_ifaces[1].pk)}},
+                "a1": {"object_type": "dcim.interface", "id": str(free_ifaces[0].pk)},
+                "b1": {"object_type": "dcim.interface", "id": str(free_ifaces[1].pk)},
             },
         }
         response = self.client.post(url, payload, format="json", **self.header)
@@ -3670,12 +3688,10 @@ class CableTest(Mixins.BaseComponentTestMixin):
             url,
             {
                 "terminations": {
-                    "b": {
-                        # Replace B-connector-1 with a different interface.
-                        "1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
-                        # Delete B-connector-2 (already has a termination from setUpTestData).
-                        "2": None,
-                    },
+                    # Replace B-connector-1 with a different interface.
+                    "b1": {"object_type": "dcim.interface", "id": str(free_iface.pk)},
+                    # Delete B-connector-2 (already has a termination from setUpTestData).
+                    "b2": None,
                 },
             },
             format="json",
@@ -3781,7 +3797,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
             url,
             {
                 "terminations": {
-                    "a": {"1": {"object_type": "dcim.rearport", "id": str(rear_port.pk)}},
+                    "a1": {"object_type": "dcim.rearport", "id": str(rear_port.pk)},
                 },
             },
             format="json",
@@ -3849,7 +3865,7 @@ class CableTest(Mixins.BaseComponentTestMixin):
             "label": "Cable console breakout reject",
             "cable_type": breakout_type.pk,
             "terminations": {
-                "a": {"1": {"object_type": "dcim.consoleport", "id": str(console_port.pk)}},
+                "a1": {"object_type": "dcim.consoleport", "id": str(console_port.pk)},
             },
         }
         response = self.client.post(url, payload, format="json", **self.header)
@@ -3948,6 +3964,122 @@ class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
                 "interface": interfaces[8].pk,
             },
         ]
+
+
+class InterfaceConnectionTest(APITestCase):
+    """Coverage for the read-only `/dcim/interface-connections/` REST endpoint.
+
+    Shares `CablePath.interface_connections()` with the UI list view: a breakout cable surfaces as one
+    connection per lane with the trunk canonicalized onto the `interface_a` side, and the endpoint is
+    gated on Interface (not CablePath) view permission with both endpoints restricted per object perms.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        device_type = DeviceType.objects.first()
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        iface_status = Status.objects.get_for_model(Interface).first()
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        def make_device(name):
+            return Device.objects.create(
+                name=name, location=location, device_type=device_type, role=device_role, status=device_status
+            )
+
+        # Point-to-point connection.
+        cls.p2p_a = Interface.objects.create(device=make_device("API Conn A"), name="p2p-a", status=iface_status)
+        cls.p2p_b = Interface.objects.create(device=make_device("API Conn B"), name="p2p-b", status=iface_status)
+        Cable(termination_a=cls.p2p_a, termination_b=cls.p2p_b, status=connected).save()
+
+        # 1x4 breakout: trunk fanning out to four leaf interfaces.
+        breakout_type = CableType.objects.create(name="API 1x4 breakout", a_connectors=1, b_connectors=4, total_lanes=4)
+        cls.trunk = Interface.objects.create(
+            device=make_device("API Conn Trunk"),
+            name="Trunk",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=iface_status,
+        )
+        leaf_device = make_device("API Conn Leaf")
+        cls.leaves = [
+            Interface.objects.create(device=leaf_device, name=f"Leaf {i}", status=iface_status) for i in range(1, 5)
+        ]
+        cable = Cable(termination_a=cls.trunk, termination_b=cls.leaves[0], cable_type=breakout_type, status=connected)
+        cable.save()
+        for connector, leaf in enumerate(cls.leaves[1:], start=2):
+            cable.add_termination(leaf, "B", connector=connector)
+
+        cls.url = reverse("dcim-api:interfaceconnections-list")
+
+    @staticmethod
+    def _ids_a(results):
+        return {str(row["interface_a"]["id"]) for row in results}
+
+    def test_list_gated_on_interface_view_permission(self):
+        # No permissions -> denied.
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        # The queryset-model-derived `view_cablepath` is not the relevant permission and grants nothing.
+        self.add_permissions("dcim.view_cablepath")
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        # `dcim.view_interface` (what the UI view requires) grants access.
+        self.add_permissions("dcim.view_interface")
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+
+    def test_breakout_lanes_listed_with_trunk_on_side_a(self):
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = response.data["results"]
+
+        # All four lanes present, trunk always on interface_a, each leaf as interface_b exactly once.
+        trunk_rows = [row for row in results if str(row["interface_a"]["id"]) == str(self.trunk.pk)]
+        self.assertEqual(len(trunk_rows), 4)
+        self.assertEqual(
+            {str(row["interface_b"]["id"]) for row in trunk_rows},
+            {str(leaf.pk) for leaf in self.leaves},
+        )
+        # Reverse fan-out rows are dropped: no leaf appears on the interface_a side.
+        self.assertFalse(self._ids_a(results) & {str(leaf.pk) for leaf in self.leaves})
+        # The four breakout lanes are returned consecutively (shared canonical ordering).
+        trunk_indexes = [i for i, row in enumerate(results) if str(row["interface_a"]["id"]) == str(self.trunk.pk)]
+        self.assertEqual(trunk_indexes, list(range(trunk_indexes[0], trunk_indexes[0] + 4)))
+        # Point-to-point connection surfaces exactly once, with reachability exposed.
+        p2p_pks = {str(self.p2p_a.pk), str(self.p2p_b.pk)}
+        p2p_rows = [row for row in results if {str(row["interface_a"]["id"]), str(row["interface_b"]["id"])} == p2p_pks]
+        self.assertEqual(len(p2p_rows), 1)
+        self.assertTrue(p2p_rows[0]["connected_endpoint_reachable"])
+
+    def test_object_permission_restricts_both_endpoints(self):
+        # Grant view for the trunk + three of its four leaves only. An ObjectPermission also satisfies
+        # the model-level `view_interface` gate, so no separate add_permissions is needed.
+        visible = [self.trunk, *self.leaves[:3]]
+        obj_perm = ObjectPermission(
+            name="Visible interfaces",
+            constraints={"pk__in": [iface.pk for iface in visible]},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Interface))
+
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = response.data["results"]
+
+        # Only lanes whose far endpoint is visible survive; the lane to the hidden leaf is filtered out.
+        trunk_rows = [row for row in results if str(row["interface_a"]["id"]) == str(self.trunk.pk)]
+        self.assertEqual(len(trunk_rows), 3)
+        self.assertEqual(
+            {str(row["interface_b"]["id"]) for row in trunk_rows},
+            {str(leaf.pk) for leaf in self.leaves[:3]},
+        )
+        self.assertNotIn(str(self.leaves[3].pk), {str(row["interface_b"]["id"]) for row in trunk_rows})
+        # The point-to-point connection (neither endpoint granted) is entirely hidden.
+        p2p_pks = {str(self.p2p_a.pk), str(self.p2p_b.pk)}
+        self.assertFalse(
+            any({str(row["interface_a"]["id"]), str(row["interface_b"]["id"])} == p2p_pks for row in results)
+        )
 
 
 class ConnectedDeviceTest(APITestCase):

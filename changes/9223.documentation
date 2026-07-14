@@ -1,0 +1,1 @@
+Clarified that canceling a job is not a rollback. It does not add atomic transactions and does not undo work already completed.

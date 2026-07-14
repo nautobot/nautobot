@@ -491,6 +491,13 @@ $grid-breakpoints: (
 $utilities: map-merge(
   $utilities,
   (
+    "nb-background-color": (
+      class: nb-bg,
+      property: background-color,
+      values: (
+        inherit: inherit,
+      ),
+    ),
     "nb-color": (
       class: nb-text,
       property: color,
@@ -2770,6 +2777,16 @@ pre.version, pre.version-stamp {
       display: block;
     }
   }
+}
+
+@include color-mode(dark, true) {
+  .nb-card-body-exposed {
+    background: var(--#{$prefix}tertiary-bg);
+  }
+}
+
+.nb-card-body-exposed {
+  background: var(--#{$prefix}body-bg);
 }
 
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */

@@ -6,6 +6,8 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+# use_directory_urls: false is appropriate for local development and for packaging compiled docs as static files.
+# Note that for deployment to ReadTheDocs, you may want to override this (e.g. `mkdocs build --use-directory-urls`)
 use_directory_urls: false
 strict: true
 theme:
@@ -406,6 +408,8 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+              - Homepage Panels: "user-guide/feature-guides/getting-started/homepage-panels.md"
+          - Breakout Cables: "user-guide/feature-guides/breakout-cables.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields:
@@ -487,7 +491,9 @@ nav:
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Cable Type: "user-guide/core-data-model/dcim/cabletype.md"
               - Cable: "user-guide/core-data-model/dcim/cable.md"
+              - Cable to Cable Termination: "user-guide/core-data-model/dcim/cabletocabletermination.md"
               - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
               - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
               - Power Panel: "user-guide/core-data-model/dcim/powerpanel.md"
@@ -573,7 +579,7 @@ nav:
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
-              - Job Revocation: "user-guide/platform-functionality/jobs/job-revocation.md"
+              - Job Cancel: "user-guide/platform-functionality/jobs/job-cancel.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"

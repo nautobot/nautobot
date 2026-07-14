@@ -4,16 +4,28 @@ from urllib.parse import urlencode
 from django.template import Context
 from django.template.loader import render_to_string
 from django.urls import reverse
+import netaddr
 
 from nautobot.core.templatetags import helpers
 from nautobot.core.ui.object_detail import (
     Button,
     KeyValueTablePanel,
     ObjectFieldsPanel,
+    ObjectsTablePanel,
 )
 from nautobot.core.views.utils import get_obj_from_context
 
 logger = logging.getLogger(__name__)
+
+
+def render_utilization(value):
+    """Renders a utilization graph, or a placeholder if none exist."""
+    if value is None:
+        return helpers.placeholder(None)
+    return render_to_string(
+        "utilities/templatetags/utilization_graph.html",
+        helpers.utilization_graph(value),
+    )
 
 
 class AddChildPrefixButton(Button):
@@ -113,15 +125,6 @@ class PrefixKeyValueOverrideValueTablePanel(KeyValueTablePanel):
             verbose_name_plural=key,
         )
 
-    def render_utilization(self, value):
-        """Renders a utilization graph, or a placeholder if none exist."""
-        if value is None:
-            return helpers.placeholder(None)
-        return render_to_string(
-            "utilities/templatetags/utilization_graph.html",
-            helpers.utilization_graph(value),
-        )
-
 
 class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTablePanel):
     """
@@ -148,8 +151,60 @@ class PrefixObjectFieldsPanel(ObjectFieldsPanel, PrefixKeyValueOverrideValueTabl
     def render_value(self, key, value, context):
         instance = get_obj_from_context(context)
         if key == "utilization":
-            return self.render_utilization(value)
+            return render_utilization(value)
         if key == "locations":
             return self.render_locations_list(key, value, instance)
 
         return super().render_value(key, value, context)
+
+
+class IPAddressRangeObjectFieldsPanel(ObjectFieldsPanel):
+    def get_data(self, context):
+        data = super().get_data(context)
+        instance = get_obj_from_context(context, self.context_object_key)
+        if instance and "utilization" in self.fields and (instance.count_as_utilized and not instance.is_exclusive):
+            data["utilization"] = instance.get_utilization()
+        return data
+
+    def render_value(self, key, value, context):
+        if key == "utilization":
+            return render_utilization(value)
+        return super().render_value(key, value, context)
+
+
+class IPAddressRangeIPAddressesPanel(ObjectsTablePanel):
+    """IPAddresses contained in this range; hidden entirely for exclusive ranges."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("enable_related_link", False)
+        super().__init__(**kwargs)
+
+    def get_table_data_queryset(self, instance, request):
+        return instance.ip_addresses
+
+    def should_render(self, context):
+        if not super().should_render(context):
+            return False
+        instance = get_obj_from_context(context)
+        return instance is not None and not instance.is_exclusive
+
+    def _get_table_add_url(self, context):
+        obj = get_obj_from_context(context)
+        request = context["request"]
+        if not request.user.has_perm("ipam.add_ipaddress"):
+            return None
+
+        range_set = netaddr.IPSet(netaddr.IPRange(obj.start_host, obj.end_host))
+        available = obj.parent.get_available_ips() & range_set
+        if not available:
+            return None
+
+        add_route = reverse("ipam:ipaddress_add")
+        return_url = context.get("return_url", obj.get_absolute_url())
+        first_free = next(iter(available))
+        params = {
+            "namespace": str(obj.parent.namespace_id),
+            "address": f"{first_free}/{obj.parent.prefix_length}",
+            "return_url": return_url,
+        }
+        return f"{add_route}?{urlencode(params)}"

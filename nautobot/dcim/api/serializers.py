@@ -1,4 +1,5 @@
 import contextlib
+import re
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -934,18 +935,19 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         else:
             a_connectors = 1
             b_connectors = 1
-        result = {"a": {}, "b": {}}
+        result = {}
         for side, count in (("A", a_connectors), ("B", b_connectors)):
             for connector in range(1, count + 1):
+                key = f"{side.lower()}{connector}"
                 row = rows_by_slot.get((side, connector))
                 if row is None:
-                    result[side.lower()][str(connector)] = None
+                    result[key] = None
                     continue
                 termination = row.termination
                 if termination is None:
-                    result[side.lower()][str(connector)] = None
+                    result[key] = None
                     continue
-                result[side.lower()][str(connector)] = return_nested_serializer_data_based_on_depth(
+                result[key] = return_nested_serializer_data_based_on_depth(
                     self, depth, obj, termination, f"termination_{side.lower()}"
                 )
         return result
@@ -1015,7 +1017,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         """Translate the dict-shape `terminations` input into internal `_apply_terminations` entries.
 
         Input shape:
-            {"a": {"<connector>": null | {"object_type": "<app.model>", "id": "<uuid>"}}, "b": {...}}
+            {"a1": {"<connector>": null | {"object_type": "<app.model>", "id": "<uuid>"}}, "b1": {...}}
 
         Output: list of {"cable_end": "A"/"B", "connector": int, <fk>: id?} dicts. A slot whose
         value is `null` (or an empty dict) yields an entry with no FK set, signaling delete to
@@ -1024,68 +1026,55 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         """
         if not isinstance(raw, dict):
             raise serializers.ValidationError(
-                {"terminations": "Expected an object keyed by side ('a'/'b'), then connector number."}
-            )
-        invalid_sides = set(raw) - {"a", "b"}
-        if invalid_sides:
-            raise serializers.ValidationError(
-                {"terminations": f"Invalid side keys: {sorted(invalid_sides)}. Allowed: 'a', 'b'."}
+                {"terminations": "Expected an object keyed by side and connector (e.g. 'a1', 'b2')."}
             )
         entries = []
-        for side_key in ("a", "b"):
-            if side_key not in raw:
-                continue
-            side_payload = raw[side_key]
-            if not isinstance(side_payload, dict):
+        for side_connector_key, value in raw.items():
+            match = re.fullmatch(r"(?P<side>[ab])(?P<connector>\d+)", side_connector_key)
+            if not match:
                 raise serializers.ValidationError(
-                    {"terminations": {side_key: "Expected an object keyed by connector number."}}
+                    {
+                        "terminations": {
+                            side_connector_key: "Key must be a side ('a'/'b') followed by a connector number, e.g. 'a1'."
+                        }
+                    }
                 )
-            for connector_key, value in side_payload.items():
-                try:
-                    connector = int(connector_key)
-                except (TypeError, ValueError) as exc:
-                    raise serializers.ValidationError(
-                        {"terminations": {side_key: {connector_key: "Connector key must be an integer."}}}
-                    ) from exc
-                entry = {"cable_end": side_key.upper(), "connector": connector}
-                if value is None:
-                    entries.append(entry)
-                    continue
-                if not isinstance(value, dict):
-                    raise serializers.ValidationError(
-                        {"terminations": {side_key: {connector_key: "Expected null or an {object_type, id} object."}}}
-                    )
-                object_type = value.get("object_type")
-                term_id = value.get("id")
-                if not object_type or not term_id:
-                    raise serializers.ValidationError(
-                        {"terminations": {side_key: {connector_key: "Required keys: 'object_type' and 'id'."}}}
-                    )
-                try:
-                    app_label, model = object_type.split(".")
-                except (AttributeError, ValueError) as exc:
-                    raise serializers.ValidationError(
-                        {
-                            "terminations": {
-                                side_key: {connector_key: {"object_type": "Must be of the form 'app_label.modelname'."}}
-                            }
-                        }
-                    ) from exc
-                fk = CONTENT_TYPE_TO_TERMINATION_FK.get((app_label, model))
-                if fk is None:
-                    raise serializers.ValidationError(
-                        {
-                            "terminations": {
-                                side_key: {
-                                    connector_key: {
-                                        "object_type": f"{object_type} is not a valid cable termination type."
-                                    }
-                                }
-                            }
-                        }
-                    )
-                entry[fk] = term_id
+            side_key, connector = match.group("side"), int(match.group("connector"))
+            entry = {"cable_end": side_key.upper(), "connector": connector}
+            if value is None:
                 entries.append(entry)
+                continue
+            if not isinstance(value, dict):
+                raise serializers.ValidationError(
+                    {"terminations": {side_connector_key: "Expected null or an {object_type, id} object."}}
+                )
+            object_type = value.get("object_type")
+            term_id = value.get("id")
+            if not object_type or not term_id:
+                raise serializers.ValidationError(
+                    {"terminations": {side_connector_key: "Required keys: 'object_type' and 'id'."}}
+                )
+            try:
+                app_label, model = object_type.split(".")
+            except (AttributeError, ValueError) as exc:
+                raise serializers.ValidationError(
+                    {
+                        "terminations": {
+                            side_connector_key: {"object_type": "Must be of the form 'app_label.modelname'."}
+                        }
+                    }
+                ) from exc
+            fk = CONTENT_TYPE_TO_TERMINATION_FK.get((app_label, model))
+            if fk is None:
+                raise serializers.ValidationError(
+                    {
+                        "terminations": {
+                            side_connector_key: {"object_type": f"{object_type} is not a valid cable termination type."}
+                        }
+                    }
+                )
+            entry[fk] = term_id
+            entries.append(entry)
         return entries
 
     def _apply_terminations(self, cable, raw_payload):

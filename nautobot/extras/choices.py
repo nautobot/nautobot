@@ -390,11 +390,11 @@ class JobConsoleEntryOutputTypeChoices(ChoiceSet):
 
 
 #
-# JobRevocationType
+# JobCancelType
 #
 
 
-class JobRevocationTypeChoices(ChoiceSet):
+class JobCancelTypeChoices(ChoiceSet):
     TYPE_TERMINATED = "terminated"
     TYPE_REAPED = "reaped"
     TYPE_ABANDONED = "abandoned"

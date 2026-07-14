@@ -135,6 +135,32 @@ def get_obj_from_context(context, key=None):
     return context.get("obj") or context.get("object")
 
 
+def borrow_extras_fields(create_form, model_form):
+    """Borrow a model form's "extras" fields onto a bulk-create form, in place.
+
+    The form used for `name_pattern`/`label_pattern` bulk component creation is a plain form that does not
+    declare the "extras" fields (custom fields, relationships, object note, dynamic groups); those are
+    added dynamically to the per-instance model form. Copy them -- and the `custom_fields`/`relationships`
+    grouping metadata that the extras template renders panels from -- onto the create form, so they render
+    and validate on the single create form and flow through its `cleaned_data`.
+
+    Shared by `nautobot.core.views.generic.ComponentCreateView` and
+    `nautobot.dcim.views.ComponentCreateViewMixin`.
+    """
+    for attr in ("custom_fields", "relationships"):
+        setattr(create_form, attr, list(getattr(model_form, attr, [])))
+    extras_field_names = [
+        *getattr(model_form, "custom_fields", []),
+        *getattr(model_form, "relationships", []),
+        "object_note",
+        "dynamic_groups",
+    ]
+    for name in extras_field_names:
+        # `name in model_form.fields` skips extras the model doesn't support (e.g. no object_note/dynamic_groups).
+        if name in model_form.fields:
+            create_form.fields[name] = model_form.fields[name]
+
+
 def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})

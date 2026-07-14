@@ -3,6 +3,7 @@ import factory
 import faker
 
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     PrimaryModelFactory,
@@ -194,18 +195,28 @@ class VPNProfileFactory(PrimaryModelFactory):
     @factory.post_generation
     def vpn_phase1_policies(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.vpn_phase1_policies.set(extracted)
-            else:
-                self.vpn_phase1_policies.set(get_random_instances(models.VPNPhase1Policy, minimum=1))
+            if not extracted:
+                extracted = get_random_instances(models.VPNPhase1Policy, minimum=1)
+            for policy in extracted:
+                VPNProfilePhase1PolicyAssignmentFactory.create(vpn_profile=self, vpn_phase1_policy=policy)
 
     @factory.post_generation
     def vpn_phase2_policies(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.vpn_phase2_policies.set(extracted)
-            else:
-                self.vpn_phase2_policies.set(get_random_instances(models.VPNPhase2Policy, minimum=1))
+            if not extracted:
+                extracted = get_random_instances(models.VPNPhase2Policy, minimum=1)
+            for policy in extracted:
+                VPNProfilePhase2PolicyAssignmentFactory.create(vpn_profile=self, vpn_phase2_policy=policy)
+
+
+class VPNProfilePhase1PolicyAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.VPNProfilePhase1PolicyAssignment
+
+
+class VPNProfilePhase2PolicyAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = models.VPNProfilePhase2PolicyAssignment
 
 
 class VPNFactory(PrimaryModelFactory):

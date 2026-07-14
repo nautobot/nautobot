@@ -28,10 +28,10 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
+    JobCancelTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    JobRevocationTypeChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ScheduledJobStateChoices,
@@ -1501,7 +1501,7 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
-    def test_revocation_type(self):
+    def test_cancel_type(self):
         user = UserFactory.create()
         job = self.jobs[0]
 
@@ -1511,8 +1511,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             name=job.class_path,
             user=user,
             status=JobResultStatusChoices.STATUS_REVOKED,
-            revocation_type=JobRevocationTypeChoices.TYPE_TERMINATED,
-            date_revoked=now(),
+            cancel_type=JobCancelTypeChoices.TYPE_TERMINATED,
+            date_canceled=now(),
         )
         # "reaped"
         JobResult.objects.create(
@@ -1520,8 +1520,8 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             name=job.class_path,
             user=user,
             status=JobResultStatusChoices.STATUS_REVOKED,
-            revocation_type=JobRevocationTypeChoices.TYPE_REAPED,
-            date_revoked=now(),
+            cancel_type=JobCancelTypeChoices.TYPE_REAPED,
+            date_canceled=now(),
         )
         # "abandoned"
         JobResult.objects.create(
@@ -1529,31 +1529,31 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
             name=job.class_path,
             user=user,
             status=JobResultStatusChoices.STATUS_REVOKED,
-            revocation_type=JobRevocationTypeChoices.TYPE_ABANDONED,
-            date_revoked=now(),
+            cancel_type=JobCancelTypeChoices.TYPE_ABANDONED,
+            date_canceled=now(),
         )
 
         self.assertQuerySetEqualAndNotEmpty(
-            self.filterset({"revocation_type": ["terminated"]}, self.queryset).qs,
-            self.queryset.filter(revocation_type=JobRevocationTypeChoices.TYPE_TERMINATED).distinct(),
+            self.filterset({"cancel_type": ["terminated"]}, self.queryset).qs,
+            self.queryset.filter(cancel_type=JobCancelTypeChoices.TYPE_TERMINATED).distinct(),
         )
 
         self.assertQuerySetEqualAndNotEmpty(
-            self.filterset({"revocation_type": ["reaped"]}, self.queryset).qs,
-            self.queryset.filter(revocation_type=JobRevocationTypeChoices.TYPE_REAPED).distinct(),
+            self.filterset({"cancel_type": ["reaped"]}, self.queryset).qs,
+            self.queryset.filter(cancel_type=JobCancelTypeChoices.TYPE_REAPED).distinct(),
         )
 
         self.assertQuerySetEqualAndNotEmpty(
-            self.filterset({"revocation_type": ["abandoned"]}, self.queryset).qs,
-            self.queryset.filter(revocation_type=JobRevocationTypeChoices.TYPE_ABANDONED).distinct(),
+            self.filterset({"cancel_type": ["abandoned"]}, self.queryset).qs,
+            self.queryset.filter(cancel_type=JobCancelTypeChoices.TYPE_ABANDONED).distinct(),
         )
         self.assertQuerySetEqualAndNotEmpty(
-            self.filterset({"revocation_type": ["terminated", "reaped", "abandoned"]}, self.queryset).qs,
+            self.filterset({"cancel_type": ["terminated", "reaped", "abandoned"]}, self.queryset).qs,
             self.queryset.filter(status=JobResultStatusChoices.STATUS_REVOKED).distinct(),
         )
 
         self.assertQuerySetEqual(
-            self.filterset({"revocation_type": []}, self.queryset).qs,
+            self.filterset({"cancel_type": []}, self.queryset).qs,
             self.queryset.all(),
             ordered=False,
         )

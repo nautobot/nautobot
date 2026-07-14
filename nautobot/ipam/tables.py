@@ -14,7 +14,7 @@ from nautobot.core.tables import (
 from nautobot.core.templatetags.helpers import render_boolean
 from nautobot.dcim.models import Interface
 from nautobot.dcim.tables import InterfaceTable
-from nautobot.dcim.tables.devices import DeviceComponentTable
+from nautobot.dcim.tables.devices import ModularDeviceComponentTable
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
@@ -207,12 +207,12 @@ IPADDRESS_OR_RANGE_ACTIONS = """\
                     <li>
                         <a href="{{ record.get_absolute_url }}" class="dropdown-item">
                             <span class="mdi mdi-information-outline" aria-hidden="true"></span>
-                            Details
+                            IP address range Details
                         </a>
                     </li>
                     <li>
                         <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
-                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View IP address range change log
                         </a>
                     </li>
                     {% if perms.ipam.change_iprange %}
@@ -233,12 +233,12 @@ IPADDRESS_OR_RANGE_ACTIONS = """\
                     <li>
                         <a href="{{ record.get_absolute_url }}" class="dropdown-item">
                             <span class="mdi mdi-information-outline" aria-hidden="true"></span>
-                            Details
+                            IP address Details
                         </a>
                     </li>
                     <li>
                         <a href="{% url 'ipam:ipaddressrange_changelog' pk=record.pk %}" class="dropdown-item">
-                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View change log
+                            <span class="mdi mdi-history me-4" aria-hidden="true"></span>View IP address change log
                         </a>
                     </li>
                     {% if perms.ipam.change_ipaddress %}
@@ -631,7 +631,9 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         viewname="dcim:device_list",
         url_params={"ip_addresses": "pk"},
         reverse_lookup="interfaces__ip_addresses",
+        lookup="interfaces__device",
         distinct=True,
+        display_field="name",
         verbose_name="Devices",
     )
     vm_interface_count = LinkedCountColumn(
@@ -641,7 +643,9 @@ class IPAddressTable(StatusTableMixin, RoleTableMixin, BaseTable):
         viewname="virtualization:virtualmachine_list",
         url_params={"ip_addresses": "pk"},
         reverse_lookup="interfaces__ip_addresses",
+        lookup="vm_interfaces__virtual_machine",
         distinct=True,
+        display_field="name",
         verbose_name="Virtual Machines",
     )
     actions = tables.TemplateColumn(
@@ -759,10 +763,11 @@ class IPAddressAssignTable(StatusTableMixin, BaseTable):
 
 class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.Column(linkify=True)
+    name = tables.Column(linkify=True, empty_values=[])
     start_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("start_host",))
     end_address = tables.TemplateColumn(template_code=IPADDRESSRANGE_COPY, order_by=("end_host",))
     parent = tables.Column(linkify=True, verbose_name="Parent Prefix")
+    namespace = tables.Column(linkify=True, accessor="parent__namespace")
     tenant = TenantColumn()
     count_as_utilized = BooleanColumn(verbose_name="Mark Utilized")
     is_exclusive = BooleanColumn(verbose_name="Exclusive")
@@ -777,11 +782,11 @@ class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "start_address",
             "end_address",
             "parent",
+            "namespace",
             "ip_version",
             "status",
             "role",
             "tenant",
-            "count_as_utilized",
             "is_exclusive",
             "description",
             "tags",
@@ -793,12 +798,16 @@ class IPAddressRangeTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "start_address",
             "end_address",
             "parent",
+            "namespace",
             "status",
             "role",
             "tenant",
             "description",
             "actions",
         )
+
+    def render_name(self, record, value):
+        return value or str(record)
 
 
 class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
@@ -817,31 +826,44 @@ class InterfaceIPAddressTable(StatusTableMixin, BaseTable):
 
 class IPAddressInterfaceTable(InterfaceTable):
     name = tables.TemplateColumn(
-        template_code='<i class="mdi mdi-{% if iface.mgmt_only %}wrench{% elif iface.is_lag %}drag-horizontal-variant'
-        "{% elif iface.is_virtual %}circle{% elif iface.is_wireless %}wifi{% else %}ethernet"
-        '{% endif %}"></i> <a href="{{ record.get_absolute_url }}">{{ value }}</a>',
+        # Keep in sync with DeviceModuleInterfaceTable.name.template_code
+        template_code=(
+            '<span class="mdi mdi-'
+            "{% if record.mgmt_only %}wrench"
+            "{% elif record.is_lag %}drag-horizontal-variant"
+            "{% elif record.is_virtual %}circle"
+            "{% elif record.is_wireless %}wifi"
+            '{% else %}ethernet{% endif %}"></span> '
+            '<a href="{{ record.get_absolute_url }}">{{ value }}</a>'
+        ),
         attrs={"td": {"class": "text-nowrap"}},
     )
     parent_interface = tables.Column(linkify=True, verbose_name="Parent")
     bridge = tables.Column(linkify=True)
     lag = tables.Column(linkify=True, verbose_name="LAG")
 
-    class Meta(DeviceComponentTable.Meta):
+    class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
         fields = (
             "pk",
             "name",
             "device",
-            "type",
             "status",
+            "role",
             "label",
+            "module",
             "enabled",
             "type",
+            "port_type",
+            "speed",
+            "duplex",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mgmt_only",
             "mtu",
+            "vrf",
             "mode",
             "mac_address",
             "description",
@@ -852,12 +874,14 @@ class IPAddressInterfaceTable(InterfaceTable):
             "ip_addresses",
             "untagged_vlan",
             "tagged_vlans",
+            "actions",
         )
         default_columns = [
             "pk",
             "device",
             "name",
             "status",
+            "role",
             "label",
             "enabled",
             "type",
@@ -869,6 +893,7 @@ class IPAddressInterfaceTable(InterfaceTable):
             "ip_addresses",
             "cable",
             "connection",
+            "actions",
         ]
         row_attrs = {
             "class": cable_status_color_css,

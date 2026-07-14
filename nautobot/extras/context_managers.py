@@ -238,6 +238,7 @@ def web_request_context(
             ObjectChange.objects.select_related("changed_object_type", "user")
             .filter(request_id=change_context.change_id)
             .order_by("time")  # default ordering is -time but we want oldest first not newest first
+            .defer("object_data", "object_data_v2")  # avoid an "Out of sort memory" exception on MySQL
             .iterator()
         ):
             if oc.action != last_action or oc.changed_object_type != last_content_type:

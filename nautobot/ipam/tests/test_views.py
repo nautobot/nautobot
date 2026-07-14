@@ -51,7 +51,7 @@ from nautobot.ipam.models import (
 )
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
-from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine
+from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
 class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1034,6 +1034,44 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "description": "New description",
         }
 
+        # An IP address assigned to both device Interfaces and VM VMInterfaces, for the interfaces tab views.
+        cls.tabs_ip_address = IPAddress.objects.create(
+            address="192.0.2.1/24", parent=cls.prefix, status=cls.statuses[0]
+        )
+
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        device = Device.objects.create(
+            name="IP Interfaces Test Device",
+            location=location,
+            device_type=DeviceType.objects.create(
+                manufacturer=Manufacturer.objects.first(), model="IP Interfaces Test Device Type"
+            ),
+            role=Role.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        intf_status = Status.objects.get_for_model(Interface).first()
+        cls.visible_interface = Interface.objects.create(device=device, name="Visible Interface", status=intf_status)
+        cls.hidden_interface = Interface.objects.create(device=device, name="Hidden Interface", status=intf_status)
+        cls.visible_interface.ip_addresses.add(cls.tabs_ip_address)
+        cls.hidden_interface.ip_addresses.add(cls.tabs_ip_address)
+
+        cluster = Cluster.objects.create(
+            name="IP Interfaces Test Cluster",
+            cluster_type=ClusterType.objects.create(name="IP Interfaces Test Cluster Type"),
+        )
+        virtual_machine = VirtualMachine.objects.create(
+            name="IP Interfaces Test VM", cluster=cluster, status=Status.objects.get_for_model(VirtualMachine).first()
+        )
+        vm_intf_status = Status.objects.get_for_model(VMInterface).first()
+        cls.visible_vm_interface = VMInterface.objects.create(
+            virtual_machine=virtual_machine, name="Visible VM Interface", status=vm_intf_status
+        )
+        cls.hidden_vm_interface = VMInterface.objects.create(
+            virtual_machine=virtual_machine, name="Hidden VM Interface", status=vm_intf_status
+        )
+        cls.visible_vm_interface.ip_addresses.add(cls.tabs_ip_address)
+        cls.hidden_vm_interface.ip_addresses.add(cls.tabs_ip_address)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_get_object_with_permission(self):
         response = super().test_get_object_with_permission()
@@ -1141,6 +1179,52 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.4/24").exists())
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.5/24").exists())
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_interfaces_view_loads(self):
+        """The interfaces tab loads and shows all interfaces the user is permitted to view."""
+        self.add_permissions("ipam.view_ipaddress", "dcim.view_interface")
+        url = reverse("ipam:ipaddress_interfaces", kwargs={"pk": self.tabs_ip_address.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(self.visible_interface.name, content)
+        self.assertIn(self.hidden_interface.name, content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_interfaces_view_respects_interface_permissions(self):
+        """The interfaces tab only shows interfaces the user has permission to view."""
+        self.add_permissions("ipam.view_ipaddress")
+        self.add_permissions("dcim.view_interface", constraints={"name": self.visible_interface.name})
+        url = reverse("ipam:ipaddress_interfaces", kwargs={"pk": self.tabs_ip_address.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(self.visible_interface.name, content)
+        self.assertNotIn(self.hidden_interface.name, content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_vm_interfaces_view_loads(self):
+        """The VM interfaces tab loads and shows all VM interfaces the user is permitted to view."""
+        self.add_permissions("ipam.view_ipaddress", "virtualization.view_vminterface")
+        url = reverse("ipam:ipaddress_vm_interfaces", kwargs={"pk": self.tabs_ip_address.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(self.visible_vm_interface.name, content)
+        self.assertIn(self.hidden_vm_interface.name, content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_vm_interfaces_view_respects_interface_permissions(self):
+        """The VM interfaces tab only shows VM interfaces the user has permission to view."""
+        self.add_permissions("ipam.view_ipaddress")
+        self.add_permissions("virtualization.view_vminterface", constraints={"name": self.visible_vm_interface.name})
+        url = reverse("ipam:ipaddress_vm_interfaces", kwargs={"pk": self.tabs_ip_address.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(self.visible_vm_interface.name, content)
+        self.assertNotIn(self.hidden_vm_interface.name, content)
 
 
 class IPAddressMergeTestCase(ModelViewTestCase):
@@ -1771,6 +1855,103 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             status_code=200,
         )
         self.assertFalse(IPAddressRange.objects.filter(start_host="192.0.2.60").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_shows_utilization_for_count_as_utilized(self):
+        """A count_as_utilized range renders a utilization bar in its detail view."""
+        ip_range = IPAddressRange.objects.create(
+            name="util-shown",
+            start_address="192.0.2.60",
+            end_address="192.0.2.65",
+            namespace=self.namespace,
+            status=self.statuses[0],
+            count_as_utilized=True,
+        )
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Utilization")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_utilization_for_exclusive(self):
+        """An exclusive range does not render the utilization row (per panel condition)."""
+        ip_range = IPAddressRange.objects.create(
+            name="util-hidden-exclusive",
+            start_address="192.0.2.70",
+            end_address="192.0.2.75",
+            namespace=self.namespace,
+            status=self.statuses[0],
+            count_as_utilized=True,
+            is_exclusive=True,
+        )
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn(b"Utilization", response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_shows_ip_table_for_non_exclusive(self):
+        """A non-exclusive range renders the inline IP Addresses table, listing contained IPs."""
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10
+        IPAddress.objects.create(address="192.0.2.3/24", namespace=self.namespace, status=self.prefix_status)
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "IP Addresses")
+        self.assertBodyContains(response, "192.0.2.3")
+
+    def test_detail_view_add_ip_button_with_permission(self):
+        """With ipam.add_ipaddress, the inline table renders an Add link prefilled into the range."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # non-exclusive, empty, first free = .1
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        add_url = reverse("ipam:ipaddress_add")
+        self.assertBodyContains(response, add_url)
+        self.assertBodyContains(response, f"namespace={ip_range.parent.namespace_id}")
+        self.assertBodyContains(response, "192.0.2.1")
+
+    def test_detail_view_no_add_button_without_add_permission(self):
+        """Without ipam.add_ipaddress, no Add IP Address link is rendered in the panel."""
+        self.add_permissions("ipam.view_ipaddressrange")  # view only
+        ip_range = self.ip_ranges[0]
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # add route should not appear as a link target for the inline table
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_unnamed_range_links_using_str(self):
+        """A range with no name still renders a link in the name column, falling back to its string representation."""
+        ip_range = IPAddressRange.objects.create(
+            name="",
+            start_address="192.0.2.80",
+            end_address="192.0.2.90",
+            namespace=self.namespace,
+            status=self.statuses[0],
+        )
+        # The table rows are rendered in the HTMX partial response.
+        response = self.client.get(reverse("ipam:ipaddressrange_list"), headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # The empty name falls back to str(record), rendered as a link to the object.
+        self.assertIn(f'href="{ip_range.get_absolute_url()}"', content)
+        self.assertIn(escape(str(ip_range)), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_no_add_button_when_range_is_full(self):
+        """If in range there is no any free address then button `Add` is not rendered."""
+        self.add_permissions("ipam.view_ipaddressrange", "ipam.add_ipaddress")
+        ip_range = self.ip_ranges[0]  # 192.0.2.1 - .10, nie-exclusive
+
+        for i in range(1, 11):
+            IPAddress.objects.create(
+                address=f"192.0.2.{i}/24",
+                namespace=self.namespace,
+                status=self.prefix_status,
+            )
+
+        response = self.client.get(reverse("ipam:ipaddressrange", kwargs={"pk": ip_range.pk}))
+        self.assertHttpStatus(response, 200)
+        # If _get_table_add_url return None then address to add ipaddress shouldn't be rendered
+        self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
 
 
 class VLANGroupTestCase(

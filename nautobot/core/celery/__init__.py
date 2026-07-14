@@ -8,7 +8,7 @@ import sys
 from celery import bootsteps, Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
-from celery.worker.state import revoked as revoked_tasks
+from celery.worker.state import revoked as canceled_tasks
 from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
@@ -71,17 +71,17 @@ def _get_celery_queue_items(queue_name):
 
 
 @signals.worker_ready.connect
-def load_revoked_on_start(sender=None, **kwargs):
-    """Re-apply the in-memory revoked set when a Celery worker boots.
+def load_canceled_on_start(sender=None, **kwargs):
+    """Re-apply the in-memory canceled set when a Celery worker boots.
 
-    Celery's revoked set lives in worker memory (`celery.worker.state.revoked`)
+    Celery's canceled set lives in worker memory (`celery.worker.state.revoked`)
     and is lost on restart. If a job was marked REVOKED in the DB while the
     worker was down, the message could still be sitting in the broker queue
     and would be picked up and executed on next start.
 
     This handler runs once per worker on `worker_ready`: it reads every queue
     the worker is consuming, finds messages whose `JobResult` is already in
-    REVOKED status, and adds those task IDs back to the in-memory revoked
+    REVOKED status, and adds those task IDs back to the in-memory canceled
     set so Celery skips them when it dequeues them.
 
     Connected via the `worker_ready` signal; not intended to be called directly.
@@ -100,7 +100,7 @@ def load_revoked_on_start(sender=None, **kwargs):
     ).values_list("id", flat=True)
 
     for tid in ids:
-        revoked_tasks.add(str(tid))
+        canceled_tasks.add(str(tid))
 
 
 @signals.import_modules.connect

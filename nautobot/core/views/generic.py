@@ -58,6 +58,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
+    borrow_extras_fields,
     check_filter_for_display,
     common_detail_view_context,
     get_bulk_queryset_from_view,
@@ -1408,7 +1409,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "dcim/device_component_add.html"
+    template_name = "generic/object_create.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -1419,6 +1420,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
         form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = self.form(initial=normalize_querydict(request.GET, form_class=self.form), **form_kwargs)  # pylint: disable=not-callable
         model_form = self.model_form(request.GET)  # pylint: disable=not-callable
+        borrow_extras_fields(form, model_form)
         base_template = (
             "components/htmx/object_embedded_create.html"
             if request.headers.get("HX-Request", False)
@@ -1431,6 +1433,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             {
                 "base_template": base_template,
                 "component_type": self.queryset.model._meta.verbose_name,
+                # Required by the generic create template (title, header, `data-nb-obj-type`).
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "model_form": model_form,
                 "form": form,
                 "return_url": self.get_return_url(request),
@@ -1445,6 +1449,11 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             raise RuntimeError("self.form, self.model_form, and self.queryset must not be None")
         form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
         model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))  # pylint: disable=not-callable
+        # Borrow the model form's "extras" fields onto the create form so they validate as part of it; their
+        # values then flow through `form.cleaned_data` into each per-instance form below. Only these borrowed
+        # fields (plus the create form's own) reach `data`, so model fields deliberately omitted from the
+        # create UI cannot be set via a crafted POST request.
+        borrow_extras_fields(form, model_form)
 
         if form.is_valid():
             new_components = []
@@ -1476,7 +1485,11 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
                             field = "breakout_position_pattern"
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+                            if field not in form.fields:
+                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                form.add_error(None, f"{name}: {field}: {err_str}")
+                            else:
+                                form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
@@ -1510,6 +1523,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             self.template_name,
             {
                 "component_type": self.queryset.model._meta.verbose_name,
+                # Required by the generic create template (title, header, `data-nb-obj-type`).
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "model_form": model_form,
                 "return_url": self.get_return_url(request),
@@ -1600,10 +1615,11 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
                                     ) in component_form.errors.as_data().items():
                                         for e in errors:
                                             err_str = ", ".join(e)
-                                            form.add_error(
-                                                field,
-                                                f"{obj} {name}: {err_str}",
-                                            )
+                                            if field not in form.fields:
+                                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                                form.add_error(None, f"{obj} {name}: {field}: {err_str}")
+                                            else:
+                                                form.add_error(field, f"{obj} {name}: {err_str}")
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
