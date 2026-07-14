@@ -44,7 +44,12 @@ Reap on Kubernetes still issues a best-effort cleanup of the underlying K8s reso
 
 ### Permissions
 
-Canceling requires `extras.run_job` and `extras.view_jobresult`. Users can cancel jobs they submitted. Staff can additionally cancel jobs submitted by other users. Staff without `run_job` cannot cancel anything.
+Canceling requires `extras.view_jobresult` to reach the job, plus authority to cancel it. There are two ways to have that authority:
+
+- **Submitters** can always cancel a job they submitted, without holding `extras.cancel_job`.
+- **Anyone else** needs the `extras.cancel_job` permission, scoped (object-level) to the specific Job being canceled. A user whose `extras.cancel_job` is constrained to certain Jobs can only cancel those Jobs.
+
+If the Job associated with a result has been deleted, there is no Job left to scope the permission against. In that case any user with the `extras.cancel_job` permission can cancel the result, regardless of constraints, so that these orphaned results can be cleaned up.
 
 ### Cancel via the UI
 
