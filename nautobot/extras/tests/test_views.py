@@ -5225,6 +5225,25 @@ class JobResultTestCase(
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(any("You do not have permission to cancel this job." in m for m in messages_list))
 
+    def test_cancel_job_orphaned_result_non_owner_without_cancel_job_denied(self):
+        """When job_model is None, a non-owner without cancel_job is still denied (strategy never invoked)."""
+        other = User.objects.create_user(username="orphan-non-owner-noperm")
+        orphan = JobResult.objects.create(
+            name="deleted_module.deleted_job2",
+            job_model=None,
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": orphan.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, orphan.get_absolute_url())
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("You do not have permission to cancel this job." in m for m in messages_list))
+
     @mock.patch.object(CeleryStrategy, "cancel")
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
     def test_cancel_job_get_renders_confirmation_for_running_job(self, mock_liveness, mock_cancel):
@@ -5430,6 +5449,51 @@ class JobResultTestCase(
             level_choice=LogLevelChoices.LOG_FAILURE,
             grouping="canceling",
         )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_orphaned_result_non_owner_with_cancel_job_can_cancel(self, mock_cancel, mock_liveness):
+        """When the associated Job is gone (job_model=None), a non-owner with cancel_job can still cancel."""
+        other = User.objects.create_user(username="orphan-non-owner")
+        orphan = JobResult.objects.create(
+            name="deleted_module.deleted_job",
+            job_model=None,
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        mock_cancel.return_value = {"job_result": orphan, "error": None}
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": orphan.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, orphan.get_absolute_url())
+        mock_cancel.assert_called_once_with(orphan, user=self.user)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_orphaned_result_submitter_can_cancel(self, mock_cancel, mock_liveness):
+        """The submitter can cancel their own orphaned result (job_model=None) without cancel_job."""
+        orphan = JobResult.objects.create(
+            name="deleted_module.deleted_job_submitter",
+            job_model=None,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        mock_cancel.return_value = {"job_result": orphan, "error": None}
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": orphan.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, orphan.get_absolute_url())
+        mock_cancel.assert_called_once_with(orphan, user=self.user)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
 
 
 class JobTestCase(

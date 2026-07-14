@@ -34,9 +34,9 @@ def user_can_cancel_job_result(user, job_result):
     if job_result.user == user:
         return True
     if job_result.job_model_id is None:
-        # The Job record is gone, so there's nothing to
-        # scope cancel_job against. Only the submitter (handled above) may cancel.
-        return False
+        # The associated Job is gone, so it can never run. Anyone with cancel_job
+        # (even constrained) may clean it up, since there is no Job left to scope against.
+        return user.has_perm("extras.cancel_job")
     return Job.objects.restrict(user, "cancel").filter(pk=job_result.job_model_id).exists()
 
 

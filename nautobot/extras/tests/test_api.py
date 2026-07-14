@@ -3790,16 +3790,16 @@ class JobResultTest(
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_cancel_orphaned_result_non_owner_denied(self):
-        """When job_model is None, a non-owner is denied even with unconstrained cancel_job."""
-        other = User.objects.create_user(username="orphan-owner")
+    def test_cancel_orphaned_result_non_owner_without_cancel_job_denied(self):
+        """When job_model is None, a non-owner without cancel_job is still denied."""
+        other = User.objects.create_user(username="orphan-non-owner-noperm")
         orphan = JobResult.objects.create(
             job_model=None,
             name="deleted_module.deleted_job_pending2",
             user=other,
             status=JobResultStatusChoices.STATUS_PENDING,
         )
-        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+        self.add_permissions("extras.view_jobresult")
         url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -3956,6 +3956,24 @@ class JobResultTest(
             celery_kwargs={"nautobot_job_queue_type": "celery"},
         )
         self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_orphaned_result_non_owner_with_cancel_job_can_cancel(self, mock_cancel, mock_liveness):
+        """When job_model is None, a non-owner with cancel_job can cancel."""
+        other = User.objects.create_user(username="orphan-non-owner")
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending2",
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
         url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
         response = self.client.post(url, **self.header)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
