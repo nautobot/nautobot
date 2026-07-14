@@ -1316,13 +1316,15 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         return context
 
     def dispatch(self, request, *args, **kwargs):
+        # initialize_request() populates self.action for this request (it isn't set before then); this is
+        # the same call the base dispatch uses, and calling it again in super().dispatch() is harmless.
         # The interface/vminterface GET param is only consumed when adding/editing a single IP (form_save
-        # attaches the new IP to it) or by the assign action; validate it only for those actions so an
-        # incidental ?interface=<pk> on e.g. a list request is ignored rather than warned+redirected.
-        # self.action isn't set until super().dispatch() runs initialize_request(), so resolve the action
-        # for this request from action_map here.
-        action = getattr(self, "action_map", {}).get(request.method.lower())
-        if action in ("create", "update", "assign") and ("interface" in request.GET or "vminterface" in request.GET):
+        # attaches the new IP to it) or by the assign action, so validate it only for those actions -- an
+        # incidental ?interface=<pk> on e.g. a list request must be ignored, not warned+redirected.
+        self.initialize_request(request, *args, **kwargs)
+        if self.action in ("create", "update", "assign") and (
+            "interface" in request.GET or "vminterface" in request.GET
+        ):
             _, error_msg = retrieve_interface_or_vminterface_from_request(request)
             if error_msg:
                 messages.warning(request, error_msg)
