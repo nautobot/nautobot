@@ -17,11 +17,27 @@ from nautobot.extras.choices import (
     JobResultStatusChoices,
     LogLevelChoices,
 )
-from nautobot.extras.models import JobResult
+from nautobot.extras.models import Job, JobResult
 from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
 
 logger = logging.getLogger(__name__)
+
+
+def user_can_cancel_job_result(user, job_result):
+    """Return whether `user` may cancel `job_result`.
+
+    The submitter can always cancel their own job, without needing any
+    permission. Anyone else needs the `extras.cancel_job` permission scoped
+    to the specific Job.
+    """
+    if job_result.user == user:
+        return True
+    if job_result.job_model_id is None:
+        # The associated Job is gone, so it can never run. Anyone with cancel_job
+        # (even constrained) may clean it up, since there is no Job left to scope against.
+        return user.has_perm("extras.cancel_job")
+    return Job.objects.restrict(user, "cancel").filter(pk=job_result.job_model_id).exists()
 
 
 class JobAlreadyTerminal(Exception):
