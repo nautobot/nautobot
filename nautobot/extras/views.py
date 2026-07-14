@@ -98,7 +98,7 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.jobs_cancel import CancelFactory
+from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -3722,12 +3722,15 @@ class JobResultUIViewSet(
                 label="Cancel Job",
                 color=ButtonActionColorChoices.DELETE,
                 icon="mdi-close-circle",
-                required_permissions=["extras.run_job"],
+                # No required_permissions: the submitter can cancel without cancel_job,
+                # so there is no single permission that gates the button. The real rule
+                # (submitter OR object-level cancel_job) lives in user_can_cancel_job_result,
+                # enforced here for rendering and again in the view.
                 link_name=lambda ctx: (
                     reverse("extras:jobresult_cancel_job", kwargs={"pk": ctx["object"].pk})
                     if (
                         ctx["object"].is_unready_state
-                        and (ctx["object"].user == ctx["request"].user or ctx["request"].user.is_staff)
+                        and user_can_cancel_job_result(ctx["request"].user, ctx["object"])
                     )
                     else None
                 ),
@@ -4039,12 +4042,8 @@ class JobResultUIViewSet(
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
-        if not request.user.has_perm("extras.run_job"):
-            messages.error(request, "Job can not be canceled by user without permission to run jobs.")
-            return redirect(job_result.get_absolute_url())
-
-        if job_result.user != request.user and not request.user.is_staff:
-            messages.error(request, "Job can be canceled only by the submitter or by staff users.")
+        if not user_can_cancel_job_result(request.user, job_result):
+            messages.error(request, "You do not have permission to cancel this job.")
             return redirect(job_result.get_absolute_url())
 
         strategy = CancelFactory.get_strategy(job_result.queue_type)

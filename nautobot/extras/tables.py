@@ -174,23 +174,23 @@ JOB_RESULT_BUTTONS = """
             </a>
         </li>
     {% endif %}
-    {% if record.is_unready_state %}
-        {% if record.user == request.user or request.user.is_staff %}
-            <li>
-                <a href="{% url 'extras:jobresult_cancel_job' pk=record.pk %}" class="dropdown-item text-danger">
-                    <span class="mdi mdi-close-circle" aria-hidden="true"></span>
-                    Cancel Job
-                </a>
-            </li>
-        {% endif %}
-    {% elif request.user|can_delete:record and perms.extras.delete_jobresult %}
+{% endif %}
+{% if record.is_unready_state %}
+    {% if record.user == request.user or perms.extras.cancel_job %}
         <li>
-            <a href="{% url 'extras:jobresult_delete' pk=record.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
-                <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                Delete job result
+            <a href="{% url 'extras:jobresult_cancel_job' pk=record.pk %}" class="dropdown-item text-danger">
+                <span class="mdi mdi-close-circle" aria-hidden="true"></span>
+                Cancel Job
             </a>
         </li>
     {% endif %}
+{% elif request.user|can_delete:record and perms.extras.delete_jobresult %}
+    <li>
+        <a href="{% url 'extras:jobresult_delete' pk=record.pk %}?return_url={{ request.path }}" class="dropdown-item text-danger">
+            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+            Delete job result
+        </a>
+    </li>
 {% endif %}
 {% if perms.extras.view_joblogentry %}
     <li>
