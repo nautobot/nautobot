@@ -7,7 +7,7 @@ Each device in the virtual chassis is referred to as a VC member, and assigned a
 You create your devices, then create the Virtual Chassis and assign the devices to the Virtual Chassis.
 
 !!! note
-    It's important to recognize the distinction between a virtual chassis and a chassis-based device. A virtual chassis is **not** suitable for modeling a chassis-based switch with removable line cards (such as the Juniper EX9208), as its line cards are _not_ physically autonomous devices. Chassis should be modeled with module bays and modules.
+    It's important to recognize the distinction between a virtual chassis and a chassis-based device. A virtual chassis is **not** suitable for modeling a chassis-based switch with removable line cards (such as the Juniper EX9208), as its line cards are _not_ physically autonomous devices. Such a chassis should be modeled with [module bays](modulebay.md) and [modules](module.md) instead.
 
 ## Overview
 
@@ -16,9 +16,9 @@ Choosing between Virtual Chassis and a [Device Redundancy Group](deviceredundanc
 Use a Virtual Chassis when multiple physical devices operate as a **single logical device** with one management IP, such as a switch stack. The model is small: a single `VirtualChassis` object that member devices point to, with each member recording its position in the stack. One member can be explicitly designated as the master, and Nautobot will surface all ports (interfaces, front ports, rear ports, etc.) from every member on that master device, reflecting how the stack actually presents itself on the network. The one exception is an interface with `mgmt_only` set, which is not surfaced on the master.
 
 !!! note
-    Interfaces are **not** renumbered automatically. As on real hardware, a device's interfaces default to slot 1 (e.g. `GigabitEthernet1/0/1`); when that device becomes member 3, its interfaces should be `GigabitEthernet3/0/1`. Use the Bulk Rename feature to renumber them.
+    Interfaces are **not** renumbered automatically in Nautobot when their device is assigned to a virtual chassis. As on real hardware, a device's interfaces default to slot 1 (e.g. `GigabitEthernet1/0/1`); when that device becomes member 3, its interfaces should be `GigabitEthernet3/0/1`. Use the Bulk Rename feature to renumber them.
 
-LAG interfaces are supported across devices that have the same parent virtual chassis — this is the one case in Nautobot where a LAG's member interfaces may live on different devices. The LAG will show its member interfaces across the multiple devices on the LAG itself. The recommendation is to create the LAG interface itself (e.g. `PortChannel10`) on the expected master device. Because the chassis is a single logical device, the LAG fully captures the relationship on its own; no additional grouping model (such as an Interface Redundancy Group) is needed.
+LAG interfaces are supported across devices that have the same parent virtual chassis — this is the one case in Nautobot where a LAG's member interfaces may live on different devices. The LAG will show its member interfaces across the multiple devices on the LAG itself. The recommendation is to create the LAG interface itself (e.g. `Port-Channel10`) on the expected master device. Because the chassis is a single logical device, the LAG fully captures the relationship on its own; no additional grouping model (such as an Interface Redundancy Group) is needed.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -89,7 +89,7 @@ erDiagram
 ```
 
 !!! note
-    Prior to 3.2, not every interface had a direct foreign key to its device. An interface installed in a module instead referenced the module, which in turn referenced the device, so the link to the device was indirect.
+    Prior to Nautobot 3.2, not every interface had a direct foreign key to its device. An interface installed in a module instead referenced the module, which in turn referenced the device, so the link to the device was indirect.
 
 ## Sample API
 
@@ -282,7 +282,7 @@ TODO: review `connect_cable` design builder extenstion post 3.2 release
 
 ??? example "Show Design Builder YAML"
 
-    ```jinja2
+    
     # Prefixes are created first so the management IPs below can parent to them.
     prefixes:
       - "!create_or_update:prefix": "192.168.1.0/24"
