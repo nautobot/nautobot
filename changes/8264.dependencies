@@ -1,0 +1,7 @@
+Updated dependency `django-celery-beat` to `==2.9.0`.
+Updated dependency `django-prometheus` to `>=2.5.0,<2.6`.
+Updated dependency `django-structlog` to `>=10.1.0,<10.2`.
+Updated dependency `django-tree-queries` to `>=0.24.0,<0.25`.
+Updated dependency `drf-spectacular` to `>=0.29.0,<0.30`.
+Updated dependency `kubernetes` to `>=36.0.2,<37`.
+Updated dependency `prometheus-client` to `>=0.25.0,<0.26`.

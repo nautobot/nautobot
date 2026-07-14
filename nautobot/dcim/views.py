@@ -11,7 +11,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.core.paginator import EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import Case, F, IntegerField, Prefetch, ProtectedError, When
+from django.db.models import Case, F, IntegerField, Prefetch, ProtectedError, When, Window
+from django.db.models.functions import RowNumber
 from django.forms import (
     Form,
     modelformset_factory,
@@ -76,7 +77,12 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
-from nautobot.core.views.utils import common_detail_view_context, get_obj_from_context, handle_protectederror
+from nautobot.core.views.utils import (
+    borrow_extras_fields,
+    common_detail_view_context,
+    get_obj_from_context,
+    handle_protectederror,
+)
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.constants import DEVICE_COMPONENT_ICONS, TERMINATION_CABLE_COLUMN_FK_FIELDS
@@ -91,7 +97,7 @@ from nautobot.dcim.utils import (
 )
 from nautobot.extras.models import ConfigContext, Contact, ContactAssociation, Role, SavedView, Status, Team
 from nautobot.extras.tables import DynamicGroupTable, ImageAttachmentTable
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
 from nautobot.ipam.tables import (
     InterfaceIPAddressTable,
     InterfaceVLANTable,
@@ -2227,14 +2233,28 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
 
     create_form_class: type[Form]
     form_class: type[Form]
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
 
     def get_component_create_form(self, request, data=None):
-        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields)."""
-        return self.create_form_class(  # pylint: disable=not-callable
+        """Return the parent bulk-create form (with `name_pattern`/`label_pattern` fields).
+
+        The "extras" fields (custom fields, relationships, object note, dynamic groups) are declared
+        on the per-instance model form, not on the create form. Borrow them onto the create form so
+        they render (and validate) on the single bulk-create form, without redeclaring them on every
+        *CreateForm and without passing a separate `model_form` to the template.
+        """
+        create_form = self.create_form_class(  # pylint: disable=not-callable
             data or None,
             initial=normalize_querydict(request.GET, form_class=self.create_form_class),
         )
+        # Pass `data` through: some model forms (e.g. VMInterfaceForm) resolve a required parent
+        # (virtual_machine) in __init__ from the bound data / GET initial, so instantiating with no
+        # data at all would raise DoesNotExist.
+        model_form = self.get_component_model_form(request, data=data)
+        # The *CreateForm is a plain `forms.Form` (no custom-field/relationship support of its own); borrow
+        # the extras fields + grouping metadata off the model form so they render/validate on it.
+        borrow_extras_fields(create_form, model_form)
+        return create_form
 
     def get_selected_objects_parents_name(self, selected_objects):
         """Return the display name of the parent object that owns the selected components or templates."""
@@ -2278,7 +2298,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
             return self.render_component_create_response(request, create_form)
 
         new_components = []
-        data = deepcopy(request.POST)
+        # `get_component_create_form` borrows the "extras" fields (custom fields, relationships, object
+        # note, dynamic groups) onto the create form, so `cleaned_data` already carries their validated
+        # values; they flow through to each per-instance form via `data` below.
+        data = deepcopy(create_form.cleaned_data)
 
         # Support for bulk creation using name_pattern and label_pattern
         names = create_form.cleaned_data["name_pattern"]
@@ -2307,7 +2330,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                     }.get(field, field)
                     for e in errors:
                         err_str = ", ".join(e)
-                        create_form.add_error(parent_field, f"{name}: {err_str}")
+                        if parent_field in create_form.fields:
+                            create_form.add_error(parent_field, f"{name}: {err_str}")
+                        else:
+                            create_form.add_error(None, f"{name} ({field}): {err_str}")
 
         if create_form.errors:
             return self.render_component_create_response(request, create_form)
@@ -2343,14 +2369,10 @@ class ComponentCreateViewMixin(ObjectEditViewMixin):
                 request, data=request.POST if request.method == "POST" else None
             )
 
-        model_form = self.get_component_model_form(request, data=request.POST if request.method == "POST" else None)
-
         return Response(
             {
                 "template": self.create_template_name,
-                "component_type": self.queryset.model._meta.verbose_name,
                 "form": create_form,
-                "model_form": model_form,
                 "return_url": self.get_return_url(request),
             },
         )
@@ -2643,7 +2665,7 @@ class ModuleBayTemplateUIViewSet(
     model_form_class = forms.ModuleBayTemplateForm
     serializer_class = serializers.ModuleBayTemplateSerializer
     table_class = tables.ModuleBayTemplateTable
-    create_template_name = "dcim/device_component_add.html"
+    create_template_name = "generic/object_create.html"
     object_detail_content = None
 
     def get_selected_objects_parents_name(self, selected_objects):
@@ -4683,11 +4705,23 @@ class ConsoleServerPortUIViewSet(
     device_breadcrumb_url = "dcim:device_consoleserverports"
     module_breadcrumb_url = "dcim:module_consoleserverports"
 
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        if self.action == "retrieve":
-            context["connected_endpoint_tables"] = get_connected_endpoint_tables(instance)
-        return context
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                label="Console Server Port",
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:consoleserverport_trace",
+            ),
+            *get_connected_endpoint_panels("consoleserverport"),
+        )
+    )
 
 
 #
@@ -4777,75 +4811,79 @@ class PowerOutletUIViewSet(
 #
 
 
-class InterfaceListView(generic.ObjectListView):
+class InterfaceUIViewSet(
+    DeviceComponentPageMixin,
+    ComponentCreateViewMixin,
+    ComponentBulkDisconnectViewMixin,
+    NautobotUIViewSet,
+):
     # `optimize_queryset_for_cable_columns` adds the `select_related` / `prefetch_related` needed
     # so `cable`, `cable_peer`, and `connection` columns don't trigger per-row N+1 queries against
     # CableToCableTermination / CablePath.
     queryset = Interface.optimize_queryset_for_cable_columns(Interface.objects.all())
-    filterset = filters.InterfaceFilterSet
-    filterset_form = forms.InterfaceFilterForm
-    table = tables.InterfaceTable
+    bulk_update_form_class = forms.InterfaceBulkEditForm
+    create_form_class = forms.InterfaceCreateForm
+    filterset_class = filters.InterfaceFilterSet
+    filterset_form_class = forms.InterfaceFilterForm
+    form_class = forms.InterfaceForm
+    serializer_class = serializers.InterfaceSerializer
+    table_class = tables.InterfaceTable
     action_buttons = ("import", "export")
-    # Load `connection_toggles.js` so the per-row cable actions (mark connected/planned, detach)
-    # function in the list view.
-    template_name = "dcim/device_component_list.html"
-
-
-class InterfaceView(
-    DeviceComponentPageMixin,
-    generic.ObjectView,
-):
-    queryset = Interface.objects.all()
     device_breadcrumb_url = "dcim:device_interfaces"
     module_breadcrumb_url = "dcim:module_interfaces"
 
-    def get_extra_context(self, request, instance):
-        # Get assigned IP addresses
-        ipaddress_table = InterfaceIPAddressTable(
-            # data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
-            data=instance.ip_addresses.restrict(request.user, "view").select_related("tenant"),
-            orderable=False,
-        )
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "retrieve":
+            # Get assigned IP addresses
+            ipaddress_table = InterfaceIPAddressTable(
+                # data=instance.ip_addresses.restrict(request.user, "view").select_related("vrf", "tenant"),
+                data=instance.ip_addresses.restrict(request.user, "view").select_related("tenant"),
+                orderable=False,
+            )
 
-        # Get child interfaces
-        child_interfaces = instance.child_interfaces.restrict(request.user, "view")
-        child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
+            # Get child interfaces
+            child_interfaces = instance.child_interfaces.restrict(request.user, "view")
+            child_interfaces_tables = tables.InterfaceTable(child_interfaces, orderable=False, exclude=("device",))
 
-        # Get assigned VLANs and annotate whether each is tagged or untagged
-        vlans = []
-        if instance.untagged_vlan is not None:
-            vlans.append(instance.untagged_vlan)
-            vlans[0].tagged = False
+            # Get assigned VLANs and annotate whether each is tagged or untagged
+            vlans = []
+            # Restrict `untagged_vlan` (a single FK) the same way `tagged_vlans` is restricted below,
+            # so a user without view permission on that VLAN doesn't see it in the table.
+            if instance.untagged_vlan_id is not None:
+                untagged_vlan = VLAN.objects.restrict(request.user, "view").filter(pk=instance.untagged_vlan_id).first()
+                if untagged_vlan is not None:
+                    untagged_vlan.tagged = False
+                    vlans.append(untagged_vlan)
 
-        for vlan in (
-            instance.tagged_vlans.restrict(request.user)
-            .annotate(location_count=count_related(Location, "vlans"))
-            .select_related("vlan_group", "tenant", "role")
-        ):
-            vlan.tagged = True
-            vlans.append(vlan)
-        vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
+            for vlan in (
+                instance.tagged_vlans.restrict(request.user)
+                .annotate(location_count=count_related(Location, "vlans"))
+                .select_related("vlan_group", "tenant", "role")
+            ):
+                vlan.tagged = True
+                vlans.append(vlan)
+            vlan_table = InterfaceVLANTable(interface=instance, data=vlans, orderable=False)
 
-        redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
-        virtual_device_contexts_table = tables.VirtualDeviceContextTable(
-            instance.virtual_device_contexts.restrict(request.user, "view").select_related(
-                "device", "tenant", "primary_ip4", "primary_ip6"
-            ),
-            orderable=False,
-            exclude=("device",),
-        )
-
-        return {
-            "ipaddress_table": ipaddress_table,
-            "vlan_table": vlan_table,
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "module_breadcrumb_url": self.module_breadcrumb_url,
-            "child_interfaces_table": child_interfaces_tables,
-            "redundancy_table": redundancy_table,
-            "virtual_device_contexts_table": virtual_device_contexts_table,
-            "connected_endpoint_tables": get_connected_endpoint_tables(instance),
-            **super().get_extra_context(request, instance),
-        }
+            redundancy_table = self._get_interface_redundancy_groups_table(request, instance)
+            virtual_device_contexts_table = tables.VirtualDeviceContextTable(
+                instance.virtual_device_contexts.restrict(request.user, "view").select_related(
+                    "device", "tenant", "primary_ip4", "primary_ip6"
+                ),
+                orderable=False,
+                exclude=("device",),
+            )
+            context.update(
+                {
+                    "ipaddress_table": ipaddress_table,
+                    "vlan_table": vlan_table,
+                    "child_interfaces_table": child_interfaces_tables,
+                    "redundancy_table": redundancy_table,
+                    "virtual_device_contexts_table": virtual_device_contexts_table,
+                    "connected_endpoint_tables": get_connected_endpoint_tables(instance),
+                }
+            )
+        return context
 
     def _get_interface_redundancy_groups_table(self, request, instance):
         """Return a table of assigned Interface Redundancy Groups."""
@@ -4870,50 +4908,6 @@ class InterfaceView(
         return table
 
 
-class InterfaceCreateView(generic.ComponentCreateView):
-    queryset = Interface.objects.all()
-    form = forms.InterfaceCreateForm
-    model_form = forms.InterfaceForm
-
-
-class InterfaceEditView(generic.ObjectEditView):
-    queryset = Interface.objects.all()
-    model_form = forms.InterfaceForm
-    template_name = "dcim/interface_edit.html"
-
-
-class InterfaceDeleteView(generic.ObjectDeleteView):
-    queryset = Interface.objects.all()
-    template_name = "dcim/device_interface_delete.html"
-
-
-class InterfaceBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = Interface.objects.all()
-    table = tables.InterfaceTable
-
-
-class InterfaceBulkEditView(generic.BulkEditView):
-    queryset = Interface.objects.all()
-    filterset = filters.InterfaceFilterSet
-    table = tables.InterfaceTable
-    form = forms.InterfaceBulkEditForm
-
-
-class InterfaceBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = Interface.objects.all()
-
-
-class InterfaceBulkDisconnectView(BulkDisconnectView):
-    queryset = Interface.objects.all()
-
-
-class InterfaceBulkDeleteView(generic.BulkDeleteView):
-    queryset = Interface.objects.all()
-    filterset = filters.InterfaceFilterSet
-    table = tables.InterfaceTable
-    template_name = "dcim/interface_bulk_delete.html"
-
-
 #
 # Front ports
 #
@@ -4936,6 +4930,22 @@ class FrontPortUIViewSet(
     action_buttons = ("import", "export")
     device_breadcrumb_url = "dcim:device_frontports"
     module_breadcrumb_url = "dcim:module_frontports"
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            object_detail.ObjectFieldsPanel(
+                section=SectionChoices.LEFT_HALF,
+                weight=100,
+                exclude_fields=("cable_termination",),
+                hide_if_unset=("device", "module"),
+            ),
+            object_detail.ConnectionPanel(
+                section=SectionChoices.RIGHT_HALF,
+                weight=100,
+                trace_url_name="dcim:frontport_trace",
+            ),
+        )
+    )
 
 
 #
@@ -5214,70 +5224,50 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
 #
 
 
-class InventoryItemListView(generic.ObjectListView):
-    queryset = InventoryItem.objects.all()
-    filterset = filters.InventoryItemFilterSet
-    filterset_form = forms.InventoryItemFilterForm
-    table = tables.InventoryItemTable
+class InventoryItemFieldsPanel(object_detail.ObjectFieldsPanel):
+    """ObjectFieldsPanel with context-aware rendering of `software_version` and its image files."""
+
+    def render_value(self, key, value, context):
+        if key == "software_version":
+            instance = get_obj_from_context(context, self.context_object_key)
+            return render_software_version_and_image_files(instance, value, context)
+        return super().render_value(key, value, context)
+
+
+class InventoryItemUIViewSet(DeviceComponentPageMixin, ComponentCreateViewMixin, NautobotUIViewSet):
+    queryset = InventoryItem.objects.select_related("device", "manufacturer", "software_version")
+    filterset_class = filters.InventoryItemFilterSet
+    filterset_form_class = forms.InventoryItemFilterForm
+    bulk_update_form_class = forms.InventoryItemBulkEditForm
+    create_form_class = forms.InventoryItemCreateForm
+    form_class = forms.InventoryItemForm
+    serializer_class = serializers.InventoryItemSerializer
+    table_class = tables.InventoryItemTable
+    create_template_name = "dcim/inventoryitem_add.html"
     action_buttons = ("import", "export")
-
-
-class InventoryItemView(DeviceComponentPageMixin, generic.ObjectView):
-    queryset = InventoryItem.objects.all().select_related("device", "manufacturer", "software_version")
     device_breadcrumb_url = "dcim:device_inventory"
 
-    def get_extra_context(self, request, instance):
-        # Software images
-        if instance.software_version is not None:
-            software_version_images = instance.software_version.software_image_files.restrict(request.user, "view")
-        else:
-            software_version_images = []
-
-        return {
-            "device_breadcrumb_url": self.device_breadcrumb_url,
-            "software_version_images": software_version_images,
-            **super().get_extra_context(request, instance),
-        }
-
-
-class InventoryItemEditView(generic.ObjectEditView):
-    queryset = InventoryItem.objects.all()
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_edit.html"
-
-
-class InventoryItemCreateView(generic.ComponentCreateView):
-    queryset = InventoryItem.objects.all()
-    form = forms.InventoryItemCreateForm
-    model_form = forms.InventoryItemForm
-    template_name = "dcim/inventoryitem_add.html"
-
-
-class InventoryItemDeleteView(generic.ObjectDeleteView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkImportView(generic.BulkImportView):  # 3.0 TODO: remove, unused
-    queryset = InventoryItem.objects.all()
-    table = tables.InventoryItemTable
-
-
-class InventoryItemBulkEditView(generic.BulkEditView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    filterset = filters.InventoryItemFilterSet
-    table = tables.InventoryItemTable
-    form = forms.InventoryItemBulkEditForm
-
-
-class InventoryItemBulkRenameView(BaseDeviceComponentsBulkRenameView):
-    queryset = InventoryItem.objects.all()
-
-
-class InventoryItemBulkDeleteView(generic.BulkDeleteView):
-    queryset = InventoryItem.objects.select_related("device", "manufacturer")
-    table = tables.InventoryItemTable
-    template_name = "dcim/inventoryitem_bulk_delete.html"
-    filterset = filters.InventoryItemFilterSet
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            InventoryItemFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                label="Inventory Item",
+                fields=[
+                    "device",
+                    "parent",
+                    "name",
+                    "label",
+                    "manufacturer",
+                    "part_id",
+                    "serial",
+                    "asset_tag",
+                    "software_version",
+                    "description",
+                ],
+            ),
+        ),
+    )
 
 
 #
@@ -5616,17 +5606,19 @@ class CableUIViewSet(NautobotUIViewSet):
     def lane_side_fields(self, request):
         """HTMX endpoint: return parent+termination fields for a specific lane side when the type changes.
 
-        The current cable's pk is not needed since the response only depends on the selected
-        termination type, side, and connector — not on any existing cable state.
+        The only piece of existing cable state the response depends on is the cable pk (forwarded by
+        the type select's `hx-vals`), used to re-apply the `available_for_cable` termination filter so
+        the cable's own endpoints stay pickable after a type change. It's absent when creating a cable.
         """
         connector = request.GET.get("connector", "1")
         side = request.GET.get("side", "a")
+        cable_pk = request.GET.get("cable") or None
         prefix = f"{side}_conn_{connector}"
         # HTMX-only endpoint: the requesting type select sends its value as `<prefix>_type` via hx-include.
         term_type = request.GET.get(f"{prefix}_type", "interface")
 
         fieldset = CableTerminationFieldSet()
-        result = fieldset.get_fields(prefix, term_type=term_type)
+        result = fieldset.get_fields(prefix, term_type=term_type, cable_pk=cable_pk)
 
         # Build a minimal form-like object for template rendering.
         temp_form = Form()
@@ -5826,25 +5818,27 @@ class InterfaceConnectionsListView(ConnectionsListView):
         # CablePath view permission (which is the model of the underlying queryset).
         return "dcim.view_interface"
 
-    def get_queryset(self):
+    @staticmethod
+    def base_queryset():
         """
-        Build a CablePath queryset of interface-to-interface connections.
+        Build the canonical CablePath queryset of interface-to-interface connections for the list view.
 
-        Driven from CablePath rather than Interface so each connection is naturally one row (independent
-        of breakout-cable lanes). Lazy-built here so `ContentType.objects.get_for_model` doesn't run at
-        import time.
+        Delegates to `CablePath.interface_connections()` (shared with the REST API so both stay
+        consistent) for the trunk-onto-one-side canonicalization and ordering, then adds the UI-only
+        `group_row` window annotation — the lane index within each origin (1 for the first lane) — so
+        the table can blank the repeated trunk cell on continuation rows of a breakout.
         """
-        iface_ct = ContentType.objects.get_for_model(Interface)
-        qs = CablePath.objects.filter(
-            origin_type=iface_ct,
-            destination_type=iface_ct,
-            # Canonicalize each iface↔iface pair: each connection produces two CablePaths (one per
-            # direction); keep only the one whose origin_id is the lower of the two. Breakout-lane
-            # CablePaths between distinct pairs are independent rows and all survive.
-            origin_id__lt=F("destination_id"),
-        ).prefetch_related("origin", "destination")
+        return CablePath.interface_connections().annotate(
+            group_row=Window(
+                expression=RowNumber(),
+                partition_by=[F("origin_type"), F("origin_id")],
+                order_by=[F("peer_connector")],
+            )
+        )
+
+    def get_queryset(self):
         if self.queryset is None:
-            self.queryset = qs
+            self.queryset = self.base_queryset()
 
         return self.queryset
 

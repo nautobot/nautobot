@@ -1,0 +1,1 @@
+Job cancellation now requires the new `extras.cancel_job` permission instead of `extras.run_job`. The submitter of a job can still cancel their own job with only `extras.view_jobresult` (no `cancel_job` needed). Any other user needs `extras.cancel_job` scoped (object-level) to the specific Job. Staff status no longer grants the ability to cancel another user's job.

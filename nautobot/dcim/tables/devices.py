@@ -795,6 +795,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
 class DeviceModuleInterfaceTable(InterfaceTable):
     name = DeviceComponentNameColumn(
         modelname="interface",
+        # Keep in sync with IPAddressInterfaceTable.name.template_code
         template_code=(
             '<span class="mdi mdi-'
             "{% if record.mgmt_only %}wrench"

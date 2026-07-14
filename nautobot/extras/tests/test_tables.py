@@ -1,9 +1,10 @@
+from django.apps import apps
 from django.utils.html import escape
 from jsonschema import Draft7Validator
 
 from nautobot.core.testing import TestCase
-from nautobot.extras.models import ConfigContext, ConfigContextSchema, JobResult
-from nautobot.extras.tables import ConfigContextSchemaValidationStateColumn, JobResultTable
+from nautobot.extras.models import ConfigContext, ConfigContextSchema, GitRepository, Job, JobResult
+from nautobot.extras.tables import ConfigContextSchemaValidationStateColumn, JobResultTable, JobTable
 
 
 class ConfigContextSchemaValidationStateColumnTestCase(TestCase):
@@ -39,6 +40,44 @@ class ConfigContextSchemaValidationStateColumnTestCase(TestCase):
         self.assertIn("mdi-close-thick", rendered)
         self.assertIn("text-danger", rendered)
         self.assertIn("No schema available", rendered)
+
+
+class JobTableTestCase(TestCase):
+    def test_source_version_column_abbreviates_commit_hash(self):
+        """Git commit hashes render abbreviated to 7 characters with the full hash as hover text."""
+        repo = GitRepository(
+            name="Source Version Table Test Repo",
+            slug="source_version_table_test_repo",
+            remote_url="http://localhost/git.git",
+            current_head="0123456789abcdef0123456789abcdef01234567",
+        )
+        repo.validated_save()
+        job = Job.objects.get(job_class_name="TestPassJob")
+        job.module_name = f"{repo.slug}.jobs.my_job"
+        job.save()
+        table = JobTable(Job.objects.filter(pk=job.pk))
+
+        cell = next(iter(table.rows)).get_cell("source_version")
+
+        self.assertEqual(cell, '<span title="0123456789abcdef0123456789abcdef01234567">0123456</span>')
+
+    def test_source_version_column_renders_app_version_unmodified(self):
+        """Non-hash version strings (e.g. App versions) render as-is."""
+        job = Job.objects.get(job_class_name="ExampleJob")
+        table = JobTable(Job.objects.filter(pk=job.pk))
+
+        cell = next(iter(table.rows)).get_cell("source_version")
+
+        self.assertEqual(cell, apps.get_app_config("example_app").version)
+
+    def test_source_version_column_renders_placeholder_when_unknown(self):
+        """JOBS_ROOT jobs have no version information and render the empty placeholder."""
+        job = Job.objects.get(job_class_name="TestPassJob")
+        table = JobTable(Job.objects.filter(pk=job.pk))
+
+        cell = next(iter(table.rows)).get_cell("source_version")
+
+        self.assertEqual(cell, table.default)
 
 
 class JobResultTableTestCase(TestCase):

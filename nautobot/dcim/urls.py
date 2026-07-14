@@ -2,7 +2,7 @@ from django.urls import path
 from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
-from nautobot.extras.views import ImageAttachmentEditView, ObjectChangeLogView, ObjectNotesView
+from nautobot.extras.views import ImageAttachmentEditView
 from nautobot.ipam.views import ServiceEditView
 
 from . import views
@@ -12,7 +12,6 @@ from .models import (
     Device,
     FrontPort,
     Interface,
-    InventoryItem,
     Location,
     PowerFeed,
     PowerOutlet,
@@ -40,8 +39,10 @@ router.register("device-types", views.DeviceTypeUIViewSet)
 router.register("devices", views.DeviceUIViewSet)
 router.register("front-ports", views.FrontPortUIViewSet)
 router.register("front-port-templates", views.FrontPortTemplateUIViewSet)
+router.register("interfaces", views.InterfaceUIViewSet)
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupUIViewSet)
 router.register("interface-redundancy-groups-associations", views.InterfaceRedundancyGroupAssociationUIViewSet)
+router.register("inventory-items", views.InventoryItemUIViewSet)
 router.register("interface-templates", views.InterfaceTemplateUIViewSet)
 router.register("locations", views.LocationUIViewSet)
 router.register("location-types", views.LocationTypeUIViewSet)
@@ -300,56 +301,6 @@ urlpatterns = [
         name="device_bulk_add_poweroutlet",
     ),
     # Interfaces
-    path("interfaces/", views.InterfaceListView.as_view(), name="interface_list"),
-    path("interfaces/add/", views.InterfaceCreateView.as_view(), name="interface_add"),
-    path(
-        "interfaces/import/",
-        views.InterfaceBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="interface_import",
-    ),
-    path(
-        "interfaces/edit/",
-        views.InterfaceBulkEditView.as_view(),
-        name="interface_bulk_edit",
-    ),
-    path(
-        "interfaces/rename/",
-        views.InterfaceBulkRenameView.as_view(),
-        name="interface_bulk_rename",
-    ),
-    path(
-        "interfaces/disconnect/",
-        views.InterfaceBulkDisconnectView.as_view(),
-        name="interface_bulk_disconnect",
-    ),
-    path(
-        "interfaces/delete/",
-        views.InterfaceBulkDeleteView.as_view(),
-        name="interface_bulk_delete",
-    ),
-    path("interfaces/<uuid:pk>/", views.InterfaceView.as_view(), name="interface"),
-    path(
-        "interfaces/<uuid:pk>/edit/",
-        views.InterfaceEditView.as_view(),
-        name="interface_edit",
-    ),
-    path(
-        "interfaces/<uuid:pk>/delete/",
-        views.InterfaceDeleteView.as_view(),
-        name="interface_delete",
-    ),
-    path(
-        "interfaces/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="interface_changelog",
-        kwargs={"model": Interface},
-    ),
-    path(
-        "interfaces/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="interface_notes",
-        kwargs={"model": Interface},
-    ),
     path(
         "interfaces/<uuid:pk>/trace/",
         views.PathTraceView.as_view(),
@@ -411,63 +362,6 @@ urlpatterns = [
         name="device_bulk_add_modulebay",
     ),
     # Inventory items
-    path(
-        "inventory-items/",
-        views.InventoryItemListView.as_view(),
-        name="inventoryitem_list",
-    ),
-    path(
-        "inventory-items/add/",
-        views.InventoryItemCreateView.as_view(),
-        name="inventoryitem_add",
-    ),
-    path(
-        "inventory-items/import/",
-        views.InventoryItemBulkImportView.as_view(),  # 3.0 TODO: remove, unused
-        name="inventoryitem_import",
-    ),
-    path(
-        "inventory-items/edit/",
-        views.InventoryItemBulkEditView.as_view(),
-        name="inventoryitem_bulk_edit",
-    ),
-    path(
-        "inventory-items/rename/",
-        views.InventoryItemBulkRenameView.as_view(),
-        name="inventoryitem_bulk_rename",
-    ),
-    path(
-        "inventory-items/delete/",
-        views.InventoryItemBulkDeleteView.as_view(),
-        name="inventoryitem_bulk_delete",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/",
-        views.InventoryItemView.as_view(),
-        name="inventoryitem",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/edit/",
-        views.InventoryItemEditView.as_view(),
-        name="inventoryitem_edit",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/delete/",
-        views.InventoryItemDeleteView.as_view(),
-        name="inventoryitem_delete",
-    ),
-    path(
-        "inventory-items/<uuid:pk>/changelog/",
-        ObjectChangeLogView.as_view(),
-        name="inventoryitem_changelog",
-        kwargs={"model": InventoryItem},
-    ),
-    path(
-        "inventory-items/<uuid:pk>/notes/",
-        ObjectNotesView.as_view(),
-        name="inventoryitem_notes",
-        kwargs={"model": InventoryItem},
-    ),
     path(
         "devices/inventory-items/add/",
         views.DeviceBulkAddInventoryItemView.as_view(),

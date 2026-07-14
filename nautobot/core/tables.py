@@ -522,6 +522,8 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return_url_extra="",
         **kwargs,
     ):
+        if buttons is None:
+            buttons = self.buttons
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
         edit_route = get_route_for_model(model, "edit")
@@ -545,7 +547,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
         self.extra_context.update(
             {
-                "buttons": buttons or self.buttons,
+                "buttons": buttons,
                 "return_url_extra": return_url_extra,
             }
         )

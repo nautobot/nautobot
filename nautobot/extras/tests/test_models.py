@@ -7,6 +7,7 @@ import uuid
 from zoneinfo import ZoneInfo
 
 from django import forms as django_forms
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -2205,6 +2206,46 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(self.app_job.class_path, "example_app.jobs.ExampleJob")
         self.assertEqual(self.app_job.class_path, self.app_job.job_class.class_path)
 
+    def test_source_version_system_job(self):
+        system_job = JobModel.objects.get(job_class_name="ExportObjectList")
+        self.assertEqual(system_job.source_version, settings.VERSION)
+
+    def test_source_version_app_job(self):
+        expected = apps.get_app_config("example_app").version
+        # Guard against a vacuous pass if example_app ever stops declaring a version
+        self.assertNotEqual(expected, "")
+        self.assertEqual(self.app_job.source_version, expected)
+
+    def test_source_version_jobs_root_job(self):
+        self.assertEqual(self.local_job.source_version, "")
+
+    def test_source_version_git_job(self):
+        repo = GitRepository(
+            name="Source Version Test Repo",
+            slug="source_version_test_repo",
+            remote_url="http://localhost/git.git",
+            current_head="0123456789abcdef0123456789abcdef01234567",
+        )
+        repo.validated_save()
+        # A fresh instance so that the git_repository cached_property hasn't been populated yet;
+        # module_name is only changed in memory as source_version reads nothing else from the record.
+        job = JobModel.objects.get(pk=self.local_job.pk)
+        job.module_name = f"{repo.slug}.jobs.my_job"
+        self.assertEqual(job.source_version, repo.current_head)
+
+    def test_source_version_app_precedence_over_git_repository(self):
+        # A GitRepository slug shadowing an installed module is rejected by clean()
+        # (see GitRepositoryTest.test_no_module_clobbering), so bypass validation with save()
+        # to simulate legacy data and prove that the App source takes precedence.
+        repo = GitRepository(
+            name="Shadowing Repo",
+            slug="example_app",
+            remote_url="http://localhost/git.git",
+            current_head="0123456789abcdef0123456789abcdef01234567",
+        )
+        repo.save()
+        self.assertEqual(self.app_job.source_version, apps.get_app_config("example_app").version)
+
     def test_latest_result(self):
         self.assertEqual(self.local_job.latest_result, self.local_job.job_results.only("status").first())
         self.assertEqual(self.app_job.latest_result, self.app_job.job_results.only("status").first())
@@ -2416,7 +2457,6 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         self.assertNotIsInstance(mt.to_form_field(), django_forms.Field)
 
     def test_to_form_field_integer_returns_integer_field(self):
-
         mt = MetadataType.objects.create(name="MT int", data_type=MetadataTypeDataTypeChoices.TYPE_INTEGER)
         field = mt.to_form_field(initial=42)
         self.assertIs(type(field), django_forms.IntegerField)
@@ -2424,14 +2464,12 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         self.assertFalse(field.required)
 
     def test_to_form_field_float_returns_float_field(self):
-
         mt = MetadataType.objects.create(name="MT float", data_type=MetadataTypeDataTypeChoices.TYPE_FLOAT)
         field = mt.to_form_field(initial=1.5)
         self.assertIs(type(field), django_forms.FloatField)
         self.assertEqual(field.initial, 1.5)
 
     def test_to_form_field_boolean_returns_nullboolean_field(self):
-
         mt = MetadataType.objects.create(name="MT bool", data_type=MetadataTypeDataTypeChoices.TYPE_BOOLEAN)
         field = mt.to_form_field(initial=False)
         self.assertIs(type(field), django_forms.NullBooleanField)
@@ -2441,19 +2479,16 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         self.assertIn(False, widget_choices)
 
     def test_to_form_field_date_returns_nullable_date_field(self):
-
         mt = MetadataType.objects.create(name="MT date", data_type=MetadataTypeDataTypeChoices.TYPE_DATE)
         field = mt.to_form_field()
         self.assertIs(type(field), NullableDateField)
 
     def test_to_form_field_datetime_returns_datetime_field(self):
-
         mt = MetadataType.objects.create(name="MT datetime", data_type=MetadataTypeDataTypeChoices.TYPE_DATETIME)
         field = mt.to_form_field()
         self.assertIs(type(field), django_forms.DateTimeField)
 
     def test_to_form_field_url_returns_lax_url_field(self):
-
         mt = MetadataType.objects.create(name="MT url", data_type=MetadataTypeDataTypeChoices.TYPE_URL)
         field = mt.to_form_field()
         self.assertIs(type(field), LaxURLField)
@@ -2466,13 +2501,11 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(field.initial, "hello")
 
     def test_to_form_field_markdown_returns_comment_field(self):
-
         mt = MetadataType.objects.create(name="MT md", data_type=MetadataTypeDataTypeChoices.TYPE_MARKDOWN)
         field = mt.to_form_field()
         self.assertIs(type(field), CommentField)
 
     def test_to_form_field_select_returns_choice_field_with_choices(self):
-
         mt = MetadataType.objects.create(name="MT select", data_type=MetadataTypeDataTypeChoices.TYPE_SELECT)
         MetadataChoice.objects.create(metadata_type=mt, value="alpha")
         MetadataChoice.objects.create(metadata_type=mt, value="beta")
@@ -2484,7 +2517,6 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         self.assertIn("beta", choice_values)
 
     def test_to_form_field_multiselect_returns_multiple_choice_field(self):
-
         mt = MetadataType.objects.create(name="MT multiselect", data_type=MetadataTypeDataTypeChoices.TYPE_MULTISELECT)
         MetadataChoice.objects.create(metadata_type=mt, value="x")
         MetadataChoice.objects.create(metadata_type=mt, value="y")
@@ -2495,7 +2527,6 @@ class MetadataTypeTest(ModelTestCases.BaseModelTestCase):
         self.assertEqual(set(choice_values), {"x", "y"})
 
     def test_to_form_field_json_falls_back_to_jsonformfield(self):
-
         mt = MetadataType.objects.create(name="MT json", data_type=MetadataTypeDataTypeChoices.TYPE_JSON)
         field = mt.to_form_field()
         self.assertIs(type(field), JSONFormField)
@@ -4787,6 +4818,34 @@ class JobResultTestCase(TestCase):
         with self.subTest("Returns None when JobQueue does not exist"):
             self.job_result.celery_kwargs = {"queue": "does-not-exist"}
             self.assertIsNone(self.job_result.queue_type)
+
+    def test__is_deletable_property(self):
+        """_is_deletable should be False for unready results and True once the result is finished."""
+
+        with self.subTest("Not deletable while pending"):
+            self.job_result.status = JobResultStatusChoices.STATUS_PENDING
+            self.job_result.save()
+            self.assertFalse(self.job_result._is_deletable)
+
+        with self.subTest("Not deletable while started"):
+            self.job_result.status = JobResultStatusChoices.STATUS_STARTED
+            self.job_result.save()
+            self.assertFalse(self.job_result._is_deletable)
+
+        with self.subTest("Deletable once succeeded"):
+            self.job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+            self.job_result.save()
+            self.assertTrue(self.job_result._is_deletable)
+
+        with self.subTest("Deletable once failed"):
+            self.job_result.status = JobResultStatusChoices.STATUS_FAILURE
+            self.job_result.save()
+            self.assertTrue(self.job_result._is_deletable)
+
+        with self.subTest("Deletable once revoked"):
+            self.job_result.status = JobResultStatusChoices.STATUS_REVOKED
+            self.job_result.save()
+            self.assertTrue(self.job_result._is_deletable)
 
 
 class WebhookTest(ModelTestCases.BaseModelTestCase):

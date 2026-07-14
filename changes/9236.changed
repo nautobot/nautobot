@@ -1,0 +1,1 @@
+Changed behavior of Cable create/edit form to entirely omit endpoints that are already connected to a different cable, instead of the previous behavior of displaying them but disabling them as options.
