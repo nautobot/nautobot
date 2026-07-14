@@ -1,4 +1,5 @@
 import logging
+import re
 from textwrap import dedent
 
 from django.contrib.contenttypes.models import ContentType
@@ -1133,12 +1134,12 @@ def log_entry_color_css(record):
 
 class JobTable(BaseTable):
     pk = ToggleColumn()
-    source = tables.Column()
     # grouping is used to, well, group the Jobs, so it isn't a column of its own.
     name = tables.Column(
         attrs={"a": {"class": "job_run", "title": "Run/Schedule"}},
         linkify=("extras:job_run", {"pk": tables.A("pk")}),
     )
+    source_version = tables.Column(orderable=False)
     installed = BooleanColumn()
     enabled = BooleanColumn()
     has_sensitive_variables = BooleanColumn()
@@ -1182,13 +1183,19 @@ class JobTable(BaseTable):
             value,
         )
 
+    def render_source_version(self, value):
+        """Abbreviate Git commit hashes to their familiar short form, with the full hash as hover text."""
+        if re.fullmatch(r"[0-9a-fA-F]{20,}", value):
+            return format_html('<span title="{}">{}</span>', value, value[:7])
+        return value
+
     class Meta(BaseTable.Meta):
         model = JobModel
         orderable = False
         fields = (
             "pk",
-            "source",
             "name",
+            "source_version",
             "installed",
             "enabled",
             "has_sensitive_variables",

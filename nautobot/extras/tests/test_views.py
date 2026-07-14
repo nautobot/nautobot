@@ -5,6 +5,7 @@ from unittest import mock
 import urllib.parse
 import uuid
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -5573,6 +5574,13 @@ class JobTestCase(
         """
         queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
         return get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+
+    def test_job_detail_source_version(self):
+        """The Job detail view renders the Job's source_version in the Source Code panel."""
+        self.add_permissions("extras.view_job")
+        instance = Job.objects.get(job_class_name="ExampleJob")
+        response = self.client.get(instance.get_absolute_url())
+        self.assertBodyContains(response, apps.get_app_config("example_app").version)
 
     def test_delete_system_jobs_fail(self):
         instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
