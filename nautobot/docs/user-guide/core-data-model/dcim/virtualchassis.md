@@ -276,7 +276,7 @@ erDiagram
 
 The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same two-member virtual chassis as the Sample API above (`jcy-vc01`). It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"` and `deferred: true` so the master assignment happens after both objects exist, and the primary IPv4 address is similarly deferred until interface and IP assignments are in place. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`.
 
-TODO: review `connect_cable` design builder extenstion post
+TODO: review `connect_cable` design builder extenstion post 3.2 release
 
 ??? example "Show Design Builder YAML"
 
@@ -638,7 +638,7 @@ Given the data model, what questions would a user ask?
 
 === "Dual-chassis Single Control Plane"
 
-    Dual-chassis Single Control Plane VSS / StackWise Virtual (Cisco)
+    Operating systems and technologies include Dual-chassis Single Control Plane VSS / StackWise Virtual (Cisco)
 
 
     A config template driven entirely by the GraphQL response above. Each member becomes a virtual-switch identity, and every LAG is rendered as a port channel with its member interfaces.
@@ -706,7 +706,7 @@ Given the data model, what questions would a user ask?
 
 === "Multi-Chassis Stack"
 
-    Multi-chassis Stack Stackwise / Virtual Chassis / Arista Stack / HPE IRF / Extreme SummitStack
+    Operating systems and technologies include Multi-chassis Stack Stackwise / Virtual Chassis / Arista Stack / HPE IRF / Extreme SummitStack
 
     A config template driven entirely by the GraphQL response above. Member priority drives master election and `vc_position` renumbers each member; management is configured once on the master, and the uplink LAG becomes a trunked port channel.
 

@@ -127,6 +127,8 @@ The below Python snippet is intended to work by dropping it into a iPython shell
     ROOT_NAME = "jcy"
     MGMT_PREFIX = "192.168.1.0/24"
     FAILOVER_PREFIX = "172.27.48.0/31"
+    EXTERNAL_PREFIX = "203.0.113.0/25"
+    INTERNAL_PREFIX = "203.0.113.128/25"
     DEVICE_TYPE_MODEL = "N9K-C9372TX"
 
     LOCATION_NAME = f"{ROOT_NAME.upper()}"
@@ -136,9 +138,29 @@ The below Python snippet is intended to work by dropping it into a iPython shell
     DEVICE_1_NAME = f"{ROOT_NAME}-drg-rt01"
     DEVICE_2_NAME = f"{ROOT_NAME}-drg-rt02"
 
+    # Floating (virtual) IPs shared by the pair, modeled as each group's `virtual_ip`.
+    VIP_INTERFACES = {
+        "external": "203.0.113.20/25",
+        "internal": "203.0.113.150/25",
+    }
+
     DEVICES = [
-        {"name": DEVICE_1_NAME, "priority": 100, "mgmt_ip": "192.168.1.20/24", "failover_ip": "172.27.48.0/31"},
-        {"name": DEVICE_2_NAME, "priority": 50, "mgmt_ip": "192.168.1.21/24", "failover_ip": "172.27.48.1/31"},
+        {
+            "name": DEVICE_1_NAME,
+            "priority": 100,
+            "mgmt_ip": "192.168.1.20/24",
+            "failover_ip": "172.27.48.0/31",
+            "external_ip": "203.0.113.10/25",
+            "internal_ip": "203.0.113.140/25",
+        },
+        {
+            "name": DEVICE_2_NAME,
+            "priority": 50,
+            "mgmt_ip": "192.168.1.21/24",
+            "failover_ip": "172.27.48.1/31",
+            "external_ip": "203.0.113.11/25",
+            "internal_ip": "203.0.113.141/25",
+        },
     ]
 
     nb = pynautobot.api(url=NAUTOBOT_URL, token=NAUTOBOT_TOKEN)
@@ -172,7 +194,7 @@ The below Python snippet is intended to work by dropping it into a iPython shell
     print("Seeding prerequisites...")
     role = nb.extras.roles.get(name=ROLE_NAME)
 
-    for prefix in (MGMT_PREFIX, FAILOVER_PREFIX):
+    for prefix in (MGMT_PREFIX, FAILOVER_PREFIX, EXTERNAL_PREFIX, INTERNAL_PREFIX):
         _, created = get_or_create(
             nb.ipam.prefixes, {"prefix": prefix, "namespace": namespace.id}, {"status": active.id}
         )
@@ -190,6 +212,7 @@ The below Python snippet is intended to work by dropping it into a iPython shell
     log(created, "DeviceRedundancyGroup", drg.name)
 
     lag_ids = {}
+    vip_interface_ids = {}
     for spec in DEVICES:
         print(f"Seeding {spec['name']}...")
         device, created = get_or_create(
@@ -249,6 +272,24 @@ The below Python snippet is intended to work by dropping it into a iPython shell
         )
         log(created, "IP assignment", f"{failover_ip.address} -> {device.name} failover-link")
 
+        for vip_name in VIP_INTERFACES:
+            vip_interface, created = get_or_create(
+                nb.dcim.interfaces,
+                {"device": device.id, "name": vip_name},
+                {"type": "1000base-t", "status": active.id, "description": f"{vip_name.capitalize()} traffic interface"},
+            )
+            log(created, "Interface", f"{device.name} {vip_name}")
+            vip_interface_ids[(device.name, vip_name)] = vip_interface.id
+
+            self_ip, created = get_or_create(
+                nb.ipam.ip_addresses, {"address": spec[f"{vip_name}_ip"], "namespace": namespace.id}, {"status": active.id}
+            )
+            log(created, "IPAddress", str(self_ip.address))
+            _, created = get_or_create(
+                nb.ipam.ip_address_to_interface, {"interface": vip_interface.id, "ip_address": self_ip.id}
+            )
+            log(created, "IP assignment", f"{self_ip.address} -> {device.name} {vip_name}")
+
         po10, created = get_or_create(
             nb.dcim.interfaces,
             {"device": device.id, "name": "Port-Channel10"},
@@ -267,11 +308,11 @@ The below Python snippet is intended to work by dropping it into a iPython shell
             if member.lag is None:
                 member.update({"lag": po10.id})
 
-    print("Seeding interface redundancy group...")
+    print("Seeding interface redundancy groups...")
     irg, created = get_or_create(
         nb.dcim.interface_redundancy_groups,
         {"name": IRG_NAME},
-        {"status": active.id, "protocol": "vrrp", "protocol_group_id": "10"},
+        {"status": active.id, "protocol_group_id": "10"},
     )
     log(created, "InterfaceRedundancyGroup", irg.name)
 
@@ -282,6 +323,27 @@ The below Python snippet is intended to work by dropping it into a iPython shell
             {"priority": spec["priority"]},
         )
         log(created, "IRG association", f"{spec['name']} Port-Channel10 (priority {spec['priority']})")
+
+    for vip_name, vip_address in VIP_INTERFACES.items():
+        virtual_ip, created = get_or_create(
+            nb.ipam.ip_addresses, {"address": vip_address, "namespace": namespace.id}, {"status": active.id}
+        )
+        log(created, "IPAddress", str(virtual_ip.address))
+
+        vip_irg, created = get_or_create(
+            nb.dcim.interface_redundancy_groups,
+            {"name": f"{ROOT_NAME}-drg-rt01:02-{vip_name}"},
+            {"status": active.id, "virtual_ip": virtual_ip.id},
+        )
+        log(created, "InterfaceRedundancyGroup", vip_irg.name)
+
+        for spec in DEVICES:
+            _, created = get_or_create(
+                nb.dcim.interface_redundancy_group_associations,
+                {"interface_redundancy_group": vip_irg.id, "interface": vip_interface_ids[(spec["name"], vip_name)]},
+                {"priority": spec["priority"]},
+            )
+            log(created, "IRG association", f"{spec['name']} {vip_name} (priority {spec['priority']})")
 
     ```
 
@@ -395,7 +457,7 @@ The following [Design Builder](https://docs.nautobot.com/projects/design-builder
 The following query retrieves a device redundancy group by name, without needing to know any of the member hostnames up front. It is built to answer the "Questions to ask of the data model" below in a single call.
 
 !!! note
-    The `failover_links: interfaces(name__ie: "failover-link")` is a convention, this would work in a scenario where you defined your interface to be named `failover-link`. You can choose other methods (such as a tag or role) and would need to update accordingly.
+    The `failover_links: interfaces(name__ie: "failover-link")` and `vip_interfaces: interfaces(name: ["external", "internal"])` filters are conventions, these would work in a scenario where you defined your interfaces to use those names. You can choose other methods (such as a tag or role) and would need to update accordingly.
 
 ```graphql
 query ($redundancy_group: [String]) {
@@ -414,7 +476,7 @@ query ($redundancy_group: [String]) {
       primary_ip4 {
         address
       }
-      lag_interfaces: interfaces (interface_redundancy_groups__isnull: false, lag__isnull: true) {
+      lag_interfaces: interfaces (type: "lag", interface_redundancy_groups__isnull: false) {
         name
         interface_redundancy_groups {
           name
@@ -430,6 +492,18 @@ query ($redundancy_group: [String]) {
         ip_addresses {
           host
           mask_length
+        }
+      }
+      vip_interfaces: interfaces(name: ["external", "internal"]) {
+        name
+        ip_addresses {
+          address
+        }
+        interface_redundancy_groups {
+          name
+          virtual_ip {
+            address
+          }
         }
       }
     }
@@ -495,6 +569,40 @@ An example of the data returned from Nautobot is presented below.
                   }
                 ]
               }
+            ],
+            "vip_interfaces": [
+              {
+                "name": "external",
+                "ip_addresses": [
+                  {
+                    "address": "203.0.113.10/25"
+                  }
+                ],
+                "interface_redundancy_groups": [
+                  {
+                    "name": "jcy-drg-rt01:02-external",
+                    "virtual_ip": {
+                      "address": "203.0.113.20/25"
+                    }
+                  }
+                ]
+              },
+              {
+                "name": "internal",
+                "ip_addresses": [
+                  {
+                    "address": "203.0.113.140/25"
+                  }
+                ],
+                "interface_redundancy_groups": [
+                  {
+                    "name": "jcy-drg-rt01:02-internal",
+                    "virtual_ip": {
+                      "address": "203.0.113.150/25"
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
@@ -530,6 +638,40 @@ An example of the data returned from Nautobot is presented below.
                   {
                     "host": "172.27.48.1",
                     "mask_length": 31
+                  }
+                ]
+              }
+            ],
+            "vip_interfaces": [
+              {
+                "name": "external",
+                "ip_addresses": [
+                  {
+                    "address": "203.0.113.11/25"
+                  }
+                ],
+                "interface_redundancy_groups": [
+                  {
+                    "name": "jcy-drg-rt01:02-external",
+                    "virtual_ip": {
+                      "address": "203.0.113.20/25"
+                    }
+                  }
+                ]
+              },
+              {
+                "name": "internal",
+                "ip_addresses": [
+                  {
+                    "address": "203.0.113.141/25"
+                  }
+                ],
+                "interface_redundancy_groups": [
+                  {
+                    "name": "jcy-drg-rt01:02-internal",
+                    "virtual_ip": {
+                      "address": "203.0.113.150/25"
+                    }
                   }
                 ]
               }
@@ -570,6 +712,7 @@ Given the data model, what questions would a user ask?
 - Given a redundancy group, I would like to know which credentials (Secrets Group) to use to access its members.
 - Given a member device, I would like to know which interfaces form the HA/failover/peer link, and which port on the peer they connect to (via cables).
 - Given a multi-chassis port channel (vPC/MLAG), I would like to know the corresponding LAG on the peer device (via their shared interface redundancy group).
+- Given a member device, I would like to know the floating (virtual) IPs it shares with its peer (via its interfaces' interface redundancy groups).
 - Given a controller, I would like to know whether it is deployed on a device redundancy group rather than a single device.
 
 !!! tip
@@ -659,265 +802,51 @@ Given the data model, what questions would a user ask?
 
 === "HA pairs"
 
-    Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Versa, and Silver Peak.
+    Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Versa, and Silver Peak. F5 BIG-IP is shown as the representative example.
 
-    ??? data "For the templating below this was added to the GraphQL query for simplicity."
+    A config template driven entirely by the GraphQL response above. Each unit renders its own self IPs from its `vip_interfaces`, the failover link doubles as the ConfigSync/heartbeat/mirroring address, and each floating self IP is read from the interface's interface redundancy group `virtual_ip` — the shared address is modeled once on the group instead of being derived in the template.
 
-        ```
-          interfaces {
-            name
-            ip_addresses {
-              float: parent {
-                network
-                prefix_length
-              }
-              address
-            }
-          }
-          ```
-
-    ### Configuration Generation
-
-    ??? data "GraphQL data returned"
-
-        ```json
-        {
-          "data": {
-            "device_redundancy_groups": [
-              {
-                "name": "ANY01-bigip-drg",
-                "failover_strategy": "ACTIVE_PASSIVE",
-                "secrets_group": null,
-                "controllers": [],
-                "devices": [
-                  {
-                    "name": "bigip1",
-                    "device_redundancy_group_priority": 1,
-                    "primary_ip4": {
-                      "address": "192.0.2.10/24"
-                    },
-                    "interfaces": [
-                      {
-                        "name": "HA",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "198.51.100.0",
-                              "prefix_length": 24
-                            },
-                            "address": "198.51.100.10/24"
-                          }
-                        ]
-                      },
-                      {
-                        "name": "MGMT",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "192.0.2.0",
-                              "prefix_length": 24
-                            },
-                            "address": "192.0.2.10/24"
-                          }
-                        ]
-                      },
-                      {
-                        "name": "external",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "203.0.113.0",
-                              "prefix_length": 25
-                            },
-                            "address": "203.0.113.10/25"
-                          }
-                        ]
-                      },
-                      {
-                        "name": "internal",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "203.0.113.128",
-                              "prefix_length": 25
-                            },
-                            "address": "203.0.113.140/25"
-                          }
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    "name": "bigip2",
-                    "device_redundancy_group_priority": 2,
-                    "primary_ip4": {
-                      "address": "192.0.2.11/24"
-                    },
-                    "interfaces": [
-                      {
-                        "name": "HA",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "198.51.100.0",
-                              "prefix_length": 24
-                            },
-                            "address": "198.51.100.11/24"
-                          }
-                        ]
-                      },
-                      {
-                        "name": "MGMT",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "192.0.2.0",
-                              "prefix_length": 24
-                            },
-                            "address": "192.0.2.11/24"
-                          }
-                        ]
-                      },
-                      {
-                        "name": "external",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "203.0.113.0",
-                              "prefix_length": 25
-                            },
-                            "address": "203.0.113.11/25"
-                          }
-                        ]
-                      },
-                      {
-                        "name": "internal",
-                        "ip_addresses": [
-                          {
-                            "float": {
-                              "network": "203.0.113.128",
-                              "prefix_length": 25
-                            },
-                            "address": "203.0.113.141/25"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        }
-        ```
-
-    The template to generate both F5 configurations for Active and Passive.
+    !!! note
+        The example device names (`jcy-drg-rt01`/`jcy-drg-rt02`) read more like routers than load balancers, they come from the shared GraphQL example above so that a single dataset drives all three templates. Substitute your own naming standard; the rendered configuration is otherwise unaffected.
 
     ```jinja2
     {% set group = data.device_redundancy_groups[0] %}
-    {% for device in group.devices %}
+    {% set ordered = group.devices | sort(attribute="device_redundancy_group_priority", reverse=true) %}
+    {% set primary = ordered | first %}
+    {% for device in ordered %}
     {% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
+    {% set ha = device.failover_links[0] %}
+    {% set ha_ip = ha.ip_addresses[0].host %}
+    # ~~~~~ {{ device.name }} ({{ "Primary/Active" if device.name == primary.name else "Secondary/Standby" }}) ~~~~~
 
-    modify sys global-settings hostname {{ device.name }}{{ device}}
+    modify sys global-settings hostname {{ device.name }}
     mv cm device bigip1 {{ device.name }}
 
-    {% for interface in device.interfaces %}
-    {% if "external" in interface.name %}
-    create net vlan {{ interface.name }} interfaces add { 1.1 }
+    create net vlan {{ ha.name }} interfaces add { 1.1 }
+    create net self {{ ha.name }}-self address {{ ha_ip }}/{{ ha.ip_addresses[0].mask_length }} vlan {{ ha.name }}
+    {% for interface in device.vip_interfaces %}
+    create net vlan {{ interface.name }} interfaces add { 1.{{ loop.index + 1 }} }
     create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
-
-    {% elif "HA" in interface.name %}
-    create net vlan {{ interface.name }} interfaces add { 1.2 }
-    create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
-    modify cm device {{ device.name }} configsync-ip {{ interface.ip_addresses[0].address.split("/")[0] }}
-    modify cm device {{ device.name }} unicast-address { { ip {{ interface.ip_addresses[0].address.split("/")[0] }} } { ip {{ device.primary_ip4.address.split("/")[0] }} } }
-    modify cm device {{ device.name }} mirror-ip {{ interface.ip_addresses[0].address.split("/")[0] }}
-    {% elif "internal" in interface.name %}
-    create net vlan {{ interface.name }} interfaces add { 1.3 }
-    create net self {{ interface.name }}-self address {{ interface.ip_addresses[0].address }} vlan {{ interface.name }}
-    {% endif %}
     {% endfor %}
 
+    modify cm device {{ device.name }} configsync-ip {{ ha_ip }}
+    modify cm device {{ device.name }} unicast-address { { ip {{ ha_ip }} } { ip {{ device.primary_ip4.address.split("/")[0] }} } }
+    modify cm device {{ device.name }} mirror-ip {{ ha_ip }}
+    {% if device.name == primary.name %}
 
-    {% if device.device_redundancy_group_priority == 1 %}
     modify cm trust-domain Root ca-devices add { {{ peer.primary_ip4.address.split("/")[0] }} } name {{ peer.name }} username admin password <peer-admin-password>
     create cm device-group HA-group devices add { {{ device.name }} {{ peer.name }} } type sync-failover auto-sync enabled network-failover enabled
     run cm config-sync to-group HA-group
-
-    {% for interface in device.interfaces %}
-    {% if "external" in interface.name %}
-    create net self {{ interface.name }}-float address {{ interface.ip_addresses[0]["float"]["network"].split(".")[:3] | join(".") }}.20/{{ interface.ip_addresses[0]["float"]["prefix_length"] }} vlan {{ interface.name }} traffic-group traffic-group-1
-    {% elif "internal" in interface.name %}
-    create net self {{ interface.name }}-float address {{ interface.ip_addresses[0]["float"]["network"].split(".")[:3] | join(".") }}.150/{{ interface.ip_addresses[0]["float"]["prefix_length"] }} vlan {{ interface.name }} traffic-group traffic-group-1
-    {% endif %}
+    {% for interface in device.vip_interfaces %}
+    create net self {{ interface.name }}-float address {{ interface.interface_redundancy_groups[0].virtual_ip.address }} vlan {{ interface.name }} traffic-group traffic-group-1
     {% endfor %}
     {% endif %}
+
     {% endfor %}
     ```
 
-    _Full Configuration for HA Pair_
-
-
-    1. Device A (Primary)
-
-        ```
-        # Set hostname.
-        modify sys global-settings hostname bigip1
-        mv cm device bigip1 bigip1
-
-        # Create the HA VLAN + self IP — the dedicated link used for sync and heartbeats.
-        create net vlan HA interfaces add { 1.2 }
-        create net self HA-self address 198.51.100.10/24 vlan HA
-        create net vlan external interfaces add { 1.1 }
-        create net self external-self address 203.0.113.10/25 vlan external
-        create net vlan internal interfaces add { 1.3 }
-        create net self internal-self address 203.0.113.140/25 vlan internal
-
-        # Set the ConfigSync address — where config is pushed/pulled.
-        modify cm device bigip1 configsync-ip 198.51.100.10
-
-        # Set failover (unicast) addresses — heartbeat over the HA link, with mgmt as backup path.
-        modify cm device bigip1 unicast-address { { ip 198.51.100.10 } { ip 192.0.2.10 } }
-
-        # Set the mirroring address — for connection mirroring (optional but recommended).
-        modify cm device bigip1 mirror-ip 198.51.100.10
-
-        # Establish device trust (one device only) — point at the peer's management IP and admin creds.
-        modify cm trust-domain Root ca-devices add { 192.0.2.11 } name bigip2 username admin password <peer-admin-password>
-
-        # Create the sync-failover device group (one device only) — this is the HA pair itself.
-        create cm device-group HA-group devices add { bigip1 bigip2 } type sync-failover auto-sync enabled network-failover enabled
-        run cm config-sync to-group HA-group
-
-        # Create the floating self IP (one device only) — lives in traffic-group-1, moves to whichever unit is active.
-        create net self external-float address 203.0.113.20/25 vlan external traffic-group traffic-group-1
-        create net self internal-float address 203.0.113.20/25 vlan internal traffic-group traffic-group-1
-        ```
-
-    2. Device B (Standby)
-
-        ```
-        # Set hostname.
-        modify sys global-settings hostname bigip2
-        mv cm device bigip1 bigip2
-
-        # Create the HA VLAN + self IP — the dedicated link used for sync and heartbeats.
-        create net vlan HA interfaces add { 1.2 }
-        create net self HA-self address 198.51.100.11/24 vlan HA
-        create net vlan external interfaces add { 1.1 }
-        create net self external-self address 203.0.113.11/25 vlan external
-        create net vlan internal interfaces add { 1.3 }
-        create net self internal-self address 203.0.113.141/25 vlan internal
-
-        # Set the ConfigSync address — where config is pushed/pulled.
-        modify cm device bigip2 configsync-ip 198.51.100.10
-
-        # Set failover (unicast) addresses — heartbeat over the HA link, with mgmt as backup path.
-        modify cm device bigip2 unicast-address { { ip 198.51.100.10 } { ip 192.0.2.11 } }
-
-        # Set the mirroring address — for connection mirroring (optional but recommended).
-        modify cm device bigip2 mirror-ip 198.51.100.10
-        ```
+    !!! note
+        Device trust, the sync-failover device group, and the floating self IPs are configured on the primary only (highest `device_redundancy_group_priority`) — once trust is established, ConfigSync replicates them to the standby. `mv cm device bigip1 ...` renames the factory-default device object to the unit's hostname, and the VLAN-to-port mapping (`1.1`, `1.2`, ...) is positional by convention — adjust it to your hardware.
 
 ## Generating the Configuration
 
