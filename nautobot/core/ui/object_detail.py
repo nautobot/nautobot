@@ -1232,9 +1232,9 @@ class ObjectsTablePanel(Panel):
         if context_cache is None:
             context_cache = {}
             request._objects_table_panel_extra_context = context_cache
-        if id(self) not in context_cache:
-            context_cache[id(self)] = self._build_extra_context(context)
-        return context_cache[id(self)]
+        if self.component_id not in context_cache:
+            context_cache[self.component_id] = self._build_extra_context(context)
+        return context_cache[self.component_id]
 
     def _build_extra_context(self, context: Context):
         """Build the render context for this table panel. See `get_extra_context()` for caching details."""
