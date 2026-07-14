@@ -1259,9 +1259,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         """The dispatch() interface guard is gated on the action: a `list` request with a bad
         ?interface=<pk> must render the list (HTTP 200), not validate/redirect like add/edit/assign do."""
         self.add_permissions("ipam.view_ipaddress")
-        response = self.client.get(
-            reverse("ipam:ipaddress_list") + "?interface=00000000-0000-0000-0000-000000000000"
-        )
+        response = self.client.get(reverse("ipam:ipaddress_list") + "?interface=00000000-0000-0000-0000-000000000000")
         self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])

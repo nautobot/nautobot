@@ -1322,9 +1322,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         # self.action isn't set until super().dispatch() runs initialize_request(), so resolve the action
         # for this request from action_map here.
         action = getattr(self, "action_map", {}).get(request.method.lower())
-        if action in ("create", "update", "assign") and (
-            "interface" in request.GET or "vminterface" in request.GET
-        ):
+        if action in ("create", "update", "assign") and ("interface" in request.GET or "vminterface" in request.GET):
             _, error_msg = retrieve_interface_or_vminterface_from_request(request)
             if error_msg:
                 messages.warning(request, error_msg)
