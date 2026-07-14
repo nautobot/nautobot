@@ -1204,6 +1204,43 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertFalse(IPAddress.objects.filter(parent__namespace=empty_namespace).exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_with_required_custom_field(self):
+        """Regression for nautobot#9148: a required custom field must not break the bulk-add flow.
+
+        The pattern form (IPAddressBulkCreateForm) only defines `pattern`, so a per-instance error on a
+        `cf_*` field must not raise "has no field named ...". With the value supplied the IPs are created
+        and the custom field persists; with it missing the form re-renders (HTTP 200), never a 500.
+        """
+        self.add_permissions("ipam.add_ipaddress")
+        cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Bulk Add Required CF", required=True
+        )
+        cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        base_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[20-22]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+
+        # Missing required CF: must re-render with an error (HTTP 200), not the #9148 ValueError/500.
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(base_data))
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(IPAddress.objects.filter(host="192.0.2.20").exists())
+
+        # CF supplied: all IPs are created and the value persists on each.
+        response = self.client.post(
+            reverse("ipam:ipaddress_bulk_add"),
+            data=post_data({**base_data, f"cf_{cf.key}": "present"}),
+        )
+        self.assertHttpStatus(response, 302)
+        created = IPAddress.objects.filter(host__in=["192.0.2.20", "192.0.2.21", "192.0.2.22"])
+        self.assertEqual(created.count(), 3)
+        for ip in created:
+            self.assertEqual(ip.cf[cf.key], "present")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_assign_without_interface_redirects(self):
         """GET on the assign endpoint with no interface/vminterface redirects to the add page."""
         self.add_permissions("ipam.add_ipaddress")
@@ -1216,6 +1253,16 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.add_permissions("ipam.add_ipaddress")
         response = self.client.get(reverse("ipam:ipaddress_assign") + "?interface=00000000-0000-0000-0000-000000000000")
         self.assertHttpStatus(response, 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_ignores_interface_query_param(self):
+        """The dispatch() interface guard is gated on the action: a `list` request with a bad
+        ?interface=<pk> must render the list (HTTP 200), not validate/redirect like add/edit/assign do."""
+        self.add_permissions("ipam.view_ipaddress")
+        response = self.client.get(
+            reverse("ipam:ipaddress_list") + "?interface=00000000-0000-0000-0000-000000000000"
+        )
+        self.assertHttpStatus(response, 200)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @override_config(MAX_PAGE_SIZE=10)
