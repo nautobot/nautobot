@@ -40,7 +40,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
-from nautobot.extras.jobs_revoke import JobLiveness, RevokeFactory
+from nautobot.extras.jobs_cancel import CancelFactory, JobLiveness, user_can_cancel_job_result
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1152,7 +1152,7 @@ class JobResultViewSet(
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
-    class RevokeJobPermission(TokenPermissions):
+    class CancelJobPermission(TokenPermissions):
         """
         Enforce `view_jobresult` permission (instead of default `add_jobresult` for POST).
         """
@@ -1164,11 +1164,11 @@ class JobResultViewSet(
 
     def restrict_queryset(self, request, *args, **kwargs):
         """
-        Apply special permissions as queryset filter on the /revoke/ endpoint.
+        Apply special permissions as queryset filter on the /cancel/ endpoint.
 
         Otherwise, same as ModelViewSetMixin.
         """
-        action_to_method = {"revoke": "view"}
+        action_to_method = {"cancel": "view"}
         if request.user.is_authenticated and self.action in action_to_method:
             self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
         else:
@@ -1184,7 +1184,7 @@ class JobResultViewSet(
     @extend_schema(
         methods=["get"],
         responses={
-            200: serializers.JobResultRevokePreviewSerializer,
+            200: serializers.JobResultCancelPreviewSerializer,
         },
     )
     @extend_schema(
@@ -1193,16 +1193,13 @@ class JobResultViewSet(
             200: serializers.JobResultSerializer,
         },
     )
-    @action(detail=True, methods=["get", "post"], permission_classes=[RevokeJobPermission])
-    def revoke(self, request, pk=None):
-        """Terminate a running or pending Job, or reap it if its worker is gone."""
+    @action(detail=True, methods=["get", "post"], permission_classes=[CancelJobPermission])
+    def cancel(self, request, pk=None):
+        """Cancel a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied("Job can not be revoked by user without permission to run jobs.")
-
-        if job_result.user != request.user and not request.user.is_staff:
-            raise PermissionDenied("Job can be revoked only by the submitter or by staff users.")
+        if not user_can_cancel_job_result(request.user, job_result):
+            raise PermissionDenied("You do not have permission to cancel this job.")
 
         if not job_result.is_unready_state and request.method == "POST":
             return Response(
@@ -1210,7 +1207,7 @@ class JobResultViewSet(
                 status=status.HTTP_409_CONFLICT,
             )
 
-        strategy = RevokeFactory.get_strategy(job_result.queue_type)
+        strategy = CancelFactory.get_strategy(job_result.queue_type)
 
         job_liveness_state = strategy.liveness(job_result)
 
@@ -1218,50 +1215,32 @@ class JobResultViewSet(
             if not job_result.is_unready_state:
                 detail = {
                     "message": f"Job '{job_result.name}' is already finished.",
-                    "action": "None",
-                    "action_description": "Job is already finished. Nothing to do.",
                     "job_status": job_result.status,
                     "timestamp": timezone.now().isoformat(),
                 }
                 return Response(detail, status=status.HTTP_200_OK)
 
-            revoke_info = {
-                JobLiveness.RUNNING: {
-                    "action": "TERMINATE",
-                    "action_description": "SIGKILL to worker. Stops immediately, no cleanup.",
-                    "job_status": "RUNNING",
-                },
-                JobLiveness.NOT_RUNNING: {
-                    "action": "REAP",
-                    "action_description": "No worker running. Marks JobResult as revoked without signal.",
-                    "job_status": "NOT RUNNING",
-                },
-                JobLiveness.UNKNOWN: {
-                    "action": "ABANDON",
-                    "action_description": (
-                        "Backend unreachable. Marks JobResult as revoked without confirming "
-                        "its state. If the job is still running somewhere, it will continue "
-                        "until it finishes on its own."
-                    ),
-                    "job_status": "UNKNOWN",
-                },
+            liveness_display = {
+                JobLiveness.RUNNING: "RUNNING",
+                JobLiveness.NOT_RUNNING: "NOT RUNNING",
+                JobLiveness.UNKNOWN: "UNKNOWN",
             }
             detail = {
-                "message": f"Are you sure you want to revoke '{job_result.name}'?",
-                **revoke_info[job_liveness_state],
+                "message": f"Are you sure you want to cancel '{job_result.name}'?",
+                "job_status": liveness_display[job_liveness_state],
                 "irreversible": "This action cannot be undone.",
                 "timestamp": timezone.now().isoformat(),
             }
             return Response(detail, status=status.HTTP_200_OK)
 
-        result = strategy.revoke(job_result, user=request.user)
+        result = strategy.cancel(job_result, user=request.user)
 
         if result["error"]:
             return Response({"detail": result["error"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        if not result["revoked"]:
+        if not result["canceled"]:
             return Response(
-                {"detail": "Job finished before it could be revoked. No action was taken."},
+                {"detail": "Job finished before it could be canceled. No action was taken."},
                 status=status.HTTP_409_CONFLICT,
             )
 

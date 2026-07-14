@@ -1,11 +1,22 @@
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings
+from django.urls import reverse
 from netaddr import EUI
 
 from nautobot.core.testing import post_data, ViewTestCases
 from nautobot.dcim.choices import InterfaceModeChoices
 from nautobot.dcim.models import Device, Location, LocationType, Platform, SoftwareVersion
-from nautobot.extras.models import ConfigContextSchema, CustomField, Role, Status, Tag
+from nautobot.extras.choices import CustomFieldTypeChoices, DynamicGroupTypeChoices, RelationshipTypeChoices
+from nautobot.extras.models import (
+    ConfigContextSchema,
+    CustomField,
+    DynamicGroup,
+    Relationship,
+    RelationshipAssociation,
+    Role,
+    Status,
+    Tag,
+)
 from nautobot.ipam.models import VLAN, VLANGroup, VRF
 from nautobot.virtualization.factory import ClusterGroupFactory, ClusterTypeFactory
 from nautobot.virtualization.models import (
@@ -385,3 +396,80 @@ class VMInterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         data = self.bulk_create_data.copy()
         data["name_pattern"] = "BRIDGE"
         return data
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_includes_untagged_and_tagged_vlans_in_vlan_table(self):
+        """
+        Cover both branches of VMInterfaceUIViewSet.get_extra_context:
+          - `if instance.untagged_vlan is not None:` body
+          - `for vlan in instance.tagged_vlans.restrict(...)...:` body
+        """
+        interface = VMInterface.objects.filter(virtual_machine__name="Virtual Machine 1").first()
+
+        # Use VLANs created in setUpTestData at "Location 1" so the
+        # `tagged_vlans` location-match validation passes.
+        location_vlans = VLAN.objects.filter(location__name="Location 1")
+        untagged = location_vlans.get(name="VLAN1")
+        tagged = location_vlans.get(name="VLAN101")
+
+        interface.mode = InterfaceModeChoices.MODE_TAGGED
+        interface.untagged_vlan = untagged
+        interface.save()
+        interface.tagged_vlans.set([tagged])
+
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, untagged.name)
+        self.assertBodyContains(response, tagged.name)
+
+    def test_bulk_create_propagates_multiselect_extras(self):
+        """Multi-select "extras" set on the bulk-create form persist on every created component.
+
+        `ComponentCreateViewMixin` borrows the extras fields onto the create form, so each per-instance
+        model form is re-bound from `create_form.cleaned_data` (which holds model instances/QuerySets rather
+        than raw POST strings). This verifies that round-trip for the tricky multi-select model fields --
+        a many-to-many relationship and `dynamic_groups` (which uses `to_field_name="name"`) -- plus a
+        single-value custom field.
+        """
+        self.add_permissions("virtualization.add_vminterface", "extras.add_staticgroupassociation")
+        vm = VirtualMachine.objects.first()
+        status = Status.objects.get_for_model(VMInterface).first()
+        vmi_ct = ContentType.objects.get_for_model(VMInterface)
+
+        custom_field = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="VMI Owner")
+        custom_field.content_types.set([vmi_ct])
+        dynamic_group = DynamicGroup.objects.create(
+            content_type=vmi_ct, name="Static VMI Group", group_type=DynamicGroupTypeChoices.TYPE_STATIC
+        )
+        relationship = Relationship(
+            label="VMI Peers",
+            key="vmi_peers",
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            source_type=vmi_ct,
+            destination_type=vmi_ct,
+        )
+        relationship.validated_save()
+        peer = VMInterface.objects.create(virtual_machine=vm, name="Peer Interface", status=status)
+
+        data = {
+            "virtual_machine": vm.pk,
+            "name_pattern": "Extras Interface [1-2]",
+            "status": status.pk,
+            f"cf_{custom_field.key}": "netops",
+            "dynamic_groups": [dynamic_group.name],  # DynamicModelMultipleChoiceField uses to_field_name="name"
+            f"cr_{relationship.key}__destination": [peer.pk],
+            "_create": True,
+        }
+        response = self.client.post(reverse("virtualization:vminterface_add"), data)
+        self.assertIn(response.status_code, (302, 303))
+
+        created = VMInterface.objects.filter(name__in=["Extras Interface 1", "Extras Interface 2"])
+        self.assertEqual(created.count(), 2)
+        for interface in created:
+            self.assertEqual(interface._custom_field_data.get(custom_field.key), "netops")
+            self.assertTrue(dynamic_group.members.filter(pk=interface.pk).exists())
+            self.assertTrue(
+                RelationshipAssociation.objects.filter(
+                    relationship=relationship, source_id=interface.pk, destination_id=peer.pk
+                ).exists()
+            )

@@ -27,9 +27,9 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    JobCancelTypeChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    JobRevocationTypeChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
@@ -1225,8 +1225,8 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Has Job Console Entries",
     )
 
-    revocation_type = django_filters.MultipleChoiceFilter(
-        choices=JobRevocationTypeChoices.CHOICES,
+    cancel_type = django_filters.MultipleChoiceFilter(
+        choices=JobCancelTypeChoices.CHOICES,
     )
 
     class Meta:
@@ -1236,11 +1236,11 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "date_created",
             "date_started",
             "date_done",
-            "date_revoked",
+            "date_canceled",
             "name",
             "status",
             "user",
-            "revoked_by",
+            "canceled_by",
             "scheduled_job",
         ]
 

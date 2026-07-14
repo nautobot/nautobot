@@ -104,13 +104,13 @@ A new [`IPAddressRange`](../user-guide/core-data-model/ipam/ipaddressrange.md) m
 !!! tip
     Setting a range to "exclusive" may change your workflow — for example, you will no longer be able to create an IP address that falls within an exclusive IP address range. This is by design, but may be surprising if the implications of enabling exclusivity were not considered.
 
-#### Job Cancellation
+#### Job Cancel
 
 Jobs that are actively running, pending a run, or abandoned, can now be cancelled from both the UI and REST API, with support for both Celery and Kubernetes jobs. You will now be able to see a Job Cancel button on the job result list and detail views (for jobs not in a terminal state.)
 
-The "Cancel Job" action will perform slightly different actions depending on the current state of the job, all of which end up with the Job Result in a terminal state. For technical details refer to the documentation for [Job cancellation](../user-guide/platform-functionality/jobs/job-revocation.md).
+The "Cancel Job" action will perform slightly different actions depending on the current state of the job, all of which end up with the Job Result in a terminal state. For technical details refer to the documentation for [Job cancel](../user-guide/platform-functionality/jobs/job-cancel.md).
 
-Job Cancellation requires the `extras.run_job` permission; additionally, non-staff users with this permission may cancel only jobs they submitted, while staff users with this permission may cancel any user's jobs.
+Job Cancel requires the `extras.run_job` permission; additionally, non-staff users with this permission may cancel only jobs they submitted, while staff users with this permission may cancel any user's jobs.
 
 #### Homepage Stickiness
 

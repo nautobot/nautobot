@@ -12,21 +12,37 @@ import kubernetes.client
 
 from nautobot.core.celery import app as celery_app
 from nautobot.extras.choices import (
+    JobCancelTypeChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    JobRevocationTypeChoices,
     LogLevelChoices,
 )
-from nautobot.extras.models import JobResult
+from nautobot.extras.models import Job, JobResult
 from nautobot.extras.utils import build_kubernetes_api_client
 from nautobot.users.models import User
 
 logger = logging.getLogger(__name__)
 
 
+def user_can_cancel_job_result(user, job_result):
+    """Return whether `user` may cancel `job_result`.
+
+    The submitter can always cancel their own job, without needing any
+    permission. Anyone else needs the `extras.cancel_job` permission scoped
+    to the specific Job.
+    """
+    if job_result.user == user:
+        return True
+    if job_result.job_model_id is None:
+        # The associated Job is gone, so it can never run. Anyone with cancel_job
+        # (even constrained) may clean it up, since there is no Job left to scope against.
+        return user.has_perm("extras.cancel_job")
+    return Job.objects.restrict(user, "cancel").filter(pk=job_result.job_model_id).exists()
+
+
 class JobAlreadyTerminal(Exception):
     """Control-flow signal: the `JobResult` has already left the `unready`
-    state, so there is nothing to revoke.
+    state, so there is nothing to cancel.
 
     Raised from `locked_unready_job_result` when the freshly-locked row is no longer
     in an unready state.
@@ -47,12 +63,12 @@ class JobLiveness(Enum):
         return self.value.replace("_", " ").upper()
 
 
-class JobRevokeStrategy(ABC):
+class JobCancelStrategy(ABC):
     """Abstract base class for job termination strategies across different queues.
 
     Defines the interface for various backends (Celery, Kubernetes, etc.).
     Subclasses implement the `is_alive`, 'perform_reap`, and
-    `perform_termination` hooks; `revoke` orchestrates them.
+    `perform_termination` hooks; `cancel` orchestrates them.
     """
 
     @abstractmethod
@@ -72,14 +88,14 @@ class JobRevokeStrategy(ABC):
 
     @abstractmethod
     def perform_reap(self, job_result: JobResult, user: User) -> bool:
-        """Reap a job: mark it revoked without claiming we killed live work."""
+        """Reap a job: mark it canceled without claiming we killed live work."""
 
     @abstractmethod
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
-        """Send the backend-specific kill signal and mark the job revoked."""
+        """Send the backend-specific kill signal and mark the job canceled."""
 
     def perform_abandon(self, job_result, user) -> bool:
-        """Abandon a job whose backend is unreachable: mark revoked without
+        """Abandon a job whose backend is unreachable: mark canceled without
         confirming its actual state. No kill signal is sent — if the job is
         still executing somewhere, it will continue until it finishes on its own.
         """
@@ -87,9 +103,9 @@ class JobRevokeStrategy(ABC):
         job_result.log(
             f"Abandoned job {job_result.pk} by {user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
+            grouping="canceling",
         )
-        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_ABANDONED)
+        self._mark_canceled(job_result, user, JobCancelTypeChoices.TYPE_ABANDONED)
         return True
 
     @contextmanager
@@ -126,22 +142,22 @@ class JobRevokeStrategy(ABC):
         )
         job_result.log(
             f"Job {job_result.pk} is already in terminal state `{job_result.status}`, no action was taken",
-            grouping="revoking",
+            grouping="canceling",
         )
 
-    def _apply_revoke_metadata(
-        self, job_result: JobResult, user: User, revocation_type: str, now_timestamp: None | datetime = None
+    def _apply_cancel_metadata(
+        self, job_result: JobResult, user: User, cancel_type: str, now_timestamp: None | datetime = None
     ) -> set[str]:
         """Fill in termination metadata fields on a locked `JobResult`.
 
-        Sets `date_done`, `date_revoked`, `revoked_by`, `revoked_by_user_name`, and
+        Sets `date_done`, `date_canceled`, `canceled_by`, `canceled_by_user_name`, and
         only if they are not already set. Caller is responsible
         for the surrounding transaction/lock and for calling `save()`.
 
         Args:
             job_result: The locked `JobResult` to update (modified in place).
             user: The user requesting termination.
-            revocation_type: revocation type based on `JobRevocationTypeChoices`.
+            cancel_type: cancel type based on `JobCancelTypeChoices`.
             now_timestamp: Optional timestamp to use for `date_done`. If not provided,
                 the current time will be used.
 
@@ -157,78 +173,78 @@ class JobRevokeStrategy(ABC):
             job_result.date_done = now_timestamp
             changed.add("date_done")
 
-        if job_result.date_revoked is None:
-            job_result.date_revoked = now_timestamp
-            changed.add("date_revoked")
+        if job_result.date_canceled is None:
+            job_result.date_canceled = now_timestamp
+            changed.add("date_canceled")
 
-        if job_result.revoked_by is None:
-            job_result.revoked_by = user
-            changed.add("revoked_by")
+        if job_result.canceled_by is None:
+            job_result.canceled_by = user
+            changed.add("canceled_by")
 
-        if not job_result.revoked_by_user_name:
-            job_result.revoked_by_user_name = user.username
-            changed.add("revoked_by_user_name")
+        if not job_result.canceled_by_user_name:
+            job_result.canceled_by_user_name = user.username
+            changed.add("canceled_by_user_name")
 
-        if not job_result.revocation_type:
-            job_result.revocation_type = revocation_type
-            changed.add("revocation_type")
+        if not job_result.cancel_type:
+            job_result.cancel_type = cancel_type
+            changed.add("cancel_type")
 
         return changed
 
-    def _mark_revoked(self, job_result: JobResult, user: User, revocation_type: str) -> JobResult:
-        """Mark a `JobResult` as revoked, filling in only fields that aren't already set.
+    def _mark_canceled(self, job_result: JobResult, user: User, cancel_type: str) -> JobResult:
+        """Mark a `JobResult` as canceled, filling in only fields that aren't already set.
 
         Re-fetches and locks the row via `locked_unready_job_result`; if the job has
         already settled into a terminal state, `JobAlreadyTerminal` propagates
         """
         with self.locked_unready_job_result(job_result) as locked_job_result:
-            changed = self._apply_revoke_metadata(locked_job_result, user, revocation_type)
+            changed = self._apply_cancel_metadata(locked_job_result, user, cancel_type)
             locked_job_result.status = JobResultStatusChoices.STATUS_REVOKED
             changed |= {"status"}
             locked_job_result.save(update_fields=list(changed))
             return locked_job_result
 
     def _resolve_action(self, liveness: JobLiveness) -> tuple[Callable, str]:
-        """Map liveness to the matching `perform_*` method and revocation type.
+        """Map liveness to the matching `perform_*` method and cancel type.
 
         Args:
             liveness: The result of `self.liveness(job_result)`.
 
         Returns:
-            Tuple `(action, revocation_type)` where `action` is the bound
-            `perform_*` method to invoke and `revocation_type` is the matching
-            `JobRevocationTypeChoices` value to record.
+            Tuple `(action, cancel_type)` where `action` is the bound
+            `perform_*` method to invoke and `cancel_type` is the matching
+            `JobCancelTypeChoices` value to record.
         """
         return {
-            JobLiveness.RUNNING: (self.perform_termination, JobRevocationTypeChoices.TYPE_TERMINATED),
-            JobLiveness.NOT_RUNNING: (self.perform_reap, JobRevocationTypeChoices.TYPE_REAPED),
-            JobLiveness.UNKNOWN: (self.perform_abandon, JobRevocationTypeChoices.TYPE_ABANDONED),
+            JobLiveness.RUNNING: (self.perform_termination, JobCancelTypeChoices.TYPE_TERMINATED),
+            JobLiveness.NOT_RUNNING: (self.perform_reap, JobCancelTypeChoices.TYPE_REAPED),
+            JobLiveness.UNKNOWN: (self.perform_abandon, JobCancelTypeChoices.TYPE_ABANDONED),
         }[liveness]
 
-    def revoke(self, job_result, user) -> dict:
+    def cancel(self, job_result, user) -> dict:
         """Terminate, reap, or abandon a job and return the outcome.
 
         Dispatches based on `self.liveness(job_result)`:
             - JobLiveness.RUNNING: perform_termination (send kill signal)
-            - JobLiveness.NOT_RUNNING: perform_reap (worker is gone; mark revoked)
-            - JobLiveness.UNKNOWN: perform_abandon (backend unreachable; mark revoked)
+            - JobLiveness.NOT_RUNNING: perform_reap (worker is gone; mark canceled)
+            - JobLiveness.UNKNOWN: perform_abandon (backend unreachable; mark canceled)
 
         Exceptions from the chosen action are caught and reported in `error`.
 
         Args:
-            job_result: The job result object to revoke.
-            user: The user requesting the revocation.
+            job_result: The job result object to cancel.
+            user: The user requesting the cancel.
 
         Returns:
             dict: A dictionary containing:
                 - job_result (JobResult): The updated job result.
                 - error (str | None): Error message if an exception occurred.
-                - revoked (bool): Whether the job was successfully marked as revoked.
+                - canceled (bool): Whether the job was successfully marked as canceled.
         """
         base = {
             "job_result": job_result,
             "error": None,
-            "revoked": False,
+            "canceled": False,
         }
 
         if not job_result.is_unready_state:
@@ -236,29 +252,29 @@ class JobRevokeStrategy(ABC):
             return base
 
         job_liveness_state = self.liveness(job_result)
-        action, revocation_type = self._resolve_action(job_liveness_state)
+        action, cancel_type = self._resolve_action(job_liveness_state)
 
         try:
-            revoked = action(job_result, user)
+            canceled = action(job_result, user)
         except JobAlreadyTerminal:
             return base
         except Exception as e:
-            revocation_label = {"terminated": "Termination", "reaped": "Reap", "abandoned": "Abandon"}
-            logger.error("%s failed for %s: %s", revocation_label[revocation_type], job_result.pk, e)
+            cancel_label = {"terminated": "Termination", "reaped": "Reap", "abandoned": "Abandon"}
+            logger.error("%s failed for %s: %s", cancel_label[cancel_type], job_result.pk, e)
             job_result.log(
-                f"{revocation_label[revocation_type]} failed for {job_result.pk}: {e}",
+                f"{cancel_label[cancel_type]} failed for {job_result.pk}: {e}",
                 level_choice=LogLevelChoices.LOG_ERROR,
-                grouping="revoking",
+                grouping="canceling",
             )
-            return {**base, "error": f"{revocation_label[revocation_type]} failed: {e}"}
+            return {**base, "error": f"{cancel_label[cancel_type]} failed: {e}"}
 
         return {
             **base,
-            "revoked": revoked,
+            "canceled": canceled,
         }
 
 
-class CeleryStrategy(JobRevokeStrategy):
+class CeleryStrategy(JobCancelStrategy):
     "Termination strategy for jobs running on Celery workers."
 
     def liveness(self, job_result) -> JobLiveness:
@@ -288,7 +304,7 @@ class CeleryStrategy(JobRevokeStrategy):
             job_result.log(
                 f"Failed to query Celery workers: {e}",
                 level_choice=LogLevelChoices.LOG_ERROR,
-                grouping="revoking",
+                grouping="canceling",
             )
             return JobLiveness.UNKNOWN
 
@@ -300,52 +316,52 @@ class CeleryStrategy(JobRevokeStrategy):
         return JobLiveness.RUNNING if found else JobLiveness.NOT_RUNNING
 
     def perform_reap(self, job_result, user) -> bool:
-        """Reap a dead Celery job: mark revoked without sending a signal.
+        """Reap a dead Celery job: mark canceled without sending a signal.
 
-        Called when no worker is processing the task. Records revoke metadata
+        Called when no worker is processing the task. Records cancel metadata
         and stamps a Celery-shaped `result` payload imitating what a worker
-        would write on TaskRevokedError, so the JobResult looks the same as
-        normally-revoked tasks for downstream consumers.
+        would write on TaskCanceledError, so the JobResult looks the same as
+        normally-canceled tasks for downstream consumers.
         """
         logger.info("Reaped dead job %s by %s", job_result.pk, user)
         job_result.log(
             f"Reaped dead job {job_result.pk} by {user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
+            grouping="canceling",
         )
 
-        job_result = self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
+        job_result = self._mark_canceled(job_result, user, JobCancelTypeChoices.TYPE_REAPED)
 
         return True
 
     def perform_termination(self, job_result: JobResult, user: User):
-        """Send a SIGKILL revoke to the Celery worker and mark the job revoked.
+        """Send a SIGKILL cancel to the Celery worker and mark the job canceled.
 
-        Fires a `revoke(terminate=True, signal="SIGKILL")` control message to
-        whichever worker holds the task, then records the revocation on the
-        `JobResult` via `_apply_revoke_metadata`. Any exception from the revoke call
-        propagates — the orchestrator in `revoke` catches it and reports
+        Fires a `cancel(terminate=True, signal="SIGKILL")` control message to
+        whichever worker holds the task, then records the cancel on the
+        `JobResult` via `_apply_cancel_metadata`. Any exception from the cancel call
+        propagates — the orchestrator in `cancel` catches it and reports
         the failure to the caller.
 
         Args:
             job_result: The `JobResult` to terminate. Its `pk` is used as the
                 Celery task ID.
-            user: The user requesting termination, recorded on `revoked_by`.
+            user: The user requesting termination, recorded on `canceled_by`.
         """
         task_id = str(job_result.pk)
         with self.locked_unready_job_result(job_result) as locked_job_result:
-            changed = self._apply_revoke_metadata(locked_job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
+            changed = self._apply_cancel_metadata(locked_job_result, user, JobCancelTypeChoices.TYPE_TERMINATED)
             locked_job_result.save(update_fields=list(changed))
             celery_app.control.revoke(task_id, terminate=True, signal="SIGKILL")
 
         logger.info("Job %s terminated by %s", job_result.pk, user)
         job_result.log(
-            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"
+            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="canceling"
         )
         return True
 
 
-class K8sStrategy(JobRevokeStrategy):
+class K8sStrategy(JobCancelStrategy):
     def _job_name(self, job_result: JobResult) -> str:
         """Recreate the K8s Job name that was used at submission time."""
         return f"{settings.KUBERNETES_JOB_POD_NAME}-{job_result.pk}"
@@ -440,7 +456,7 @@ class K8sStrategy(JobRevokeStrategy):
             job_result.log(
                 f"Kubernetes API error while checking job {job_name}: {e}",
                 level_choice=LogLevelChoices.LOG_ERROR,
-                grouping="revoking",
+                grouping="canceling",
             )
             return JobLiveness.UNKNOWN
 
@@ -456,7 +472,7 @@ class K8sStrategy(JobRevokeStrategy):
         return JobLiveness.RUNNING if is_running else JobLiveness.NOT_RUNNING
 
     def perform_reap(self, job_result: JobResult, user: User) -> bool:
-        """Reap a dead K8s job: clean up leftover resources, then mark JobResult revoked."""
+        """Reap a dead K8s job: clean up leftover resources, then mark JobResult canceled."""
 
         # Ideally, this operation has no effect
         # Functions in k8s, such as `ttlSecondsAfterFinished` or others
@@ -476,20 +492,20 @@ class K8sStrategy(JobRevokeStrategy):
                 )
                 job_result.log(
                     f"Job {job_result.pk} already in terminal state {job_result.status}, no action taken",
-                    grouping="revoking",
+                    grouping="canceling",
                 )
                 return False
 
         job_result.log(
             f"Reaped dead K8s job {job_name} by {user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
+            grouping="canceling",
         )
-        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_REAPED)
+        self._mark_canceled(job_result, user, JobCancelTypeChoices.TYPE_REAPED)
         return True
 
     def perform_termination(self, job_result: JobResult, user: User) -> bool:
-        """Delete the K8s job and mark the JobResult revoked and set date_revoked."""
+        """Delete the K8s job and mark the JobResult canceled and set date_canceled."""
 
         deleted = self._delete_k8s_job(job_result)
         if not deleted:
@@ -503,19 +519,19 @@ class K8sStrategy(JobRevokeStrategy):
                 )
                 job_result.log(
                     f"Job {job_result.pk} already in terminal state {job_result.status}, no action taken",
-                    grouping="revoking",
+                    grouping="canceling",
                 )
                 return False
 
-        self._mark_revoked(job_result, user, JobRevocationTypeChoices.TYPE_TERMINATED)
+        self._mark_canceled(job_result, user, JobCancelTypeChoices.TYPE_TERMINATED)
         logger.info("Job %s terminated by %s", job_result.pk, user)
         job_result.log(
-            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="revoking"
+            f"Job {job_result.pk} terminated by {user}", level_choice=LogLevelChoices.LOG_FAILURE, grouping="canceling"
         )
         return True
 
 
-class UnknownStrategy(JobRevokeStrategy):
+class UnknownStrategy(JobCancelStrategy):
     """Fallback strategy for queue types without a registered backend.
 
     There is no backend to query for liveness, so liveness is always `UNKNOWN` and the orchestrator routes
@@ -537,8 +553,8 @@ class UnknownStrategy(JobRevokeStrategy):
         return False
 
 
-class RevokeFactory:
-    """Resolve the right revoke strategy for a given job queue type."""
+class CancelFactory:
+    """Resolve the right cancel strategy for a given job queue type."""
 
     strategies = {JobQueueTypeChoices.TYPE_CELERY: CeleryStrategy, JobQueueTypeChoices.TYPE_KUBERNETES: K8sStrategy}
 
@@ -547,7 +563,7 @@ class RevokeFactory:
         """Return a strategy instance for `queue_type`.
 
         Unknown queue types fall back to `UnknownStrategy`, which reaps the
-        job (marks it revoked) without attempting any backend-specific signal.
+        job (marks it canceled) without attempting any backend-specific signal.
         """
         strategy_class = cls.strategies.get(queue_type, UnknownStrategy)
         return strategy_class()

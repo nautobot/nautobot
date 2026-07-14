@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from constance.test import override_config
@@ -800,6 +801,24 @@ class CableTerminationFieldSetTestCase(TestCase):
         result = CableTerminationFieldSet().get_fields("b_conn_1", term_type="powerfeed")
         self.assertIs(result["fields"]["b_conn_1_parent"].queryset.model, PowerPanel)
         self.assertIs(result["fields"]["b_conn_1_termination"].queryset.model, PowerFeed)
+
+    def test_get_fields_new_cable_filters_to_uncabled(self):
+        """Without a cable_pk (new cable), the termination dropdown is limited to uncabled endpoints."""
+        result = CableTerminationFieldSet().get_fields("a_conn_1")
+        attrs = result["fields"]["a_conn_1_termination"].widget.attrs
+        self.assertEqual(json.loads(attrs["data-query-param-has_cable"]), ["false"])
+        self.assertNotIn("data-query-param-available_for_cable", attrs)
+        # The old client-side disabled-indicator mechanism is fully replaced by server-side filtering.
+        self.assertNotIn("disabled-indicator", attrs)
+
+    def test_get_fields_existing_cable_filters_available_for_cable(self):
+        """With a cable_pk, the dropdown is limited to endpoints uncabled or already on that cable."""
+        cable_pk = "11111111-1111-1111-1111-111111111111"
+        result = CableTerminationFieldSet().get_fields("a_conn_1", cable_pk=cable_pk)
+        attrs = result["fields"]["a_conn_1_termination"].widget.attrs
+        self.assertEqual(json.loads(attrs["data-query-param-available_for_cable"]), [cable_pk])
+        self.assertNotIn("data-query-param-has_cable", attrs)
+        self.assertNotIn("disabled-indicator", attrs)
 
 
 class CableFormTestCase(FormTestCases.BaseFormTestCase):

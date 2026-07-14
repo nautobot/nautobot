@@ -98,7 +98,7 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
-from nautobot.extras.jobs_revoke import RevokeFactory
+from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -2425,6 +2425,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     "module_name",
                     "job_class_name",
                     "class_path",
+                    "source_version",
                     "installed",
                     "is_job_hook_receiver",
                     "is_job_button_receiver",
@@ -3526,12 +3527,12 @@ def render_jobresult_status(status):
     )
 
 
-def render_jobresult_revocation_type(revocation_type):
+def render_jobresult_cancel_type(cancel_type):
     """
-    Render a Bootstrap-style label for a JobRevocationType.
+    Render a Bootstrap-style label for a JobCancelType.
 
     Args:
-        revocation_type (str): The job result revocation type (e.g., "terminated", "reaped", etc.).
+        cancel_type (str): The job result cancel type (e.g., "terminated", "reaped", etc.).
 
     Returns:
         str: Safe HTML string for a styled label with a fixed ID so tests work.
@@ -3542,9 +3543,9 @@ def render_jobresult_revocation_type(revocation_type):
         "abandoned": ("bg-body-secondary border", "Abandoned"),
     }
 
-    css_class, text = mapping.get(revocation_type, ("bg-body-secondary border", f"{revocation_type} (unrecognized)"))
+    css_class, text = mapping.get(cancel_type, ("bg-body-secondary border", f"{cancel_type} (unrecognized)"))
     return format_html(
-        '<span id="revocation-type-label"><span class="badge {}">{}</span></span>',
+        '<span id="cancel-type-label"><span class="badge {}">{}</span></span>',
         css_class,
         text,
     )
@@ -3617,7 +3618,7 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
         return False
 
 
-class RevocationPanel(object_detail.ObjectFieldsPanel):
+class JobResultCancelPanel(object_detail.ObjectFieldsPanel):
     def should_render(self, context):
         return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
 
@@ -3719,19 +3720,22 @@ class JobResultUIViewSet(
             ),
             JobResultButton(
                 weight=140,
-                label="Revoke Job",
+                label="Cancel Job",
                 color=ButtonActionColorChoices.DELETE,
                 icon="mdi-close-circle",
-                required_permissions=["extras.run_job"],
+                # No required_permissions: the submitter can cancel without cancel_job,
+                # so there is no single permission that gates the button. The real rule
+                # (submitter OR object-level cancel_job) lives in user_can_cancel_job_result,
+                # enforced here for rendering and again in the view.
                 link_name=lambda ctx: (
-                    reverse("extras:jobresult_revoke_job", kwargs={"pk": ctx["object"].pk})
+                    reverse("extras:jobresult_cancel_job", kwargs={"pk": ctx["object"].pk})
                     if (
                         ctx["object"].is_unready_state
-                        and (ctx["object"].user == ctx["request"].user or ctx["request"].user.is_staff)
+                        and user_can_cancel_job_result(ctx["request"].user, ctx["object"])
                     )
                     else None
                 ),
-                template_path="extras/inc/jobresult_revokejobbutton.html",
+                template_path="extras/inc/jobresult_canceljobbutton.html",
             ),
         ),
         extra_tabs=[
@@ -3772,17 +3776,17 @@ class JobResultUIViewSet(
             object_field="celery_kwargs",
             render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
         ),
-        RevocationPanel(
-            label="Revocation",
+        JobResultCancelPanel(
+            label="Cancel Details",
             section=SectionChoices.RIGHT_HALF,
             weight=100,
             fields=[
-                "date_revoked",
-                "revoked_by_user_name",
-                "revocation_type",
+                "date_canceled",
+                "canceled_by_user_name",
+                "cancel_type",
             ],
             value_transforms={
-                "revocation_type": [render_jobresult_revocation_type],
+                "cancel_type": [render_jobresult_cancel_type],
             },
         ),
         object_detail.ObjectFieldsPanel(
@@ -4031,23 +4035,19 @@ class JobResultUIViewSet(
     @action(
         detail=True,
         methods=["get", "post"],
-        url_path="revoke-job",
-        url_name="revoke_job",
+        url_path="cancel-job",
+        url_name="cancel_job",
         custom_view_base_action="view",
     )
-    def revoke_job(self, request, pk=None):
+    def cancel_job(self, request, pk=None):
         """Terminate a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
-        if not request.user.has_perm("extras.run_job"):
-            messages.error(request, "Job can not be revoked by user without permission to run jobs.")
+        if not user_can_cancel_job_result(request.user, job_result):
+            messages.error(request, "You do not have permission to cancel this job.")
             return redirect(job_result.get_absolute_url())
 
-        if job_result.user != request.user and not request.user.is_staff:
-            messages.error(request, "Job can be revoked only by the submitter or by staff users.")
-            return redirect(job_result.get_absolute_url())
-
-        strategy = RevokeFactory.get_strategy(job_result.queue_type)
+        strategy = CancelFactory.get_strategy(job_result.queue_type)
 
         if not job_result.is_unready_state:
             messages.info(request, "Job is already finished. Nothing to do.")
@@ -4057,7 +4057,7 @@ class JobResultUIViewSet(
         if request.method == "GET":
             return render(
                 request,
-                "extras/job_revoke.html",
+                "extras/job_cancel.html",
                 {
                     "object": job_result,
                     "job_liveness_state": job_liveness_state,
@@ -4066,14 +4066,14 @@ class JobResultUIViewSet(
                 },
             )
 
-        result = strategy.revoke(job_result, user=request.user)
+        result = strategy.cancel(job_result, user=request.user)
         if result["error"]:
             messages.error(request, result["error"])
         else:
-            if result["revoked"]:
-                messages.success(request, "Job revoked.")
+            if result["canceled"]:
+                messages.success(request, "Job canceled.")
             else:
-                messages.info(request, "Job finished before it could be revoked. No action was taken.")
+                messages.info(request, "Job finished before it could be canceled. No action was taken.")
 
         return redirect(job_result.get_absolute_url())
 

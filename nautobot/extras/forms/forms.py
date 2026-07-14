@@ -51,10 +51,10 @@ from nautobot.extras.choices import (
     ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     DynamicGroupTypeChoices,
+    JobCancelTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    JobRevocationTypeChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
@@ -1981,10 +1981,10 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         label="Has Job Console Entries",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    revocation_type = forms.MultipleChoiceField(
-        choices=JobRevocationTypeChoices,
+    cancel_type = forms.MultipleChoiceField(
+        choices=JobCancelTypeChoices,
         required=False,
-        label="Revocation Type",
+        label="Cancel Type",
         widget=StaticSelect2Multiple(),
     )
 
