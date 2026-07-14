@@ -5,6 +5,7 @@ from unittest import mock
 import urllib.parse
 import uuid
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -62,7 +63,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
-from nautobot.extras.jobs_revoke import CeleryStrategy, JobLiveness
+from nautobot.extras.jobs_cancel import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -4768,30 +4769,30 @@ class JobResultTestCase(
         FileProxy.objects.create(name=file.name, file=file, job_result=JobResult.objects.first())
 
     @staticmethod
-    def _fake_revoke_success_termination_path(job_result, user):
-        """Simulate a successful revoke by flipping the job to REVOKED.
+    def _fake_cancel_success_termination_path(job_result, user):
+        """Simulate a successful cancel by flipping the job to REVOKED.
 
-        Stand-in for `CeleryStrategy.revoke` in tests of the TERMINATE path,
+        Stand-in for `CeleryStrategy.cancel` in tests of the TERMINATE path,
         where the real code relies on Celery's async catchup to set the
         REVOKED status. Writes the status synchronously so the view's
-        post-revoke check sees the expected terminal state.
+        post-cancel check sees the expected terminal state.
         """
         job_result.status = JobResultStatusChoices.STATUS_REVOKED
         job_result.save(update_fields=["status"])
-        return {"job_result": job_result, "error": None, "revoked": True}
+        return {"job_result": job_result, "error": None, "canceled": True}
 
     @staticmethod
-    def _fake_revoke_no_action_termination_path(job_result, user):
-        """Simulate a revoke that lost the race to natural completion.
+    def _fake_cancel_no_action_termination_path(job_result, user):
+        """Simulate a cancel that lost the race to natural completion.
 
-        Stand-in for `CeleryStrategy.revoke` in tests where the job finishes
+        Stand-in for `CeleryStrategy.cancel` in tests where the job finishes
         between the view's pre-check and the strategy call. Leaves the job
-        in a non-REVOKED terminal state (COMPLETED) so the view's post-revoke
+        in a non-REVOKED terminal state (COMPLETED) so the view's post-cancel
         check trips and returns 409.
         """
         job_result.status = JobResultStatusChoices.STATUS_SUCCESS
         job_result.save(update_fields=["status"])
-        return {"job_result": job_result, "error": None, "revoked": False}
+        return {"job_result": job_result, "error": None, "canceled": False}
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
@@ -5148,78 +5149,78 @@ class JobResultTestCase(
         content = response.content.decode(response.charset)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
-    def test_revoke_job_get_anonymous_redirects_to_login(self):
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+    def test_cancel_job_get_anonymous_redirects_to_login(self):
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.client.logout()
-        response = self.client.get(revoke_url, follow=True)
+        response = self.client.get(cancel_url, follow=True)
         self.assertHttpStatus(response, 200)
-        self.assertRedirects(response, f"/login/?next={revoke_url}")
+        self.assertRedirects(response, f"/login/?next={cancel_url}")
 
-    def test_revoke_job_get_without_permission(self):
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        response = self.client.get(revoke_url)
+    def test_cancel_job_get_without_permission(self):
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(cancel_url)
         self.assertHttpStatus(response, [403, 404])
 
-    def test_revoke_job_get_without_run_job_permission_redirects_with_message(self):
+    def test_cancel_job_get_without_run_job_permission_redirects_with_message(self):
         """User has view perm but no run_job and not staff - redirect with error message."""
         self.add_permissions("extras.view_jobresult")
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
 
-        response = self.client.get(revoke_url)
+        response = self.client.get(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job can not be revoked by user without permission to run jobs." in m for m in messages_list)
+            any("Job can not be canceled by user without permission to run jobs." in m for m in messages_list)
         )
 
-    def test_revoke_job_post_without_run_job_permission_redirects_with_message(self):
+    def test_cancel_job_post_without_run_job_permission_redirects_with_message(self):
         """POST without run_job - redirect with error, strategy never invoked."""
         self.add_permissions("extras.view_jobresult")
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
 
-        response = self.client.post(revoke_url)
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job can not be revoked by user without permission to run jobs." in m for m in messages_list)
+            any("Job can not be canceled by user without permission to run jobs." in m for m in messages_list)
         )
 
-    def test_revoke_job_non_owner_non_staff_redirects_with_message(self):
+    def test_cancel_job_non_owner_non_staff_redirects_with_message(self):
         """User has run_job but is neither owner nor staff - owner/staff redirect."""
         other = User.objects.create_user(username="other-owner")
         self.job_result_pending.user = other
         self.job_result_pending.save()
         self.add_permissions("extras.view_jobresult", "extras.run_job")
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
 
-        response = self.client.get(revoke_url)
+        response = self.client.get(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job can be revoked only by the submitter or by staff users." in m for m in messages_list),
+            any("Job can be canceled only by the submitter or by staff users." in m for m in messages_list),
         )
 
-    def test_revoke_job_owner_without_permission(self):
+    def test_cancel_job_owner_without_permission(self):
         """Owner has not run_job permission and is not a staff."""
         self.job_result_pending.user = self.user
         self.job_result_pending.save()
         self.user.is_staff = False
         self.user.save()
         self.add_permissions("extras.view_jobresult")
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
 
-        response = self.client.get(revoke_url)
+        response = self.client.get(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job can not be revoked by user without permission to run jobs." in m for m in messages_list),
+            any("Job can not be canceled by user without permission to run jobs." in m for m in messages_list),
         )
 
-    def test_revoke_job_staff_without_run_job_permission_redirects(self):
+    def test_cancel_job_staff_without_run_job_permission_redirects(self):
         """Staff users need run_job."""
         self.user.is_staff = True
         self.user.save()
@@ -5228,29 +5229,29 @@ class JobResultTestCase(
         self.add_permissions("extras.view_jobresult")
         self.remove_permissions("extras.run_job")
 
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        response = self.client.post(revoke_url)
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job can not be revoked by user without permission to run jobs." in m for m in messages_list),
+            any("Job can not be canceled by user without permission to run jobs." in m for m in messages_list),
         )
 
-    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "cancel")
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    def test_revoke_job_get_renders_confirmation_for_running_job(self, mock_liveness, mock_revoke):
+    def test_cancel_job_get_renders_confirmation_for_running_job(self, mock_liveness, mock_cancel):
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.get(revoke_url)
+        response = self.client.get(cancel_url)
 
         self.assertHttpStatus(response, 200)
-        self.assertTemplateUsed(response, "extras/job_revoke.html")
+        self.assertTemplateUsed(response, "extras/job_cancel.html")
         self.assertEqual(response.context["object"], self.job_result_pending)
         self.assertTrue(response.context["job_liveness_state"])
         self.assertEqual(
@@ -5258,40 +5259,40 @@ class JobResultTestCase(
             self.job_result_pending.get_absolute_url(),
         )
         mock_liveness.assert_called_once_with(self.job_result_pending)
-        mock_revoke.assert_not_called()
+        mock_cancel.assert_not_called()
 
-    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "cancel")
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
-    def test_revoke_job_get_renders_confirmation_for_dead_worker(self, mock_liveness, mock_revoke):
+    def test_cancel_job_get_renders_confirmation_for_dead_worker(self, mock_liveness, mock_cancel):
         """`job_liveness_state=JobLiveness.NOT_RUNNING` is the 'reap' branch — confirmation page still shown."""
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.get(revoke_url)
+        response = self.client.get(cancel_url)
 
         self.assertHttpStatus(response, 200)
         self.assertEqual(response.context["job_liveness_state"], JobLiveness.NOT_RUNNING)
-        mock_revoke.assert_not_called()
+        mock_cancel.assert_not_called()
 
-    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "cancel")
     @mock.patch.object(CeleryStrategy, "liveness")
-    def test_revoke_job_get_already_finished_redirects(self, mock_liveness, mock_revoke):
+    def test_cancel_job_get_already_finished_redirects(self, mock_liveness, mock_cancel):
         self.user.is_staff = True
         self.user.save()
         self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_completed.save()
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_completed.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.get(revoke_url)
+        response = self.client.get(cancel_url)
 
         self.assertRedirects(response, self.job_result_completed.get_absolute_url())
         mock_liveness.assert_not_called()
-        mock_revoke.assert_not_called()
+        mock_cancel.assert_not_called()
 
         messages_list = list(get_messages(response.wsgi_request))
         self.assertTrue(
@@ -5299,127 +5300,127 @@ class JobResultTestCase(
             f"Expected an info message about the job being finished, got: {messages_list}",
         )
 
-    def test_revoke_job_post_without_permission(self):
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        response = self.client.post(revoke_url)
+    def test_cancel_job_post_without_permission(self):
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(cancel_url)
         self.assertHttpStatus(response, [403, 404])
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_job_post_success(self, mock_revoke, mock_liveness):
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_post_success(self, mock_cancel, mock_liveness):
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
-        mock_revoke.return_value = {
+        mock_cancel.return_value = {
             "job_result": self.job_result_pending,
             "error": None,
         }
 
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.post(revoke_url)
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
-        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job revoked." in m for m in messages_list),
+            any("Job canceled." in m for m in messages_list),
             f"Expected a success message, got: {messages_list}",
         )
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_success_termination_path)
-    def test_revoke_job_post_success_when_user_owner_with_permission(self, mock_revoke, mock_liveness):
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_post_success_when_user_owner_with_permission(self, mock_cancel, mock_liveness):
         self.user.is_staff = False
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.user = self.user
         self.job_result_pending.save()
-        mock_revoke.return_value = {
+        mock_cancel.return_value = {
             "job_result": self.job_result_pending,
             "error": None,
         }
 
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.post(revoke_url)
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
-        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job revoked." in m for m in messages_list),
+            any("Job canceled." in m for m in messages_list),
             f"Expected a success message, got: {messages_list}",
         )
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke")
-    def test_revoke_job_post_strategy_returns_error(self, mock_revoke, mock_liveness):
+    @mock.patch.object(CeleryStrategy, "cancel")
+    def test_cancel_job_post_strategy_returns_error(self, mock_cancel, mock_liveness):
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
-        error_message = "Broker is unreachable; could not revoke."
-        mock_revoke.return_value = {
+        error_message = "Broker is unreachable; could not cancel."
+        mock_cancel.return_value = {
             "job_result": self.job_result_pending,
             "error": error_message,
         }
 
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.post(revoke_url)
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
-        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertIn(error_message, messages_list)
 
-    @mock.patch.object(CeleryStrategy, "revoke")
+    @mock.patch.object(CeleryStrategy, "cancel")
     @mock.patch.object(CeleryStrategy, "liveness")
-    def test_revoke_job_post_already_finished_does_not_invoke_strategy(self, mock_liveness, mock_revoke):
+    def test_cancel_job_post_already_finished_does_not_invoke_strategy(self, mock_liveness, mock_cancel):
         self.user.is_staff = True
         self.user.save()
         self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_completed.save()
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_completed.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_completed.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.post(revoke_url)
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_completed.get_absolute_url())
         mock_liveness.assert_not_called()
-        mock_revoke.assert_not_called()
+        mock_cancel.assert_not_called()
 
     @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
-    @mock.patch.object(CeleryStrategy, "revoke", side_effect=_fake_revoke_no_action_termination_path)
-    def test_revoke_status_not_changed_returns_409(self, mock_revoke, mock_liveness):
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_no_action_termination_path)
+    def test_cancel_status_not_changed_returns_409(self, mock_cancel, mock_liveness):
         """If the strategy reports success but the job didn't end up REVOKED returns info."""
         self.user.is_staff = True
         self.user.save()
         self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
         self.job_result_pending.save()
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.add_permissions("extras.view_jobresult", "extras.run_job")
 
-        response = self.client.post(revoke_url)
+        response = self.client.post(cancel_url)
 
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
-        mock_revoke.assert_called_once_with(self.job_result_pending, user=self.user)
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertTrue(
-            any("Job finished before it could be revoked. No action was taken." in m for m in messages_list)
+            any("Job finished before it could be canceled. No action was taken." in m for m in messages_list)
         )
 
     @mock.patch.object(JobResult, "log")
-    def test_revoke_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+    def test_cancel_unsupported_queue_type_should_abandon_job(self, mock_job_log):
         """Unsuporrted queue type should abandon job."""
         self.job_result_pending.celery_kwargs = {}
         self.job_result_pending.save()
@@ -5429,16 +5430,16 @@ class JobResultTestCase(
             "extras.view_jobresult",
             "extras.run_job",
         )
-        revoke_url = reverse("extras:jobresult_revoke_job", kwargs={"pk": self.job_result_pending.pk})
-        response = self.client.post(revoke_url)
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(cancel_url)
         self.assertRedirects(response, self.job_result_pending.get_absolute_url())
 
         messages_list = [str(m) for m in get_messages(response.wsgi_request)]
-        self.assertTrue(any("Job revoked." in m for m in messages_list))
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
         mock_job_log.assert_called_once_with(
             f"Abandoned job {self.job_result_pending.pk} by {self.user}",
             level_choice=LogLevelChoices.LOG_FAILURE,
-            grouping="revoking",
+            grouping="canceling",
         )
 
 
@@ -5584,6 +5585,13 @@ class JobTestCase(
         """
         queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
         return get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+
+    def test_job_detail_source_version(self):
+        """The Job detail view renders the Job's source_version in the Source Code panel."""
+        self.add_permissions("extras.view_job")
+        instance = Job.objects.get(job_class_name="ExampleJob")
+        response = self.client.get(instance.get_absolute_url())
+        self.assertBodyContains(response, apps.get_app_config("example_app").version)
 
     def test_delete_system_jobs_fail(self):
         instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()

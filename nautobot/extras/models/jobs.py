@@ -10,6 +10,7 @@ from typing import Optional, TYPE_CHECKING, Union
 from billiard.exceptions import SoftTimeLimitExceeded
 from celery.exceptions import NotRegistered
 from celery.utils.log import get_logger, LoggingProxy
+from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
@@ -37,11 +38,11 @@ from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.choices import (
     ButtonClassChoices,
+    JobCancelTypeChoices,
     JobConsoleEntryOutputTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
-    JobRevocationTypeChoices,
     LogLevelChoices,
     ScheduledJobStateChoices,
 )
@@ -337,6 +338,29 @@ class Job(PrimaryModel):
             return GitRepository.objects.get(slug=self.module_name.split(".")[0])
         except GitRepository.DoesNotExist:
             return None
+
+    @property
+    def source_version(self) -> str:
+        """
+        Version of the source code that provides this Job, derived from the Job's source.
+
+        - System Jobs (`module_name` in the `nautobot.` namespace): the Nautobot version (`settings.VERSION`).
+        - App-provided Jobs (top-level module in `settings.PLUGINS`): the App's declared `version`, if any.
+        - Git-repository-provided Jobs: the owning GitRepository's `current_head` commit hash
+          (empty string if the repository has never been synced).
+        - `JOBS_ROOT` Jobs: an empty string, as no version information is available.
+
+        Sources are checked in the same order of precedence as `nautobot.extras.jobs.get_job()`:
+        system, then App, then Git repository.
+        """
+        if self.module_name.startswith("nautobot."):
+            return settings.VERSION
+        module_root = self.module_name.split(".")[0]
+        if module_root in settings.PLUGINS:
+            return apps.get_app_config(module_root).version or ""
+        if self.git_repository is not None:
+            return self.git_repository.current_head
+        return ""
 
     @property
     def job_task(self):
@@ -717,27 +741,26 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     warning_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
     error_log_count = models.PositiveIntegerField(blank=True, null=True, editable=False)
 
-    # Revoke switch fields
-    revoked_by = models.ForeignKey(
+    # Cancel switch fields
+    canceled_by = models.ForeignKey(
         to=settings.AUTH_USER_MODEL,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="terminated_job_results",
-        help_text="The user who initiated the revoke action.",
+        help_text="The user who initiated the cancel action.",
     )
-    # TODO: after merge with `develop` change `150` to `USERNAME_MAX_LENGTH` constant
-    revoked_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
-    revocation_type = models.CharField(
+    canceled_by_user_name = models.CharField(max_length=150, blank=True, editable=False)
+    cancel_type = models.CharField(
         max_length=30,
-        choices=JobRevocationTypeChoices,
+        choices=JobCancelTypeChoices,
         blank=True,
-        help_text="Revocation type of the Job being revoked",
+        help_text="Cancel type of the Job being canceled",
     )
-    date_revoked = models.DateTimeField(
+    date_canceled = models.DateTimeField(
         null=True,
         blank=True,
-        help_text="Timestamp at which the job was revoked",
+        help_text="Timestamp at which the job was canceled",
     )
 
     objects = JobResultManager()
@@ -830,6 +853,17 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     def is_unready_state(self) -> bool:
         """Return True if job_result is in a not finished state."""
         return self.status in JobResultStatusChoices.UNREADY_STATES
+
+    @property
+    def _is_deletable(self):
+        """Running/pending results are canceled, not deleted."""
+        # Private: used only to decide whether the delete button/action renders for this
+        # JobResult (a running or pending result offers Cancel instead of Delete). Not part
+        # of the public model API.
+        # TODO: revisit this. The rendering flag assigned to a specific model raises some concerns
+        # consider moving it to a more view-oriented layer, or generalizing it onto BaseModel
+        # so any model can declare when it is deletable, rather than special-casing here.
+        return not self.is_unready_state
 
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.

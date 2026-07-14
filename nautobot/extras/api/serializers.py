@@ -737,26 +737,16 @@ class JobRunResponseSerializer(serializers.Serializer):
     job_result = JobResultSerializer(read_only=True, required=False)
 
 
-class JobResultRevokePreviewSerializer(serializers.Serializer):
-    """Describes what a revoke action would do, returned by GET on the revoke endpoint."""
+class JobResultCancelPreviewSerializer(serializers.Serializer):
+    """Describes what a cancel action would do, returned by GET on the cancel endpoint."""
 
     message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
-    action = serializers.ChoiceField(
-        choices=["TERMINATE", "REAP", "ABANDON", "None"],
-        help_text=(
-            "TERMINATE if worker alive; "
-            "REAP if no worker; "
-            "ABANDON if backend unreachable; "
-            "None if job already finished."
-        ),
-    )
-    action_description = serializers.CharField(help_text="Human-readable explanation of the action.")
     job_status = serializers.ChoiceField(
         choices=["RUNNING", "NOT RUNNING", "UNKNOWN", *JobResultStatusChoices.ALL_STATES],
         help_text=("For unready jobs: RUNNING, NOT RUNNING, or UNKNOWN. For ready jobs: the terminal state."),
     )
     irreversible = serializers.CharField(
-        required=False, help_text="Warning that the action cannot be undone. Omitted when action is None."
+        required=False, help_text="Warning that the action cannot be undone. Omitted when the job is already finished."
     )
     timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
 
