@@ -304,7 +304,9 @@ class CreateBreakoutSubinterfacesTestCase(TestCase):
             status=self.interface_status,
         )
 
-    def _create_breakout_type(self, name="1x4 breakout", b_connectors=4, total_lanes=4):
+    def _create_breakout_type(self, name="test_utils 1x4 breakout", b_connectors=4, total_lanes=4):
+        # Use a test-specific name prefix. Migrations already create defaults like "1x4 Breakout",
+        # and MySQL treats names like that as duplicates regardless of capitalization.
         cable_type = CableType(name=name, a_connectors=1, b_connectors=b_connectors, total_lanes=total_lanes)
         cable_type.validated_save()
         return cable_type
@@ -403,7 +405,7 @@ class CreateBreakoutSubinterfacesTestCase(TestCase):
         cable = self._create_breakout_cable(
             trunk,
             fanouts,
-            cable_type=self._create_breakout_type(name="1x2 breakout", b_connectors=2, total_lanes=2),
+            cable_type=self._create_breakout_type(name="test_utils position index 1x2", b_connectors=2, total_lanes=2),
         )
 
         created = create_breakout_subinterfaces(cable)
@@ -442,7 +444,7 @@ class CreateBreakoutSubinterfacesTestCase(TestCase):
         cable = self._create_breakout_cable(
             trunk,
             fanouts,
-            cable_type=self._create_breakout_type(name="existing child 1x2", b_connectors=2, total_lanes=2),
+            cable_type=self._create_breakout_type(name="test_utils existing child 1x2", b_connectors=2, total_lanes=2),
         )
 
         created = create_breakout_subinterfaces(cable)
@@ -468,7 +470,7 @@ class CreateBreakoutSubinterfacesTestCase(TestCase):
         cable = self._create_breakout_cable(
             trunk,
             fanouts,
-            cable_type=self._create_breakout_type(name="collision 1x2", b_connectors=2, total_lanes=2),
+            cable_type=self._create_breakout_type(name="test_utils collision 1x2", b_connectors=2, total_lanes=2),
         )
 
         with self.assertRaisesRegex(ValidationError, "already in use"):
@@ -496,7 +498,7 @@ class CreateBreakoutSubinterfacesTestCase(TestCase):
                 device = self._create_device(name=f"{model_name} Trunk Device")
                 trunk = self._create_non_interface_trunk(device, model_name)
                 fanouts = [self._create_interface(device=device, name=f"{model_name} Fanout {i}") for i in range(1, 5)]
-                cable_type = self._create_breakout_type(name=f"{model_name} 1x4 breakout")
+                cable_type = self._create_breakout_type(name=f"test_utils {model_name} 1x4 breakout")
                 cable = self._create_breakout_cable(trunk, fanouts, cable_type=cable_type)
 
                 created = create_breakout_subinterfaces(cable)
