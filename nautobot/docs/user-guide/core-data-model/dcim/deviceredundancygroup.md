@@ -6,7 +6,7 @@ Device Redundancy Groups are created first, before the devices are assigned to t
 A failover strategy represents the intended operation mode of the group. Supported failover strategies are:
 
 - Active/Active
-- Active/Passive.
+- Active/Passive
 
 Secrets groups could be used to store secret information used by failover or a cluster of devices.
 
@@ -110,7 +110,7 @@ erDiagram
 
 ## Sample API
 
-The below Python snippet is intended to work by dropping it into an iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+The below Python snippet is intended to work by dropping it into an IPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
 
 ??? example "Show pynautobot script"
 

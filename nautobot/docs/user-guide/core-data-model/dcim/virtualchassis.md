@@ -93,7 +93,7 @@ erDiagram
 
 ## Sample API
 
-The below Python snippet is intended to work by dropping it into an iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+The below Python snippet is intended to work by dropping it into an IPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
 
 ??? example "Show pynautobot script"
 
