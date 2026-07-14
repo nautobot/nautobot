@@ -29,8 +29,6 @@ To help guide these use cases, we will ask and answer each of these questions to
 - On a Primary object, can you tell which interfaces are assigned to which device?
 - When do you see all the interfaces on the primary device?
 - Can you connect interfaces from primary to non-primary?
-- Do any configurations **not** map back to model?
-- How are interfaces named?
 - What should the naming standard be for the chassis device?
 - Should I use interface named templates?
 
@@ -38,10 +36,10 @@ To help guide these use cases, we will ask and answer each of these questions to
 
 While vendors offer a variety of technologies, the data model remains largely agnostic to these specifics. The following table serves as a foundation for modeling redundant devices in Nautobot.
 
-<!-- markdownlint-disable MD033 -->
+<!-- pyml disable-num-lines 13 no-inline-html -->
 |     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Example Technologies | VSS / StackWise Virtual / SRX | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FTD | vPC / MLAG / MC-LAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
+| Example Technologies | VSS / StackWise Virtual | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FTD / SRX | vPC / MLAG / MC-LAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
@@ -52,7 +50,6 @@ While vendors offer a variety of technologies, the data model remains largely ag
 | Redundancy Mode | Active/Active | Active/Active | Active/Active or Active/Standby | Active/Active | Active/Standby or Active/Active | Active/Standby or Active/Active |
 | Dedicated HA Interface | Yes | Yes | Yes | Yes | Yes | Typically<br>(sync/heartbeat links) |
 | Shared Virtual MAC | Yes | Yes | Yes | Typically<br>(via protocol such as FHRP/anycast) | Yes (on L3) | Yes |
-<!-- markdownlint-enable MD033 -->
 
 ### Which Nautobot Model to Use
 

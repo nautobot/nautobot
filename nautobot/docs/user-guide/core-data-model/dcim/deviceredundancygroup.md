@@ -21,11 +21,9 @@ Use a Device Redundancy Group when multiple physical devices work together to pr
 !!! note
     Unlike a Virtual Chassis, there is no master concept and interfaces are never surfaced on a peer device. Each member remains a fully independent device in Nautobot — with its own interfaces, inventory, configuration, and primary IP — reflecting that each unit is managed on its own. Which unit is "primary" is conveyed by `device_redundancy_group_priority`, but Nautobot only stores this integer — it does not elect a primary or define whether higher or lower wins. Your automation assigns the meaning, so pick a convention and document it.
 
-TODO: Review this as our final recommendation
+LAG interfaces cannot span members of a Device Redundancy Group; a LAG and its member interfaces must belong to the same device (or the same virtual chassis). For multi-chassis technologies such as vPC or MLAG, model a port channel on each member individually and give it the same name on both members (e.g. `Port-Channel10` on each switch), matching how the technology is typically configured. The pairing is deliberately a naming convention: nothing in the data model links the two port channels, nothing enforces that the names match, and no configuration is synced. Conventions also carry the identifiers config templates need, the per-port-channel vPC/MLAG number is derived from the port channel name (e.g. `Port-Channel10` → `vpc 10`), and the pair-scoped domain ID is recorded in a [config context](../extras/configcontext.md) assigned to the device redundancy group.
 
-LAG interfaces cannot span members of a Device Redundancy Group; a LAG and its member interfaces must belong to the same device (or the same virtual chassis). For multi-chassis technologies such as vPC or MLAG, the recommendation is to model a port channel on each member individually, then tie the pair together with an [Interface Redundancy Group](interfaceredundancygroup.md): create one group per multi-chassis port channel, assign each member's LAG interface to it with a priority, and record the vPC/MLAG domain or pair ID in `protocol_group_id` — the cross-vendor redundancy identifier (vPC domain, MLAG domain, cluster ID) that config templates read to render the domain/group lines. As users, we recommend giving the LAG the same name on both members (e.g. `Port-Channel10` on each switch) to match how the technology is typically configured; however, this is not enforced nor is any configuration synced. The Interface Redundancy Group is the only thing in the data model relating them to each other.
-
-An Interface Redundancy Group does not change or take over the interfaces themselves — each member's LAG remains an ordinary, independently configured interface on its own device. What the group models is the relationship between them: two separately configured interfaces that present a single logical entity to the rest of the network. The `protocol` field is meant for first hop redundancy protocols (FHRP) such as VRRP, not for link aggregation protocols such as LACP; leave it blank when grouping port channels.
+If you need an explicit link between the two port channels instead of a convention — for example, when the names cannot be kept identical — create a custom [Relationship](../../platform-functionality/relationship.md) (e.g. "vPC peer", Interface ↔ Interface) and query it alongside the rest of the data. An [Interface Redundancy Group](interfaceredundancygroup.md) can technically group any redundant interfaces, but it was designed for first hop redundancy protocols — a shared `virtual_ip`, an FHRP `protocol`, election priorities — so we do not recommend it for pairing multi-chassis port channels. It remains the right model when those semantics genuinely apply, such as the floating IPs shared by a load balancer pair shown later on this page.
 
 The device redundancy group model provides the following fields:
 
@@ -85,7 +83,7 @@ erDiagram
         string name UK
         Status status FK
         string protocol "HSRP, VRRP, GLBP, CARP, or blank for other groupings"
-        string protocol_group_id "e.g. HSRP group ID or vPC domain ID"
+        string protocol_group_id "e.g. HSRP or VRRP group ID"
         IPAddress virtual_ip FK "optional shared virtual address"
         SecretsGroup secrets_group FK "optional"
     }
@@ -112,7 +110,7 @@ erDiagram
 
 ## Sample API
 
-The below Python snippet is intended to work by dropping it into a iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+The below Python snippet is intended to work by dropping it into an iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
 
 ??? example "Show pynautobot script"
 
@@ -133,10 +131,9 @@ The below Python snippet is intended to work by dropping it into a iPython shell
 
     LOCATION_NAME = f"{ROOT_NAME.upper()}"
     DRG_NAME = f"{ROOT_NAME}-drg01:02"
-    IRG_NAME = f"{ROOT_NAME}-drg-rt01:02-po10"
     SECRETS_GROUP_NAME = f"{ROOT_NAME}-drg-credentials"
-    DEVICE_1_NAME = f"{ROOT_NAME}-drg-rt01"
-    DEVICE_2_NAME = f"{ROOT_NAME}-drg-rt02"
+    DEVICE_1_NAME = f"{ROOT_NAME}-drg01"
+    DEVICE_2_NAME = f"{ROOT_NAME}-drg02"
 
     # Floating (virtual) IPs shared by the pair, modeled as each group's `virtual_ip`.
     VIP_INTERFACES = {
@@ -211,7 +208,14 @@ The below Python snippet is intended to work by dropping it into a iPython shell
     )
     log(created, "DeviceRedundancyGroup", drg.name)
 
-    lag_ids = {}
+    # Pair-scoped identifiers (e.g. the vPC domain ID) live in a config context assigned to the group.
+    vpc_context, created = get_or_create(
+        nb.extras.config_contexts,
+        {"name": f"{DRG_NAME}-vpc"},
+        {"data": {"vpc_domain_id": 10}, "device_redundancy_groups": [drg.id]},
+    )
+    log(created, "ConfigContext", vpc_context.name)
+
     vip_interface_ids = {}
     for spec in DEVICES:
         print(f"Seeding {spec['name']}...")
@@ -296,7 +300,6 @@ The below Python snippet is intended to work by dropping it into a iPython shell
             {"type": "lag", "status": active.id, "description": "Multi-chassis port channel (vPC 10)"},
         )
         log(created, "Interface", f"{device.name} Port-Channel10")
-        lag_ids[device.name] = po10.id
 
         for member_name in ("Ethernet1/1", "Ethernet1/2"):
             member, created = get_or_create(
@@ -308,22 +311,7 @@ The below Python snippet is intended to work by dropping it into a iPython shell
             if member.lag is None:
                 member.update({"lag": po10.id})
 
-    print("Seeding interface redundancy groups...")
-    irg, created = get_or_create(
-        nb.dcim.interface_redundancy_groups,
-        {"name": IRG_NAME},
-        {"status": active.id, "protocol_group_id": "10"},
-    )
-    log(created, "InterfaceRedundancyGroup", irg.name)
-
-    for spec in DEVICES:
-        _, created = get_or_create(
-            nb.dcim.interface_redundancy_group_associations,
-            {"interface_redundancy_group": irg.id, "interface": lag_ids[spec["name"]]},
-            {"priority": spec["priority"]},
-        )
-        log(created, "IRG association", f"{spec['name']} Port-Channel10 (priority {spec['priority']})")
-
+    print("Seeding floating IP interface redundancy groups...")
     for vip_name, vip_address in VIP_INTERFACES.items():
         virtual_ip, created = get_or_create(
             nb.ipam.ip_addresses, {"address": vip_address, "namespace": namespace.id}, {"status": active.id}
@@ -332,7 +320,7 @@ The below Python snippet is intended to work by dropping it into a iPython shell
 
         vip_irg, created = get_or_create(
             nb.dcim.interface_redundancy_groups,
-            {"name": f"{ROOT_NAME}-drg-rt01:02-{vip_name}"},
+            {"name": f"{DRG_NAME}-{vip_name}"},
             {"status": active.id, "virtual_ip": virtual_ip.id},
         )
         log(created, "InterfaceRedundancyGroup", vip_irg.name)
@@ -349,7 +337,7 @@ The below Python snippet is intended to work by dropping it into a iPython shell
 
 ## Sample Design Builder
 
-The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same HA pair as the Sample API above: `jcy-drg-rt01` and `jcy-drg-rt02` tied together by a `DeviceRedundancyGroup` named `jcy-drg01:02`, sharing the same `JCY` location and `192.168.1.0/24` management prefix.
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same HA pair as the Sample API above: `jcy-drg01` and `jcy-drg02` tied together by a `DeviceRedundancyGroup` named `jcy-drg01:02`, sharing the same `JCY` location and `192.168.1.0/24` management prefix.
 
 ??? example "Show Design Builder YAML"
 
@@ -372,7 +360,7 @@ The following [Design Builder](https://docs.nautobot.com/projects/design-builder
 
     devices:
         # Primary unit
-      - "!create_or_update:name": "jcy-drg-rt01"
+      - "!create_or_update:name": "jcy-drg01"
         location__name: "JCY"
         status__name: "Active"
         device_type__model: "C9300"
@@ -412,7 +400,7 @@ The following [Design Builder](https://docs.nautobot.com/projects/design-builder
           deferred: true
 
         # Secondary unit
-      - "!create_or_update:name": "jcy-drg-rt02"
+      - "!create_or_update:name": "jcy-drg02"
         location__name: "JCY"
         status__name: "Active"
         device_type__model: "C9300"
@@ -457,7 +445,7 @@ The following [Design Builder](https://docs.nautobot.com/projects/design-builder
 The following query retrieves a device redundancy group by name, without needing to know any of the member hostnames up front. It is built to answer the "Questions to ask of the data model" below in a single call.
 
 !!! note
-    The `failover_links: interfaces(name__ie: "failover-link")` and `vip_interfaces: interfaces(name: ["external", "internal"])` filters are conventions, these would work in a scenario where you defined your interfaces to use those names. You can choose other methods (such as a tag or role) and would need to update accordingly.
+    The `failover_links: interfaces(name__ie: "failover-link")` and `vip_interfaces: interfaces(name: ["external", "internal"])` filters are conventions, these would work in a scenario where you defined your interfaces to use those names. You can choose other methods (such as a tag or role) and would need to update accordingly. The multi-chassis port channels rely on the same idea — identical LAG names on both members pair them, and the pair-scoped vPC domain ID arrives in each device's `config_context` (from the config context assigned to the redundancy group).
 
 ```graphql
 query ($redundancy_group: [String]) {
@@ -473,15 +461,12 @@ query ($redundancy_group: [String]) {
     devices {
       name
       device_redundancy_group_priority
+      config_context
       primary_ip4 {
         address
       }
-      lag_interfaces: interfaces (type: "lag", interface_redundancy_groups__isnull: false) {
+      lag_interfaces: interfaces (type: "lag") {
         name
-        interface_redundancy_groups {
-          name
-          protocol_group_id
-        }
         member_interfaces {
           name
         }
@@ -534,20 +519,17 @@ An example of the data returned from Nautobot is presented below.
         "controllers": [],
         "devices": [
           {
-            "name": "jcy-drg-rt01",
+            "name": "jcy-drg01",
             "device_redundancy_group_priority": 100,
+            "config_context": {
+              "vpc_domain_id": 10
+            },
             "primary_ip4": {
               "address": "192.168.1.20/24"
             },
             "lag_interfaces": [
               {
                 "name": "Port-Channel10",
-                "interface_redundancy_groups": [
-                  {
-                    "name": "jcy-drg-rt01:02-po10",
-                    "protocol_group_id": "10"
-                  }
-                ],
                 "member_interfaces": [
                   {
                     "name": "Ethernet1/1"
@@ -580,7 +562,7 @@ An example of the data returned from Nautobot is presented below.
                 ],
                 "interface_redundancy_groups": [
                   {
-                    "name": "jcy-drg-rt01:02-external",
+                    "name": "jcy-drg01:02-external",
                     "virtual_ip": {
                       "address": "203.0.113.20/25"
                     }
@@ -596,7 +578,7 @@ An example of the data returned from Nautobot is presented below.
                 ],
                 "interface_redundancy_groups": [
                   {
-                    "name": "jcy-drg-rt01:02-internal",
+                    "name": "jcy-drg01:02-internal",
                     "virtual_ip": {
                       "address": "203.0.113.150/25"
                     }
@@ -606,20 +588,17 @@ An example of the data returned from Nautobot is presented below.
             ]
           },
           {
-            "name": "jcy-drg-rt02",
+            "name": "jcy-drg02",
             "device_redundancy_group_priority": 50,
+            "config_context": {
+              "vpc_domain_id": 10
+            },
             "primary_ip4": {
               "address": "192.168.1.21/24"
             },
             "lag_interfaces": [
               {
                 "name": "Port-Channel10",
-                "interface_redundancy_groups": [
-                  {
-                    "name": "jcy-drg-rt01:02-po10",
-                    "protocol_group_id": "10"
-                  }
-                ],
                 "member_interfaces": [
                   {
                     "name": "Ethernet1/1"
@@ -652,7 +631,7 @@ An example of the data returned from Nautobot is presented below.
                 ],
                 "interface_redundancy_groups": [
                   {
-                    "name": "jcy-drg-rt01:02-external",
+                    "name": "jcy-drg01:02-external",
                     "virtual_ip": {
                       "address": "203.0.113.20/25"
                     }
@@ -668,7 +647,7 @@ An example of the data returned from Nautobot is presented below.
                 ],
                 "interface_redundancy_groups": [
                   {
-                    "name": "jcy-drg-rt01:02-internal",
+                    "name": "jcy-drg01:02-internal",
                     "virtual_ip": {
                       "address": "203.0.113.150/25"
                     }
@@ -685,11 +664,11 @@ An example of the data returned from Nautobot is presented below.
 ```
 
 !!! note
-    The same data is reachable starting from a member device (e.g. `query { devices(name: ["nyc-fw-primary"]) { device_redundancy_group { devices { ... } } } }`) when a hostname is what you have in hand.
+    The same data is reachable starting from a member device (e.g. `query { devices(name: ["jcy-drg01"]) { device_redundancy_group { devices { ... } } } }`) when a hostname is what you have in hand.
 
 ## Key Characteristics
 
-- **Can you port channel across multiple devices?** No, but you can use interface redundancy groups to provide relationships between port channel virtual interfaces on two devices.
+- **Can you port channel across multiple devices?** No — model a port channel on each member individually and pair them by giving both the same name; add a custom Relationship only if you need an explicit link.
 - **Can you see all interfaces on the Primary?** No — the active unit only shows its own interfaces
 - **Can you see all interfaces on the Backup?** No — the standby unit has its own separate interface list
 - **On Primary, can you tell which interfaces are assigned to which device?** N/A — each device is modeled separately in Nautobot
@@ -711,7 +690,8 @@ Given the data model, what questions would a user ask?
 - Given a redundancy group, I would like to know whether failover is active/active or active/passive.
 - Given a redundancy group, I would like to know which credentials (Secrets Group) to use to access its members.
 - Given a member device, I would like to know which interfaces form the HA/failover/peer link, and which port on the peer they connect to (via cables).
-- Given a multi-chassis port channel (vPC/MLAG), I would like to know the corresponding LAG on the peer device (via their shared interface redundancy group).
+- Given a multi-chassis port channel (vPC/MLAG), I would like to know the corresponding LAG on the peer device (by convention, the LAG with the same name).
+- Given a redundancy group, I would like to know its pair-scoped identifiers such as the vPC/MLAG domain ID (via the config context assigned to the group).
 - Given a member device, I would like to know the floating (virtual) IPs it shares with its peer (via its interfaces' interface redundancy groups).
 - Given a controller, I would like to know whether it is deployed on a device redundancy group rather than a single device.
 
@@ -724,13 +704,13 @@ Given the data model, what questions would a user ask?
 
     Operating systems and technologies include VPC / MLAG (Cisco vPC, Arista MLAG, and Juniper MC-LAG variants).
 
-    A config template driven by the GraphQL response above. Each device renders its vPC domain (from the Interface Redundancy Group `protocol_group_id`), a peer-keepalive between the two members' management IPs, and each vPC port channel with its member interfaces.
+    A config template driven by the GraphQL response above. Each device renders its vPC domain (from the `vpc_domain_id` key in its config context, assigned via the device redundancy group), a peer-keepalive between the two members' management IPs, and each vPC port channel with its member interfaces. The per-port-channel vPC number is derived from the port channel name by convention (`Port-Channel10` → `vpc 10`).
 
     ```jinja2
     {% set group = data.device_redundancy_groups[0] %}
     {% for device in group.devices %}
     {% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
-    {% set group_id = device.lag_interfaces[0].interface_redundancy_groups[0].protocol_group_id %}
+    {% set domain_id = device.config_context.vpc_domain_id %}
     # ~~~~~ {{ device.name }} ~~~~~
 
     # Global / vPC Domain
@@ -738,14 +718,14 @@ Given the data model, what questions would a user ask?
     feature vpc
     feature lacp
     !
-    vpc domain {{ group_id }}
+    vpc domain {{ domain_id }}
       role priority {{ device.device_redundancy_group_priority }}
       peer-keepalive destination {{ peer.primary_ip4.address.split("/")[0] }} source {{ device.primary_ip4.address.split("/")[0] }} vrf management
       peer-switch
       peer-gateway
       auto-recovery
 
-    # note: vPC domain ID / `protocol_group_id` ({{ group_id }}) must match on both peers
+    # note: the vPC domain ID ({{ domain_id }}) is pair-scoped, from the group's config context; it must match on both peers
 
     # Peer-Link Configuration
 
@@ -757,16 +737,17 @@ Given the data model, what questions would a user ask?
 
     # vPC to Downstream Device Configuration
     {% for lag in device.lag_interfaces %}
+    {% set vpc_id = lag.name | replace("Port-Channel", "") %}
     interface {{ lag.name }}
-      description vPC {{ group_id }} downstream
+      description vPC {{ vpc_id }} downstream
       switchport mode trunk
-      vpc {{ group_id }}
+      vpc {{ vpc_id }}
     !
     {% for member in lag.member_interfaces %}
     interface {{ member.name }}
-      description Member of {{ lag.name }} (vPC {{ group_id }})
+      description Member of {{ lag.name }} (vPC {{ vpc_id }})
       switchport mode trunk
-      channel-group {{ lag.name | replace("Port-Channel", "") }} mode active
+      channel-group {{ vpc_id }} mode active
     !
     {% endfor %}
     {% endfor %}
@@ -805,9 +786,6 @@ Given the data model, what questions would a user ask?
     Operating systems and technologies include F5 BIG-IP, A10 Thunder, Viptela, Versa, and Silver Peak. F5 BIG-IP is shown as the representative example.
 
     A config template driven entirely by the GraphQL response above. Each unit renders its own self IPs from its `vip_interfaces`, the failover link doubles as the ConfigSync/heartbeat/mirroring address, and each floating self IP is read from the interface's interface redundancy group `virtual_ip` — the shared address is modeled once on the group instead of being derived in the template.
-
-    !!! note
-        The example device names (`jcy-drg-rt01`/`jcy-drg-rt02`) read more like routers than load balancers, they come from the shared GraphQL example above so that a single dataset drives all three templates. Substitute your own naming standard; the rendered configuration is otherwise unaffected.
 
     ```jinja2
     {% set group = data.device_redundancy_groups[0] %}

@@ -93,6 +93,8 @@ erDiagram
 
 ## Sample API
 
+The below Python snippet is intended to work by dropping it into an iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+
 ??? example "Show pynautobot script"
 
     ```python
@@ -456,146 +458,166 @@ Query variables:
 
 ```json
 {
-    "data": {
-        "virtual_chassis": [
-            {
-                "name": "jcy-vc01",
-                "domain": "jcy-vc01",
-                "master": {"name": "jcy-vc01"},
-                "members": [
-                    {
-                        "name": "jcy-vc01",
-                        "vc_position": 1,
-                        "vc_priority": 15,
-                        "primary_ip4": {"address": "192.168.1.10/24"},
-                        "interfaces": [
-                            {
-                                "name": "GigabitEthernet0/0",
-                                "type": "A_1000BASE_T",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": True,
-                                "description": "Management Interface",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [{"address": "192.168.1.10/24"}],
-                            },
-                            {
-                                "name": "TenGigabitEthernet1/1/1",
-                                "type": "A_10GBASE_X_SFPP",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": False,
-                                "description": "Uplink (Po1 member)",
-                                "lag": {"name": "Port-Channel1"},
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                            {
-                                "name": "StackPort1/1",
-                                "type": "CISCO_STACKWISE_480",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": False,
-                                "description": "Stack ring",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                            {
-                                "name": "StackPort1/2",
-                                "type": "CISCO_STACKWISE_480",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": False,
-                                "description": "Stack ring",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                            {
-                                "name": "Port-Channel1",
-                                "type": "LAG",
-                                "enabled": True,
-                                "mode": "TAGGED",
-                                "mgmt_only": False,
-                                "description": "Cross-stack uplink LAG to upstream distribution",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [
-                                    {"vid": 10},
-                                    {"vid": 20},
-                                    {"vid": 30},
-                                    {"vid": 40},
-                                ],
-                                "ip_addresses": [],
-                            },
-                        ],
-                    },
-                    {
-                        "name": "jcy-vc01:2",
-                        "vc_position": 2,
-                        "vc_priority": 14,
-                        "primary_ip4": None,
-                        "interfaces": [
-                            {
-                                "name": "GigabitEthernet0/0",
-                                "type": "A_1000BASE_T",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": True,
-                                "description": "Management Interface",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                            {
-                                "name": "TenGigabitEthernet2/1/1",
-                                "type": "A_10GBASE_X_SFPP",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": False,
-                                "description": "Uplink (Po1 member)",
-                                "lag": {"name": "Port-Channel1"},
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                            {
-                                "name": "StackPort2/1",
-                                "type": "CISCO_STACKWISE_480",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": False,
-                                "description": "Stack ring",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                            {
-                                "name": "StackPort2/2",
-                                "type": "CISCO_STACKWISE_480",
-                                "enabled": True,
-                                "mode": None,
-                                "mgmt_only": False,
-                                "description": "Stack ring",
-                                "lag": None,
-                                "untagged_vlan": None,
-                                "tagged_vlans": [],
-                                "ip_addresses": [],
-                            },
-                        ],
-                    },
+  "data": {
+    "virtual_chassis": [
+      {
+        "name": "jcy-vc01",
+        "domain": "jcy-vc01",
+        "master": {
+          "name": "jcy-vc01"
+        },
+        "members": [
+          {
+            "name": "jcy-vc01",
+            "vc_position": 1,
+            "vc_priority": 15,
+            "primary_ip4": {
+              "address": "192.168.1.10/24"
+            },
+            "interfaces": [
+              {
+                "name": "GigabitEthernet0/0",
+                "type": "A_1000BASE_T",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": true,
+                "description": "Management Interface",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": [
+                  {
+                    "address": "192.168.1.10/24"
+                  }
+                ]
+              },
+              {
+                "name": "TenGigabitEthernet1/1/1",
+                "type": "A_10GBASE_X_SFPP",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": false,
+                "description": "Uplink (Po1 member)",
+                "lag": {
+                  "name": "Port-Channel1"
+                },
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              },
+              {
+                "name": "StackPort1/1",
+                "type": "CISCO_STACKWISE_480",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": false,
+                "description": "Stack ring",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              },
+              {
+                "name": "StackPort1/2",
+                "type": "CISCO_STACKWISE_480",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": false,
+                "description": "Stack ring",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              },
+              {
+                "name": "Port-Channel1",
+                "type": "LAG",
+                "enabled": true,
+                "mode": "TAGGED",
+                "mgmt_only": false,
+                "description": "Cross-stack uplink LAG to upstream distribution",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [
+                  {
+                    "vid": 10
+                  },
+                  {
+                    "vid": 20
+                  },
+                  {
+                    "vid": 30
+                  },
+                  {
+                    "vid": 40
+                  }
                 ],
-            }
+                "ip_addresses": []
+              }
+            ]
+          },
+          {
+            "name": "jcy-vc01:2",
+            "vc_position": 2,
+            "vc_priority": 14,
+            "primary_ip4": null,
+            "interfaces": [
+              {
+                "name": "GigabitEthernet0/0",
+                "type": "A_1000BASE_T",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": true,
+                "description": "Management Interface",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              },
+              {
+                "name": "TenGigabitEthernet2/1/1",
+                "type": "A_10GBASE_X_SFPP",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": false,
+                "description": "Uplink (Po1 member)",
+                "lag": {
+                  "name": "Port-Channel1"
+                },
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              },
+              {
+                "name": "StackPort2/1",
+                "type": "CISCO_STACKWISE_480",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": false,
+                "description": "Stack ring",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              },
+              {
+                "name": "StackPort2/2",
+                "type": "CISCO_STACKWISE_480",
+                "enabled": true,
+                "mode": null,
+                "mgmt_only": false,
+                "description": "Stack ring",
+                "lag": null,
+                "untagged_vlan": null,
+                "tagged_vlans": [],
+                "ip_addresses": []
+              }
+            ]
+          }
         ]
-    }
+      }
+    ]
+  }
 }
 
 ```
@@ -605,13 +627,13 @@ Query variables:
 
 ## Key Characteristics
 
-- **Can you port channel across multiple devices?** Yes — spanned EtherChannel is supported in FTD clustering
-- **Can you see all interfaces on the Primary (control node)?** No — Each node can only see its interfaces, but all cluster interfaces are visible via FMC
-- **Can you see all interfaces on the Backup (data node)?** No — only interfaces physically on that chassis module are visible locally
-- **On Primary, can you tell which interfaces are assigned to which device?** No — Only the FMC can see all interfaces
-- **When do you see all the interfaces on the primary device?** You cannot - Only the FMC can see all interface
-- **Can you connect interfaces from primary to non-primary?** Yes
-- **What should the naming standard be for the chassis device?** Use the shared cluster name / FMC display name (logical single name)
+- **Can you port channel across multiple devices?** Yes — a virtual chassis is the one case in Nautobot where a LAG's member interfaces may live on different devices (any members sharing the same parent virtual chassis)
+- **Can you see all interfaces on the Primary (master)?** Yes — you can see every member's ports on the master device (except the members' `mgmt_only` interfaces)
+- **Can you see all interfaces on the Backup (member)?** No — a non-master member shows only its own interfaces
+- **On Primary, can you tell which interfaces are assigned to which device?** Yes — each interface keeps its relationship to the member that physically owns it, and slot-based names (e.g. `GigabitEthernet2/0/1`) convey the member position
+- **When do you see all the interfaces on the primary device?** Once the device is designated as the virtual chassis master
+- **Can you connect interfaces from primary to non-primary?** Yes — the stack/VSL ports are cabled between the members either directly or in a ring
+- **What should the naming standard be for the chassis device?** The master carries the logical chassis name (e.g., `jcy-vc01`); the other members are suffixed with their position (e.g., `jcy-vc01:2`)
 - **Should I use interface named templates?** Yes
 
 ## Questions to ask of the data model
@@ -702,7 +724,7 @@ Given the data model, what questions would a user ask?
     {% endfor %}
     ```
 
-    > Note: this config is on a single management IP
+    ## note: This config is on a single management IP
 
 === "Multi-Chassis Stack"
 
@@ -751,7 +773,8 @@ Given the data model, what questions would a user ask?
     {% endfor %}
     ```
 
-    > Note: On member, keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
+    !!! note
+        On member, keep a lower priority. You should renumber them so their interfaces are easily identifiable (e.g., Member 2 uses 2/0/x).
 
 === "Firewall Cluster"
 
@@ -795,9 +818,11 @@ Given the data model, what questions would a user ask?
     {% endfor %}
     ```
 
-    > Note: `set chassis-id` is unique per chassis (from `vc_position`); the cluster group name and the CCL port-channel ID must match on all chassis. Use dedicated high-bandwidth interfaces for the CCL.
+    !!! note
+        `set chassis-id` is unique per chassis (from `vc_position`); the cluster group name and the CCL port-channel ID must match on all chassis. Use dedicated high-bandwidth interfaces for the CCL.
 
-    > Note: The control/data role is not configured — the cluster elects the control unit when it forms. The Nautobot `master` field records which member is expected to hold the control role.
+    !!! note
+        The control/data role is not configured — the cluster elects the control unit when it forms. The Nautobot `master` field records which member is expected to hold the control role.
 
 The script below renders the templates against GraphQL query. Paste the GraphQL query from the [GraphQL](#graphql) section into a variable called `GRAPHQL_QUERY`, and one of the three templates above into `CLI_CONFIG_TEMPLATE`. This script is a continuation of the prior script above and assumes the variables `nb`, `NAUTOBOT_URL`, and `NAUTOBOT_TOKEN` are already set.
 
