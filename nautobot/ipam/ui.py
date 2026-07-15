@@ -102,10 +102,10 @@ class AddIPAddressRangeButton(Button):
             # Strip the mask -> "10.32.0.1"
             start = first_available_ip.split("/")[0]
             params["start_address"] = start
+            # for IPv4 we take first three octets, but for IPv6 end_address is empty
             if obj.ip_version == 4:
                 # First three octets only -> "10.32.0"
-                params["end_address"] = ".".join(start.split(".")[:3])
-            # TBD: what to do with IPv6
+                params["end_address"], _ = start.rsplit(".", 1)
         if obj.tenant:
             params["tenant"] = obj.tenant.pk
             if obj.tenant.tenant_group:
@@ -200,7 +200,8 @@ class IPAddressRangeIPAddressesPanel(ObjectsTablePanel):
             return None
 
         range_set = netaddr.IPSet(netaddr.IPRange(obj.start_host, obj.end_host))
-        available = obj.parent.get_available_ips() & range_set
+        occupied = netaddr.IPSet([ip.address.ip for ip in obj.ip_addresses])
+        available = range_set - occupied
         if not available:
             return None
 
