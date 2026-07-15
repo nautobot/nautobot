@@ -1,6 +1,5 @@
 """Enable OTEL Tracing."""
 
-from importlib import import_module
 import logging
 
 from opentelemetry import metrics, trace
@@ -19,6 +18,7 @@ from opentelemetry.sdk.trace import SpanLimits, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
 
 from nautobot import __version__
+from nautobot.core.utils.module_loading import import_string_optional
 
 logger = logging.getLogger(__name__)
 
@@ -113,10 +113,12 @@ def instrument():
     # getattr with a default (unlike the direct reads above) so a hand-rolled nautobot_config.py that
     # predates this setting still works; settings.py always defines it, so the default only covers overrides.
     for path in getattr(nautobot_config, "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", []):
-        module_path, _, class_name = path.rpartition(".")
         try:
-            instrumentor_cls = getattr(import_module(module_path), class_name)
-        except (ImportError, AttributeError, ValueError):
+            # Returns None for a missing module/attribute; a dotless path raises ValueError.
+            instrumentor_cls = import_string_optional(path)
+        except ValueError:
+            instrumentor_cls = None
+        if instrumentor_cls is None:
             logger.warning("Could not load OTEL instrumentor %s; skipping.", path)
             continue
         try:
