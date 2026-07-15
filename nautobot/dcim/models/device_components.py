@@ -757,6 +757,17 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
 
     class Meta(ModularComponentModel.Meta):
         ordering = ("device", "module__id", CollateAsChar("_name"))  # Module.ordering is complex; don't order by module
+        indexes = [
+            # Expression index matching the `ordering` tuple above so the default (unsorted) list query can be
+            # satisfied by an index scan instead of a full sort. The `_name` expression must use the same
+            # CollateAsChar collation as `ordering`, otherwise the planner cannot use the index for the ORDER BY.
+            models.Index(
+                models.F("device"),
+                models.F("module"),
+                CollateAsChar("_name"),
+                name="dcim_interface_order_idx",
+            ),
+        ]
 
     def clean(self):
         super().clean()
