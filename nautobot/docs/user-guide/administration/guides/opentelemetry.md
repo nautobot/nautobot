@@ -233,3 +233,10 @@ Testing with `OTEL_TRACES_EXPORTER=none` isolates the cost of span creation and 
 - Under high concurrency, consider disabling metrics export (`OTEL_METRICS_EXPORTER=none`) and relying on sampling to reduce collector load.
 - Avoid `OTEL_TRACES_EXPORTER=console` in production. It serializes each span synchronously to stdout and adds measurable overhead at volume.
 - If database span volume is too high, tail-based sampling rules at the collector can exclude fast, successful database-only traces while retaining error traces and slow traces in full.
+- Potentially expensive calculations when populating attributes can be skipped during head-based sampling when the current span is not being recorded
+
+```python
+if span.is_recording():
+    # Set your attribute
+    span.set_attribute("my_app.complex_attribute", expensive_calculation())
+```
