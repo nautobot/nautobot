@@ -93,7 +93,47 @@ erDiagram
 
 ## Sample API
 
-The below Python snippet is intended to work by dropping it into an IPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+The below Python snippet creates a HA pair two-member virtual chassis as `jcy-vc01`. It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"`. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`. The below diagram describes what the code will create.
+
+You can drop this snippet into an iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+
+```mermaid
+---
+title: Virtual Chassis Created by the Sample Script
+---
+graph TB
+    vc["VirtualChassis: jcy-vc01<br><i>domain: jcy-vc01</i>"]
+    mgmt_prefix["Prefix: 192.168.1.0/24<br>(management)"]
+    vlans["VLANs: 10, 20, 30, 40"]
+
+    subgraph loc["Location: JCY"]
+        subgraph sw1["Device: jcy-vc01 (position 1, priority 15)"]
+            s1_mgmt["GigabitEthernet0/0 (mgmt_only)<br>192.168.1.10/24 (primary IP)"]
+            s1_po1["Port-Channel1 (LAG)<br><i>mode: tagged, VLANs 10,20,30,40</i>"]
+            s1_uplink["TenGigabitEthernet1/1/1"]
+            s1_sp1["StackPort1/1"]
+            s1_sp2["StackPort1/2"]
+        end
+        subgraph sw2["Device: jcy-vc01:2 (position 2, priority 14)"]
+            s2_mgmt["GigabitEthernet0/0 (mgmt_only)<br>no IP - reached via the master"]
+            s2_uplink["TenGigabitEthernet2/1/1"]
+            s2_sp1["StackPort2/1"]
+            s2_sp2["StackPort2/2"]
+        end
+    end
+
+    sw1 -- "member" --> vc
+    sw2 -- "member" --> vc
+    vc -- "master" --> sw1
+    s1_mgmt -.- mgmt_prefix
+    s1_po1 -.- vlans
+
+    s1_uplink -- "lag" --> s1_po1
+    s2_uplink -- "lag (cross-stack)" --> s1_po1
+
+    s2_sp1 -. "cable (stack ring)" .- s1_sp2
+    s2_sp2 -. "cable (stack ring)" .- s1_sp1
+```
 
 ??? example "Show pynautobot script"
 
@@ -276,13 +316,11 @@ The below Python snippet is intended to work by dropping it into an IPython shel
 
 ## Sample Design Builder
 
-The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same two-member virtual chassis as the Sample API above (`jcy-vc01`). It demonstrates the patterns required to handle the circular dependency between a `Device` and its `VirtualChassis`: switch 1 is created first and tagged with `"!ref": "sw1"`, the `VirtualChassis` is then created inline with `master: "!ref:sw1"` and `deferred: true` so the master assignment happens after both objects exist, and the primary IPv4 address is similarly deferred until interface and IP assignments are in place. Switch 2 joins the existing chassis via `"!ref:virtual_chassis"`.
-
-TODO: review `connect_cable` design builder extenstion post 3.2 release
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same HA pair as the Sample API above.
 
 ??? example "Show Design Builder YAML"
 
-    
+    ```jinja
     # Prefixes are created first so the management IPs below can parent to them.
     prefixes:
       - "!create_or_update:prefix": "192.168.1.0/24"
@@ -323,21 +361,12 @@ TODO: review `connect_cable` design builder extenstion post 3.2 release
             type: "cisco-stackwise-480"
             status__name: "Active"
             description: "Stack ring"
-            # `to` is a query that must resolve to exactly one #termination, not a bare ref.
-            #"!connect_cable":
-            #  status__name: "Connected"
-            #  to:
-            #    device: "!ref:sw1"
-            #    name: "StackPort1/2"
+            "!ref": "sw1_stackport_1"
           - "!create_or_update:name": "StackPort1/2"
             type: "cisco-stackwise-480"
             status__name: "Active"
             description: "Stack ring"
-            #"!connect_cable":
-            #  status__name: "Connected"
-            #  to:
-            #    device: "!ref:sw1"
-            #    name: "StackPort1/1"
+            "!ref": "sw1_stackport_2"
           - "!create_or_update:name": "Port-Channel1"
             type: "lag"
             status__name: "Active"
@@ -392,16 +421,36 @@ TODO: review `connect_cable` design builder extenstion post 3.2 release
             type: "cisco-stackwise-480"
             status__name: "Active"
             description: "Stack ring"
+            "!ref": "sw2_stackport_1"
           - "!create_or_update:name": "StackPort2/2"
             type: "cisco-stackwise-480"
             status__name: "Active"
             description: "Stack ring"
+            "!ref": "sw2_stackport_2"
           - "!create_or_update:name": "TenGigabitEthernet2/1/1"
             type: "10gbase-x-sfpp"
             status__name: "Active"
             description: "Uplink (Po1 member)"
             lag: "!ref:po1"
         # No primary IP assignment on switch 2 to avoid conflicts with switch 1 management IP
+
+    # Stack ring cabling (member 2's stack ports loop back to member 1's)
+    cables:
+      - "!create_or_update:label": "jcy-vc01 stack ring 1"
+        status__name: "Connected"
+        terminations:
+          - "!create_or_update:cable_end": "A"
+            interface: "!ref:sw2_stackport_1"
+          - "!create_or_update:cable_end": "B"
+            interface: "!ref:sw1_stackport_2"
+      - "!create_or_update:label": "jcy-vc01 stack ring 2"
+        status__name: "Connected"
+        terminations:
+          - "!create_or_update:cable_end": "A"
+            interface: "!ref:sw2_stackport_2"
+          - "!create_or_update:cable_end": "B"
+            interface: "!ref:sw1_stackport_1"
+
     ```
 
 ## GraphQL
@@ -634,7 +683,7 @@ Query variables:
 - **When do you see all the interfaces on the primary device?** Once the device is designated as the virtual chassis master
 - **Can you connect interfaces from primary to non-primary?** Yes — the stack/VSL ports are cabled between the members either directly or in a ring
 - **What should the naming standard be for the chassis device?** The master carries the logical chassis name (e.g., `jcy-vc01`); the other members are suffixed with their position (e.g., `jcy-vc01:2`)
-- **Should I use interface named templates?** Yes
+- **Should I name the interfaces via interface device component templates?** Yes, but you will have to change the interfaces on the second device after the fact with the bulk rename.
 
 ## Questions to ask of the data model
 
@@ -665,7 +714,7 @@ Given the data model, what questions would a user ask?
 
     A config template driven entirely by the GraphQL response above. Each member becomes a virtual-switch identity, and every LAG is rendered as a port channel with its member interfaces.
 
-    ```jinja2
+    ```jinja
     {% set vc = data.virtual_chassis[0] %}
     {% for member in vc.members %}
     # ~~~~~ {{ member.name }} ~~~~~
@@ -724,7 +773,8 @@ Given the data model, what questions would a user ask?
     {% endfor %}
     ```
 
-    ## note: This config is on a single management IP
+    !!! note
+        This config is on a single management IP
 
 === "Multi-Chassis Stack"
 
@@ -732,7 +782,7 @@ Given the data model, what questions would a user ask?
 
     A config template driven entirely by the GraphQL response above. Member priority drives master election and `vc_position` renumbers each member; management is configured once on the master, and the uplink LAG becomes a trunked port channel.
 
-    ```jinja2
+    ```jinja
     {% set vc = data.virtual_chassis[0] %}
     {% for member in vc.members %}
     # ~~~~~ {{ "Master" if member.name == vc.master.name else "Member" }} Device ({{ member.name }}) ~~~~~
@@ -782,7 +832,7 @@ Given the data model, what questions would a user ask?
 
     A config template driven entirely by the GraphQL response above. Each member renders as its own chassis: its cluster control link (CCL) port channel is built from the member's own ports that reference the LAG, and the cluster bootstrap assigns `chassis-id` from `vc_position` with the chassis `domain` as the cluster group name.
 
-    ```jinja2
+    ```jinja
     {% set vc = data.virtual_chassis[0] %}
     {% for member in vc.members %}
     # ~~~~~ {{ member.name }} (chassis {{ member.vc_position }}) ~~~~~

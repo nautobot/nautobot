@@ -1,7 +1,6 @@
 # Device Redundancy Groups
 
-Device Redundancy Groups represent logical relationships between multiple devices. Typically, a redundancy group could represent a failover pair, failover group, or a load sharing cluster.
-Device Redundancy Groups are created first, before the devices are assigned to the group.
+Device Redundancy Groups represent logical relationships between multiple devices. Typically, a redundancy group could represent a failover pair, failover group, or a load sharing cluster. Device Redundancy Groups are created first, before the devices are assigned to the group.
 
 A failover strategy represents the intended operation mode of the group. Supported failover strategies are:
 
@@ -112,7 +111,54 @@ erDiagram
 
 ## Sample API
 
-The below Python snippet is intended to work by dropping it into an IPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
+The below Python snippet creates a HA pair to create devices `jcy-drg01` and `jcy-drg02` tied together by a `DeviceRedundancyGroup` named `jcy-drg01:02`, sharing the same `JCY` location and `192.168.1.0/24` management prefix. The below diagram describes what the code will create.
+
+```mermaid
+---
+title: HA Pair Created by the Sample Script
+---
+graph TB
+    loc["Location: JCY"]
+    sg["SecretsGroup: jcy-drg-credentials"]
+    cc["ConfigContext: jcy-drg01:02-vpc<br><i>vpc_domain_id: 10</i>"]
+    mgmt_prefix["Prefix: 192.168.1.0/24<br>(management)"]
+
+    subgraph drg["DeviceRedundancyGroup: jcy-drg01:02 (failover_strategy: active/active)"]
+        subgraph dev1["Device: jcy-drg01 (priority 100)"]
+            d1_mgmt["Management0<br>192.168.1.20/24 (primary IP)"]
+            d1_fo["failover-link<br>172.27.48.0/31"]
+            d1_po["Port-Channel10<br>(Ethernet1/1, Ethernet1/2)"]
+            d1_ext["external<br>203.0.113.10/25"]
+            d1_int["internal<br>203.0.113.140/25"]
+        end
+        subgraph dev2["Device: jcy-drg02 (priority 50)"]
+            d2_mgmt["Management0<br>192.168.1.21/24 (primary IP)"]
+            d2_fo["failover-link<br>172.27.48.1/31"]
+            d2_po["Port-Channel10<br>(Ethernet1/1, Ethernet1/2)"]
+            d2_ext["external<br>203.0.113.11/25"]
+            d2_int["internal<br>203.0.113.141/25"]
+        end
+    end
+
+    drg -- "secrets_group" --> sg
+    cc -- "assigned to" --> drg
+    dev1 -- "location" --> loc
+    dev2 -- "location" --> loc
+    d1_mgmt -.- mgmt_prefix
+    d2_mgmt -.- mgmt_prefix
+    d1_fo -. "HA failover link" .- d2_fo
+    d1_po -. "paired by name (vPC 10)" .- d2_po
+
+    irg_ext["InterfaceRedundancyGroup: jcy-drg01:02-external<br><i>virtual_ip: 203.0.113.20/25</i>"]
+    irg_int["InterfaceRedundancyGroup: jcy-drg01:02-internal<br><i>virtual_ip: 203.0.113.150/25</i>"]
+
+    d1_ext -- "member" --> irg_ext
+    d2_ext -- "member" --> irg_ext
+    d1_int -- "member" --> irg_int
+    d2_int -- "member" --> irg_int
+```
+
+You can drop this snippet into an iPython shell or file. It leverages the public demo sandbox. In addition, you can update the first set of variables to more easily integrate with other systems.
 
 ??? example "Show pynautobot script"
 
@@ -339,11 +385,11 @@ The below Python snippet is intended to work by dropping it into an IPython shel
 
 ## Sample Design Builder
 
-The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same HA pair as the Sample API above: `jcy-drg01` and `jcy-drg02` tied together by a `DeviceRedundancyGroup` named `jcy-drg01:02`, sharing the same `JCY` location and `192.168.1.0/24` management prefix.
+The following [Design Builder](https://docs.nautobot.com/projects/design-builder/en/latest/) example models the same HA pair as the Sample API above.
 
 ??? example "Show Design Builder YAML"
 
-    ```jinja2
+    ```yaml
     # Prefixes are created first so the IPs below can parent to them.
     prefixes:
       - "!create_or_update:prefix": "192.168.1.0/24"
@@ -677,7 +723,7 @@ An example of the data returned from Nautobot is presented below.
 - **When do you see all the interfaces on the primary device?** You do not, each device always shows only its own interfaces
 - **Can you connect interfaces from primary to non-primary?** The failover and stateful link interfaces connect the two units either directly or via a switch
 - **What should the naming standard be for the HA pair?** A combination of the two devices names (e.g., `ASA01:02` for `ASA01` and `ASA02`)
-- **Should I use interface named templates?** Yes
+- **Should I name the interfaces via interface device component templates?** Yes
 
 ## Questions to ask of the data model
 
@@ -708,7 +754,7 @@ Given the data model, what questions would a user ask?
 
     A config template driven by the GraphQL response above. Each device renders its vPC domain (from the `vpc_domain_id` key in its config context, assigned via the device redundancy group), a peer-keepalive between the two members' management IPs, and each vPC port channel with its member interfaces. The per-port-channel vPC number is derived from the port channel name by convention (`Port-Channel10` → `vpc 10`).
 
-    ```jinja2
+    ```jinja
     {% set group = data.device_redundancy_groups[0] %}
     {% for device in group.devices %}
     {% set peer = group.devices | rejectattr("name", "equalto", device.name) | first %}
@@ -763,7 +809,7 @@ Given the data model, what questions would a user ask?
 
     Operating systems and technologies include Palo Alto, Fortinet, and Cisco ASA. Cisco ASA is shown as the representative example; the same data model drives the equivalent Palo Alto (`high-availability`) and Fortinet (`config system ha`) stanzas.
 
-    ```jinja2
+    ```jinja
     {% set group = data.device_redundancy_groups[0] %}
     {% set ordered = group.devices | sort(attribute="device_redundancy_group_priority", reverse=true) %}
     {% set primary = ordered | first %}
@@ -789,7 +835,7 @@ Given the data model, what questions would a user ask?
 
     A config template driven entirely by the GraphQL response above. Each unit renders its own self IPs from its `vip_interfaces`, the failover link doubles as the ConfigSync/heartbeat/mirroring address, and each floating self IP is read from the interface's interface redundancy group `virtual_ip` — the shared address is modeled once on the group instead of being derived in the template.
 
-    ```jinja2
+    ```jinja
     {% set group = data.device_redundancy_groups[0] %}
     {% set ordered = group.devices | sort(attribute="device_redundancy_group_priority", reverse=true) %}
     {% set primary = ordered | first %}

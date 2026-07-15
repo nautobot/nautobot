@@ -16,6 +16,8 @@ theme:
   custom_dir: "docs/assets/overrides"
   hljs_languages:
     - "django"
+    - "graphql"
+    - "jinja"
     - "yaml"
   icon:
     admonition:

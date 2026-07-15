@@ -21,7 +21,7 @@ The primary use cases to consider when creating, updating, or documenting HA mod
 - **Configuration Management:** Generating and managing device configurations.
 - **HA Resiliency:** Understanding and documenting network fault tolerance.
 
-To help guide these use cases, we will ask and answer each of these questions to go with the best practices:
+To help guide these use cases, these questions will be answered each the respective [virtual chassis](./virtualchassis.md) and [device redundancy groups](./deviceredundancygroup.md) docs:
 
 - Can you create a link aggregation group (LAG) across multiple devices?
 - Can you see all interfaces on the Primary?
@@ -30,21 +30,21 @@ To help guide these use cases, we will ask and answer each of these questions to
 - When do you see all the interfaces on the primary device?
 - Can you connect interfaces from primary to non-primary?
 - What should the naming standard be for the chassis device?
-- Should I use interface named templates?
+- Should I name the interfaces via interface device component templates?
 
 ## Vendor Implementations
 
-While vendors offer a variety of technologies, the data model remains largely agnostic to these specifics. The following table serves as a foundation for modeling redundant devices in Nautobot.
+While vendors offer a variety of technologies, the data model remains largely agnostic to these specifics. The following table walks through those various vendor technologies that were considered in the data modeling best practices.
 
 <!-- pyml disable-num-lines 13 no-inline-html -->
 |     | Dual-chassis Single Control Plane | Multi-chassis Stack | Firewall Cluster | Multi-chassis L2 Pair | Firewall HA Pair | HA Pairs |
 | --- | --- | --- | --- | --- | --- | --- |
-| Example Technologies | VSS / StackWise Virtual | StackWise / VC / Arista Stack / IRF / SummitStack | Cisco FTD / SRX | vPC / MLAG / MC-LAG | PAN / Fortinet / ASA | LB / F5 / A10 / Viptela / Versa / Silver Peak |
+| Example Technologies | VSS <br> StackWise Virtual | StackWise <br> VC <br> Arista Stack <br> IRF <br> SummitStack | Cisco FTD <br> SRX | vPC <br> MLAG <br> MC-LAG | PAN <br> Fortinet <br> ASA | LB <br> F5 <br> A10 <br> Viptela <br> Versa <br> Silver Peak |
 | Management Control Plane Count | 1* | 1 | 1 | 2 | 2 | 2 |
 | Physical Device Count | 2 | 2+ | 2+ | 2+ | 2 | 2 |
 | Prompt Identity<br>(CLI Hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Shared<br>(single logical hostname) | Per-device | Per-device<br>(may show active or similar) | Per-device<br>(may show active or similar) |
 | Sibling Awareness | members | members | members | peer relationship | node0/node1| peer/HA partner |
-| Configuration Scope<br>(must match, if synced will match) | Full<br>(single running config for logical switch) | Full | Full | Partial | Majority | Majority |
+| Configuration Scope | Full<br>(single running config for logical switch) | Full | Full | Partial | Majority | Majority |
 | Configuration Sync<br>(full / majority / independent) | Full | Full | Full | Independent | Majority<br>(minor local config) | Majority<br>(minor local config) |
 | Redundancy Group Identifier | Domain/Pair ID | Stack/Chassis ID | Cluster ID | Domain/Pair ID<br>(vPC domain ID / MLAG domain) | Cluster ID | HA/Cluster ID |
 | Redundancy Mode | Active/Active | Active/Active | Active/Active or Active/Standby | Active/Active | Active/Standby or Active/Active | Active/Standby or Active/Active |
