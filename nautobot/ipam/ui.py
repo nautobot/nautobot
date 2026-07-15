@@ -87,7 +87,7 @@ class AddIPAddressRangeButton(Button):
     def should_render(self, context: Context):
         if not super().should_render(context):
             return False
-        return context.get("first_available_ip") is not None
+        return context.get("first_available_ip_for_range") is not None
 
     def get_link(self, context: Context):
         obj = get_obj_from_context(context)
@@ -97,10 +97,15 @@ class AddIPAddressRangeButton(Button):
         params = {
             "namespace": obj.namespace.pk,
         }
-        first_available_ip = context.get("first_available_ip")
+        first_available_ip = context.get("first_available_ip_for_range")
         if first_available_ip:
-            # Pre-populate start_address with the first available IP (strip the mask)
-            params["start_address"] = first_available_ip.split("/")[0]
+            # Strip the mask -> "10.32.0.1"
+            start = first_available_ip.split("/")[0]
+            params["start_address"] = start
+            if obj.ip_version == 4:
+                # First three octets only -> "10.32.0"
+                params["end_address"] = ".".join(start.split(".")[:3])
+            # TBD: what to do with IPv6
         if obj.tenant:
             params["tenant"] = obj.tenant.pk
             if obj.tenant.tenant_group:
