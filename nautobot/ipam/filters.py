@@ -802,6 +802,12 @@ class VLANFilterSet(
         method="_filter_vm_interfaces",
         label="VM interface (name or ID)",
     )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        method="_filter_interfaces",
+        label="Interface (name or ID)",
+    )
 
     class Meta:
         model = VLAN
@@ -826,6 +832,12 @@ class VLANFilterSet(
         if not value:
             return queryset
         return queryset.filter(Q(vminterfaces_as_untagged__in=value) | Q(vminterfaces_as_tagged__in=value)).distinct()
+
+    def _filter_interfaces(self, queryset, name, value):
+        """Return all VLANs assigned (tagged or untagged) to the specified interface(s)."""
+        if not value:
+            return queryset
+        return queryset.filter(Q(interfaces_as_untagged__in=value) | Q(interfaces_as_tagged__in=value)).distinct()
 
 
 class VLANLocationAssignmentFilterSet(NautobotFilterSet):

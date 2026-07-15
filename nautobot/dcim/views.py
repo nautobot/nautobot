@@ -4770,7 +4770,6 @@ class InterfaceUIViewSet(
                 exclude_fields=(
                     "cable_termination",
                     "untagged_vlan",
-                    "mgmt_only",
                     "vpn_tunnel_endpoints_src_int",
                     "vpn_tunnel_endpoints_tunnel",
                 ),
@@ -4812,7 +4811,6 @@ class InterfaceUIViewSet(
                 select_related_fields=["tenant"],
                 table_title="IP Addresses",
                 add_button_route=None,
-                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=400,
@@ -4820,7 +4818,7 @@ class InterfaceUIViewSet(
                 context_table_key="vlan_table",
                 table_title="VLANs",
                 add_button_route=None,
-                enable_related_link=False,
+                related_field_name="interface",
             ),
             object_detail.ObjectsTablePanel(
                 weight=500,
@@ -4840,7 +4838,6 @@ class InterfaceUIViewSet(
                 exclude_columns=["device"],
                 table_title="Child Interfaces",
                 add_button_route=None,
-                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=700,
@@ -4852,7 +4849,6 @@ class InterfaceUIViewSet(
                 exclude_columns=["device"],
                 table_title="Virtual Device Contexts",
                 add_button_route=None,
-                enable_related_link=False,
             ),
         )
     )
