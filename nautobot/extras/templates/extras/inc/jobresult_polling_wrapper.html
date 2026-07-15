@@ -1,0 +1,18 @@
+{% comment %}
+    Wraps a JobResult panel body in an HTMX poller so the panel refreshes itself
+    (every 3s) while the job is still running, and stops once the job reaches a
+    terminal state. The specific panel body is supplied by the caller via the
+    `inner_body_wrapper_template` variable.
+{% endcomment %}
+{% if object.status not in job_result_ready_states %}
+    <div hx-get="{{ object.get_absolute_url }}"
+         hx-select="#component-{{ component.component_id }}"
+         hx-target="#component-{{ component.component_id }}"
+         hx-trigger="every 3s"
+         hx-vals='{"component_id": "{{ component.component_id }}"}'
+    >
+{% else %}
+    <div>
+{% endif %}
+{% include inner_body_wrapper_template %}
+</div>

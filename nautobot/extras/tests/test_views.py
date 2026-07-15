@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
+from nautobot.extras import views
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
@@ -4706,6 +4707,38 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         response_content = response.content.decode(response.charset)
         self.assertNotIn("log-table-poller", response_content)
+
+    def _get_advanced_tab_panel(self, label):
+        """Return the Advanced-tab panel with the given label from the JobResult detail view definition."""
+        content = views.JobResultUIViewSet.object_detail_content
+        advanced_tab = next(tab for tab in content.tabs if tab.label == "Advanced")
+        return next(panel for panel in advanced_tab.panels if panel.label == label)
+
+    def test_advanced_tab_panels_poll_while_job_pending(self):
+        """Worker and Traceback panels should self-poll (hx-trigger) while the job is not yet finished (#9208)."""
+        self.add_permissions("extras.view_jobresult")
+        url = self.job_result_pending.get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertIn('hx-trigger="every 3s"', content)
+
+    def test_advanced_tab_panels_do_not_poll_when_job_complete(self):
+        """Worker and Traceback panels should stop polling once the job has reached a terminal state (#9208)."""
+        self.add_permissions("extras.view_jobresult")
+        url = self.job_result_completed.get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertNotIn('hx-trigger="every 3s"', content)
 
     def test_joblogentrytable_vary_header(self):
         """Test that Vary header includes HX-Request for proper caching."""
