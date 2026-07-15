@@ -286,9 +286,8 @@ class ModelViewSetMixin:
             natural_key_field_lookups = []
         natural_key_prefetch_fields = set()
         for lookup in natural_key_field_lookups:
-            relation_parts = lookup.split("__")[:-1]
-            if relation_parts:
-                prefix = "__".join(relation_parts)
+            if "__" in lookup:
+                prefix, _ = lookup.rsplit("__", 1)
                 # Single-level FKs are already covered by select_fields above.
                 if prefix not in select_fields:
                     natural_key_prefetch_fields.add(prefix)
