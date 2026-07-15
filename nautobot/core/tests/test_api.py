@@ -528,6 +528,7 @@ class ModelViewSetMixinTest(testing.APITestCase):
         serializer_class = ipam_serializers.IPAddressSerializer
         filterset_class = ipam_filters.IPAddressFilterSet
 
+    @override_settings(ALLOWED_HOSTS=["*"])  # serializing hyperlinked fields builds absolute URLs
     def test_get_queryset_optimizations(self):
         """Test that the queryset is appropriately optimized based on request parameters."""
         self.user.is_superuser = True
@@ -563,6 +564,19 @@ class ModelViewSetMixinTest(testing.APITestCase):
             list(instance.interfaces.all())
             list(instance.vm_interfaces.all())
             list(instance.tags.all())
+
+        # The `natural_slug` field calls `natural_key()`, which walks related-object natural keys (e.g.
+        # parent__namespace). Those relations were prefetched above, so computing it for every object must
+        # not issue an additional query per object (this was previously an N+1).
+        instances = list(view.get_queryset())
+        self.assertGreater(len(instances), 1, "need multiple objects for a meaningful N+1 assertion")
+        with self.assertNumQueries(0):
+            natural_slugs = [instance.natural_slug for instance in instances]
+        # Exercise the real serializer too: natural_slug should render for every object, matching the
+        # query-free traversal above. (Full serialization also issues a couple of constant, per-model
+        # custom-field metadata lookups, which is why the query-count assertion targets the traversal.)
+        data = view.get_serializer(instances, many=True).data
+        self.assertEqual([row["natural_slug"] for row in data], natural_slugs)
 
         # With exclude_m2m query parameter set to True
         view = self.SimpleIPAddressViewSet()
