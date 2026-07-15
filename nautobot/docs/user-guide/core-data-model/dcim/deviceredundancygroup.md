@@ -20,12 +20,6 @@ Use a Device Redundancy Group when multiple physical devices work together to pr
 !!! note
     Unlike a Virtual Chassis, there is no "master" concept and interfaces are never surfaced on a peer device. Each member remains a fully independent device in Nautobot — with its own interfaces, inventory, configuration, and primary IP — reflecting that each unit is managed on its own. Which unit is "primary" is conveyed by `device_redundancy_group_priority`, but Nautobot only stores this integer — it does not elect a primary or define whether higher or lower wins. Your automation assigns the meaning, so pick a convention and document it.
 
-LAG interfaces, in Nautobot's data model, cannot span members of a Device Redundancy Group, as a LAG and its member interfaces must all belong to the same Device (or the same Virtual Chassis). For multi-chassis technologies such as vPC or MLAG, model a port channel on each member individually and give it the same name on both members (e.g. `Port-Channel10` on each switch), matching how the technology is typically configured.
-
-The pairing is only by naming convention: nothing in the data model links the two port channels, nothing enforces that the names match, and no configuration is synced. Conventions also carry the identifiers config templates need: the per-port-channel vPC/MLAG number is derived from the port channel name (e.g. `Port-Channel10` → `vpc 10`), and the pair-scoped domain ID is recorded in a [config context](../extras/configcontext.md) assigned to the device redundancy group.
-
-If you need an explicit link between the two port channels instead of a convention — for example, when the names cannot be kept identical — create a custom [Relationship](../../platform-functionality/relationship.md) (e.g. "vPC peer", Interface ↔ Interface) and query it alongside the rest of the data. An [Interface Redundancy Group](interfaceredundancygroup.md) can technically group any redundant interfaces, but it was designed for first hop redundancy protocols — a shared `virtual_ip`, an FHRP `protocol`, election priorities — so we do not recommend it for pairing multi-chassis port channels. It remains the right model when those semantics genuinely apply, such as the floating IPs shared by a load balancer pair shown later on this page.
-
 The device redundancy group model provides the following fields:
 
 | Field | Type | Required | Description |
@@ -43,6 +37,14 @@ The following fields are on the `Device` model, in support of the Device Redunda
 |---|---|---|---|
 | `device_redundancy_group` | FK → DeviceRedundancyGroup | No | The redundancy group this device belongs to |
 | `device_redundancy_group_priority` | Integer (≥ 1) | No | Priority of this device within the group |
+
+### Modeling LAG across a Device Redundancy Group
+
+LAG interfaces, in Nautobot's data model, cannot span members of a Device Redundancy Group, as a LAG and its member interfaces must all belong to the same Device (or the same Virtual Chassis). For multi-chassis technologies such as vPC or MLAG, model a port channel on each member individually and give it the same name on both members (e.g. `Port-Channel10` on each switch), matching how the technology is typically configured.
+
+The pairing is only by naming convention: nothing in the data model links the two port channels, nothing enforces that the names match, and no configuration is synced. Conventions also carry the identifiers config templates need: the per-port-channel vPC/MLAG number is derived from the port channel name (e.g. `Port-Channel10` → `vpc 10`), and the pair-scoped domain ID is recorded in a [config context](../extras/configcontext.md) assigned to the device redundancy group.
+
+If you need an explicit link between the two port channels instead of a convention — for example, when the names cannot be kept identical — create a custom [Relationship](../../platform-functionality/relationship.md) (e.g. "vPC peer", Interface ↔ Interface) and query it alongside the rest of the data. An [Interface Redundancy Group](interfaceredundancygroup.md) can technically group any redundant interfaces, but it was designed for first hop redundancy protocols — a shared `virtual_ip`, an FHRP `protocol`, election priorities — so we do not recommend it for pairing multi-chassis port channels. It remains the right model when those semantics genuinely apply, such as the floating IPs shared by a load balancer pair shown later on this page.
 
 ## Entity Relationship Diagram
 
