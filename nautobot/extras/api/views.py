@@ -40,7 +40,7 @@ from nautobot.extras.choices import (
 )
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
-from nautobot.extras.jobs_cancel import CancelFactory, JobLiveness
+from nautobot.extras.jobs_cancel import CancelFactory, JobLiveness, user_can_cancel_job_result
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -1198,11 +1198,8 @@ class JobResultViewSet(
         """Cancel a running or pending Job, or reap it if its worker is gone."""
         job_result = self.get_object()
 
-        if not request.user.has_perm("extras.run_job"):
-            raise PermissionDenied("Job can not be canceled by user without permission to run jobs.")
-
-        if job_result.user != request.user and not request.user.is_staff:
-            raise PermissionDenied("Job can be canceled only by the submitter or by staff users.")
+        if not user_can_cancel_job_result(request.user, job_result):
+            raise PermissionDenied("You do not have permission to cancel this job.")
 
         if not job_result.is_unready_state and request.method == "POST":
             return Response(
