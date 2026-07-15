@@ -3555,7 +3555,7 @@ class JobResultUIViewSet(
                     "status": [render_jobresult_status],
                     "files": [render_jobresult_files],
                 },
-                body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
+                body_wrapper_template_path="extras/inc/jobresult_polling_key_value_panel.html",
             ),
             object_detail.Panel(
                 weight=200,
@@ -3637,7 +3637,7 @@ class JobResultUIViewSet(
                 "meta",
             ],
             # Poll for updates while the job is running so worker details populate without a manual refresh.
-            body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
+            body_wrapper_template_path="extras/inc/jobresult_polling_key_value_panel.html",
         ),
         object_detail.ObjectTextPanel(
             label="Traceback",
