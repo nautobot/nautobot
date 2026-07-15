@@ -221,12 +221,12 @@ class GraphQLOpenTelemetryMiddleware:
     GraphQL query/variables from being logged in deployments that never enabled OTel.
 
     Span attributes set:
-    - ``enduser.id``            - authenticated username
-    - ``http.client_ip``        - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
-    - ``graphql.document``      - full query / mutation / subscription text
-    - ``graphql.variables``     - JSON-serialised variables (when present)
-    - ``graphql.operation.type``- ``query``, ``mutation``, or ``subscription``
-    - ``http.status_code``      - HTTP response status code
+    - ``enduser.id``                          - authenticated username
+    - ``http.client_ip``                      - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
+    - ``nautobot.core.graphql.document``      - full query / mutation / subscription text
+    - ``nautobot.core.graphql.variables``     - JSON-serialised variables (when present)
+    - ``nautobot.core.graphql.operation.type``- ``query``, ``mutation``, or ``subscription``
+    - ``http.status_code``                    - HTTP response status code
 
     The INFO log additionally includes ``duration_ms``.
 
