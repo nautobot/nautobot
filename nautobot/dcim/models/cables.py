@@ -14,7 +14,10 @@ from django.utils.functional import classproperty
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.models.fields import ColorField
+from nautobot.core.models.managers import BaseManager
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import to_meters
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.dcim.choices import CableLengthUnitChoices, CableTypeChoices, CableTypePolarityMethodChoices
 from nautobot.dcim.constants import (
     BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
@@ -313,6 +316,131 @@ class CableType(PrimaryModel):
 #
 
 
+class CableQuerySet(RestrictedQuerySet):
+    """
+    Add backward-compat translation for legacy `termination_[a|b]_type` / `termination_[a|b]_id` lookups.
+
+    This queryset rewrites those lookup kwargs on `filter()` and `exclude()` (and therefore `get()`,
+    which filters internally) into the equivalent `terminations__...` join lookups, constrained to
+    `connector=1` to mirror the Cable properties, emitting a `DeprecationWarning` for each. This keeps
+    `Cable.objects.get_or_create(termination_a_type=..., termination_a_id=..., ...)` and
+    `Cable.objects.filter(termination_a_id=...)` working for legacy callers: the lookup half is
+    translated here and, for `get_or_create()`, the create half flows through `Cable.__init__` into
+    `_materialize_initial_terminations`.
+
+    Supported lookup kwargs (exact-match only):
+
+    - `termination_a_type` / `termination_b_type` (`ContentType`),
+    - `termination_a_id` / `termination_b_id` (UUID). A bare `*_id` without a matching `*_type` is matched against
+      every per-type FK (termination PKs are UUIDs, so this stays unambiguous).
+
+    NOT translated -- use the explicit `terminations__...` form for these:
+
+    - extended lookups such as `termination_a_id__in=...`
+    - `Q(termination_a_id=...)` and similar expressions
+    - `order_by("termination_a_type")` and similar
+    - `values("termination_a_id") / `values_list("termination_a_type")` and similar
+    - `select_related("termination_a_id")` / `prefetch_related("termination_a")` and similar
+    - `exclude(termination_a_id=..., termination_b_id=...)` - while accepted, combining both ends is applied per end
+      (`exclude(A) AND exclude(B)`), which is not identical to negating the combined condition.
+    """
+
+    _SIDES = {"a": "A", "b": "B"}
+
+    @staticmethod
+    def _warn(old, new):
+        warn_deprecated_at_caller(
+            f"Querying Cable by `{old}` is deprecated; use `{new}` instead. The `termination_a` / "
+            "`termination_b` generic foreign keys have been replaced by the `terminations` "
+            "(CableToCableTermination) relation."
+        )
+
+    @classmethod
+    def _extract_side_spec(cls, side, working):
+        """
+        Pop legacy `termination_<side>_type` / `termination_<side>_id` kwargs from `working` and return the
+        matching `terminations__...` Q, or None if the side isn't referenced by a translatable kwarg.
+
+        The legacy `*_type` / `*_id` columns were non-nullable, so an explicit `None` on either key never
+        matched a row -- even combined with a real value on the other key (`type IS NULL AND id = <pk>`).
+        We preserve that in this deprecated code path (even though `terminations` is now nullable): any
+        present `None` yields a match-nothing Q for the side rather than being dropped (which would
+        silently widen the result set) or leaking a now-nonexistent field through to the queryset.
+        """
+        type_key = f"termination_{side}_type"
+        id_key = f"termination_{side}_id"
+        has_type = type_key in working
+        has_id = id_key in working
+        if not (has_type or has_id):
+            return None
+
+        cable_end = cls._SIDES[side]
+        # All constraints for one side share a single join (built up in one `.filter()`/`.exclude()`
+        # call) so they match the *same* CableToCableTermination row.
+        base = models.Q(terminations__cable_end=cable_end, terminations__connector=1)
+
+        term_type = working.pop(type_key, None)
+        term_id = working.pop(id_key, None)
+
+        # A present `None` reproduces the old `<col> IS NULL` on a non-nullable column -> matched
+        # nothing, and did so even alongside a real value on the other key. Empty the whole side so
+        # `filter()` returns empty (and `get()` raises `DoesNotExist`) as before.
+        if (has_type and term_type is None) or (has_id and term_id is None):
+            return base & models.Q(pk__in=[])
+
+        if term_type is not None:
+            try:
+                fk_field = CONTENT_TYPE_TO_TERMINATION_FK[(term_type.app_label, term_type.model)]
+            except KeyError:
+                raise TypeError(
+                    f"{term_type.app_label}.{term_type.model} is not a valid Cable termination type"
+                ) from None
+            if term_id is not None:
+                cls._warn(
+                    f"{type_key}=..., {id_key}=...",
+                    f"terminations__{fk_field}_id=... with terminations__cable_end={cable_end!r}",
+                )
+                return base & models.Q(**{f"terminations__{fk_field}_id": term_id})
+            cls._warn(
+                f"{type_key}=...", f"terminations__{fk_field}__isnull=False with terminations__cable_end={cable_end!r}"
+            )
+            return base & models.Q(**{f"terminations__{fk_field}__isnull": False})
+
+        # Else, a bare id (no type): match it against every per-type FK.
+        cls._warn(f"{id_key}=...", f"terminations__<type>_id=... with terminations__cable_end={cable_end!r}")
+        match = models.Q()
+        for fk_field in TERMINATION_FK_FIELDS:
+            match |= models.Q(**{f"terminations__{fk_field}_id": term_id})
+        return base & match
+
+    @classmethod
+    def _translate_termination_kwargs(cls, kwargs):
+        """Split `kwargs` into (passthrough field lookups, list of per-side `terminations__...` Q objects)."""
+        working = dict(kwargs)
+        side_qs = [q for side in cls._SIDES if (q := cls._extract_side_spec(side, working)) is not None]
+        return working, side_qs
+
+    def filter(self, *args, **kwargs):
+        passthrough, side_qs = self._translate_termination_kwargs(kwargs)
+        qs = super().filter(*args, **passthrough)
+        # Apply each side as its own call so the multi-valued `terminations` relation gets a separate
+        # join per side -- a single call would force one row to be both the A- and B-side termination.
+        for q in side_qs:
+            qs = qs.filter(q)
+        return qs
+
+    def exclude(self, *args, **kwargs):
+        passthrough, side_qs = self._translate_termination_kwargs(kwargs)
+        qs = super().exclude(*args, **passthrough) if (args or passthrough) else self.all()
+        for q in side_qs:
+            qs = qs.exclude(q)
+        return qs
+
+
+# Manager wired to the translation queryset; set as `Cable.objects` below.
+CableManager = BaseManager.from_queryset(CableQuerySet)
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -329,6 +457,8 @@ class Cable(PrimaryModel):
     properties retrieve the A-side and B-side termination on connector 1 respectively for backward
     compatibility; use `terminations_a` / `terminations_b` to access all terminations on each side.
     """
+
+    objects = CableManager()
 
     cable_type = models.ForeignKey(
         to=CableType,
@@ -971,26 +1101,6 @@ def termination_fk_field(model_or_instance):
         ) from None
 
 
-def _resolve_termination_device(termination):
-    """Return the effective parent Device of a termination, walking through any chain of nested modules."""
-    if termination is None:
-        return None
-    direct_device = getattr(termination, "device", None)
-    if direct_device is not None:
-        return direct_device
-    module = getattr(termination, "module", None)
-    while module is not None:
-        if module.device is not None:
-            return module.device
-        parent_bay = getattr(module, "parent_module_bay", None)
-        if parent_bay is None:
-            return None
-        if getattr(parent_bay, "parent_device", None) is not None:
-            return parent_bay.parent_device
-        module = getattr(parent_bay, "parent_module", None)
-    return None
-
-
 def _at_most_one_termination_q():
     """Build a Q expression that's true iff at most one of the TERMINATION_FK_FIELDS is non-null.
 
@@ -1105,17 +1215,6 @@ class CableToCableTermination(BaseModel):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
         help_text="The connector number on this cable end. Always 1 for standard cables.",
-    )
-
-    # Cached parent Device for filtering (resolved through any chain of nested modules at save time).
-    # Necessary denormalization: the effective device of a modular component is reached through a
-    # recursive parent_module_bay/parent_module chain, which can't be expressed as a single ORM JOIN.
-    _termination_device = models.ForeignKey(
-        to="dcim.Device",
-        on_delete=models.CASCADE,
-        related_name="+",
-        blank=True,
-        null=True,
     )
 
     natural_key_field_names = ["pk"]
@@ -1253,11 +1352,6 @@ class CableToCableTermination(BaseModel):
                         continue
                     Cable.validate_termination_pair(term, peer_term)
 
-    def save(self, *args, **kwargs):
-        # Cache the effective parent device for filtering. See `_termination_device` field comment.
-        self._termination_device = _resolve_termination_device(self.termination)
-        super().save(*args, **kwargs)
-
 
 @extras_features("graphql")
 class CablePath(BaseModel):
@@ -1308,6 +1402,13 @@ class CablePath(BaseModel):
         default=1,
         validators=[MinValueValidator(1), MaxValueValidator(CABLE_BREAKOUT_MAX_CONNECTORS)],
     )
+    # Whether this path's origin / destination sits on the fan-out (trunk) side of a breakout cable,
+    # i.e. its connector maps to more than one opposite-side connector (see
+    # `CableTermination.breakout_fans_out()`). Stamped at path-build time (a pure function of each
+    # endpoint + its cable type, so recomputed on every rebuild). Lets the Interface Connections list
+    # view canonicalize a breakout's lanes onto one side and group them without per-row subqueries.
+    origin_fans_out = models.BooleanField(default=False)
+    destination_fans_out = models.BooleanField(default=False)
     # `CablePathSerializer` currently does not inherit from `BaseModelSerializer`
     # thus it does not have `object_type` field needed for the `assigned_object` field using `PolymorphicProxySerializer`.
     is_metadata_associable_model = False
@@ -1326,6 +1427,39 @@ class CablePath(BaseModel):
     def segment_count(self):
         total_length = 1 + len(self.path) + (1 if self.destination else 0)
         return int(total_length / 3)
+
+    @classmethod
+    def interface_connections(cls):
+        """
+        Canonical queryset of interface-to-interface connections, one CablePath row per lane.
+
+        For a breakout cable the trunk interface is the origin of all N lanes; those are kept
+        (canonicalizing the trunk onto one side) and the reverse fan-out rows are dropped, while
+        point-to-point connections keep a single canonical direction:
+
+        - `origin_fans_out=True` — a trunk-origin lane; keep all N.
+        - `destination_fans_out=True` — a reverse fan-out row (its far endpoint is the trunk); drop it.
+        - Otherwise point-to-point; keep the single canonical direction (`origin_id < destination_id`).
+
+        Both flags are stored (see `from_origin`), so this is a plain indexed column filter with no
+        per-row subqueries. Rows are ordered so a trunk's lanes are consecutive. Shared by the UI
+        Interface Connections list view and the REST API `InterfaceConnectionViewSet` so they stay
+        consistent.
+        """
+        return (
+            cls.objects.filter(
+                origin_type__app_label="dcim",
+                origin_type__model="interface",
+                destination_type__app_label="dcim",
+                destination_type__model="interface",
+            )
+            .filter(
+                models.Q(origin_fans_out=True)
+                | (models.Q(destination_fans_out=False) & models.Q(origin_id__lt=models.F("destination_id")))
+            )
+            .order_by("origin_type", "origin_id", "peer_connector")
+            .prefetch_related("origin", "destination")
+        )
 
     @classmethod
     def from_origin(cls, origin, peer_connector=1):
@@ -1441,6 +1575,9 @@ class CablePath(BaseModel):
             is_active=is_active,
             is_split=is_split,
             peer_connector=peer_connector,
+            # Locally computed from each endpoint's own connector mapping; no sibling-row lookups.
+            origin_fans_out=origin.breakout_fans_out(),
+            destination_fans_out=destination.breakout_fans_out() if destination is not None else False,
         )
 
     def get_path(self):

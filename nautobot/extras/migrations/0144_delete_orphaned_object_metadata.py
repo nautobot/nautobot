@@ -12,7 +12,7 @@ def delete_orphaned_object_metadata(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("extras", "0143_jobresult_date_revoked_jobresult_revocation_type_and_more"),
+        ("extras", "0143_computedfield_output_type_jobresult_cancel_type_and_more"),
     ]
 
     operations = [

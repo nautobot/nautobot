@@ -270,6 +270,8 @@ class MultiValueCharField(django_forms.CharField):
         widget = bound_field.field.widget
         # Save the selected choices in the widget even after the filterform is submitted
         if value is not None:
+            if isinstance(value, str):
+                value = [value]
             widget.choices = [(v, v) for v in value]
 
         return bound_field

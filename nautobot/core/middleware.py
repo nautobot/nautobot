@@ -243,7 +243,7 @@ class GraphQLOpenTelemetryMiddleware:
         client_ip = self._get_client_ip(request)
         query, variables = self._parse_graphql_body(request)
         operation_type = self._get_operation_type(query)
-        username = getattr(getattr(request, "user", None), "username", None) or "anonymous"
+        username = request.user.username if request.user.is_authenticated else "anonymous"
 
         tracer = trace.get_tracer("nautobot.graphql")
         span_name = f"graphql {operation_type}" if operation_type else "graphql"

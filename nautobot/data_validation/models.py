@@ -112,7 +112,7 @@ class RegularExpressionValidationRule(ValidationRuleModelMixin, PrimaryModel):
     regular_expression = models.TextField()
     context_processing = models.BooleanField(
         default=False,
-        help_text="When enabled, the regular expression value is first processed as a Jinja2 template with access to the context of the data being validated in a variable named <code>object</code>.",
+        help_text="When enabled, the regular expression value is first processed as a Jinja2 template with access to the object being validated in a variable named <code>obj</code>.",
     )
 
     clone_fields = ["enabled", "content_type", "regular_expression", "error_message"]

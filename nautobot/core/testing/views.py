@@ -301,7 +301,7 @@ class ViewTestCases:
             object_delete_url = buttons.delete_button(instance)["url"]
             object_clone_url = buttons.clone_button(instance)["url"]
             render_edit_button = bool(object_edit_url)
-            render_delete_button = bool(object_delete_url)
+            render_delete_button = bool(object_delete_url and getattr(instance, "_is_deletable", True))
             render_clone_button = bool(hasattr(instance, "clone_fields") and object_clone_url)
             action_buttons = []
             if render_edit_button:
@@ -2645,6 +2645,30 @@ class ViewTestCases:
                 except AssertionError:
                     pass
             self.assertEqual(matching_count, self.bulk_create_count)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_components_with_required_custom_field(self):
+            """A required custom field must be carried through to each component created via the add form (#9047)."""
+            custom_field = extras_models.CustomField.objects.create(
+                type=extras_choices.CustomFieldTypeChoices.TYPE_TEXT,
+                label="Mandatory Component Field",
+                required=True,
+            )
+            custom_field.content_types.set([ContentType.objects.get_for_model(self.model)])
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            data = self.bulk_create_data.copy()
+            data[custom_field.add_prefix_to_cf_key()] = "expected value"
+            initial_pks = set(self._get_queryset().values_list("pk", flat=True))
+
+            response = self.client.post(self._get_url("add"), data=utils.post_data(data))
+            self.assertHttpStatus(response, 302)
+
+            new_objects = self._get_queryset().exclude(pk__in=initial_pks)
+            self.assertEqual(new_objects.count(), self.bulk_create_count)
+            for instance in new_objects:
+                self.assertEqual(instance.cf[custom_field.key], "expected value")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_modular_component_create_form_fields(self):
