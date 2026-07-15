@@ -5,11 +5,13 @@ import os
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+from django.conf import settings
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from opentelemetry import trace as otel_trace
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
+from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
@@ -23,6 +25,16 @@ import requests
 from nautobot.core import testing
 from nautobot.core.cli.opentelemetry import instrument
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
+
+
+def _db_instrumentor_for_engine(engine):
+    """Return the DB instrumentor class matching ``engine``, mirroring ``instrument()`` in opentelemetry.py.
+
+    Production selects the instrumentor with the same ``"mysql" in engine`` test, so tests read the live
+    ``settings.DATABASES`` engine to instrument/uninstrument the backend the suite is actually running against
+    (e.g. CI's dedicated MySQL job), rather than hardcoding Psycopg2.
+    """
+    return MySQLClientInstrumentor if "mysql" in engine else Psycopg2Instrumentor
 
 
 def _fake_otel_config(**overrides):
@@ -44,7 +56,9 @@ def _fake_otel_config(**overrides):
         "OTEL_PYTHON_LOG_CORRELATION": False,
         "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT": 8192,
         "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS": [],
-        "DATABASES": {"default": {"ENGINE": "django.db.backends.postgresql"}},
+        # Default to the live DB engine so instrument() exercises the branch (psycopg2 vs mysqlclient)
+        # matching the backend the suite is running against; tests pin a specific branch via a DATABASES override.
+        "DATABASES": {"default": {"ENGINE": settings.DATABASES["default"]["ENGINE"]}},
     }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -56,16 +70,19 @@ class InstrumentFunctionTest(testing.TestCase):
     def setUp(self):
         super().setUp()
         self._original_provider = otel_trace.get_tracer_provider()
+        # Uninstrument the DB instrumentor matching the live engine, mirroring instrument()'s selection,
+        # so cleanup is correct on both Postgres and MySQL runs (CI has a dedicated MySQL job).
+        self._db_instrumentor_cls = _db_instrumentor_for_engine(settings.DATABASES["default"]["ENGINE"])
         DjangoInstrumentor().uninstrument()
         RedisInstrumentor().uninstrument()
         CeleryInstrumentor().uninstrument()
-        Psycopg2Instrumentor().uninstrument()
+        self._db_instrumentor_cls().uninstrument()
 
     def tearDown(self):
         DjangoInstrumentor().uninstrument()
         RedisInstrumentor().uninstrument()
         CeleryInstrumentor().uninstrument()
-        Psycopg2Instrumentor().uninstrument()
+        self._db_instrumentor_cls().uninstrument()
         otel_trace.set_tracer_provider(self._original_provider)
         super().tearDown()
 
@@ -79,6 +96,42 @@ class InstrumentFunctionTest(testing.TestCase):
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
 
+    def test_postgres_engine_instruments_psycopg2(self):
+        """A PostgreSQL DATABASES engine must instrument psycopg2, not mysqlclient."""
+        # instrument() imports these lazily inside the function, so patch them at their source modules.
+        with patch("opentelemetry.instrumentation.psycopg2.Psycopg2Instrumentor") as mock_psycopg2:
+            with patch("opentelemetry.instrumentation.mysqlclient.MySQLClientInstrumentor") as mock_mysql:
+                with patch.dict(
+                    "sys.modules",
+                    {
+                        "nautobot_config": _fake_otel_config(
+                            DATABASES={"default": {"ENGINE": "django.db.backends.postgresql"}}
+                        )
+                    },
+                ):
+                    instrument()
+
+        mock_psycopg2.return_value.instrument.assert_called_once()
+        mock_mysql.return_value.instrument.assert_not_called()
+
+    def test_mysql_engine_instruments_mysqlclient(self):
+        """A MySQL DATABASES engine must instrument mysqlclient, not psycopg2."""
+        # instrument() imports these lazily inside the function, so patch them at their source modules.
+        with patch("opentelemetry.instrumentation.psycopg2.Psycopg2Instrumentor") as mock_psycopg2:
+            with patch("opentelemetry.instrumentation.mysqlclient.MySQLClientInstrumentor") as mock_mysql:
+                with patch.dict(
+                    "sys.modules",
+                    {
+                        "nautobot_config": _fake_otel_config(
+                            DATABASES={"default": {"ENGINE": "django.db.backends.mysql"}}
+                        )
+                    },
+                ):
+                    instrument()
+
+        mock_mysql.return_value.instrument.assert_called_once()
+        mock_psycopg2.return_value.instrument.assert_not_called()
+
 
 class InstrumentExporterBranchTest(testing.TestCase):
     """Verify instrument() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard."""
@@ -86,11 +139,13 @@ class InstrumentExporterBranchTest(testing.TestCase):
     def setUp(self):
         super().setUp()
         self._original_provider = otel_trace.get_tracer_provider()
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+        # Include the DB instrumentor matching the live engine (psycopg2 vs mysqlclient), mirroring instrument().
+        self._db_instrumentor_cls = _db_instrumentor_for_engine(settings.DATABASES["default"]["ENGINE"])
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
             instrumentor().uninstrument()
 
     def tearDown(self):
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
             instrumentor().uninstrument()
         otel_trace.set_tracer_provider(self._original_provider)
         super().tearDown()
@@ -484,11 +539,13 @@ class ExtraInstrumentorsTest(testing.TestCase):
     def setUp(self):
         super().setUp()
         self._original_provider = otel_trace.get_tracer_provider()
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+        # Include the DB instrumentor matching the live engine (psycopg2 vs mysqlclient), mirroring instrument().
+        self._db_instrumentor_cls = _db_instrumentor_for_engine(settings.DATABASES["default"]["ENGINE"])
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
             instrumentor().uninstrument()
 
     def tearDown(self):
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, Psycopg2Instrumentor):
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
             instrumentor().uninstrument()
         otel_trace.set_tracer_provider(self._original_provider)
         super().tearDown()
