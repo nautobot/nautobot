@@ -1,0 +1,1 @@
+Documented that VRF and Location associations cannot be set via Prefix CSV/bulk import and must be assigned via the UI or the REST API assignment endpoints.
