@@ -4753,22 +4753,33 @@ class InterfaceUIViewSet(
         def should_render(self, context):
             return hasattr(get_obj_from_context(context), "vpn_tunnel_endpoints_src_int")
 
+    class InterfaceFieldsPanel(object_detail.ObjectFieldsPanel):
+        def render_value(self, key, value, context):
+            if key == "mac_address":
+                if not value:
+                    return helpers.HTML_NONE
+                return format_html('<span class="font-monospace">{}</span>', value)
+            return super().render_value(key, value, context)
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
-            object_detail.ObjectFieldsPanel(
+            InterfaceFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
-                exclude_fields=("cable_termination", "untagged_vlan", "mgmt_only"),
+                exclude_fields=(
+                    "cable_termination",
+                    "untagged_vlan",
+                    "mgmt_only",
+                    "vpn_tunnel_endpoints_src_int",
+                    "vpn_tunnel_endpoints_tunnel",
+                ),
                 hide_if_unset=("device", "module", "breakout_position"),
                 value_transforms={"speed": [helpers.humanize_speed, helpers.placeholder]},
                 key_transforms={
-                    "port_type": "Port Type",
                     "vrf": "VRF",
-                    "mtu": "MTU",
                     "lag": "LAG",
-                    "mac_address": "MAC Address",
-                    "mode": "802.1Q Mode",
+                    "bridge": "Bridge",
                 },
             ),
             object_detail.ConnectionPanel(
@@ -4829,6 +4840,7 @@ class InterfaceUIViewSet(
                 exclude_columns=["device"],
                 table_title="Child Interfaces",
                 add_button_route=None,
+                enable_related_link=False,
             ),
             object_detail.ObjectsTablePanel(
                 weight=700,
@@ -4852,11 +4864,11 @@ class InterfaceUIViewSet(
             vlans = []
             # Restrict `untagged_vlan` (a single FK) the same way `tagged_vlans` is restricted below,
             # so a user without view permission on that VLAN doesn't see it in the table.
-            if instance.untagged_vlan is not None:
+            if instance.untagged_vlan_id is not None:
                 untagged_vlan = VLAN.objects.restrict(request.user, "view").filter(pk=instance.untagged_vlan_id).first()
                 if untagged_vlan is not None:
+                    untagged_vlan.tagged = False
                     vlans.append(untagged_vlan)
-                    vlans[0].tagged = False
 
             for vlan in (
                 instance.tagged_vlans.restrict(request.user)
