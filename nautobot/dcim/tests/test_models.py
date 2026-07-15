@@ -3382,8 +3382,10 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
 
         # Getters on a saved cable resolve through the first endpoint on each side.
         self.assertEqual(self.cable.termination_a_type, interface_ct)
+        self.assertEqual(self.cable.termination_a_type_id, interface_ct.pk)
         self.assertEqual(self.cable.termination_a_id, self.interface1.pk)
         self.assertEqual(self.cable.termination_b_type, interface_ct)
+        self.assertEqual(self.cable.termination_b_type_id, interface_ct.pk)
         self.assertEqual(self.cable.termination_b_id, self.interface2.pk)
 
         def assert_round_trip(cable):
@@ -3449,6 +3451,31 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertEqual(via_type_id_setters.termination_b_id, self.rear_port1.pk)
         assert_round_trip(via_type_id_setters)
 
+        # Variant 4: `*_type_id` (integer ContentType PK) kwargs -- the Django `<gfk>_id` convention.
+        via_type_pk = Cable(
+            termination_a_type_id=interface_ct.pk,
+            termination_a_id=self.interface3.pk,
+            termination_b_type_id=rear_port_ct.pk,
+            termination_b_id=self.rear_port1.pk,
+            status=self.status,
+        )
+        # The `*_type_id` getter reports the PK, and `*_type` stays None until save resolves the join rows.
+        self.assertEqual(via_type_pk.termination_a_type_id, interface_ct.pk)
+        self.assertEqual(via_type_pk.termination_a_id, self.interface3.pk)
+        self.assertEqual(via_type_pk.termination_b_type_id, rear_port_ct.pk)
+        self.assertEqual(via_type_pk.termination_b_id, self.rear_port1.pk)
+        assert_round_trip(via_type_pk)
+
+        # Variant 5: direct attribute assignment via the `*_type_id` setters.
+        via_type_pk_setters = Cable(status=self.status)
+        via_type_pk_setters.termination_a_type_id = interface_ct.pk
+        via_type_pk_setters.termination_a_id = self.interface3.pk
+        via_type_pk_setters.termination_b_type_id = rear_port_ct.pk
+        via_type_pk_setters.termination_b_id = self.rear_port1.pk
+        self.assertEqual(via_type_pk_setters.termination_a_type_id, interface_ct.pk)
+        self.assertEqual(via_type_pk_setters.termination_b_type_id, rear_port_ct.pk)
+        assert_round_trip(via_type_pk_setters)
+
     def test_termination_backward_compat_queryset_lookups(self):
         """`Cable.objects` translates legacy `termination_[ab]_type`/`_id` lookups to `terminations__...`."""
         interface_ct = ContentType.objects.get_for_model(Interface)
@@ -3479,6 +3506,31 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
                 ),
                 [self.cable],
             )
+
+        # `*_type_id` (integer ContentType PK) is accepted as an alternative to `*_type`.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(
+                Cable.objects.get(termination_a_type_id=interface_ct.pk, termination_a_id=self.interface1.pk),
+                self.cable,
+            )
+        # `*_type_id` alone (no id) matches any cable whose named side terminates on that type.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(Cable.objects.get(termination_b_type_id=interface_ct.pk), self.cable)
+        # A `*_type` and `*_type_id` that agree are accepted; conflicting values raise.
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(
+                Cable.objects.get(
+                    termination_a_type=interface_ct,
+                    termination_a_type_id=interface_ct.pk,
+                    termination_a_id=self.interface1.pk,
+                ),
+                self.cable,
+            )
+        with self.assertRaises(TypeError):
+            Cable.objects.filter(termination_a_type=interface_ct, termination_a_type_id=power_port_ct.pk).first()
+        # A non-matching `*_type_id` finds nothing.
+        with self.assertWarns(DeprecationWarning):
+            self.assertFalse(Cable.objects.filter(termination_a_type_id=power_port_ct.pk).exists())
 
         # Bare id (no type) is matched across every per-type FK.
         with self.assertWarns(DeprecationWarning):
@@ -3543,10 +3595,12 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         self.assertTrue(Cable.objects.exists())  # there is something to (fail to) match
         empty_lookups = (
             {"termination_a_type": None},
+            {"termination_a_type_id": None},
             {"termination_a_id": None},
             {"termination_b_id": None},
             {"termination_a_type": None, "termination_a_id": self.interface1.pk},  # None alongside a real id
             {"termination_a_type": interface_ct, "termination_a_id": None},  # None alongside a real type
+            {"termination_a_type_id": None, "termination_a_id": self.interface1.pk},  # None type_id alongside real id
         )
         for kwargs in empty_lookups:
             with self.subTest(kwargs=kwargs):
