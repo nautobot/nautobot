@@ -1137,6 +1137,7 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
     )
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    has_controller_managed_device_group = NautobotBoolIterator()
     controller_managed_device_group = factory.Maybe(
         "has_controller_managed_device_group", random_instance(ControllerManagedDeviceGroup, allow_null=False), None
     )
