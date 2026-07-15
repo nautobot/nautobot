@@ -1,4 +1,5 @@
 import json
+import logging
 import re
 import time
 from zoneinfo import ZoneInfo
@@ -30,7 +31,13 @@ from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
 
+# structlog logger for the django_structlog-coupled exception path below (only reached when
+# django_structlog is enabled, so structlog is guaranteed to be configured there).
 logger = structlog.get_logger(__name__)
+# Plain stdlib logger for general use. Unlike structlog's, this routes through Django's LOGGING
+# whether or not the operator opted into structlog via setup_structlog_logging(); when structlog
+# is configured, its ProcessorFormatter picks these records up via foreign_pre_chain.
+stdlib_logger = logging.getLogger(__name__)
 
 _GRAPHQL_PATHS = frozenset({"/graphql", "/api/graphql"})
 _GRAPHQL_OPERATION_RE = re.compile(r"^\s*(query|mutation|subscription)\b", re.IGNORECASE)
@@ -264,14 +271,19 @@ class GraphQLOpenTelemetryMiddleware:
 
             span.set_attribute("http.status_code", response.status_code)
 
-            logger.info(
+            # Use the stdlib logger so this is emitted through Django's LOGGING config
+            # regardless of whether the operator opted into structlog. Structured fields go
+            # via ``extra`` (surfaced by structlog's ProcessorFormatter when it is configured).
+            stdlib_logger.info(
                 "graphql.request",
-                username=username,
-                client_ip=client_ip,
-                query=query,
-                variables=variables,
-                duration_ms=duration_ms,
-                http_status=response.status_code,
+                extra={
+                    "username": username,
+                    "client_ip": client_ip,
+                    "query": query,
+                    "variables": variables,
+                    "duration_ms": duration_ms,
+                    "http_status": response.status_code,
+                },
             )
 
         return response

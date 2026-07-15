@@ -19,7 +19,6 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 import requests
-import structlog
 
 from nautobot.core import testing
 from nautobot.core.cli.opentelemetry import instrument
@@ -392,22 +391,24 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         middleware = self._make_middleware(status_code=200)
         request = self._build_request(variables=self._SAMPLE_VARIABLES, xff="203.0.113.5")
 
-        with structlog.testing.capture_logs() as captured:
+        with self.assertLogs("nautobot.core.middleware", level="INFO") as captured:
             middleware(request)
 
-        graphql_logs = [e for e in captured if e.get("event") == "graphql.request"]
-        self.assertEqual(len(graphql_logs), 1, f"Expected exactly one graphql.request log entry; got: {captured!r}")
-        log = graphql_logs[0]
+        graphql_records = [r for r in captured.records if r.getMessage() == "graphql.request"]
+        self.assertEqual(
+            len(graphql_records), 1, f"Expected exactly one graphql.request log entry; got: {captured.records!r}"
+        )
+        record = graphql_records[0]
 
-        self.assertEqual(log.get("log_level"), "info")
-        self.assertEqual(log.get("username"), self.user.username)
-        self.assertEqual(log.get("client_ip"), "203.0.113.5")
-        self.assertEqual(log.get("query"), self._SAMPLE_QUERY)
-        self.assertEqual(log.get("variables"), self._SAMPLE_VARIABLES)
-        self.assertEqual(log.get("http_status"), 200)
-        self.assertIn("duration_ms", log, "duration_ms must be present in the log entry.")
-        self.assertIsInstance(log["duration_ms"], float)
-        self.assertGreaterEqual(log["duration_ms"], 0.0)
+        self.assertEqual(record.levelname, "INFO")
+        self.assertEqual(record.username, self.user.username)
+        self.assertEqual(record.client_ip, "203.0.113.5")
+        self.assertEqual(record.query, self._SAMPLE_QUERY)
+        self.assertEqual(record.variables, self._SAMPLE_VARIABLES)
+        self.assertEqual(record.http_status, 200)
+        self.assertTrue(hasattr(record, "duration_ms"), "duration_ms must be present in the log entry.")
+        self.assertIsInstance(record.duration_ms, float)
+        self.assertGreaterEqual(record.duration_ms, 0.0)
 
     @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=False)
     def test_disabled_emits_no_span_or_log(self):
@@ -422,16 +423,12 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         middleware = GraphQLOpenTelemetryMiddleware(MagicMock(return_value=mock_response))
         request = self._build_request(variables=self._SAMPLE_VARIABLES)
 
-        with structlog.testing.capture_logs() as captured:
+        with self.assertNoLogs("nautobot.core.middleware", level="INFO"):
             response = middleware(request)
 
         self.assertIs(response, mock_response, "Response must still pass through when OTel is disabled.")
         self.assertEqual(
             len(self._exporter.get_finished_spans()), 0, "No span should be emitted when OTel is disabled."
-        )
-        graphql_logs = [e for e in captured if e.get("event") == "graphql.request"]
-        self.assertEqual(
-            graphql_logs, [], f"No graphql.request log should be emitted when OTel is disabled; got: {captured!r}"
         )
 
 
