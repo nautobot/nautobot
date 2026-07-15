@@ -545,7 +545,8 @@ class ModelViewSetMixinTest(testing.APITestCase):
         view.initial(request)
 
         queryset = view.get_queryset()
-        with self.assertNumQueries(5):  # IPAddress plus four prefetches
+        # IPAddress plus one natural-key prefetch (parent__namespace), plus four prefetches.
+        with self.assertNumQueries(6):
             instance = queryset.first()
         # FK related objects should have been auto-selected
         with self.assertNumQueries(0):
@@ -575,7 +576,9 @@ class ModelViewSetMixinTest(testing.APITestCase):
         view.initial(request)
 
         queryset = view.get_queryset()
-        with self.assertNumQueries(1):  # IPAddress only, no prefetches
+        # IPAddress plus the natural-key prefetch (parent__namespace).
+        # exclude_m2m suppresses the additional M2M/reverse prefetches.
+        with self.assertNumQueries(2):
             instance = queryset.first()
         # FK related objects should still have been auto-selected
         with self.assertNumQueries(0):
