@@ -4,7 +4,7 @@
     terminal state. The specific panel body is supplied by the caller via the
     `inner_body_wrapper_template` variable.
 {% endcomment %}
-{% if object.status not in job_result_ready_states %}
+{% if job_result_ready_states and object.status not in job_result_ready_states %}
     <div hx-get="{{ object.get_absolute_url }}"
          hx-select="#component-{{ component.component_id }}"
          hx-target="#component-{{ component.component_id }}"
