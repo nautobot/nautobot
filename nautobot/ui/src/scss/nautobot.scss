@@ -1643,6 +1643,17 @@ html, body {
 body {
   /* Transition below is Bootstrap `$transition-collapse-width` with `width` replaced by `padding-inline`. */
   @include transition(padding-inline .35s ease);
+
+  /*
+   * While a Bootstrap modal opens/closes it writes an inline `padding-right` on `<body>` to compensate for the
+   * scrollbar it hides. Because `padding-inline` is transitioned above (for the sidenav/drawer slide), that
+   * modal-driven change would otherwise animate and make the whole page slide sideways ("wiggle"). The
+   * `nb-modal-transitioning` class is toggled around the modal lifecycle (see `modal.js`) to suppress the
+   * transition only for that brief window, keeping both the sidenav and drawer animations intact. See NAPPS-1136.
+   */
+  &.nb-modal-transitioning {
+    transition: none;
+  }
   display: grid;
   grid-template-areas:
     "sidenav banner-global-area drawer"

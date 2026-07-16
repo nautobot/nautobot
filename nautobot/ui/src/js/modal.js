@@ -19,6 +19,36 @@ const FALLBACK_CONTENT = `
 
 const isModalContentTarget = (event) => event.detail?.target?.id === MODAL_CONTENT_CONTAINER_ID;
 
+const MODAL_TRANSITIONING_CLASS = 'nb-modal-transitioning';
+
+/**
+ * Prevent the background page from sliding sideways ("wiggle") when a modal opens or closes.
+ *
+ * The `<body>` transitions `padding-inline` to animate the sidenav/drawer slide. When a modal opens/closes Bootstrap
+ * writes/removes an inline `padding-right` on `<body>` to compensate for the scrollbar it hides, and that change would
+ * otherwise be animated by the same transition. We suppress the transition for the brief modal open/close window only,
+ * so both the sidenav and drawer animations remain intact.
+ *
+ * `show`/`hide` fire before Bootstrap mutates the padding, so the class is in place in time. On `shown`/`hidden` the
+ * padding is already at its final value; a forced reflow commits that value with the transition still disabled before
+ * the class is removed, so re-enabling the transition never sees a pending change to animate.
+ * @returns {void} Do not return any value, attach event listeners.
+ */
+const initializeModalWiggleFix = () => {
+  const forceReflow = (element) => element.offsetWidth; // Reading a layout property forces a synchronous reflow.
+  const disable = () => document.body.classList.add(MODAL_TRANSITIONING_CLASS);
+  const enable = () => {
+    // Commit the reset padding while the transition is still disabled, so re-enabling it sees no pending change.
+    forceReflow(document.body);
+    document.body.classList.remove(MODAL_TRANSITIONING_CLASS);
+  };
+
+  document.addEventListener('show.bs.modal', disable);
+  document.addEventListener('hide.bs.modal', disable);
+  document.addEventListener('shown.bs.modal', enable);
+  document.addEventListener('hidden.bs.modal', enable);
+};
+
 /**
  * Initialize behavior for the shared `#nautobot-generic-modal` used by job modal buttons and other HTMX-driven modals.
  * On close, optionally reloads the page when the modal content opted in via `data-nb-refresh-on-close="true"`, otherwise
@@ -27,6 +57,8 @@ const isModalContentTarget = (event) => event.detail?.target?.id === MODAL_CONTE
  * @returns {void} Do not return any value, attach event listeners.
  */
 export const initializeModal = () => {
+  initializeModalWiggleFix();
+
   document.addEventListener('hidden.bs.modal', (event) => {
     if (event.target.id !== MODAL_ID) {
       return;
