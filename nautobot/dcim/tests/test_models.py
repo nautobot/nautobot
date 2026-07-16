@@ -3459,10 +3459,13 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
             termination_b_id=self.rear_port1.pk,
             status=self.status,
         )
-        # The `*_type_id` getter reports the PK, and `*_type` stays None until save resolves the join rows.
+        # The `*_type_id` getter reports the PK, and the `*_type` getter resolves the ContentType
+        # from it pre-save, mirroring Django's usual FK field/attname pairing.
         self.assertEqual(via_type_pk.termination_a_type_id, interface_ct.pk)
+        self.assertEqual(via_type_pk.termination_a_type, interface_ct)
         self.assertEqual(via_type_pk.termination_a_id, self.interface3.pk)
         self.assertEqual(via_type_pk.termination_b_type_id, rear_port_ct.pk)
+        self.assertEqual(via_type_pk.termination_b_type, rear_port_ct)
         self.assertEqual(via_type_pk.termination_b_id, self.rear_port1.pk)
         assert_round_trip(via_type_pk)
 
@@ -3473,7 +3476,9 @@ class CableTestCase(ModelTestCases.BaseModelTestCase):
         via_type_pk_setters.termination_b_type_id = rear_port_ct.pk
         via_type_pk_setters.termination_b_id = self.rear_port1.pk
         self.assertEqual(via_type_pk_setters.termination_a_type_id, interface_ct.pk)
+        self.assertEqual(via_type_pk_setters.termination_a_type, interface_ct)
         self.assertEqual(via_type_pk_setters.termination_b_type_id, rear_port_ct.pk)
+        self.assertEqual(via_type_pk_setters.termination_b_type, rear_port_ct)
         assert_round_trip(via_type_pk_setters)
 
     def test_termination_backward_compat_queryset_lookups(self):

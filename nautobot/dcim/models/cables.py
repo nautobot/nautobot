@@ -646,8 +646,15 @@ class Cable(PrimaryModel):
 
     @property
     def termination_a_type(self):
-        """ContentType of the A-side termination on connector 1 (backward compat)."""
-        return self._get_termination_attr("A", "termination_type", "_initial_termination_a_type")
+        """ContentType of the A-side termination on connector 1 (backward compat).
+
+        On an unsaved assignment, resolves from either the `termination_a_type` or the
+        `termination_a_type_id` setter, mirroring Django's usual FK field/attname pairing.
+        """
+        ct = self._get_termination_attr("A", "termination_type", "_initial_termination_a_type")
+        if ct is None:
+            ct = self._resolve_initial_termination_type("a")
+        return ct
 
     @termination_a_type.setter
     def termination_a_type(self, value):
@@ -676,8 +683,15 @@ class Cable(PrimaryModel):
 
     @property
     def termination_b_type(self):
-        """ContentType of the B-side termination on connector 1 (backward compat)."""
-        return self._get_termination_attr("B", "termination_type", "_initial_termination_b_type")
+        """ContentType of the B-side termination on connector 1 (backward compat).
+
+        On an unsaved assignment, resolves from either the `termination_b_type` or the
+        `termination_b_type_id` setter, mirroring Django's usual FK field/attname pairing.
+        """
+        ct = self._get_termination_attr("B", "termination_type", "_initial_termination_b_type")
+        if ct is None:
+            ct = self._resolve_initial_termination_type("b")
+        return ct
 
     @termination_b_type.setter
     def termination_b_type(self, value):
