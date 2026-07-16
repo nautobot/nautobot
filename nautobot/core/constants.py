@@ -252,6 +252,16 @@ NAUTOBOT_STATIC_ASSETS = {
         "icon_mask": "img/enterprise/nautobot-enterprise-monochrome.svg",
         "logo": "img/nautobot_logo.svg",
     },
+    "cloud": {
+        "navbar_icon": "img/cloud/nautobot-cloud-navbar-icon.svg",
+        "icon_16": "img/cloud/nautobot-cloud-16x16.png",
+        "icon_32": "img/cloud/nautobot-cloud-32x32.png",
+        "icon_180": "img/cloud/nautobot-cloud-180x180.png",
+        "icon_192": "img/cloud/nautobot-cloud-192x192.png",
+        "favicon": "img/cloud/nautobot-cloud.ico",
+        "icon_mask": "img/cloud/nautobot-cloud-monochrome.svg",
+        "logo": "img/nautobot_logo.svg",
+    },
 }
 
 # Per-edition product page URLs.
@@ -259,4 +269,5 @@ NAUTOBOT_EDITION_URLS = {
     "community": "https://networktocode.com/nautobot",
     "professional": "https://networktocode.com/nautobot/nautobot-professional/",
     "enterprise": "https://networktocode.com/nautobot/nautobot-enterprise/",
+    "cloud": "https://networktocode.com/nautobot/nautobot-cloud/",
 }

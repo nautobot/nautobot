@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   id="Layer_1"
+   x="0px"
+   y="0px"
+   viewBox="0 0 200 200"
+   xml:space="preserve"
+   sodipodi:docname="nautobot_icon.svg"
+   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   width="200"
+   height="200"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"><metadata
+   id="metadata200"><rdf:RDF><cc:Work
+       rdf:about=""><dc:format>image/svg+xml</dc:format><dc:type
+         rdf:resource="http://purl.org/dc/dcmitype/StillImage" /><dc:title /></cc:Work></rdf:RDF></metadata><defs
+   id="defs198" /><sodipodi:namedview
+   pagecolor="#ffffff"
+   bordercolor="#666666"
+   borderopacity="1"
+   objecttolerance="10"
+   gridtolerance="10"
+   guidetolerance="10"
+   inkscape:pageopacity="0"
+   inkscape:pageshadow="2"
+   inkscape:window-width="2320"
+   inkscape:window-height="1310"
+   id="namedview196"
+   showgrid="false"
+   showguides="true"
+   inkscape:guide-bbox="true"
+   inkscape:zoom="2.6687159"
+   inkscape:cx="62.764268"
+   inkscape:cy="101.35961"
+   inkscape:window-x="250"
+   inkscape:window-y="72"
+   inkscape:window-maximized="0"
+   inkscape:current-layer="g193"
+   fit-margin-top="0"
+   fit-margin-left="0"
+   fit-margin-right="0"
+   fit-margin-bottom="0"
+   inkscape:document-rotation="0"
+   inkscape:showpageshadow="2"
+   inkscape:pagecheckerboard="0"
+   inkscape:deskcolor="#d1d1d1"><sodipodi:guide
+     position="79.53482,31.029998"
+     orientation="0,-1"
+     id="guide210"
+     inkscape:locked="false" /></sodipodi:namedview>
+<style
+   type="text/css"
+   id="style132">
+	.st0{fill:url(#SVGID_1_);}
+	.st1{fill:#FFFFFF;}
+	.st2{fill:#939598;}
+	.st3{fill:#FF8400;}
+	.st4{fill:url(#SVGID_2_);}
+</style>
+<g
+   id="g193"
+   transform="translate(-112.69246)">
+	<linearGradient
+   id="SVGID_1_"
+   gradientUnits="userSpaceOnUse"
+   x1="610.09967"
+   y1="101.1704"
+   x2="610.09967"
+   y2="-0.087783419"
+   gradientTransform="matrix(1.9175444,0,0,1.9459355,-708.40003,0)">
+		<stop
+   offset="0"
+   style="stop-color:#0097FF"
+   id="stop134" />
+		<stop
+   offset="1"
+   style="stop-color:#0A31E0"
+   id="stop136" />
+	</linearGradient>
+	
+	
+	
+<g
+   id="g1"><path
+     class="st0"
+     d="M 289.00137,0 H 136.08648 C 123.04721,0 112.69246,10.702645 112.69246,23.740413 V 175.91257 c 0,13.23236 10.54649,23.74041 23.39402,23.74041 h 152.91489 c 13.03929,0 23.39403,-10.70264 23.39403,-23.74041 V 23.740413 C 312.3954,10.702645 301.84892,0 289.00137,0 Z"
+     id="path139"
+     style="fill:url(#SVGID_1_);stroke-width:1.93169"
+     sodipodi:nodetypes="sssssssss" /><path
+     style="font-size:285.56px;line-height:1.25;font-family:'Courier New';-inkscape-font-specification:'Courier New, Normal';fill:#ffffff;stroke-width:7.13904"
+     d="m 172.79923,43.819891 v 17.708066 q 12.27015,-12.40959 22.16994,-17.150332 9.89978,-4.740742 22.30937,-4.740742 13.38563,0 24.40088,5.716777 7.80828,4.183008 14.08279,13.943359 6.41395,9.620918 6.41395,19.79957 v 73.760371 h 9.89978 q 4.18301,0 5.99565,1.6732 1.81263,1.53377 1.81263,4.18301 0,2.50981 -1.81263,4.18301 -1.81264,1.6732 -5.99565,1.6732 h -31.37256 q -4.32244,0 -6.13507,-1.6732 -1.81264,-1.6732 -1.81264,-4.18301 0,-2.64924 1.81264,-4.18301 1.81263,-1.6732 6.13507,-1.6732 h 9.76036 v -71.8083 q 0,-12.40959 -9.06319,-20.915039 -9.06318,-8.644883 -24.26144,-8.644883 -11.57299,0 -20.07844,4.740742 -8.50545,4.601309 -24.26144,23.145977 v 73.481503 h 13.24619 q 4.183,0 5.99564,1.6732 1.81264,1.53377 1.81264,4.18301 0,2.50981 -1.81264,4.18301 -1.81264,1.6732 -5.99564,1.6732 h -38.20481 q -4.18301,0 -5.99564,-1.6732 -1.81264,-1.6732 -1.81264,-4.18301 0,-2.64924 1.81264,-4.18301 1.81263,-1.6732 5.99564,-1.6732 H 161.0868 V 55.671746 h -9.89978 q -4.18301,0 -5.99565,-1.673203 -1.81263,-1.673203 -1.81263,-4.322442 0,-2.509804 1.81263,-4.183007 1.81264,-1.673203 5.99565,-1.673203 z"
+     id="text208"
+     transform="scale(0.99623928,1.0037749)"
+     aria-label="n" /></g></g>
+</svg>
