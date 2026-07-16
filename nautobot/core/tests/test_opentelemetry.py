@@ -3,6 +3,7 @@
 import json
 import os
 from types import SimpleNamespace
+import unittest
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
@@ -11,7 +12,6 @@ from django.urls import reverse
 from opentelemetry import trace as otel_trace
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
 from opentelemetry.instrumentation.django import DjangoInstrumentor
-from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
@@ -26,6 +26,13 @@ from nautobot.core import testing
 from nautobot.core.cli.opentelemetry import instrument
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
 
+try:
+    import MySQLdb  # noqa: F401  # mysqlclient C-extension; only present on the MySQL CI job
+
+    _MYSQLCLIENT_AVAILABLE = True
+except ImportError:
+    _MYSQLCLIENT_AVAILABLE = False
+
 
 def _db_instrumentor_for_engine(engine):
     """Return the DB instrumentor class matching ``engine``, mirroring ``instrument()`` in opentelemetry.py.
@@ -33,8 +40,15 @@ def _db_instrumentor_for_engine(engine):
     Production selects the instrumentor with the same ``"mysql" in engine`` test, so tests read the live
     ``settings.DATABASES`` engine to instrument/uninstrument the backend the suite is actually running against
     (e.g. CI's dedicated MySQL job), rather than hardcoding Psycopg2.
+
+    The mysqlclient instrumentor is imported lazily (only in the MySQL branch) because its package runs
+    ``import MySQLdb`` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
     """
-    return MySQLClientInstrumentor if "mysql" in engine else Psycopg2Instrumentor
+    if "mysql" in engine:
+        from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
+
+        return MySQLClientInstrumentor
+    return Psycopg2Instrumentor
 
 
 def _fake_otel_config(**overrides):
@@ -96,6 +110,7 @@ class InstrumentFunctionTest(testing.TestCase):
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
 
+    @unittest.skipUnless(_MYSQLCLIENT_AVAILABLE, "mysqlclient (MySQLdb) is not installed")
     def test_postgres_engine_instruments_psycopg2(self):
         """A PostgreSQL DATABASES engine must instrument psycopg2, not mysqlclient."""
         # instrument() imports these lazily inside the function, so patch them at their source modules.
@@ -114,6 +129,7 @@ class InstrumentFunctionTest(testing.TestCase):
         mock_psycopg2.return_value.instrument.assert_called_once()
         mock_mysql.return_value.instrument.assert_not_called()
 
+    @unittest.skipUnless(_MYSQLCLIENT_AVAILABLE, "mysqlclient (MySQLdb) is not installed")
     def test_mysql_engine_instruments_mysqlclient(self):
         """A MySQL DATABASES engine must instrument mysqlclient, not psycopg2."""
         # instrument() imports these lazily inside the function, so patch them at their source modules.
