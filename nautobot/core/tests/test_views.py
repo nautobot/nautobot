@@ -73,6 +73,33 @@ class GetReturnURLMixinTestCase(TestCase):
         self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
 
 
+class ObjectListViewActionButtonsTestCase(TestCase):
+    """Tests for rendering of the add/import/export action buttons on object list views."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("circuits.view_provider", "circuits.add_provider")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_rendered_with_default_action_buttons(self):
+        """With the default `("add", "import", "export")` action buttons, the dropdown caret is rendered."""
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_not_rendered_when_add_only(self):
+        """With `action_buttons = ("add",)`, there are no dropdown menu entries, so no caret should render."""
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("add",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('id="add-button"', response_body)
+        self.assertNotIn('id="actions-dropdown"', response_body)
+
+
 class HomeViewTestCase(TestCase):
     def test_home(self):
         url = reverse("home")

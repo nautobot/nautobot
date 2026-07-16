@@ -1,0 +1,1 @@
+Fixed the action button showing a caret when `add` is present but neither `import` nor `export` is.
