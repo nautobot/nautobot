@@ -1730,6 +1730,11 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
             self.parent = closest_parent
             self._namespace = None
 
+        if self.host and self.parent_id:
+            duplicate = IPAddress.objects.filter(parent_id=self.parent_id, host=self.host).exclude(pk=self.pk)
+            if duplicate.exists():
+                raise ValidationError({"__all__": f"IP address {self.address} already exists in {self.parent}."})
+
         # Force dns_name to lowercase
         if not self.dns_name.islower():
             self.dns_name = self.dns_name.lower()
