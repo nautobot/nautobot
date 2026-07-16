@@ -1690,7 +1690,7 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
             self._namespace = None
 
         if self.host and self.parent_id:
-            duplicate = IPAddress.objects.filter(parent=self.parent, host=self.host).exclude(pk=self.pk)
+            duplicate = IPAddress.objects.filter(parent_id=self.parent_id, host=self.host).exclude(pk=self.pk)
             if duplicate.exists():
                 raise ValidationError({"__all__": f"IP address {self.address} already exists in {self.parent}."})
 
