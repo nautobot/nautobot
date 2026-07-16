@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+import netaddr
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
@@ -359,6 +360,7 @@ class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     namespace = NautobotHyperlinkedRelatedField(
         view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
     )
+    size = serializers.SerializerMethodField()
 
     class Meta:
         model = IPAddressRange
@@ -367,6 +369,11 @@ class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMix
             "ip_version": {"read_only": True},
             "parent": {"required": False},
         }
+
+    def get_size(self, obj):
+        if obj.start_host is None or obj.end_host is None:
+            return None
+        return netaddr.IPRange(obj.start_host, obj.end_host).size
 
     def validate(self, attrs):
         namespace = attrs.get("namespace", None)
