@@ -1631,12 +1631,58 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         )
         cls.vm_interfaces[1].tagged_vlans.set([cls.vm_interface_vlans[1], cls.vm_interface_vlans[2]])
 
+        # VLANs assigned to physical Interfaces, for the `interface` filter. Global (no location) so
+        # they satisfy the tagged-VLAN location validation regardless of the interface's device.
+        cls.interface_vlans = (
+            VLAN.objects.create(vid=4011, name="IF Filter VLAN 4011", status=statuses[0]),
+            VLAN.objects.create(vid=4012, name="IF Filter VLAN 4012", status=statuses[0]),
+            VLAN.objects.create(vid=4013, name="IF Filter VLAN 4013", status=statuses[0]),
+        )
+        if_devicetype = DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.first(), model="VLAN Filter Device Type"
+        )
+        if_device = Device.objects.create(
+            device_type=if_devicetype,
+            role=Role.objects.get_for_model(Device).first(),
+            name="VLAN Filter Device",
+            location=cls.locations[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        cls.interfaces = (
+            Interface.objects.create(
+                device=if_device,
+                name="int untagged",
+                status=int_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                mode=InterfaceModeChoices.MODE_ACCESS,
+                untagged_vlan=cls.interface_vlans[0],
+            ),
+            Interface.objects.create(
+                device=if_device,
+                name="int tagged",
+                status=int_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                mode=InterfaceModeChoices.MODE_TAGGED,
+            ),
+        )
+        cls.interfaces[1].tagged_vlans.set([cls.interface_vlans[1], cls.interface_vlans[2]])
+
     def test_vm_interfaces(self):
         params = {"vm_interfaces": [self.vm_interfaces[0].pk, self.vm_interfaces[1].name]}
         self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(
                 Q(vminterfaces_as_untagged__in=self.vm_interfaces) | Q(vminterfaces_as_tagged__in=self.vm_interfaces)
+            ).distinct(),
+        )
+
+    def test_interface(self):
+        params = {"interface": [self.interfaces[0].pk, self.interfaces[1].name]}
+        self.assertQuerySetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                Q(interfaces_as_untagged__in=self.interfaces) | Q(interfaces_as_tagged__in=self.interfaces)
             ).distinct(),
         )
 
