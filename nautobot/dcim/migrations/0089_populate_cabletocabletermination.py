@@ -5,8 +5,8 @@ migration translates the legacy `Cable.termination_a_type` / `Cable.termination_
 B-side) into a write to the appropriate FK column on the join model.
 """
 
-import operator
 from functools import reduce
+import operator
 
 from django.db import migrations, models
 
@@ -35,8 +35,7 @@ def populate_cable_to_cable_terminations(apps, schema_editor):
         (models.Q(app_label=app_label, model=model) for app_label, model in _FK_FIELD_BY_NATURAL_KEY),
     )
     fk_field_by_ct_id = {
-        ct.pk: _FK_FIELD_BY_NATURAL_KEY[(ct.app_label, ct.model)]
-        for ct in ContentType.objects.filter(ct_filter)
+        ct.pk: _FK_FIELD_BY_NATURAL_KEY[(ct.app_label, ct.model)] for ct in ContentType.objects.filter(ct_filter)
     }
 
     def _new_termination(cable_id, cable_end, type_id, term_id):
@@ -70,6 +69,4 @@ def clear_cable_to_cable_terminations(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [("dcim", "0088_cabletocabletermination")]
-    operations = [
-        migrations.RunPython(populate_cable_to_cable_terminations, clear_cable_to_cable_terminations)
-    ]
+    operations = [migrations.RunPython(populate_cable_to_cable_terminations, clear_cable_to_cable_terminations)]
