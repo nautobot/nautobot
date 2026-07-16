@@ -1180,6 +1180,32 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.5/24").exists())
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_with_duplicate(self):
+        """A bulk-add pattern colliding with an existing address is rejected with a form error."""
+        self.add_permissions("ipam.add_ipaddress")
+
+        # Pre-create the address to have collision
+        address = IPAddress.objects.create(address="192.0.2.5/24", parent=self.prefix, status=self.statuses[1])
+
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[4-6]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+        request = {
+            "path": reverse("ipam:ipaddress_bulk_add"),
+            "data": post_data(form_data),
+        }
+        response = self.client.post(**request)
+
+        self.assertBodyContains(response, f"IP address {address.address} already exists in {address.parent}.")
+
+        self.assertEqual(IPAddress.objects.filter(address="192.0.2.5/24").count(), 1)
+        self.assertFalse(IPAddress.objects.filter(address="192.0.2.4/24").exists())
+        self.assertFalse(IPAddress.objects.filter(address="192.0.2.6/24").exists())
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_interfaces_view_loads(self):
         """The interfaces tab loads and shows all interfaces the user is permitted to view."""
