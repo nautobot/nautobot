@@ -1241,6 +1241,46 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertEqual(ip.cf[cf.key], "present")
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_add_another(self):
+        """Bulk-add with `_addanother` creates the IPs and redirects back to the add form."""
+        self.add_permissions("ipam.add_ipaddress")
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[43-44]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "_addanother": "1",
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+        self.assertEqual(response.url, reverse("ipam:ipaddress_bulk_add"))
+        self.assertTrue(IPAddress.objects.filter(host="192.0.2.43").exists())
+        self.assertTrue(IPAddress.objects.filter(host="192.0.2.44").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_object_permission_violation(self):
+        """Created IPs outside the user's constrained add permission abort the whole batch: the
+        object-level check raises, the form re-renders with an error (HTTP 200) and nothing persists."""
+        # Constrained add permission: the user may only add IPs whose dns_name is "allowed".
+        obj_perm = ObjectPermission(name="Constrained add IP", actions=["add"], constraints={"dns_name": "allowed"})
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[45-47]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "dns_name": "blocked",  # violates the constraint above
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Object creation failed due to object-level permissions violation")
+        # Transaction rolled back: nothing was created.
+        self.assertFalse(IPAddress.objects.filter(host__in=["192.0.2.45", "192.0.2.46", "192.0.2.47"]).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_assign_without_interface_redirects(self):
         """GET on the assign endpoint with no interface/vminterface redirects to the add page."""
         self.add_permissions("ipam.add_ipaddress")
