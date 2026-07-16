@@ -91,6 +91,9 @@ if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGEL
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
 
+# Sender address for emails sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+DEFAULT_FROM_EMAIL = os.getenv("NAUTOBOT_DEFAULT_FROM_EMAIL", "webmaster@localhost")
+
 # UUID uniquely but anonymously identifying this Nautobot deployment.
 if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID"] != "":
     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
@@ -102,6 +105,20 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 #   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
 if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
+
+# SMTP settings for outbound email sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+EMAIL_HOST = os.getenv("NAUTOBOT_EMAIL_HOST", "localhost")
+EMAIL_HOST_PASSWORD = os.getenv("NAUTOBOT_EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_USER = os.getenv("NAUTOBOT_EMAIL_HOST_USER", "")
+EMAIL_PORT = int(os.getenv("NAUTOBOT_EMAIL_PORT", "25"))
+if "NAUTOBOT_EMAIL_SSL_CERTFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"] != "":
+    EMAIL_SSL_CERTFILE = os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"]
+if "NAUTOBOT_EMAIL_SSL_KEYFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"] != "":
+    EMAIL_SSL_KEYFILE = os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"]
+if "NAUTOBOT_EMAIL_TIMEOUT" in os.environ and os.environ["NAUTOBOT_EMAIL_TIMEOUT"] != "":
+    EMAIL_TIMEOUT = int(os.environ["NAUTOBOT_EMAIL_TIMEOUT"])
+EMAIL_USE_SSL = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_SSL", "False"))
+EMAIL_USE_TLS = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_TLS", "False"))
 
 # Event Brokers
 EVENT_BROKERS = {}
