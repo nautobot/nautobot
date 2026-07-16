@@ -3662,8 +3662,6 @@ class JobResultUIViewSet(
                     "associated_record": None,
                     "result": instance,
                     "console_log_from_run": instance.celery_kwargs.get("nautobot_job_console_log", False),
-                    # Used by the self-polling panel wrappers to decide whether the job is still running.
-                    "job_result_ready_states": JobResultStatusChoices.READY_STATES,
                 }
             )
 
