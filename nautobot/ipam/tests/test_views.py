@@ -997,6 +997,54 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         # The IPRange's pk never appears as a checkbox value
         self.assertNotIn(f'name="pk" value="{ip_range.pk}"', content)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_add_range_button_renders_with_prefill(self):
+        """AddIPAddressRangeButton renders when the prefix has room for a new range,
+        pre-filling start_address (first available for a range) and end_address
+        (first three octets of the start, IPv4)."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        self.add_permissions("ipam.add_ipaddressrange")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        # Button is present, prefilled: start = .1 (network .0 omitted), end = first 3 octets
+        self.assertIn("Add IP Address Range", content)
+        self.assertIn("start_address=10.0.0.1", content)
+        self.assertIn("end_address=10.0.0", content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_prefix_ipaddresses_add_range_button_hidden_when_no_space(self):
+        """AddIPAddressRangeButton does not render when no address is available for a new
+        range (an existing range fills the usable pool -> first_available_ip_for_range is None)."""
+        instance = Prefix.objects.create(
+            prefix="10.0.0.0/29",
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+            status=self.statuses[1],
+        )
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        IPAddressRange.objects.create(
+            start_address="10.0.0.1",  # first usable
+            end_address="10.0.0.6",  # last usable in /29 -> fills the whole pool
+            namespace=self.namespace,
+            status=range_status,
+            is_exclusive=False,
+        )
+        self.add_permissions("ipam.add_ipaddressrange")
+        url = reverse("ipam:prefix_ipaddresses", args=(instance.pk,))
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        self.assertNotIn("Add IP Address Range", content)
+
 
 class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = IPAddress
