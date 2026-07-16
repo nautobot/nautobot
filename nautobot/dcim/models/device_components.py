@@ -1234,6 +1234,14 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
             "module_id",
             CollateAsChar("_name"),
         )  # Module.ordering is complex; don't order by module
+        indexes = [
+            models.Index(
+                "device_id",
+                "module_id",
+                CollateAsChar("_name"),
+                name="dcim_interface_ordering_idx",
+            ),
+        ]
         constraints = [
             *ModularComponentModel.Meta.constraints,
             # A given trunk position can be claimed by at most one child interface. Rows without a
