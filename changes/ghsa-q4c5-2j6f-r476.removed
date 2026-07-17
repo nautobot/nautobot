@@ -1,1 +1,0 @@
-Removed the unused `ApprovalWorkflowStageResponse` UI view registration, which was never linked.

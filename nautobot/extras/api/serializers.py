@@ -102,6 +102,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.users.api.serializers import UserSerializer
 
 from .fields import MultipleChoiceJSONField
 
@@ -169,6 +170,7 @@ class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
 
     user = serializers.SerializerMethodField()
 
+    @extend_schema_field(UserSerializer)
     def get_user(self, obj):
         if obj.user is None:
             return None
