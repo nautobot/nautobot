@@ -573,7 +573,7 @@ class LiveSearchView(AccessMixin, View):
                     filtered_queryset.restrict(request.user, "view")
                     if hasattr(filtered_queryset, "restrict")
                     else filtered_queryset
-                    )[:LIVE_SEARCH_MAX_RESULTS + 1]
+                )[: LIVE_SEARCH_MAX_RESULTS + 1]
                 table = table_class(
                     restricted_queryset,
                     # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
