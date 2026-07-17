@@ -454,8 +454,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
-        status = Status.objects.create(name="nonexistentstatus")
-        status.content_types.add(ContentType.objects.get_for_model(Prefix))
+        nonexistent_status = Status.objects.create(name="nonexistentstatus")
+        nonexistent_status.content_types.add(ContentType.objects.get_for_model(Prefix))
         self.assertNotEqual(prefixes.count(), 0)
 
         url = self._get_url("list")
@@ -2231,14 +2231,14 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         roles = Role.objects.get_for_model(VLAN)[:2]
 
-        status = Status.objects.get_for_model(VLAN).first()
+        vlan_status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
             "vlan_group": cls.vlangroups[0].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
-            "status": status.pk,
+            "status": vlan_status.pk,
             "role": roles[1].pk,
             "locations": list(cls.locations.values_list("pk", flat=True)[:1]),
             "description": "A new VLAN",
@@ -2248,7 +2248,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "vlan_group": cls.vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
-            "status": status.pk,
+            "status": vlan_status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }
