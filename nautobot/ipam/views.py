@@ -111,6 +111,13 @@ class NamespaceUIViewSet(NautobotUIViewSet):
                 url_name="ipam:namespace_ip_addresses",
                 related_object_attribute="ip_addresses",
             ),
+            object_detail.DistinctViewTab(
+                weight=1100,
+                tab_id="ip-address-ranges",
+                label="IP Address Ranges",
+                related_object_attribute="ip_address_ranges",
+                url_name="ipam:namespace_ipaddressranges",
+            ),
         ),
     )
 
@@ -189,7 +196,34 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "ip_address_table": ip_address_table,
-                "active_tab": "ip_addresses",
+                "active_tab": "ip-addresses",
+            }
+        )
+
+    @action(
+        detail=True,
+        url_path="ip-address-ranges",
+        url_name="ipaddressranges",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddressrange"],
+    )
+    def ip_address_ranges(self, request, *args, **kwargs):
+        instance = self.get_object()
+        ip_address_ranges = instance.ip_address_ranges.restrict(request.user, "view").select_related(
+            "role", "status", "tenant"
+        )
+        ip_address_range_table = tables.IPAddressRangeTable(
+            data=ip_address_ranges, user=request.user, exclude=["namespace"]
+        )
+        if request.user.has_perm("ipam.change_ipaddressrange") or request.user.has_perm("ipam.delete_ipaddressrange"):
+            ip_address_range_table.columns.show("pk")
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(ip_address_range_table)
+        return Response(
+            {
+                "ip_address_range_table": ip_address_range_table,
+                "active_tab": "ip-address-ranges",
             }
         )
 
@@ -556,6 +590,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         form_id="ipaddressrange_form",
                         enable_bulk_actions=True,
                         footer_buttons=[
+                            BulkEditButton(form_id="ipaddressrange_form", model=IPAddressRange),
                             BulkDeleteButton(form_id="ipaddressrange_form", model=IPAddressRange),
                         ],
                     ),
