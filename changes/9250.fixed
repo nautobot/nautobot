@@ -1,0 +1,1 @@
+Fixed an N+1 query when listing Interfaces via the REST API.
