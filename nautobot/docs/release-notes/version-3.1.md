@@ -148,6 +148,58 @@ Nautobot 3.1 upgrades the core `Django` dependency from 4.2.x LTS to 5.2.x LTS. 
 
 <!-- towncrier release notes start -->
 
+## v3.1.8 (2026-07-17)
+
+### Security in v3.1.8
+
+- [#GHSA-56v6-2fhr-wxgq](https://github.com/nautobot/nautobot/issues/GHSA-56v6-2fhr-wxgq) - Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
+- [#ghsa-q4c5-2j6f-r476](https://github.com/nautobot/nautobot/issues/ghsa-q4c5-2j6f-r476) - Fixed an authorization bypass in the REST API where a user with only `add_approvalworkflowstageresponse` permission could POST to create "approved" responses, bypassing the intended approver checks and self-approving a workflow. The standalone `ApprovalWorkflowStageResponse` endpoint has been removed; responses are now exposed as read-only nested data on the approval workflow stage, filtered by view permission.
+- [#9218](https://github.com/nautobot/nautobot/issues/9218) - Updated dependency `django` to `>=5.2.16,<5.3` to mitigate CVE-2026-48588, CVE-2026-53877, and CVE-2026-53878.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated dependency `Pillow` to `>=12.3.0,<13` to mitigate multiple CVEs.
+
+### Added in v3.1.8
+
+- [#9037](https://github.com/nautobot/nautobot/issues/9037) - Added a "Go to page" input field to the paginator for quickly jumping to a specific page in multi-page tables.
+
+### Changed in v3.1.8
+
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed removing a VRF from a Device or VirtualMachine to raise an error if that VRF is still attached to one of the interfaces.
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed attaching a VRF to a VM interface via API/ORM to raise an error if the parent Virtual Machine does not have that VRF assigned.
+- [#9210](https://github.com/nautobot/nautobot/issues/9210) - Object counts on the home page are now displayed with thousands separators (e.g., `1,009,518`).
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Enhanced the REST API queryset optimizer to automatically pre-fetch the related objects traversed by a model's natural key to avoid N+1 queries.
+
+### Removed in v3.1.8
+
+- [#ghsa-q4c5-2j6f-r476](https://github.com/nautobot/nautobot/issues/ghsa-q4c5-2j6f-r476) - Removed the unused `ApprovalWorkflowStageResponse` UI view registration, which was never linked.
+
+### Fixed in v3.1.8
+
+- [#9144](https://github.com/nautobot/nautobot/issues/9144) - Fixed the CustomField `description` field no longer being rendered as Markdown on the Custom Field detail view.
+- [#9161](https://github.com/nautobot/nautobot/issues/9161) - Fixed the broken Operational Compliance documentation link in the Application Marketplace, which returned a 404 due to a trailing quotation mark in the URL.
+- [#9179](https://github.com/nautobot/nautobot/issues/9179) - Fixed dynamic group membership incorrectly returning no members when a filter specified multiple conjoined values (such as multiple `tags`), which should match objects having *all* of the given values.
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Fixed an N+1 query when listing Interfaces via the REST API.
+
+### Dependencies in v3.1.8
+
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated dependency `regex` to `>=2026.6.28`.
+
+### Documentation in v3.1.8
+
+- [#9100](https://github.com/nautobot/nautobot/issues/9100) - Documented that VRF and Location associations cannot be set via Prefix CSV/bulk import and must be assigned via the UI or the REST API assignment endpoints.
+- [#9201](https://github.com/nautobot/nautobot/issues/9201) - Added documentation clarifying that `__init__.py` files are required in both the Git repository root and the `custom_validators/` folder for Data Compliance Rules to be discovered from a remote Git repository.
+- [#9215](https://github.com/nautobot/nautobot/issues/9215) - Fixed docs bug in the EVENT_BROKERS setting documentation.
+
+### Housekeeping in v3.1.8
+
+- [#9165](https://github.com/nautobot/nautobot/issues/9165) - Fixed `invoke lint --fix` to continue running in the event of a linting failure.
+- [#9165](https://github.com/nautobot/nautobot/issues/9165) - Removed proper name fix from the markdownlint fix command.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed the default max_locks_per_transaction for Postgres to 512 for test runs with many parallel workers.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Backported Django 6.0 fix for parallel test runs with --buffer.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated development dependency `faker` to `^40.28.1`.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated development dependency `mkdocstrings` to `~1.0.5`.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated development dependency `ruff` to `~0.15.21`.
+
 ## v3.1.7 (2026-07-06)
 
 ### Added in v3.1.7
