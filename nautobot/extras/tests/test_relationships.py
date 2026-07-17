@@ -422,6 +422,27 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         self.assertIsInstance(field, DynamicModelChoiceField)
         self.assertEqual(field.label, "rack")
 
+    def test_to_form_field_description_sanitized(self):
+        """A Relationship description is sanitized before being used as form field help_text.
+
+        Regression test for GHSA-56v6-2fhr-wxgq
+        """
+        relationship = Relationship(
+            label="XSS Relationship",
+            key="xss_relationship",
+            source_type=self.rack_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            description='<script>alert("XSS")</script>**bold**',
+        )
+        relationship.validated_save()
+
+        field = relationship.to_form_field("source")
+        # The script tag is stripped by the Markdown/nh3 sanitization...
+        self.assertNotIn("<script>", field.help_text)
+        # ...while legitimate Markdown is still rendered to HTML.
+        self.assertIn("<strong>bold</strong>", field.help_text)
+
     def test_check_if_key_is_graphql_safe(self):
         """
         Check the GraphQL validation method on CustomField Key Attribute.
