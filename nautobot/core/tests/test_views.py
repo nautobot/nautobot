@@ -496,7 +496,7 @@ class LiveSearchViewTestCase(TestCase):
         # In case when there are more results than just the 10 displayed, expect "More..." button to be rendered.
         self.assertContains(
             response,
-            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%23">More... (10)</a>',
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%23">More...</a>',
             html=True,
         )
 
@@ -516,7 +516,7 @@ class LiveSearchViewTestCase(TestCase):
         # In case when there are no more results than those displayed, expect "More..." button not to be rendered.
         self.assertNotContains(
             response,
-            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%230">More... (10)</a>',
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%230">More...</a>',
             html=True,
         )
 
@@ -528,8 +528,7 @@ class LiveSearchViewTestCase(TestCase):
             ),
             headers={"HX-Request": "true"},
         )
-        # Response is effectively empty, it just contains line breaks from the template file.
-        self.assertEqual(response.text, "\n\n\n")
+        self.assertContains(response, "No locations found")
 
     def test_live_search_bad_request_when_no_htmx(self):
         """Non-HTMX requests are not supported."""
