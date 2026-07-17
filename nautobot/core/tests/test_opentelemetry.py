@@ -58,7 +58,9 @@ def _fake_otel_config(**overrides):
     ``load_settings()``), not from ``nautobot.core.settings``. Tests inject this fake via
     ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``. It must carry every
     attribute ``instrument()`` reads, with real types: ``DATABASES`` is a real dict so the
-    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int.
+    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int
+    (or ``None`` for unlimited, mirroring an empty env var)
+    (or ``None`` for unlimited, mirroring an empty env var).
     Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
     """
     defaults = {
@@ -109,6 +111,40 @@ class InstrumentFunctionTest(testing.TestCase):
             instrument()
 
         self.assertIsInstance(otel_trace.get_tracer_provider(), TracerProvider)
+
+    def _provider_built_by_instrument(self, span_attr_limit):
+        """Run instrument() with the given limit and return the TracerProvider it constructs.
+
+        The global TracerProvider can only be set once per process (`set_tracer_provider` refuses to
+        override an existing provider), so reading `get_tracer_provider()` after a second instrument()
+        would return a stale provider. Instead, patch set_tracer_provider to capture the provider that
+        instrument() actually builds.
+        """
+        captured = {}
+
+        def _capture(provider):
+            captured["provider"] = provider
+
+        with patch.dict(
+            "sys.modules",
+            {"nautobot_config": _fake_otel_config(OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT=span_attr_limit)},
+        ):
+            with patch(
+                "nautobot.core.cli.opentelemetry.trace.set_tracer_provider",
+                side_effect=_capture,
+            ):
+                instrument()
+        return captured["provider"]
+
+    def test_span_attribute_length_limit_applied(self):
+        """instrument() should cap span attribute value length using OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT."""
+        provider = self._provider_built_by_instrument(8192)
+        self.assertEqual(provider._span_limits.max_span_attribute_length, 8192)
+
+    def test_span_attribute_length_limit_unlimited(self):
+        """A None limit (empty env var) maps to SpanLimits.UNSET, leaving span attribute length unlimited."""
+        provider = self._provider_built_by_instrument(None)
+        self.assertIsNone(provider._span_limits.max_span_attribute_length)
 
     @unittest.skipUnless(_MYSQLCLIENT_AVAILABLE, "mysqlclient (MySQLdb) is not installed")
     def test_postgres_engine_instruments_psycopg2(self):

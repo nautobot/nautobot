@@ -1318,7 +1318,13 @@ OTEL_METRICS_EXPORTER = [
 OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
 OTEL_EXPORTER_OTLP_PROTOCOL = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
 OTEL_EXPORTER_OTLP_INSECURE = is_truthy(os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "False"))
-OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT = int(os.getenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "8192"))
+# OTEL-SDK-standard env var: an empty value means "unlimited" (SDK sentinel _ENV_VALUE_UNSET == "").
+# Nautobot applies a protective default cap of 8192 chars; set the env var to "" to restore the
+# SDK's unlimited behavior. None flows through to SpanLimits(max_span_attribute_length=None).
+OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT = (
+    int(_value) if (_value := os.getenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "8192")) != "" else None
+)
+del _value
 # Extra OpenTelemetry instrumentors to enable at startup, as dotted import paths to instrumentor
 # classes (e.g. "opentelemetry.instrumentation.botocore.BotocoreInstrumentor"). Nautobot core installs
 # each one against its own TracerProvider during instrument(), so apps do not need to call

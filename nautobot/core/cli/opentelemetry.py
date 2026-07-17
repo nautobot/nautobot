@@ -47,7 +47,12 @@ def instrument():
     resource = Resource(attributes={SERVICE_NAME: "nautobot", SERVICE_VERSION: __version__})
     # Cap span attribute value length so large values (e.g. GraphQL queries) don't bloat spans. The OTEL
     # SDK is unbounded by default; OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT defaults to 8192 (see settings.py).
-    span_limits = SpanLimits(max_span_attribute_length=nautobot_config.OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT)
+    # A None setting (empty env var) means "unlimited": map it to SpanLimits.UNSET, which deterministically
+    # disables the cap. Passing None directly would instead make SpanLimits re-read the env var/global default.
+    span_attr_limit = nautobot_config.OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT
+    if span_attr_limit is None:
+        span_attr_limit = SpanLimits.UNSET
+    span_limits = SpanLimits(max_span_attribute_length=span_attr_limit)
     provider = TracerProvider(resource=resource, span_limits=span_limits)
     trace.set_tracer_provider(provider)
 
