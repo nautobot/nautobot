@@ -1399,6 +1399,7 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         with self.subTest("no valid containing prefix, parent set"):
             with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
                 self.assertHttpStatus(self.client.get(detail_url), 200)
+
     def test_bulk_create_ips_with_duplicate(self):
         """A bulk-add pattern colliding with an existing address is rejected with a form error."""
         self.add_permissions("ipam.add_ipaddress")
