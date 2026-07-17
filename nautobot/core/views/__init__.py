@@ -569,32 +569,31 @@ class LiveSearchView(AccessMixin, View):
 
             if filterset and table_class:
                 filtered_queryset = filterset(request.GET).qs
-                if filtered_queryset:
-                    restricted_queryset = (
-                        filtered_queryset.restrict(request.user, "view")
-                        if hasattr(filtered_queryset, "restrict")
-                        else filtered_queryset
-                    )
-                    table = table_class(
-                        restricted_queryset,
-                        # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
-                        attrs={"class": "table nb-table-headings"},
-                        hide_hierarchy_ui=True,
-                        configurable=False,
-                        orderable=False,
-                        row_attrs={
-                            # Event handlers and attributes below are defined in order to imitate anchor link behavior.
-                            "role": "link",
-                            "tabindex": 0,
-                            "onclick": lambda record: f'window.location.href = "{record.get_absolute_url()}";',
-                            "onkeydown": "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }",
-                        },
-                    )
-                    # Hide unnecessary "pk" and "actions" columns, if they would otherwise be displayed.
-                    for column in ["pk", "actions"]:
-                        if column in table.columns:
-                            table.columns.hide(column)
-                    table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
+                restricted_queryset = (
+                    filtered_queryset.restrict(request.user, "view")
+                    if hasattr(filtered_queryset, "restrict")
+                    else filtered_queryset
+                )[: LIVE_SEARCH_MAX_RESULTS + 1]
+                table = table_class(
+                    restricted_queryset,
+                    # Omit `table-hover` class, and defer item focus and selection to `search.js` script.
+                    attrs={"class": "table nb-table-headings"},
+                    hide_hierarchy_ui=True,
+                    configurable=False,
+                    orderable=False,
+                    row_attrs={
+                        # Event handlers and attributes below are defined in order to imitate anchor link behavior.
+                        "role": "link",
+                        "tabindex": 0,
+                        "onclick": lambda record: f'window.location.href = "{record.get_absolute_url()}";',
+                        "onkeydown": "if (event.key === 'Enter' || event.key === ' ') { event.currentTarget.click(); }",
+                    },
+                )
+                # Hide unnecessary "pk" and "actions" columns, if they would otherwise be displayed.
+                for column in ["pk", "actions"]:
+                    if column in table.columns:
+                        table.columns.hide(column)
+                table.paginate(per_page=LIVE_SEARCH_MAX_RESULTS)
             return render(
                 request,
                 "components/htmx/live_search_results.html",
