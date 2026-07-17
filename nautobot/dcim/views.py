@@ -4818,7 +4818,7 @@ class InterfaceUIViewSet(
                 context_table_key="vlan_table",
                 table_title="VLANs",
                 add_button_route=None,
-                related_field_name="interface",
+                related_field_name="interfaces",
             ),
             object_detail.ObjectsTablePanel(
                 weight=500,

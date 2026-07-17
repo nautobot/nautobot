@@ -802,7 +802,7 @@ class VLANFilterSet(
         method="_filter_vm_interfaces",
         label="VM interface (name or ID)",
     )
-    interface = NaturalKeyOrPKMultipleChoiceFilter(
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.all(),
         to_field_name="name",
         method="_filter_interfaces",

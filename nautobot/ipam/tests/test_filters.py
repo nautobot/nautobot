@@ -1677,8 +1677,8 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             ).distinct(),
         )
 
-    def test_interface(self):
-        params = {"interface": [self.interfaces[0].pk, self.interfaces[1].name]}
+    def test_interfaces(self):
+        params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].name]}
         self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(
