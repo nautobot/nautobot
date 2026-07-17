@@ -173,7 +173,8 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Security in v2.4.37
 
-- [#GHSA-56v6-2fhr-wxgq](https://github.com/nautobot/nautobot/issues/GHSA-56v6-2fhr-wxgq) - Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
+- [GHSA-56v6-2fhr-wxgq](https://github.com/nautobot/nautobot/security/advisories/GHSA-56v6-2fhr-wxgq) - Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated dependency `Pillow` to `>=12.3.0,<13` to mitigate multiple CVEs.
 
 ### Changed in v2.4.37
 
@@ -187,7 +188,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Housekeeping in v2.4.37
 
-- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed the default max_locks_per_transaction for Postgres to 512 for test runs with many parallel workers.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed the default `max_locks_per_transaction` for Postgres to 512 for test runs with many parallel workers.
 - [#9216](https://github.com/nautobot/nautobot/issues/9216) - Backported Django 6.0 fix for parallel test runs with --buffer.
 - [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
 
