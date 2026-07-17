@@ -101,7 +101,7 @@ class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):
     def create(self, validated_data):
         """
         Create the assignment through the VRF's `prefixes` M2M manager rather than instantiating the
-        VRFPrefixAssignment through model directly.Routing through `vrf.prefixes.add()` fires
+        VRFPrefixAssignment through model directly. Routing through `vrf.prefixes.add()` fires
         m2m_changed and generates a change log entry against the VRF, matching the UI.
         """
         vrf = validated_data.pop("vrf")
@@ -220,7 +220,7 @@ class VLANLocationAssignmentSerializer(ValidatedModelSerializer):
     def create(self, validated_data):
         """
         Create the assignment through the VLAN's `locations` M2M manager rather than instantiating the
-        VLANLocationAssignment through model directly.  Routing through `vlan.locations.add()` fires
+        VLANLocationAssignment through model directly. Routing through `vlan.locations.add()` fires
         m2m_changed and generates a change log entry against the VLAN, matching the UI.
         """
         vlan = validated_data.pop("vlan")
