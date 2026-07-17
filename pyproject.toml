@@ -2,7 +2,7 @@
 name = "nautobot"
 # Primary package version gets set here. This is used for publishing, and once
 # installed, `nautobot.__version__` will have this version number.
-version = "2.4.36"
+version = "2.4.37"
 description = "Source of truth and network automation platform."
 authors = ["Network to Code <opensource@networktocode.com>"]
 license = "Apache-2.0"
@@ -125,7 +125,7 @@ nh3 = "~0.3.2"
 # Handling of version numbers
 packaging = ">=23.1"
 # Image processing library
-Pillow = "^12.2.0"
+Pillow = "^12.3.0"
 # Custom prometheus metrics
 prometheus-client = "~0.23.1"
 # PostgreSQL database adapter

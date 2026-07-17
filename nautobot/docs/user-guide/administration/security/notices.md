@@ -4,6 +4,42 @@ As a part of the Nautobot development team's commitment to security, we maintain
 
 <!-- pyml disable-num-lines 700 proper-names -->
 
+## GHSA-56v6-2fhr-wxgq
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>July 17, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A user with access to add or change Relationship or Module Family records could inject malicious content into these records, which would be rendered into other forms, enabling a stored cross-site scripting (XSS) attack.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-56v6-2fhr-wxgq">GHSA-56v6-2fhr-wxgq</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.37</li>
+        <li>&ge;3.0.0, &lt;3.1.8</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.37 (<a href="https://github.com/nautobot/nautobot/commit/f8a62466f3ebc42759a6373e7c79b0cad5751c2f">patch</a>)</li>
+        <li>3.1.8 (<a href="https://github.com/nautobot/nautobot/commit/e6ff20d50e0759135c6d278e7b2ceec56ed9b3c8">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## CVE-2026-44798
 
 <!-- pyml disable-next-line no-inline-html -->

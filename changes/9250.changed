@@ -1,1 +1,0 @@
-Enhanced the REST API queryset optimizer to automatically pre-fetch the related objects traversed by a model's natural key to avoid N+1 queries.
