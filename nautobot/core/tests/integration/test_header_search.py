@@ -188,8 +188,8 @@ class HeaderSearchTestCase(SeleniumTestCase):
         input_field = self.get_search_popup_input()
         input_field.fill("in: locations ")
 
-        # Type a "lo" phrase in the search popup input.
-        input_field.fill("lo")
+        # Type a "loc" phrase in the search popup input.
+        input_field.fill("loc")
 
         # There should always be no more than ten live results displayed at a time (+1 for the "More..." button).
         results = self.get_search_popup_results()
