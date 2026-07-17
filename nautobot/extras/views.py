@@ -700,20 +700,6 @@ class ApprovalWorkflowStageUIViewSet(
         return redirect(self.get_return_url(request))
 
 
-class ApprovalWorkflowStageResponseUIViewSet(
-    ObjectBulkDestroyViewMixin,
-    ObjectDestroyViewMixin,
-):
-    """ViewSet for ApprovalWorkflowStageResponse."""
-
-    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageResponseFilterForm
-    queryset = ApprovalWorkflowStageResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
-    table_class = tables.ApprovalWorkflowStageResponseTable
-    object_detail_content = None
-
-
 class ApproverDashboardView(ObjectListViewMixin):
     """
     View for the dashboard of approval workflow stages waiting for the current user to approve.
