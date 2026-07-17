@@ -102,6 +102,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.users.api.serializers import UserSerializer
 
 from .fields import MultipleChoiceJSONField
 
@@ -164,25 +165,56 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
-    """ApprovalWorkflowStage Serializer."""
-
-    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStage
-        fields = "__all__"
-
-
 class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
-    """ApprovalWorkflowStageResponse Serializer."""
+    """Nested read representer for ApprovalWorkflowStageResponse; not exposed as its own endpoint."""
+
+    user = serializers.SerializerMethodField()
+
+    @extend_schema_field(UserSerializer)
+    def get_user(self, obj):
+        if obj.user is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.user, "user")
+        except SerializerNotFound:
+            return None
 
     class Meta:
         """Meta attributes."""
 
         model = ApprovalWorkflowStageResponse
+        fields = [
+            "id",
+            "user",
+            "comments",
+            "state",
+            "last_updated",
+        ]
+        read_only_fields = ["user", "state"]
+
+
+class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStage Serializer."""
+
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
+    responses = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(ApprovalWorkflowStageResponseSerializer(many=True))
+    def get_responses(self, obj):
+        """Read-only nested responses, filtered by `view` permission like the UI panel."""
+        request = self.context.get("request")
+        if request is None:
+            return None
+        queryset = ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage=obj).restrict(
+            request.user, "view"
+        )
+        return ApprovalWorkflowStageResponseSerializer(queryset, many=True, context=self.context).data
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
         fields = "__all__"
 
 

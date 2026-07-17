@@ -22,7 +22,7 @@ from nautobot.core.forms import (
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.templatetags.helpers import bettertitle, render_markdown
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
@@ -810,7 +810,8 @@ class Relationship(
         field.required = False
         field.label = self.get_label(side)
         if self.description:
-            field.help_text = self.description
+            # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
+            field.help_text = render_markdown(self.description)
 
         return field
 

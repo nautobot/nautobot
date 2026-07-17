@@ -2288,6 +2288,12 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
         max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
     )
+    description = forms.CharField(
+        label="Description",
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        help_text="Markdown formatting and a limited subset of HTML are supported",
+    )
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),
         help_text="The source object type to which this relationship applies.",
