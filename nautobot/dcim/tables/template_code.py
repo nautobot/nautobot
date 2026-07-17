@@ -285,9 +285,9 @@ MODULEBAY_TREE_LINK = """
             {% endfor %}
         {% endif %}
         {% if table_expandable|default:False %}
-            {% if record.installed_module_bays.exists %}
+            {% if record.installed_child_bays.exists %}
                 <button class="nb-subtree nb-subtree-expandable"
-                        hx-get="{% url 'dcim:modulebay_children' pk=record.pk %}?tree_depth={{ tree_depth|default:0|add:1 }}{% if return_url %}&return_url={{ return_url|urlencode }}{% endif %}"
+                        hx-get="{% url 'dcim:modulebay_nested-bays' pk=record.pk %}?tree_depth={{ tree_depth|default:0|add:1 }}{% if return_url %}&return_url={{ return_url|urlencode }}{% endif %}"
                         hx-indicator="closest .table-responsive"
                         hx-select=".table-responsive tr"
                         hx-select-oob="none"

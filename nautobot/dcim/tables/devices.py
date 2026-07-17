@@ -1140,7 +1140,7 @@ class DeviceDeviceBayTable(DeviceBayTable):
 
 class DeviceModuleBayTable(ModuleBayTable):
     # Hierarchical tree link with an HTMX expand button; nested bays are loaded on demand via the
-    # `dcim:modulebay_children` action. Falls back to a plain icon+link when `hide_hierarchy_ui` is set.
+    # `dcim:modulebay_nested-bays` action. Falls back to a plain icon+link when `hide_hierarchy_ui` is set.
     name = tables.TemplateColumn(
         template_code=MODULEBAY_TREE_LINK,
         order_by=("_name",),

@@ -2736,7 +2736,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn("Test View Module Bay 1", response_body)
         self.assertNotIn("Test View Nested Module Bay 1", response_body)
         # The bay with an installed module exposes an expand button targeting the `children` action.
-        children_url = reverse("dcim:modulebay_children", kwargs={"pk": nested_parent_bay.pk})
+        children_url = reverse("dcim:modulebay_nested-bays", kwargs={"pk": nested_parent_bay.pk})
         self.assertIn(children_url, response_body)
 
         # The panel header badge reports the full count of module bays at all levels (4), not just the
@@ -2792,10 +2792,10 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             self.assertIn("Expand Root Bay 2", page2_body)
             self.assertNotIn("Expand Nested Bay 1", page2_body)
 
-            # The pre-computed depth map (not a per-row ancestor-chain walk) drives indentation:
-            # page 1 has a depth-1 row (the nested bay) and so more `nb-subtree` spacers than page 2,
-            # which is a single depth-0 root. If the depth lookup were broken, both would be equal.
-            self.assertGreater(page1_body.count('class="nb-subtree"'), page2_body.count('class="nb-subtree"'))
+            # With page size set to 2, the first page should display a root + 1 level of nesting.
+            #   Page 2 should contain no nesting as only a single root device is left
+            self.assertEqual(page1_body.count('class="nb-subtree"'), 1)
+            self.assertEqual(page2_body.count('class="nb-subtree"'), 0)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_consoleports(self):
@@ -3357,7 +3357,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn("Module View Bay A", response_body)
         self.assertNotIn("Module View Nested Bay", response_body)
         # The bay with an installed submodule exposes an expand button targeting the `children` action.
-        children_url = reverse("dcim:modulebay_children", kwargs={"pk": bay.pk})
+        children_url = reverse("dcim:modulebay_nested-bays", kwargs={"pk": bay.pk})
         self.assertIn(children_url, response_body)
 
         # The `children` action returns the submodule's nested module bay.

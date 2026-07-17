@@ -3081,7 +3081,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         """Device module bays panel with a collapsible tree (default) and an "expand all" mode.
 
         By default only the device's top-level bays render, and nested bays load on demand via HTMX
-        (`MODULEBAY_TREE_LINK` + the `dcim:modulebay_children` action). When `?expand_all=true` is present,
+        (`MODULEBAY_TREE_LINK` + the `dcim:modulebay_nested-bays` action). When `?expand_all=true` is present,
         the panel instead renders the *entire* bay hierarchy as a single pre-order (depth-first) list,
         which the standard paginator then slices at the normal page size (so page 1 shows the first root
         and its descendants before any later root). The "Expand all"/"Collapse all" toggle lives in the
@@ -5172,11 +5172,11 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
         detail=True,
         custom_view_base_action="view",
     )
-    def children(self, request, *args, **kwargs):
+    def nested_bays(self, request, *args, **kwargs):
         """Render the child module bays of this bay's installed module, for HTMX expandable-tree rows."""
         instance = self.get_object()
-        children = instance.installed_module_bays.restrict(request.user, "view").prefetch_related(
-            "installed_module", "installed_module__status"
+        children = instance.installed_child_bays.restrict(request.user, "view").prefetch_related(
+            "installed_module"
         )
         return_url = request.GET.get("return_url", None)
         saved_view_pk = request.GET.get("saved_view", None)
@@ -5208,7 +5208,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
                 "instance": instance,
                 "request": request,
                 "return_url": return_url,
-                "next_page_url": reverse("dcim:modulebay_children", kwargs={"pk": instance.pk}),
+                "next_page_url": reverse("dcim:modulebay_nested-bays", kwargs={"pk": instance.pk}),
                 "table_inc_template": "components/htmx/subtree_children.html",
                 "template": "panel_table.html",
                 "table": children_table,

@@ -1994,7 +1994,7 @@ class ModuleBay(PrimaryModel):
         return self.parent_device
 
     @property
-    def installed_module_bays(self):
+    def installed_child_bays(self):
         """Return the queryset of ModuleBays belonging to the Module (if any) installed in this bay.
 
         These are the "children" of this bay in the Device/Module nesting hierarchy, used to render the
