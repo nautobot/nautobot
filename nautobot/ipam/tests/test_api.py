@@ -1920,7 +1920,7 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
-    def test_ipv4_size_is_correct_under_256_network_range(self):
+    def test_ipv4_size_is_correct_under_256_octet_range(self):
         """Confirm IPV4 Size Is Calculated Correctly Under Simple Prefix."""
         self.add_permissions(
             "ipam.add_ipaddressrange",
@@ -1948,7 +1948,7 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         result = list_response.data["results"][0]
         self.assertEqual(result["size"], 11)
 
-    def test_ipv4_size_is_correct_over_256_network_range(self):
+    def test_ipv4_size_is_correct_over_256_octet_range(self):
         """Confirm IPV6 Size Is Calculated Correctly On A Large Prefix"""
         self.add_permissions(
             "ipam.add_ipaddressrange",
@@ -2014,7 +2014,7 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         result = list_response.data["results"][0]
         self.assertEqual(result["size"], 65535)
 
-    def test_ipv6_size_is_correct_over_final_hextet_range_without_compression_notation(self):
+    def test_ipv6_size_is_correct_over_final_hextet_range(self):
         """Confirm IPV6 Size Is Calculated Correctly On A Large Prefix Without
         Compression Notation
         """
@@ -2053,7 +2053,7 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         result = list_response.data["results"][0]
         self.assertEqual(result["size"], 131072)
 
-    def test_ipv6_size_is_correct_over_final_hextet_range_with_compression_notation(self):
+    def test_ipv6_size_is_calculated_correctly_with_compression_notation(self):
         """Confirm IPV6 Size Is Calculated Correctly On A Large Prefix With
         Compression Notation
         """
