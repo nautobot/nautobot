@@ -3622,6 +3622,8 @@ class JobResultUIViewSet(
                 "task_name",
                 "meta",
             ],
+            # Poll for updates while the job is running so worker details populate without a manual refresh.
+            body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
         ),
         object_detail.ObjectTextPanel(
             label="Traceback",
@@ -3629,6 +3631,8 @@ class JobResultUIViewSet(
             weight=200,
             object_field="traceback",
             render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            # Poll for updates so the traceback populates when the job finishes without a manual refresh.
+            body_wrapper_template_path="extras/inc/jobresult_polling_text_panel.html",
         ),
     )
 

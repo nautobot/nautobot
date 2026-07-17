@@ -794,6 +794,11 @@ class JobResult(SavedViewMixin, BaseModel, CustomFieldModel):
     def job_description(self):
         return self.job_model.description if self.job_model else None
 
+    @property
+    def is_unready_state(self) -> bool:
+        """Return True if job_result is in a not finished state."""
+        return self.status in JobResultStatusChoices.UNREADY_STATES
+
     # FIXME(jathan): This needs to go away. Need to think about that the impact
     # will be in the JOB_RESULT_METRIC and how to compensate for it.
     def set_status(self, status):
