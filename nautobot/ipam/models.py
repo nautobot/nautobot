@@ -792,8 +792,8 @@ class Prefix(PrimaryModel):
             if self.parent is None and self.ip_addresses.exists():
                 raise models.ProtectedError(
                     msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddress objects that "
-                        "would no longer have a valid parent."
+                        f"Cannot delete Prefix {self} because it has child IP Address objects that "
+                        "would no longer have a valid parent: "
                     ),
                     protected_objects=self.ip_addresses.all(),
                 )
@@ -801,8 +801,8 @@ class Prefix(PrimaryModel):
             if self.parent is None and self.ip_address_ranges.exists():
                 raise models.ProtectedError(
                     msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddressRanges objects that "
-                        "would no longer have a valid parent."
+                        f"Cannot delete Prefix {self} because it has child IP Address Ranges objects that "
+                        "would no longer have a valid parent: "
                     ),
                     protected_objects=self.ip_address_ranges.all(),
                 )
@@ -1960,7 +1960,10 @@ class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
             self._deconstruct_end_address(end_address)
 
     def __str__(self):
-        return f"{self.start_address} - {self.end_address}"
+        if self.name:
+            return f"{self.name}: {self.start_address} - {self.end_address}"
+        else:
+            return f"{self.start_address} - {self.end_address}"
 
     def _deconstruct_start_address(self, address):
         if address:
