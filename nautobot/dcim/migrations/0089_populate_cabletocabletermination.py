@@ -5,7 +5,10 @@ migration translates the legacy `Cable.termination_a_type` / `Cable.termination_
 B-side) into a write to the appropriate FK column on the join model.
 """
 
-from django.db import migrations
+from functools import reduce
+import operator
+
+from django.db import migrations, models
 
 # Map (app_label, model_name) of a legacy GFK target → the corresponding FK field name on
 # CableToCableTermination.
@@ -27,32 +30,43 @@ def populate_cable_to_cable_terminations(apps, schema_editor):
     CableToCableTermination = apps.get_model("dcim", "CableToCableTermination")
     ContentType = apps.get_model("contenttypes", "ContentType")
 
-    # Cache content types so we don't requery per-row.
-    ct_cache = {}
+    ct_filter = reduce(
+        operator.or_,
+        (models.Q(app_label=app_label, model=model) for app_label, model in _FK_FIELD_BY_NATURAL_KEY),
+    )
+    fk_field_by_ct_id = {
+        ct.pk: _FK_FIELD_BY_NATURAL_KEY[(ct.app_label, ct.model)] for ct in ContentType.objects.filter(ct_filter)
+    }
 
-    def _fk_field_for(ct_id):
-        if ct_id not in ct_cache:
-            ct = ContentType.objects.get(pk=ct_id)
-            ct_cache[ct_id] = _FK_FIELD_BY_NATURAL_KEY.get((ct.app_label, ct.model))
-        return ct_cache[ct_id]
+    def _new_termination(cable_id, cable_end, type_id, term_id):
+        if not (type_id and term_id):
+            return None
+        fk_field = fk_field_by_ct_id.get(type_id)
+        if fk_field is None:
+            return None
+        return CableToCableTermination(cable_id=cable_id, cable_end=cable_end, **{fk_field: term_id})
 
-    for cable in Cable.objects.all().iterator():
-        for cable_end, type_id, term_id in (
-            ("A", cable.termination_a_type_id, cable.termination_a_id),
-            ("B", cable.termination_b_type_id, cable.termination_b_id),
-        ):
-            if not (type_id and term_id):
-                continue
-            fk_field = _fk_field_for(type_id)
-            if fk_field is None:
-                continue
-            CableToCableTermination.objects.get_or_create(
-                cable=cable,
-                cable_end=cable_end,
-                **{fk_field: term_id},
-            )
+    batch = []
+    batch_size = 2000
+    cable_fields = ("pk", "termination_a_type_id", "termination_a_id", "termination_b_type_id", "termination_b_id")
+    for pk, a_type, a_id, b_type, b_id in Cable.objects.values_list(*cable_fields).iterator(chunk_size=batch_size):
+        for cable_end, type_id, term_id in (("A", a_type, a_id), ("B", b_type, b_id)):
+            obj = _new_termination(pk, cable_end, type_id, term_id)
+            if obj is not None:
+                batch.append(obj)
+        if len(batch) >= batch_size:
+            CableToCableTermination.objects.bulk_create(batch, ignore_conflicts=True)
+            batch = []
+
+    if batch:
+        CableToCableTermination.objects.bulk_create(batch, ignore_conflicts=True)
+
+
+def clear_cable_to_cable_terminations(apps, schema_editor):
+    CableToCableTermination = apps.get_model("dcim", "CableToCableTermination")
+    CableToCableTermination.objects.all().delete()
 
 
 class Migration(migrations.Migration):
     dependencies = [("dcim", "0088_cabletocabletermination")]
-    operations = [migrations.RunPython(populate_cable_to_cable_terminations, migrations.RunPython.noop)]
+    operations = [migrations.RunPython(populate_cable_to_cable_terminations, clear_cable_to_cable_terminations)]
