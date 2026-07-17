@@ -217,9 +217,11 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         )
         if request.user.has_perm("ipam.change_ipaddressrange") or request.user.has_perm("ipam.delete_ipaddressrange"):
             ip_address_range_table.columns.show("pk")
+
         RequestConfig(
             request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
         ).configure(ip_address_range_table)
+
         return Response(
             {
                 "ip_address_range_table": ip_address_range_table,
