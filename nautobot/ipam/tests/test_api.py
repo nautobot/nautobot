@@ -12,6 +12,7 @@ from rest_framework import status
 
 from nautobot.core.testing import APITestCase, APIViewTestCases, disable_warnings
 from nautobot.core.testing.api import APITransactionTestCase
+from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
@@ -22,6 +23,7 @@ from nautobot.dcim.models import (
     Manufacturer,
     VirtualDeviceContext,
 )
+from nautobot.extras.choices import ObjectChangeActionChoices
 from nautobot.extras.models import CustomField, Role, Status
 from nautobot.ipam import choices
 from nautobot.ipam.models import (
@@ -124,6 +126,34 @@ class VRFTest(APIViewTestCases.APIViewTestCase):
             "description": "New description",
             "status": vrf_statuses.last().pk,
         }
+
+
+def _assert_assignment_change_logged_against_parent(test, create_data, parent):
+    """Assert that creating and deleting an M2M-through assignment via the API logs a change on its parent.
+
+    These IPAM through models (e.g. VRFDeviceAssignment, IPAddressToInterface) are not themselves
+    change-logged. Creating/deleting them via the API must therefore route through the parent's M2M
+    manager so that an `m2m_changed` signal records an ObjectChange against the parent object.
+
+    Args:
+        test: The APIViewTestCase instance driving the request.
+        create_data (dict): Request body for creating a single assignment.
+        parent: The parent object (VRF/Prefix/VLAN/(VM)Interface) expected to receive the change log entry.
+    """
+    # Create the assignment and confirm a change log entry was recorded against the parent.
+    changes_before = get_changes_for_model(parent).count()
+    response = test.client.post(test._get_list_url(), create_data, format="json", **test.header)
+    test.assertHttpStatus(response, status.HTTP_201_CREATED)
+    test.assertEqual(get_changes_for_model(parent).count(), changes_before + 1)
+    test.assertEqual(get_changes_for_model(parent).latest("time").action, ObjectChangeActionChoices.ACTION_UPDATE)
+
+    # Delete the assignment and confirm a second change log entry was recorded against the parent.
+    assignment = test.model.objects.get(pk=response.data["id"])
+    changes_before = get_changes_for_model(parent).count()
+    response = test.client.delete(test._get_detail_url(assignment), **test.header)
+    test.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+    test.assertEqual(get_changes_for_model(parent).count(), changes_before + 1)
+    test.assertEqual(get_changes_for_model(parent).latest("time").action, ObjectChangeActionChoices.ACTION_UPDATE)
 
 
 class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -280,6 +310,20 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
             self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
 
+    def test_change_logging_recorded_against_vrf(self):
+        """Assigning/unassigning a device, VM, or VDC via the API records a change log entry against the VRF."""
+        self.add_permissions(
+            "ipam.add_vrfdeviceassignment",
+            "ipam.delete_vrfdeviceassignment",
+            "ipam.view_vrf",
+            "dcim.view_device",
+            "dcim.view_virtualdevicecontext",
+            "virtualization.view_virtualmachine",
+        )
+        # create_data[0] assigns a device, [1] a virtual machine, [3] a virtual device context.
+        for data in (self.create_data[0], self.create_data[1], self.create_data[3]):
+            _assert_assignment_change_logged_against_parent(self, data, VRF.objects.get(pk=data["vrf"]))
+
 
 class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
     model = VRFPrefixAssignment
@@ -332,6 +376,17 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
         self.assertContains(response, "must be in same namespace as", status_code=status.HTTP_400_BAD_REQUEST)
         response = self.client.post(self._get_list_url(), missing_field_create_data, format="json", **self.header)
         self.assertContains(response, "This field may not be null.", status_code=status.HTTP_400_BAD_REQUEST)
+
+    def test_change_logging_recorded_against_vrf(self):
+        """Assigning/unassigning a prefix via the API records a change log entry against the VRF."""
+        self.add_permissions(
+            "ipam.add_vrfprefixassignment",
+            "ipam.delete_vrfprefixassignment",
+            "ipam.view_vrf",
+            "ipam.view_prefix",
+        )
+        data = self.create_data[0]
+        _assert_assignment_change_logged_against_parent(self, data, VRF.objects.get(pk=data["vrf"]))
 
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):
@@ -1445,6 +1500,17 @@ class PrefixLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def test_change_logging_recorded_against_prefix(self):
+        """Assigning/unassigning a location via the API records a change log entry against the Prefix."""
+        self.add_permissions(
+            "ipam.add_prefixlocationassignment",
+            "ipam.delete_prefixlocationassignment",
+            "ipam.view_prefix",
+            "dcim.view_location",
+        )
+        data = self.create_data[0]
+        _assert_assignment_change_logged_against_parent(self, data, Prefix.objects.get(pk=data["prefix"]))
+
 
 class ParallelPrefixTest(APITransactionTestCase):
     """
@@ -1722,6 +1788,23 @@ class IPAddressToInterfaceTest(APIViewTestCases.APIViewTestCase):
                 "vm_interface": vm_interfaces[1].pk,
             },
         ]
+
+    def test_change_logging_recorded_against_interface(self):
+        """Assigning/unassigning an IP via the API records a change log entry against the (VM)Interface."""
+        self.add_permissions(
+            "ipam.add_ipaddresstointerface",
+            "ipam.delete_ipaddresstointerface",
+            "ipam.view_ipaddress",
+            "dcim.view_interface",
+            "virtualization.view_vminterface",
+        )
+        # create_data[0] assigns to an Interface, [2] to a VMInterface.
+        for data in (self.create_data[0], self.create_data[2]):
+            if data["interface"]:
+                parent = Interface.objects.get(pk=data["interface"])
+            else:
+                parent = VMInterface.objects.get(pk=data["vm_interface"])
+            _assert_assignment_change_logged_against_parent(self, data, parent)
 
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
@@ -2193,6 +2276,17 @@ class VLANLocationAssignmentTest(APIViewTestCases.APIViewTestCase):
                 "location": locations_without_vlans[3].pk,
             },
         ]
+
+    def test_change_logging_recorded_against_vlan(self):
+        """Assigning/unassigning a location via the API records a change log entry against the VLAN."""
+        self.add_permissions(
+            "ipam.add_vlanlocationassignment",
+            "ipam.delete_vlanlocationassignment",
+            "ipam.view_vlan",
+            "dcim.view_location",
+        )
+        data = self.create_data[0]
+        _assert_assignment_change_logged_against_parent(self, data, VLAN.objects.get(pk=data["vlan"]))
 
 
 class ServiceTest(APIViewTestCases.APIViewTestCase):
