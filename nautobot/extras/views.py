@@ -700,20 +700,6 @@ class ApprovalWorkflowStageUIViewSet(
         return redirect(self.get_return_url(request))
 
 
-class ApprovalWorkflowStageResponseUIViewSet(
-    ObjectBulkDestroyViewMixin,
-    ObjectDestroyViewMixin,
-):
-    """ViewSet for ApprovalWorkflowStageResponse."""
-
-    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageResponseFilterForm
-    queryset = ApprovalWorkflowStageResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
-    table_class = tables.ApprovalWorkflowStageResponseTable
-    object_detail_content = None
-
-
 class ApproverDashboardView(ObjectListViewMixin):
     """
     View for the dashboard of approval workflow stages waiting for the current user to approve.
@@ -3636,6 +3622,8 @@ class JobResultUIViewSet(
                 "task_name",
                 "meta",
             ],
+            # Poll for updates while the job is running so worker details populate without a manual refresh.
+            body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
         ),
         object_detail.ObjectTextPanel(
             label="Traceback",
@@ -3643,6 +3631,8 @@ class JobResultUIViewSet(
             weight=200,
             object_field="traceback",
             render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            # Poll for updates so the traceback populates when the job finishes without a manual refresh.
+            body_wrapper_template_path="extras/inc/jobresult_polling_text_panel.html",
         ),
     )
 

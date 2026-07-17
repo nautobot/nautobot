@@ -42,6 +42,7 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
+from nautobot.extras import views
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     CustomFieldTypeChoices,
@@ -1403,87 +1404,30 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, "Can not comment canceled approval workflow.")
 
+    def test_responses_panel_visible_only_with_view_permission(self):
+        """The stage detail Responses panel is gated by object-level `view` on ApprovalWorkflowStageResponse."""
+        stage = ApprovalWorkflowStage.objects.first()
+        marker = "Panel-visible response comment"
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.COMMENT,
+            comments=marker,
+        )
+        self.client.force_login(self.user)
+        url = reverse("extras:approvalworkflowstage", args=[stage.pk])
 
-class ApprovalWorkflowStageResponseViewTestCase(
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
-    """Test the ApprovalWorkflowStageResponse views."""
+        with self.subTest("without view_approvalworkflowstageresponse -> panel empty"):
+            self.add_permissions("extras.view_approvalworkflowstage")
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertNotContains(response, marker)
 
-    model = ApprovalWorkflowStageResponse
-
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        cls.approver_groups = [Group.objects.create(name=f"Test Group {i}") for i in range(3)]
-        cls.users = User.objects.all()
-        for user in cls.users:
-            for group in cls.approver_groups:
-                user.groups.add(group)
-
-        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
-        cls.scheduled_jobs = [
-            ScheduledJob.objects.create(
-                name=f"TessPassJob Scheduled Job {i}",
-                task="pass_job.TestPassJob",
-                job_model=job_model,
-                interval=JobExecutionType.TYPE_IMMEDIATELY,
-                user=cls.users[0],
-                start_time=timezone.now(),
-            )
-            for i in range(6)
-        ]
-
-        cls.approval_workflow_definitions = [
-            ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i} Definition",
-                model_content_type=cls.scheduledjob_ct,
-                weight=i,
-                model_constraints={"job_model__name": "NoSuchJob"},
-            )
-            for i in range(5)
-        ]
-        cls.approval_workflow_stage_definitions = []
-        for approval_workflow_definition in cls.approval_workflow_definitions:
-            for i in range(3):
-                cls.approval_workflow_stage_definitions.append(
-                    ApprovalWorkflowStageDefinition.objects.create(
-                        approval_workflow_definition=approval_workflow_definition,
-                        sequence=i * 100,
-                        name=f"Test Approval Workflow Stage {i} Definition",
-                        min_approvers=i + 1,
-                        denial_message=f"Stage {i} Denial Message",
-                        approver_group=cls.approver_groups[i],
-                    )
-                )
-        cls.approval_workflows = [
-            ApprovalWorkflow.objects.create(
-                approval_workflow_definition=cls.approval_workflow_definitions[i],
-                object_under_review_content_type=cls.scheduledjob_ct,
-                object_under_review_object_id=cls.scheduled_jobs[i].pk,
-                current_state=ApprovalWorkflowStateChoices.PENDING,
-            )
-            for i in range(5)
-        ]
-        cls.approval_workflow_stages = []
-        for i, approval_workflow in enumerate(cls.approval_workflows):
-            for j in range(3):
-                approval_workflow_stage = ApprovalWorkflowStage.objects.create(
-                    approval_workflow=approval_workflow,
-                    approval_workflow_stage_definition=cls.approval_workflow_stage_definitions[i * 3 + j],
-                    state=ApprovalWorkflowStateChoices.PENDING,
-                )
-                cls.approval_workflow_stages.append(approval_workflow_stage)
-                if i < 2:
-                    # Create responses for the first two approval workflow instances
-                    ApprovalWorkflowStageResponse.objects.create(
-                        approval_workflow_stage=approval_workflow_stage,
-                        user=cls.users[i],
-                        comments=f"Test comment {i * 3 + j}",
-                        state=ApprovalWorkflowStateChoices.PENDING,
-                    )
+        with self.subTest("with view_approvalworkflowstageresponse -> response shown"):
+            self.add_permissions("extras.view_approvalworkflowstageresponse")
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, marker)
 
 
 class ComputedFieldTestCase(
@@ -4706,6 +4650,38 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         response_content = response.content.decode(response.charset)
         self.assertNotIn("log-table-poller", response_content)
+
+    def _get_advanced_tab_panel(self, label):
+        """Return the Advanced-tab panel with the given label from the JobResult detail view definition."""
+        content = views.JobResultUIViewSet.object_detail_content
+        advanced_tab = next(tab for tab in content.tabs if tab.label == "Advanced")
+        return next(panel for panel in advanced_tab.panels if panel.label == label)
+
+    def test_advanced_tab_panels_poll_while_job_pending(self):
+        """Worker and Traceback panels should self-poll (hx-trigger) while the job is not yet finished (#9208)."""
+        self.add_permissions("extras.view_jobresult")
+        url = self.job_result_pending.get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertIn('hx-trigger="every 3s"', content)
+
+    def test_advanced_tab_panels_do_not_poll_when_job_complete(self):
+        """Worker and Traceback panels should stop polling once the job has reached a terminal state (#9208)."""
+        self.add_permissions("extras.view_jobresult")
+        url = self.job_result_completed.get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertNotIn('hx-trigger="every 3s"', content)
 
     def test_joblogentrytable_vary_header(self):
         """Test that Vary header includes HX-Request for proper caching."""

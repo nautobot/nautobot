@@ -528,6 +528,7 @@ class ModelViewSetMixinTest(testing.APITestCase):
         serializer_class = ipam_serializers.IPAddressSerializer
         filterset_class = ipam_filters.IPAddressFilterSet
 
+    @override_settings(ALLOWED_HOSTS=["*"])  # serializing hyperlinked fields builds absolute URLs
     def test_get_queryset_optimizations(self):
         """Test that the queryset is appropriately optimized based on request parameters."""
         self.user.is_superuser = True
@@ -545,7 +546,8 @@ class ModelViewSetMixinTest(testing.APITestCase):
         view.initial(request)
 
         queryset = view.get_queryset()
-        with self.assertNumQueries(5):  # IPAddress plus four prefetches
+        # IPAddress plus one natural-key prefetch (parent__namespace), plus four prefetches.
+        with self.assertNumQueries(6):
             instance = queryset.first()
         # FK related objects should have been auto-selected
         with self.assertNumQueries(0):
@@ -563,6 +565,19 @@ class ModelViewSetMixinTest(testing.APITestCase):
             list(instance.vm_interfaces.all())
             list(instance.tags.all())
 
+        # The `natural_slug` field calls `natural_key()`, which walks related-object natural keys (e.g.
+        # parent__namespace). Those relations were prefetched above, so computing it for every object must
+        # not issue an additional query per object (this was previously an N+1).
+        instances = list(view.get_queryset())
+        self.assertGreater(len(instances), 1, "need multiple objects for a meaningful N+1 assertion")
+        with self.assertNumQueries(0):
+            natural_slugs = [instance.natural_slug for instance in instances]
+        # Exercise the real serializer too: natural_slug should render for every object, matching the
+        # query-free traversal above. (Full serialization also issues a couple of constant, per-model
+        # custom-field metadata lookups, which is why the query-count assertion targets the traversal.)
+        data = view.get_serializer(instances, many=True).data
+        self.assertEqual([row["natural_slug"] for row in data], natural_slugs)
+
         # With exclude_m2m query parameter set to True
         view = self.SimpleIPAddressViewSet()
         view.action_map = {"get": "list"}
@@ -575,7 +590,9 @@ class ModelViewSetMixinTest(testing.APITestCase):
         view.initial(request)
 
         queryset = view.get_queryset()
-        with self.assertNumQueries(1):  # IPAddress only, no prefetches
+        # IPAddress plus the natural-key prefetch (parent__namespace).
+        # exclude_m2m suppresses the additional M2M/reverse prefetches.
+        with self.assertNumQueries(2):
             instance = queryset.first()
         # FK related objects should still have been auto-selected
         with self.assertNumQueries(0):

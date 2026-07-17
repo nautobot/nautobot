@@ -515,14 +515,6 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class ApprovalWorkflowStageResponseViewSet(ModelViewSet):
-    """ApprovalWorkflowStageResponse viewset."""
-
-    queryset = ApprovalWorkflowStageResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
-    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
-
-
 #
 # Contacts
 #

@@ -829,7 +829,7 @@ properties:
       - **EXCLUDE** filters out specific topics like those with "no-publish" in the name.
 
       !!! note
-          If **INCLUDE** is set to ["*"], all topics will be published unless excluded by **EXCLUDE**.
+          If **INCLUDE** is set to `["*"]`, all topics will be published unless excluded by **EXCLUDE**.
     properties:
       CLASS:
         type: "string"
