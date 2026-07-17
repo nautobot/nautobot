@@ -174,7 +174,7 @@ def add_available_ipaddresses(prefix, ipaddress_list, is_pool=False, ip_ranges=N
 
 def get_add_available_ipaddresses_callback(show_available, parent):
     """Always inject IP ranges; `show_available` only toggles the available-IP gap rows."""
-    ip_ranges = list(parent.ip_address_ranges.all())
+    ip_ranges = parent.get_all_ip_address_ranges()
     return lambda ip_addresses: add_available_ipaddresses(
         parent.prefix,
         ip_addresses,

@@ -1062,6 +1062,17 @@ class Prefix(PrimaryModel):
         """
         return self.get_all_ips()
 
+    @property
+    def all_ip_address_ranges(self):
+        """
+        All IP address ranges contained within this prefix, including
+        those in descendant prefixes.
+
+        This is a property alias for `get_all_ip_address_ranges()` and may be
+        used as `related_object_attribute` in `object_detail.DistinctViewTab`.
+        """
+        return self.get_all_ip_address_ranges()
+
     def reparent_subnets(self):
         """
         Handle changes to the parentage of other Prefixes as a consequence of this Prefix's creation or update.
@@ -1353,16 +1364,21 @@ class Prefix(PrimaryModel):
 
         return available_prefixes
 
-    def get_available_ips(self):
+    def get_available_ips(self, exclude_child_ips=True):
         """
         Return all available IPs within this prefix as an IPSet.
-        """
-        prefix = netaddr.IPSet(self.prefix)
-        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
-        available_ips = prefix - child_ips
 
-        # Subtract addresses covered by exclusive IP Ranges
-        for ip_range in self.ip_address_ranges.filter(is_exclusive=True):
+        exclude_child_ips: when False, existing IP Addresses are NOT removed from
+        the set. Used when pre-filling a new (non-exclusive) IP Address Range,
+        which may legitimately overlap already-assigned IPs.
+        """
+        available_ips = netaddr.IPSet(self.prefix)
+
+        if exclude_child_ips:
+            child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
+            available_ips -= child_ips
+
+        for ip_range in self.get_all_ip_address_ranges():
             start = netaddr.IPAddress(ip_range.start_address)
             end = netaddr.IPAddress(ip_range.end_address)
             available_ips -= netaddr.IPSet(netaddr.IPRange(start, end))
@@ -1428,6 +1444,18 @@ class Prefix(PrimaryModel):
             host__lte=self.broadcast,
         )
 
+    def get_all_ip_address_ranges(self):
+        """
+        All IP Address Ranges within this prefix's span in the same namespace,
+        including ranges parented to descendant prefixes (analogous to get_all_ips).
+        """
+        return IPAddressRange.objects.filter(
+            parent__namespace_id=self.namespace_id,
+            ip_version=self.ip_version,
+            start_host__gte=self.network,
+            end_host__lte=self.broadcast,
+        )
+
     def get_first_available_prefix(self):
         """
         Return the first available child prefix within the prefix (or None).
@@ -1445,6 +1473,19 @@ class Prefix(PrimaryModel):
         if not available_ips:
             return None
         return f"{next(available_ips.__iter__())}/{self.prefix_length}"
+
+    def get_first_available_ip_for_range(self):
+        """
+        Return the first available IP for pre-filling a new IP Address Range,
+        as a bare address string (no mask), or None.
+
+        Unlike get_first_available_ip(), this ignores existing IP Addresses,
+        since a non-exclusive Range may contain them.
+        """
+        available_ips = self.get_available_ips(exclude_child_ips=False)
+        if not available_ips:
+            return None
+        return str(next(available_ips.__iter__()))
 
     def get_utilization(self):
         """Return the utilization of this prefix as a UtilizationData object.
@@ -1688,6 +1729,11 @@ class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
             # Otherwise, it was *implicitly* changed (e.g. by changing `namespace`), so just update it as appropriate.
             self.parent = closest_parent
             self._namespace = None
+
+        if self.host and self.parent_id:
+            duplicate = IPAddress.objects.filter(parent_id=self.parent_id, host=self.host).exclude(pk=self.pk)
+            if duplicate.exists():
+                raise ValidationError({"__all__": f"IP address {self.address} already exists in {self.parent}."})
 
         # Force dns_name to lowercase
         if not self.dns_name.islower():

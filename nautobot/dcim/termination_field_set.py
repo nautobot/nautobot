@@ -39,7 +39,7 @@ def _device_term_config(term_model, term_label, display, has_filter, extra_query
         "parent_model": Device,
         "parent_label": "Device",
         "parent_field_name": "device",
-        "parent_query_params": {has_filter: True},
+        "parent_query_params": {has_filter: "true"},
         "term_model": term_model,
         "term_label": term_label,
         "term_query_params": query_params,
@@ -64,7 +64,7 @@ TERMINATION_TYPE_CONFIGS = {
         "parent_model": Circuit,
         "parent_label": "Circuit",
         "parent_field_name": "circuit",
-        "parent_query_params": {"has_terminations": True},
+        "parent_query_params": {"has_terminations": "true"},
         "term_model": CircuitTermination,
         "term_label": "Termination",
         "term_query_params": {"circuit": None},
@@ -74,7 +74,7 @@ TERMINATION_TYPE_CONFIGS = {
         "parent_model": PowerPanel,
         "parent_label": "Power Panel",
         "parent_field_name": "power_panel",
-        "parent_query_params": {"has_power_feeds": True},
+        "parent_query_params": {"has_power_feeds": "true"},
         "term_model": PowerFeed,
         "term_label": "Power Feed",
         "term_query_params": {"power_panel": None},
@@ -181,7 +181,7 @@ class CableTerminationFieldSet:
             required=False,
             initial=parent if parent else None,
             query_params=config["parent_query_params"],
-            embedded_create=False,  # TODO: disabled for now for consistency with fields[term_field_name] below
+            embedded_create=False,
             embedded_search=True,
         )
         if parent:
@@ -212,8 +212,8 @@ class CableTerminationFieldSet:
             required=False,
             initial=existing_term if existing_term else None,
             query_params=query_params,
-            embedded_create=False,  # TODO: disabled for now as ComponentCreateView doesn't work properly as embedded
-            embedded_search=True,
+            embedded_create=False,
+            embedded_search=False,  # disabled due to query_params not all propagating into modal - NAUTOBOT-1415
         )
         if existing_term:
             initial[term_field_name] = existing_term.pk
