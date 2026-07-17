@@ -15,7 +15,6 @@ from django.db.utils import OperationalError, ProgrammingError
 from django.utils.functional import SimpleLazyObject
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
-import redis
 
 from nautobot import add_failure_logger, add_success_logger
 from nautobot.core.branching import BranchContext
@@ -50,9 +49,9 @@ app.autodiscover_tasks()
 def _get_celery_queue_items(queue_name):
     """Return the task IDs of all messages currently sitting in a Celery broker queue.
 
-    Connects directly to Redis (the broker) and reads the raw queue contents
-    via `LRANGE`. Each message is a JSON-encoded Celery envelope; the task ID
-    lives at `headers.id`.
+    Uses Celery's own broker connection (rather than connecting directly to Redis)
+    and reads the raw queue contents via `LRANGE`. Each message is a JSON-encoded
+    Celery envelope; the task ID lives at `headers.id`.
 
     Args:
         queue_name: The name of the broker queue to read.
@@ -60,11 +59,15 @@ def _get_celery_queue_items(queue_name):
     Returns:
         A list of task ID strings, in queue order (head to tail).
     """
-    r = redis.Redis.from_url(app.conf.broker_url, decode_responses=True)
-    raw_tasks = r.lrange(queue_name, 0, -1)
+    with app.connection_for_read() as conn:
+        with conn.channel() as channel:
+            # kombu's redis transport exposes the live redis-py client for this channel
+            client = channel.client
+            raw_tasks = client.lrange(queue_name, 0, -1)
 
     decoded = []
     for raw in raw_tasks:
+        # channel.client does NOT decode_responses, so raw is bytes
         task = json.loads(raw)
         decoded.append(task["headers"]["id"])
     return decoded

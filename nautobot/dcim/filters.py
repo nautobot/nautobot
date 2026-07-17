@@ -1101,7 +1101,8 @@ class InterfaceFilterSet(
         field_name="pk",
         label="Virtual Chassis member Device (ID)",
     )
-    kind = django_filters.CharFilter(
+    kind = django_filters.ChoiceFilter(
+        choices=[("physical", "Physical"), ("virtual", "Virtual"), ("wireless", "Wireless")],
         method="filter_kind",
         label="Kind of interface",
     )
