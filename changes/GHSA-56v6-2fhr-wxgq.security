@@ -1,1 +1,0 @@
-Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
