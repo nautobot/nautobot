@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load helpers %}
+
+{% block title %}{{ action_title }}{% endblock %}
+
+{% block content %}
+    <form action="" method="post" class="vstack h-100">
+        {% csrf_token %}
+        <input type="hidden" name="content_type" value="{{ content_type.pk }}">
+        {% for pk in all_pks %}<input type="hidden" name="pk" value="{{ pk }}">{% endfor %}
+        <div class="row align-content-start justify-content-center flex-fill">
+            <div class="col-lg-8 col-md-10 d-flex justify-content-center">
+                <div class="card">
+                    <h2 class="card-header">{{ action_title }}</h2>
+                    <div class="card-body">
+                        {% if locked_objects %}
+                            <div class="alert alert-warning" role="alert">
+                                <strong>{{ locked_objects|length }}</strong> of the selected objects are already locked:
+                                <ul>
+                                    {% for obj in locked_objects %}
+                                        <li>{{ obj|hyperlinked_object }} — already locked</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        {{ form.as_p }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="nb-form-sticky-footer">
+            {% if mode == "lock" and locked_objects %}
+                {% if unlocked_count %}
+                    <button type="submit" name="_confirm" value="unlocked_only" class="btn btn-primary">
+                        <span aria-hidden="true" class="mdi mdi-lock me-4"></span><!--
+                        -->Proceed with {{ unlocked_count }} unlocked only
+                    </button>
+                {% endif %}
+            {% else %}
+                <button type="submit" name="_confirm" value="all" class="btn btn-primary">
+                    <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                    -->Confirm
+                </button>
+            {% endif %}
+            <a href="{{ return_url }}" class="btn btn-secondary">
+                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                -->Cancel
+            </a>
+        </div>
+    </form>
+{% endblock %}

@@ -1,0 +1,69 @@
+{% load helpers %}
+<div class="object-lock-panel">
+    <p class="text-secondary">
+        <span class="mdi mdi-lock" aria-hidden="true"></span>
+        This object is {{ lock_protection_blurb }}.
+    </p>
+
+    <ul class="list-inline small text-secondary object-lock-legend" aria-label="Lock glyph legend">
+        <li class="list-inline-item"><span class="mdi mdi-lock" aria-hidden="true"></span> Delete-locked</li>
+        <li class="list-inline-item"><span class="mdi mdi-pencil-lock" aria-hidden="true"></span> Update-locked</li>
+        <li class="list-inline-item"><span class="mdi mdi-lock-alert" aria-hidden="true"></span> Both</li>
+    </ul>
+
+    {% if can_view_metadata %}
+        <table class="table table-hover">
+            <thead>
+                <tr><th>Mode</th><th>Source</th><th>Created by</th><th>Reason</th><th>Created</th><th>Expires</th><th></th></tr>
+            </thead>
+            <tbody>
+                {% for claim in claims %}
+                    <tr data-nb-lock-id="{{ claim.pk }}" data-nb-source-label="{{ claim.source_key }}">
+                        <td>
+                            {{ claim.mode_label }}
+                            {% if claim.prevent_update and claim.locked_fields %}
+                                <span class="text-secondary small">
+                                    <span class="mdi mdi-lock-outline" aria-hidden="true"></span>
+                                    frozen: {{ claim.frozen_field_labels|join:", " }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ claim.source_key }}{% if claim.source_detail %} <span class="text-secondary">({{ claim.source_detail }})</span>{% endif %}</td>
+                        <td>{{ claim.created_by|default:"—" }}</td>
+                        <td>{{ claim.reason|default:"—" }}</td>
+                        <td>{{ claim.created }}</td>
+                        <td>{{ claim.expires|default:"never" }}</td>
+                        <td>
+                            {% if claim.can_release %}
+                                {# Real POST form so release works without JS; object_lock.js enhances it by #}
+                                {# intercepting submit to release via fetch and update the live counter in place. #}
+                                <form method="post" action="{{ claim.release_url }}" class="object-lock-release-form d-inline"{% if not claim.is_own %} data-nb-object-lock-force="true"{% endif %}>
+                                    {% csrf_token %}
+                                    <input type="hidden" name="confirm" value="true">
+                                    <button type="submit" class="btn btn-sm btn-danger object-lock-release-btn">
+                                        {% if claim.is_own %}Release{% else %}Force release{% endif %}
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="text-secondary small">held by another source</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {# Live "N locks remaining" counter for the release-then-act flow. #}
+        <div class="object-lock-remaining" role="status"
+             data-nb-remaining="{{ active_lock_count }}"
+             data-nb-blocking-others="{{ has_other_source_locks|yesno:'true,false' }}"
+             data-nb-login-url="{% url 'login' %}">
+            <strong class="object-lock-remaining-count">{{ active_lock_count }}</strong> lock(s) remaining.
+        </div>
+    {% else %}
+        <p class="text-secondary">
+            {{ summary }} — {{ active_lock_count }} active lock(s).
+            <em>Lock details are restricted to authorized users.</em>
+        </p>
+    {% endif %}
+</div>

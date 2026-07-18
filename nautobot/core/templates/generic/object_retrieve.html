@@ -3,12 +3,18 @@
 {% load custom_links %}
 {% load job_buttons %}
 {% load helpers %}
+{% load object_lock %}
 {% load render_table from django_tables2 %}
 {% load perms %}
 {% load plugins %}
 {% load static %}
 {% load tz %}
 {% load ui_framework %}
+
+{% block extra_styles %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/object_lock.css' %}">
+{% endblock extra_styles %}
 
 {% block page_title %}
     {% with copy_title=True %}
@@ -138,7 +144,52 @@
                             {% plugin_buttons object %}
                             {% render_detail_view_extra_buttons tab_id="main" %}
                             {% block extra_buttons %}{% endblock extra_buttons %}
-                            {% consolidate_detail_view_action_buttons %}
+                            {% object_lock_state object as object_lock %}
+                            {% if object_lock %}
+                                {# Locked: block Edit only when update-locked and Delete only when delete-locked, #}
+                                {# so an update lock never disables deletion (and vice versa). Blocked controls are #}
+                                {# focusable aria-disabled affordances suppressed by js/object_lock.js; the write #}
+                                {# itself is enforced server-side (ObjectLockedError/409). #}
+                                {% object_lock_blurb as object_lock_blurb %}
+                                {# Gate each control on the same object-level permission the unlocked path uses, so a #}
+                                {# user without change/delete rights never sees a lock-only affordance (or a 403 after release). #}
+                                <div class="btn-group" role="group" aria-label="Detail view button group">
+                                    {% if user|can_change:object %}
+                                        {% if object_lock.locked_for_update %}
+                                            <a role="button" tabindex="0" class="btn btn-warning" data-nb-object-lock-blocked="edit" aria-disabled="true" aria-describedby="object-lock-edit-explanation">
+                                                <span class="mdi mdi-pencil-lock" aria-hidden="true"></span> Edit {{ verbose_name|bettertitle }}
+                                            </a>
+                                        {% else %}
+                                            {% edit_button object %}
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if user|can_delete:object %}
+                                        {% if object_lock.locked_for_delete %}
+                                            <a role="button" tabindex="0" class="btn btn-danger" data-nb-object-lock-blocked="delete" aria-disabled="true" aria-describedby="object-lock-delete-explanation">
+                                                <span class="mdi mdi-lock" aria-hidden="true"></span> Delete {{ verbose_name|bettertitle }}
+                                            </a>
+                                        {% else %}
+                                            {% delete_button object %}
+                                        {% endif %}
+                                    {% endif %}
+                                    {# Clone + model-specific action buttons: the unlocked path gets these from #}
+                                    {# consolidate_detail_view_action_buttons, so render them here too — locking an #}
+                                    {# object must not hide unrelated, safe actions. #}
+                                    {% object_lock_extra_detail_buttons %}
+                                </div>
+                                {% if object_lock.locked_for_update and user|can_change:object %}
+                                    <span id="object-lock-edit-explanation" class="visually-hidden" hidden>
+                                        This object is {{ object_lock_blurb }}. Release its locks below to edit it.
+                                    </span>
+                                {% endif %}
+                                {% if object_lock.locked_for_delete and user|can_delete:object %}
+                                    <span id="object-lock-delete-explanation" class="visually-hidden" hidden>
+                                        This object is protected against accidental deletion. Release its locks below to delete it.
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                {% consolidate_detail_view_action_buttons %}
+                            {% endif %}
                         {% endblock buttons %}
                     </div>
                 </div>
@@ -278,6 +329,7 @@
 
 
 {% block javascript %}
+    {{ block.super }}
     <script>
         const clipboard = new ClipboardJS('.btn');
         clipboard.on('success', function (event) {});
@@ -356,4 +408,5 @@
 
         window.addEventListener('popstate', (event) => show_tab(event.state.id));
     </script>
+    <script src="{% static 'js/object_lock.js' %}"></script>
 {% endblock javascript %}

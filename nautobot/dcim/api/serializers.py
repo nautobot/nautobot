@@ -106,6 +106,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
+from nautobot.extras.api.object_locks import ObjectLockableSerializerMixin
 from nautobot.extras.utils import FeatureQuery
 
 
@@ -352,7 +353,7 @@ class RackElevationDetailFilterSerializer(serializers.Serializer):
 #
 
 
-class ManufacturerSerializer(NautobotModelSerializer):
+class ManufacturerSerializer(ObjectLockableSerializerMixin, NautobotModelSerializer):
     cloud_account_count = serializers.IntegerField(read_only=True)
     device_type_count = serializers.IntegerField(read_only=True)
     inventory_item_count = serializers.IntegerField(read_only=True)

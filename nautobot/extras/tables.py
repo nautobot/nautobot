@@ -55,6 +55,7 @@ from .models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectLock,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -1639,6 +1640,49 @@ class ObjectChangeTable(BaseTable):
                             Please ensure you fully understand the implications of these actions before proceeding.
                             """)
             logger.warning(error_message)
+
+
+#
+# Object Locks
+#
+
+
+class ObjectLockTable(BaseTable):
+    pk = ToggleColumn()
+    content_type = tables.Column(verbose_name="Type")
+    locked_object = tables.Column(linkify=True, verbose_name="Locked object", orderable=False)
+    prevent_delete = BooleanColumn()
+    prevent_update = BooleanColumn()
+    # source_key linkifies to the lock's own detail: Nautobot's generic ListObjectsViewTestCase requires a
+    # self-link column and source_key is the lock's natural identifier (locked_object links to the target).
+    source_key = tables.Column(linkify=True, verbose_name="Source")
+    expires = tables.DateTimeColumn()
+    actions = ButtonsColumn(ObjectLock, buttons=("delete",))
+
+    class Meta(BaseTable.Meta):
+        model = ObjectLock
+        fields = (
+            "pk",
+            "content_type",
+            "locked_object",
+            "prevent_delete",
+            "prevent_update",
+            "source_context",
+            "source_key",
+            "created_by",
+            "expires",
+            "actions",
+        )
+        default_columns = (
+            "pk",
+            "content_type",
+            "locked_object",
+            "prevent_delete",
+            "prevent_update",
+            "source_key",
+            "expires",
+            "actions",
+        )
 
 
 #

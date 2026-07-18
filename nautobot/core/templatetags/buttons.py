@@ -1,6 +1,8 @@
 from django import template
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import CharField
+from django.db.models.base import ModelBase
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 
@@ -219,6 +221,47 @@ def consolidate_bulk_action_buttons(context):
                 },
             }
         )
+
+    # Object Lock bulk actions. Lock is gated on add_objectlock, release on
+    # delete_objectlock. The generic confirmation views are model-agnostic, so the target
+    # model's content_type is carried on the formaction query string (a list view's bulk <form> only
+    # POSTs the pk checkboxes); the views read it from POST-or-GET. Require a real model class
+    # (a list view always supplies one) so get_for_model() never runs against a non-model.
+    if isinstance(model, ModelBase) and (
+        context["user"].has_perm("extras.add_objectlock") or context["user"].has_perm("extras.delete_objectlock")
+    ):
+        lock_ct_pk = ContentType.objects.get_for_model(model).pk
+        ct_query = f"{query_string}&content_type={lock_ct_pk}" if query_string else f"?content_type={lock_ct_pk}"
+        if context["user"].has_perm("extras.add_objectlock"):
+            button_defs.append(
+                {
+                    "label": "Lock Selected",
+                    "icon": "mdi mdi-lock",
+                    "btn_class": "btn btn-sm btn-primary",
+                    "dropdown_class": "dropdown-item",
+                    "dropdown_icon": "mdi mdi-lock text-secondary",
+                    "attrs": {
+                        "type": "submit",
+                        "name": "_lock",
+                        "formaction": reverse("extras:objectlock_bulk_lock") + ct_query,
+                    },
+                }
+            )
+        if context["user"].has_perm("extras.delete_objectlock"):
+            button_defs.append(
+                {
+                    "label": "Release Selected",
+                    "icon": "mdi mdi-lock-open-variant",
+                    "btn_class": "btn btn-sm btn-primary",
+                    "dropdown_class": "dropdown-item",
+                    "dropdown_icon": "mdi mdi-lock-open-variant text-secondary",
+                    "attrs": {
+                        "type": "submit",
+                        "name": "_release",
+                        "formaction": reverse("extras:objectlock_bulk_release") + ct_query,
+                    },
+                }
+            )
 
     has_name_field = False
     if model:

@@ -68,6 +68,7 @@ from nautobot.extras.filters import (
     MetadataChoiceFilterSet,
     MetadataTypeFilterSet,
     ObjectChangeFilterSet,
+    ObjectLockFilterSet,
     ObjectMetadataFilterSet,
     RelationshipAssociationFilterSet,
     RelationshipFilterSet,
@@ -115,6 +116,7 @@ from nautobot.extras.models import (
     MetadataChoice,
     MetadataType,
     ObjectChange,
+    ObjectLock,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -1362,7 +1364,8 @@ class JobFilterSetTestCase(FilterTestCases.FilterTestCase):
     @tag("example_app")
     def test_hidden(self):
         params = {"hidden": True}
-        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 3)
+        # 3 baseline hidden jobs + 2 hidden Object Lock bulk jobs (BulkLockObjects, BulkReleaseObjects).
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 5)
 
     def test_read_only(self):
         params = {"read_only": True}
@@ -2634,3 +2637,73 @@ class RoleTestCase(FilterTestCases.FilterTestCase):
         rack_roles = self.queryset.filter(content_types=rack_ct)
         params = {"content_types": ["dcim.rack"]}
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, rack_roles)
+
+
+class ObjectLockFilterTestCase(FilterTestCases.FilterTestCase):
+    queryset = ObjectLock.objects.all()
+    filterset = ObjectLockFilterSet
+    generic_filter_tests = (
+        ["object_id"],
+        ["source_key"],
+        ["source_context"],
+        ("created_by", "created_by__id"),
+        ("created_by", "created_by__username"),
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        ct = ContentType.objects.get_for_model(Manufacturer)
+        users = (
+            User.objects.create(username="ol-filter-user1"),
+            User.objects.create(username="ol-filter-user2"),
+            User.objects.create(username="ol-filter-user3"),
+        )
+        contexts = ["web", "job", "orm"]
+        # (suffix, prevent_delete, prevent_update, user index, source_context index)
+        specs = [
+            ("alpha", True, False, 0, 0),
+            ("beta", True, True, 1, 1),
+            ("gamma", False, True, 2, 2),
+            ("delta", False, False, 0, 0),
+            ("epsilon", True, False, 1, 1),
+            ("zeta", False, True, 2, 2),
+        ]
+        for suffix, prevent_delete, prevent_update, user_idx, ctx_idx in specs:
+            manufacturer = Manufacturer.objects.create(name=f"ObjectLockFilter Mfr {suffix}")
+            ObjectLock.objects.create(
+                content_type=ct,
+                object_id=manufacturer.pk,
+                prevent_delete=prevent_delete,
+                prevent_update=prevent_update,
+                created_by=users[user_idx],
+                source_context=contexts[ctx_idx],
+                source_key=f"zqs-source-{suffix}",
+                source_detail=f"zqs detail {suffix}",
+                reason=f"zqs {suffix} justification",
+            )
+
+    def test_content_type(self):
+        params = {"content_type": "dcim.manufacturer"}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(content_type=ContentType.objects.get_for_model(Manufacturer)),
+            ordered=False,
+        )
+
+    def test_prevent_delete(self):
+        for value in (True, False):
+            with self.subTest(prevent_delete=value):
+                self.assertQuerySetEqualAndNotEmpty(
+                    self.filterset({"prevent_delete": value}, self.queryset).qs,
+                    self.queryset.filter(prevent_delete=value),
+                    ordered=False,
+                )
+
+    def test_prevent_update(self):
+        for value in (True, False):
+            with self.subTest(prevent_update=value):
+                self.assertQuerySetEqualAndNotEmpty(
+                    self.filterset({"prevent_update": value}, self.queryset).qs,
+                    self.queryset.filter(prevent_update=value),
+                    ordered=False,
+                )

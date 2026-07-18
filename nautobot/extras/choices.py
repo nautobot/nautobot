@@ -470,6 +470,20 @@ class ObjectChangeEventContextChoices(ChoiceSet):
     )
 
 
+class ObjectLockModeChoices(ChoiceSet):
+    """Derived mode of an ObjectLock, computed from its prevent_delete/prevent_update flags."""
+
+    DELETE = "delete"
+    UPDATE = "update"
+    BOTH = "both"
+
+    CHOICES = (
+        (DELETE, "Delete"),
+        (UPDATE, "Update"),
+        (BOTH, "Both"),
+    )
+
+
 #
 # Relationships
 #

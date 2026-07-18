@@ -277,6 +277,15 @@ menu_items = (
                         ],
                         buttons=(),
                     ),
+                    NavMenuItem(
+                        link="extras:objectlock_list",
+                        name="Object Locks",
+                        weight=200,
+                        permissions=[
+                            "extras.view_objectlock",
+                        ],
+                        buttons=(),
+                    ),
                 ),
             ),
             NavMenuGroup(

@@ -4,7 +4,8 @@ from uuid import UUID
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
+from django.utils import timezone
 import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
@@ -92,6 +93,7 @@ from nautobot.extras.models import (
     MetadataType,
     Note,
     ObjectChange,
+    ObjectLock,
     ObjectMetadata,
     Relationship,
     RelationshipAssociation,
@@ -160,6 +162,8 @@ __all__ = (
     "NautobotFilterSet",
     "NoteFilterSet",
     "ObjectChangeFilterSet",
+    "ObjectLockFilterSet",
+    "ObjectLockableFilterSetMixin",
     "RelationshipAssociationFilterSet",
     "RelationshipFilter",
     "RelationshipFilterSet",
@@ -617,6 +621,77 @@ class NautobotFilterSet(
 
 
 #
+# Object-lock filter mixin (reusable across any lockable model)
+#
+
+
+class ObjectLockableFilterSetMixin(django_filters.FilterSet):
+    """Adds ``is_locked`` / ``locked_for_delete`` / ``locked_for_update`` boolean filters.
+
+    Mix this in *before* the primary FilterSet base so its fields are discovered first:
+
+        class MyModelFilterSet(ObjectLockableFilterSetMixin, NautobotFilterSet):
+            ...
+
+    All three filters execute a single correlated EXISTS subquery — no per-row evaluation.
+    An expired lock does **not** count as active.
+    """
+
+    is_locked = django_filters.BooleanFilter(method="_filter_is_locked", label="Is locked")
+    locked_for_delete = django_filters.BooleanFilter(method="_filter_locked_for_delete", label="Locked for delete")
+    locked_for_update = django_filters.BooleanFilter(method="_filter_locked_for_update", label="Locked for update")
+
+    def _active_lock_subquery(self, extra_filter=None):
+        """Return a correlated subquery that matches active ObjectLock rows for the filtered model.
+
+        Args:
+            extra_filter: Optional dict of additional filter kwargs (e.g. ``{"prevent_delete": True}``).
+
+        Returns:
+            A QuerySet suitable for use with ``Exists()``.
+        """
+        qs = ObjectLock.objects.filter(
+            content_type=ContentType.objects.get_for_model(self.queryset.model),
+            object_id=OuterRef("pk"),
+        ).filter(Q(expires__isnull=True) | Q(expires__gt=timezone.now()))
+        if extra_filter:
+            qs = qs.filter(**extra_filter)
+        return qs
+
+    def _apply_lock_filter(self, queryset, value, extra_filter=None, alias="_ol_exists"):
+        """Annotate *queryset* with an EXISTS subquery and filter to value.
+
+        Args:
+            queryset: The queryset to filter.
+            value: Boolean — True keeps locked objects, False keeps unlocked objects.
+            extra_filter: Forwarded to :meth:`_active_lock_subquery`.
+            alias: Annotation alias. Must be unique per filter — django_filters applies filters
+                sequentially on the same queryset, so a shared alias would collide (and 500) when two
+                lock filters are combined (e.g. ``?is_locked=true&locked_for_update=true``).
+
+        Returns:
+            Filtered queryset, or *queryset* unchanged if *value* is None.
+        """
+        if value is None:
+            return queryset
+        if not settings.OBJECT_LOCK_ENFORCED:
+            return queryset.none() if value else queryset  # kill switch: nothing is "locked"
+        return queryset.annotate(**{alias: Exists(self._active_lock_subquery(extra_filter))}).filter(**{alias: value})
+
+    def _filter_is_locked(self, queryset, name, value):
+        """Filter objects that have (True) or lack (False) any active lock."""
+        return self._apply_lock_filter(queryset, value, alias="_ol_locked_any")
+
+    def _filter_locked_for_delete(self, queryset, name, value):
+        """Filter objects that are (True) or are not (False) actively locked for delete."""
+        return self._apply_lock_filter(queryset, value, {"prevent_delete": True}, alias="_ol_locked_delete")
+
+    def _filter_locked_for_update(self, queryset, name, value):
+        """Filter objects that are (True) or are not (False) actively locked for update."""
+        return self._apply_lock_filter(queryset, value, {"prevent_update": True}, alias="_ol_locked_update")
+
+
+#
 # Approval Workflows
 #
 
@@ -739,6 +814,48 @@ class ContactAssociationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, 
     class Meta:
         model = ContactAssociation
         fields = "__all__"
+
+
+#
+# Object Locks
+#
+
+
+class ObjectLockFilterSet(NautobotFilterSet):
+    """FilterSet for ObjectLock.
+
+    Supports filtering by content type, object_id, lock flags, attribution source, and expiry.
+    """
+
+    q = SearchFilter(
+        filter_predicates={
+            "source_key": "icontains",
+            "source_detail": "icontains",
+            "reason": "icontains",
+            "content_type__app_label": "icontains",
+            "content_type__model": "icontains",
+        },
+    )
+    content_type = ContentTypeFilter()
+    created_by = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=get_user_model().objects.all(),
+        to_field_name="username",
+        label="Created by (username or ID)",
+    )
+
+    class Meta:
+        model = ObjectLock
+        fields = [
+            "id",
+            "content_type",
+            "object_id",
+            "prevent_delete",
+            "prevent_update",
+            "source_key",
+            "source_context",
+            "created_by",
+            "expires",
+        ]
 
 
 #

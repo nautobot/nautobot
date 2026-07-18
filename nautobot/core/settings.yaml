@@ -1519,6 +1519,23 @@ properties:
     environment_variable: "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"
     is_constance_config: true
     version_added: "2.4.0"
+  OBJECT_LOCK_DEFAULT_TTL:
+    default: 86400
+    description: >-
+      Default time-to-live, in seconds, applied to a programmatically-created Object Lock when no explicit
+      expiry is provided. Defaults to 86400 (24 hours).
+    environment_variable: "NAUTOBOT_OBJECT_LOCK_DEFAULT_TTL"
+    type: "integer"
+    version_added: "3.2.0"
+  OBJECT_LOCK_ENFORCED:
+    default: true
+    description: >-
+      Master switch for Object Lock enforcement. When `True` (the default), Object Locks are enforced on
+      UI, REST API, and Job writes; set to `False` to disable enforcement (takes effect on service
+      restart) without removing existing locks.
+    environment_variable: "NAUTOBOT_OBJECT_LOCK_ENFORCED"
+    type: "boolean"
+    version_added: "3.2.0"
   PAGINATE_COUNT:
     default: 50
     description: >-

@@ -54,6 +54,7 @@ from nautobot.extras.forms import (
     LocalContextFilterForm,
     LocalContextModelBulkEditForm,
     LocalContextModelForm,
+    LockedFieldsFormMixin,
     NautobotBulkEditForm,
     NautobotFilterForm,
     NautobotModelForm,
@@ -75,6 +76,7 @@ from nautobot.extras.models import (
     Tag,
     Team,
 )
+from nautobot.extras.object_lock_ui import ObjectLockQuickFilterFormMixin
 from nautobot.ipam.constants import BGP_ASN_MAX, BGP_ASN_MIN
 from nautobot.ipam.models import IPAddress, IPAddressToInterface, VLAN, VLANLocationAssignment, VRF
 from nautobot.tenancy.forms import TenancyFilterForm, TenancyForm
@@ -831,7 +833,7 @@ class ManufacturerBulkEditForm(NautobotBulkEditForm):
         ]
 
 
-class ManufacturerForm(NautobotModelForm):
+class ManufacturerForm(LockedFieldsFormMixin, NautobotModelForm):
     class Meta:
         model = Manufacturer
         fields = [
@@ -840,7 +842,7 @@ class ManufacturerForm(NautobotModelForm):
         ]
 
 
-class ManufacturerFilterForm(NautobotFilterForm):
+class ManufacturerFilterForm(ObjectLockQuickFilterFormMixin, NautobotFilterForm):
     model = Manufacturer
     q = forms.CharField(required=False, label="Search")
     device_types = DynamicModelMultipleChoiceField(

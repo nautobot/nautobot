@@ -45,7 +45,14 @@ from nautobot.dcim.graphql.types import (
     RearPortType,
 )
 from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipSideChoices
-from nautobot.extras.graphql.types import ContactAssociationType, DynamicGroupType, JobType, ScheduledJobType, TagType
+from nautobot.extras.graphql.types import (
+    ContactAssociationType,
+    DynamicGroupType,
+    JobType,
+    ObjectLockType,
+    ScheduledJobType,
+    TagType,
+)
 from nautobot.extras.models import ComputedField, CustomField, Relationship
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import check_if_key_is_graphql_safe
@@ -76,6 +83,7 @@ registry["graphql_types"]["dcim.location"] = LocationType
 registry["graphql_types"]["extras.contactassociation"] = ContactAssociationType
 registry["graphql_types"]["extras.dynamicgroup"] = DynamicGroupType
 registry["graphql_types"]["extras.job"] = JobType
+registry["graphql_types"]["extras.objectlock"] = ObjectLockType
 registry["graphql_types"]["extras.scheduledjob"] = ScheduledJobType
 registry["graphql_types"]["extras.tag"] = TagType
 registry["graphql_types"]["ipam.ipaddress"] = IPAddressType
@@ -155,6 +163,16 @@ def extend_schema_type(schema_type):
     # Add multiple layers of filtering
     #
     schema_type = extend_schema_type_filter(schema_type, model)
+
+    #
+    # Object Lock state: is_locked / locked_for_* / locked_fields / locks.
+    # Guard against recursion: do not add these fields to ObjectLockType itself, else `locks { locks {...} }`
+    # would recurse.
+    #
+    if model._meta.label_lower != "extras.objectlock":
+        from nautobot.extras.graphql.object_lock import extend_schema_type_object_lock
+
+        schema_type = extend_schema_type_object_lock(schema_type)
 
     return schema_type
 
