@@ -170,8 +170,6 @@ class IPAddressRangeObjectFieldsPanel(ObjectFieldsPanel):
 
         if instance and "utilization" in self.fields and (instance.count_as_utilized and not instance.is_exclusive):
             data["utilization"] = instance.get_utilization()
-        if instance and "size" in self.fields and instance.start_host and instance.end_host:
-            data["size"] = netaddr.IPRange(instance.start_host, instance.end_host).size
 
         # Reorder the Panel Dictionary to match the `fields` order specified
         if isinstance(self.fields, list):
