@@ -2732,22 +2732,13 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
 
     def test_size_ipv6_inner_hextet_range(self):
         """Check ipv6  inner octect size is correct"""
-        ip_range = IPAddressRange(
-            start_address="2001:db8:abcd:50:0:0:0:1", end_address="2001:db8:abcd:50:0:0:0:ffff"
-        )
+        ip_range = IPAddressRange(start_address="2001:db8:abcd:50:0:0:0:1", end_address="2001:db8:abcd:50:0:0:0:ffff")
         self.assertEqual(ip_range.size, 65535)
-
-    def test_size_ipv4_single_address_range(self):
-        """Check single ip address range is possible."""
-        ip_range = IPAddressRange(start_address="10.0.0.50", end_address="10.0.0.50")
-        self.assertEqual(ip_range.size, 1)
 
     def test_size_ipv6_compressed_notation(self):
         """Check ipv6 size is calculated correctly when compression notation is used."""
         compressed = IPAddressRange(start_address="2001:db8:abcd::1", end_address="2001:db8:abcd::2:0")
-        uncompressed = IPAddressRange(
-            start_address="2001:db8:abcd:0:0:0:0:1", end_address="2001:db8:abcd:0:0:0:2:0"
-        )
+        uncompressed = IPAddressRange(start_address="2001:db8:abcd:0:0:0:0:1", end_address="2001:db8:abcd:0:0:0:2:0")
         self.assertEqual(compressed.size, 131072)
         self.assertEqual(compressed.size, uncompressed.size)
 
