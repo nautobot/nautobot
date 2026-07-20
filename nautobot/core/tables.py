@@ -833,6 +833,11 @@ class ComputedFieldColumn(django_tables2.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
+        model = self.computedfield.content_type.model_class()
+        if not isinstance(record, model):
+            # Interleaved tables (e.g. Prefix > IP Addresses) can contain rows of other types that this computed
+            # field doesn't apply to. Render a placeholder instead of evaluating the template.
+            return helpers.placeholder(None)
         value = self.computedfield.render({"obj": record})
         if self.computedfield.output_type == choices.ComputedFieldTypeChoices.TYPE_MARKDOWN:
             return helpers.render_markdown(value)
