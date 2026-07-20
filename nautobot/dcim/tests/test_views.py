@@ -2750,6 +2750,37 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn("Test View Nested Module Bay 1", children_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_devicemodulebaystablepanel_expanded_module_bay_traversal_method(self):
+        device = Device.objects.filter(module_bays__isnull=True).first()
+        mtype = ModuleType.objects.create(manufacturer=device.device_type.manufacturer, model="EXPAND VENDOR")
+        module = Module.objects.create(module_type=mtype, status=Status.objects.get(name="Active"))
+
+        root1 = ModuleBay.objects.create(parent_device=device, name="Expand Root Bay 1")
+        root2 = ModuleBay.objects.create(parent_device=device, name="Expand Root Bay 2")
+        nested1 = ModuleBay.objects.create(parent_module=module, name="Expand Nested Bay 1")
+        module.parent_module_bay = root1
+        module.validated_save()
+
+        panel = DeviceUIViewSet.DeviceModuleBaysTablePanel(weight=100)
+        request = RequestFactory().get(reverse("dcim:device_modulebays", kwargs={"pk": device.pk}))
+        request.user = self.user
+
+        ordered_pks, depth_by_pk = panel._expanded_module_bay_traversal(device, request)
+
+        self.assertIsInstance(depth_by_pk, dict)
+        self.assertEqual(ordered_pks, [root1.pk, nested1.pk, root2.pk])
+        self.assertEqual(depth_by_pk, {root1.pk: 0, nested1.pk: 1, root2.pk: 0})
+
+        cache_attr = f"_expanded_module_bay_traversal_{device.pk}"
+        self.assertEqual(getattr(request, cache_attr), (ordered_pks, depth_by_pk))
+
+        with CaptureQueriesContext(connection) as ctx:
+            cached_ordered_pks, cached_depth_by_pk = panel._expanded_module_bay_traversal(device, request)
+        self.assertIs(cached_ordered_pks, ordered_pks)
+        self.assertIs(cached_depth_by_pk, depth_by_pk)
+        self.assertEqual(len(ctx.captured_queries), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_device_modulebays_expand_all(self):
         device = Device.objects.filter(module_bays__isnull=True).first()
         mtype = ModuleType.objects.create(manufacturer=device.device_type.manufacturer, model="EXPAND VENDOR")

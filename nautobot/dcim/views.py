@@ -5175,9 +5175,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
     def nested_bays(self, request, *args, **kwargs):
         """Render the child module bays of this bay's installed module, for HTMX expandable-tree rows."""
         instance = self.get_object()
-        children = instance.installed_child_bays.restrict(request.user, "view").prefetch_related(
-            "installed_module"
-        )
+        children = instance.installed_child_bays.restrict(request.user, "view").prefetch_related("installed_module")
         return_url = request.GET.get("return_url", None)
         saved_view_pk = request.GET.get("saved_view", None)
         table_changes_pending = request.GET.get("table_changes_pending", False)
