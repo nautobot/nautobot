@@ -8,6 +8,8 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
+from django.http import QueryDict
+from django.test.client import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -18,7 +20,6 @@ from rest_framework import exceptions, serializers
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
-from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import (
@@ -549,12 +550,14 @@ def get_bulk_queryset_from_view(
 
     Args:
         user: The user performing the bulk operation.
-        model: The model class on which the bulk operation is being performed.
-        delete_all: Boolean indicating whether the operation applies to pk_list or not.
-        edit_all: Boolean indicating whether the operation applies to pk_list or not.
+        content_type: The ContentType of the model on which the bulk operation is being performed.
         filter_query_params: A dictionary of filter parameters to apply to the queryset as produced by convert_querydict_to_dict(request.GET).
         pk_list: A list of primary keys to include, when not using a filter.
         saved_view_id: (Optional) UUID of a saved view to apply additional filters from.
+        action: The action being performed, either "delete" or "change".
+        delete_all: Boolean indicating whether a "delete" action applies to all (filtered) objects rather than pk_list.
+        edit_all: Boolean indicating whether a "change" action applies to all (filtered) objects rather than pk_list.
+        log: (Optional) Logger to use; defaults to this module's logger.
 
     Returns:
         A Django queryset representing the objects to be affected by the bulk operation.
@@ -597,23 +600,42 @@ def get_bulk_queryset_from_view(
     if not view_class:
         raise RuntimeError(f"No view found for model {model} to determine base queryset.")
 
-    queryset = view_class.queryset.restrict(user, action)
+    # Reconstruct a job-safe synthetic request from the (already serializable) params so that the view's
+    # alter_queryset() runs identically whether we're called from a UI view (request exists) or from a
+    # background system Job (no request/view instance exists). This ensures implicit view scoping applied
+    # by alter_queryset() is respected during bulk operations rather than silently dropped.
+    get_params = QueryDict(mutable=True)
+    for key, values in (filter_query_params or {}).items():
+        values = values if isinstance(values, (list, tuple)) else [values]
+        get_params.setlist(key, [str(value) for value in values])
+    synthetic_request = RequestFactory().get("/")
+    synthetic_request.GET = get_params
+    synthetic_request.user = user
 
-    # The filterset_class is determined from model on purpose versus getting it from the view itself. This is
-    # because the filterset_class on the view as a param, will not work with a job. It is better to be consistent
-    # with each with sending the same params that will always be available from to the confirmation page and to the job.
-    filterset_class = get_filterset_for_model(model)
+    view = view_class()
+    view.request = synthetic_request
+    # Map to the permission-bearing UI action so the view's get_action()/restrict() line up with `action`.
+    view.action = "bulk_destroy" if action == "delete" else "bulk_update"
+    view.kwargs = {}
+
+    # Apply the view's alter_queryset() so implicit list-view scoping is honored. The default implementation
+    # returns the base queryset unchanged, so views that don't override it behave exactly as before. The
+    # trailing restrict() covers legacy generic views whose alter_queryset() does not restrict by permission.
+    if hasattr(view, "alter_queryset"):
+        queryset = view.alter_queryset(synthetic_request).restrict(user, action)
+    else:
+        queryset = view_class.queryset.restrict(user, action)
+
+    # Prefer the view's own filterset_class (a class attribute, so still job-safe), falling back to the
+    # model-level lookup. This honors views that declare a narrower/custom filterset than the model default.
+    filterset_class = getattr(view_class, "filterset_class", None) or get_filterset_for_model(model)
 
     if not filterset_class:
         log.debug(f"No filterset_class found for model {model}, returning all objects")
         return queryset
 
-    filterset_class = lookup.get_filterset_for_model(model)
-    if filterset_class:
-        filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
-        log.debug(f"Normalized filter_query_params: {filter_query_params}")
-    else:
-        filter_query_params = {}
+    filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+    log.debug(f"Normalized filter_query_params: {filter_query_params}")
 
     # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
     # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
