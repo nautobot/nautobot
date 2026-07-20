@@ -1,0 +1,1 @@
+Fixed assigning or removing a VRF via the REST API not creating a change log entry as the UI does.
