@@ -74,20 +74,21 @@ class VRFDeviceAssignmentSerializer(ValidatedModelSerializer):
 
     def create(self, validated_data):
         """
-        Create the assignment through the VRF's M2M managers rather than instantiating the
-        VRFDeviceAssignment through model directly. Routing through `vrf.<devices|virtual_machines|
-        virtual_device_contexts>.add()` fires m2m_changed and generates a change log entry against the VRF, matching the UI.
+        Create the assignment through the device/VM/VDC's `vrfs` M2M manager rather than instantiating
+        the VRFDeviceAssignment through model directly. Routing through `<device|virtual_machine|
+        virtual_device_context>.vrfs.add()` fires m2m_changed and generates a change log entry against
+        the device/VM/VDC, matching where the UI records the change.
         """
         vrf = validated_data.pop("vrf")
         device = validated_data.pop("device", None)
         virtual_machine = validated_data.pop("virtual_machine", None)
         virtual_device_context = validated_data.pop("virtual_device_context", None)
         if device is not None:
-            vrf.devices.add(device, through_defaults=validated_data)
+            device.vrfs.add(vrf, through_defaults=validated_data)
         elif virtual_machine is not None:
-            vrf.virtual_machines.add(virtual_machine, through_defaults=validated_data)
+            virtual_machine.vrfs.add(vrf, through_defaults=validated_data)
         else:
-            vrf.virtual_device_contexts.add(virtual_device_context, through_defaults=validated_data)
+            virtual_device_context.vrfs.add(vrf, through_defaults=validated_data)
         return VRFDeviceAssignment.objects.get(
             vrf=vrf, device=device, virtual_machine=virtual_machine, virtual_device_context=virtual_device_context
         )
@@ -100,13 +101,14 @@ class VRFPrefixAssignmentSerializer(ValidatedModelSerializer):
 
     def create(self, validated_data):
         """
-        Create the assignment through the VRF's `prefixes` M2M manager rather than instantiating the
-        VRFPrefixAssignment through model directly. Routing through `vrf.prefixes.add()` fires
-        m2m_changed and generates a change log entry against the VRF, matching the UI.
+        Create the assignment through the Prefix's `vrfs` M2M manager rather than instantiating the
+        VRFPrefixAssignment through model directly. Routing through `prefix.vrfs.add()` fires
+        m2m_changed and generates a change log entry against the Prefix, matching where the UI records
+        the change (and firing Job Hooks configured on the Prefix).
         """
         vrf = validated_data.pop("vrf")
         prefix = validated_data.pop("prefix")
-        vrf.prefixes.add(prefix, through_defaults=validated_data)
+        prefix.vrfs.add(vrf, through_defaults=validated_data)
         return VRFPrefixAssignment.objects.get(vrf=vrf, prefix=prefix)
 
 

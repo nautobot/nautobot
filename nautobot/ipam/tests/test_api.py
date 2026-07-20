@@ -310,8 +310,8 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             response = self.client.post(self._get_list_url(), data, format="json", **self.header)
             self.assertContains(response, expected_responses[i], status_code=status.HTTP_400_BAD_REQUEST)
 
-    def test_change_logging_recorded_against_vrf(self):
-        """Assigning/unassigning a device, VM, or VDC via the API records a change log entry against the VRF."""
+    def test_change_logging_recorded_against_device(self):
+        """Assigning/unassigning a VRF via the API records a change log entry against the device/VM/VDC, matching the UI."""
         self.add_permissions(
             "ipam.add_vrfdeviceassignment",
             "ipam.delete_vrfdeviceassignment",
@@ -321,8 +321,14 @@ class VRFDeviceAssignmentTest(APIViewTestCases.APIViewTestCase):
             "virtualization.view_virtualmachine",
         )
         # create_data[0] assigns a device, [1] a virtual machine, [3] a virtual device context.
-        for data in (self.create_data[0], self.create_data[1], self.create_data[3]):
-            _assert_assignment_change_logged_against_parent(self, data, VRF.objects.get(pk=data["vrf"]))
+        parent_lookups = (
+            (self.create_data[0], Device, "device"),
+            (self.create_data[1], VirtualMachine, "virtual_machine"),
+            (self.create_data[3], VirtualDeviceContext, "virtual_device_context"),
+        )
+        for data, parent_model, parent_field in parent_lookups:
+            parent = parent_model.objects.get(pk=data[parent_field])
+            _assert_assignment_change_logged_against_parent(self, data, parent)
 
 
 class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
@@ -377,8 +383,8 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), missing_field_create_data, format="json", **self.header)
         self.assertContains(response, "This field may not be null.", status_code=status.HTTP_400_BAD_REQUEST)
 
-    def test_change_logging_recorded_against_vrf(self):
-        """Assigning/unassigning a prefix via the API records a change log entry against the VRF."""
+    def test_change_logging_recorded_against_prefix(self):
+        """Assigning/unassigning a VRF via the API records a change log entry against the Prefix, matching the UI."""
         self.add_permissions(
             "ipam.add_vrfprefixassignment",
             "ipam.delete_vrfprefixassignment",
@@ -386,7 +392,7 @@ class VRFPrefixAssignmentTest(APIViewTestCases.APIViewTestCase):
             "ipam.view_prefix",
         )
         data = self.create_data[0]
-        _assert_assignment_change_logged_against_parent(self, data, VRF.objects.get(pk=data["vrf"]))
+        _assert_assignment_change_logged_against_parent(self, data, Prefix.objects.get(pk=data["prefix"]))
 
 
 class RouteTargetTest(APIViewTestCases.APIViewTestCase):

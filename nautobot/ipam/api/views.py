@@ -63,17 +63,18 @@ class VRFDeviceAssignmentViewSet(ModelViewSet):
 
     def perform_destroy(self, instance):
         """
-        Remove the assignment through the VRF's M2M managers rather than deleting the
-        VRFDeviceAssignment through instance directly. Routing through `vrf.<devices|virtual_machines|
-        virtual_device_contexts>.remove()` fires m2m_changed and generates a change log entry against the VRF, matching the UI.
+        Remove the assignment through the device/VM/VDC's `vrfs` M2M manager rather than deleting the
+        VRFDeviceAssignment through instance directly. Routing through `<device|virtual_machine|
+        virtual_device_context>.vrfs.remove()` fires m2m_changed and generates a change log entry against
+        the device/VM/VDC, matching where the UI records the change.
         """
         vrf = instance.vrf
         if instance.device_id is not None:
-            vrf.devices.remove(instance.device)
+            instance.device.vrfs.remove(vrf)
         elif instance.virtual_machine_id is not None:
-            vrf.virtual_machines.remove(instance.virtual_machine)
+            instance.virtual_machine.vrfs.remove(vrf)
         else:
-            vrf.virtual_device_contexts.remove(instance.virtual_device_context)
+            instance.virtual_device_context.vrfs.remove(vrf)
 
 
 class VRFPrefixAssignmentViewSet(ModelViewSet):
@@ -83,10 +84,11 @@ class VRFPrefixAssignmentViewSet(ModelViewSet):
 
     def perform_destroy(self, instance):
         """
-        Remove the assignment through the VRF's `prefixes` M2M manager rather than deleting the
-        VRFPrefixAssignment through instance directly, so m2m_changed fires and a change log entry is recorded against the VRF, matching the UI.
+        Remove the assignment through the Prefix's `vrfs` M2M manager rather than deleting the
+        VRFPrefixAssignment through instance directly, so m2m_changed fires and a change log entry is
+        recorded against the Prefix, matching where the UI records the change.
         """
-        instance.vrf.prefixes.remove(instance.prefix)
+        instance.prefix.vrfs.remove(instance.vrf)
 
 
 #
