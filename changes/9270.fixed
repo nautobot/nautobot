@@ -1,1 +1,1 @@
-Fixed assigning or removing a VRF via the REST API not creating a change log entry as the UI does.
+Modified serializer and views for IPAM assignment models to create a change log when the object is created or deleted via API.
