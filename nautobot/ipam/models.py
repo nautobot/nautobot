@@ -806,7 +806,7 @@ class Prefix(PrimaryModel):
             if self.parent is None and self.ip_address_ranges.exists():
                 raise models.ProtectedError(
                     msg=(
-                        f"Cannot delete Prefix {self} because it has child IP Address Ranges objects that "
+                        f"Cannot delete Prefix {self} because it has child IP Address Range objects that "
                         "would no longer have a valid parent: "
                     ),
                     protected_objects=self.ip_address_ranges.all(),
