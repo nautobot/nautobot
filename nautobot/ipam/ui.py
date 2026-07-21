@@ -167,8 +167,14 @@ class IPAddressRangeObjectFieldsPanel(ObjectFieldsPanel):
     def get_data(self, context):
         data = super().get_data(context)
         instance = get_obj_from_context(context, self.context_object_key)
+
         if instance and "utilization" in self.fields and (instance.count_as_utilized and not instance.is_exclusive):
             data["utilization"] = instance.get_utilization()
+
+        # Reorder the Panel Dictionary to match the `fields` order specified
+        if isinstance(self.fields, list):
+            data = {field_name: data[field_name] for field_name in self.fields if field_name in data}
+
         return data
 
     def render_value(self, key, value, context):

@@ -2128,6 +2128,12 @@ class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
         self._deconstruct_end_address(address)
 
     @property
+    def size(self):
+        if self.start_host is None or self.end_host is None:
+            return None
+        return netaddr.IPRange(self.start_host, self.end_host).size
+
+    @property
     def ip_addresses(self):
         """IPAddresses whose host falls within this range (same namespace)."""
         return IPAddress.objects.filter(
