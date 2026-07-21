@@ -31,6 +31,128 @@ The distinction matters because the two paths have very different costs and side
 
 All three paths converge on `status = REVOKED` with full attribution.
 
+### Cancel workflows
+
+The following diagrams summarize how Nautobot determines what kind of cancel operation to perform and how that behavior differs between Celery and Kubernetes backends.
+
+#### General workflow
+
+The first diagram shows the backend-independent decision tree implemented by the cancel framework.
+
+```mermaid
+flowchart TD
+
+    A["User clicks Cancel Job<br/>or POST /cancel/"] --> B{"JobResult is in<br/>an unready state?"}
+
+    B -->|No| C["No action<br/>Job already finished"]
+    C --> D["Return existing JobResult"]
+
+    B -->|Yes| E["Select cancel strategy<br/>based on queue type"]
+
+    E --> F["Determine job liveness"]
+
+    F -->|RUNNING| G["Perform termination"]
+    F -->|NOT RUNNING| H["Perform reap"]
+    F -->|UNKNOWN| I["Perform abandon"]
+
+    G --> J["Apply cancel metadata"]
+    H --> J
+    I --> J
+
+    J -. updates .-> X[[
+    date_done<br/>
+    date_canceled<br/>
+    canceled_by<br/>
+    canceled_by_user_name<br/>
+    cancel_type
+    ]]
+
+    J --> K["Set status = REVOKED"]
+
+    K --> L["Save JobResult"]
+
+    L --> M["Return updated JobResult"]
+
+    G -.-> N["Backend-specific implementation"]
+    H -.-> N
+    I -.-> N
+```
+
+### Celery workflow
+
+This diagram illustrates how Celery determines whether a task is still running and the actions taken for terminate, reap, and abandon.
+
+```mermaid
+flowchart TD
+
+    A["Cancel request"] --> B["Query Celery workers"]
+
+    B -->|Worker unreachable| C["Liveness = UNKNOWN"]
+    B -->|Task found| D["Liveness = RUNNING"]
+    B -->|Task not found| E["Liveness = NOT RUNNING"]
+
+    %% Running
+
+    D --> F["Send revoke (SIGKILL)"]
+    F --> G["Apply cancel metadata<br/>cancel_type = TERMINATED"]
+    G --> H["Set status = REVOKED"]
+
+    %% Not running
+
+    E --> I["Apply cancel metadata<br/>cancel_type = REAPED"]
+    I --> J["Set status = REVOKED"]
+
+    %% Unknown
+
+    C --> K["Apply cancel metadata<br/>cancel_type = ABANDONED"]
+    K --> L["Set status = REVOKED"]
+
+    H --> M["Return updated JobResult"]
+    J --> M
+    L --> M
+```
+
+### Kubernetes workflow
+
+This diagram shows how Kubernetes determines job liveness from the Job and Pod state before selecting terminate, reap, or abandon.
+
+```mermaid
+flowchart TD
+
+    A["Cancel request"] --> B["Read Kubernetes Job"]
+
+    B -->|API error| C["Liveness = UNKNOWN"]
+    B -->|Job missing or failed| D["Liveness = NOT RUNNING"]
+    B -->|Job exists| E["Read first Pod"]
+
+    E -->|No pod| D
+    E -->|Pod exists| F{"Container running?"}
+
+    F -->|No| D
+    F -->|Yes| G["Liveness = RUNNING"]
+
+    %% Running
+
+    G --> H["Delete Kubernetes Job"]
+    H --> I["Apply cancel metadata<br/>cancel_type = TERMINATED"]
+    I --> J["Set status = REVOKED"]
+
+    %% Not running
+
+    D --> K["Best-effort delete Kubernetes Job"]
+    K --> L["Apply cancel metadata<br/>cancel_type = REAPED"]
+    L --> M["Set status = REVOKED"]
+
+    %% Unknown
+
+    C --> N["Apply cancel metadata<br/>cancel_type = ABANDONED"]
+    N --> O["Set status = REVOKED"]
+
+    J --> P["Return updated JobResult"]
+    M --> P
+    O --> P
+```
+
 ### Worker restart recovery
 
 There's one edge case worth knowing about: a job can be marked `REVOKED` in the database while its Celery message is still sitting in the broker queue. If the worker that was supposed to run it has been down, the message has not been consumed yet. When the worker comes back online, it would normally pick the message up and run the job, ignoring the database state. To prevent this, a `worker_ready` signal handler runs once at worker startup. It reads every queue the worker is consuming, finds messages whose `JobResult` is already `REVOKED` in the database, and adds those task IDs to Celery's in-memory canceled set. When the worker dequeues those messages it sees them in the canceled set and discards them. This closes the gap between "operator clicked Cancel Job" and "worker comes back online" — the kill survives a restart.
