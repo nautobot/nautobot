@@ -288,7 +288,7 @@ def worker_shutdown(**_):
 
 
 class LivenessProbe(bootsteps.StartStopStep):
-    requires = {"celery.worker.components:Timer"}
+    requires = {"celery.worker.consumer.connection:Connection"}
 
     def __init__(self, parent, **kwargs):
         self.requests = []
@@ -313,4 +313,4 @@ class LivenessProbe(bootsteps.StartStopStep):
         self.WORKER_HEARTBEAT_FILE.touch(exist_ok=True)
 
 
-app.steps["worker"].add(LivenessProbe)
+app.steps["consumer"].add(LivenessProbe)
