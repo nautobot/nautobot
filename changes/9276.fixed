@@ -1,0 +1,1 @@
+Fixed an N+1 query problem on the Interfaces REST API.
