@@ -331,8 +331,9 @@ class CableQuerySet(RestrictedQuerySet):
     Supported lookup kwargs (exact-match only):
 
     - `termination_a_type` / `termination_b_type` (`ContentType`),
-    - `termination_a_id` / `termination_b_id` (UUID). A bare `*_id` without a matching `*_type` is matched against
-      every per-type FK (termination PKs are UUIDs, so this stays unambiguous).
+    - `termination_a_type_id` / `termination_b_type_id` (`ContentType` integer PK)
+    - `termination_a_id` / `termination_b_id` (UUID). A bare `*_id` without a matching `*_type` / `*_type_id` is matched
+      against every per-type FK (termination PKs are UUIDs, so this stays unambiguous).
 
     NOT translated -- use the explicit `terminations__...` form for these:
 
@@ -358,20 +359,26 @@ class CableQuerySet(RestrictedQuerySet):
     @classmethod
     def _extract_side_spec(cls, side, working):
         """
-        Pop legacy `termination_<side>_type` / `termination_<side>_id` kwargs from `working` and return the
-        matching `terminations__...` Q, or None if the side isn't referenced by a translatable kwarg.
+        Pop legacy `termination_<side>_type` / `termination_<side>_type_id` / `termination_<side>_id` kwargs from
+        `working` and return the matching `terminations__...` Q, or None if the side isn't referenced by a
+        translatable kwarg.
 
-        The legacy `*_type` / `*_id` columns were non-nullable, so an explicit `None` on either key never
-        matched a row -- even combined with a real value on the other key (`type IS NULL AND id = <pk>`).
+        `termination_<side>_type_id` (integer `ContentType` PK) is accepted as an alternative to
+        `termination_<side>_type` (`ContentType` instance); if both are given they must resolve to the same object.
+
+        The legacy `*_type` / `*_type_id` / `*_id` columns were non-nullable, so an explicit `None` on any key never
+        matched a row -- even combined with a real value on another key (`type IS NULL AND id = <pk>`).
         We preserve that in this deprecated code path (even though `terminations` is now nullable): any
         present `None` yields a match-nothing Q for the side rather than being dropped (which would
         silently widen the result set) or leaking a now-nonexistent field through to the queryset.
         """
         type_key = f"termination_{side}_type"
+        type_id_key = f"termination_{side}_type_id"
         id_key = f"termination_{side}_id"
         has_type = type_key in working
+        has_type_id = type_id_key in working
         has_id = id_key in working
-        if not (has_type or has_id):
+        if not (has_type or has_type_id or has_id):
             return None
 
         cable_end = cls._SIDES[side]
@@ -380,13 +387,24 @@ class CableQuerySet(RestrictedQuerySet):
         base = models.Q(terminations__cable_end=cable_end, terminations__connector=1)
 
         term_type = working.pop(type_key, None)
+        term_type_id = working.pop(type_id_key, None)
         term_id = working.pop(id_key, None)
 
         # A present `None` reproduces the old `<col> IS NULL` on a non-nullable column -> matched
-        # nothing, and did so even alongside a real value on the other key. Empty the whole side so
+        # nothing, and did so even alongside a real value on another key. Empty the whole side so
         # `filter()` returns empty (and `get()` raises `DoesNotExist`) as before.
-        if (has_type and term_type is None) or (has_id and term_id is None):
+        if (has_type and term_type is None) or (has_type_id and term_type_id is None) or (has_id and term_id is None):
             return base & models.Q(pk__in=[])
+
+        # Resolve the effective `ContentType` from whichever of the two type forms was supplied, and
+        # record which key(s) were used so the deprecation warning names the caller's actual kwargs.
+        type_desc = type_key if has_type else None
+        if term_type_id is not None:
+            resolved = ContentType.objects.get_for_id(term_type_id)
+            if term_type is not None and term_type != resolved:
+                raise TypeError(f"Conflicting `{type_key}` and `{type_id_key}` values in Cable termination lookup")
+            term_type = resolved
+            type_desc = type_id_key if type_desc is None else f"{type_key}/{type_id_key}"
 
         if term_type is not None:
             try:
@@ -397,12 +415,12 @@ class CableQuerySet(RestrictedQuerySet):
                 ) from None
             if term_id is not None:
                 cls._warn(
-                    f"{type_key}=..., {id_key}=...",
+                    f"{type_desc}=..., {id_key}=...",
                     f"terminations__{fk_field}_id=... with terminations__cable_end={cable_end!r}",
                 )
                 return base & models.Q(**{f"terminations__{fk_field}_id": term_id})
             cls._warn(
-                f"{type_key}=...", f"terminations__{fk_field}__isnull=False with terminations__cable_end={cable_end!r}"
+                f"{type_desc}=...", f"terminations__{fk_field}__isnull=False with terminations__cable_end={cable_end!r}"
             )
             return base & models.Q(**{f"terminations__{fk_field}__isnull": False})
 
@@ -553,10 +571,13 @@ class Cable(PrimaryModel):
         # Store them for post-save processing by signal handlers or forms.
         self._initial_termination_a = kwargs.pop("termination_a", None)
         self._initial_termination_b = kwargs.pop("termination_b", None)
-        # Also handle the type/id kwargs used by serializers and forms
+        # Also handle the type/id kwargs used by serializers and forms,
+        # as well as the type_id kwargs used by Design Builder and others.
         self._initial_termination_a_type = kwargs.pop("termination_a_type", None)
+        self._initial_termination_a_type_id = kwargs.pop("termination_a_type_id", None)
         self._initial_termination_a_id = kwargs.pop("termination_a_id", None)
         self._initial_termination_b_type = kwargs.pop("termination_b_type", None)
+        self._initial_termination_b_type_id = kwargs.pop("termination_b_type_id", None)
         self._initial_termination_b_id = kwargs.pop("termination_b_id", None)
 
         super().__init__(*args, **kwargs)
@@ -633,6 +654,18 @@ class Cable(PrimaryModel):
         self._initial_termination_a_type = value
 
     @property
+    def termination_a_type_id(self):
+        """PK of the ContentType of the A-side termination on connector 1 (backward compat)."""
+        ct = self._get_termination_attr("A", "termination_type", "_initial_termination_a_type")
+        if ct is not None:
+            return ct.pk
+        return getattr(self, "_initial_termination_a_type_id", None)
+
+    @termination_a_type_id.setter
+    def termination_a_type_id(self, value):
+        self._initial_termination_a_type_id = value
+
+    @property
     def termination_a_id(self):
         """UUID of the A-side termination on connector 1 (backward compat)."""
         return self._get_termination_attr("A", "termination_id", "_initial_termination_a_id")
@@ -649,6 +682,18 @@ class Cable(PrimaryModel):
     @termination_b_type.setter
     def termination_b_type(self, value):
         self._initial_termination_b_type = value
+
+    @property
+    def termination_b_type_id(self):
+        """PK of the ContentType of the B-side termination on connector 1 (backward compat)."""
+        ct = self._get_termination_attr("B", "termination_type", "_initial_termination_b_type")
+        if ct is not None:
+            return ct.pk
+        return getattr(self, "_initial_termination_b_type_id", None)
+
+    @termination_b_type_id.setter
+    def termination_b_type_id(self, value):
+        self._initial_termination_b_type_id = value
 
     @property
     def termination_b_id(self):
@@ -983,6 +1028,20 @@ class Cable(PrimaryModel):
         # persisted, not against the initial value captured in __init__.
         self._orig_status = self.status
 
+    def _resolve_initial_termination_type(self, side):
+        """Resolve the initial termination ContentType for `side` ("a"/"b") from `_type` or `_type_id`.
+
+        Prefers a supplied `ContentType` instance (`_initial_termination_<side>_type`); otherwise resolves
+        the integer PK form (`_initial_termination_<side>_type_id`). Returns None if neither was supplied.
+        """
+        ct = getattr(self, f"_initial_termination_{side}_type", None)
+        if ct is not None:
+            return ct
+        ct_id = getattr(self, f"_initial_termination_{side}_type_id", None)
+        if ct_id is not None:
+            return ContentType.objects.get_for_id(ct_id)
+        return None
+
     def _materialize_initial_terminations(self):
         """
         Create `CableToCableTermination` rows from any `_initial_termination_*` attrs supplied via
@@ -992,13 +1051,16 @@ class Cable(PrimaryModel):
         term_a = getattr(self, "_initial_termination_a", None)
         term_b = getattr(self, "_initial_termination_b", None)
 
-        # Also handle type/id kwargs for the case where termination objects aren't resolved yet.
-        if term_a is None and getattr(self, "_initial_termination_a_type", None):
-            ct = self._initial_termination_a_type
-            term_a = ct.model_class().objects.get(pk=self._initial_termination_a_id)
-        if term_b is None and getattr(self, "_initial_termination_b_type", None):
-            ct = self._initial_termination_b_type
-            term_b = ct.model_class().objects.get(pk=self._initial_termination_b_id)
+        # Also handle type/id kwargs for the case where termination objects aren't resolved yet. The
+        # ContentType may arrive as an instance (`_type`) or an integer PK (`_type_id`).
+        if term_a is None:
+            ct = self._resolve_initial_termination_type("a")
+            if ct is not None:
+                term_a = ct.model_class().objects.get(pk=self._initial_termination_a_id)
+        if term_b is None:
+            ct = self._resolve_initial_termination_type("b")
+            if ct is not None:
+                term_b = ct.model_class().objects.get(pk=self._initial_termination_b_id)
 
         # Determine lane 1 connector. Defaults to 1 (the only valid connector on each side for a
         # standard cable); breakout cables read the lane-1 connectors from mapping[0].

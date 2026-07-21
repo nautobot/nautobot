@@ -1,0 +1,1 @@
+Changed Cable create/edit form to not present "embedded search" options for the individual terminations (interface, front port, etc.).

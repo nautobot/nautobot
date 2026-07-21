@@ -30,7 +30,7 @@ The behavior of the [Device component `device` foreign key](#device-component-de
 
 To support [breakout cables](../user-guide/feature-guides/breakout-cables.md), the association between a [`Cable`](../user-guide/core-data-model/dcim/cable.md) and its terminations has been re-implemented. The `cable` `ForeignKey` that previously existed on each `CableTermination` subclass (`Interface`, `FrontPort`, `RearPort`, `CircuitTermination`, `PowerPort`, etc.) has been removed in favor of a new [`CableToCableTermination`](../user-guide/core-data-model/dcim/cabletocabletermination.md) join model, exposed on each termination via the `cable_termination` reverse one-to-one relationship. App and Job code that queries or traverses cables may need to be updated.
 
-**The `cable` attribute is preserved** as a read-only property on each termination instance (e.g. `interface.cable`), so attribute access continues to work. Assignments to `Cable.termination_a` / `Cable.termination_b` (and their `*_type` / `*_id` counterparts) on **unsaved** `Cable` instances also continue to work and are materialized into `CableToCableTermination` rows on save.
+**The `cable` attribute is preserved** as a read-only property on each termination instance (e.g. `interface.cable`), so attribute access continues to work. Assignments to `Cable.termination_a` / `Cable.termination_b` (and their `*_type` / `*_type_id` / `*_id` counterparts) on **unsaved** `Cable` instances also continue to work and are materialized into `CableToCableTermination` rows on save.
 
 **ORM queries** filtering CableTermination subclasses by `cable` are automatically translated to the new `cable_termination__cable[...]` paths, emitting a `DeprecationWarning` for each. The following patterns are translated:
 
@@ -49,12 +49,13 @@ The following patterns are **not** translated and will break — rewrite them ex
 | `.order_by("cable")` | `.order_by("cable_termination__cable")` |
 | `.values("cable")` / `.values_list("cable")` | `cable_termination__cable` |
 
-**Querying `Cable` by its terminations:** in the same way, the legacy `termination_a_type` / `termination_a_id` (and b-side) fields are no longer database columns on `Cable` — the terminations now live on the `terminations` (`CableToCableTermination`) relation. `Cable.objects` translates lookups using the old `*_type` / `*_id` names into the equivalent `terminations__...` join paths (constrained to connector 1 to match the properties), emitting a `DeprecationWarning` for each, so `Cable.objects.filter(...)`, `.get(...)`, and `.get_or_create(...)` continue to work for legacy callers. The lookup half is translated by the queryset and, for `get_or_create()`, the same kwargs flow through `Cable(...)` and are materialized into `CableToCableTermination` rows on save.
+**Querying `Cable` by its terminations:** in the same way, the legacy `termination_a_type` / `termination_a_id` (and b-side) fields are no longer database columns on `Cable` — the terminations now live on the `terminations` (`CableToCableTermination`) relation. `Cable.objects` translates lookups using the old `*_type` / `*_id` names into the equivalent `terminations__...` join paths (constrained to connector 1 to match the properties), emitting a `DeprecationWarning` for each, so `Cable.objects.filter(...)`, `.get(...)`, and `.get_or_create(...)` continue to work for legacy callers. The `*_type` `ContentType` may be supplied either as a `ContentType` instance (`termination_a_type=<ct>`) or as an integer `ContentType` PK (`termination_a_type_id=<ct.pk>`). The lookup half is translated by the queryset and, for `get_or_create()`, the same kwargs flow through `Cable(...)` and are materialized into `CableToCableTermination` rows on save.
 
 | Deprecated | Translated to |
 |------------|---------------|
 | `Cable.objects.get(termination_a_type=<ct>, termination_a_id=<pk>)` | `terminations__<fk>_id=<pk>` with `terminations__cable_end="A"` |
-| `.filter(termination_a_id=<pk>)` (no `_type` given) | `<pk>` matched against every per-type termination FK |
+| `.get(termination_a_type_id=<ct.pk>, termination_a_id=<pk>)` (integer `ContentType` PK) | same as above |
+| `.filter(termination_a_id=<pk>)` (no `_type` / `_type_id` given) | `<pk>` matched against every per-type termination FK |
 | `Cable.objects.get_or_create(termination_a_type=..., termination_a_id=..., ...)` | lookup translated as above; creation flows through `Cable(...)` |
 
 The following are **not** translated — rewrite them against the `terminations` relation explicitly:

@@ -543,7 +543,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                 weight=950,
                 tab_id="ip-address-ranges",
                 label="IP Address Ranges",
-                related_object_attribute="ip_address_ranges",
+                related_object_attribute="all_ip_address_ranges",
                 url_name="ipam:prefix_ipaddressranges",
                 panels=[
                     object_detail.ObjectsTablePanel(
@@ -811,6 +811,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "first_available_ip": instance.get_first_available_ip(),
+                "first_available_ip_for_range": instance.get_first_available_ip_for_range(),
                 "ip_table": ip_table,
                 "permissions": permissions,
                 "bulk_querystring": bulk_querystring,
@@ -831,7 +832,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
     def ip_address_ranges(self, request, *args, **kwargs):
 
         instance = self.get_object()
-        ip_address_ranges_qs = instance.ip_address_ranges.restrict(request.user, "view")
+        ip_address_ranges_qs = instance.get_all_ip_address_ranges().restrict(request.user, "view")
 
         ip_address_range_table = tables.IPAddressRangeTable(
             ip_address_ranges_qs,
@@ -853,9 +854,11 @@ class PrefixUIViewSet(NautobotUIViewSet):
             "change": request.user.has_perm("ipam.change_ipaddressrange"),
             "delete": request.user.has_perm("ipam.delete_ipaddressrange"),
         }
+
         return Response(
             {
                 "first_available_ip": instance.get_first_available_ip(),
+                "first_available_ip_for_range": instance.get_first_available_ip_for_range(),
                 "ipaddressrange_table": ip_address_range_table,
                 "permissions": permissions,
                 "active_tab": "ip-address-ranges",
