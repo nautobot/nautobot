@@ -8,6 +8,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.urls import reverse
+from django.utils.html import format_html
 from django.utils.http import urlencode
 from timezone_field import TimeZoneFormField
 
@@ -2695,9 +2696,10 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 if parent_bay.module_family:
                     self.fields["module_family"].initial = parent_bay.module_family.id
                     self.fields["module_family"].disabled = True
-                    self.fields[
-                        "module_family"
-                    ].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
+                    self.fields["module_family"].help_text = format_html(
+                        "The selected parent module bay requires a module in the {} family",
+                        parent_bay.module_family.name,
+                    )
 
                 if parent_bay.requires_first_party_modules:
                     if parent_bay.parent_device:

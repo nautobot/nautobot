@@ -18,11 +18,11 @@ from nautobot.core.models.fields import JSONArrayField, PositiveRangeNumberTextF
 from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.data import UtilizationData
-from nautobot.dcim.models import Interface
+from nautobot.dcim.models import Device, Interface
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.ipam import choices, constants
-from nautobot.virtualization.models import VMInterface
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 from .fields import VarbinaryIPField
 from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuerySet
@@ -436,6 +436,16 @@ class VRF(PrimaryModel):
     remove_prefix.alters_data = True
 
 
+def interfaces_assigned_to_vrf(vrf, parent):
+    """Return the interfaces on `parent` (Device or VirtualMachine) that still reference `vrf`."""
+    if isinstance(parent, Device):
+        return parent.all_interfaces.filter(vrf=vrf)
+    if isinstance(parent, VirtualMachine):
+        return parent.interfaces.filter(vrf=vrf)
+    # TODO: account for VirtualDeviceContext interfaces as well.
+    return Interface.objects.none()
+
+
 @extras_features("graphql")
 class VRFDeviceAssignment(BaseModel):
     vrf = models.ForeignKey("ipam.VRF", on_delete=models.CASCADE, related_name="device_assignments")
@@ -508,6 +518,21 @@ class VRFDeviceAssignment(BaseModel):
             )
 
     clean.alters_data = True
+
+    def delete(self, *args, **kwargs):
+        """Prevent removing this VRF from its Device or VirtualMachine while its interfaces still reference the VRF."""
+        # TODO: account for VirtualDeviceContext interfaces as well.
+        parent = self.device or self.virtual_machine
+        interfaces = interfaces_assigned_to_vrf(self.vrf, parent)
+        if interfaces.exists():
+            raise models.ProtectedError(
+                msg=(
+                    f"Cannot remove VRF {self.vrf} from {parent} because it is still assigned to one or more "
+                    "of its interfaces. Remove the VRF from those interfaces first."
+                ),
+                protected_objects=set(interfaces),
+            )
+        return super().delete(*args, **kwargs)
 
 
 @extras_features("graphql")
