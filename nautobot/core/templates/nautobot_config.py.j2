@@ -372,6 +372,19 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
 #     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
+# SMTP settings for outbound email sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+# EMAIL_HOST = os.getenv("NAUTOBOT_EMAIL_HOST", "localhost")
+# EMAIL_HOST_PASSWORD = os.getenv("NAUTOBOT_EMAIL_HOST_PASSWORD", "")
+# EMAIL_HOST_USER = os.getenv("NAUTOBOT_EMAIL_HOST_USER", "")
+# EMAIL_PORT = int(os.getenv("NAUTOBOT_EMAIL_PORT", "25"))
+# if "NAUTOBOT_EMAIL_SSL_CERTFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"] != "":
+#     EMAIL_SSL_CERTFILE = os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"]
+# if "NAUTOBOT_EMAIL_SSL_KEYFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"] !="":
+    EMAIL_SSL_KEYFILE = os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"]
+# EMAIL_TIMEOUT = int(os.getenv("NAUTOBOT_EMAIL_TIMEOUT", "30"))
+# EMAIL_USE_SSL = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_SSL", "False"))
+# EMAIL_USE_TLS = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_TLS", "False"))
+
 # Event Brokers
 # EVENT_BROKERS = {}
 

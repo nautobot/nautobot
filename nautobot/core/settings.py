@@ -115,8 +115,7 @@ if "NAUTOBOT_EMAIL_SSL_CERTFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SS
     EMAIL_SSL_CERTFILE = os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"]
 if "NAUTOBOT_EMAIL_SSL_KEYFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"] != "":
     EMAIL_SSL_KEYFILE = os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"]
-if "NAUTOBOT_EMAIL_TIMEOUT" in os.environ and os.environ["NAUTOBOT_EMAIL_TIMEOUT"] != "":
-    EMAIL_TIMEOUT = int(os.environ["NAUTOBOT_EMAIL_TIMEOUT"])
+EMAIL_TIMEOUT = int(os.getenv("NAUTOBOT_EMAIL_TIMEOUT", "30"))
 EMAIL_USE_SSL = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_SSL", "False"))
 EMAIL_USE_TLS = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_TLS", "False"))
 

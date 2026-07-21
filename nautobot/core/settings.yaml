@@ -871,7 +871,7 @@ properties:
     type: "string"
     version_added: "3.2.0"
   EMAIL_TIMEOUT:
-    default: null
+    default: 30
     description: "Timeout in seconds for blocking operations such as connecting to the SMTP server."
     environment_variable: "NAUTOBOT_EMAIL_TIMEOUT"
     see_also:
