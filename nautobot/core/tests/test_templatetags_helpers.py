@@ -2,10 +2,13 @@ from unittest import mock
 
 from constance.test import override_config
 from django.conf import settings
+from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.templatetags.static import static, StaticNode
 from django.test import override_settings, tag
 
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import NAUTOBOT_EDITION_URLS, NAUTOBOT_STATIC_ASSETS
 from nautobot.core.templatetags import helpers
 from nautobot.core.testing import TestCase
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
@@ -369,6 +372,27 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 ),
             )
 
+        # Cloud edition: icon assets resolve to the cloud image; logo falls back to the Community default.
+        with self._override_edition("cloud"):
+            self.assertEqual(
+                helpers.custom_branding_or_static("navbar_icon"),
+                add_nautobot_version_query_param_to_url(
+                    StaticNode.handle_simple("img/cloud/nautobot-cloud-navbar-icon.svg")
+                ),
+            )
+            self.assertEqual(
+                helpers.custom_branding_or_static("icon_32"),
+                add_nautobot_version_query_param_to_url(StaticNode.handle_simple("img/cloud/nautobot-cloud-32x32.png")),
+            )
+            self.assertEqual(
+                helpers.custom_branding_or_static("favicon"),
+                add_nautobot_version_query_param_to_url(StaticNode.handle_simple("img/cloud/nautobot-cloud.ico")),
+            )
+            self.assertEqual(
+                helpers.custom_branding_or_static("logo"),
+                add_nautobot_version_query_param_to_url(StaticNode.handle_simple("img/nautobot_logo.svg")),
+            )
+
         # An unrecognized edition value falls back to the Community asset.
         with self._override_edition("not_a_real_edition"):
             self.assertEqual(
@@ -407,6 +431,17 @@ class NautobotTemplatetagsHelperTest(TestCase):
                 helpers.custom_branding_or_static("example_app_icon", "example_app/icon.png"),
                 add_nautobot_version_query_param_to_url(StaticNode.handle_simple("example_app/icon.png")),
             )
+
+    def test_every_edition_has_complete_static_assets(self):
+        """Every defined Nautobot edition must have a complete set of on-disk branding assets and an edition URL."""
+        community_asset_keys = set(NAUTOBOT_STATIC_ASSETS[NautobotEditionChoices.COMMUNITY])
+        for edition in NautobotEditionChoices.values():
+            with self.subTest(edition=edition):
+                self.assertIn(edition, NAUTOBOT_STATIC_ASSETS)
+                self.assertEqual(set(NAUTOBOT_STATIC_ASSETS[edition]), community_asset_keys)
+                for branding_key, path in NAUTOBOT_STATIC_ASSETS[edition].items():
+                    self.assertIsNotNone(finders.find(path), f"Static file not found for {branding_key}: {path}")
+                self.assertIn(edition, NAUTOBOT_EDITION_URLS)
 
     def test_hyperlinked_object_target_new_tab(self):
         # None gives a placeholder

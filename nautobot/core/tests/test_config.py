@@ -76,6 +76,10 @@ class GetNautobotEditionTestCase(TestCase):
         with self._apps_declaring(["not_a_real_edition", NautobotEditionChoices.PROFESSIONAL]):
             self.assertEqual(get_nautobot_edition(), NautobotEditionChoices.PROFESSIONAL)
 
+    def test_app_declaring_cloud_outweighs_other_editions(self):
+        with self._apps_declaring([NautobotEditionChoices.ENTERPRISE, NautobotEditionChoices.CLOUD]):
+            self.assertEqual(get_nautobot_edition(), NautobotEditionChoices.CLOUD)
+
     def test_result_is_cached(self):
         with self._apps_declaring([NautobotEditionChoices.ENTERPRISE]):
             self.assertEqual(get_nautobot_edition(), NautobotEditionChoices.ENTERPRISE)
