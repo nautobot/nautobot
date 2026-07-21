@@ -215,7 +215,7 @@ TODO
 - [#9108](https://github.com/nautobot/nautobot/issues/9108) - Added support for path tracing from a trunk interface's subinterface.
 - [#9110](https://github.com/nautobot/nautobot/issues/9110) - Added utilization reporting for IP Address Ranges, showing the percentage of addresses within a range occupied by IP Addresses.
 - [#9121](https://github.com/nautobot/nautobot/issues/9121) - Added a reusable `copy_button` template tag for rendering hover copy-to-clipboard buttons.
-- [#9126](https://github.com/nautobot/nautobot/issues/9126) - Added the concept of a Nautobot edition (Community, Professional, or Enterprise), derived from the installed Nautobot Apps.
+- [#9126](https://github.com/nautobot/nautobot/issues/9126) - Added a `NAUTOBOT_EDITION` setting reflecting the installed edition (Community, Professional, or Enterprise).
 - [#9126](https://github.com/nautobot/nautobot/issues/9126) - Added a `navbar_icon` branding key to `BRANDING_FILEPATHS` for customizing the navbar icon independently of the favicon.
 - [#9147](https://github.com/nautobot/nautobot/issues/9147) - Added rendering of IP Ranges inline within the IP Addresses tab of the Prefix detail view, including nested available-IP blocks and subtree indentation for contained addresses.
 - [#9158](https://github.com/nautobot/nautobot/issues/9158) - Added a utilization bar to the IP Address Range detail view, showing the percentage of addresses in the range that are assigned to IPAddress objects.
