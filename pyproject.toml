@@ -97,6 +97,20 @@ dependencies = [
     "netutils (>=1.14.0,<2)",
     # HTML sanitization
     "nh3 (>=0.3.6,<0.4)",
+    # OpenTelemetry (opt-in tracing/metrics/logs; enabled via OTEL_PYTHON_DJANGO_INSTRUMENT).
+    # The SDK/exporter (1.4x) and the instrumentation packages (0.6xb0) release in lockstep;
+    # keep them on the same coordinated line when bumping.
+    "opentelemetry-exporter-otlp (>=1.43.0,<1.44)",
+    "opentelemetry-instrumentation-celery (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-dbapi (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-django (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-logging (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-mysqlclient (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-psycopg2 (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-redis (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-requests (>=0.64b0,<0.65)",
+    "opentelemetry-instrumentation-wsgi (>=0.64b0,<0.65)",
+    "opentelemetry-sdk (>=1.43.0,<1.44)",
     # Handling of version numbers
     "packaging (>=23.1)",
     # Image processing library

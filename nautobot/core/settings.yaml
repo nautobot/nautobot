@@ -1579,6 +1579,21 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
+  NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
+    type: "array"
+    items:
+      type: "string"
+    default: []
+    description: >-
+      A list of dotted import paths to additional OpenTelemetry instrumentor classes for Nautobot to
+      install at startup, for example
+      `opentelemetry.instrumentation.botocore.BotocoreInstrumentor`. Nautobot core installs each one
+      against its own tracer provider, so apps do not need to call `.instrument()` from their
+      `AppConfig.ready()` method (which conflicts when multiple apps enable the same instrumentor).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
+    environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
+    version_added: "3.2.0"
   NAUTOBOT_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/"
@@ -1627,6 +1642,88 @@ properties:
     environment_variable: "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"
     is_constance_config: true
     version_added: "2.4.0"
+  OTEL_EXPORTER_OTLP_ENDPOINT:
+    type: "string"
+    format: "uri"
+    default: ""
+    description: "OTLP Exporter Endpoint."
+    environment_variable: "OTEL_EXPORTER_OTLP_ENDPOINT"
+    version_added: "3.2.0"
+  OTEL_EXPORTER_OTLP_INSECURE:
+    type: "boolean"
+    default: false
+    description: "Setting this to true will send OTLP data over insecure connection."
+    environment_variable: "OTEL_EXPORTER_OTLP_INSECURE"
+    version_added: "3.2.0"
+  OTEL_EXPORTER_OTLP_PROTOCOL:
+    type: "string"
+    enum:
+    - "grpc"
+    - "http"
+    default: "grpc"
+    description: "OTLP Exporter Protocol."
+    environment_variable: "OTEL_EXPORTER_OTLP_PROTOCOL"
+    version_added: "3.2.0"
+  OTEL_METRICS_EXPORTER:
+    type: "array"
+    items:
+      type: "string"
+      enum:
+      - "otlp"
+      - "console"
+      - "none"
+    default:
+    - "otlp"
+    description: >-
+      A list of OpenTelemetry metrics exporters to enable (`otlp`, `console`, or `none`).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `OTEL_METRICS_EXPORTER="otlp,console"`.)
+    environment_variable: "OTEL_METRICS_EXPORTER"
+    version_added: "3.2.0"
+  OTEL_PYTHON_DJANGO_INSTRUMENT:
+    type: "boolean"
+    default: false
+    description: >-
+      Setting this to true enables OpenTelemetry instrumentation (traces, metrics, and logs) for
+      Nautobot, including propagating the Traceparent header in API requests.
+    environment_variable: "OTEL_PYTHON_DJANGO_INSTRUMENT"
+    version_added: "3.2.0"
+  OTEL_PYTHON_LOG_CORRELATION:
+    type: "boolean"
+    default: true
+    description: >-
+      Setting this to true enables OpenTelemetry Log correlation which
+      will add the trace id, span id, and resource details to the log.
+    environment_variable: "OTEL_PYTHON_LOG_CORRELATION"
+    version_added: "3.2.0"
+  OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT:
+    type: "integer"
+    minimum: 1
+    default: 8192
+    description: >-
+      Maximum number of characters recorded for any single span attribute value, applied as an
+      SDK-side safety net so large values (for example GraphQL query documents) do not bloat spans.
+      Nautobot defaults this to 8192 characters; the OpenTelemetry SDK itself is unlimited by
+      default. Set the environment variable to an empty string to restore the SDK's unlimited
+      behavior.
+    environment_variable: "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT"
+    version_added: "3.2.0"
+  OTEL_TRACES_EXPORTER:
+    type: "array"
+    items:
+      type: "string"
+      enum:
+      - "otlp"
+      - "console"
+      - "none"
+    default:
+    - "otlp"
+    description: >-
+      A list of OpenTelemetry trace exporters to enable (`otlp`, `console`, or `none`).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `OTEL_TRACES_EXPORTER="otlp,console"`.)
+    environment_variable: "OTEL_TRACES_EXPORTER"
+    version_added: "3.2.0"
   PAGINATE_COUNT:
     default: 50
     description: >-
