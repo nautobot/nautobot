@@ -1,0 +1,1 @@
+Added documentation clarifying that the `extras.view_fileproxy` permission is required to download a job's output files.
