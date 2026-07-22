@@ -612,30 +612,28 @@ def get_bulk_queryset_from_view(
     synthetic_request.GET = get_params
     synthetic_request.user = user
 
-    view = view_class()
-    view.request = synthetic_request
-    # Map to the permission-bearing UI action so the view's get_action()/restrict() line up with `action`.
-    view.action = "bulk_destroy" if action == "delete" else "bulk_update"
-    view.kwargs = {}
+    def scoped_queryset(scoping_view_class):
+        """Instantiate the given view and return its alter_queryset() result using the synthetic request."""
+        scoping_view = scoping_view_class()
+        scoping_view.request = synthetic_request
+        # Map to the permission-bearing UI action so the view's get_action()/restrict() line up with `action`.
+        scoping_view.action = "bulk_destroy" if action == "delete" else "bulk_update"
+        scoping_view.kwargs = {}
+        return scoping_view.alter_queryset(synthetic_request)
 
-    # Apply the view's alter_queryset() so implicit list-view scoping is honored. The default implementation
-    # returns the base queryset unchanged, so views that don't override it behave exactly as before. The
-    # trailing restrict() covers legacy generic views whose alter_queryset() does not restrict by permission.
-    if hasattr(view, "alter_queryset"):
-        queryset = view.alter_queryset(synthetic_request).restrict(user, action)
+    if hasattr(view_class, "alter_queryset"):
+        # Case: NautobotUIViewSet
+        queryset = scoped_queryset(view_class)
     else:
-        queryset = view_class.queryset.restrict(user, action)
-
-    # Prefer the view's own filterset_class (a class attribute, so still job-safe), falling back to the
-    # model-level lookup. This honors views that declare a narrower/custom filterset than the model default.
-    filterset_class = getattr(view_class, "filterset_class", None) or get_filterset_for_model(model)
-
-    if not filterset_class:
-        log.debug(f"No filterset_class found for model {model}, returning all objects")
-        return queryset
-
-    filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
-    log.debug(f"Normalized filter_query_params: {filter_query_params}")
+        # Case: Legacy bulk views (BulkDeleteView/BulkEditView)
+        list_view_class = get_view_for_model(model, view_type="List")
+        if list_view_class is not None and hasattr(list_view_class, "alter_queryset"):
+            # Case: Legacy list view (ObjectListView) with alter_queryset
+            queryset = scoped_queryset(list_view_class)
+        else:
+            # Case: Legacy list view (ObjectListView) without alter_queryset
+            queryset = view_class.queryset
+    queryset = queryset.restrict(user, action)
 
     # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
     # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
@@ -647,6 +645,17 @@ def get_bulk_queryset_from_view(
     if not is_all and not pk_list:
         log.debug("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
         return queryset.none()
+
+    # Prefer the view's own filterset_class (a class attribute, so still job-safe), falling back to the
+    # model-level lookup. This honors views that declare a narrower/custom filterset than the model default.
+    filterset_class = getattr(view_class, "filterset_class", None) or get_filterset_for_model(model)
+
+    if not filterset_class:
+        log.debug(f"No filterset_class found for model {model}, returning all objects")
+        return queryset
+
+    filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+    log.debug(f"Normalized filter_query_params: {filter_query_params}")
 
     # The query params when you manually delete filters from the UI include on the saved view filter
     # set the flag all_filters_removed to true. If that is the case, we ignore the saved view below, by setting it

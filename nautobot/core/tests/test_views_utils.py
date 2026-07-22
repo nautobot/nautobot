@@ -1,3 +1,4 @@
+from unittest import mock
 import urllib.parse
 
 from django.contrib.auth.models import AnonymousUser
@@ -552,3 +553,64 @@ class GetBulkQuerysetFromViewScopingTestCase(TestCase):
             action="delete",
         )
         self.assertQuerySetEqual(qs, self.archived, ordered=False)
+
+    def test_pk_list_honored_when_no_filterset(self):
+        """A PK-list bulk op targets only the selected PKs even when no filterset is available.
+
+        Regression test: the "no filterset" short-circuit must not preempt the explicit pk_list handling,
+        which would otherwise cause the operation to fall through and target all (scoped) objects.
+        """
+        from example_app.models import ExampleModel
+
+        class FakeViewNoFilterset:  # UIViewSet-like, but no filterset_class declared
+            queryset = ExampleModel.objects.all()
+
+            def alter_queryset(self, request):
+                return self.queryset.all()
+
+        with (
+            mock.patch("nautobot.core.views.utils.get_view_for_model", return_value=FakeViewNoFilterset),
+            mock.patch("nautobot.core.views.utils.get_filterset_for_model", return_value=None),
+        ):
+            qs = get_bulk_queryset_from_view(
+                user=self.user,
+                content_type=self.content_type,
+                delete_all=False,
+                filter_query_params={},
+                pk_list=[self.visible[0].pk, self.visible[1].pk],
+                saved_view_id=None,
+                action="delete",
+            )
+        self.assertQuerySetEqual(qs, [self.visible[0], self.visible[1]], ordered=False)
+
+    def test_legacy_bulk_view_falls_back_to_list_view_scoping(self):
+        """When the resolved bulk view lacks alter_queryset (legacy views), the list view's scoping is used.
+
+        Legacy `BulkDeleteView`/`BulkEditView` don't define alter_queryset(); the scoping lives on the
+        separate `ObjectListView`. get_bulk_queryset_from_view should look that up and honor it.
+        """
+        from example_app.models import ExampleModel
+
+        class FakeLegacyBulkDeleteView:  # no alter_queryset(), mirrors legacy BulkDeleteView
+            queryset = ExampleModel.objects.all()
+
+        class FakeLegacyListView:  # scopes rows the way a legacy ObjectListView.alter_queryset() would
+            queryset = ExampleModel.objects.all()
+
+            def alter_queryset(self, request):
+                return self.queryset.exclude(number__lt=0)
+
+        def fake_get_view_for_model(_model, view_type=""):
+            return FakeLegacyListView if view_type == "List" else FakeLegacyBulkDeleteView
+
+        with mock.patch("nautobot.core.views.utils.get_view_for_model", side_effect=fake_get_view_for_model):
+            qs = get_bulk_queryset_from_view(
+                user=self.user,
+                content_type=self.content_type,
+                delete_all=True,
+                filter_query_params={},
+                pk_list=[],
+                saved_view_id=None,
+                action="delete",
+            )
+        self.assertQuerySetEqual(qs, self.visible, ordered=False)
