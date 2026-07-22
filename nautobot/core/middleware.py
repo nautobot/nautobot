@@ -216,21 +216,21 @@ class GraphQLOpenTelemetryMiddleware:
     Django middleware that creates an OpenTelemetry span and emits a structured INFO log
     for every request to the /graphql and /api/graphql endpoints.
 
-    Opt-in: this is a no-op pass-through unless ``OTEL_PYTHON_DJANGO_INSTRUMENT`` is enabled,
+    Opt-in: this is a no-op pass-through unless `OTEL_PYTHON_DJANGO_INSTRUMENT` is enabled,
     matching the rest of the OpenTelemetry feature (disabled by default). This prevents the
     GraphQL query/variables from being logged in deployments that never enabled OTel.
 
     Span attributes set:
-    - ``enduser.id``                          - authenticated username
-    - ``http.client_ip``                      - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
-    - ``nautobot.core.graphql.document``      - full query / mutation / subscription text
-    - ``nautobot.core.graphql.variables``     - JSON-serialised variables (when present)
-    - ``nautobot.core.graphql.operation.type``- ``query``, ``mutation``, or ``subscription``
-    - ``http.status_code``                    - HTTP response status code
+    - `enduser.id`                          - authenticated username
+    - `http.client_ip`                      - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
+    - `nautobot.core.graphql.document`      - full query / mutation / subscription text
+    - `nautobot.core.graphql.variables`     - JSON-serialised variables (when present)
+    - `nautobot.core.graphql.operation.type`- `query`, `mutation`, or `subscription`
+    - `http.status_code`                    - HTTP response status code
 
-    The INFO log additionally includes ``duration_ms``.
+    The INFO log additionally includes `duration_ms`.
 
-    Must be placed after ``ExternalAuthMiddleware`` in MIDDLEWARE so that ``request.user``
+    Must be placed after `ExternalAuthMiddleware` in MIDDLEWARE so that `request.user`
     is fully resolved (including remote-auth and SSO/LDAP users) before this runs.
     """
 
@@ -273,7 +273,7 @@ class GraphQLOpenTelemetryMiddleware:
 
             # Use the stdlib logger so this is emitted through Django's LOGGING config
             # regardless of whether the operator opted into structlog. Structured fields go
-            # via ``extra`` (surfaced by structlog's ProcessorFormatter when it is configured).
+            # via `extra` (surfaced by structlog's ProcessorFormatter when it is configured).
             stdlib_logger.info(
                 "graphql.request",
                 extra={
@@ -299,7 +299,7 @@ class GraphQLOpenTelemetryMiddleware:
 
     @staticmethod
     def _parse_graphql_body(request):
-        """Return ``(query_string, variables_dict)`` extracted from the POST body."""
+        """Return `(query_string, variables_dict)` extracted from the POST body."""
         if request.method != "POST":
             return None, None
         try:
@@ -322,7 +322,7 @@ class GraphQLOpenTelemetryMiddleware:
 
     @staticmethod
     def _get_operation_type(query):
-        """Return ``query``, ``mutation``, or ``subscription`` from the document, or ``None``."""
+        """Return `query`, `mutation`, or `subscription` from the document, or `None`."""
         if not query:
             return None
         match = _GRAPHQL_OPERATION_RE.match(query)
