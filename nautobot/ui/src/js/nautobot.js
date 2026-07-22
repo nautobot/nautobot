@@ -51,6 +51,7 @@ import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
+import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { refreshMessages } from './messages.js';
 import { initializeModal } from './modal.js';
 import { initializeSearch } from './search.js';
@@ -98,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
+
+  // HTMX button spinner
+  initializeHtmxButtonSpinner();
 
   // Messages
   window.nb.messages = { refreshMessages };
