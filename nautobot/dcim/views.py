@@ -5168,12 +5168,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
             return parent.display
         return ""
 
-    @action(
-        detail=True,
-        custom_view_base_action="view",
-        url_path="nested-bays",
-        url_name="nestedbays"
-    )
+    @action(detail=True, custom_view_base_action="view", url_path="nested-bays", url_name="nestedbays")
     def nested_bays(self, request, *args, **kwargs):
         """Render the child module bays of this bay's installed module, for HTMX expandable-tree rows."""
         instance = self.get_object()
