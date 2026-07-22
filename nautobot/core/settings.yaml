@@ -775,6 +775,16 @@ properties:
     see_also:
       "Django documentation for `DEBUG`": "https://docs.djangoproject.com/en/stable/ref/settings/#debug"
     type: "boolean"
+  DEFAULT_FROM_EMAIL:
+    default: "webmaster@localhost"
+    description: >-
+      Default sender address for emails sent by Nautobot, such as error reports to `ADMINS`
+      and emails sent by Jobs.
+    environment_variable: "NAUTOBOT_DEFAULT_FROM_EMAIL"
+    see_also:
+      "Django documentation for `DEFAULT_FROM_EMAIL`": "https://docs.djangoproject.com/en/stable/ref/settings/#default-from-email"
+    type: "string"
+    version_added: "3.2.0"
   DEPLOYMENT_ID:
     default: ""
     description: >-
@@ -806,6 +816,88 @@ properties:
     is_constance_config: true
     type: "string"
     version_added: "3.0.0"
+  EMAIL_HOST:
+    default: "localhost"
+    description: "Hostname or IP address of the SMTP server to use for sending email."
+    environment_variable: "NAUTOBOT_EMAIL_HOST"
+    see_also:
+      "Django documentation for `EMAIL_HOST`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-host"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_HOST_PASSWORD:
+    default: ""
+    description: "Password to use when authenticating to the SMTP server, used together with `EMAIL_HOST_USER`."
+    environment_variable: "NAUTOBOT_EMAIL_HOST_PASSWORD"
+    see_also:
+      "Django documentation for `EMAIL_HOST_PASSWORD`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-host-password"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_HOST_USER:
+    default: ""
+    description: >-
+      Username to use when authenticating to the SMTP server.
+      If empty, authentication will not be attempted.
+    environment_variable: "NAUTOBOT_EMAIL_HOST_USER"
+    see_also:
+      "Django documentation for `EMAIL_HOST_USER`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-host-user"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_PORT:
+    default: 25
+    description: "TCP port to use when connecting to the SMTP server."
+    environment_variable: "NAUTOBOT_EMAIL_PORT"
+    see_also:
+      "Django documentation for `EMAIL_PORT`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-port"
+    type: "integer"
+    version_added: "3.2.0"
+  EMAIL_SSL_CERTFILE:
+    default: null
+    description: >-
+      Optional path to a PEM-formatted certificate chain file to use for the SSL connection
+      to the SMTP server. Only used when `EMAIL_USE_SSL` or `EMAIL_USE_TLS` is enabled.
+    environment_variable: "NAUTOBOT_EMAIL_SSL_CERTFILE"
+    see_also:
+      "Django documentation for `EMAIL_SSL_CERTFILE`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-ssl-certfile"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_SSL_KEYFILE:
+    default: null
+    description: >-
+      Optional path to a PEM-formatted private key file to use for the SSL connection
+      to the SMTP server. Only used when `EMAIL_USE_SSL` or `EMAIL_USE_TLS` is enabled.
+    environment_variable: "NAUTOBOT_EMAIL_SSL_KEYFILE"
+    see_also:
+      "Django documentation for `EMAIL_SSL_KEYFILE`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-ssl-keyfile"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_TIMEOUT:
+    default: 30
+    description: "Timeout in seconds for blocking operations such as connecting to the SMTP server."
+    environment_variable: "NAUTOBOT_EMAIL_TIMEOUT"
+    see_also:
+      "Django documentation for `EMAIL_TIMEOUT`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-timeout"
+    type: "integer"
+    version_added: "3.2.0"
+  EMAIL_USE_SSL:
+    default: false
+    description: >-
+      Use an implicit TLS (secure) connection when talking to the SMTP server, generally on port 465.
+      Mutually exclusive with `EMAIL_USE_TLS`.
+    environment_variable: "NAUTOBOT_EMAIL_USE_SSL"
+    see_also:
+      "Django documentation for `EMAIL_USE_SSL`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-use-ssl"
+    type: "boolean"
+    version_added: "3.2.0"
+  EMAIL_USE_TLS:
+    default: false
+    description: >-
+      Use an explicit TLS (STARTTLS) connection when talking to the SMTP server, generally on port 587.
+      Mutually exclusive with `EMAIL_USE_SSL`.
+    environment_variable: "NAUTOBOT_EMAIL_USE_TLS"
+    see_also:
+      "Django documentation for `EMAIL_USE_TLS`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-use-tls"
+    type: "boolean"
+    version_added: "3.2.0"
   EVENT_BROKERS:
     default: {}
     description: >-
@@ -838,7 +930,7 @@ properties:
       - **EXCLUDE** filters out specific topics like those with "no-publish" in the name.
 
       !!! note
-          If **INCLUDE** is set to ["*"], all topics will be published unless excluded by **EXCLUDE**.
+          If **INCLUDE** is set to `["*"]`, all topics will be published unless excluded by **EXCLUDE**.
     properties:
       CLASS:
         type: "string"

@@ -11,7 +11,7 @@ const BASE_SEARCH_INPUT_PADDING_X = `${FORM_CONTROL_PADDING_X + ICON_SIZE + GAP}
 const CONTENT_TYPE_LIVE_SEARCH_DEBOUNCE_DELAY = 500;
 const MAX_BADGE_COUNT = 1;
 const MAX_TYPEAHEAD_RESULT_COUNT = 3;
-const MIN_CONTENT_TYPE_LIVE_SEARCH_PHRASE_LENGTH = 2;
+const MIN_CONTENT_TYPE_LIVE_SEARCH_PHRASE_LENGTH = 3;
 
 export const initializeSearch = () => {
   const headerSearch = document.getElementById('header_search');
