@@ -45,7 +45,10 @@ class CircuitViewSet(NautobotModelViewSet):
 
 
 class CircuitTerminationViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = CircuitTermination.objects.prefetch_related("cable_paths__destination")
+    queryset = CircuitTermination.objects.prefetch_related(
+        *CircuitTermination.connection_prefetch_related_fields(),
+        *CircuitTermination.cable_peer_prefetch_related_fields(),
+    )
     serializer_class = serializers.CircuitTerminationSerializer
     filterset_class = filters.CircuitTerminationFilterSet
 

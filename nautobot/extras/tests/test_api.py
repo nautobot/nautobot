@@ -932,6 +932,79 @@ class ApprovalWorkflowStageTest(
                     # Confirm correct object is returned
                     self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflow_stages[0].id))
 
+    def test_responses_visible_only_with_view_permission(self):
+        """Nested responses are gated by object-level `view` on ApprovalWorkflowStageResponse (UI parity)."""
+        stage = self.approval_workflow_stages[0]
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.COMMENT,
+            comments="A response",
+        )
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+
+        with self.subTest("without view_approvalworkflowstageresponse responses hidden"):
+            self.add_permissions("extras.view_approvalworkflowstage")
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["responses"], [])
+
+        with self.subTest("with view_approvalworkflowstageresponse responses visible"):
+            self.add_permissions("extras.view_approvalworkflowstageresponse")
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(len(response.data["responses"]), 1)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_responses_cannot_be_modified_via_stage_endpoint(self):
+        """PATCH on the stage must not create/modify responses (the `responses` field is read-only)."""
+        stage = self.approval_workflow_stages[0]
+        self.add_permissions("extras.change_approvalworkflowstage")
+        before = stage.approval_workflow_stage_responses.count()
+
+        data = {
+            "responses": [
+                {
+                    "approval_workflow_stage": str(stage.pk),
+                    "user": str(self.user.pk),
+                    "state": ApprovalWorkflowStateChoices.APPROVED,
+                    "comments": "Injected",
+                }
+            ]
+        }
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+        response = self.client.patch(url, data=data, format="json", **self.header)
+
+        # PATCH itself may succeed (it just ignores `responses`), but nothing may be written.
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        stage.refresh_from_db()
+        self.assertEqual(stage.approval_workflow_stage_responses.count(), before)
+        self.assertFalse(
+            stage.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.APPROVED).exists()
+        )
+        # And the stage state must not have advanced.
+        self.assertEqual(stage.state, ApprovalWorkflowStateChoices.PENDING)
+
+    def test_nested_response_user_has_correct_object_type(self):
+        """Regression: nested response `user` must carry its own object_type (users.user), not the parent's."""
+        stage = self.approval_workflow_stages[0]
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.COMMENT,
+            comments="A response",
+        )
+        self.add_permissions("extras.view_approvalworkflowstage", "extras.view_approvalworkflowstageresponse")
+
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        self.assertEqual(len(response.data["responses"]), 1)
+        nested_user = response.data["responses"][0]["user"]
+        self.assertEqual(nested_user["object_type"], "users.user")
+        self.assertEqual(nested_user["id"], self.user.pk)
+
 
 #
 #  Computed Fields
