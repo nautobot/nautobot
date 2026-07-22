@@ -21,7 +21,7 @@ The [`CACHES`](../configuration/settings.md#caches) setting is used to, among ot
 In the event you need to use a customized `django-redis` client, the following settings (under `CACHES["default"]["OPTIONS"]`) can be changed:
 
 * [`CLIENT_CLASS`](https://github.com/jazzband/django-redis?tab=readme-ov-file#pluggable-clients)
-* [`CUSTOM_HEALTH_CHECK_CLASS`](../guides/health-checks.md#redis)
+* [`CUSTOM_HEALTH_CHECK_CLASS`](../monitoring/health-checks.md#redis)
 
 ## Task Queuing with Celery
 

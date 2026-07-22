@@ -1,0 +1,444 @@
+# Logging
+
+Nautobot uses Python's standard `logging` module, configured via Django's [`LOGGING`](https://docs.djangoproject.com/en/stable/topics/logging/) dictionary. By default, every Nautobot process writes to the standard streams of the container or service, where your platform collects them.
+
+For Job-specific logging (the `self.logger.*` API surfaced in the Job Result UI), see [Job Logging](../../../development/jobs/job-logging.md).
+
+## Configuration
+
+The defaults are defined in [`nautobot/core/settings.py`](https://github.com/nautobot/nautobot/blob/develop/nautobot/core/settings.py) and are driven by two environment variables:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `NAUTOBOT_DEBUG` | `False` | Drives the default log level (`DEBUG` if true, `INFO` otherwise) and the formatter (verbose vs. compact). **Always `False` in production.** |
+| `NAUTOBOT_LOG_DEPRECATION_WARNINGS` | `False` | When true, deprecation warnings raised by Nautobot are also logged at `WARNING` level. Useful when planning a major upgrade; noisy at steady state. Must be set as an environment variable — not in `nautobot_config.py`. |
+
+For full configuration options, including [`SANITIZER_PATTERNS`](../configuration/settings.md#sanitizer_patterns) for redaction of credentials in Job log entries, see [Configuration Settings](../configuration/settings.md).
+
+### Switching to JSON Output
+
+Most modern log aggregators prefer JSON. Override `LOGGING` in `nautobot_config.py` after Nautobot's defaults are loaded:
+
+```python
+import logging.config
+
+LOGGING["formatters"]["json"] = {
+    "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+    "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(funcName)s %(filename)s %(lineno)d",
+}
+LOGGING["handlers"]["json_console"] = {
+    "class": "logging.StreamHandler",
+    "formatter": "json",
+}
+for logger_name in ("django", "nautobot"):
+    LOGGING["loggers"][logger_name]["handlers"] = ["json_console"]
+
+logging.config.dictConfig(LOGGING)
+```
+
+Add `python-json-logger` to your image. Output then carries `name` (logger), `levelname`, `message`, and other fields that your aggregator parses automatically.
+
+The handler reassignment on the last line *replaces* the default `console` handler with `json_console` rather than appending — by design, since you almost always want one canonical format reaching your aggregator. If you also configure a [remote-syslog handler](#forwarding-to-remote-collectors) further on, that example uses `.append()` so both handlers fire.
+
+### Reading the Logger Name in Your Aggregator
+
+Nautobot always emits the logger name — both formatters above include `%(name)s` (or the JSON `name` field). The question is just whether your aggregator sees it as a structured field it can pivot on, or as plain text inside the line body.
+
+In the default text format, the logger name is right there in the line (`14:32:15.123 INFO    nautobot.extras.jobs : ...`) — searchable with `grep`, but not directly filterable as `logger="..."`. To make it a queryable field, pick one of the two approaches below.
+
+**Switch to JSON output** (recommended — see above). Each line becomes one JSON object with `name`, `levelname`, and `message` as fields. In Loki:
+
+```logql
+{app="nautobot"} | json | name="nautobot.extras.jobs" | levelname="ERROR"
+{app="nautobot"} | json | name=~"nautobot\\.extras\\..*" | levelname=~"ERROR|CRITICAL"
+```
+
+Splunk SPL, Elastic KQL, and Datadog log search use the same idea — extract once, filter on a field. Keep `name` as a field rather than promoting it to a label, since logger names like `nautobot.jobs.<module>` can have high cardinality.
+
+**Parse the default text format on ingest** when you can't change Nautobot's `LOGGING`. A Promtail / Alloy pipeline that turns the default `"<time> <level>  <logger> :\n  <message>"` shape into structured fields:
+
+```yaml
+pipeline_stages:
+  - multiline:
+      firstline: '^\d{2}:\d{2}:\d{2}\.\d{3}'
+      max_lines: 200
+  - regex:
+      expression: '^(?P<time>\d{2}:\d{2}:\d{2}\.\d{3})\s+(?P<level>\S+)\s+(?P<logger>\S+)\s+:\s*\n?\s*(?P<msg>.*)$'
+  - labels:
+      level:
+  - structured_metadata:
+      logger:
+```
+
+The same approach works in Vector and Fluent Bit — the regex is the load-bearing part.
+
+## Log Streams
+
+Three operator-facing streams reach your aggregator via the container's `stdout` — these are the streams you ship:
+
+| Stream | Source process | What it carries |
+|---|---|---|
+| Web | `nautobot-server` (uWSGI / gunicorn) | Django request handling, REST API, GraphQL, authentication, ORM warnings |
+| Celery worker | `nautobot-server celery worker` | Celery task lifecycle, broker connect/reconnect, **Job log records emitted via `self.logger`** |
+| Celery Beat | `nautobot-server celery beat` | Scheduler startup, scheduled-Job firing, schedule disable events |
+
+Two additional in-database log surfaces exist for end-user UI access and the REST API — these are not separate streams:
+
+| Surface | Source | Where | What it carries |
+|---|---|---|---|
+| `JobLogEntry` | `NautobotDatabaseHandler` | `extras_joblogentry` table → Job Result UI | Per-Job structured records (level, message, grouping, associated object). **The same log lines also reach worker `stdout` via the `nautobot.jobs.<module>` logger** — your aggregator already captures them from there. |
+| `ObjectChange` | model signals | `extras_objectchange` table → Change Log UI | User CRUD on data — *not* operational |
+
+Do not mirror the in-database surfaces to your SIEM. The operational signal in `JobLogEntry` is already covered by the worker `stdout` stream above; mirroring duplicates events and is the most common source of "every Job log line shows up twice" confusion.
+
+### Streaming Event Notifications to Logs
+
+Nautobot's [Event Notifications](../../platform-functionality/events.md) system publishes record-change and Job lifecycle topics to pluggable brokers. Registering `SyslogEventBroker` in `nautobot_config.py` emits each event through Python logging under `nautobot.events.<topic>` with a JSON payload — the same pipeline that already ships your operational logs will pick it up. Use this when you want structured Nautobot events in the same aggregator as everything else, without standing up a separate Redis Pub/Sub consumer.
+
+The two topic groups that most deployments will care about:
+
+- [User Events](../../platform-functionality/events.md#user-events) (`nautobot.users.user.login`, `…logout`, `…change_password`, `nautobot.admin.user.change_password`) — the audit signal your SIEM or compliance team needs. Payloads carry the affected user record; emit these to satisfy login/logout and password-change tracking requirements that text-grepping `nautobot.auth.*` would otherwise have to approximate.
+- [Job Events](../../platform-functionality/events.md#job-events) (`nautobot.jobs.job.started`, `…completed`) — a structured signal for whether automation actually ran. Payloads carry `job_result_id`, `job_name`, `user_name`, and (on completion) `job_output` and `einfo` (stacktrace on failure). Prefer this over scraping `nautobot.extras.jobs` log lines when an external system needs to react to job lifecycle.
+
+## Forwarding to Remote Collectors
+
+The default path — write to stdout, let your platform's log-collector sidecar ship the lines — is the recommended one and is orthogonal to Nautobot configuration. The recipes below cover the cases where Nautobot itself has to push logs to a remote endpoint: no sidecar is available, or you want a specific subset of records (auth, job lifecycle) on a dedicated channel.
+
+### Remote Syslog from `LOGGING`
+
+Add a `SysLogHandler` to `nautobot_config.py` and route the loggers you care about to it. The example below ships everything Nautobot and Django log to a remote syslog receiver on UDP 514; swap `socktype` for `socket.SOCK_STREAM` to use TCP.
+
+```python
+import logging.config
+import socket
+from logging.handlers import SysLogHandler
+
+LOGGING["handlers"]["remote_syslog"] = {
+    "class": "logging.handlers.SysLogHandler",
+    "address": ("logs.example.com", 514),
+    "socktype": socket.SOCK_DGRAM,
+    "facility": SysLogHandler.LOG_LOCAL0,
+    "formatter": "normal",   # or "json" if you defined one above
+}
+for logger_name in ("django", "nautobot"):
+    LOGGING["loggers"][logger_name]["handlers"].append("remote_syslog")
+
+logging.config.dictConfig(LOGGING)
+```
+
+Keep the existing `console` handler alongside so container stdout is still captured — `SysLogHandler` is best-effort, and a temporary network blip will silently drop records.
+
+### Splunk
+
+Splunk accepts syslog directly on a configured input — point the handler above at that receiver, or at an intermediary that re-emits to Splunk. HEC (HTTP Event Collector) is not configured inside Nautobot — it terminates on a Splunk forwarder or load balancer in front of the indexer, not on a Python logging handler. If your platform team requires HEC end-to-end, that intermediary is a deployment concern outside the scope of this page.
+
+### Redis and Other Event Streams
+
+For shipping structured business or security events (record changes, user events, job lifecycle) rather than raw log lines, use the [Event Notifications](../../platform-functionality/events.md) system instead of `LOGGING`. The bundled `RedisEventBroker` publishes each event to Redis Pub/Sub under its topic name — register it in `nautobot_config.py` the same way as `SyslogEventBroker`:
+
+```python
+from nautobot.core.events import register_event_broker, RedisEventBroker
+
+register_event_broker(RedisEventBroker(url="redis://events.example.com:6379/0"))
+```
+
+Other event-stream targets — Kafka, NATS, RabbitMQ — are reachable through the same extension point: subclass `nautobot.core.events.EventBroker` and register your implementation. The topics and payload shapes are stable across brokers; only the publish mechanics change. Prefer this path over piping log lines into an event bus, since log text is line-oriented and unstructured while event payloads carry typed JSON.
+
+## Logger Namespace Map
+
+Loggers in Nautobot are named by Python module (`logging.getLogger(__name__)`). When building alert rules in your aggregator, filter on logger name plus level rather than free-text grep — that combination eliminates routine warnings that would otherwise bury real failures.
+
+| Subsystem | Logger name(s) |
+|---|---|
+| Authentication | `nautobot.auth.login`, `nautobot.auth.logout` |
+| REST API | `nautobot.core.api.serializers`, `nautobot.core.api.fields`, `nautobot.core.api.mixins` |
+| GraphQL | `nautobot.core.graphql.schema` |
+| Celery / Beat scheduler | `nautobot.core.celery`, `nautobot.core.celery.schedulers` |
+| Jobs framework | `nautobot.extras.jobs` |
+| Apps (plugins) loading | `nautobot.extras.plugins`, `nautobot.apps.config` |
+| Git repository sync | `nautobot.core.utils.git` |
+| Deprecations | `nautobot.core.utils.deprecation` |
+| Job code (per Job) | `nautobot.jobs.<module>` (set by `get_task_logger(self.__module__)`) |
+
+## Common Failure Patterns
+
+!!! note "Living section"
+    The patterns below are the ones we currently see most often in production deployments — they're a useful starting point, not an exhaustive catalogue, and we expect the list to grow as more operators share their experience. If you've hit a recurring pattern that isn't covered here, a docs contribution is very welcome.
+
+The exact text of any individual log line is not part of Nautobot's API and may shift between releases. Treat the patterns below as alerting starting points — and prefer the metric-based or probe-based equivalents listed in [Alerting](./alerting.md) where one exists.
+
+For each pattern, the recommended way to detect it is to combine the named logger (from the [Logger Namespace Map](#logger-namespace-map) above) with a level filter inside your aggregator — see [Reading the Logger Name in Your Aggregator](#reading-the-logger-name-in-your-aggregator) for the LogQL / SPL / KQL shape. Free-text grep over `stdout` works for ad-hoc investigation but is too coarse for production alert rules.
+
+### Migration and Startup Errors
+
+**Potential Issue:** Django applies pending migrations automatically at process start. A failed migration aborts the process and the container restart loop kicks in. The cause is typically a deploy-time issue — code rolled forward without the matching DB schema, or a downgrade where the new code expects a schema that has been rolled back.
+
+**Artifact or data:** Failures surface in worker/web `stdout` at process startup, in the *first* startup log block before subsequent restart noise. Representative log lines:
+
+```text
+django.db.utils.ProgrammingError: relation "extras_X" does not exist
+django.db.utils.OperationalError: FATAL: database "..." does not exist
+InconsistentMigrationHistory: Migration X is applied before its dependency Y
+ImportError: cannot import name 'X' from 'nautobot.Y'
+```
+
+**Query:** Prefer the deploy-time signal over log search — the [`/health/`](./health-checks.md#nautobot-http-server) readiness probe fails until all migrations have applied. For post-hoc investigation of a restart-looping pod, scope the aggregator to the first 30 seconds of each restart window.
+
+**Suggested resolution(s):** Roll back the deploy if the matching DB schema is not in place. Long-term, gate deploys on the readiness probe so a bad migration never reaches rollout completion.
+
+### Database Connectivity and Capacity
+
+**Potential Issue:** PostgreSQL is unreachable, has hit its `max_connections` ceiling, or is encountering contention (deadlocks, lock timeouts). Nautobot intentionally suppresses database errors during config bootstrap, so the *first* sign is usually a 500 traceback from a request rather than a friendly startup error.
+
+**Artifact or data:** Lines surface through Django's `db.backends` logger and Python's stdlib `OperationalError` / `ProgrammingError` propagation. Representative log lines:
+
+```text
+OperationalError: could not connect to server                # PostgreSQL unreachable
+OperationalError: FATAL: too many connections for role       # pool exhausted
+psycopg2.errors.DeadlockDetected, LockNotAvailable           # contention
+django.db.utils.InterfaceError: connection already closed    # worker fork or stale CONN_MAX_AGE
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="django.db.backends" | levelname="ERROR"
+```
+
+Add `name="django.request" AND levelname="ERROR"` as a second query to catch request-time tracebacks that surface the underlying database error.
+
+**Suggested resolution(s):** Connection-pool exhaustion is the most common case — check the connection pooler before Nautobot, see [Backing Stores — PostgreSQL connection topology](./backing-stores.md#connection-topology). For unreachable-server errors, check the PostgreSQL liveness probe in [Health Checks — PostgreSQL](./health-checks.md#postgresql). For deadlock spikes, see [Backing Stores — Key PostgreSQL Metrics](./backing-stores.md#key-postgresql-metrics) (the `pg_stat_database_deadlocks` rate).
+
+### Authentication Backend Failures
+
+**Potential Issue:** An external authentication backend (LDAP, SAML, OAuth) is misconfigured, has lost connectivity to its upstream service, or is rejecting valid credentials due to a state mismatch. Errors surface at the moment a user attempts to log in.
+
+**Artifact or data:** Errors propagate from the underlying backend module (`django_auth_ldap.backend`, `social_core`, etc.) and the auth-event line is emitted through `nautobot.auth.login`. Representative log lines:
+
+```text
+LDAP authentication error: server is unwilling to perform
+LDAP error: <LDAPError ...> while authenticating user 'alice'
+OAuth2 state mismatch: rejected callback for provider 'okta'
+SAML signature validation failed for IdP 'okta'
+django_auth_ldap group sync raised <Exception>: connection refused
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.auth.login" | levelname=~"WARNING|ERROR"
+```
+
+A spike during normal operating hours is the canonical signal of a backend outage.
+
+**Suggested resolution(s):** Pair the aggregator alert with a `health_check_*` probe on the upstream auth service if available. For OAuth providers, route the spike to the IdP team rather than to the Nautobot operator — the failure is almost always upstream.
+
+### REST API Validation and Throttling Errors
+
+**Potential Issue:** External API clients are sending malformed payloads (4xx validation), hitting unique-constraint violations, or hitting rate limits (429). These are usually client-side bugs, not Nautobot problems.
+
+**Artifact or data:** Per-request validation errors surface from the REST API serializers and propagate through `django.request` when they reach the response layer. Soft client errors (400/403/429) are visible from `nautobot.core.api.serializers` and friends. Representative log lines:
+
+```text
+ValidationError: {'parent': [ErrorDetail(string='Invalid pk ...', code='does_not_exist')]}
+IntegrityError: duplicate key value violates unique constraint "..."
+Request was throttled. Expected available in N seconds.
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name=~"nautobot\\.core\\.api\\..*" | levelname="WARNING"
+```
+
+For surfaced 4xx HTTP responses, also include `name="django.request" AND levelname="WARNING"`.
+
+**Suggested resolution(s):** 4xx classes are usually a client issue — a misconfigured external integration retrying a bad payload. For a sustained 429 rate on a specific endpoint, identify the requesting client by IP or API token and address it client-side; treat it as a Nautobot problem only when many distinct clients are throttling simultaneously.
+
+### GraphQL Execution Errors
+
+**Potential Issue:** GraphQL queries are failing schema validation, exceeding depth limits, or running slowly enough to drive elevated database time on the underlying view.
+
+**Artifact or data:** Errors are logged from `nautobot.core.graphql.schema`. Representative log lines:
+
+```text
+Cannot query field "X" on type "..."
+Variable "$id" of type "String!" used in position expecting type "ID!"
+Maximum query depth N reached
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.core.graphql.schema" | levelname="ERROR"
+```
+
+**Suggested resolution(s):** Schema validation errors are client-side — point the client at the schema introspection. For deeply-nested queries that are slow rather than malformed, enable [Request Profiling](./request-profiling.md) for the requesting user — `django-silk` captures every SQL query a single GraphQL request issues.
+
+### Object-Permission Denials
+
+**Potential Issue:** API or UI requests are being rejected by Nautobot's object-level permission system. Single occurrences are normal; a sustained spike usually indicates a misconfigured automation user.
+
+**Artifact or data:** 403s surface from `django.request` at the HTTP layer and from the Nautobot module that raised the `PermissionDenied`. Representative log lines:
+
+```text
+PermissionDenied: ...
+django.request: Forbidden: /api/dcim/devices/<id>/
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="django.request" |~ "Forbidden:"
+```
+
+**Suggested resolution(s):** Read-only users hitting write endpoints produce single occurrences that should be ignored. For a sustained spike on a specific endpoint from a single token, review the corresponding user's group memberships and object-permission constraints — the issue is almost always a misconfigured automation user, not a Nautobot bug.
+
+### Job Execution Failures
+
+**Potential Issue:** A Nautobot Job has failed, been revoked, or is stuck retrying. Job results carry both a Celery task status and an application log level — see the [`JobResult`](../../platform-functionality/jobs/models.md#job-results) model.
+
+The Celery statuses an operator is likely to encounter:
+
+| Status | Meaning |
+|---|---|
+| `PENDING` | Task is queued but no worker has picked it up yet. Long-pending tasks indicate worker shortage or queue routing issues. |
+| `RECEIVED` | A worker has picked up the task but has not started running it. |
+| `STARTED` | The task is currently executing on a worker. Visible only when `task_track_started=True` is configured. |
+| `SUCCESS` | Task finished without raising an exception. |
+| `FAILURE` | Task raised an exception. Inspect `JobResult.traceback` and `nautobot_worker_exception_jobs{exception_type=...}` to identify the class. |
+| `RETRY` | Task is being retried by Celery. Frequent retries on the same Job name suggest a transient downstream dependency is failing. |
+| `REVOKED` | Task was canceled before completion — typically because an operator hit "Revoke" in the UI or singleton-conflict resolution killed a duplicate. |
+| `IGNORED` | Task ran but its result was discarded (`ignore_result=True`). Rare in Nautobot Jobs, since results back the Job Result UI. |
+| `REJECTED` | Task was rejected by the worker (commonly via `task_reject_on_worker_lost`) and either requeued or discarded depending on broker policy. |
+
+**Artifact or data:** Representative log lines from `nautobot.extras.jobs`:
+
+```text
+Job <name> is not enabled to be run!
+Job <name> is a singleton and already running.
+The hard time limit ... is less than or equal to the soft time limit ...
+JobHook <name> is enabled, but the underlying Job implementation is missing
+```
+
+And from `nautobot.core.celery.schedulers`:
+
+```text
+Removing schedule <name> for argument deserialization error
+Disabling schedule <name> that was removed from database
+Disabling schedule <name> with missing user
+```
+
+**Query:** Prefer metrics over log text — `nautobot_worker_finished_jobs{status="FAILURE"}` and `nautobot_worker_exception_jobs{exception_type=...}` are the canonical signal; see [Prometheus Metrics](./prometheus-metrics.md). When metrics aren't available:
+
+```logql
+{app="nautobot"} | json | name="nautobot.extras.jobs" | levelname=~"ERROR|CRITICAL"
+```
+
+**Suggested resolution(s):** Inspect `JobResult.traceback` in the Job Result UI to identify the exception class. For systematic failures of a single Job, see [Celery and Jobs](./celery-jobs.md) for reliability tuning.
+
+### Celery Worker and Broker
+
+**Potential Issue:** A Celery worker has crashed, lost its broker connection, or stopped responding to control pings. Single occurrences during a Redis restart or a pod recycle are routine; sustained occurrences indicate a real problem.
+
+**Artifact or data:** Worker stdout carries the standard Celery diagnostics. Representative log lines:
+
+```text
+consumer: Cannot connect to redis://...: Connection refused.
+Trying again in N.NN seconds... (M/M)              # one or two during a Redis restart is normal
+WorkerLostError: Worker exited prematurely: signal 9 (SIGKILL)
+MissingHeartbeatException
+No celery workers running on queue <name>          # web logs this when inspect-ping fails (1 s timeout)
+```
+
+**Query:**
+
+```logql
+{app="nautobot",component="worker"} | json | levelname=~"ERROR|WARNING" |~ "WorkerLostError|MissingHeartbeatException|Cannot connect to redis"
+```
+
+**Suggested resolution(s):** Single retries during a Redis restart are routine — see [Known Noise](#known-noise) below. For sustained reconnect attempts or `WorkerLostError` patterns, see [Celery and Jobs](./celery-jobs.md) for reliability tuning.
+
+### App Initialization (Plugins)
+
+**Potential Issue:** A Nautobot App fails to register cleanly at startup — typically a filter-set field conflict, a table-column collision, or a missing attribute. Hard failures crash the process loudly (Django dies on import); soft failures are logged.
+
+**Artifact or data:** Soft failures surface from `nautobot.extras.plugins`. Representative log lines:
+
+```text
+ERROR  - There was a conflict with filter set field <name>...
+ERROR  - There was a name conflict with existing table column <name>...
+WARN   - <plugin> table extension is missing default_columns attribute
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.extras.plugins" | levelname="ERROR"
+```
+
+Scope to `ERROR` rather than `WARNING` to avoid the cosmetic `default_columns` notice — see [Known Noise](#known-noise) below.
+
+**Suggested resolution(s):** App-startup conflicts are deploy-time bugs — coordinate with the App author. For hard import failures, check the deploy log of the first restarting pod for the traceback.
+
+### Git Repository Sync
+
+**Potential Issue:** A Git repository sync (triggered by the **Git Repositories** sync action, which runs as a Job) fails to reach the remote, fails to resolve the configured branch, or fails to clone due to credentials.
+
+**Artifact or data:** Most output flows through `JobLogEntry`. The underlying utility logs to `nautobot.core.utils.git`. Representative log line:
+
+```text
+Branch <name> does not exist at <url>. <git_error>
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name="nautobot.core.utils.git" | levelname=~"WARNING|ERROR"
+```
+
+**Suggested resolution(s):** Verify the Git repository configuration (URL, branch, credentials) in the Nautobot admin UI. For connectivity issues, check the operator-network egress to the Git host.
+
+### Static and Media Storage Backend Errors
+
+**Potential Issue:** `STORAGE_BACKEND` is misconfigured, the local `MEDIA_ROOT` has become unwritable, or S3 credentials have rotated without an update. These break image attachments, exported templates, and Job-result download links.
+
+**Artifact or data:** Errors surface from Django's file-handling stack rather than from Nautobot directly. The underlying request surfaces to the user as a 500 with the traceback in `django.request`. Representative log lines:
+
+```text
+botocore.exceptions.NoCredentialsError: Unable to locate credentials
+PermissionError: [Errno 13] Permission denied: '/opt/nautobot/media/...'
+ClientError: An error occurred (AccessDenied) when calling the PutObject operation
+```
+
+**Query:**
+
+```logql
+{app="nautobot"} | json | name=~"botocore.*|django.request" | levelname="ERROR" |~ "NoCredentialsError|PermissionError|AccessDenied"
+```
+
+**Suggested resolution(s):** Verify storage backend credentials and the writability of `MEDIA_ROOT` (for filesystem backends). For S3, audit the IAM policy attached to the credentials in use.
+
+## Known Noise
+
+!!! note "Living section"
+    This list captures the routine messages we've observed in healthy deployments so far. It will grow over time as more deployments report back; if a message keeps showing up in your environment without a real underlying issue, it's a good candidate to add here.
+
+Some messages appear routinely in healthy deployments and should be excluded from alert rules:
+
+| Message / pattern | Why it's benign |
+|---|---|
+| `Cannot export Prometheus metrics from worker, no available ports in range.` | Every port in [`CELERY_WORKER_PROMETHEUS_PORTS`](./prometheus-metrics.md#enabling-worker-metrics) is taken by another process on this host. Worker-level metric export is best-effort; the web `/metrics` is unaffected. Expand the configured port range if you actually need worker counters from this host. |
+| `Deleting unmanaged (leftover?) Git repository clone at ...` | Cleanup of stale `GIT_ROOT` clones; expected after repository removal. |
+| `Substantial drift from celery@...` (Celery library) | Single occurrences during worker restart. Alert only on sustained drift. |
+| Deprecation warnings (when `LOG_DEPRECATION_WARNINGS=True`) | Pre-upgrade signal only — leave **off** in steady-state production. |
+| `Unable to find peer model ... to create GraphQL relationship` | An app declares a GraphQL relation to a model not installed in this deployment. |
+| `<plugin> table extension is missing default_columns attribute` | Cosmetic — the app author should fix it, but the UI works. |
+| `DisallowedHost: Invalid HTTP_HOST header: <hostname>` in a short burst at deploy time | Health-check probes hit while `ALLOWED_HOSTS` propagates across pods; recovers automatically within seconds of the new pod becoming reachable. |
+| `consumer: Cannot connect to redis://...: Connection refused. Trying again in N.NN seconds... (1/M)` (one or two during a Redis restart) | Celery's reconnect-with-backoff loop. Single retries are routine; alert only on sustained reconnect attempts that don't recover. |
+| `Job <name> is not enabled to be run!` (when the Job is intentionally disabled) | Job state is controlled by admins via the Job admin page; an intentional disable produces this line every time the Job would otherwise be invoked. Scope alerts to specific Job names rather than the message. |
+| `Worker pid <pid> died, exit code 0` during routine recycle | Triggered by `worker_max_tasks_per_child` or `worker_max_memory_per_child` recycling a worker. Exit code `0` is the clean-recycle signal — non-zero would be a real crash. |
+| Constance migration warnings on first boot after a Nautobot upgrade | Appear once during the upgrade as Constance adopts new settings keys; do not recur on subsequent restarts. |
+
+!!! tip
+    A useful rule of thumb: if a message appears in a healthy deployment more than once an hour, it belongs in this list — not in your alert ruleset. Anchoring queries on logger name (e.g. `logger:nautobot.extras.jobs`) plus level rather than free-text grep dramatically cuts this noise.

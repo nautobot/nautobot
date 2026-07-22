@@ -41,7 +41,7 @@ properties:
     environment_variable: "NAUTOBOT_ALLOW_REQUEST_PROFILING"
     is_constance_config: true
     see_also:
-      "Administration guide to request profiling": "../guides/request-profiling.md"
+      "Administration guide to request profiling": "../monitoring/request-profiling.md"
     type: "boolean"
     version_added: "2.2.0"
   ALLOWED_HOSTS:
@@ -1360,7 +1360,7 @@ properties:
     description: "Toggle requiring authentication to view `/metrics`."
     environment_variable: "NAUTOBOT_METRICS_AUTHENTICATED"
     see_also:
-      "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
+      "Guide to Nautobot Prometheus metrics": "../monitoring/prometheus-metrics.md"
     type: "boolean"
     version_added: "2.1.5"
   METRICS_DISABLED_APPS:
@@ -1373,7 +1373,7 @@ properties:
     items:
       type: "string"
     see_also:
-      "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
+      "Guide to Nautobot Prometheus metrics": "../monitoring/prometheus-metrics.md"
     type: "array"
     version_added: "2.2.1"
   METRICS_ENABLED:
@@ -1381,7 +1381,7 @@ properties:
     description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
     environment_variable: "NAUTOBOT_METRICS_ENABLED"
     see_also:
-      "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
+      "Guide to Nautobot Prometheus metrics": "../monitoring/prometheus-metrics.md"
     type: "boolean"
   METRICS_EXPERIMENTAL_CACHING_DURATION:
     default: 0
