@@ -1517,6 +1517,7 @@ class IPAddressRangeUIViewSet(NautobotUIViewSet):
                     "name",
                     "start_address",
                     "end_address",
+                    "size",
                     "ip_version",
                     "parent",
                     "status",
