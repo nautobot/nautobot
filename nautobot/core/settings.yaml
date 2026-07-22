@@ -1579,18 +1579,6 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
-  NAUTOBOT_EDITION:
-    default: "community"
-    description: >-
-      The installed Nautobot edition.
-    enum:
-    - "community"
-    - "professional"
-    - "enterprise"
-    environment_variable: "NAUTOBOT_EDITION"
-    is_constance_config: true
-    type: "string"
-    version_added: "3.2.0"
   NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
     type: "array"
     items:
