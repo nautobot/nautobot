@@ -352,6 +352,20 @@ http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
 
 If the parameter is omitted, all stages are returned regardless of approval status.
 
+#### View Stage Responses
+
+Responses (approvals, denials, and comments) are not a separately routable resource. They are returned as read-only nested data on the approval workflow
+stage, and are only included for users who hold the `extras.view_approvalworkflowstageresponse` permission (subject to any object-level constraints).
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=3.0; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/
+```
+
+The `responses` field in the returned stage contains the list of responses the user is permitted to see.
+
 #### Cancel Workflow
 
 ```no-highlight

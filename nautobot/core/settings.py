@@ -735,6 +735,11 @@ AUTHENTICATION_BACKENDS = [
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
 USE_TZ = True
+# Group numbers into thousands (e.g. 1,009,518) for filters that force grouping such as `intcomma`.
+# Because our FORMAT_MODULE_PATH stub proxies format lookups to settings, this would otherwise fall
+# back to Django's default of 0, which disables grouping. USE_THOUSAND_SEPARATOR remains False, so
+# general number rendering is unaffected.
+NUMBER_GROUPING = 3
 
 # WSGI
 WSGI_APPLICATION = "nautobot.core.wsgi.application"

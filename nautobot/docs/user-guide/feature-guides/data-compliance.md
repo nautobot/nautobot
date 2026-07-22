@@ -48,7 +48,17 @@ There are two options for where to include these data compliance rule classes:
 
 #### Writing Data Compliance Rules in a Remote Git Repository
 
-A Git repository can be configured to add the `data compliance rules` context to store `DataComplianceRule` classes in source control. The app looks for a folder in your repo called `custom_validators`, and any Python files within that folder containing classes that implement `DataComplianceRule` will be imported. No code within the app itself needs to be added, changed, or modified.
+A Git repository can be configured to add the `data compliance rules` context to store `DataComplianceRule` classes in source control. During the Git Repository Sync job, Nautobot looks for a folder in your repo called `custom_validators`, and any Python files within that folder containing classes that implement `DataComplianceRule` will be imported, as long as `custom_validators` contains a `__init__.py`. Another `__init__.py` must be included in the Git root folder as well, otherwise the sync job will not be able to import the data validation classes.
+
+Hence the correct/discoverable repo structure looks like this:
+
+```shell
+.
+├── __init__.py
+├── custom_validators
+│   ├── __init__.py
+│   ├── my_data_compliance_rules.py
+```
 
 Below is a template data compliance rule class that would be stored in `custom_validators/my_data_compliance_rules.py` in a remote Git repository:
 

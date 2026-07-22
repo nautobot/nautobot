@@ -169,6 +169,29 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.37 (2026-07-17)
+
+### Security in v2.4.37
+
+- [GHSA-56v6-2fhr-wxgq](https://github.com/nautobot/nautobot/security/advisories/GHSA-56v6-2fhr-wxgq) - Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated dependency `Pillow` to `>=12.3.0,<13` to mitigate multiple CVEs.
+
+### Changed in v2.4.37
+
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed removing a VRF from a Device or VirtualMachine to raise an error if that VRF is still attached to one of the interfaces.
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed attaching a VRF to a VM interface via API/ORM to raise an error if the parent Virtual Machine does not have that VRF assigned.
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Enhanced the REST API queryset optimizer to automatically pre-fetch the related objects traversed by a model's natural key to avoid N+1 queries.
+
+### Fixed in v2.4.37
+
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Fixed an N+1 query when listing Interfaces via the REST API.
+
+### Housekeeping in v2.4.37
+
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed the default `max_locks_per_transaction` for Postgres to 512 for test runs with many parallel workers.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Backported Django 6.0 fix for parallel test runs with --buffer.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
+
 ## v2.4.36 (2026-06-22)
 
 ### Security in v2.4.36
