@@ -3081,7 +3081,7 @@ class DeviceUIViewSet(NautobotUIViewSet):
         """Device module bays panel with a collapsible tree (default) and an "expand all" mode.
 
         By default only the device's top-level bays render, and nested bays load on demand via HTMX
-        (`MODULEBAY_TREE_LINK` + the `dcim:modulebay_nested-bays` action). When `?expand_all=true` is present,
+        (`MODULEBAY_TREE_LINK` + the `dcim:modulebay_nestedbays` action). When `?expand_all=true` is present,
         the panel instead renders the *entire* bay hierarchy as a single pre-order (depth-first) list,
         which the standard paginator then slices at the normal page size (so page 1 shows the first root
         and its descendants before any later root). The "Expand all"/"Collapse all" toggle lives in the
@@ -5171,14 +5171,13 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
     @action(
         detail=True,
         custom_view_base_action="view",
+        url_path="nested-bays",
+        url_name="nestedbays"
     )
     def nested_bays(self, request, *args, **kwargs):
         """Render the child module bays of this bay's installed module, for HTMX expandable-tree rows."""
         instance = self.get_object()
         children = instance.installed_child_bays.restrict(request.user, "view").prefetch_related("installed_module")
-        return_url = request.GET.get("return_url", None)
-        saved_view_pk = request.GET.get("saved_view", None)
-        table_changes_pending = request.GET.get("table_changes_pending", False)
         # Depth (relative to the display root) at which these child rows should be indented; the expanding
         # row's tree link always passes its own depth + 1. This endpoint is only reached via that HTMX link,
         # so a missing/invalid value (e.g. a direct hit, which renders no usable standalone page) is simply
@@ -5186,8 +5185,6 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
         tree_depth = int(request.GET.get("tree_depth", 0))
         children_table = tables.DeviceModuleBayTable(
             children,
-            table_changes_pending=table_changes_pending,
-            saved_view=SavedView.objects.get(pk=saved_view_pk) if saved_view_pk else None,
             user=request.user,
             hide_hierarchy_ui=False,
             configurable=True,
@@ -5205,8 +5202,7 @@ class ModuleBayUIViewSet(ModuleBayCommonViewSetMixin, NautobotUIViewSet, ObjectB
             {
                 "instance": instance,
                 "request": request,
-                "return_url": return_url,
-                "next_page_url": reverse("dcim:modulebay_nested-bays", kwargs={"pk": instance.pk}),
+                "next_page_url": reverse("dcim:modulebay_nestedbays", kwargs={"pk": instance.pk}),
                 "table_inc_template": "components/htmx/subtree_children.html",
                 "template": "panel_table.html",
                 "table": children_table,

@@ -2736,7 +2736,7 @@ class DeviceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn("Test View Module Bay 1", response_body)
         self.assertNotIn("Test View Nested Module Bay 1", response_body)
         # The bay with an installed module exposes an expand button targeting the `children` action.
-        children_url = reverse("dcim:modulebay_nested-bays", kwargs={"pk": nested_parent_bay.pk})
+        children_url = reverse("dcim:modulebay_nestedbays", kwargs={"pk": nested_parent_bay.pk})
         self.assertIn(children_url, response_body)
 
         # The panel header badge reports the full count of module bays at all levels (4), not just the
@@ -3388,7 +3388,7 @@ class ModuleTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertIn("Module View Bay A", response_body)
         self.assertNotIn("Module View Nested Bay", response_body)
         # The bay with an installed submodule exposes an expand button targeting the `children` action.
-        children_url = reverse("dcim:modulebay_nested-bays", kwargs={"pk": bay.pk})
+        children_url = reverse("dcim:modulebay_nestedbays", kwargs={"pk": bay.pk})
         self.assertIn(children_url, response_body)
 
         # The `children` action returns the submodule's nested module bay.
