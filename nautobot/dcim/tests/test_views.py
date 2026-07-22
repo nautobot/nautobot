@@ -3966,6 +3966,17 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         for tagged_vlan in tagged_vlans:
             self.assertBodyContains(response, tagged_vlan.get_absolute_url())
 
+    def test_interface_detail_renders_mac_address_as_monospace(self):
+        """A set MAC address is rendered wrapped in a monospace span in the detail view."""
+        interface = Interface.objects.first()
+        interface.mac_address = "01:02:03:04:05:06"
+        interface.validated_save()
+
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(interface.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, f'<span class="font-monospace">{interface.mac_address}</span>')
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_interface_detail_shows_all_breakout_cable_peers(self):
         """All far-end terminations of a multi-termination (breakout) cable must appear on the detail view.
