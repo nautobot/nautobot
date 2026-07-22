@@ -1,0 +1,1 @@
+Added the ability to set Django email settings via NAUTOBOT_EMAIL_* environment variables.

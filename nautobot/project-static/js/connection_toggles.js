@@ -3,13 +3,14 @@ function setLabel(elem, icon, text) {
     if (icon) {
         elem.appendChild(icon);
     }
-    elem.appendChild(document.createTextNode(' ' + text));
+    elem.append(text);
 }
 
 function toggleConnection(elem) {
     const url = nautobot_api_path + "dcim/cables/" + elem.getAttribute('data') + "/";
-    const isConnected = elem.classList.contains('connected');
-    const newStatus = isConnected ? 'Planned' : 'Connected';
+    const wasConnected = elem.classList.contains('connected');
+    const oldStatus = wasConnected ? 'Connected' : 'Planned';
+    const newStatus = wasConnected ? 'Planned' : 'Connected';
 
     fetch(url, {
         method: 'PATCH',
@@ -25,40 +26,54 @@ function toggleConnection(elem) {
         }
         const row = elem.closest('tr');
         const icon = elem.querySelector(':scope > span');
-        if (isConnected) {
-            if (row) {
-                row.classList.remove('table-success');
-                row.classList.add('table-info');
-            }
-            elem.classList.remove('connected', 'text-warning');
-            elem.classList.add('text-success');
-            if (icon) {
-                icon.classList.remove('mdi-lan-pending');
-                icon.classList.add('mdi-lan-connect');
-            }
-            setLabel(elem, icon, 'Mark cable as Connected');
-        } else {
-            if (row) {
-                row.classList.remove('table-info');
-                row.classList.add('table-success');
-            }
-            elem.classList.remove('text-success');
-            elem.classList.add('connected', 'text-warning');
-            if (icon) {
-                icon.classList.remove('mdi-lan-connect');
-                icon.classList.add('mdi-lan-pending');
-            }
-            setLabel(elem, icon, 'Mark cable as Planned');
+        if (row) {
+            row.classList.toggle('table-success', newStatus === 'Connected');
+            row.classList.toggle('table-info', newStatus === 'Planned');
+        }
+        elem.classList.toggle('connected', newStatus === 'Connected');
+        elem.classList.toggle('text-warning', newStatus === 'Connected');
+        elem.classList.toggle('text-success', newStatus === 'Planned');
+        if (icon) {
+            icon.classList.toggle('mdi-lan-connect', newStatus === 'Planned');
+            icon.classList.toggle('mdi-lan-pending', newStatus === 'Connected');
+        }
+        setLabel(elem, icon, `Mark cable as ${oldStatus}`);
+    });
+    return false;
+}
+
+function disconnectTermination(elem) {
+    // Detach a single termination from its cable. The post_delete signal handler on
+    // CableToCableTermination rebuilds affected CablePaths.
+    fetch(nautobot_api_path + "dcim/cables-to-cable-terminations/" + elem.getAttribute('data') + "/", {
+        method: 'DELETE',
+        headers: {
+            'Accept': 'application/json',
+            'X-CSRFToken': nautobot_csrf_token,
+        },
+    }).then(function(response) {
+        if (response.ok) {
+            window.location.reload();
         }
     });
     return false;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.cable-toggle').forEach(function(elem) {
-        elem.addEventListener('click', function(event) {
-            event.preventDefault();
-            toggleConnection(elem);
-        });
-    });
+// Delegate from `document` rather than binding each `.cable-toggle`/`.cable-disconnect` element
+// directly: object-list tables (and UIViewSet list views) render their rows via HTMX, replacing
+// the table after page load, so per-element listeners bound on `DOMContentLoaded` would be lost on
+// every swap. A single delegated listener keeps working for swapped-in rows. (Matches the
+// delegation pattern already used in cable_update.html and generic/object_list.html.)
+document.addEventListener('click', function(event) {
+    const toggle = event.target.closest('.cable-toggle');
+    if (toggle) {
+        event.preventDefault();
+        toggleConnection(toggle);
+        return;
+    }
+    const disconnect = event.target.closest('.cable-disconnect');
+    if (disconnect) {
+        event.preventDefault();
+        disconnectTermination(disconnect);
+    }
 });

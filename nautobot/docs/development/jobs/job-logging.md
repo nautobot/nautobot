@@ -119,6 +119,10 @@ If `grouping` is not specified, Nautobot uses the current function name as a def
 
 Log messages can include Markdown formatting, and [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown) is also supported for added emphasis in the UI.
 
+## Tracing and Telemetry
+
+When OpenTelemetry instrumentation is enabled, a Job runs inside a Celery task span and messages logged through `self.logger` are automatically correlated to the active trace. To add your own spans around phases of a Job's `run()` - so you can measure where its time goes - see [Instrumenting Your App with OpenTelemetry](../apps/api/platform-features/opentelemetry.md).
+
 ## Sanitizing Log Messages
 
 As a security precaution, Nautobot passes all log messages through `nautobot.core.utils.logging.sanitize()` to remove sensitive information like passwords or tokens. You should still avoid logging such values yourself, as this redaction is best-effort. The sanitization behavior can be customized using [`settings.SANITIZER_PATTERNS`](../../user-guide/administration/configuration/settings.md#sanitizer_patterns).

@@ -1,6 +1,7 @@
 import contextlib
 import datetime
 import random
+from textwrap import dedent
 import types
 from unittest import skip, TestCase as UnitTestTestCase
 import uuid
@@ -983,7 +984,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -993,7 +994,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             status=interface_status,
             role=interface_role,
@@ -1073,7 +1074,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface21 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device2,
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -1082,7 +1083,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device2,
             mac_address="00:12:12:12:12:12",
             status=interface_status,
@@ -1106,12 +1107,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface31 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device3,
             status=interface_status,
             role=interface_role,
         )
-        cls.interface31 = Interface.objects.create(
+        cls.interface32 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device3,
@@ -2328,26 +2329,28 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
-        query_pagination = """\
-query {
-    interfaces(limit: 2, offset: 3) {
-        id
-        name
-        device {
-          name
-        }
-    }
-}"""
-        query_all = """\
-query {
-    interfaces {
-        id
-        name
-        device {
-          name
-        }
-    }
-}"""
+        offset = 3
+        limit = 2
+        query_pagination = dedent("""\
+            query {
+                interfaces(limit: %s, offset: %s) {
+                    id
+                    name
+                    device {
+                    name
+                    }
+                }
+            }""") % (limit, offset)
+        query_all = dedent("""\
+            query {
+                interfaces {
+                    id
+                    name
+                    device {
+                    name
+                    }
+                }
+            }""")
 
         result_1 = self.execute_query(query_pagination)
         self.assertEqual(len(result_1.data.get("interfaces", [])), 2)
@@ -2355,9 +2358,10 @@ query {
         # With the limit and skip implemented in the GQL query, this should return Device 2 (Int1) and
         # Device 3 (Int2). This test will validate that the correct device/interface combinations are returned.
         device_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
-        self.assertEqual(sorted(device_names), ["Device 2", "Device 3"])
+        exp_order = list(Interface.objects.only("id", "name", "device")[offset : offset + limit])
+        self.assertEqual(device_names, [i.device.name for i in exp_order])
         interface_names = [item["name"] for item in result_1.data.get("interfaces", [])]
-        self.assertEqual(interface_names, ["Int2", "Int1"])
+        self.assertEqual(interface_names, [i.name for i in exp_order])
 
         result_2 = self.execute_query(query_all)
         self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())

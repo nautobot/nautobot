@@ -969,6 +969,54 @@ class DataTablePanel(Panel):
         }
 
 
+class ConnectionPanel(Panel):
+    """
+    Panel rendering the cable/connection detail of a `CableTermination` (its cable, all cable peers,
+    and all connected endpoints), correctly handling multi-termination ("breakout") cables.
+
+    Renders the shared `dcim/inc/connection_body.html` fragment with `object` set to the termination,
+    so the same markup is used here and in the legacy object-retrieve detail templates.
+    """
+
+    body_content_template_path = "dcim/inc/connection_body.html"
+
+    def __init__(self, *, trace_url_name, context_object_key="object", require_location=False, **kwargs):
+        """
+        Instantiate a ConnectionPanel.
+
+        Keyword Args:
+            trace_url_name (str): The trace view name for this termination type
+                (e.g. 'dcim:interface_trace', 'circuits:circuittermination_trace').
+            context_object_key (str): The render-context key holding the termination to render.
+                Defaults to "object" (the detail-view object); set to e.g. "circuit_termination_a"
+                when the page object is not itself the termination.
+            require_location (bool): If True, the panel is hidden when the termination has no
+                `location` (matches the legacy circuit-termination behavior).
+        """
+        self.trace_url_name = trace_url_name
+        self.context_object_key = context_object_key
+        self.require_location = require_location
+        kwargs.setdefault("label", "Connections")
+        super().__init__(**kwargs)
+
+    def should_render(self, context: Context):
+        termination = context.get(self.context_object_key)
+        if termination is None:
+            return False
+        if self.require_location and getattr(termination, "location", None) is None:
+            return False
+        return getattr(termination, "is_connectable", True)
+
+    def render_body_content(self, context: Context):
+        termination = context.get(self.context_object_key)
+        return render_component_template(
+            self.body_content_template_path,
+            context,
+            object=termination,
+            trace_url_name=self.trace_url_name,
+        )
+
+
 class ObjectsTablePanel(Panel):
     """A panel that renders a Table of objects (typically related objects, rather than the "main" object of a view).
     Has built-in pagination support and "Add" button at bottom of the Table.
@@ -1113,8 +1161,15 @@ class ObjectsTablePanel(Panel):
             )
         if self.table_filter and self.table_attribute:
             raise ValueError("You can only specify either `table_filter` or `table_attribute`")
-        if self.table_class and not (self.table_filter or self.table_attribute):
-            raise ValueError("You must specify either `table_filter` or `table_attribute`")
+        # A subclass that overrides `get_table_data_queryset()` supplies its own data source and so
+        # does not require `table_filter`/`table_attribute`.
+        overrides_table_data_queryset = (
+            type(self).get_table_data_queryset is not ObjectsTablePanel.get_table_data_queryset
+        )
+        if self.table_class and not (self.table_filter or self.table_attribute or overrides_table_data_queryset):
+            raise ValueError(
+                "You must specify either `table_filter` or `table_attribute`, or override `get_table_data_queryset()`"
+            )
         if self.table_attribute and not self.related_field_name:
             raise ValueError("You must provide a `related_field_name` when specifying `table_attribute`")
 
@@ -1214,6 +1269,35 @@ class ObjectsTablePanel(Panel):
             "utilities/templatetags/table_config_form.html", table_config_form(context["body_content_table"])
         )
 
+    def get_table_data_queryset(self, instance, request):
+        """Return the base queryset used to populate this panel's table.
+
+        This is the queryset *before* `.restrict()`, `select_related`, `prefetch_related`, `order_by`,
+        and `distinct` are applied by `get_extra_context()`. The default implementation derives it from
+        `table_attribute` or `table_filter`. Override this to source the table's data differently (for
+        example, from a relationship that isn't expressible as a simple `table_filter`).
+
+        Args:
+            instance (Model): The detail-view object that this panel belongs to.
+            request (Request): The current request.
+
+        Returns:
+            (QuerySet): The base queryset of `self.table_class.Meta.model` objects to display.
+        """
+        body_content_table_model = self.table_class.Meta.model
+        if self.table_attribute:
+            return getattr(instance, self.table_attribute)
+        if isinstance(self.table_filter, str):
+            table_filters = [self.table_filter]
+        elif isinstance(self.table_filter, list):
+            table_filters = self.table_filter
+        else:
+            table_filters = []
+        query = Q()
+        for table_filter in table_filters:
+            query = query | Q(**{table_filter: instance})
+        return body_content_table_model.objects.filter(query)
+
     def get_extra_context(self, context: Context):
         """Add additional context for rendering the table panel.
 
@@ -1230,20 +1314,7 @@ class ObjectsTablePanel(Panel):
             body_content_table_model = body_content_table_class.Meta.model
             instance = get_obj_from_context(context)
 
-            if self.table_attribute:
-                body_content_table_queryset = getattr(instance, self.table_attribute)
-            else:
-                if isinstance(self.table_filter, str):
-                    table_filters = [self.table_filter]
-                elif isinstance(self.table_filter, list):
-                    table_filters = self.table_filter
-                else:
-                    table_filters = []
-                query = Q()
-                for table_filter in table_filters:
-                    query = query | Q(**{table_filter: instance})
-                body_content_table_queryset = body_content_table_model.objects.filter(query)
-
+            body_content_table_queryset = self.get_table_data_queryset(instance, request)
             body_content_table_queryset = body_content_table_queryset.restrict(request.user, "view")
             if self.select_related_fields:
                 body_content_table_queryset = body_content_table_queryset.select_related(*self.select_related_fields)
@@ -1350,6 +1421,49 @@ class ObjectsTablePanel(Panel):
             "include_paginator": self.include_paginator,
             "show_table_config_button": self.show_table_config_button,  # unused now in core but kept for compatibility
         }
+
+
+class ConnectedEndpointsPanel(ObjectsTablePanel):
+    """Panel listing the connected endpoints *of a single type* reachable from a `PathEndpoint`.
+
+    Sources its table data from the termination's `CablePaths` (one per breakout lane for a breakout
+    cable), keeping only the resolved destinations whose model matches this panel's `table_class`, so
+    that multi-termination ("breakout") cables show *every* connected endpoint of that type. Declare
+    one panel per compatible endpoint type; each renders nothing when there are no connected endpoints
+    of its type.
+    """
+
+    def __init__(self, **kwargs):
+        """Instantiate a ConnectedEndpointsPanel.
+
+        Keyword Args:
+            table_class (obj): The list table for the endpoint type to display, e.g. `InterfaceTable`.
+
+        See `ObjectsTablePanel` for additional supported keyword arguments.
+        """
+        # Connected endpoints have no natural "list all" route or "add" action from this context.
+        kwargs.setdefault("enable_related_link", False)
+        kwargs.setdefault("add_button_route", None)
+        super().__init__(**kwargs)
+
+    def _connected_endpoints_queryset(self, termination):
+        """Queryset of this panel's endpoint type that are connected to `termination` via its CablePaths."""
+        model = self.table_class.Meta.model
+        cable_paths = getattr(termination, "cable_paths", None)
+        if cable_paths is None:
+            return model.objects.none()
+        destination_type = ContentType.objects.get_for_model(model)
+        destination_ids = cable_paths.filter(destination_type=destination_type).values_list("destination_id", flat=True)
+        return model.objects.filter(pk__in=destination_ids)
+
+    def get_table_data_queryset(self, instance, request):
+        return self._connected_endpoints_queryset(instance)
+
+    def should_render(self, context: Context):
+        if not super().should_render(context):
+            return False
+        termination = get_obj_from_context(context)
+        return termination is not None and self._connected_endpoints_queryset(termination).exists()
 
 
 class KeyValueTablePanel(Panel):
@@ -1557,21 +1671,15 @@ class KeyValueTablePanel(Panel):
                 if value_display is HTML_NONE:
                     value_tag = value_display
                 else:
+                    # key might not be globally unique in a page, but is unique to a panel;
+                    # Hence we add the panel label to make it globally unique to the page
+                    value_id = f"{panel_label}_value_{slugify(key)}"
+                    copy_button = render_to_string("buttons/copy.html", {"target": f"#{value_id}", "label": "Copy"})
                     value_tag = format_html(
-                        """
-                            <span>
-                                <span id="{unique_id}_value_{key}">{value}</span>
-                                <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#{unique_id}_value_{key}">
-                                    <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-                                    <span class="visually-hidden">Copy</span>
-                                </button>
-                            </span>
-                        """,
-                        # key might not be globally unique in a page, but is unique to a panel;
-                        # Hence we add the panel label to make it globally unique to the page
-                        unique_id=panel_label,
-                        key=slugify(key),
+                        '<span><span id="{value_id}">{value}</span>{copy_button}</span>',
+                        value_id=value_id,
                         value=value_display,
+                        copy_button=copy_button,
                     )
                 result += format_html("<tr><td>{key}</td><td>{value}</td></tr>", key=key_display, value=value_tag)
 
@@ -2308,6 +2416,14 @@ class _ObjectComputedFieldsPanel(GroupedKeyValueTablePanel):
         """Render the computed field's description as well as its label."""
         return format_html('<span title="{}">{}</span>', key.description, key)
 
+    def render_value(self, key, value, context: Context):
+        """Render a given computed field value appropriately depending on what output type the computed field has."""
+        # TODO: this logic could be unified with ComputedFieldColumn.render()?
+        cf = key
+        if cf.output_type == CustomFieldTypeChoices.TYPE_MARKDOWN and value:
+            return render_markdown(value)
+        return super().render_value(key, value, context)
+
 
 class _ObjectRelationshipsPanel(KeyValueTablePanel):
     """A panel that renders a table of object "custom" relationships."""
@@ -2617,6 +2733,18 @@ class _ObjectDetailGroupsTab(Tab):
         )
 
 
+class _ObjectMetadataTablePanel(ObjectsTablePanel):
+    """Custom table panel for ObjectMetadata that includes assigned_object_type in the add URL."""
+
+    def _get_table_add_url(self, context: Context):
+        url = super()._get_table_add_url(context)
+        if url:
+            obj = get_obj_from_context(context)
+            content_type = ContentType.objects.get_for_model(obj)
+            url += f"&assigned_object_type={content_type.pk}"
+        return url
+
+
 @dataclass
 class _ObjectDetailMetadataTab(Tab):
     """Built-in class for a Tab displaying information about associated object metadata."""
@@ -2630,13 +2758,12 @@ class _ObjectDetailMetadataTab(Tab):
         super().__init__(**kwargs)
         if not self.panels:
             self.panels = (
-                ObjectsTablePanel(
+                _ObjectMetadataTablePanel(
                     weight=100,
                     table_class=ObjectMetadataTable,
                     table_attribute="associated_object_metadata",
                     order_by_fields=["metadata_type", "scoped_fields"],
                     exclude_columns=["assigned_object"],
-                    add_button_route=None,
                     related_field_name="assigned_object_id",
                     table_title="Object Metadata",
                 ),
@@ -2646,7 +2773,7 @@ class _ObjectDetailMetadataTab(Tab):
         if not super().should_render(context):
             return False
         obj = get_obj_from_context(context)
-        return getattr(obj, "is_metadata_associable_model", False) and obj.associated_object_metadata.exists()
+        return getattr(obj, "is_metadata_associable_model", False)
 
     def render_label(self, context: Context):
         return format_html(

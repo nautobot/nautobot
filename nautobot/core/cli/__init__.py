@@ -277,6 +277,16 @@ def main():
 
     # If we get here, it's a regular Django management command - so load in the nautobot_config.py then hand off
     load_settings(args.config_path)
+
+    # Read the flag from the loaded nautobot_config module (registered in sys.modules by load_settings)
+    # rather than nautobot.core.settings, so an OTEL_PYTHON_DJANGO_INSTRUMENT override in nautobot_config.py
+    # is honored, not just the env-var default.
+    nautobot_config = sys.modules["nautobot_config"]
+    if nautobot_config.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        from nautobot.core.cli.opentelemetry import instrument
+
+        instrument()
+
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 
