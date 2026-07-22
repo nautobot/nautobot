@@ -147,6 +147,13 @@ dcim:
   - fields:
     - description
     - id
+    - manufacturer__name
+    - name
+    - part_number
+    name: Cable Type
+  - fields:
+    - description
+    - id
     - label
     - name
     name: Console Port
@@ -692,6 +699,11 @@ ipam:
     - interface__name
     - vm_interface__name
     name: IP Address Assignment
+  - fields:
+    - description
+    - id
+    - name
+    name: IP Address Range
   - fields:
     - id
     - name
