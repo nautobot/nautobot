@@ -2710,6 +2710,44 @@ class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
         with self.assertRaisesRegex(ValidationError, "overlaps with child Prefix"):
             ip_range.validated_save()
 
+    def test_size_is_readonly(self):
+        """Check ipv4 inner octet size is correct."""
+        ip_range = IPAddressRange(start_address="10.0.0.10", end_address="10.0.0.20")
+        self.assertRaises(AttributeError, lambda: setattr(ip_range, "size", 100))
+
+    def test_size_ipv4_inner_octect_range(self):
+        """Check ipv4 inner octet size is correct."""
+        ip_range = IPAddressRange(start_address="10.0.0.10", end_address="10.0.0.20")
+        self.assertEqual(ip_range.size, 11)
+
+    def test_size_ipv4_single_address_range(self):
+        """Check single ip address range is possible."""
+        ip_range = IPAddressRange(start_address="10.0.0.50", end_address="10.0.0.50")
+        self.assertEqual(ip_range.size, 1)
+
+    def test_size_ipv4_range_crossing_octet_boundary(self):
+        """Check ipv4 calculates correctly across octet boundary."""
+        ip_range = IPAddressRange(start_address="10.0.1.0", end_address="10.0.4.255")
+        self.assertEqual(ip_range.size, 1024)
+
+    def test_size_ipv6_inner_hextet_range(self):
+        """Check ipv6  inner octect size is correct"""
+        ip_range = IPAddressRange(start_address="2001:db8:abcd:50:0:0:0:1", end_address="2001:db8:abcd:50:0:0:0:ffff")
+        self.assertEqual(ip_range.size, 65535)
+
+    def test_size_ipv6_compressed_notation(self):
+        """Check ipv6 size is calculated correctly when compression notation is used."""
+        compressed = IPAddressRange(start_address="2001:db8:abcd::1", end_address="2001:db8:abcd::2:0")
+        uncompressed = IPAddressRange(start_address="2001:db8:abcd:0:0:0:0:1", end_address="2001:db8:abcd:0:0:0:2:0")
+        self.assertEqual(compressed.size, 131072)
+        self.assertEqual(compressed.size, uncompressed.size)
+
+    def test_size_none_when_endpoints_unset(self):
+        """size returns None when either host is missing (guard clause in the property)."""
+        self.assertIsNone(IPAddressRange().size)
+        self.assertIsNone(IPAddressRange(start_address="10.0.0.10").size)
+        self.assertIsNone(IPAddressRange(end_address="10.0.0.10").size)
+
     def test_get_utilization_no_ips(self):
         """Empty range: no addresses occupied."""
         ip_range = IPAddressRange.objects.create(

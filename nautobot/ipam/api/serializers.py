@@ -359,6 +359,7 @@ class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     namespace = NautobotHyperlinkedRelatedField(
         view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
     )
+    size = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = IPAddressRange
