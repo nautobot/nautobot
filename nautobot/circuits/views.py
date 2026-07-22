@@ -170,6 +170,10 @@ class ProviderUIViewSet(NautobotUIViewSet):
                 section=SectionChoices.LEFT_HALF,
                 weight=100,
                 fields="__all__",
+                value_transforms={
+                    "noc_contact": [helpers.render_markdown, helpers.placeholder],
+                    "admin_contact": [helpers.render_markdown, helpers.placeholder],
+                },
             ),
             ObjectsTablePanel(
                 weight=200,
