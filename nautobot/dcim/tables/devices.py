@@ -54,6 +54,7 @@ from .template_code import (
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
     MODULEBAY_BUTTONS,
+    MODULEBAY_TREE_LINK,
     PARENT_DEVICE,
     PATHENDPOINT,
     TREE_LINK,
@@ -1138,12 +1139,12 @@ class DeviceDeviceBayTable(DeviceBayTable):
 
 
 class DeviceModuleBayTable(ModuleBayTable):
-    name = DeviceComponentNameColumn(
-        modelname="modulebay",
-        template_code=(
-            '<span class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}'
-            '"></span> <a href="{{ record.get_absolute_url }}">{{ value }}</a>'
-        ),
+    # Hierarchical tree link with an HTMX expand button; nested bays are loaded on demand via the
+    # `dcim:modulebay_nestedbays` action. Falls back to a plain icon+link when `hide_hierarchy_ui` is set.
+    name = tables.TemplateColumn(
+        template_code=MODULEBAY_TREE_LINK,
+        order_by=("_name",),
+        attrs={"td": {"class": "nb-tree-element text-nowrap", "data-pk": lambda record: str(record.pk)}},
     )
     module_family = tables.Column(linkify=True, verbose_name="Family")
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
