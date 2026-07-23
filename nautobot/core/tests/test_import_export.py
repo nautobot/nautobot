@@ -22,10 +22,12 @@ Lower-level serializer/parser unit tests for CSV live in `test_csv.py` / `test_a
 management-command round-trip lives in `test_commands.py`.
 """
 
+import codecs
 import csv
 from io import StringIO
 import json
 from pathlib import Path
+from unittest import expectedFailure, skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
@@ -41,16 +43,26 @@ from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS, CSV_NULL_
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.jobs.import_utils import detect_import_format
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer
+from nautobot.dcim.api.serializers import DeviceSerializer
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import ExportTemplate, FileProxy, JobLogEntry, SavedView, Status
+from nautobot.extras.models import (
+    Contact,
+    ContactAssociation,
+    ExportTemplate,
+    FileProxy,
+    JobLogEntry,
+    Role,
+    SavedView,
+    Status,
+)
 from nautobot.ipam.models import Prefix
+from nautobot.users.models import ObjectPermission
+
 
 # ===========================================================================
 # Layer 1c — shared pure functions (format-agnostic core, no DB)
 # ===========================================================================
-
-
 class NestFlatDictTests(SimpleTestCase):
     """`nest_flat_dict` converts flat `a__b` keys to nested dicts (used by both export and import)."""
 
@@ -151,6 +163,70 @@ class PruneMissingReferencesTests(SimpleTestCase):
         )
 
 
+class ImportDocumentTests(SimpleTestCase):
+    """`build_import_document` (writer) and `unwrap_document` (reader) share one wire format."""
+
+    def test_core_document__build(self):
+        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
+        self.assertEqual(list(doc.keys()), ["nautobot_import", "model", "match_fields", "records"])
+        self.assertEqual(doc["nautobot_import"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(doc["model"], "dcim.manufacturer")
+        self.assertEqual(doc["match_fields"], ["name"])
+        self.assertEqual(doc["records"], [{"name": "Cisco"}])
+
+    def test_core_document__build_omits_empty_match_fields(self):
+        self.assertNotIn("match_fields", build_import_document("dcim.manufacturer", [{"name": "Cisco"}]))
+
+    def test_core_document__unwrap_envelope(self):
+        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
+        metadata, records = ImportDocumentParserMixin.unwrap_document(doc)
+        self.assertEqual(metadata["model"], "dcim.manufacturer")
+        self.assertEqual(metadata["match_fields"], ["name"])
+        self.assertEqual(records, [{"name": "Cisco"}])
+
+    def test_core_document__unwrap_bare_list(self):
+        metadata, records = ImportDocumentParserMixin.unwrap_document([{"name": "Cisco"}])
+        self.assertEqual(metadata, {})
+        self.assertEqual(records, [{"name": "Cisco"}])
+
+    def test_core_document__unwrap_bad_version(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"nautobot_import": "999", "records": []})
+
+    def test_core_document__unwrap_mapping_without_records(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"model": "dcim.manufacturer"})
+
+    def test_core_document__unwrap_records_not_a_list(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"records": {"not": "a list"}})
+
+
+class DetectImportFormatTests(SimpleTestCase):
+    """`detect_import_format` sniffs by filename first, then content, else CSV."""
+
+    def test_core_detect__by_extension(self):
+        self.assertEqual(detect_import_format(filename="x.json"), "json")
+        self.assertEqual(detect_import_format(filename="x.yaml"), "yaml")
+        self.assertEqual(detect_import_format(filename="x.yml"), "yaml")
+        self.assertEqual(detect_import_format(filename="x.csv"), "csv")
+
+    def test_core_detect__by_content_json(self):
+        self.assertEqual(detect_import_format(text='{"records": []}'), "json")
+        self.assertEqual(detect_import_format(text="[{}]"), "json")
+
+    def test_core_detect__by_content_yaml(self):
+        self.assertEqual(detect_import_format(text="---\nname: x"), "yaml")
+        self.assertEqual(detect_import_format(text="nautobot_import: '1'\nrecords: []"), "yaml")
+
+    def test_core_detect__default_csv(self):
+        self.assertEqual(detect_import_format(text="name,color\nx,111111"), "csv")
+        self.assertEqual(detect_import_format(), "csv")
+
+
+# ===========================================================================
+# Shared base — the run/read/assert cadence for job-backed tests
+# ===========================================================================
 class ImportExportJobTestCase(TransactionTestCase):
     """Shared fixtures + the setup→run→assert cadence for the ExportObjectList / ImportObjects jobs."""
 
@@ -613,71 +689,226 @@ class ExportResultModalTests(ImportExportJobTestCase):
 
 
 # ===========================================================================
-# Import — document wire format & format detection (pure)
+# Layer 1b — core import resolution (per field type)
 # ===========================================================================
-class ImportDocumentTests(SimpleTestCase):
-    """`build_import_document` (writer) and `unwrap_document` (reader) share one wire format."""
+class CoreImportResolveTests(ImportExportJobTestCase):
+    def test_core_import__m2m_ct(self):
+        """A CSV with a content_types (M2M to ContentType) column creates records with the relations set."""
+        job_result = self.run_import(self.csv_data)
+        self.assertNoIssues(job_result)
+        self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
 
-    def test_core_document__build(self):
-        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
-        self.assertEqual(list(doc.keys()), ["nautobot_import", "model", "match_fields", "records"])
-        self.assertEqual(doc["nautobot_import"], IMPORT_DOCUMENT_VERSION)
-        self.assertEqual(doc["model"], "dcim.manufacturer")
-        self.assertEqual(doc["match_fields"], ["name"])
-        self.assertEqual(doc["records"], [{"name": "Cisco"}])
+    def test_core_import__cf(self):
+        """A custom-field value round-trips: importable as cf_<key> and exportable as a cf_<key> column."""
+        from nautobot.extras.choices import CustomFieldTypeChoices
+        from nautobot.extras.models import CustomField
 
-    def test_core_document__build_omits_empty_match_fields(self):
-        self.assertNotIn("match_fields", build_import_document("dcim.manufacturer", [{"name": "Cisco"}]))
+        cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, key="test_ie_cf", label="Test IE CF")
+        cf.content_types.set([ContentType.objects.get_for_model(Status)])
+        status = self.create_status(name="test_cf_status", color="111111")
 
-    def test_core_document__unwrap_envelope(self):
-        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
-        metadata, records = ImportDocumentParserMixin.unwrap_document(doc)
-        self.assertEqual(metadata["model"], "dcim.manufacturer")
-        self.assertEqual(metadata["match_fields"], ["name"])
-        self.assertEqual(records, [{"name": "Cisco"}])
+        self.run_import("name,cf_test_ie_cf\ntest_cf_status,hello-cf", match_fields="name")
+        status.refresh_from_db()
+        self.assertEqual(status.cf["test_ie_cf"], "hello-cf")
 
-    def test_core_document__unwrap_bare_list(self):
-        metadata, records = ImportDocumentParserMixin.unwrap_document([{"name": "Cisco"}])
-        self.assertEqual(metadata, {})
-        self.assertEqual(records, [{"name": "Cisco"}])
+        text = self.export_text(self.run_export(query_string="name=test_cf_status", export_fields="name,cf_test_ie_cf"))
+        self.assertIn("cf_test_ie_cf", text)
+        self.assertIn("hello-cf", text)
 
-    def test_core_document__unwrap_bad_version(self):
-        with self.assertRaises(ParseError):
-            ImportDocumentParserMixin.unwrap_document({"nautobot_import": "999", "records": []})
+    def test_core_import__gfk(self):
+        """A GFK-backed association (ContactAssociation) resolves its generic target and related keys."""
+        self.add_permissions(
+            "dcim.view_locationtype",
+            "extras.view_status",
+            "dcim.view_location",
+            "extras.add_role",
+            "extras.add_contact",
+        )
+        self.run_import("name\nContactAssignmentImportTestLocationType", model=LocationType)
+        self.assertEqual(LocationType.objects.filter(name="ContactAssignmentImportTestLocationType").count(), 1)
 
-    def test_core_document__unwrap_mapping_without_records(self):
-        with self.assertRaises(ParseError):
-            ImportDocumentParserMixin.unwrap_document({"model": "dcim.manufacturer"})
+        self.run_import(
+            "\n".join(
+                [
+                    "location_type__name,name,status__name",
+                    "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation1,Active",
+                    "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation2,Active",
+                ]
+            ),
+            model=Location,
+        )
+        self.assertEqual(
+            Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType").count(), 2
+        )
 
-    def test_core_document__unwrap_records_not_a_list(self):
-        with self.assertRaises(ParseError):
-            ImportDocumentParserMixin.unwrap_document({"records": {"not": "a list"}})
+        self.run_import("name,email\nBob-ContactAssignmentImportTestLocation,bob@example.com", model=Contact)
+        self.assertEqual(Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count(), 1)
 
+        self.run_import(
+            "name,content_types\nContactAssignmentImportTestLocation-On Site,extras.contactassociation", model=Role
+        )
+        self.assertEqual(Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count(), 1)
 
-class DetectImportFormatTests(SimpleTestCase):
-    """`detect_import_format` sniffs by filename first, then content, else CSV."""
-
-    def test_core_detect__by_extension(self):
-        self.assertEqual(detect_import_format(filename="x.json"), "json")
-        self.assertEqual(detect_import_format(filename="x.yaml"), "yaml")
-        self.assertEqual(detect_import_format(filename="x.yml"), "yaml")
-        self.assertEqual(detect_import_format(filename="x.csv"), "csv")
-
-    def test_core_detect__by_content_json(self):
-        self.assertEqual(detect_import_format(text='{"records": []}'), "json")
-        self.assertEqual(detect_import_format(text="[{}]"), "json")
-
-    def test_core_detect__by_content_yaml(self):
-        self.assertEqual(detect_import_format(text="---\nname: x"), "yaml")
-        self.assertEqual(detect_import_format(text="nautobot_import: '1'\nrecords: []"), "yaml")
-
-    def test_core_detect__default_csv(self):
-        self.assertEqual(detect_import_format(text="name,color\nx,111111"), "csv")
-        self.assertEqual(detect_import_format(), "csv")
+        associations = ["associated_object_id,associated_object_type,status__name,role__name,contact__name"]
+        for location in Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType"):
+            associations.append(
+                f"{location.pk},dcim.location,Active,ContactAssignmentImportTestLocation-On Site,"
+                "Bob-ContactAssignmentImportTestLocation"
+            )
+        self.run_import("\n".join(associations), model=ContactAssociation)
 
 
 # ===========================================================================
-# Layer 2 — import format adapters (create)
+# Layer 1b — core upsert (create / update / unchanged)
+# ===========================================================================
+class CoreUpsertTests(ImportExportJobTestCase):
+    def test_core_upsert__scalar__update(self):
+        """An update logs the changed fields as `field: old → new`."""
+        self.create_status(color="111111")
+        job_result = self.run_import("name,color\ntest_update_status,222222", match_fields="name")
+        self.assertImport(job_result, updated=1)
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertRegex(entry.message, r"color:.*111111.*→.*222222")
+
+    def test_core_upsert__scalar__unchanged(self):
+        """Re-importing identical data writes nothing: no save, no change-log, reported as unchanged."""
+        status = self.create_status(color="111111")
+        first = self.run_import("name,color\ntest_update_status,222222", match_fields="name")
+        self.assertImport(first, updated=1)
+        status.refresh_from_db()
+        touched_at = status.last_updated
+
+        second = self.run_import("name,color\ntest_update_status,222222", match_fields="name")
+        self.assertImport(second, created=0, updated=0, unchanged=1)
+        status.refresh_from_db()
+        self.assertEqual(status.last_updated, touched_at)  # no write occurred
+        self.assertNoLog(second, "No changes", level=LogLevelChoices.LOG_INFO)  # not surfaced at info level
+        self.assertLog(second, "No changes", level=LogLevelChoices.LOG_DEBUG)  # but logged at debug level
+
+    def test_core_upsert__mixed(self):
+        """In a single run, matched rows update and unmatched rows create, with distinct counts reported."""
+        status = self.create_status()
+        csv_data = "\n".join(
+            [
+                "name,color,content_types",
+                "test_update_status,555555,dcim.device",
+                "test_upsert_new_status,666666,dcim.device",
+            ]
+        )
+        job_result = self.run_import(csv_data, match_fields="name")
+        status.refresh_from_db()
+        self.assertEqual(status.color, "555555")
+        self.assertTrue(Status.objects.filter(name="test_upsert_new_status", color="666666").exists())
+        self.assertImport(job_result, updated=1, created=1)
+
+
+# ===========================================================================
+# Match key (source, uniqueness, failures)
+# ===========================================================================
+class MatchKeyTests(ImportExportJobTestCase):
+    def test_match__param(self):
+        """An explicit match_fields parameter updates matching records in place."""
+        status = self.create_status()
+        job_result = self.run_import("name,color\ntest_update_status,222222", match_fields="name")
+        status.refresh_from_db()
+        self.assertEqual(status.color, "222222")
+        self.assertEqual(Status.objects.filter(name="test_update_status").count(), 1)
+        self.assertImport(job_result, created=0, updated=1, match_fields=["name"], source="run parameter")
+
+    def test_match__directive_csv(self):
+        """A `# nautobot-import:` directive row resolves the match key with no parameters supplied."""
+        status = self.create_status()
+        csv_data = "\n".join(["# nautobot-import: match_fields=name", "name,color", "test_update_status,333333"])
+        job_result = self.run_import(csv_data)
+        status.refresh_from_db()
+        self.assertEqual(status.color, "333333")
+        self.assertImport(job_result, updated=1, match_fields=["name"])
+
+    def test_match__precedence_param_over_directive(self):
+        """An explicit match_fields parameter takes precedence over the file's directive."""
+        status = self.create_status()
+        csv_data = "\n".join(["# nautobot-import: match_fields=color", "name,color", "test_update_status,444444"])
+        job_result = self.run_import(csv_data, match_fields="name")
+        status.refresh_from_db()
+        self.assertEqual(status.color, "444444")
+        self.assertImport(job_result, match_fields=["name"])
+
+    def test_match__default_natural_key(self):
+        """With no parameter or directive, records match on the model's natural key by default."""
+        status = self.create_status()
+        csv_data = "\n".join(
+            [
+                "name,color,content_types",
+                "test_update_status,777777,dcim.device",
+                "test_default_new_status,888888,dcim.device",
+            ]
+        )
+        job_result = self.run_import(csv_data)
+        status.refresh_from_db()
+        self.assertEqual(status.color, "777777")
+        self.assertTrue(Status.objects.filter(name="test_default_new_status").exists())
+        self.assertImport(job_result, updated=1, created=1, match_fields=["name"], source="default")
+
+    def test_match__default_id(self):
+        """With no parameter or directive, an `id` column matches records on primary key."""
+        status = self.create_status()
+        job_result = self.run_import(f"id,color\n{status.pk},999999")
+        status.refresh_from_db()
+        self.assertEqual(status.color, "999999")
+        self.assertImport(job_result, updated=1, match_fields=["id"], source="default")
+
+    def test_match__composite(self):
+        """A composite match key (name, color) resolves the record; a non-key field is updated."""
+        status = self.create_status(name="test_composite", color="111111")
+        job_result = self.run_import(
+            "name,color,description\ntest_composite,111111,composite-updated", match_fields="name,color"
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.description, "composite-updated")
+        self.assertImport(job_result, updated=1, match_fields=["name", "color"])
+
+    def test_match__user_defined_unique_field(self):
+        """Matching on a field with no DB uniqueness constraint (color) works when it is unique in the data."""
+        status = self.create_status(name="test_userunique", color="abcabc")
+        job_result = self.run_import("name,color\ntest_userunique_renamed,abcabc", match_fields="color")
+        status.refresh_from_db()
+        self.assertEqual(status.name, "test_userunique_renamed")
+        self.assertImport(job_result, updated=1, match_fields=["color"])
+
+    def test_match__nonunique_dupe_in_file(self):
+        """A match key that doesn't uniquely identify rows within the file fails with a clear error."""
+        self.create_status()
+        csv_data = "\n".join(["name,color", "test_update_status,111111", "test_update_status,222222"])
+        job_result = self.run_import(
+            csv_data, match_fields="name", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertLog(job_result, "do not uniquely identify each row", level=LogLevelChoices.LOG_ERROR)
+
+    def test_match__matches_multiple_existing(self):
+        """A row whose match key matches more than one existing record fails with a clear error."""
+        self.create_status(name="test_multi_status1", color="555555")
+        self.create_status(name="test_multi_status2", color="555555")
+        job_result = self.run_import(
+            "name,color\ntest_multi_status1,555555",
+            match_fields="color",
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertLog(job_result, "Multiple existing records match", level=LogLevelChoices.LOG_ERROR)
+
+    def test_match__unknown_field(self):
+        """An unrecognized match field fails with an error identifying the field."""
+        self.create_status()
+        job_result = self.run_import(
+            "name,color\ntest_update_status,222222",
+            match_fields="no_such_field",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertLog(job_result, "Unknown match field(s): no_such_field", level=LogLevelChoices.LOG_ERROR)
+
+
+# ===========================================================================
+# Layer 2 — import format adapters
 # ===========================================================================
 class ImportAdapterTests(ImportExportJobTestCase):
     def test_adapter_import__bom(self):
@@ -696,3 +927,291 @@ class ImportAdapterTests(ImportExportJobTestCase):
         yaml_data = "\n".join(["- name: test_yaml_bare_status", "  color: '334455'", "  content_types: [dcim.device]"])
         self.run_import(yaml_data, import_format="yaml")
         self.assertTrue(Status.objects.filter(name="test_yaml_bare_status", color="334455").exists())
+
+
+# ===========================================================================
+# Layer 3 — end-to-end round-trips
+# ===========================================================================
+class RoundTripE2ETests(ImportExportJobTestCase):
+    def _roundtrip(self, export_format, source):
+        """Export one status, flip its color in the raw file, re-import, and assert the in-place update."""
+        status = self.create_status(name=f"test_{export_format}_roundtrip", color="111111")
+        export_kwargs = {"query_string": f"name=test_{export_format}_roundtrip"}
+        if export_format != "csv":
+            export_kwargs["export_format"] = export_format
+        edited = self.export_text(self.run_export(**export_kwargs)).replace("111111", "222222")
+        count_before = Status.objects.count()
+        job_result = self.run_import(edited)  # format auto-detected from content
+        status.refresh_from_db()
+        self.assertEqual(status.color, "222222")
+        self.assertEqual(Status.objects.count(), count_before)
+        self.assertImport(job_result, created=0, updated=1, source=source)
+
+    def test_e2e_roundtrip__csv(self):
+        self._roundtrip("csv", source="file directive")
+
+    def test_e2e_roundtrip__json(self):
+        self._roundtrip("json", source="file directive")
+
+    def test_e2e_roundtrip__yaml(self):
+        self._roundtrip("yaml", source="file directive")
+
+
+# ===========================================================================
+# Import errors, strictness & rollback
+# ===========================================================================
+class ImportErrorTests(ImportExportJobTestCase):
+    def test_error__no_data_no_file(self):
+        """Either csv_data or csv_file must be provided."""
+        self.run_import(username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+
+    def test_error__unknown_field_json(self):
+        """An import with an unrecognized field fails with an error identifying the field (#6464)."""
+        payload = json.dumps([{"name": "test_bad_field_status", "color": "111111", "colour": "111111"}])
+        job_result = self.run_import(
+            payload, import_format="json", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertLog(job_result, "unrecognized field(s): colour", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_bad_field_status").exists())
+
+    def test_error__unknown_field_csv(self):
+        """A CSV import with an unrecognized column fails with an error identifying the column (#6464)."""
+        job_result = self.run_import(
+            "name,colour\ntest_bad_column_status,111111", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertLog(job_result, "colour", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_bad_column_status").exists())
+
+    def test_error__model_mismatch(self):
+        """A file whose document declares a different model than the requested content-type fails clearly."""
+        payload = json.dumps(
+            {
+                "nautobot_import": "1",
+                "model": "dcim.device",
+                "records": [{"name": "test_mismatch_status", "color": "111111"}],
+            }
+        )
+        job_result = self.run_import(
+            payload, import_format="json", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertLog(job_result, 'declares model "dcim.device"', level=LogLevelChoices.LOG_ERROR)
+
+    def test_error__unsupported_format(self):
+        """An unsupported import_format fails the job and imports nothing."""
+        job_result = self.run_import(
+            "name,color\ntest_bad_format,111111",
+            import_format="xml",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertFalse(Status.objects.filter(name="test_bad_format").exists())
+        self.assertIn("Unsupported import format", job_result.traceback or "")
+
+    def test_error__empty_data(self):
+        """A file with a header but no data rows creates nothing and warns."""
+        job_result = self.run_import("name,color\n")
+        self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
+        self.assertLog(job_result, "created or updated", level=LogLevelChoices.LOG_WARNING)
+
+
+class RollbackTests(ImportExportJobTestCase):
+    def _bad_row_csv(self):
+        rows = self.csv_data.split("\n")
+        rows.insert(1, "test_status0,notacolor,dcim.device")
+        return "\n".join(rows)
+
+    def test_rollback__on_reverts_all(self):
+        """A bad row rolls back all rows when roll_back_if_error."""
+        job_result = self.run_import(
+            self._bad_row_csv(), roll_back_if_error=True, expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        log_info = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        for idx, status_name in enumerate(("test_status1", "test_status2", "test_status3", "test_status4")):
+            self.assertIn(f'Created record "{status_name}"', log_info[idx].message)
+            self.assertFalse(Status.objects.filter(name=status_name).exists())
+        errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+        warnings = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
+        self.assertEqual(warnings[0].message, "Rolling back all 4 records.")
+        self.assertEqual(warnings[1].message, "No status objects were created or updated")
+
+    def test_rollback__off_keeps_good_rows(self):
+        """With roll_back_if_error False, good rows persist and the bad row is reported."""
+        job_result = self.run_import(self._bad_row_csv(), expected_status=JobResultStatusChoices.STATUS_FAILURE)
+        errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+        self.assertFalse(Status.objects.filter(name="test_status0").exists())
+        successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        for idx, status_name in enumerate(("test_status1", "test_status2", "test_status3", "test_status4")):
+            self.assertIn(f'Created record "{status_name}"', successes[idx].message)
+            self.assertTrue(Status.objects.filter(name=status_name).exists())
+        self.assertEqual(successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
+
+
+# ===========================================================================
+# Sentinels & value edge cases
+# ===========================================================================
+class SentinelValueTests(ImportExportJobTestCase):
+    def test_value__special_chars(self):
+        """A scalar value with commas/quotes/apostrophes survives CSV export and re-import unchanged."""
+        tricky = 'St. John\'s, "HQ" site'
+        status = self.create_status(name="test_special", color="111111")
+        status.description = tricky
+        status.save()
+        csv_data = self.export_text(self.run_export(query_string="name=test_special"))
+        self.run_import(csv_data)
+        status.refresh_from_db()
+        self.assertEqual(status.description, tricky)
+
+    @expectedFailure
+    def test_sentinel__empty_equiv_null_noobject(self):
+        """Intended: an empty cell clears a scalar to null, equivalent to NULL/NoObject.
+
+        Known gap (qa-test-plan §13): an empty string is preserved as "" on a non-nullable CharField
+        rather than coerced to null, so this currently fails.
+        """
+        status = self.create_status(name="test_empty_null", color="111111")
+        status.description = "seed"
+        status.save()
+        self.run_import("name,description\ntest_empty_null,\n", match_fields="name")
+        status.refresh_from_db()
+        self.assertIsNone(status.description)
+
+
+# ===========================================================================
+# Import mode
+# ===========================================================================
+class ImportModeTests(ImportExportJobTestCase):
+    @skip("Open question: create-only mode + an existing match — behavior undefined (test-matrix Q2)")
+    def test_mode__create_only_match_exists(self):
+        """Create-only mode encountering an existing match: expected behavior TBD."""
+
+
+# ===========================================================================
+# Permissions
+# ===========================================================================
+class PermissionTests(ImportExportJobTestCase):
+    def test_perm__export_without_permission(self):
+        """Job enforces view permission on the content-type being exported."""
+        job_result = self.run_export(username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+        self.assertLog(
+            job_result,
+            f'User "{self.user}" does not have permission to view status objects',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(job_result.files.exists())
+
+    def test_perm__export_with_constrained_permission(self):
+        """Job only exports objects the user has permission to view."""
+        instance1, instance2 = Status.objects.all()[:2]
+        obj_perm = ObjectPermission(name="Test permission", constraints={"pk": instance1.pk}, actions=["view"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        job_result = self.run_export(username=self.user.username)
+        csv_bytes = self._export_bytes(job_result)
+        self.assertTrue(csv_bytes.startswith(codecs.BOM_UTF8), csv_bytes)
+        csv_data = csv_bytes.decode("utf-8")
+        self.assertIn(str(instance1.pk), csv_data)
+        self.assertNotIn(str(instance2.pk), csv_data)
+
+    def test_perm__import_without_permission(self):
+        """Job enforces create/update permission on the content-type being imported."""
+        job_result = self.run_import(
+            self.csv_data, username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertLog(
+            job_result,
+            f'User "{self.user}" does not have permission to create or update status objects',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
+
+    def test_perm__import_constrained_add(self):
+        """Job only creates objects the user has permission to add."""
+        obj_perm = ObjectPermission(
+            name="Test permission", constraints={"color__in": ["111111", "222222"]}, actions=["add"]
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        job_result = self.run_import(
+            self.csv_data, username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        self.assertEqual(successes[0].message, 'Row 1: Created record "test_status1"')
+        self.assertEqual(successes[1].message, 'Row 2: Created record "test_status2"')
+        self.assertEqual(successes[2].message, "Created 2 status object(s) from 4 row(s) of data")
+        self.assertLog(
+            job_result,
+            f'Row 3: User "{self.user}" does not have permission to create an object with these attributes',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(Status.objects.filter(name="test_status3").exists())
+
+    def test_perm__import_update_without_permission(self):
+        """An import by a user with neither add nor change permissions is denied outright."""
+        status = self.create_status()
+        job_result = self.run_import(
+            "name,color\ntest_update_status,999999",
+            match_fields="name",
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertLog(
+            job_result,
+            f'User "{self.user}" does not have permission to create or update status objects',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
+
+    def test_perm__import_update_requires_change(self):
+        """A user with only add permission cannot update matched records (treated as create → fails)."""
+        obj_perm = ObjectPermission(name="Add only", actions=["add"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        status = self.create_status()
+        self.run_import(
+            "name,color\ntest_update_status,999999",
+            match_fields="name",
+            username=self.user.username,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
+
+
+# ===========================================================================
+# REST API CSV backwards-compatibility (§16)
+# ===========================================================================
+class RestApiCsvTests(TransactionTestCase):
+    """The default CSV keeps only the historical M2M subset and omits the newly-supported composite M2M;
+    exclude_m2m=False opts every M2M in; exclude_m2m=True drops them all. Measured on output fields."""
+
+    def _csv_output_fields(self, exclude_m2m):
+        context = {"request": None, "depth": 0}
+        if exclude_m2m is not None:
+            context["exclude_m2m"] = exclude_m2m
+        serializer = DeviceSerializer(context=context, force_csv=True)
+        return {name for name, field in serializer.fields.items() if not field.write_only}
+
+    def test_rest_csv__default_keeps_subset_omits_composite(self):
+        fields = self._csv_output_fields(None)
+        self.assertIn("tags", fields)
+        self.assertNotIn("software_image_files", fields)
+
+    def test_rest_csv__exclude_m2m_false_includes_composite(self):
+        self.assertIn("software_image_files", self._csv_output_fields(False))
+
+    def test_rest_csv__exclude_m2m_true_removes_all_m2m(self):
+        fields = self._csv_output_fields(True)
+        self.assertNotIn("tags", fields)
+        self.assertNotIn("software_image_files", fields)

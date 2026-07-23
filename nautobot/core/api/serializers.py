@@ -904,7 +904,16 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        relationships_key_specified = "relationships" in self.context["request"].data
+        request = self.context.get("request")
+        if request is not None:
+            relationships_key_specified = "relationships" in request.data
+        else:
+            # No HTTP request is present when updating via the ImportObjects system job;
+            # fall back to inspecting the data provided directly to this serializer.
+            # (Fixed as part of the configurable import/export work: this method previously dereferenced
+            # self.context["request"].data unconditionally, which raised AttributeError on any update
+            # performed without an HTTP request in context.)
+            relationships_key_specified = "relationships" in getattr(self, "initial_data", {})
         relationships_data = validated_data.pop("relationships", {})
         required_relationships_errors = self.Meta().model.required_related_objects_errors(
             output_for="api",

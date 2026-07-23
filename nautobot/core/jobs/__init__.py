@@ -8,9 +8,11 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
+    MultipleObjectsReturned,
     PermissionDenied,
+    ValidationError as DjangoValidationError,
 )
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.db.models import Prefetch, Q
 from django.http import QueryDict
 from django.urls import reverse
@@ -43,6 +45,8 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.models.utils import serialize_object
+from nautobot.core.utils.data import shallow_compare_dict
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.data_validation import models
@@ -573,7 +577,7 @@ class ExportObjectList(Job):
 
 
 class ImportObjects(Job):
-    """System Job to import CSV data to create a set of objects."""
+    """System Job to import (update-or-create) a set of objects from CSV, JSON, or YAML data."""
 
     content_type = ObjectVar(
         model=ContentType,
@@ -597,12 +601,21 @@ class ImportObjects(Job):
         default=True,
         description="If an error is encountered when processing any row of data, rollback the entire import such that no data is imported.",
     )
-
+    match_fields = StringVar(
+        label="Match Existing Records On",
+        required=False,
+        description="Optional field name(s), separated by commas or spaces, used to match records in the "
+        "import data to existing records (e.g. <code>name serial</code>). Matched records are updated in "
+        "place; unmatched records are created. Overrides any <code># nautobot-import: match_fields=...</code> "
+        "directive present in the file itself. If neither is specified, records are matched on the "
+        "<code>id</code> column if present, otherwise on the model's natural key; rows missing values for "
+        "that default match key are simply created as new records.",
+    )
     template_name = "system_jobs/import_objects.html"
 
     class Meta:
         name = "Import Objects"
-        description = "Import objects from CSV-formatted data."
+        description = "Import (update-or-create) objects from CSV-formatted data."
         has_sensitive_variables = False
         # Importing large files may take substantial processing time
         soft_time_limit = 1800
@@ -614,50 +627,158 @@ class ImportObjects(Job):
         "yaml": NautobotYAMLImportParser,
     }
 
-    def _perform_atomic_operation(self, data, serializer_class, queryset):
-        new_objs = []
-        with contextlib.suppress(AbortTransaction):
-            with transaction.atomic():
-                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
-                if validation_failed:
-                    raise AbortTransaction
-                return new_objs, validation_failed
-        # If validation failed return an empty list, since all objs created were rolled back
-        self.logger.warning("Rolling back all %s records.", len(new_objs))
-        return [], validation_failed
+    # Auto-managed bookkeeping fields are ignored when detecting changes: `last_updated` (auto_now) bumps
+    # on every save, so including it would make every row look changed and defeat idempotent skipping.
+    _DIFF_EXCLUDE_FIELDS = ("created", "last_updated")
 
-    def _perform_operation(self, data, serializer_class, queryset):
-        new_objs = []
+    def _perform_import_operation(self, data, serializer_class, add_queryset, change_queryset, match, *, atomic):
+        """Run the upsert, optionally wrapped in an atomic transaction.
+
+        When `atomic` is True the whole import runs inside `transaction.atomic()`, and any validation
+        failure aborts the transaction so every row is rolled back — the returned lists are empty because
+        nothing was committed. When `atomic` is False a `nullcontext` is used instead, so rows that
+        imported cleanly persist even if a later row fails validation.
+        """
+        created_objs = []
+        updated_objs = []
+        unchanged_objs = []
+        validation_failed = False
+        rolled_back = False
+        transaction_ctx = transaction.atomic() if atomic else contextlib.nullcontext()
+        with contextlib.suppress(AbortTransaction):
+            with transaction_ctx:
+                created_objs, updated_objs, unchanged_objs, validation_failed = self._perform_operation(
+                    data, serializer_class, add_queryset, change_queryset, match
+                )
+                if validation_failed and atomic:
+                    rolled_back = True
+                    raise AbortTransaction
+        if rolled_back:
+            # All objects created/updated were rolled back, so return empty lists.
+            self.logger.warning("Rolling back all %s records.", len(created_objs) + len(updated_objs))
+            return [], [], [], validation_failed
+        return created_objs, updated_objs, unchanged_objs, validation_failed
+
+    @staticmethod
+    def _format_diff(before, changed):
+        """Render a shallow_compare_dict result as `field: old → new, ...` for logging.
+
+        `changed` is `{field: new_value}` (as returned by `shallow_compare_dict`); the old values come
+        from the pre-change `before` snapshot.
+        """
+
+        def display(value):
+            if value is None or value == "":
+                return "∅"
+            if isinstance(value, (list, dict)):
+                return json.dumps(value, default=str)
+            return value
+
+        return ", ".join(f"{field}: {display(before.get(field))} → {display(new)}" for field, new in changed.items())
+
+    def _perform_operation(self, data, serializer_class, add_queryset, change_queryset, match):
+        match_fields, match_fields_source = match
+        created_objs = []
+        updated_objs = []
+        unchanged_objs = []
         validation_failed = False
         for row, entry in enumerate(data, start=1):
-            serializer = serializer_class(data=entry, context={"request": None})
-            if serializer.is_valid():
+            instance = None
+            if match_fields:
                 try:
-                    with transaction.atomic():
-                        new_obj = serializer.save()
-                        if not queryset.filter(pk=new_obj.pk).exists():
-                            raise AbortTransaction()
-                    self.logger.info('Row %d: Created record "%s"', row, new_obj, extra={"object": new_obj})
-                    new_objs.append(new_obj)
-                except AbortTransaction:
+                    filter_params = import_utils.build_match_filter(entry, match_fields)
+                    # Matching is performed within the change-restricted queryset: a record the user isn't
+                    # permitted to update is treated as unmatched, and the resulting create attempt will
+                    # surface a uniqueness error rather than exposing or modifying the record.
+                    instance = import_utils.find_existing_object(change_queryset, filter_params)
+                except MultipleObjectsReturned:
                     self.logger.error(
-                        'Row %d: User "%s" does not have permission to create an object with these attributes',
+                        "Row %d: Multiple existing records match on (%s); cannot determine which to update",
                         row,
-                        self.user,
+                        ", ".join(match_fields),
                     )
                     validation_failed = True
+                    continue
+                except ValueError as exc:
+                    if match_fields_source == "default":
+                        # The default match key isn't fully present in this data; treat the row as a create.
+                        instance = None
+                    else:
+                        self.logger.error("Row %d: `%s`", row, exc)
+                        validation_failed = True
+                        continue
+            before = None
+            if instance is not None:
+                # Snapshot the pristine state now: is_valid()/save() mutate the in-memory instance, so a
+                # later snapshot would already reflect the incoming values and hide the change.
+                before = serialize_object(instance, exclude=self._DIFF_EXCLUDE_FIELDS)
+                serializer = serializer_class(instance, data=entry, partial=True, context={"request": None})
             else:
+                serializer = serializer_class(data=entry, context={"request": None})
+            if not serializer.is_valid():
                 validation_failed = True
                 for field, errs in serializer.errors.items():
                     for err in errs:
                         self.logger.error("Row %d: `%s`: `%s`", row, field, err)
-        return new_objs, validation_failed
+                continue
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False, import_format="auto"):  # pylint:disable=arguments-differ
-        if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
-            self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
-            raise PermissionDenied("User does not have create permissions on the requested content-type")
+            permission_queryset = change_queryset if instance is not None else add_queryset
+            outcome = None  # one of: "created", "updated", "unchanged", "denied"
+            diff = {}
+            try:
+                with transaction.atomic():
+                    obj = serializer.save()
+                    if not permission_queryset.filter(pk=obj.pk).exists():
+                        outcome = "denied"
+                        raise AbortTransaction()
+                    if instance is not None:
+                        # Reuse the same shallow diff the change-logging framework uses (change_logging.py).
+                        diff = shallow_compare_dict(before, serialize_object(obj, exclude=self._DIFF_EXCLUDE_FIELDS))
+                        if not diff:
+                            # Idempotent: nothing changed, so roll back the no-op save (and its change-log
+                            # entry) and record the row as unchanged.
+                            outcome = "unchanged"
+                            raise AbortTransaction()
+                        outcome = "updated"
+                    else:
+                        outcome = "created"
+            except AbortTransaction:
+                pass
+            except (DatabaseError, DjangoValidationError) as exc:
+                # A constraint/validation error not surfaced by the serializer (e.g. a database uniqueness
+                # violation) is reported as a row-level failure instead of crashing the whole job; the
+                # savepoint is already rolled back, so remaining rows still process.
+                self.logger.error("Row %d: %s", row, exc, extra={"object": instance} if instance else {})
+                validation_failed = True
+                continue
 
+            if outcome == "denied":
+                self.logger.error(
+                    'Row %d: User "%s" does not have permission to %s an object with these attributes',
+                    row,
+                    self.user,
+                    "update" if instance is not None else "create",
+                )
+                validation_failed = True
+            elif outcome == "unchanged":
+                unchanged_objs.append(instance)
+                # Recorded at DEBUG only (a debug run logs every row, changes or not); the INFO summary
+                # reports the unchanged count.
+                self.logger.debug('Row %d: No changes for record "%s"', row, instance, extra={"object": instance})
+            elif outcome == "updated":
+                self.logger.info(
+                    'Row %d: Updated record "%s" (%s)', row, obj, self._format_diff(before, diff), extra={"object": obj}
+                )
+                updated_objs.append(obj)
+            elif outcome == "created":
+                self.logger.info('Row %d: Created record "%s"', row, obj, extra={"object": obj})
+                created_objs.append(obj)
+        return created_objs, updated_objs, unchanged_objs, validation_failed
+
+    # ---- PREPARE (resolve target, read input, pick parser) ----
+
+    def _resolve_model_and_serializer(self, content_type):
+        """The model and its serializer for the requested content-type; hard-fail if either is missing."""
         model = content_type.model_class()
         if model is None:
             self.logger.error(
@@ -670,66 +791,163 @@ class ImportObjects(Job):
             serializer_class = get_serializer_for_model(model)
         except SerializerNotFound:
             self.logger.error(
-                'Could not find the "%s.%s" data serializer. Unable to process CSV for this model.',
+                'Could not find the "%s.%s" data serializer. Unable to process import data for this model.',
                 content_type.app_label,
                 content_type.model,
             )
             raise
-        queryset = model.objects.restrict(self.user, "add")
+        return model, serializer_class
 
+    def _read_import_text(self, csv_data, csv_file):
+        """The import payload as text plus a filename (for format auto-detection), from data or an uploaded file."""
         if not csv_data and not csv_file:
             raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
         if csv_file:
             raw = csv_file.read()
             text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
-            filename = getattr(csv_file, "name", "")
-        else:
-            text = csv_data
-            filename = ""
+            return text, getattr(csv_file, "name", "")
+        return csv_data, ""
 
+    def _select_parser(self, import_format, filename, text):
+        """Resolve the effective import format (auto-detecting if requested) and its parser class."""
         if not import_format or import_format == "auto":
             import_format = import_utils.detect_import_format(filename, text)
         parser_class = self.IMPORT_PARSERS.get(import_format)
         if parser_class is None:
             raise RunJobTaskFailed(f'Unsupported import format "{import_format}"')
         self.logger.info("Importing data as %s", import_format.upper())
+        return parser_class, import_format
 
-        new_objs = []
+    # ---- PARSE (bytes -> records) ----
+
+    def _parse(self, parser_class, serializer_class, content_type, text):
+        """Parse the payload into records, returning `(data, directive_match_fields)`.
+
+        Verifies that a model declaration carried in the file (if any) agrees with the requested
+        content-type, and surfaces the file's `match_fields` directive (if any) for match-key resolution.
+        """
+        parser_context = {"request": None, "serializer_class": serializer_class, "strict_fields": True}
+        data = parser_class().parse(stream=BytesIO(text.encode("utf-8")), parser_context=parser_context)
+
+        # A file-carried model declaration must agree with the requested content-type
+        import_model = parser_context.get("import_model")
+        if import_model and import_model.lower() != f"{content_type.app_label}.{content_type.model}":
+            self.logger.error(
+                'The file declares model "%s" but this import was requested for "%s.%s"',
+                import_model,
+                content_type.app_label,
+                content_type.model,
+            )
+            raise RunJobTaskFailed("Import file model does not match the requested content-type")
+
+        return data, parser_context.get("import_directives", {}).get("match_fields")
+
+    # ---- RESOLVE MATCH (which records to update vs create) ----
+
+    def _require_import_permissions(self, model, content_type):
+        """The add/change-restricted querysets for this import; hard-fail if the user can do neither."""
+        can_add = self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}")
+        can_change = self.user.has_perm(f"{content_type.app_label}.change_{content_type.model}")
+        if not can_add and not can_change:
+            self.logger.error(
+                'User "%s" does not have permission to create or update %s objects',
+                self.user,
+                content_type.model,
+            )
+            raise PermissionDenied("User does not have create or update permissions on the requested content-type")
+        return model.objects.restrict(self.user, "add"), model.objects.restrict(self.user, "change")
+
+    def _validate_match(self, data, effective_match_fields, match_fields_source, serializer_class):
+        """Log the effective match key and validate it (field names + within-file uniqueness); no-op if unset."""
+        if not effective_match_fields:
+            return
+        self.logger.info(
+            "Matching existing records on (%s), from the %s; "
+            "matched records are updated in place and unmatched rows become new records",
+            ", ".join(effective_match_fields),
+            match_fields_source,
+        )
         try:
-            parser_context = {"request": None, "serializer_class": serializer_class, "strict_fields": True}
-            data = parser_class().parse(stream=BytesIO(text.encode("utf-8")), parser_context=parser_context)
+            if match_fields_source != "default":
+                import_utils.validate_match_fields(effective_match_fields, serializer_class)
+            import_utils.validate_match_uniqueness_within_file(data, effective_match_fields)
+        except ValueError as exc:
+            self.logger.error("%s", exc)
+            raise RunJobTaskFailed(str(exc)) from exc
 
-            # A file-carried model declaration must agree with the requested content-type
-            import_model = parser_context.get("import_model")
-            if import_model and import_model.lower() != f"{content_type.app_label}.{content_type.model}":
-                self.logger.error(
-                    'The file declares model "%s" but this import was requested for "%s.%s"',
-                    import_model,
-                    content_type.app_label,
-                    content_type.model,
-                )
-                raise RunJobTaskFailed("Import file model does not match the requested content-type")
+    # ---- SUMMARIZE ----
 
+    def _log_import_summary(self, content_type, data, created_objs, updated_objs, unchanged_objs):
+        """Log the created/updated/unchanged counts (or a warning when nothing was imported)."""
+        if created_objs:
+            self.logger.info(
+                "Created %d %s object(s) from %d row(s) of data", len(created_objs), content_type.model, len(data)
+            )
+        if updated_objs:
+            self.logger.info(
+                "Updated %d %s object(s) from %d row(s) of data", len(updated_objs), content_type.model, len(data)
+            )
+        if unchanged_objs:
+            self.logger.info(
+                "Left %d %s object(s) unchanged (identical data, skipped)", len(unchanged_objs), content_type.model
+            )
+        if not created_objs and not updated_objs and not unchanged_objs:
+            self.logger.warning("No %s objects were created or updated", content_type.model)
+
+    def run(
+        self,
+        *,
+        content_type,
+        csv_data=None,
+        csv_file=None,
+        roll_back_if_error=False,
+        match_fields=None,
+        import_format="auto",
+    ):  # pylint:disable=arguments-differ
+        # PREPARE — resolve target, read input, pick parser (guard clauses hard-fail on bad input)
+        model, serializer_class = self._resolve_model_and_serializer(content_type)
+        text, filename = self._read_import_text(csv_data, csv_file)
+        parser_class, import_format = self._select_parser(import_format, filename, text)
+
+        data = []
+        created_objs, updated_objs, unchanged_objs = [], [], []
+        effective_match_fields = match_fields_source = None
+        validation_failed = False
+        try:
+            # PARSE — bytes -> records; verify any file-declared model matches the requested content-type
+            data, directive_match_fields = self._parse(parser_class, serializer_class, content_type, text)
+
+            # RESOLVE MATCH — run parameter > file directive > model default
+            effective_match_fields, match_fields_source = import_utils.resolve_match_fields(
+                model, data, match_fields, directive_match_fields
+            )
+            add_queryset, change_queryset = self._require_import_permissions(model, content_type)
+            self._validate_match(data, effective_match_fields, match_fields_source, serializer_class)
+
+            # UPSERT
             self.logger.info("Processing %d rows of data", len(data))
-            if roll_back_if_error:
-                new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)
-            else:
-                new_objs, validation_failed = self._perform_operation(data, serializer_class, queryset)
+            match = (effective_match_fields, match_fields_source)
+            created_objs, updated_objs, unchanged_objs, validation_failed = self._perform_import_operation(
+                data, serializer_class, add_queryset, change_queryset, match, atomic=roll_back_if_error
+            )
         except drf_exceptions.ParseError as exc:
             validation_failed = True
             self.logger.error("`%s`", exc)
 
-        if new_objs:
-            self.logger.info(
-                "Created %d %s object(s) from %d row(s) of data", len(new_objs), content_type.model, len(data)
-            )
-        else:
-            self.logger.warning("No %s objects were created", content_type.model)
-
+        # SUMMARIZE — count logs, then raise-or-return
+        self._log_import_summary(content_type, data, created_objs, updated_objs, unchanged_objs)
         if validation_failed:
             if roll_back_if_error:
-                raise RunJobTaskFailed("CSV import not successful, all imports were rolled back, see logs")
-            raise RunJobTaskFailed("CSV import not fully successful, see logs")
+                raise RunJobTaskFailed("Import not successful, all imports were rolled back, see logs")
+            raise RunJobTaskFailed("Import not fully successful, see logs")
+
+        return {
+            "created": len(created_objs),
+            "updated": len(updated_objs),
+            "unchanged": len(unchanged_objs),
+            "effective_match_fields": effective_match_fields,
+            "match_fields_source": match_fields_source,
+        }
 
 
 def get_data_compliance_rules():
