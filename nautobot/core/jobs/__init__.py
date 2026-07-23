@@ -10,10 +10,10 @@ from django.core.exceptions import (
     PermissionDenied,
 )
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import QueryDict
 from django.urls import reverse
-from rest_framework import exceptions as drf_exceptions
+from rest_framework import exceptions as drf_exceptions, serializers as drf_serializers
 import yaml
 
 from nautobot.core import constants
@@ -196,10 +196,33 @@ class ExportObjectList(Job):
         return match_fields
 
     def _get_serializer_data(self, model, serializer_class, queryset):
-        """Serialize the queryset with flat natural-key lookups for related fields."""
+        """Serialize the queryset with flat natural-key lookups for related fields, M2M included."""
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
-        serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
+
+        # select_related the single-valued relations so each exported row's natural-key columns
+        # (e.g. device_type__manufacturer__name) resolve in the JOIN rather than a per-row FK lookup.
+        fk_field_names = [field.name for field in model._meta.fields if field.is_relation]
+        if fk_field_names:
+            queryset = queryset.select_related(*fk_field_names)
+
+        # Include M2M fields (represented by member natural keys) and prefetch them so serialization
+        # doesn't query per instance; select_related the members' own relations so composite-keyed
+        # members (whose natural key spans an FK) don't trigger a nested per-member lookup.
+        m2m_prefetches = []
+        for m2m_field in model._meta.many_to_many:
+            member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
+            if member_fks:
+                m2m_prefetches.append(
+                    Prefetch(m2m_field.name, queryset=m2m_field.related_model.objects.select_related(*member_fks))
+                )
+            else:
+                m2m_prefetches.append(m2m_field.name)
+        if m2m_prefetches:
+            queryset = queryset.prefetch_related(*m2m_prefetches)
+
+        context = {"request": None, "exclude_m2m": False}
+        serializer = serializer_class(queryset, many=True, context=context, force_csv=True)
         return serializer.data
 
     @staticmethod
@@ -239,8 +262,10 @@ class ExportObjectList(Job):
         Reshape flat serializer records into the nested representation used by JSON/YAML exports.
 
         Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts
-        collapse to their value; url fields are dropped.
+        collapse to their value; comma-joined M2M strings become lists; url fields are dropped.
         """
+        serializer = serializer_class(context={"request": None, "depth": 0})
+        fields = serializer.fields
         records = []
         for record in serializer_data:
             reshaped = {}
@@ -254,6 +279,9 @@ class ExportObjectList(Job):
                 head = key.split("__", 1)[0]
                 if "__" in key:
                     flattened_heads.add(head)
+                if isinstance(fields.get(head), drf_serializers.ManyRelatedField) and isinstance(value, str):
+                    # Comma-joined scalar-keyed M2M members
+                    value = value.split(",") if value else []
                 reshaped[key] = value
             null_prefixes = self._null_reference_prefixes(reshaped)
             nested = nest_flat_dict(reshaped, constants.CSV_NULL_SENTINELS)
