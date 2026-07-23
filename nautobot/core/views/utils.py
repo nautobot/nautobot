@@ -646,9 +646,7 @@ def get_bulk_queryset_from_view(
         log.debug("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
         return queryset.none()
 
-    # Prefer the view's own filterset_class (a class attribute, so still job-safe), falling back to the
-    # model-level lookup. This honors views that declare a narrower/custom filterset than the model default.
-    filterset_class = getattr(view_class, "filterset_class", None) or get_filterset_for_model(model)
+    filterset_class = get_filterset_for_model(model)
 
     if not filterset_class:
         log.debug(f"No filterset_class found for model {model}, returning all objects")
