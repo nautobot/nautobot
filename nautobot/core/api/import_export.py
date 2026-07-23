@@ -10,6 +10,9 @@ format is not (yet) negotiable over HTTP, so it is plain functions rather than a
 `?format=...` support for it be added later, the renderer would be a thin wrapper over these.
 """
 
+from rest_framework import exceptions, serializers
+
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import CSV_NO_OBJECT
 
 # Keys/values for the metadata format shared by CSV/JSON/YAML import and export. In JSON/YAML these are
@@ -23,8 +26,11 @@ IMPORT_DOCUMENT_MODEL_KEY = "model"
 IMPORT_DOCUMENT_MATCH_FIELDS_KEY = "match_fields"
 IMPORT_DOCUMENT_RECORDS_KEY = "records"
 
-#: Serializer fields that describe the API representation rather than the object, and so are omitted.
+# Serializer fields that describe the API representation rather than the object, and so are omitted.
 EXCLUDED_DOCUMENT_FIELDS = ("url", "notes_url")
+
+# Maximum relation-traversal depth permitted in an export field selection (e.g. a__b__c__d = depth 3).
+EXPORT_FIELD_MAX_DEPTH = 3
 
 
 def build_import_metadata(model_label, match_fields=None):
@@ -152,3 +158,58 @@ def build_document_records(serializer_data):
             nested[head] = _prune_missing_references(null_prefixes, head, nested.get(head))
         records.append(nested)
     return records
+
+
+def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEPTH):
+    """
+    Validate a list of `__`-separated field-selection paths against a serializer's field graph.
+
+    A path's head must be a field of the serializer (or a `cf_<key>` custom-field reference); each
+    additional segment must traverse a single-valued related field, resolved through the related model's
+    serializer. Traversal into many-to-many fields is not supported (it would multiply rows).
+    Paths that reach a related model without a known serializer are accepted and left to the database
+    to validate.
+
+    Raises:
+        ValueError: describing every invalid path.
+    """
+    root_serializer = serializer_class(context={"request": None, "depth": 0})
+    errors = []
+    for path in paths:
+        parts = path.split("__")
+        if len(parts) - 1 > max_depth:
+            errors.append(f'"{path}" exceeds the maximum relation depth of {max_depth}')
+            continue
+        if parts[0].startswith("cf_"):
+            if len(parts) > 1:
+                errors.append(f'"{path}": custom-field references cannot be expanded')
+            continue
+        serializer = root_serializer
+        for index, part in enumerate(parts):
+            if serializer is None:
+                # Reached a model without a known serializer; defer validation to the database
+                break
+            field = serializer.fields.get(part)
+            if field is None:
+                errors.append(f'"{path}": unknown field "{part}"')
+                break
+            if index == len(parts) - 1:
+                break
+            if isinstance(field, serializers.ManyRelatedField):
+                errors.append(f'"{path}": cannot traverse into many-to-many field "{part}"')
+                break
+            if not isinstance(field, serializers.RelatedField):
+                errors.append(f'"{path}": "{part}" is not a related field and cannot be expanded')
+                break
+            related_model = getattr(field, "_related_model", None)
+            if related_model is None:
+                related_model = getattr(getattr(field, "queryset", None), "model", None)
+            if related_model is None:
+                serializer = None
+                continue
+            try:
+                serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
+            except exceptions.SerializerNotFound:
+                serializer = None
+    if errors:
+        raise ValueError(f"Invalid field selection: {'; '.join(errors)}")

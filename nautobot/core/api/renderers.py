@@ -68,7 +68,7 @@ class NautobotCSVRenderer(BaseRenderer):
         if isinstance(data, dict):
             data = [data]
 
-        headers = self.get_headers(data)
+        headers = self.get_headers(data, field_order=(renderer_context or {}).get("field_order"))
 
         buffer = StringIO()
         writer = csv.writer(buffer)
@@ -102,9 +102,12 @@ class NautobotCSVRenderer(BaseRenderer):
         writer.writerow([f"# {'; '.join(entries)}"])
 
     @classmethod
-    def get_headers(cls, data):
+    def get_headers(cls, data, field_order=None):
         """
         Identify the appropriate CSV headers corresponding to the given data.
+
+        If `field_order` (a list of field names / `__` lookup paths, e.g. from an explicit export field
+        selection) is given, headers are ordered to match it instead of the default priority ordering.
         """
         base_headers = list(data[0].keys())
 
@@ -134,11 +137,22 @@ class NautobotCSVRenderer(BaseRenderer):
 
         headers = base_headers + cf_headers
 
-        # Coerce important fields, if present, to the front of the list
-        for priority_header in ["id", "composite_key", "display", "name"]:
-            if priority_header in headers:
-                headers.remove(priority_header)
-                headers.insert(0, priority_header)
+        if field_order:
+            # Order headers to match the explicit field selection; a header belongs to the earliest
+            # selection entry it equals or nests under (e.g. `location__name` under `location`).
+            def selection_index(header):
+                for index, selected in enumerate(field_order):
+                    if header == selected or header.startswith(f"{selected}__"):
+                        return (index, header)
+                return (len(field_order), header)
+
+            headers.sort(key=selection_index)
+        else:
+            # Coerce important fields, if present, to the front of the list
+            for priority_header in ["id", "composite_key", "display", "name"]:
+                if priority_header in headers:
+                    headers.remove(priority_header)
+                    headers.insert(0, priority_header)
 
         return headers
 

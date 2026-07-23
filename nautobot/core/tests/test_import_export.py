@@ -12,9 +12,11 @@ from io import StringIO
 import json
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import SimpleTestCase, tag
+from django.urls import reverse
 import yaml
 
 from nautobot.core.api.import_export import (
@@ -28,7 +30,7 @@ from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
-from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Cable,
@@ -630,3 +632,100 @@ class ExportAdapterTests(ImportExportJobTestCase):
                 doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
                 record = next(r for r in doc["records"] if r["name"] == "M2M Empty VRF")
                 self.assertEqual(record["import_targets"], [])
+
+
+class ExportFieldSelectionTests(ImportExportJobTestCase):
+    def test_select__csv(self):
+        """An explicit field selection yields exactly those columns, in selection order."""
+        mfr = Manufacturer.objects.create(name="Selection Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Selection DT", u_height=1)
+        lines = self.export_lines(
+            self.run_export(
+                model=DeviceType, query_string="model=Selection+DT", export_fields="model,manufacturer__name"
+            )
+        )
+        self.assertTrue(
+            lines[0].startswith("# nautobot_import_version=3; model=dcim.devicetype; match_fields="), lines[0]
+        )
+        self.assertEqual(lines[1], "model,manufacturer__name")
+        self.assertEqual(lines[2], "Selection DT,Selection Mfr")
+
+    @skip("Enable in X4: uses use_current_view (sort + saved-view export config)")
+    def test_select__omits_directive_when_key_not_covered(self):
+        """If the selection omits the natural key, the export is not stamped with a match directive."""
+        Status.objects.create(name="test_selection_status", color="445566")
+        lines = self.export_lines(
+            self.run_export(query_string="name=test_selection_status", export_fields="color", use_current_view=True)
+        )
+        self.assertEqual(lines[0], "color")
+        self.assertEqual(lines[1], "445566")
+
+    def test_select__json(self):
+        """Field selection applies to JSON document exports as well, with nested related fields."""
+        mfr = Manufacturer.objects.create(name="Selection JSON Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Selection JSON DT", u_height=1)
+        doc = self.export_document(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Selection+JSON+DT",
+                export_format="json",
+                export_fields="model,manufacturer__name",
+            )
+        )
+        self.assertEqual(
+            doc["records"], [{"model": "Selection JSON DT", "manufacturer": {"name": "Selection JSON Mfr"}}]
+        )
+
+    def test_select__invalid(self):
+        """An invalid field selection fails with a clear error naming the bad path."""
+        job_result = self.run_export(
+            export_fields="name,no_such_field", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result, message__contains="no_such_field", log_level=LogLevelChoices.LOG_ERROR
+            ).exists()
+        )
+
+    @skip("Enable in X5: needs ExportFieldsForm (export UI)")
+    def test_select__form_expands_single_fk_relations(self):
+        """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
+        from nautobot.core.forms import ExportFieldsForm  # TODO: move to a top-level import once this exists
+
+        form = ExportFieldsForm(content_type=ContentType.objects.get_for_model(Device), initial_fields=["name"])
+        paths = [choice[0] for choice in form.fields["export_fields"].choices]
+        self.assertIn("name", paths)
+        self.assertIn("device_type__manufacturer", paths)
+        self.assertIn("status__name", paths)
+        self.assertFalse([path for path in paths if path.startswith("tags__")])
+        self.assertEqual(form.fields["export_fields"].initial, ["name"])
+        rendered = str(form["export_fields"].as_widget())
+        self.assertIn("export-field-caret", rendered)
+        self.assertIn("export-nested", rendered)
+        self.assertIn('value="device_type__manufacturer"', rendered)
+
+    @skip("Enable in X5: needs the export job-form modal template + modal button")
+    def test_select__modal_renders_selector(self):
+        """The ExportObjectList job form renders via the custom modal template with the orderable selector."""
+        get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        response = self.client.post(
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ExportObjectList"}),
+            data={
+                "render_job_form": True,
+                "job_modal_button": "core.export_object_list",
+                "content_type": ContentType.objects.get_for_model(Status).pk,
+                "export_fields": "name,color",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("export-fields-selector", content)
+        self.assertIn("nb-select-multiple-orderable-list", content)
+        self.assertIn('value="name"', content)
+        self.assertInHTML(
+            '<input class="form-check-input my-6" id="id_export_selector-export_fields_option_name" '
+            'name="export_selector-export_fields" type="checkbox" value="name" checked>',
+            content,
+        )
