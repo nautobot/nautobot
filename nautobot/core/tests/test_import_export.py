@@ -1215,3 +1215,12 @@ class RestApiCsvTests(TransactionTestCase):
         fields = self._csv_output_fields(True)
         self.assertNotIn("tags", fields)
         self.assertNotIn("software_image_files", fields)
+
+
+# ===========================================================================
+# Deferred — general M2M (see design-m2m-import-export.md)
+# ===========================================================================
+class DeferredM2MTests(ImportExportJobTestCase):
+    @skip("Deferred: writing through-model M2M on import (see design-m2m-import-export.md)")
+    def test_import_through_m2m_deferred(self):
+        """VLAN.locations (through-model M2M) round-trip on import — deferred."""
