@@ -416,7 +416,7 @@
   - "Compliance"
   - "Security"
   "requires": []
-  "docs": "https://docs.nautobot.com/projects/operational-compliance/en/stable/\""
+  "docs": "https://docs.nautobot.com/projects/operational-compliance/en/stable/"
   "headline": "Perform pre- and post-change validation with defined validation rules before and after every change."
   "description": >-
     Validate network changes on-demand with Operational Compliance by capturing and comparing device state before

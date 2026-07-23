@@ -591,31 +591,41 @@ class DeviceViewSet(ConfigContextQuerySetMixin, NautobotModelViewSet):
 
 
 class ConsolePortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsolePort.objects.prefetch_related("cable_paths__destination")
+    queryset = ConsolePort.objects.prefetch_related(
+        *ConsolePort.connection_prefetch_related_fields(), *ConsolePort.cable_peer_prefetch_related_fields()
+    )
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsolePortFilterSet
 
 
 class ConsoleServerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = ConsoleServerPort.objects.prefetch_related("cable_paths__destination")
+    queryset = ConsoleServerPort.objects.prefetch_related(
+        *ConsoleServerPort.connection_prefetch_related_fields(), *ConsoleServerPort.cable_peer_prefetch_related_fields()
+    )
     serializer_class = serializers.ConsoleServerPortSerializer
     filterset_class = filters.ConsoleServerPortFilterSet
 
 
 class PowerPortViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerPort.objects.prefetch_related("cable_paths__destination")
+    queryset = PowerPort.objects.prefetch_related(
+        *PowerPort.connection_prefetch_related_fields(), *PowerPort.cable_peer_prefetch_related_fields()
+    )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerPortFilterSet
 
 
 class PowerOutletViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerOutlet.objects.prefetch_related("cable_paths__destination")
+    queryset = PowerOutlet.objects.prefetch_related(
+        *PowerOutlet.connection_prefetch_related_fields(), *PowerOutlet.cable_peer_prefetch_related_fields()
+    )
     serializer_class = serializers.PowerOutletSerializer
     filterset_class = filters.PowerOutletFilterSet
 
 
 class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = Interface.objects.prefetch_related("cable_paths__destination").annotate(
+    queryset = Interface.objects.prefetch_related(
+        *Interface.connection_prefetch_related_fields(), *Interface.cable_peer_prefetch_related_fields()
+    ).annotate(
         _ip_address_count=count_related(IPAddress, "interfaces")  # avoid conflict with Interface.ip_address_count()
     )
     serializer_class = serializers.InterfaceSerializer
@@ -623,13 +633,17 @@ class InterfaceViewSet(PathEndpointMixin, NautobotModelViewSet):
 
 
 class FrontPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
-    queryset = FrontPort.objects.select_related("device__device_type__manufacturer")
+    queryset = FrontPort.objects.select_related("device__device_type__manufacturer").prefetch_related(
+        *FrontPort.connection_prefetch_related_fields()
+    )
     serializer_class = serializers.FrontPortSerializer
     filterset_class = filters.FrontPortFilterSet
 
 
 class RearPortViewSet(PassThroughPortMixin, NautobotModelViewSet):
-    queryset = RearPort.objects.select_related("device__device_type__manufacturer")
+    queryset = RearPort.objects.select_related("device__device_type__manufacturer").prefetch_related(
+        *RearPort.connection_prefetch_related_fields()
+    )
     serializer_class = serializers.RearPortSerializer
     filterset_class = filters.RearPortFilterSet
 
@@ -797,7 +811,9 @@ class PowerPanelViewSet(NautobotModelViewSet):
 
 
 class PowerFeedViewSet(PathEndpointMixin, NautobotModelViewSet):
-    queryset = PowerFeed.objects.prefetch_related("cable_paths__destination")
+    queryset = PowerFeed.objects.prefetch_related(
+        *PowerFeed.connection_prefetch_related_fields(), *PowerFeed.cable_peer_prefetch_related_fields()
+    )
     serializer_class = serializers.PowerFeedSerializer
     filterset_class = filters.PowerFeedFilterSet
 

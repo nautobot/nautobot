@@ -13,10 +13,11 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.core.testing import APITestCase, APIViewTestCases
+from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
+    DeviceUniquenessChoices,
     InterfaceDuplexChoices,
     InterfaceModeChoices,
     InterfaceSpeedChoices,
@@ -2739,6 +2740,28 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
             ],
         ]
 
+    def test_interface_list_avoids_natural_key_n_plus_one(self):
+        """Serializing the interfaces list must not issue one dcim_location query per interface.
+
+        The always-present `natural_slug` field calls `natural_key()`, which traverses device -> location
+        because Device's natural key includes location under DEVICE_UNIQUENESS=LOCATION_TENANT_NAME.
+        `device.location` is a second-level relation, so without prefetching it is a query per row (N+1).
+        """
+        self.add_permissions("dcim.view_interface")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        for i in range(15):  # enough rows to exceed the default threshold when the N+1 is present
+            Interface.objects.create(
+                device=self.devices[0],
+                name=f"n-plus-one-{i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            )
+        url = reverse("dcim-api:interface-list")
+        with override_config(DEVICE_UNIQUENESS=DeviceUniquenessChoices.LOCATION_TENANT_NAME):
+            with AssertNoRepeatedQueries(self, threshold=10):
+                response = self.client.get(f"{url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
     def test_untagged_vlan_requires_mode(self):
         """Test that when an `untagged_vlan` is specified, `mode` is also required."""
         self.add_permissions("dcim.add_interface", "dcim.view_device", "extras.view_status", "ipam.view_vlan")
@@ -4895,6 +4918,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
         vdc_role = Role.objects.first()
         vdc_role.content_types.add(ContentType.objects.get_for_model(VirtualDeviceContext))
         tenants = Tenant.objects.all()
+        controller_managed_device_group = ControllerManagedDeviceGroup.objects.first()
 
         cls.create_data = [
             {
@@ -4918,6 +4942,7 @@ class VirtualDeviceContextTestCase(APIViewTestCases.APIViewTestCase):
                 "status": vdc_status.pk,
                 "tenant": tenants[2].pk,
                 "role": vdc_role.pk,
+                "controller_managed_device_group": controller_managed_device_group.pk,
             },
         ]
         cls.update_data = {

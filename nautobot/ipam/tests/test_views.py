@@ -13,6 +13,7 @@ from django.utils.html import escape, strip_tags
 from django.utils.http import urlencode
 from django.utils.timezone import make_aware
 import netaddr
+from rest_framework import status
 
 from nautobot.circuits.models import Circuit, Provider
 from nautobot.core.templatetags.helpers import hyperlinked_object, queryset_to_pks
@@ -64,6 +65,7 @@ class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
         "ipam:namespace_prefixes": ["ipam.view_namespace", "ipam.view_prefix"],
         "ipam:namespace_ip_addresses": ["ipam.view_namespace", "ipam.view_ipaddress"],
+        "ipam:namespace_ipaddressranges": ["ipam.view_namespace", "ipam.view_ipaddressrange"],
     }
 
     @classmethod
@@ -83,6 +85,28 @@ class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenants[1].pk,
             "location": locations[1].pk,
         }
+
+    def _get_ip_address_ranges_table(self):
+        instance = Namespace.objects.first()
+        url = reverse("ipam:namespace_ipaddressranges", kwargs={"pk": instance.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        return response.context["ip_address_range_table"]
+
+    def test_ip_address_ranges_tab_select_column_hidden_for_viewer(self):
+        self.add_permissions("ipam.view_namespace", "ipam.view_ipaddressrange")
+        table = self._get_ip_address_ranges_table()
+        self.assertFalse(table.columns["pk"].visible)
+
+    def test_ip_address_ranges_tab_select_column_shown_with_change(self):
+        self.add_permissions("ipam.view_namespace", "ipam.view_ipaddressrange", "ipam.change_ipaddressrange")
+        table = self._get_ip_address_ranges_table()
+        self.assertTrue(table.columns["pk"].visible)
+
+    def test_ip_address_ranges_tab_select_column_shown_with_delete(self):
+        self.add_permissions("ipam.view_namespace", "ipam.view_ipaddressrange", "ipam.delete_ipaddressrange")
+        table = self._get_ip_address_ranges_table()
+        self.assertTrue(table.columns["pk"].visible)
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -457,8 +481,8 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         but the same behavior was observed in other filters, such as IPv4/IPv6.
         """
         prefixes = self._get_queryset().all()
-        status = Status.objects.create(name="nonexistentstatus")
-        status.content_types.add(ContentType.objects.get_for_model(Prefix))
+        nonexistent_status = Status.objects.create(name="nonexistentstatus")
+        nonexistent_status.content_types.add(ContentType.objects.get_for_model(Prefix))
         self.assertNotEqual(prefixes.count(), 0)
 
         url = self._get_url("list")
@@ -2250,6 +2274,162 @@ class IPAddressRangeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # If _get_table_add_url return None then address to add ipaddress shouldn't be rendered
         self.assertNotIn(reverse("ipam:ipaddress_add").encode(), response.content)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ipv4_size_is_correct_under_256_octet_range(self):
+        """Confirm IPv4 size is calculated correctly under a simple prefix."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        test_namespace = Namespace.objects.create(name="IPv4 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="192.168.50.0/24",
+            status=self.prefix_status,
+            namespace=test_namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        form_data = self.form_data.copy()
+        form_data["name"] = "ipv4-size-under"
+        form_data["start_address"] = netaddr.IPAddress("192.168.50.10")
+        form_data["end_address"] = netaddr.IPAddress("192.168.50.20")
+        form_data["namespace"] = test_namespace.pk
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+
+        detail_url = reverse(
+            "ipam:ipaddressrange", kwargs={"pk": IPAddressRange.objects.get(name="ipv4-size-under").pk}
+        )
+        detail_response = self.client.get(detail_url)
+        self.assertHttpStatus(detail_response, status.HTTP_200_OK)
+        self.assertBodyContains(
+            detail_response,
+            '<span id="_value_size">11</span>',
+            html=True,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ipv4_size_is_correct_over_256_octet_range(self):
+        """Confirm IPv4 size is calculated correctly on a large prefix."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        test_namespace = Namespace.objects.create(name="IPv4 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="10.0.0.0/16",
+            status=self.prefix_status,
+            namespace=test_namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        form_data = self.form_data.copy()
+        form_data["name"] = "ipv4-size-over"
+        form_data["start_address"] = netaddr.IPAddress("10.0.1.0")
+        form_data["end_address"] = netaddr.IPAddress("10.0.4.255")
+        form_data["namespace"] = test_namespace.pk
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+
+        detail_url = reverse("ipam:ipaddressrange", kwargs={"pk": IPAddressRange.objects.get(name="ipv4-size-over").pk})
+        detail_response = self.client.get(detail_url)
+        self.assertHttpStatus(detail_response, status.HTTP_200_OK)
+        self.assertBodyContains(
+            detail_response,
+            '<span id="_value_size">1024</span>',
+            html=True,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ipv6_size_is_correct_under_final_hextet_range(self):
+        """Confirm IPv6 size is calculated correctly under a simple prefix."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        test_namespace = Namespace.objects.create(name="IPv6 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="2001:db8:abcd:50::/64",
+            status=self.prefix_status,
+            namespace=test_namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        form_data = self.form_data.copy()
+        form_data["name"] = "ipv6-size-under"
+        form_data["start_address"] = netaddr.IPAddress("2001:db8:abcd:50:0:0:0:1")
+        form_data["end_address"] = netaddr.IPAddress("2001:db8:abcd:50:0:0:0:ffff")
+        form_data["namespace"] = test_namespace.pk
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+
+        detail_url = reverse(
+            "ipam:ipaddressrange", kwargs={"pk": IPAddressRange.objects.get(name="ipv6-size-under").pk}
+        )
+        detail_response = self.client.get(detail_url)
+        self.assertHttpStatus(detail_response, status.HTTP_200_OK)
+        self.assertBodyContains(
+            detail_response,
+            '<span id="_value_size">65535</span>',
+            html=True,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ipv6_size_is_correct_over_final_hextet_range(self):
+        """Confirm IPv6 size is calculated correctly on a large prefix without compression notation."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        test_namespace = Namespace.objects.create(name="IPv6 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="2001:db8:abcd::/48",
+            status=self.prefix_status,
+            namespace=test_namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        form_data = self.form_data.copy()
+        form_data["name"] = "ipv6-size-over"
+        form_data["start_address"] = netaddr.IPAddress("2001:db8:abcd:0:0:0:0:1")
+        form_data["end_address"] = netaddr.IPAddress("2001:db8:abcd:0:0:0:2:0")
+        form_data["namespace"] = test_namespace.pk
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+
+        detail_url = reverse("ipam:ipaddressrange", kwargs={"pk": IPAddressRange.objects.get(name="ipv6-size-over").pk})
+        detail_response = self.client.get(detail_url)
+        self.assertHttpStatus(detail_response, status.HTTP_200_OK)
+        self.assertBodyContains(
+            detail_response,
+            '<span id="_value_size">131072</span>',
+            html=True,
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_ipv6_size_is_calculated_correctly_with_compression_notation(self):
+        """Confirm IPv6 size is calculated correctly on a large prefix with compression notation."""
+        self.add_permissions("ipam.add_ipaddressrange")
+        test_namespace = Namespace.objects.create(name="IPv6 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="2001:db8:abcd::/48",
+            status=self.prefix_status,
+            namespace=test_namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        form_data = self.form_data.copy()
+        form_data["name"] = "ipv6-size-compressed"
+        form_data["start_address"] = netaddr.IPAddress("2001:db8:abcd::1")
+        form_data["end_address"] = netaddr.IPAddress("2001:db8:abcd::2:0")
+        form_data["namespace"] = test_namespace.pk
+
+        response = self.client.post(self._get_url("add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+
+        detail_url = reverse(
+            "ipam:ipaddressrange", kwargs={"pk": IPAddressRange.objects.get(name="ipv6-size-compressed").pk}
+        )
+        detail_response = self.client.get(detail_url)
+        self.assertHttpStatus(detail_response, status.HTTP_200_OK)
+        self.assertBodyContains(
+            detail_response,
+            '<span id="_value_size">131072</span>',
+            html=True,
+        )
+
 
 class VLANGroupTestCase(
     ViewTestCases.OrganizationalObjectViewTestCase,
@@ -2297,14 +2477,14 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
 
         roles = Role.objects.get_for_model(VLAN)[:2]
 
-        status = Status.objects.get_for_model(VLAN).first()
+        vlan_status = Status.objects.get_for_model(VLAN).first()
 
         cls.form_data = {
             "vlan_group": cls.vlangroups[0].pk,
             "vid": 999,
             "name": "VLAN999 with an unwieldy long name since we increased the limit to more than 64 characters",
             "tenant": None,
-            "status": status.pk,
+            "status": vlan_status.pk,
             "role": roles[1].pk,
             "locations": list(cls.locations.values_list("pk", flat=True)[:1]),
             "description": "A new VLAN",
@@ -2314,7 +2494,7 @@ class VLANTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         cls.bulk_edit_data = {
             "vlan_group": cls.vlangroups[0].pk,
             "tenant": Tenant.objects.first().pk,
-            "status": status.pk,
+            "status": vlan_status.pk,
             "role": roles[0].pk,
             "description": "New description",
         }

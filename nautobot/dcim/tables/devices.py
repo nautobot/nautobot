@@ -54,6 +54,7 @@ from .template_code import (
     INTERFACE_REDUNDANCY_INTERFACE_PRIORITY,
     INTERFACE_TAGGED_VLANS,
     MODULEBAY_BUTTONS,
+    MODULEBAY_TREE_LINK,
     PARENT_DEVICE,
     PATHENDPOINT,
     TREE_LINK,
@@ -1138,12 +1139,12 @@ class DeviceDeviceBayTable(DeviceBayTable):
 
 
 class DeviceModuleBayTable(ModuleBayTable):
-    name = DeviceComponentNameColumn(
-        modelname="modulebay",
-        template_code=(
-            '<span class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}'
-            '"></span> <a href="{{ record.get_absolute_url }}">{{ value }}</a>'
-        ),
+    # Hierarchical tree link with an HTMX expand button; nested bays are loaded on demand via the
+    # `dcim:modulebay_nestedbays` action. Falls back to a plain icon+link when `hide_hierarchy_ui` is set.
+    name = tables.TemplateColumn(
+        template_code=MODULEBAY_TREE_LINK,
+        order_by=("_name",),
+        attrs={"td": {"class": "nb-tree-element text-nowrap", "data-pk": lambda record: str(record.pk)}},
     )
     module_family = tables.Column(linkify=True, verbose_name="Family")
     installed_module = tables.Column(linkify=True, verbose_name="Installed Module")
@@ -1582,6 +1583,11 @@ class ControllerManagedDeviceGroupTable(BaseTable):
         url_params={"controller_managed_device_group": "pk"},
         verbose_name="Devices",
     )
+    virtual_device_context_count = LinkedCountColumn(
+        viewname="dcim:virtualdevicecontext_list",
+        url_params={"controller_managed_device_group": "pk"},
+        verbose_name="VDCs",
+    )
     radio_profiles_count = LinkedCountColumn(
         viewname="wireless:radioprofile_list",
         url_params={"controller_managed_device_groups": "pk"},
@@ -1601,6 +1607,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "virtual_device_context_count",
             "radio_profiles_count",
             "wireless_networks_count",
             "controller",
@@ -1614,6 +1621,7 @@ class ControllerManagedDeviceGroupTable(BaseTable):
             "pk",
             "name",
             "device_count",
+            "virtual_device_context_count",
             "radio_profiles_count",
             "wireless_networks_count",
             "controller",
@@ -1635,6 +1643,7 @@ class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
     name = tables.Column(linkify=True)
     tenant = TenantColumn()
     device = tables.Column(linkify=True)
+    controller_managed_device_group = tables.Column(linkify=True, verbose_name="Device Group")
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
@@ -1652,6 +1661,7 @@ class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "name",
             "identifier",
             "device",
+            "controller_managed_device_group",
             "status",
             "role",
             "tenant",

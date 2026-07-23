@@ -262,6 +262,51 @@ LOCATION_TREE_LINK = """
 """
 
 
+# Indentation depth is sourced two ways:
+#   * Collapsed / `children` mode: the per-table render-context value `tree_depth`. All rows in such a
+#     table are siblings at the same depth (the panel shows the root's direct bays at depth 0, and each
+#     HTMX `children` response shows one bay's child bays at the parent's depth + 1, passed via the expand
+#     button's `tree_depth` query param).
+#   * `expand_all` mode: the whole hierarchy is rendered as one flat pre-order list containing rows at
+#     mixed depths, so each row indents by its own depth, looked up from the `expanded_depths` map
+#     ({bay pk: depth}) that the panel pre-computes during traversal — avoiding a per-row
+#     ancestor-chain walk. No per-row expand buttons render in this mode.
+MODULEBAY_TREE_LINK = """
+{% load helpers %}
+{% spaceless %}
+    {% if not table.hide_hierarchy_ui %}
+        {% if expand_all %}
+            {% for i in expanded_depths|get_item:record.pk|default:0|as_range %}
+                <span class="nb-subtree"></span>
+            {% endfor %}
+        {% else %}
+            {% for i in tree_depth|default:0|as_range %}
+                <span class="nb-subtree"></span>
+            {% endfor %}
+        {% endif %}
+        {% if table_expandable|default:False %}
+            {% if record.installed_child_bays.exists %}
+                <button class="nb-subtree nb-subtree-expandable"
+                        hx-get="{% url 'dcim:modulebay_nestedbays' pk=record.pk %}?tree_depth={{ tree_depth|default:0|add:1 }}{% if return_url %}&return_url={{ return_url|urlencode }}{% endif %}"
+                        hx-indicator="closest .table-responsive"
+                        hx-select=".table-responsive tr"
+                        hx-select-oob="none"
+                        hx-swap="afterend"
+                        hx-target="closest tr"
+                        type="button"
+                ></button>
+            {% else %}
+                {# placeholder for alignment with expandable rows #}
+                <span class="nb-subtree nb-subtree-not-expandable"></span>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+    <span class="mdi mdi-{% if record.installed_module %}expansion-card-variant{% else %}tray{% endif %}"></span>
+    <a href="{{ record.get_absolute_url }}">{{ record.name }}</a>
+{% endspaceless %}
+"""
+
+
 RACKGROUP_ELEVATIONS = """
 <li>
     <a href="{% url 'dcim:rack_elevation_list' %}?location={{ record.location.pk }}&rack_group={{ record.pk }}" class="dropdown-item text-primary">

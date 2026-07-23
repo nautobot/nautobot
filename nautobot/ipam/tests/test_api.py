@@ -1920,6 +1920,177 @@ class IPAddressRangeTest(APIViewTestCases.APIViewTestCase):
         response = self.client.post(self._get_list_url(), data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
 
+    def test_ipv4_size_is_correct_under_256_octet_range(self):
+        """Confirm IPV4 Size Is Calculated Correctly Under Simple Prefix."""
+        self.add_permissions(
+            "ipam.add_ipaddressrange",
+            "ipam.view_ipaddressrange",
+            "ipam.view_namespace",
+            "extras.view_status",
+        )
+
+        ip_range = {
+            "start_address": "192.168.50.10",
+            "end_address": "192.168.50.20",
+            "namespace": self.namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+
+        creation_response = self.client.post(self._get_list_url(), ip_range, format="json", **self.header)
+        self.assertHttpStatus(creation_response, status.HTTP_201_CREATED)
+        ip_range_id = creation_response.data["id"]
+
+        url = f"{self._get_list_url()}?id={ip_range_id}"
+        list_response = self.client.get(url, **self.header)
+        self.assertHttpStatus(list_response, status.HTTP_200_OK)
+        self.assertEqual(list_response.data["count"], 1)
+
+        result = list_response.data["results"][0]
+        self.assertEqual(result["size"], 11)
+
+    def test_ipv4_size_is_correct_over_256_octet_range(self):
+        """Confirm IPV6 Size Is Calculated Correctly On A Large Prefix"""
+        self.add_permissions(
+            "ipam.add_ipaddressrange",
+            "ipam.view_ipaddressrange",
+            "ipam.view_namespace",
+            "extras.view_status",
+        )
+
+        size_namespace = Namespace.objects.create(name="IPv4 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="10.0.0.0/16",
+            status=Status.objects.get_for_model(Prefix).first(),
+            namespace=size_namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        # Size == 1024
+        ip_range = {
+            "start_address": "10.0.1.0",
+            "end_address": "10.0.4.255",
+            "namespace": size_namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+
+        creation_response = self.client.post(self._get_list_url(), ip_range, format="json", **self.header)
+        self.assertHttpStatus(creation_response, status.HTTP_201_CREATED)
+        ip_range_id = creation_response.data["id"]
+
+        url = f"{self._get_list_url()}?id={ip_range_id}"
+        list_response = self.client.get(url, **self.header)
+        self.assertHttpStatus(list_response, status.HTTP_200_OK)
+        self.assertEqual(list_response.data["count"], 1)
+
+        result = list_response.data["results"][0]
+        self.assertEqual(result["size"], 1024)
+
+    def test_ipv6_size_is_correct_under_final_hextet_range(self):
+        """Confirm IPV6 Size Is Calculated Correctly Under Simple Prefix."""
+        self.add_permissions(
+            "ipam.add_ipaddressrange",
+            "ipam.view_ipaddressrange",
+            "ipam.view_namespace",
+            "extras.view_status",
+        )
+
+        # Size == 65535
+        ip_range = {
+            "start_address": "2001:db8:abcd:50:0:0:0:1",
+            "end_address": "2001:db8:abcd:50:0:0:0:ffff",
+            "namespace": self.namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+
+        creation_response = self.client.post(self._get_list_url(), ip_range, format="json", **self.header)
+        self.assertHttpStatus(creation_response, status.HTTP_201_CREATED)
+        ip_range_id = creation_response.data["id"]
+
+        url = f"{self._get_list_url()}?id={ip_range_id}"
+        list_response = self.client.get(url, **self.header)
+        self.assertHttpStatus(list_response, status.HTTP_200_OK)
+        self.assertEqual(list_response.data["count"], 1)
+
+        result = list_response.data["results"][0]
+        self.assertEqual(result["size"], 65535)
+
+    def test_ipv6_size_is_correct_over_final_hextet_range(self):
+        """Confirm IPV6 Size Is Calculated Correctly On A Large Prefix Without
+        Compression Notation
+        """
+        self.add_permissions(
+            "ipam.add_ipaddressrange",
+            "ipam.view_ipaddressrange",
+            "ipam.view_namespace",
+            "extras.view_status",
+        )
+
+        size_namespace = Namespace.objects.create(name="IPv6 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="2001:db8:abcd::/48",
+            status=Status.objects.get_for_model(Prefix).first(),
+            namespace=size_namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        # Size == 131072
+        ip_range = {
+            "start_address": "2001:db8:abcd:0:0:0:0:1",
+            "end_address": "2001:db8:abcd:0:0:0:2:0",
+            "namespace": size_namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+
+        creation_response = self.client.post(self._get_list_url(), ip_range, format="json", **self.header)
+        self.assertHttpStatus(creation_response, status.HTTP_201_CREATED)
+        ip_range_id = creation_response.data["id"]
+
+        url = f"{self._get_list_url()}?id={ip_range_id}"
+        list_response = self.client.get(url, **self.header)
+        self.assertHttpStatus(list_response, status.HTTP_200_OK)
+        self.assertEqual(list_response.data["count"], 1)
+
+        result = list_response.data["results"][0]
+        self.assertEqual(result["size"], 131072)
+
+    def test_ipv6_size_is_calculated_correctly_with_compression_notation(self):
+        """Confirm IPV6 Size Is Calculated Correctly On A Large Prefix With
+        Compression Notation
+        """
+        self.add_permissions(
+            "ipam.add_ipaddressrange",
+            "ipam.view_ipaddressrange",
+            "ipam.view_namespace",
+            "extras.view_status",
+        )
+
+        size_namespace = Namespace.objects.create(name="IPv6 Size Test Namespace")
+        Prefix.objects.create(
+            prefix="2001:db8:abcd::/48",
+            status=Status.objects.get_for_model(Prefix).first(),
+            namespace=size_namespace,
+            type=choices.PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+        ip_range = {
+            "start_address": "2001:db8:abcd::1",
+            "end_address": "2001:db8:abcd::2:0",
+            "namespace": size_namespace.pk,
+            "status": self.statuses[0].pk,
+        }
+
+        creation_response = self.client.post(self._get_list_url(), ip_range, format="json", **self.header)
+        self.assertHttpStatus(creation_response, status.HTTP_201_CREATED)
+        ip_range_id = creation_response.data["id"]
+
+        url = f"{self._get_list_url()}?id={ip_range_id}"
+        list_response = self.client.get(url, **self.header)
+        self.assertHttpStatus(list_response, status.HTTP_200_OK)
+        self.assertEqual(list_response.data["count"], 1)
+
+        result = list_response.data["results"][0]
+        self.assertEqual(result["size"], 131072)
+
 
 class VLANGroupTest(APIViewTestCases.APIViewTestCase):
     model = VLANGroup
