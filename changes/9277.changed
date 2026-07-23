@@ -1,0 +1,1 @@
+Changed `Prefix.get_available_ips()` to exclude only exclusive IP Address Ranges, aligning availability with IPAddress validation. The `/available-ips/` API endpoint now lists and allocates addresses inside non-exclusive ranges. Removed the unused `exclude_child_ips` parameter.
