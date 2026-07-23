@@ -1,6 +1,7 @@
 import codecs
 import contextlib
 from io import BytesIO
+import json
 
 from django.apps import apps as global_apps
 from django.conf import settings
@@ -13,11 +14,13 @@ from django.db.models import Q
 from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
+import yaml
 
+from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.api.utils import build_import_document, get_serializer_for_model, nest_flat_dict
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
@@ -145,9 +148,9 @@ class ExportObjectList(Job):
         required=False,
     )
     export_format = ChoiceVar(
-        choices=(("csv", "CSV"), ("yaml", "YAML")),
+        choices=(("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
         description="Format to export to if not using an Export Template<br>"
-        "(note, in core only <code>dcim | device type</code> supports YAML export at present)",
+        "(note, <code>dcim | device type</code> YAML export uses the devicetype-library format)",
         default="csv",
         required=False,
     )
@@ -178,6 +181,164 @@ class ExportObjectList(Job):
                 saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
             return saved_view_filters
         return {}
+
+    @staticmethod
+    def _get_match_fields(model):
+        """
+        The model's natural key lookups, to stamp exports with their own import instructions.
+
+        """
+        try:
+            match_fields = list(model.csv_natural_key_field_lookups())
+        except AttributeError:
+            # Model without an identifiable natural key
+            return None
+        return match_fields
+
+    def _get_serializer_data(self, model, serializer_class, queryset):
+        """Serialize the queryset with flat natural-key lookups for related fields."""
+        # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
+        # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
+        serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
+        return serializer.data
+
+    @staticmethod
+    def _null_reference_prefixes(flat_record):
+        """The relation paths that a `CSV_NO_OBJECT` in `flat_record` reports as null.
+
+        The annotation that emits the sentinel tests `<relation>__isnull` on the lookup's *parent* relation
+        (`BaseModelSerializer._get_lookup_field_name_and_output_field`, which drops the lookup's final
+        segment), so `location__parent__name: NoObject` means `location__parent` is null and says nothing
+        about `location` itself. When the relation itself is null, its own natural-key lookup
+        (`location__name`) is a sentinel too, which is what marks the head as null.
+
+        Read from the pre-nesting record because `nest_flat_dict` maps `CSV_NO_OBJECT` ("no related object
+        at this hop") and `CSV_NULL_TYPE` ("the object exists; this one field of it is null") both to None,
+        erasing the distinction this relies on.
+        """
+        return {
+            key.rsplit("__", 1)[0]
+            for key, value in flat_record.items()
+            if "__" in key and value == constants.CSV_NO_OBJECT
+        }
+
+    @staticmethod
+    def _prune_missing_references(null_prefixes, prefix, value):
+        """Replace each subtree named by `null_prefixes` with a bare None, recursing through the rest."""
+        if prefix in null_prefixes:
+            return None
+        if isinstance(value, dict):
+            return {
+                key: ExportObjectList._prune_missing_references(null_prefixes, f"{prefix}__{key}", val)
+                for key, val in value.items()
+            }
+        return value
+
+    def _build_document_records(self, serializer_class, serializer_data):
+        """
+        Reshape flat serializer records into the nested representation used by JSON/YAML exports.
+
+        Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts
+        collapse to their value; url fields are dropped.
+        """
+        records = []
+        for record in serializer_data:
+            reshaped = {}
+            flattened_heads = set()
+            for key, value in record.items():
+                if key in ("url", "notes_url"):
+                    continue
+                if isinstance(value, dict) and "value" in value and "label" in value:
+                    # An enum type
+                    value = value["value"]
+                head = key.split("__", 1)[0]
+                if "__" in key:
+                    flattened_heads.add(head)
+                reshaped[key] = value
+            null_prefixes = self._null_reference_prefixes(reshaped)
+            nested = nest_flat_dict(reshaped, constants.CSV_NULL_SENTINELS)
+            for head in flattened_heads:
+                # Collapse each null relation to a single None, at the depth the sentinel actually reports
+                nested[head] = self._prune_missing_references(null_prefixes, head, nested.get(head))
+            records.append(nested)
+        return records
+
+    @staticmethod
+    def _export_filename(model):
+        """The branded, extension-less base filename for the export."""
+        return f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
+
+    def _render_export_template(self, export_template, content_type, queryset, filename):
+        if export_template.content_type != content_type:
+            self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
+            raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
+        self.logger.info(
+            "Exporting %d objects via ExportTemplate. This may take some time.",
+            queryset.count(),
+            extra={"object": export_template},
+        )
+        try:
+            # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
+            output = export_template.render(queryset)
+        except Exception as err:
+            self.logger.error("Error when rendering ExportTemplate: %s", err)
+            raise
+        if export_template.file_extension:
+            filename += f".{export_template.file_extension}"
+        self.create_file(filename, output)
+
+    def _render_legacy_yaml(self, queryset, filename):
+        # Device-type (etc.) legacy YAML export, preserving devicetype-library format compatibility
+        self.logger.info("Exporting %d objects to YAML. This may take some time.", queryset.count())
+        yaml_data = [obj.to_yaml() for obj in queryset]
+        self.create_file(filename + ".yaml", "---\n".join(yaml_data))
+
+    def _render_serialized(self, export_format, model, content_type, queryset, match_fields, filename):
+        """Serialize the queryset once, then write that normalized record set as CSV or a JSON/YAML document.
+
+        `records` is the single normalized structure: the flat, natural-key-flattened rows the CSV renderer
+        consumes directly and the JSON/YAML document path reshapes into nested records. The queryset stops
+        here — the format renderers only ever see `records`.
+        """
+        serializer_class = get_serializer_for_model(model)
+        self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
+        self.logger.info(
+            "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
+        )
+        records = self._get_serializer_data(model, serializer_class, queryset)
+        if export_format in ("json", "yaml"):
+            self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
+        else:
+            self._render_csv(records, match_fields, filename)
+
+    def _render_document(self, export_format, serializer_class, content_type, records, match_fields, filename):
+        # Generic JSON/YAML export: reshape the flat records into nested records wrapped in the metadata
+        # document. `build_import_document` is shared with the JSON/YAML import parsers, so the document
+        # written here stays in lock-step with the wire format they read.
+        document = build_import_document(
+            f"{content_type.app_label}.{content_type.model}",
+            self._build_document_records(serializer_class, records),
+            match_fields=match_fields,
+        )
+        if export_format == "json":
+            self.create_file(filename + ".json", json.dumps(document, indent=2, default=str))
+        else:
+            # Round-trip through JSON first to reduce DRF's ReturnDict/OrderedDict and other
+            # non-primitive values to plain types that yaml.safe_dump can represent.
+            plain_document = json.loads(json.dumps(document, default=str))
+            self.create_file(filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
+
+    def _render_csv(self, records, match_fields, filename):
+        # Generic CSV export
+        renderer = NautobotCSVRenderer()
+        renderer_context = {}
+        # Stamp the file with its own import instructions (the model's natural key as the match key),
+        # so that an unmodified export can be re-imported as an update with no additional configuration.
+        if match_fields:
+            renderer_context["import_directives"] = {"match_fields": match_fields}
+        # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
+        csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
+        self.create_file(filename + ".csv", csv_data)
 
     def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
@@ -217,51 +378,21 @@ class ExportObjectList(Job):
             self.logger.error("Invalid filters were specified: %s", filterset.errors)
             raise RunJobTaskFailed("Invalid query_string value for this content_type")
         queryset = filterset.qs
-        object_count = queryset.count()
 
-        filename = f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
+        filename = self._export_filename(model)
 
+        # ExportTemplate and legacy (`to_yaml`) exports render straight from the queryset and bypass the
+        # serializer, so they need no match key — handle them here and return.
         if export_template is not None:
-            # Export templates
-            if export_template.content_type != content_type:
-                self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
-                raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
-            self.logger.info(
-                "Exporting %d objects via ExportTemplate. This may take some time.",
-                object_count,
-                extra={"object": export_template},
-            )
-            try:
-                # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
-                output = export_template.render(queryset)
-            except Exception as err:
-                self.logger.error("Error when rendering ExportTemplate: %s", err)
-                raise
-            if export_template.file_extension:
-                filename += f".{export_template.file_extension}"
-            self.create_file(filename, output)
+            self._render_export_template(export_template, content_type, queryset, filename)
+            return
+        if export_format == "yaml" and hasattr(model, "to_yaml"):
+            self._render_legacy_yaml(queryset, filename)
+            return
 
-        elif export_format == "yaml":
-            # Device-type (etc.) YAML export
-            if not hasattr(model, "to_yaml"):
-                self.logger.error("Model %s doesn't support YAML export", content_type.model)
-                raise ValueError("YAML export not supported for this content-type")
-            self.logger.info("Exporting %d objects to YAML. This may take some time.", object_count)
-            yaml_data = [obj.to_yaml() for obj in queryset]
-            self.create_file(filename + ".yaml", "---\n".join(yaml_data))
-
-        else:
-            # Generic CSV export
-            serializer_class = get_serializer_for_model(model)
-            self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
-            renderer = NautobotCSVRenderer()
-            self.logger.info("Exporting %d objects to CSV. This may take some time.", object_count)
-            # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
-            # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
-            serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
-            # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
-            csv_data = codecs.BOM_UTF8 + renderer.render(serializer.data).encode("utf-8")
-            self.create_file(filename + ".csv", csv_data)
+        # CSV and JSON/YAML share one normalized serialization, written per-format.
+        match_fields = self._get_match_fields(model)
+        self._render_serialized(export_format, model, content_type, queryset, match_fields, filename)
 
 
 class ImportObjects(Job):

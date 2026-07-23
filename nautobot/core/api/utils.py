@@ -14,11 +14,37 @@ from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
-from nautobot.core.api import exceptions
+from nautobot.core.api import constants, exceptions
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import permission_is_exempt, qs_filter_from_constraints
 
 logger = logging.getLogger(__name__)
+
+
+def build_import_document(model_label, records, match_fields=None):
+    """Wrap records in the metadata document understood by the JSON/YAML import parsers.
+
+    Shared by the `ExportObjectList` job (writer) and `ImportDocumentParserMixin` (reader); the document
+    keys and version live in `nautobot.core.api.constants` so both ends stay in lock-step. Key insertion
+    order (version, model, match_fields, records) is preserved for readable YAML output.
+
+    Args:
+        model_label (str): The `app_label.model` the records belong to.
+        records (list): The reshaped record dicts.
+        match_fields (list, optional): The fields an importer should match existing records on. Omitted
+            from the document when falsy.
+
+    Returns:
+        dict: The metadata document.
+    """
+    document = {
+        constants.IMPORT_DOCUMENT_VERSION_KEY: constants.IMPORT_DOCUMENT_VERSION,
+        constants.IMPORT_DOCUMENT_MODEL_KEY: model_label,
+    }
+    if match_fields:
+        document[constants.IMPORT_DOCUMENT_MATCH_FIELDS_KEY] = list(match_fields)
+    document[constants.IMPORT_DOCUMENT_RECORDS_KEY] = records
+    return document
 
 
 def nest_flat_dict(data, null_sentinels=()):
