@@ -129,6 +129,7 @@ The header search bar gains two distinct capabilities. First, model-name typeahe
 
 - Computed Fields can now optionally be rendered as Markdown.
 - A reusable `copy_button` template tag renders hover copy-to-clipboard buttons.
+- Added opt-in support for OpenTelemetry traces, metrics, and logs, disabled by default.
 
 ### Changed
 
@@ -149,6 +150,10 @@ For the UI and REST API list views, if ordering by device name is desired, the p
 #### Device Component `device` Foreign Key
 
 When device components (Interface, Front Port, Rear Port, Module Bay, etc.) belong to a Module, and that Module is installed in a Module Bay belonging to a Device, the `device` foreign key on each such device component is now automatically set to point to the Device in question. This is a behavior change from previous Nautobot versions, in which the `device` foreign key would remain as `NULL`/`None` for device components belonging to a Module even when that Module was installed into a Device's Module Bay. This change was made to improve the performance and self-consistency of Device component lookups, such as the `Device.all_interfaces()` method and `Device.interfaces.all()` queryset manager.
+
+#### Module Bay Component view
+
+The Device Module Bay view now support hierarchal view using asyncronous loading each of the levels of nested modules on click. Optionally, you can expand or collapse all to build or collapse the entire nested structure.
 
 ### Dependencies
 
