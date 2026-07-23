@@ -1365,25 +1365,23 @@ class Prefix(PrimaryModel):
 
         return available_prefixes
 
-    def get_available_ips(self, exclude_child_ips=True):
+    def get_available_ips(self):
         """
         Return all available IPs within this prefix as an IPSet.
 
-        exclude_child_ips: when False, existing IP Addresses are NOT removed from
-        the set. Used when pre-filling a new (non-exclusive) IP Address Range,
-        which may legitimately overlap already-assigned IPs.
+        Addresses inside exclusive IP Address Ranges are excluded (IPAddress
+        creation there is forbidden); non-exclusive ranges are NOT excluded,
+        consistent with IPAddress validation.
         """
         available_ips = netaddr.IPSet(self.prefix)
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
+        available_ips -= child_ips
 
-        if exclude_child_ips:
-            child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
-            available_ips -= child_ips
-
-        # Collect every range's CIDRs into a single IPSet and subtract once;
-        # subtracting per-range in a loop rebuilds the set N times and is the
-        # dominant cost when there are thousands of ranges.
+        # Subtract all exclusive ranges as a single IPSet operation; per-range
+        # subtraction in a loop rebuilds the set on every iteration.
         range_cidrs = []
-        for start_host, end_host in self.get_all_ip_address_ranges().values_list("start_host", "end_host"):
+        qs = self.get_all_ip_address_ranges().filter(is_exclusive=True)
+        for start_host, end_host in qs.values_list("start_host", "end_host"):
             range_cidrs.extend(netaddr.IPRange(start_host, end_host).cidrs())
         if range_cidrs:
             available_ips -= netaddr.IPSet(range_cidrs)
