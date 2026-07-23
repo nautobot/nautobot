@@ -3193,11 +3193,11 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
     def test_git_repository_custom_actions(self, _):
         """GitRepository custom actions redirect instead of returning 403/404."""
         instance = self._get_queryset().first()
-        for action_name in ["dryrun", "sync"]:
+        for action_name, dry_run in [("dryrun", True), ("sync", False)]:
             with self.subTest(action=action_name):
                 url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
                 # Without permissions, should get 403
@@ -3207,20 +3207,16 @@ class GitRepositoryTestCase(
                 # With permissions, should redirect to job result
                 self.add_permissions("extras.change_gitrepository")
                 self.add_permissions("extras.view_gitrepository")
-                with mock.patch(
-                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
-                    if action_name == "dryrun"
-                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
-                ) as mock_enqueue:
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
                     job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
-                    mock_enqueue.return_value = job_result
+                    mock_sync.return_value = job_result
                     response = self.client.post(url)
                     self.assertRedirects(
                         response,
                         reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}),
                         fetch_redirect_response=False,
                     )
-                    mock_enqueue.assert_called_once_with(instance, self.user)
+                    mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
 

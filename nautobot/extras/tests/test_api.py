@@ -2239,7 +2239,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
         self.add_permissions("extras.change_gitrepository")

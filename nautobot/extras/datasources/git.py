@@ -11,11 +11,13 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, PermissionDenied
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from git import InvalidGitRepositoryError, Repo
 import yaml
 
+from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
 from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
@@ -38,7 +40,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry, registry_jobs_lock
-from nautobot.extras.utils import refresh_job_model_from_job_class
+from nautobot.extras.utils import get_worker_count, refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -51,6 +53,26 @@ GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
 
 # namedtuple takes from_url(remote git repository url), to_path(local path of git repo), from_branch(git branch)
 GitRepoInfo = namedtuple("GitRepoInfo", ["from_url", "to_path", "from_branch"])
+
+
+def get_git_repository_for_sync(request, pk):
+    """
+    Shared validation for both UI and API sync/dry-run entry points.
+
+    Raises:
+        PermissionDenied: if the user lacks extras.change_gitrepository.
+        CeleryWorkerNotRunningException: if no worker is available.
+        Http404: if the repository doesn't exist or isn't visible to the user.
+    """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
+
+    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+
+    if not get_worker_count():
+        raise CeleryWorkerNotRunningException()
+
+    return repository
 
 
 def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
