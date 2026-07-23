@@ -1,10 +1,12 @@
 from collections import namedtuple
 import logging
 import platform
+import re
 import sys
 
 from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import FieldError, MultipleObjectsReturned, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import NoReverseMatch, reverse
 from rest_framework import serializers, status
@@ -17,6 +19,34 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import permission_is_exempt, qs_filter_from_constraints
 
 logger = logging.getLogger(__name__)
+
+
+def nest_flat_dict(data, null_sentinels=()):
+    """
+    Convert a dictionary with flat keys separated by '__' into a nested dictionary structure.
+
+    Args:
+        data (dict): e.g. `{"name": "Interface 4", "device__name": "Device 1", "device__tenant__name": ""}`
+        null_sentinels (iterable): leaf values to replace with None (e.g. the CSV "NoObject"/"NULL" markers).
+
+    Returns:
+        (dict): The nested equivalent, e.g. `{"name": "Interface 4", "device": {"name": "Device 1", "tenant": {"name": ""}}}`
+    """
+
+    def insert_nested_dict(keys, value, current_dict):
+        key = keys[0]
+        if len(keys) == 1:
+            current_dict[key] = None if value in null_sentinels else value
+        else:
+            current_dict[key] = current_dict.get(key, {})
+            insert_nested_dict(keys[1:], value, current_dict[key])
+
+    result_dict = {}
+    for original_key, original_value in data.items():
+        split_keys = original_key.split("__")
+        insert_nested_dict(split_keys, original_value, result_dict)
+
+    return result_dict
 
 
 def dict_to_filter_params(d, prefix=""):
@@ -49,6 +79,97 @@ def dict_to_filter_params(d, prefix=""):
         else:
             params[k] = val
     return params
+
+
+def _identifying_fields_hint(model):
+    """Phrase describing which fields are guaranteed to uniquely identify an instance of `model`."""
+    # `natural_key_field_lookups` raises AttributeError for a model with no identifiable natural key, which
+    # the getattr default absorbs; such models fall back to the `id`-only hint below.
+    natural_key = list(getattr(model, "natural_key_field_lookups", None) or [])
+    if natural_key:
+        return f"its natural key ({', '.join(natural_key)}) or its `id` (UUID) are always unique"
+    return "its `id` (UUID) is always unique"
+
+
+def _format_filter_params(params):
+    """Render a filter-params dict as `key=value, ...` for human-readable error messages."""
+    return ", ".join(f"{key}={value}" for key, value in params.items()) or "the provided attributes"
+
+
+#: Extracts the match count Django reports in a `MultipleObjectsReturned` message (see
+#: `_matched_count_from_exception`). Captures either an exact number or Django's "more than N" phrasing.
+_MULTIPLE_OBJECTS_COUNT_PATTERN = re.compile(r"it returned (\d+|more than \d+)!$")
+
+
+def _matched_count_from_exception(exc):
+    """Recover how many records matched from a `MultipleObjectsReturned`, without re-querying.
+
+    `QuerySet.get()` raises with "get() returned more than one {Model} -- it returned {count}!", where
+    count is exact up to Django's `MAX_GET_RESULTS` limit and "more than 20" beyond it. Reading it off the
+    exception saves a second COUNT query on an already-failing request.
+
+    Returns:
+        str: The count phrase, or None if the message is not in Django's expected form (in which case
+            callers should describe the match count vaguely rather than guess).
+    """
+    match = _MULTIPLE_OBJECTS_COUNT_PATTERN.search(str(exc))
+    return match.group(1) if match else None
+
+
+def _ambiguous_related_object_message(model, params, count=None):
+    """Build the error message for a related-object reference that matches more than one object.
+
+    The reference is under-specified: the caller may use any field(s) unique within their own data, while
+    the model's natural key or `id` are the values guaranteed to be unique.
+
+    Args:
+        count (str, optional): How many records matched, already rendered (e.g. "3" or "more than 20").
+            Described only as "multiple" when unknown.
+    """
+    matched = f"{count} records" if count is not None else "multiple records"
+    return (
+        f"Could not resolve a single {model.__name__} — {_format_filter_params(params)} matches {matched}. "
+        f"Add field(s) that uniquely identify it: any values unique in your data work, and "
+        f"{_identifying_fields_hint(model)}. If this data came from an export, re-export the whole field so "
+        f"its full natural key is included."
+    )
+
+
+def _missing_related_object_message(model, params):
+    """Build the error message for a related-object reference that matches no object."""
+    return (
+        f"No {model.__name__} matches {_format_filter_params(params)}. Reference it by field(s) unique in your "
+        f"data — {_identifying_fields_hint(model)} — and check the values are correct."
+    )
+
+
+def resolve_related_object(queryset, filter_params):
+    """Look up the single object in `queryset` matching `filter_params`, as a writable serializer field would.
+
+    Translates Django's lookup failures into `rest_framework.exceptions.ValidationError` so they surface to
+    the API client as a 400 with an actionable message, rather than as a 500.
+
+    Args:
+        queryset (QuerySet): The candidate objects for the related-object reference.
+        filter_params (dict): ORM lookup kwargs identifying the object, e.g. from `dict_to_filter_params`.
+
+    Returns:
+        Model: The single matching object.
+
+    Raises:
+        rest_framework.exceptions.ValidationError: If the params match no object, match more than one
+            object, or reference a field that does not exist.
+    """
+    try:
+        return queryset.get(**filter_params)
+    except ObjectDoesNotExist as e:
+        raise serializers.ValidationError(_missing_related_object_message(queryset.model, filter_params)) from e
+    except MultipleObjectsReturned as e:
+        raise serializers.ValidationError(
+            _ambiguous_related_object_message(queryset.model, filter_params, _matched_count_from_exception(e))
+        ) from e
+    except FieldError as e:
+        raise serializers.ValidationError(e) from e
 
 
 def dynamic_import(name):

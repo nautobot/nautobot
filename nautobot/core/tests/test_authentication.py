@@ -459,7 +459,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         related_obj_perm.users.remove(self.user)
         response = self.client.post(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 400)
-        self.assertIn(b"Related object not found using the provided attribute", response.content)
+        self.assertIn(b"Reference it by field(s) unique in your data", response.content)
         self.assertEqual(Prefix.objects.count(), initial_count)
 
         # Create a permitted object with related object permissions
@@ -506,7 +506,7 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         url = reverse("ipam-api:prefix-detail", kwargs={"pk": self.prefixes[0].pk})
         response = self.client.patch(url, data, format="json", **self.header)
         self.assertEqual(response.status_code, 400)
-        self.assertIn(b"Related object not found using the provided attribute", response.content)
+        self.assertIn(b"Reference it by field(s) unique in your data", response.content)
 
         # Edit a permitted object with related object permissions
         related_obj_perm.users.add(self.user)
