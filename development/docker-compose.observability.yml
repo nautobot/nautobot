@@ -61,7 +61,6 @@ services:
     volumes:
       - "grafana_data:/var/lib/grafana"
       - "./configs/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/all.yml"
-      - "./configs/grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/all.yml"
       - "./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards"
       - "./configs/grafana/grafana.ini:/etc/grafana/grafana.ini"
     environment:

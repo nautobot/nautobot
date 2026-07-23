@@ -1,6 +1,8 @@
-# Ensure mimir data directories exist but don't track them in git
+# Don't track mimir data directories in git
 compactor/*
 data/tsdb/*
 rules/*
 tsdb/*
 tsdb-sync/*
+# Rules directory must exist on startup
+!rules/.gitkeep
