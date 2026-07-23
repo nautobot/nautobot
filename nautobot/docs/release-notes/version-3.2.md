@@ -190,8 +190,8 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#9236](https://github.com/nautobot/nautobot/issues/9236) - Added `has_cable` filter to "basic" filter forms for all cable termination models.
 - [#9243](https://github.com/nautobot/nautobot/issues/9243) - Added `kind` filter to Interface "basic" filter form.
 - [#9245](https://github.com/nautobot/nautobot/issues/9245) - Added IP Address Ranges to Stats in Tenant detail view.
-- [#9254](https://github.com/nautobot/nautobot/issues/9254) - Added Cloud as an Edition of Nautobot.
-- [#9255](https://github.com/nautobot/nautobot/issues/9255) - Added the ability to set Django email settings via NAUTOBOT_EMAIL_* environment variables.
+- [#9254](https://github.com/nautobot/nautobot/issues/9254) - Added Cloud as an edition of Nautobot.
+- [#9255](https://github.com/nautobot/nautobot/issues/9255) - Added the ability to set Django email settings via `NAUTOBOT_EMAIL_*` environment variables.
 - [#9262](https://github.com/nautobot/nautobot/issues/9262) - Added `size` Property To `IPAddressRange` Model And `IPAddressRangeUIViewSet`
 - [#9265](https://github.com/nautobot/nautobot/issues/9265) - Added bulk edit to IP Address Ranges list view.
 - [#9265](https://github.com/nautobot/nautobot/issues/9265) - Added `IP Address Ranges` tab to Namespace detail view.
