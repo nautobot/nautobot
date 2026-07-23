@@ -684,7 +684,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_related_by_attributes(self):
         data = {
@@ -716,7 +716,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
@@ -736,7 +736,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Multiple objects match"))
+        self.assertIn("Could not resolve a single", response.data["vlan_group"][0])
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key(self):
@@ -770,8 +770,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["status"][0].startswith("Related object not found"))
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["status"][0])
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_related_by_invalid(self):
         data = {
@@ -1045,7 +1045,7 @@ class WriteRelatedObjectPermissionTest(testing.APITestCase):
         with testing.disable_warnings("django.request"):
             response = self.client.post(self.vlan_list_url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
         self.assertFalse(ipam_models.VLAN.objects.filter(name="Write Perm VLAN 100").exists())
 
         # Granting view permission on the VLANGroup allows the reference.
@@ -1087,7 +1087,7 @@ class WriteRelatedObjectPermissionTest(testing.APITestCase):
                 **self.header,
             )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_patch_fk_reference_requires_view_permission(self):
         """PATCH updating an FK to a related object the user cannot view is rejected and leaves it unchanged."""
@@ -1100,7 +1100,7 @@ class WriteRelatedObjectPermissionTest(testing.APITestCase):
         with testing.disable_warnings("django.request"):
             response = self.client.patch(url, {"vlan_group": self.vlan_group2.pk}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
         vlan.refresh_from_db()
         self.assertEqual(vlan.vlan_group, self.vlan_group1)
 

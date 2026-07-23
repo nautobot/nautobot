@@ -893,10 +893,18 @@ class CSVImportFieldsForContentTypeAPIView(NautobotAPIVersionMixin, APIView):
     @extend_schema(exclude=True)
     def get(self, request):
         content_type_id = request.GET.get("content-type-id")
+        content_type_label = request.GET.get("content-type")
         try:
-            content_type = ContentType.objects.get(pk=content_type_id)
-        except ContentType.DoesNotExist:
-            return Response({"detail": "Invalid content-type-id."}, status=404)
+            if content_type_id:
+                content_type = ContentType.objects.get(pk=content_type_id)
+            elif content_type_label:
+                app_label, model_name = content_type_label.lower().split(".")
+                content_type = ContentType.objects.get(app_label=app_label, model=model_name)
+            else:
+                return Response({"detail": "Either content-type-id or content-type is required."}, status=400)
+        except (ContentType.DoesNotExist, ValueError):
+            invalid = "content-type-id" if content_type_id else "content-type"
+            return Response({"detail": f"Invalid {invalid}."}, status=404)
         model = content_type.model_class()
         if model is None:
             return Response(
