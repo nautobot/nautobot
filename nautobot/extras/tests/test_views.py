@@ -5486,6 +5486,26 @@ class JobTestCase(
             self.assertBodyContains(response, "Job is not enabled to be run")
             self.assertFalse(JobResult.objects.filter(name="fail.TestFailJob").exists())
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.views.ScheduledJob.create_schedule")
+    def test_schedule_job_validation_error_shows_on_page(self, mock_create_schedule, _):
+        """A ValidationError raised while scheduling is surfaced on the page instead of raising a 500."""
+        mock_create_schedule.side_effect = ValidationError("Invalid schedule parameters")
+        self.add_permissions("extras.run_job")
+
+        start_time = timezone.now() + timedelta(minutes=5)
+        data = {
+            "_schedule_type": "future",
+            "_schedule_name": "validation-error-test",
+            "_schedule_start_time": str(start_time),
+        }
+
+        for run_url in self.run_urls:
+            response = self.client.post(run_url, data)
+            self.assertHttpStatus(response, 200, msg=run_url)
+            self.assertBodyContains(response, "Unable to schedule job: Invalid schedule parameters")
+            self.assertFalse(ScheduledJob.objects.filter(name="validation-error-test").exists(), msg=run_url)
+
     def test_run_now_missing_args(self):
         self.add_permissions("extras.run_job")
 

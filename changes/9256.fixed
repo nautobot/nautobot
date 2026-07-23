@@ -1,0 +1,1 @@
+Handle validation error gracefully on Job Schedule failing clean()
