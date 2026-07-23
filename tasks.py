@@ -13,6 +13,7 @@ limitations under the License.
 """
 
 import concurrent.futures
+from functools import partial
 import json
 import os
 import platform
@@ -1028,7 +1029,9 @@ def hadolint(context):
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if fix:
-        command = "pymarkdown fix --recurse nautobot/docs examples *.md"
+        # Disable md044 (proper-names) only while fixing: its fixer over-applies
+        # proper-name capitalization to URLs, link/image targets, icons, etc.
+        command = "pymarkdown --disable-rules md044 fix --recurse nautobot/docs examples *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
@@ -1256,18 +1259,39 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
 )
 def lint(context, fix=False):
     """Run all linters."""
-    hadolint(context)
-    markdownlint(context, fix=fix)
-    yamllint(context)
-    ruff(context, fix=fix)
-    pylint(context)
-    eslint(context, fix=fix)
-    prettier(context, fix=fix)
-    djhtml(context, fix=fix)
-    djlint(context)
-    check_migrations(context)
-    check_schema(context)
-    build_and_check_docs(context)
+    linters = (
+        partial(hadolint, context),
+        partial(markdownlint, context, fix=fix),
+        partial(yamllint, context),
+        partial(ruff, context, fix=fix),
+        partial(pylint, context),
+        partial(eslint, context, fix=fix),
+        partial(prettier, context, fix=fix),
+        partial(djhtml, context, fix=fix),
+        partial(djlint, context),
+        partial(check_migrations, context),
+        partial(check_schema, context),
+        partial(build_and_check_docs, context),
+    )
+
+    exception_group = []
+
+    # Run each linter even if preceeding linter has failure
+    for linter in linters:
+        try:
+            linter()
+        except Exception as exception:
+            exception_group.append((linter.func.__name__, exception))
+
+    if len(exception_group) > 0:
+        exception_messages = [
+            f"----- {linter_name} -----\n" + str(exception) for linter_name, exception in exception_group
+        ]
+        output_string = "\n".join(exception_messages)
+        print("-" * 80)
+        print("Lint Errors Detected")
+        print("-" * 80)
+        raise Exit(output_string)
 
 
 @task(help={"version": "The version number or the rule to update the version."})
