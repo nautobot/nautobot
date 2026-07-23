@@ -1,0 +1,1 @@
+Added documentation noting that app-provided `DatasourceContent` callbacks are always called when a Git repository is synced and should always check `repository_record.provided_contents` before taking action.
