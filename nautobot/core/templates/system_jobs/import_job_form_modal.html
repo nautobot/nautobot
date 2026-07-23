@@ -1,0 +1,22 @@
+{% extends "extras/htmx/job_form_modal.html" %}
+{% load helpers %}
+
+{% comment %}
+Custom job-form modal for the ImportObjects system job. Renders the standard job form plus the
+field-reference table (available columns for the selected content type), ported from the full-page
+system_jobs/import_objects.html so the guidance is available in the modal too.
+{% endcomment %}
+
+{% block job_form_wrapper %}
+    {{ block.super }}
+    <div class="row justify-content-center">
+        <div class="col-md-9 offset-md-3">
+            {% include "system_jobs/inc/csv_fields_table.html" %}
+        </div>
+    </div>
+{% endblock job_form_wrapper %}
+
+{% block javascript %}
+    {{ block.super }}
+    {% include "system_jobs/inc/csv_fields_table_script.html" %}
+{% endblock javascript %}
