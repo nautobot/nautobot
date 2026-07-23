@@ -60,3 +60,6 @@ datasource_contents = [
 ```
 
 With this code, once your app is installed, the Git repository creation/editing UI will now include "Animals" as an option for the type(s) of data that a given repository may provide. If this option is selected for a given Git repository, your `refresh_git_animals` function will be automatically called when the repository is synced.
+
+!!! warning
+    When your app provides a `DatasourceContent` callback function, that function *will always be called* whenever a Git repository is synced, even if that given repository is not marked as providing your specific content type. This is by design, as in some cases an app may want to take action when given a repository that *doesn't* (but perhaps previously did) provide that type of content. Your callback function should **always** check `repository_record.provided_contents` (as in the example above) before taking any action.

@@ -1,3 +1,7 @@
+import json
+import logging
+import re
+import time
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -10,6 +14,7 @@ from django.utils import timezone
 from django.utils.deprecation import MiddlewareMixin
 from django_structlog.middlewares import RequestMiddleware
 from django_structlog.signals import bind_extra_request_failed_metadata
+from opentelemetry import trace
 import structlog
 
 from nautobot.core.api.utils import is_api_request, rest_api_server_error
@@ -25,6 +30,17 @@ from nautobot.core.settings_funcs import (
 from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
+
+# structlog logger for the django_structlog-coupled exception path below (only reached when
+# django_structlog is enabled, so structlog is guaranteed to be configured there).
+logger = structlog.get_logger(__name__)
+# Plain stdlib logger for general use. Unlike structlog's, this routes through Django's LOGGING
+# whether or not the operator opted into structlog via setup_structlog_logging(); when structlog
+# is configured, its ProcessorFormatter picks these records up via foreign_pre_chain.
+stdlib_logger = logging.getLogger(__name__)
+
+_GRAPHQL_PATHS = frozenset({"/graphql", "/api/graphql"})
+_GRAPHQL_OPERATION_RE = re.compile(r"^\s*(query|mutation|subscription)\b", re.IGNORECASE)
 
 
 class RemoteUserMiddleware(RemoteUserMiddleware_):
@@ -149,7 +165,6 @@ class ExceptionHandlingMiddleware:
             # case seems to never be called.
             # [0] https://docs.djangoproject.com/en/4.2/topics/http/middleware/#process-exception
             if "django_structlog.middlewares.RequestMiddleware" in settings.MIDDLEWARE:
-                logger = structlog.getLogger(__name__)
                 log_kwargs = {
                     "code": 500,
                     "request": RequestMiddleware.format_request(request),
@@ -194,3 +209,121 @@ class UserDefinedTimeZoneMiddleware:
             else:
                 timezone.deactivate()
         return self.get_response(request)
+
+
+class GraphQLOpenTelemetryMiddleware:
+    """
+    Django middleware that creates an OpenTelemetry span and emits a structured INFO log
+    for every request to the /graphql and /api/graphql endpoints.
+
+    Opt-in: this is a no-op pass-through unless `OTEL_PYTHON_DJANGO_INSTRUMENT` is enabled,
+    matching the rest of the OpenTelemetry feature (disabled by default). This prevents the
+    GraphQL query/variables from being logged in deployments that never enabled OTel.
+
+    Span attributes set:
+    - `enduser.id`                          - authenticated username
+    - `http.client_ip`                      - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
+    - `nautobot.core.graphql.document`      - full query / mutation / subscription text
+    - `nautobot.core.graphql.variables`     - JSON-serialised variables (when present)
+    - `nautobot.core.graphql.operation.type`- `query`, `mutation`, or `subscription`
+    - `http.status_code`                    - HTTP response status code
+
+    The INFO log additionally includes `duration_ms`.
+
+    Must be placed after `ExternalAuthMiddleware` in MIDDLEWARE so that `request.user`
+    is fully resolved (including remote-auth and SSO/LDAP users) before this runs.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path.rstrip("/") not in _GRAPHQL_PATHS:
+            return self.get_response(request)
+
+        # Opt-in only: when OpenTelemetry is disabled (the default) this middleware is a pass-through.
+        # Without this guard it would span and log every GraphQL request, leaking the query and variables
+        # into INFO logs in deployments that never enabled OTel.
+        if not settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
+            return self.get_response(request)
+
+        client_ip = self._get_client_ip(request)
+        query, variables = self._parse_graphql_body(request)
+        operation_type = self._get_operation_type(query)
+        username = request.user.username if request.user.is_authenticated else "anonymous"
+
+        tracer = trace.get_tracer("nautobot.graphql")
+        span_name = f"graphql {operation_type}" if operation_type else "graphql"
+
+        with tracer.start_as_current_span(span_name) as span:
+            span.set_attribute("enduser.id", username)
+            span.set_attribute("http.client_ip", client_ip)
+            if query:
+                span.set_attribute("graphql.document", query)
+            if variables:
+                span.set_attribute("graphql.variables", json.dumps(variables))
+            if operation_type:
+                span.set_attribute("graphql.operation.type", operation_type)
+
+            start = time.monotonic()
+            response = self.get_response(request)
+            duration_ms = round((time.monotonic() - start) * 1000, 2)
+
+            span.set_attribute("http.status_code", response.status_code)
+
+            # Use the stdlib logger so this is emitted through Django's LOGGING config
+            # regardless of whether the operator opted into structlog. Structured fields go
+            # via `extra` (surfaced by structlog's ProcessorFormatter when it is configured).
+            stdlib_logger.info(
+                "graphql.request",
+                extra={
+                    "username": username,
+                    "client_ip": client_ip,
+                    "query": query,
+                    "variables": variables,
+                    "duration_ms": duration_ms,
+                    "http_status": response.status_code,
+                },
+            )
+
+        return response
+
+    @staticmethod
+    def _get_client_ip(request):
+        """Return the originating client IP, respecting reverse-proxy headers."""
+        xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+        if xff:
+            # X-Forwarded-For may be a comma-separated list; the leftmost IP is the client.
+            return xff.split(",")[0].strip()
+        return request.META.get("HTTP_X_REAL_IP") or request.META.get("REMOTE_ADDR", "")
+
+    @staticmethod
+    def _parse_graphql_body(request):
+        """Return `(query_string, variables_dict)` extracted from the POST body."""
+        if request.method != "POST":
+            return None, None
+        try:
+            body = request.body
+        except Exception:
+            return None, None
+        content_type = request.content_type or ""
+        if "application/json" in content_type:
+            try:
+                payload = json.loads(body)
+                return payload.get("query"), payload.get("variables")
+            except (json.JSONDecodeError, ValueError):
+                return None, None
+        if "application/graphql" in content_type:
+            try:
+                return body.decode("utf-8"), None
+            except UnicodeDecodeError:
+                return None, None
+        return None, None
+
+    @staticmethod
+    def _get_operation_type(query):
+        """Return `query`, `mutation`, or `subscription` from the document, or `None`."""
+        if not query:
+            return None
+        match = _GRAPHQL_OPERATION_RE.match(query)
+        return match.group(1).lower() if match else None

@@ -346,7 +346,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         """Close down the browser after tests are ran."""
         cls.browser.quit()
 
-    def login(self, username, password, login_url=LOGIN_URL, button_text="Log In"):
+    def login(self, username, password, login_url=LOGIN_URL, button_text="Sign in"):
         """
         Navigate to `login_url` and perform a login w/ the provided `username` and `password`.
         """

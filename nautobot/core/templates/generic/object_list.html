@@ -139,7 +139,7 @@
 
     <div>
         {% block table %}
-            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" bulk_rename_url=content_type.model_class|validated_viewname:"bulk_rename" %}
+            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" bulk_rename_url=content_type.model_class|validated_viewname:"bulk_rename" bulk_disconnect_url=content_type.model_class|validated_viewname:"bulk_disconnect" %}
                 {% if permissions.change or permissions.delete %}
                     <form id="object_list_form" method="post" class="form form-horizontal">
                         {% csrf_token %}
@@ -312,12 +312,6 @@
 {% block javascript %}
     <script src="{% static 'jquery/jquery.formset.js' %}"></script>
     <script>
-        var clipboard = new ClipboardJS('.btn');
-
-        clipboard.on('success', function (e) {});
-
-        clipboard.on('error', function (e) {});
-
         // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
         $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {
             const button = $(event.relatedTarget);

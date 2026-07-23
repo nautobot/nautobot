@@ -1,0 +1,1 @@
+Added a `vm_interfaces` filter to `VLANFilterSet`, allowing VLANs to be filtered by the VM interface(s) they are assigned to (tagged or untagged).

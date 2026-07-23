@@ -11,4 +11,8 @@ class PathEndpointMixin:
 class CableTerminationMixin:
     """Mixin for GraphQL objects that act as CableEndpoints"""
 
+    cable = graphene.Field("nautobot.dcim.graphql.types.CableType")
     cable_peer = graphene.Field("nautobot.dcim.graphql.types.CableTerminationTypes")
+
+    def resolve_cable(self, args):
+        return self.cable

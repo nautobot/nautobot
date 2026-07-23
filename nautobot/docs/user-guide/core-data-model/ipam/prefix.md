@@ -6,6 +6,9 @@ At the database level, a prefix stores its network information in the fields `ne
 
 Each prefix belongs to a specific [Namespace](namespace.md), and is unique within that namespace. Each prefix can also optionally be assigned to a particular [Location(s)](../dcim/location.md), as well as to zero or more [virtual routing and forwarding (VRF)](vrf.md) instances. All prefixes not assigned to a VRF are considered to be in the "global" VRF within their namespace.
 
+!!! note "Assigning VRFs and Locations via import"
+    A Prefix's relationships to VRFs and Locations are many-to-many associations, managed through dedicated assignment records rather than as direct fields on the Prefix. As a result, **these associations cannot be set when creating Prefixes through CSV/bulk import** — a `vrfs` or `locations` column is ignored and the Prefix is created without the association. To assign them, edit the Prefix (or the VRF/Location) in the UI after import, or use the REST API assignment endpoints (`/api/ipam/vrf-prefix-assignments/` and `/api/ipam/prefix-location-assignments/`).
+
 +/- 2.0.0 "Prefixes are unique per Namespace"
     In Nautobot 1.x, prior to the introduction of the namespace data model, a prefix might or might not be unique within its assigned VRF. In Nautobot 2.0, prefixes are always unique within their namespace. You may need to do some cleanup of your data after migrating from Nautobot 1.x to suit the new data requirements.
 
@@ -141,3 +144,11 @@ If a prefix's `type` is set to "Pool", Nautobot will treat this prefix as a rang
 * If the prefix `type` is "Network":
     * The utilization is calculated as the sum of the total address space of all child prefixes plus the total number of child IP addresses not covered by a child prefix.
     * For IPv4 networks larger than /31, if neither the first (network) or last (broadcast) address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
+
+### Pool Prefixes vs. IP Address Ranges
+
++++ 3.2.0
+    A "Pool" Prefix and an [IP Address Range](ipaddressrange.md) can both represent a span of addresses used as a unit, such as a DHCP scope or NAT pool, and their roles partially overlap. The key difference is alignment:
+
+    * A `Pool Prefix` is still a Prefix, so it must align to a CIDR boundary (for example `10.0.0.0/26`). Use a Pool when the span you want to represent happens to be a valid subnet and you want it tracked as part of the Prefix hierarchy.
+    * An `IP Address Range` is defined by an arbitrary start and end address (for example `10.0.0.50–10.0.0.200`) and does **not** need to align to a CIDR boundary. Use an IP Address Range when the span you want to represent is not a clean subnet.

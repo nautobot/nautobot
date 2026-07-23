@@ -19,6 +19,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.utils.lookup import get_form_for_model
 from nautobot.extras.choices import (
     DynamicGroupTypeChoices,
     JobQueueTypeChoices,
@@ -37,6 +38,7 @@ from nautobot.extras.models import (
     Job,
     JobLogEntry,
     JobQueue,
+    JobQueueAssignment,
     JobResult,
     MetadataChoice,
     MetadataType,
@@ -47,6 +49,7 @@ from nautobot.extras.models import (
     StaticGroupAssociation,
     Status,
     Tag,
+    TaggedItem,
     Team,
 )
 from nautobot.extras.utils import (
@@ -163,11 +166,16 @@ class JobQueueFactory(PrimaryModelFactory):
     @factory.post_generation
     def jobs(self, create, extracted, **kwargs):
         jobs = get_random_instances(Job)
-        self.jobs.set(jobs)
         for job in jobs:
+            JobQueueAssignmentFactory.create(job=job, job_queue=self)
             if not job.job_queues_override:
                 job.job_queues_override = True
                 job.validated_save()
+
+
+class JobQueueAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = JobQueueAssignment
 
 
 class JobResultFactory(BaseModelFactory):
@@ -181,7 +189,8 @@ class JobResultFactory(BaseModelFactory):
         has_user = NautobotBoolIterator(chance_of_getting_true=80)
         has_task_args = NautobotBoolIterator(chance_of_getting_true=10)
         has_task_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
-        # TODO has_scheduled_job? has_meta? has_celery_kwargs?
+        has_celery_kwargs = NautobotBoolIterator(chance_of_getting_true=90)
+        # TODO has_scheduled_job? has_meta?
 
     job_model = factory.Maybe("has_job_model", random_instance(Job), None)
     name = factory.Faker("word")
@@ -197,7 +206,6 @@ class JobResultFactory(BaseModelFactory):
     worker = factory.LazyAttribute(lambda obj: f"celery@{faker.Faker().hostname()}")
     task_args = factory.Maybe("has_task_args", factory.Faker("pyiterable"), "")
     task_kwargs = factory.Maybe("has_task_kwargs", factory.Faker("pydict"), {})
-    # TODO celery_kwargs?
     # TODO meta?
 
     @factory.lazy_attribute
@@ -227,6 +235,25 @@ class JobResultFactory(BaseModelFactory):
             start + timedelta(seconds=factory.random.randgen.randint(0, seconds_range)) for _ in range(3)
         )
         self.date_created, self.date_started, self.date_done = timestamps
+
+    @factory.lazy_attribute
+    def celery_kwargs(self):
+        if not self.has_celery_kwargs:
+            return {}
+
+        fake = faker.Faker()
+        kwargs = {
+            "nautobot_job_profile": fake.boolean(),
+            "nautobot_job_ignore_singleton_lock": fake.boolean(),
+            "nautobot_job_console_log": fake.boolean(),
+            "nautobot_job_queue_type": "celery",
+            "queue": fake.word(),
+        }
+        if self.job_model is not None:
+            kwargs["nautobot_job_job_model_id"] = str(self.job_model.id)
+        if self.user is not None:
+            kwargs["nautobot_job_user_id"] = str(self.user.id)
+        return kwargs
 
 
 class MetadataChoiceFactory(BaseModelFactory):
@@ -545,12 +572,20 @@ class DynamicGroupFactory(PrimaryModelFactory):
 
     @factory.lazy_attribute
     def content_type(self):
-        while True:
-            content_type = factory.random.randgen.choice(
-                ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query())
-            )
-            if content_type.model_class().objects.exists():
-                return content_type
+        eligible = list(ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()))
+        factory.random.randgen.shuffle(eligible)
+        for content_type in eligible:
+            model = content_type.model_class()
+            if model is None or not model.objects.exists():
+                continue
+            # dynamic-filter group is editable only when has FilterForm
+            if (
+                self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER
+                and get_form_for_model(model, form_prefix="Filter") is None
+            ):
+                continue
+            return content_type
+        raise RuntimeError("No eligible content_type found for DynamicGroupFactory")
 
 
 class SavedViewFactory(BaseModelFactory):
@@ -663,3 +698,8 @@ class TagFactory(OrganizationalModelFactory):
                 self.content_types.set(extracted)
             else:
                 self.content_types.set(get_random_instances(lambda: TaggableClassesQuery().as_queryset(), minimum=2))
+
+
+class TaggedItemFactory(BaseModelFactory):
+    class Meta:
+        model = TaggedItem

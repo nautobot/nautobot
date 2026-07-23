@@ -5,6 +5,7 @@ from django.db import models
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.dcim.fields import ASNField
 from nautobot.dcim.models import CableTermination, PathEndpoint
+from nautobot.dcim.models.device_components import CableTerminationManager
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
 
@@ -189,6 +190,8 @@ class Circuit(PrimaryModel):
     "webhooks",
 )
 class CircuitTermination(PrimaryModel, PathEndpoint, CableTermination):
+    objects = CableTerminationManager()
+
     circuit = models.ForeignKey(to="circuits.Circuit", on_delete=models.CASCADE, related_name="circuit_terminations")
     term_side = models.CharField(max_length=1, choices=CircuitTerminationSideChoices, verbose_name="Termination")
     location = models.ForeignKey(

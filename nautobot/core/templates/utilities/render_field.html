@@ -1,7 +1,11 @@
 {% load helpers %}
 {% load form_helpers %}
 
-<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
+{# If the form field carries an `htmx_attrs` dict, wrap output in a persistent HTMX swap target. #}
+{# The wrapper's innerHTML is replaced on each swap; the wrapper itself persists across swaps so #}
+{# its HTMX attributes do not need to be re-emitted by the partial that returns the new content. #}
+{% if field.field.htmx_attrs %}<div {% for attr_name, attr_value in field.field.htmx_attrs.items %}{{ attr_name }}="{{ attr_value }}" {% endfor %}>{% endif %}
+<div{% if field.auto_id %} id="{{ field.auto_id }}-container"{% endif %} class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
@@ -46,6 +50,7 @@
                                 data-bs-toggle="modal"
                                 data-bs-target="#embedded_action_modal"
                                 hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_create_query_string %}?{{ embedded_create_query_string }}{% endif %}"
+                                hx-headers='{"HX-Embedded-Action": "create"}'
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
@@ -65,6 +70,7 @@
                                 data-bs-toggle="modal"
                                 data-bs-target="#embedded_action_modal"
                                 hx-get="{% url 'search_content_type' content_type=embedded_search_content_type %}{% if embedded_search_query_string %}?{{ embedded_search_query_string }}{% endif %}"
+                                hx-headers='{"HX-Embedded-Action": "search"}'
                                 hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
                                 hx-target="#embedded_action_modal .modal-content"
                                 type="button"
@@ -100,3 +106,4 @@
     {% endif %}
 </div>
 </div>
+{% if field.field.htmx_attrs %}</div>{% endif %}

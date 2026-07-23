@@ -1,0 +1,66 @@
+{% comment %}
+"Connections" panel body for a breakout child (sub)interface. A subinterface is virtual and has no
+cable of its own; it is connected indirectly through a single lane of its parent trunk interface's
+breakout cable. This shows just that lane — the parent's cable, the lane's one-hop peer, and the
+n-hop connected endpoint — plus a Trace button into that lane. The "via parent interface" note makes
+clear the connection is the parent's, not the subinterface's own.
+
+Required context:
+  - `object`: the child (sub)interface. Caller must ensure `object.get_breakout_lane_cable_path` is
+    non-None (i.e. the parent is cabled and this lane resolves to a path) before including this.
+{% endcomment %}
+{% load helpers %}
+{% load cables %}
+{% with parent=object.parent_interface lane=object.get_breakout_lane breakout_path=object.get_breakout_lane_cable_path %}
+    <table class="table table-hover attr-table">
+        <tr>
+            <td>Cable</td>
+            <td>
+                {{ parent.cable|hyperlinked_object }}
+                <span class="text-secondary">(via {{ parent|hyperlinked_object }})</span>
+                <span class="float-end">
+                    <a href="{% url 'dcim:interface_trace' pk=parent.pk %}?cablepath_id={{ breakout_path.pk }}" class="btn btn-primary btn-sm" title="Trace">
+                        <span class="mdi mdi-transit-connection-variant" aria-hidden="true"></span>
+                    </a>
+                </span>
+            </td>
+        </tr>
+        <tr>
+            <td>Cable Status</td>
+            <td>{{ parent.cable.status|hyperlinked_object_with_color }}</td>
+        </tr>
+        <tr>
+            <td>Cable Peer</td>
+            <td>
+                {% if lane.far_termination %}
+                    {{ lane.far_termination.parent|hyperlinked_object }}
+                    <span class="mdi {{ lane.far_termination|termination_type_icon }}" title="{{ lane.far_termination|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                    {{ lane.far_termination|hyperlinked_object }}
+                {% else %}
+                    {{ ""|placeholder }}
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Endpoint</td>
+            <td>
+                {% with endpoint=object.get_breakout_connected_endpoint %}
+                    {% if endpoint %}
+                        {{ endpoint.parent|hyperlinked_object }}
+                        <span class="mdi {{ endpoint|termination_type_icon }}" title="{{ endpoint|meta:'verbose_name'|capfirst }}" aria-hidden="true"></span>
+                        {{ endpoint|hyperlinked_object }}
+                        {# If the endpoint is itself a breakout trunk, annotate it with the child interface mapped back to the parent. #}
+                        {% with trunk_child=endpoint|breakout_trunk_child_interface:parent %}{% if trunk_child %} [{{ trunk_child|hyperlinked_object }}]{% endif %}{% endwith %}
+                        {% if breakout_path.is_active %}
+                            <span class="badge bg-success">Reachable</span>
+                        {% else %}
+                            <span class="badge bg-danger">Not Reachable</span>
+                        {% endif %}
+                    {% else %}
+                        {{ ""|placeholder }}
+                    {% endif %}
+                {% endwith %}
+            </td>
+        </tr>
+    </table>
+{% endwith %}

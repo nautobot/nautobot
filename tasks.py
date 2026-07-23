@@ -13,6 +13,7 @@ limitations under the License.
 """
 
 import concurrent.futures
+from functools import partial
 import json
 import os
 import platform
@@ -500,47 +501,73 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
+def _parse_env_kwargs(env) -> dict:
+    """Parse a list of 'KEY=VALUE' strings into a dict.
+
+    Args:
+        env: None, or an iterable of 'KEY=VALUE' strings (as produced by invoke's
+            iterable=['env'] CLI argument).
+
+    Returns:
+        dict mapping keys to values; empty dict if env is falsy.
+    """
+    if not env:
+        return {}
+    result = {}
+    for item in env:
+        if "=" not in item:
+            raise Exit(f"Invalid --env value {item!r}; expected KEY=VALUE.")
+        key, value = item.split("=", 1)
+        result[key] = value
+    return result
+
+
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def debug(context, service=None):
+def debug(context, service=None, env=None):
     """Start all services, or specified service(s) and their dependencies, in debug mode."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Starting {service or 'all services'} in debug mode...")
-
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(dump_service_ports_to_disk, context)
-        docker_compose(context, "up", service=service)
+        docker_compose(context, "up", service=service, env=dict_env)
 
 
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def start(context, service=None):
+def start(context, service=None, env=None):
     """Start all services, or specified service(s) and their dependencies, in detached mode."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Starting {service or 'all services'} in detached mode...")
-    docker_compose(context, "up --detach", service=service)
+    docker_compose(context, "up --detach", service=service, env=dict_env)
     dump_service_ports_to_disk(context)
 
 
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def restart(context, service=None):
+def restart(context, service=None, env=None):
     """Gracefully restart specified or all services."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Restarting {service or 'all services'}...")
-    docker_compose(context, "restart", service=service)
+    docker_compose(context, "restart", service=service, env=dict_env)
 
 
 @task(
@@ -661,14 +688,15 @@ def nbshell(context, quiet=False, print_sql=False, command=None):
     help={
         "service": "Name of the service to shell into",
         "root": "Launch shell as root",
+        "command": "Run this one-off command in the container instead of launching an interactive shell.",
     }
 )
-def cli(context, service="nautobot", root=False):
-    """Launch a bash shell inside the running Nautobot (or other) Docker container."""
+def cli(context, service="nautobot", root=False, command=""):
+    """Launch a bash shell inside the running Nautobot (or other) Docker container, or run a one-off command with `-c`."""
     context.nautobot.local = False
-    command = "bash"
+    cmd = command or "bash"
 
-    run_command(context, command, service=service, root=root)
+    run_command(context, cmd, service=service, root=root)
 
 
 @task(
@@ -1028,7 +1056,9 @@ def hadolint(context):
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if fix:
-        command = "pymarkdown fix --recurse nautobot/docs examples *.md"
+        # Disable md044 (proper-names) only while fixing: its fixer over-applies
+        # proper-name capitalization to URLs, link/image targets, icons, etc.
+        command = "pymarkdown --disable-rules md044 fix --recurse nautobot/docs examples *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
@@ -1256,18 +1286,39 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
 )
 def lint(context, fix=False):
     """Run all linters."""
-    hadolint(context)
-    markdownlint(context, fix=fix)
-    yamllint(context)
-    ruff(context, fix=fix)
-    pylint(context)
-    eslint(context, fix=fix)
-    prettier(context, fix=fix)
-    djhtml(context, fix=fix)
-    djlint(context)
-    check_migrations(context)
-    check_schema(context)
-    build_and_check_docs(context)
+    linters = (
+        partial(hadolint, context),
+        partial(markdownlint, context, fix=fix),
+        partial(yamllint, context),
+        partial(ruff, context, fix=fix),
+        partial(pylint, context),
+        partial(eslint, context, fix=fix),
+        partial(prettier, context, fix=fix),
+        partial(djhtml, context, fix=fix),
+        partial(djlint, context),
+        partial(check_migrations, context),
+        partial(check_schema, context),
+        partial(build_and_check_docs, context),
+    )
+
+    exception_group = []
+
+    # Run each linter even if preceeding linter has failure
+    for linter in linters:
+        try:
+            linter()
+        except Exception as exception:
+            exception_group.append((linter.func.__name__, exception))
+
+    if len(exception_group) > 0:
+        exception_messages = [
+            f"----- {linter_name} -----\n" + str(exception) for linter_name, exception in exception_group
+        ]
+        output_string = "\n".join(exception_messages)
+        print("-" * 80)
+        print("Lint Errors Detected")
+        print("-" * 80)
+        raise Exit(output_string)
 
 
 @task(help={"version": "The version number or the rule to update the version."})

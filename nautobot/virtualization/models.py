@@ -247,6 +247,10 @@ class VirtualMachine(PrimaryModel, ConfigContextModel):
     def __str__(self):
         return self.name
 
+    @property
+    def display(self):
+        return self.name
+
     def validate_unique(self, exclude=None):
         # Check for a duplicate name on a VM assigned to the same Cluster and no Tenant. This is necessary
         # because Django does not consider two NULL fields to be equal, and thus will not trigger a violation
@@ -355,6 +359,7 @@ class VMInterface(PrimaryModel, BaseInterface):
         blank=True,
         null=True,
         on_delete=models.SET_NULL,
+        verbose_name="VRF",
     )
     ip_addresses = models.ManyToManyField(
         to="ipam.IPAddress",
@@ -385,6 +390,13 @@ class VMInterface(PrimaryModel, BaseInterface):
     @property
     def parent(self):
         return self.virtual_machine
+
+    def clean(self):
+        super().clean()
+
+        # VRF validation
+        if self.vrf and self.parent and self.vrf not in self.parent.vrfs.all():
+            raise ValidationError({"vrf": "VRF must be assigned to same Virtual Machine."})
 
     @property
     def ip_address_count(self):

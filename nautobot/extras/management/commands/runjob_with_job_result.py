@@ -1,11 +1,9 @@
-import json
-
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 
 from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
-from nautobot.extras.management.utils import report_job_status
+from nautobot.extras.management.utils import report_job_status, validate_job_and_job_data
 from nautobot.extras.models import JobResult
 
 
@@ -46,13 +44,6 @@ class Command(BaseCommand):
         This command is the leaf entrypoint for Kubernetes-based job execution and is not
         intended to be called directly by humans.
         """
-        if job_data := options.get("data"):
-            try:
-                job_kwargs = json.loads(job_data)
-            except json.JSONDecodeError as error:
-                raise CommandError(f"Invalid JSON data:\n{error!s}") from error
-        else:
-            job_kwargs = {}
         job_result = None
         job_result_id = options["job_result"]
         try:
@@ -64,6 +55,11 @@ class Command(BaseCommand):
                 f"Job result has an invalid status {job_result.status} for this command."
                 f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"
             )
+        job_user = job_result.user
+        job_model = job_result.job_model
+        job_class_path = job_model.class_path
+        job_kwargs = validate_job_and_job_data(self, job_user, job_class_path, options.get("data"))
+
         if job_result.celery_kwargs.get("nautobot_job_console_log", False):
             executor = JobConsoleLogExecutor(job_result_pk=job_result_id, job_kwargs=job_kwargs)
             executor.execute()

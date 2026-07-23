@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, Optional
 from urllib.parse import parse_qs
 
+from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
@@ -20,6 +21,7 @@ from django.urls.exceptions import NoReverseMatch
 from django.utils.cache import patch_vary_headers
 from django.utils.dateparse import parse_datetime
 from django.utils.encoding import iri_to_uri
+from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
@@ -96,6 +98,7 @@ from nautobot.dcim.tables import (
 )
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
+from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
 from nautobot.extras.templatetags.approvals import render_approval_workflow_state
 from nautobot.extras.utils import (
     fixup_filterset_query_params,
@@ -104,8 +107,8 @@ from nautobot.extras.utils import (
     get_pending_approval_workflow_stages,
     get_worker_count,
 )
-from nautobot.ipam.models import IPAddress, Prefix, VLAN
-from nautobot.ipam.tables import IPAddressTable, PrefixTable, VLANTable
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN
+from nautobot.ipam.tables import IPAddressRangeTable, IPAddressTable, PrefixTable, VLANTable
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 from nautobot.virtualization.tables import VirtualMachineTable, VMInterfaceTable
 from nautobot.vpn.models import VPN, VPNProfile, VPNTunnel, VPNTunnelEndpoint
@@ -120,6 +123,7 @@ from .choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ScheduledJobStateChoices,
 )
 from .datasources import (
@@ -698,20 +702,6 @@ class ApprovalWorkflowStageUIViewSet(
         instance.refresh_from_db()
         messages.success(request, f"You commented {instance}.")
         return redirect(self.get_return_url(request))
-
-
-class ApprovalWorkflowStageResponseUIViewSet(
-    ObjectBulkDestroyViewMixin,
-    ObjectDestroyViewMixin,
-):
-    """ViewSet for ApprovalWorkflowStageResponse."""
-
-    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
-    filterset_form_class = forms.ApprovalWorkflowStageResponseFilterForm
-    queryset = ApprovalWorkflowStageResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
-    table_class = tables.ApprovalWorkflowStageResponseTable
-    object_detail_content = None
 
 
 class ApproverDashboardView(ObjectListViewMixin):
@@ -2422,6 +2412,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     "module_name",
                     "job_class_name",
                     "class_path",
+                    "source_version",
                     "installed",
                     "is_job_hook_receiver",
                     "is_job_button_receiver",
@@ -2591,7 +2582,7 @@ class JobUIViewSet(NautobotUIViewSet):
             ignore_singleton_lock=ignore_singleton_lock,
             job_queue=job_queue,
             console_log=console_log,
-            **job_class.serialize_data(job_kwargs),
+            job_kwargs=job_class.serialize_data(job_kwargs),
         )
         htmx_trigger = request.headers.get("HX-Trigger", None)
         if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
@@ -2851,7 +2842,7 @@ class JobUIViewSet(NautobotUIViewSet):
                     profile=profile,
                     console_log=console_log,
                     ignore_singleton_lock=ignore_singleton_lock,
-                    **job_class.serialize_data(job_form.cleaned_data),
+                    job_kwargs=job_class.serialize_data(job_form.cleaned_data),
                 )
                 scheduled_job_has_approval_workflow = scheduled_job.has_approval_workflow_definition()
                 is_scheduled = schedule_type in JobExecutionType.SCHEDULE_CHOICES
@@ -3258,6 +3249,99 @@ class ScheduledJobUIViewSet(
         )
     ]
 
+    @staticmethod
+    def render_state(value):
+        badges = {
+            ScheduledJobStateChoices.DENIED: ("bg-danger", "Approval Denied"),
+            ScheduledJobStateChoices.CANCELED: ("bg-danger", "Approval Canceled"),
+            ScheduledJobStateChoices.PENDING: ("bg-warning border", "Pending Approval"),
+            ScheduledJobStateChoices.ACTIVE: ("bg-info", "Active"),
+            ScheduledJobStateChoices.COMPLETED: ("bg-success", "Completed"),
+            ScheduledJobStateChoices.ERRORED: ("bg-danger", "Errored"),
+        }
+        if value in badges:
+            css_class, label = badges[value]
+            return format_html('<span class="badge {}">{}</span>', css_class, label)
+        return format_html('<span class="badge bg-body-secondary border">{}</span>', bettertitle(value))
+
+    class ScheduledJobFieldsPanel(object_detail.ObjectFieldsPanel):
+        """Object fields panel that renders the scheduled-job-specific fields with their custom formatting."""
+
+        @staticmethod
+        def _render_datetime(value, obj_tz, default_tz):
+            obj_local = date_format(value.astimezone(obj_tz), "SHORT_DATETIME_FORMAT")
+            if obj_tz == default_tz:
+                return format_html("{}", obj_local)
+            default_local = date_format(value.astimezone(default_tz), "SHORT_DATETIME_FORMAT")
+            return format_html("{} {}<br>{} {}", obj_local, obj_tz, default_local, default_tz)
+
+        def render_value(self, key, value, context):
+            if key == "task":
+                return format_html("<code>{}</code>", value)
+            obj = get_obj_from_context(context)
+            if key == "interval":
+                if value == JobExecutionType.TYPE_CUSTOM and obj.crontab:
+                    return format_html("{} ({})", value, obj.crontab)
+                return value
+            if key in ("start_time", "last_run_at"):
+                if not value:
+                    return helpers.HTML_NONE
+                return self._render_datetime(value, obj.time_zone, context["default_time_zone"])
+            return super().render_value(key, value, context)
+
+    class UserInputsPanel(object_detail.KeyValueTablePanel):
+        def should_render(self, context):
+            return bool(context.get("job_class_found"))
+
+        def get_data(self, context):
+            obj = get_obj_from_context(context)
+            labels = context.get("labels", {})
+            return {labels.get(key, key): value for key, value in obj.kwargs.items()}
+
+        def render_value(self, key, value, context):
+            if value is None:
+                return helpers.HTML_NONE
+            return format_html("<code>{}</code>", value)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            ScheduledJobFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=("name", "description", "task", "job_model", "user", "approval_required", "decision_date"),
+                key_transforms={"decision_date": "Decision Date", "user": "Requester"},
+            ),
+            ScheduledJobFieldsPanel(
+                label="Scheduling",
+                weight=200,
+                section=SectionChoices.LEFT_HALF,
+                fields=(
+                    "enabled",
+                    "state",
+                    "job_queue",
+                    "interval",
+                    "one_off",
+                    "start_time",
+                    "last_run_at",
+                    "total_run_count",
+                ),
+                value_transforms={"state": [render_state]},
+            ),
+            UserInputsPanel(
+                label="User Inputs",
+                weight=100,
+                section=SectionChoices.RIGHT_HALF,
+            ),
+            object_detail.ObjectTextPanel(
+                weight=200,
+                label="Celery Keyword Arguments",
+                section=SectionChoices.RIGHT_HALF,
+                object_field="celery_kwargs",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+            ),
+        )
+    )
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
 
@@ -3412,14 +3496,43 @@ def render_jobresult_status(status):
     """
     mapping = {
         "FAILURE": ("bg-danger", "Failed"),
+        "REVOKED": ("bg-danger", "Revoked"),
+        "IGNORED": ("bg-danger", "Ignored"),
+        "REJECTED": ("bg-danger", "Rejected"),
         "PENDING": ("bg-body-secondary border", "Pending"),
         "STARTED": ("bg-warning", "Running"),
         "SUCCESS": ("bg-success", "Completed"),
+        "RECEIVED": ("bg-warning", "Received"),
+        "RETRY": ("bg-warning", "Retry"),
     }
 
-    css_class, text = mapping.get(status, ("bg-body-secondary border", "N/A"))
+    css_class, text = mapping.get(status, ("bg-body-secondary border", f"{status} (unrecognized)"))
     return format_html(
         '<span id="pending-result-label"><span class="badge {}">{}</span></span>',
+        css_class,
+        text,
+    )
+
+
+def render_jobresult_cancel_type(cancel_type):
+    """
+    Render a Bootstrap-style label for a JobCancelType.
+
+    Args:
+        cancel_type (str): The job result cancel type (e.g., "terminated", "reaped", etc.).
+
+    Returns:
+        str: Safe HTML string for a styled label with a fixed ID so tests work.
+    """
+    mapping = {
+        "terminated": ("bg-danger", "Terminated"),
+        "reaped": ("bg-warning", "Reaped"),
+        "abandoned": ("bg-body-secondary border", "Abandoned"),
+    }
+
+    css_class, text = mapping.get(cancel_type, ("bg-body-secondary border", f"{cancel_type} (unrecognized)"))
+    return format_html(
+        '<span id="cancel-type-label"><span class="badge {}">{}</span></span>',
         css_class,
         text,
     )
@@ -3490,6 +3603,11 @@ class JobResultJobConsoleEntriesTab(object_detail.DistinctViewTab):
             return True
 
         return False
+
+
+class JobResultCancelPanel(object_detail.ObjectFieldsPanel):
+    def should_render(self, context):
+        return context["object"].status == JobResultStatusChoices.STATUS_REVOKED
 
 
 class JobResultUIViewSet(
@@ -3587,6 +3705,25 @@ class JobResultUIViewSet(
                     "extras:jobresult_export_job_console_entries", kwargs={"pk": ctx["object"].pk}
                 ),
             ),
+            JobResultButton(
+                weight=140,
+                label="Cancel Job",
+                color=ButtonActionColorChoices.DELETE,
+                icon="mdi-close-circle",
+                # No required_permissions: the submitter can cancel without cancel_job,
+                # so there is no single permission that gates the button. The real rule
+                # (submitter OR object-level cancel_job) lives in user_can_cancel_job_result,
+                # enforced here for rendering and again in the view.
+                link_name=lambda ctx: (
+                    reverse("extras:jobresult_cancel_job", kwargs={"pk": ctx["object"].pk})
+                    if (
+                        ctx["object"].is_unready_state
+                        and user_can_cancel_job_result(ctx["request"].user, ctx["object"])
+                    )
+                    else None
+                ),
+                template_path="extras/inc/jobresult_canceljobbutton.html",
+            ),
         ),
         extra_tabs=[
             JobResultJobConsoleEntriesTab(
@@ -3626,23 +3763,40 @@ class JobResultUIViewSet(
             object_field="celery_kwargs",
             render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
         ),
+        JobResultCancelPanel(
+            label="Cancel Details",
+            section=SectionChoices.RIGHT_HALF,
+            weight=100,
+            fields=[
+                "date_canceled",
+                "canceled_by_user_name",
+                "cancel_type",
+            ],
+            value_transforms={
+                "cancel_type": [render_jobresult_cancel_type],
+            },
+        ),
         object_detail.ObjectFieldsPanel(
             label="Worker",
             section=SectionChoices.RIGHT_HALF,
-            weight=110,
+            weight=200,
             fields=[
                 "worker",
                 "queue",
                 "task_name",
                 "meta",
             ],
+            # Poll for updates while the job is running so worker details populate without a manual refresh.
+            body_wrapper_template_path="extras/inc/jobresult_summary_panel.html",
         ),
         object_detail.ObjectTextPanel(
             label="Traceback",
             section=SectionChoices.RIGHT_HALF,
-            weight=200,
+            weight=300,
             object_field="traceback",
             render_as=object_detail.ObjectTextPanel.RenderOptions.CODE,
+            # Poll for updates so the traceback populates when the job finishes without a manual refresh.
+            body_wrapper_template_path="extras/inc/jobresult_polling_text_panel.html",
         ),
     )
 
@@ -3868,6 +4022,51 @@ class JobResultUIViewSet(
                 **context,
             }
         )
+
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        url_path="cancel-job",
+        url_name="cancel_job",
+        custom_view_base_action="view",
+    )
+    def cancel_job(self, request, pk=None):
+        """Terminate a running or pending Job, or reap it if its worker is gone."""
+        job_result = self.get_object()
+
+        if not user_can_cancel_job_result(request.user, job_result):
+            messages.error(request, "You do not have permission to cancel this job.")
+            return redirect(job_result.get_absolute_url())
+
+        strategy = CancelFactory.get_strategy(job_result.queue_type)
+
+        if not job_result.is_unready_state:
+            messages.info(request, "Job is already finished. Nothing to do.")
+            return redirect(job_result.get_absolute_url())
+
+        job_liveness_state = strategy.liveness(job_result)
+        if request.method == "GET":
+            return render(
+                request,
+                "extras/job_cancel.html",
+                {
+                    "object": job_result,
+                    "job_liveness_state": job_liveness_state,
+                    "timestamp": now(),
+                    "return_url": job_result.get_absolute_url(),
+                },
+            )
+
+        result = strategy.cancel(job_result, user=request.user)
+        if result["error"]:
+            messages.error(request, result["error"])
+        else:
+            if result["canceled"]:
+                messages.success(request, "Job canceled.")
+            else:
+                messages.info(request, "Job finished before it could be canceled. No action was taken.")
+
+        return redirect(job_result.get_absolute_url())
 
 
 #
@@ -4134,16 +4333,124 @@ class MetadataTypeUIViewSet(NautobotUIViewSet):
 
         return obj
 
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="value-widget",
+        url_name="value_widget",
+        custom_view_base_action="view",
+    )
+    def value_widget(self, request, *args, **kwargs):
+        """
+        Render the appropriate `value` input field for this metadata type.
+
+        Called by the ObjectMetadata create form via HTMX when the user changes the metadata_type
+        select, so the input adapts (date picker, choice list, etc.) without a full page reload.
+        The metadata type is identified by the pk in the URL path. Returns an empty fragment for
+        TYPE_CONTACT_TEAM, since those don't use `value`.
+        """
+        mt = self.get_object()
+        field = mt.to_form_field(required=False)
+        bound_field = None
+        if field is not None:
+            field.label = "Value"
+            field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+
+            class _ValueOnlyForm(django_forms.Form):
+                pass
+
+            f = _ValueOnlyForm()
+            f.fields["value"] = field
+            bound_field = f["value"]
+        return render(request, "inc/htmx_form_field.html", {"field": bound_field})
+
+
+class _ObjectMetadataFieldsPanel(object_detail.ObjectFieldsPanel):
+    def render_value(self, key, value, context):
+        if key == "_value":
+            obj = get_obj_from_context(context, self.context_object_key)
+            if obj:
+                return obj.get_value_display()
+        return super().render_value(key, value, context)
+
 
 class ObjectMetadataUIViewSet(
     ObjectListViewMixin,
+    ObjectDetailViewMixin,
+    ObjectDestroyViewMixin,
+    ObjectEditViewMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectChangeLogViewMixin,
 ):
     filterset_class = filters.ObjectMetadataFilterSet
     filterset_form_class = forms.ObjectMetadataFilterForm
     queryset = ObjectMetadata.objects.all().order_by("assigned_object_type", "assigned_object_id", "scoped_fields")
     serializer_class = serializers.ObjectMetadataSerializer
     table_class = tables.ObjectMetadataTable
+    create_form_class = forms.ObjectMetadataCreateForm
+    update_form_class = forms.ObjectMetadataForm
     action_buttons = ("export",)
+
+    object_detail_content = object_detail.ObjectDetailContent(
+        panels=(
+            _ObjectMetadataFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "metadata_type",
+                    "contact",
+                    "team",
+                    "scoped_fields",
+                    "assigned_object_type",
+                    "assigned_object",
+                    "_value",
+                ],
+                hide_if_unset=["contact", "team", "_value"],
+            ),
+        ),
+    )
+
+    def create(self, request, *args, **kwargs):
+        # ObjectMetadata is always anchored to an existing object. Block direct navigation to
+        # the bare add URL — entry must come from the parent object's Metadata tab, which
+        # supplies assigned_object_type and assigned_object_id as query params.
+        if request.method == "GET":
+            ct_id = request.GET.get("assigned_object_type")
+            obj_id = request.GET.get("assigned_object_id")
+            if not (ct_id and obj_id):
+                messages.warning(
+                    request,
+                    "Object metadata must be created from the parent object's detail view (Metadata tab).",
+                )
+                return redirect(self.get_return_url(request))
+            try:
+                ct = ContentType.objects.get(pk=ct_id)
+                ct.get_object_for_this_type(pk=obj_id)
+            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValidationError, ValueError, TypeError) as exc:
+                logger.debug(
+                    "Object metadata create: could not resolve assigned object "
+                    "(assigned_object_type=%r, assigned_object_id=%r): %r",
+                    ct_id,
+                    obj_id,
+                    exc,
+                )
+                messages.warning(
+                    request,
+                    "Cannot create metadata: the requested assigned object does not exist.",
+                )
+                return redirect(self.get_return_url(request))
+        return super().create(request, *args, **kwargs)
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        if self.action == "create":
+            # Provide a {metadata_type_id: data_type} map so the create template's JS can
+            # show/hide contact, team, and value based on the selected metadata_type.
+            context["metadata_type_data_types"] = json.dumps(
+                {str(mt.pk): mt.data_type for mt in MetadataType.objects.all()}
+            )
+            context["contact_team_data_type"] = MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        return context
 
 
 #
@@ -4400,6 +4707,13 @@ class RoleUIViewSet(viewsets.NautobotUIViewSet):
                 ipaddress_table.columns.hide("role")
                 RequestConfig(request, paginate).configure(ipaddress_table)
                 context["ipaddress_table"] = ipaddress_table
+
+            if ContentType.objects.get_for_model(IPAddressRange) in context["content_types"]:
+                ip_address_ranges = instance.ip_address_ranges.restrict(request.user, "view")
+                ip_address_range_table = IPAddressRangeTable(ip_address_ranges)
+                ip_address_range_table.columns.hide("role")
+                RequestConfig(request, paginate).configure(ip_address_range_table)
+                context["ip_address_range_table"] = ip_address_range_table
 
             if ContentType.objects.get_for_model(Prefix) in context["content_types"]:
                 prefixes = instance.prefixes.restrict(request.user, "view")

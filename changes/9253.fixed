@@ -1,0 +1,1 @@
+Fixed job cancel revoked jobs recovery on Redis Sentinel/cluster by using Celery's broker connection instead of parsing the broker URL.

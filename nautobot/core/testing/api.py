@@ -108,6 +108,16 @@ class APITestCase(views.ModelTestCase):
                 m2m_fields.append(field_name)
         return m2m_fields
 
+    def get_default_m2m_fields(self):
+        """M2M-like fields included in responses when `?exclude_m2m` is not set.
+
+        Combines the global `DEFAULT_M2M_FIELDS` with the per-serializer `Meta.default_m2m_fields` extension.
+        """
+        serializer_class = get_serializer_for_model(self.model)
+        result = set(constants.DEFAULT_M2M_FIELDS)
+        result.update(getattr(serializer_class.Meta, "default_m2m_fields", ()))
+        return result
+
     @staticmethod
     def add_query_params_to_url(url: str, query_dict: dict) -> str:
         query = QueryDict(mutable=True)
@@ -482,9 +492,10 @@ class APIViewTestCases:
             self.assertIsInstance(response.data, dict)
             self.assertIn("results", response.data)
 
+            default_m2m_fields = self.get_default_m2m_fields()
             for response_data in response.data["results"]:
                 for field in m2m_fields:
-                    if field in constants.DEFAULT_M2M_FIELDS:
+                    if field in default_m2m_fields:
                         self.assertIn(field, response_data)
                         self.assertIsInstance(response_data[field], list)
                     else:

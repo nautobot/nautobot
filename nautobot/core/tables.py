@@ -452,7 +452,7 @@ class BooleanColumn(django_tables2.Column):
 
 class ButtonsColumn(django_tables2.TemplateColumn):
     """
-    Render edit, delete, and changelog buttons for an object.
+    Render detail, changelog, edit, and delete buttons for an object.
 
     Args:
         model (type(Model)): Model class to use for calculating URL view names
@@ -460,7 +460,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return_url_extra (Optional[str]): String to append to the return URL (e.g. for specifying a tab)
     """
 
-    buttons = ("changelog", "edit", "delete")
+    buttons = ("detail", "changelog", "edit", "delete")
     attrs = {
         "td": {"class": "d-print-none text-end text-nowrap nb-actions nb-w-0"},
         "tf": {"class": "nb-w-0"},
@@ -476,11 +476,18 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
             {prepend_template}
+            {{% if "detail" in buttons %}}
+                <li>
+                    <a href="{{% url '{detail_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
+                        <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                        View {verbose_name} details
+                    </a>
+                </li>
+            {{% endif %}}
             {{% if "changelog" in buttons %}}
                 <li>
                     <a href="{{% url '{changelog_route}' {pk_field}=record.{pk_field} %}}" class="dropdown-item">
-                        <span class="mdi mdi-history" aria-hidden="true"></span>
-                        View change log
+                        <span class="mdi mdi-history me-4" aria-hidden="true"></span>View {verbose_name} change log
                     </a>
                 </li>
             {{% endif %}}
@@ -488,16 +495,14 @@ class ButtonsColumn(django_tables2.TemplateColumn):
                 {{% if "edit" in buttons and perms.{app_label}.change_{model_name} %}}
                     <li>
                         <a href="{{% url '{edit_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-warning">
-                            <span class="mdi mdi-pencil" aria-hidden="true"></span>
-                            Edit {verbose_name}
+                            <span class="mdi mdi-pencil me-4" aria-hidden="true"></span>Edit {verbose_name}
                         </a>
                     </li>
                 {{% endif %}}
                 {{% if "delete" in buttons and perms.{app_label}.delete_{model_name} %}}
                     <li>
                         <a href="{{% url '{delete_route}' {pk_field}=record.{pk_field} %}}?return_url={{{{ return_url|default:request_path }}}}{{{{ return_url_extra }}}}" class="dropdown-item text-danger">
-                            <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
-                            Delete {verbose_name}
+                            <span class="mdi mdi-trash-can-outline me-4" aria-hidden="true"></span>Delete {verbose_name}
                         </a>
                     </li>
                 {{% endif %}}
@@ -517,10 +522,13 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         return_url_extra="",
         **kwargs,
     ):
+        if buttons is None:
+            buttons = self.buttons
         app_label = model._meta.app_label
         changelog_route = get_route_for_model(model, "changelog")
         edit_route = get_route_for_model(model, "edit")
         delete_route = get_route_for_model(model, "delete")
+        detail_route = get_route_for_model(model, "")
 
         template_code = self.template_code.format(
             app_label=app_label,
@@ -529,6 +537,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
             changelog_route=changelog_route,
             edit_route=edit_route,
             delete_route=delete_route,
+            detail_route=detail_route,
             pk_field=pk_field,
             buttons=buttons,
             prepend_template=prepend_template,
@@ -538,7 +547,7 @@ class ButtonsColumn(django_tables2.TemplateColumn):
 
         self.extra_context.update(
             {
-                "buttons": buttons or self.buttons,
+                "buttons": buttons,
                 "return_url_extra": return_url_extra,
             }
         )
@@ -824,7 +833,15 @@ class ComputedFieldColumn(django_tables2.Column):
         super().__init__(*args, **kwargs)
 
     def render(self, *, record):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
-        return self.computedfield.render({"obj": record})
+        model = self.computedfield.content_type.model_class()
+        if not isinstance(record, model):
+            # Interleaved tables (e.g. Prefix > IP Addresses) can contain rows of other types that this computed
+            # field doesn't apply to. Render a placeholder instead of evaluating the template.
+            return helpers.placeholder(None)
+        value = self.computedfield.render({"obj": record})
+        if self.computedfield.output_type == choices.ComputedFieldTypeChoices.TYPE_MARKDOWN:
+            return helpers.render_markdown(value)
+        return value
 
 
 class CustomFieldColumn(django_tables2.Column):

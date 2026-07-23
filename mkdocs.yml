@@ -16,6 +16,8 @@ theme:
   custom_dir: "docs/assets/overrides"
   hljs_languages:
     - "django"
+    - "graphql"
+    - "jinja"
     - "yaml"
   icon:
     admonition:
@@ -260,6 +262,7 @@ plugins:
         "models/extras/status.md": "user-guide/platform-functionality/status.md"
         "models/extras/team.md": "user-guide/core-data-model/extras/team.md"
         "models/ipam/ipaddress.md": "user-guide/core-data-model/ipam/ipaddress.md"
+        "models/ipam/ipaddressrange.md": "user-guide/core-data-model/ipam/ipaddressrange.md"
         "models/ipam/prefix.md": "user-guide/core-data-model/ipam/prefix.md"
         "models/ipam/rir.md": "user-guide/core-data-model/ipam/rir.md"
         "models/ipam/routetarget.md": "user-guide/core-data-model/ipam/routetarget.md"
@@ -380,6 +383,7 @@ nav:
                   - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
                   - SSO: "user-guide/administration/configuration/authentication/sso.md"
                   - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
+              - OpenTelemetry: "user-guide/administration/configuration/opentelemetry.md"
           - Tools:
               - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
               - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
@@ -393,6 +397,7 @@ nav:
               - Request Profiling: "user-guide/administration/guides/request-profiling.md"
               - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
               - Task Queues: "user-guide/administration/guides/celery-queues.md"
+              - OpenTelemetry: "user-guide/administration/guides/opentelemetry.md"
           - Security:
               - Security and Maintenance Policy: "user-guide/administration/security/index.md"
               - Notices: "user-guide/administration/security/notices.md"
@@ -407,6 +412,8 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+              - Homepage Panels: "user-guide/feature-guides/getting-started/homepage-panels.md"
+          - Breakout Cables: "user-guide/feature-guides/breakout-cables.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
           - Custom Fields:
@@ -488,15 +495,19 @@ nav:
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Cable Type: "user-guide/core-data-model/dcim/cabletype.md"
               - Cable: "user-guide/core-data-model/dcim/cable.md"
-              - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+              - Cable to Cable Termination: "user-guide/core-data-model/dcim/cabletocabletermination.md"
+              - HA Devices:
+                  - "user-guide/core-data-model/dcim/hadevice.md"
+                  - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+                  - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
               - Power Panel: "user-guide/core-data-model/dcim/powerpanel.md"
               - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
               - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
               - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
               - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
-              - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Controller: "user-guide/core-data-model/dcim/controller.md"
               - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
               - Virtual Device Context: "user-guide/core-data-model/dcim/virtualdevicecontext.md"
@@ -507,6 +518,7 @@ nav:
               - Team: "user-guide/core-data-model/extras/team.md"
           - IPAM:
               - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
+              - IP Address Range: "user-guide/core-data-model/ipam/ipaddressrange.md"
               - Namespace: "user-guide/core-data-model/ipam/namespace.md"
               - Prefix: "user-guide/core-data-model/ipam/prefix.md"
               - RIR: "user-guide/core-data-model/ipam/rir.md"
@@ -573,6 +585,7 @@ nav:
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
+              - Job Cancel: "user-guide/platform-functionality/jobs/job-cancel.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
@@ -592,6 +605,7 @@ nav:
               - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
               - Search: "user-guide/platform-functionality/user-interface/search.md"
+              - Searchable Fields: "user-guide/platform-functionality/user-interface/searchable-fields.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
@@ -608,6 +622,7 @@ nav:
           - Common Job Patterns: "development/jobs/job-patterns.md"
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"
+          - Job Execution: "development/jobs/job-execution.md"
           - Migration Guides:
               - Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
@@ -641,6 +656,7 @@ nav:
               - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
               - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
               - Jobs: "development/apps/api/platform-features/jobs.md"
+              - OpenTelemetry Instrumentation: "development/apps/api/platform-features/opentelemetry.md"
               - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
@@ -719,7 +735,7 @@ nav:
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
           - HTMX: "development/core/htmx.md"
-          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
+          - Running Jobs Locally on Kubernetes: "development/core/running-jobs-locally-kubernetes.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
@@ -733,6 +749,7 @@ nav:
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 3.2: "release-notes/version-3.2.md"
       - Version 3.1: "release-notes/version-3.1.md"
       - Version 3.0: "release-notes/version-3.0.md"
       - Version 2.4: "release-notes/version-2.4.md"
