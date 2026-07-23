@@ -1501,6 +1501,18 @@ class Prefix(PrimaryModel):
         streamed from the DB in ascending order and merged lazily; the scan
         stops at the first gap.
 
+        All contained IPAddressRanges are treated as blockers, regardless of
+        their `count_as_utilized` or `is_exclusive` flags:
+
+        - When pre-filling a new IPAddressRange (exclude_child_ips=False), any
+        overlap with an existing range is rejected by validation
+        (`IPAddressRange._validate_no_range_overlap`), so every existing range
+        must be skipped no matter its flags.
+        - The flags have narrower, unrelated roles: `count_as_utilized` only
+        affects utilization statistics, and `is_exclusive` only affects
+        validation of creating individual IPAddresses inside the range.
+        Neither defines availability in the sense of this method.
+
         Returns:
             netaddr.IPAddress or None
         """
@@ -1541,7 +1553,7 @@ class Prefix(PrimaryModel):
             blockers = range_intervals()
 
         for start, end in blockers:
-            if start > candidate:
+            if candidate < start:
                 # Found a gap before this blocker.
                 break
             # This blocker starts at/before the candidate; skip past it if it covers it.
