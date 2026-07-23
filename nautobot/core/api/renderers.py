@@ -57,10 +57,13 @@ class NautobotCSVRenderer(BaseRenderer):
         if isinstance(data, dict):
             data = [data]
 
-        headers = self.get_headers(data)
+        headers = self.get_headers(data, field_order=(renderer_context or {}).get("field_order"))
 
         buffer = StringIO()
         writer = csv.writer(buffer)
+        import_directives = (renderer_context or {}).get("import_directives")
+        if import_directives:
+            self.render_directive_row(writer, import_directives)
         writer.writerow(headers)
         for record in data:
             writer.writerow(
@@ -72,9 +75,28 @@ class NautobotCSVRenderer(BaseRenderer):
 
         return buffer.getvalue()
 
+    def render_directive_row(self, writer, directives):
+        """
+        Write a `# nautobot-import: ...` directive row describing how this file should be re-imported.
+
+        The directive occupies a single cell so that it survives spreadsheet open-edit-save cycles;
+        see the corresponding first-cell parsing logic in NautobotCSVParser.
+        """
+        entries = []
+        for key, value in directives.items():
+            if isinstance(value, (list, tuple)):
+                value = " ".join(str(v) for v in value)
+            entries.append(f"{key}={value}")
+        writer.writerow([f"# nautobot-import: {'; '.join(entries)}"])
+
     @classmethod
-    def get_headers(cls, data):
-        """Identify the appropriate CSV headers corresponding to the given data."""
+    def get_headers(cls, data, field_order=None):
+        """
+        Identify the appropriate CSV headers corresponding to the given data.
+
+        If `field_order` (a list of field names / `__` lookup paths, e.g. from an explicit export field
+        selection) is given, headers are ordered to match it instead of the default priority ordering.
+        """
         base_headers = list(data[0].keys())
 
         # Remove specific headers that we know are irrelevant
@@ -103,11 +125,22 @@ class NautobotCSVRenderer(BaseRenderer):
 
         headers = base_headers + cf_headers
 
-        # Coerce important fields, if present, to the front of the list
-        for priority_header in ["id", "composite_key", "display", "name"]:
-            if priority_header in headers:
-                headers.remove(priority_header)
-                headers.insert(0, priority_header)
+        if field_order:
+            # Order headers to match the explicit field selection; a header belongs to the earliest
+            # selection entry it equals or nests under (e.g. `location__name` under `location`).
+            def selection_index(header):
+                for index, selected in enumerate(field_order):
+                    if header == selected or header.startswith(f"{selected}__"):
+                        return (index, header)
+                return (len(field_order), header)
+
+            headers.sort(key=selection_index)
+        else:
+            # Coerce important fields, if present, to the front of the list
+            for priority_header in ["id", "composite_key", "display", "name"]:
+                if priority_header in headers:
+                    headers.remove(priority_header)
+                    headers.insert(0, priority_header)
 
         return headers
 
