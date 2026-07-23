@@ -1,0 +1,1 @@
+Added a "Importing and Exporting Objects" feature guide covering field selection, the self-describing file / match-key model, CSV/JSON/YAML formats, automatic nesting, upsert semantics, and filtering.
