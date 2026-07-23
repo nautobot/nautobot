@@ -100,6 +100,43 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertNotIn('id="actions-dropdown"', response_body)
 
 
+class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
+    """Tests for the action buttons on object list views when the user lacks the `add` permission."""
+
+    def setUp(self):
+        super().setUp()
+        # Grant only the view permission; intentionally not covered in `ObjectListViewActionButtonsTestCase`.
+        self.add_permissions("circuits.view_provider")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_rendered_but_import_not_without_add_permission(self):
+        """
+        Without the `add` permission but with the default action buttons, `export` (which does not require `add`)
+        renders inside the dropdown, while `import` (which requires `add`) does not.
+        """
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+        self.assertIn("Export as CSV", response_body)
+        self.assertNotIn('id="import-button"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_not_rendered_when_import_only_without_add_permission(self):
+        """
+        With `action_buttons = ("import",)` and no `add` permission, `import` cannot render (it requires `add`) and
+        there is no `export`, so no dropdown caret should render.
+        """
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("import",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertNotIn('id="actions-dropdown"', response_body)
+        self.assertNotIn('id="import-button"', response_body)
+
+
 class HomeViewTestCase(TestCase):
     def test_home(self):
         url = reverse("home")
