@@ -1,2 +1,0 @@
-Added opt-in support for [OpenTelemetry](https://opentelemetry.io/) traces, metrics, and logs, disabled by default and enabled via the `OTEL_PYTHON_DJANGO_INSTRUMENT` setting.
-Added the `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS` setting to enable additional OpenTelemetry library instrumentors at startup.

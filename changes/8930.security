@@ -1,5 +1,0 @@
-Updated npm development dependency `brace-expansion` to `1.1.16` to mitigate CVE-2026-13149.
-Updated npm development dependency `fast-uri` to `3.1.4` to mitigate CVE-2026-16221 and CVE-2026-13676.
-Updated npm development dependency `immutable` to `5.1.9` to mitigate CVE-2026-59879 and CVE-2026-59880.
-Updated npm development dependency `js-yaml` to `4.3.0` to mitigate CVE-2026-59869.
-Updated npm development dependency `shell-quote` to `1.10.0` to mitigate CVE-2026-13311.

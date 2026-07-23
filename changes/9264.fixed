@@ -1,1 +1,0 @@
-Fixed bulk "Select All" delete and edit operations ignoring a view's implicit `alter_queryset()` scoping.
