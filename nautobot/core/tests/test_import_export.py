@@ -689,6 +689,32 @@ class ExportResultModalTests(ImportExportJobTestCase):
 
 
 # ===========================================================================
+# Import job modal
+# ===========================================================================
+class ImportModalTests(ImportExportJobTestCase):
+    def test_import__modal_renders_field_table(self):
+        """The ImportObjects job form renders via its custom modal template with the field-reference table."""
+        get_job_class_and_model("nautobot.core.jobs", "ImportObjects")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        response = self.client.post(
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}),
+            data={
+                "render_job_form": True,
+                "job_modal_button": "core.import_objects",
+                "content_type": ContentType.objects.get_for_model(Status).pk,
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        # As above: an unloadable htmx_template_name silently falls back to the generic job modal.
+        self.assertTemplateUsed(response, "system_jobs/import_job_form_modal.html")
+        self.assertTemplateUsed(response, "system_jobs/inc/csv_fields_table.html")
+        content = response.content.decode(response.charset)
+        self.assertIn("csv-fields-table", content)
+        self.assertIn("csv-fields-tbody", content)
+
+
+# ===========================================================================
 # Layer 1b — core import resolution (per field type)
 # ===========================================================================
 class CoreImportResolveTests(ImportExportJobTestCase):

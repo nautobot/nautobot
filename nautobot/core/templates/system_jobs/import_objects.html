@@ -9,18 +9,19 @@
         </div>
         <div class="card-body">
             {% render_field job_form.content_type %}
+            {% render_field job_form.import_format %}
             {% render_field job_form.roll_back_if_error %}
+            {% render_field job_form.match_fields %}
         </div>
     </div>
     <div class="card">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link" href="#csv-text" role="tab" data-bs-toggle="tab">CSV Text Input</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">File Upload</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#csv-text" role="tab" data-bs-toggle="tab">Text Input</a></li>
             </ul>
         </div>
         <div class="card-body">
-            <div id="csv-fetch-failure" class="alert alert-danger" role="alert" style="display: none"></div>
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane fade show active py-16" id="csv-file">
                     {% render_field job_form.csv_file %}
@@ -29,176 +30,12 @@
                     {% render_field job_form.csv_data %}
                 </div>
             </div>
-            <div id="csv-fields-info" class="alert alert-info" role="alert" style="display: none">
-                <p>
-                    <span class="text-success"><span aria-hidden="true" class="mdi mdi-check-bold"></span></span>
-                    Required fields <strong>must</strong> be present in the data.
-                </p>
-                <p>
-                    <span class="text-warning"><span aria-hidden="true" class="mdi mdi-key-link"></span></span>
-                    Related objects may be identified by their UUID(s) and/or by any field(s) that uniquely identify them.
-                    For example:
-                    <ul>
-                        <li>
-                            A <code>status</code> field could be populated by UUID or by the field <code>status__name</code>.
-                        </li>
-                        <li>
-                            A <code>location</code> field could be identified by UUID or by the fields
-                            <code>location__name</code> and <code>location__location_type</code>.
-                        </li>
-                    </ul>
-                    In either case, if no related object is intended for a given field, the string <code>NoObject</code>
-                    can be given.
-                </p>
-                <p>
-                    <span class="text-info"><span aria-hidden="true" class="mdi mdi-help-circle"></span></span>
-                    Some fields have a defined set of valid values. Click the button to view the list of choices.
-                </p>
-            </div>
-            <table id="csv-fields-table" class="table" style="display: none">
-                <thead>
-                    <tr>
-                        <th>Field</th>
-                        <th>Required</th>
-                        <th>Related Object</th>
-                        <th>Choices</th>
-                        <th>Description</th>
-                    </tr>
-                </thead>
-                <tbody id="csv-fields-tbody"></tbody>
-            </table>
+            {% include "system_jobs/inc/csv_fields_table.html" with verbose=True %}
         </div>
     </div>
 {% endblock job_form_wrapper %}
 
 {% block javascript %}
     {{ block.super }}
-    <script>
-        /* jquery here because select2 doesn't fire native events - https://github.com/select2/select2/issues/1908 */
-        $("#id_content_type").on("change", async (event) => {
-            const csv_data = document.getElementById("id_csv_data");
-            /* If user has already input csv_data, don't clobber it */
-            const updateCsvData = (csv_data.value.split("\n").length <= 1);
-            if (updateCsvData) {
-                csv_data.value = "";
-            }
-
-            const fetch_failure = document.getElementById("csv-fetch-failure");
-            const table_info = document.getElementById("csv-fields-info");
-            const table = document.getElementById("csv-fields-table");
-            const tbody = document.getElementById("csv-fields-tbody");
-
-            fetch_failure.style.display = "none";
-
-            const ct_id = event.target.value;
-            if (! ct_id) {
-                table_info.style.display = "none";
-                table.style.display = "none";
-                return;
-            }
-
-            const response = await fetch(`{% url 'ui-api:core-api:csv-import-fields' %}?content-type-id=${ct_id}`);
-            const data = await response.json();
-
-            if (!response.ok) {
-                table_info.style.display = "none";
-                table.style.display = "none";
-                fetch_failure.innerHTML = data.detail + " CSV cannot be imported for this content-type.";
-                fetch_failure.style.display = "";
-                return;
-            }
-
-            table_info.style.display = "";
-            table.style.display = "";
-
-            tbody.innerHTML = "";
-            for (const field of data.fields) {
-                let tr = document.createElement("tr");
-
-                /* Field */
-                let td = document.createElement("td");
-                td.innerHTML = `<code>${field.name}</code>`;
-                tr.appendChild(td);
-
-                /* Required */
-                td = document.createElement("td");
-                if (field.required) {
-                    td.innerHTML = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>';
-                    if (updateCsvData) {
-                        if (csv_data.value != "") {
-                            csv_data.value += ","
-                        }
-                        csv_data.value += field.name;
-                    }
-                } else {
-                    td.innerHTML = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>';
-                }
-                tr.appendChild(td);
-
-                /* Related Object */
-                td = document.createElement("td");
-                if (field.foreign_key) {
-                    td.innerHTML = `
-                        <span class="text-warning"><i class="mdi mdi-key-link"></i></span><code>${field.foreign_key}</code>
-                    `;
-                } else {
-                    td.innerHTML = '<span class="text-secondary">—</span>';
-                }
-                tr.appendChild(td);
-
-                /* Choices */
-                td = document.createElement("td");
-                if (field.choices) {
-                    let choicesHTML = "";
-                    for (const [value, label] of Object.entries(field.choices)) {
-                        if (value) {
-                            choicesHTML += `<tr><td><samp>${value}</samp></td><td>${label}</td></tr>`;
-                        }
-                    }
-                    td.innerHTML += `
-                        <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#${ field.name }_choices">
-                            <i class="mdi mdi-help-circle"></i>
-                        </button>
-                        <div class="modal fade" id="${field.name}_choices" tabindex="-1" role="dialog">
-                            <div class="modal-dialog" role="document">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h4 class="modal-title">${field.name} Choices</h4>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-                                        </button>
-                                    </div>
-                                    <table class="table table-hover modal-body">
-                                        <tr><th>Import Value</th><th>Label</th></tr>
-                                        ${choicesHTML}
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                } else {
-                    td.innerHTML = '<span class="text-secondary">—</span>';
-                }
-                tr.appendChild(td);
-
-                /* Description */
-                td = document.createElement("td");
-                if (field.help_text) {
-                    td.innerHTML += `${field.help_text}<br>`;
-                } else if (field.label) {
-                    td.innerHTML += `${field.label}<br>`;
-                }
-                if (field.format) {
-                    td.innerHTML += `<small class="text-secondary">Format: ${field.format}</small>`
-                }
-                tr.appendChild(td);
-
-                tbody.appendChild(tr);
-            }
-        });
-
-        if ($("#id_content_type").val()) {
-            $("#id_content_type").change();
-        }
-    </script>
-{% endblock %}
+    {% include "system_jobs/inc/csv_fields_table_script.html" %}
+{% endblock javascript %}

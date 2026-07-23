@@ -9,6 +9,8 @@ class ImportObjectsUITestCase(SeleniumTestCase):
         self.login_as_superuser()
 
     def test_import_objects_ui_population(self):
+        # The "Import from file" action opens the ImportObjects job form in the shared modal (rather than a
+        # full page); the field-reference table is rendered inside that modal.
         self.browser.visit(self.live_server_url)
         self.click_navbar_entry("Organization", "Locations")
         self.browser.find_by_id("actions-dropdown").click()

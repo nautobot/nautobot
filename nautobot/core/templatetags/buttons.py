@@ -167,9 +167,10 @@ def import_button(url):  # 3.0 TODO: remove, unused
 @register.simple_tag
 def job_import_url(content_type):
     """
-    URL to the run view for the CSV Import system job, prefilled with the given content-type.
+    URL to the run view for the Import Objects system job, prefilled with the given content-type.
 
-    Helper to `job_import_button` tag, but can be used separately if needed.
+    For templates that link to the full-page import form; `job_import_button` instead opens that same job's
+    form in a modal.
     """
     try:
         import_url = reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"})
@@ -508,6 +509,35 @@ def consolidate_detail_view_action_buttons(context):
     }
 
 
+def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals):
+    """Build the context for `buttons/inc/job_modal_trigger.html` from a registered job-modal button.
+
+    Delegates to `_JobModalButton.build_trigger_context()` so the run-view URL, base hx-vals, and disabled
+    logic live with the button rather than being duplicated per template tag. A `trigger_url` of None means
+    "nothing to render" - the button isn't registered (e.g. an app hasn't loaded yet).
+
+    Args:
+        context (dict): current Django Template context
+        button_id (str): registry key of the `_JobModalButton` this trigger opens
+        list_element (bool): render as a <li> dropdown item instead of a standalone button
+        extra_hx_vals (dict): job-specific hx-vals to merge on top of the button's base set
+    """
+    button = registry["job_modal_buttons"].get(button_id)
+    if button is None:
+        return {"trigger_url": None, "list_element": list_element}
+    trigger = button.build_trigger_context(
+        user=getattr(context.get("request"), "user", None),
+        extra_hx_vals=extra_hx_vals,
+    )
+    return {
+        "trigger_url": trigger["url"],
+        "trigger_hx_vals": json.dumps(trigger["hx_vals"]),
+        "list_element": list_element,
+        "disabled": trigger["disabled"],
+        "disabled_title": trigger["disabled_title"],
+    }
+
+
 @register.inclusion_tag("buttons/job_import.html", takes_context=True)
 def job_import_button(context, content_type, list_element=False):
     """Display an Import Button/List Element on the page.
@@ -518,24 +548,13 @@ def job_import_button(context, content_type, list_element=False):
         content_type (str): Django.contrib.ContentType for the model.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """
-    # Reuse the registered ImportObjectsModalButton to build the HTMX wiring that opens the ImportObjects
-    # job form in the shared generic modal, so the run-view URL, base hx-vals, and disabled logic aren't
-    # duplicated here. The registered button_id lets the job-result modal resolve this trigger; the button
-    # sets refresh_on_close_if_done so the list refreshes on close and newly imported objects appear.
-    button = registry["job_modal_buttons"].get("core.import_objects")
-    if content_type is None or button is None:
-        return {"import_url": None, "list_element": list_element}
-    trigger = button.build_trigger_context(
-        user=getattr(context.get("request"), "user", None),
-        extra_hx_vals={"content_type": str(content_type.id)},
+    # The registered ImportObjectsModalButton lets the job-result modal resolve this trigger, and sets
+    # refresh_on_close_if_done so the list refreshes on close and newly imported objects appear.
+    if content_type is None:
+        return {"trigger_url": None, "list_element": list_element}
+    return job_modal_trigger_context(
+        context, "core.import_objects", list_element, {"content_type": str(content_type.pk)}
     )
-    return {
-        "import_url": job_import_url(content_type),
-        "import_hx_vals": json.dumps(trigger["hx_vals"]),
-        "list_element": list_element,
-        "disabled": trigger["disabled"],
-        "disabled_title": trigger["disabled_title"],
-    }
 
 
 @register.simple_tag
@@ -543,7 +562,8 @@ def job_export_url():
     """
     URL to the run view for the Export Object List system job.
 
-    Helper to `export_button` tag, but can be used separately if needed.
+    For templates that link to the full-page export form; `export_button` instead opens that same job's
+    form in a modal.
     """
     try:
         export_url = reverse(
@@ -563,9 +583,8 @@ def export_button(context, content_type=None, list_element=False):
         content_type (content_type, optional): Django Content Type for the model. Defaults to None.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """
-    button = registry["job_modal_buttons"].get("core.export_object_list")
-    if content_type is None or button is None:
-        return {"export_url": None, "list_element": list_element}
+    if content_type is None:
+        return {"trigger_url": None, "list_element": list_element}
 
     # Default the export field selection to the current view's visible columns, when available.
     default_export_fields = ""
@@ -577,26 +596,19 @@ def export_button(context, content_type=None, list_element=False):
         except SerializerNotFound:
             pass
 
-    # Reuse the registered ExportObjectListModalButton to build the HTMX wiring that opens the
-    # ExportObjectList job form in the shared generic modal, so the run-view URL, base hx-vals, and
-    # disabled logic aren't duplicated here. The job's own fields (format, template, field selection,
-    # use_current_view) replace the previous per-format / saved-view dropdown entries; the registered
-    # button_id lets the job-result modal offer a file download once the export completes.
-    trigger = button.build_trigger_context(
-        user=getattr(context.get("request"), "user", None),
-        extra_hx_vals={
+    # The job's own fields (format, template, field selection, use_current_view) replace the previous
+    # per-format / saved-view dropdown entries; the registered ExportObjectListModalButton lets the
+    # job-result modal offer a file download once the export completes.
+    return job_modal_trigger_context(
+        context,
+        "core.export_object_list",
+        list_element,
+        {
             "content_type": str(content_type.pk),
             "query_string": context["request"].GET.urlencode(),
             "export_fields": default_export_fields,
         },
     )
-    return {
-        "export_url": trigger["url"],
-        "export_hx_vals": json.dumps(trigger["hx_vals"]),
-        "list_element": list_element,
-        "disabled": trigger["disabled"],
-        "disabled_title": trigger["disabled_title"],
-    }
 
 
 @register.inclusion_tag("buttons/export_fields_selector.html")

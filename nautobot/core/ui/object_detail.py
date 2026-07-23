@@ -3043,3 +3043,24 @@ class ExportObjectListModalButton(_JobModalButton):
             "color": "success",
             "attributes": {"download": file_proxy.name, "data-nb-auto-download": "true"},
         }
+
+
+class ImportObjectsModalButton(_JobModalButton):
+    """Registry entry for the list-view Import job modal (ImportObjects).
+
+    Not rendered directly (the Actions dropdown hand-wires the HTMX trigger via the `job_import_button`
+    template tag); it exists in the registry so the job-result modal can resolve it. The import produces
+    no file, so no download button is offered — the result modal shows the created/updated/unchanged
+    summary (and the list refreshes on close via the trigger's `refresh_on_close_if_done`).
+    """
+
+    class_path = "nautobot.core.jobs.ImportObjects"
+    button_id = "core.import_objects"
+    enable_scheduling = False
+    # Refresh the list on modal close so newly created/updated objects appear.
+    refresh_on_close_if_done = True
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("label", "Import from file")
+        kwargs.setdefault("weight", 100)
+        super().__init__(**kwargs)

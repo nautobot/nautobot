@@ -334,11 +334,12 @@ class CoreConfig(NautobotConfig):
 
         # Register the list-view Export/Import job-modal buttons so the job-result modal can resolve them
         # (Export offers a file download; Import shows the created/updated/unchanged summary).
-        from nautobot.core.ui.object_detail import ExportObjectListModalButton
-        from nautobot.extras.registry import registry as _registry
+        from nautobot.core.ui.object_detail import ExportObjectListModalButton, ImportObjectsModalButton
 
-        if "core.export_object_list" not in _registry["job_modal_buttons"]:
+        if "core.export_object_list" not in registry["job_modal_buttons"]:
             ExportObjectListModalButton()
+        if "core.import_objects" not in registry["job_modal_buttons"]:
+            ImportObjectsModalButton()
 
         @convert_django_field.register(JSONField)
         def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name

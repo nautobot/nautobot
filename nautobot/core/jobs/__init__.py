@@ -579,6 +579,9 @@ class ExportObjectList(Job):
 class ImportObjects(Job):
     """System Job to import (update-or-create) a set of objects from CSV, JSON, or YAML data."""
 
+    # Custom HTMX job-modal template that renders the standard job form plus the field-reference table.
+    htmx_template_name = "system_jobs/import_job_form_modal.html"
+
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to import",
