@@ -151,13 +151,13 @@ For the UI and REST API list views, if ordering by device name is desired, the p
 
 When device components (Interface, Front Port, Rear Port, Module Bay, etc.) belong to a Module, and that Module is installed in a Module Bay belonging to a Device, the `device` foreign key on each such device component is now automatically set to point to the Device in question. This is a behavior change from previous Nautobot versions, in which the `device` foreign key would remain as `NULL`/`None` for device components belonging to a Module even when that Module was installed into a Device's Module Bay. This change was made to improve the performance and self-consistency of Device component lookups, such as the `Device.all_interfaces()` method and `Device.interfaces.all()` queryset manager.
 
-#### Module Bay Component View
+#### Device Module Bays Tree View
 
-The Device Module Bay view now supports a hierarchical view with asynchronous loading of each nested module level as you expand it. Optionally, you can expand or collapse all levels to show or hide the entire nested structure.
+The Device detail view "Module Bays" tab now supports a hierarchical view with asynchronous loading of each nested module level as you expand it. Optionally, you can expand or collapse all levels to show or hide the entire nested structure.
 
 ### Dependencies
 
-TODO
+As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of Nautobot's dependencies, including in some cases major-version updates to these dependencies. These updates should generally be transparent to end users, but Apps relying on these dependencies may in turn require minor updates for compatibility.
 
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
