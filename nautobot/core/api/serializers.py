@@ -112,6 +112,16 @@ class OptInFieldsMixin:
                     if field not in user_opt_in_fields:
                         fields.pop(field, None)
 
+            # An explicit export field selection (e.g. from ExportObjectList) restricts the field set
+            # to exactly the selected heads. Applied here, after all get_field_names() customizations,
+            # so that mixin-injected fields (tags, custom_fields, ...) are restricted as well.
+            export_fields = self.context.get("export_fields")
+            if export_fields and not getattr(self, "is_nested", False):
+                selected_heads = {path.split("__", 1)[0] for path in export_fields}
+                if any(head.startswith("cf_") for head in selected_heads):
+                    selected_heads.add("custom_fields")
+                fields = {name: field for name, field in fields.items() if name in selected_heads}
+
             # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
             # don't get included in the response.
             # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
@@ -272,6 +282,8 @@ class CSVRepresentationMixin:
         """
         model = self.Meta.model
         field_lookups = []
+        export_fields = self.context.get("export_fields") if not self.is_nested else None
+        selected_heads = {path.split("__", 1)[0] for path in export_fields} if export_fields else None
         # NOTE: M2M and One2M fields field are ignored in csv export
         fields = [
             field
@@ -284,6 +296,15 @@ class CSVRepresentationMixin:
         ]
         # Get each related field model's natural_key_fields and prepend field name
         for field in fields:
+            if selected_heads is not None:
+                if field.name not in selected_heads:
+                    continue
+                # An explicit nested selection (e.g. `device_type__manufacturer__name`) replaces the
+                # relation's natural-key defaults; a bare head selection keeps them.
+                selected_paths = [path for path in export_fields if path.startswith(f"{field.name}__")]
+                if selected_paths:
+                    field_lookups.extend(selected_paths)
+                    continue
             # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr.
             # fallback to using default behavior for these fields
             with contextlib.suppress(AttributeError):

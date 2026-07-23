@@ -20,9 +20,15 @@ from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import build_import_document, get_serializer_for_model, nest_flat_dict
+from nautobot.core.api.utils import (
+    build_import_document,
+    get_serializer_for_model,
+    nest_flat_dict,
+    validate_field_paths,
+)
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.jobs import import_utils
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
 from nautobot.core.jobs.customfields import (
@@ -163,6 +169,15 @@ class ExportObjectList(Job):
         default=None,
         required=False,
     )
+    export_fields = StringVar(
+        label="Fields to Export",
+        default="",
+        required=False,
+        description="Optional comma-separated list of fields to export, including nested references to "
+        "related objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
+        "If unspecified, all fields are exported. Not applicable to Export Templates or "
+        "devicetype-library YAML exports.",
+    )
 
     class Meta:
         name = "Export Object List"
@@ -183,26 +198,50 @@ class ExportObjectList(Job):
         return {}
 
     @staticmethod
-    def _get_match_fields(model):
+    def _get_match_fields(model, export_field_paths=None):
         """
         The model's natural key lookups, to stamp exports with their own import instructions.
 
+        When an explicit field selection is in effect, the match key is only stamped if the selection
+        actually includes every match field (otherwise a re-import couldn't resolve the key).
         """
         try:
             match_fields = list(model.csv_natural_key_field_lookups())
         except AttributeError:
             # Model without an identifiable natural key
             return None
+        if export_field_paths is not None:
+            for match_field in match_fields:
+                head = match_field.split("__", 1)[0]
+                if match_field not in export_field_paths and head not in export_field_paths:
+                    return None
         return match_fields
 
-    def _get_serializer_data(self, model, serializer_class, queryset):
+    def _resolve_export_field_paths(self, model, export_fields):
+        """Parse the field-selection string into validated field paths (empty = export all fields)."""
+        export_field_paths = import_utils.parse_match_fields(export_fields)
+        if export_field_paths:
+            try:
+                validate_field_paths(get_serializer_for_model(model), export_field_paths)
+            except ValueError as exc:
+                self.logger.error("%s", exc)
+                raise RunJobTaskFailed(str(exc)) from exc
+            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
+        return export_field_paths
+
+    def _get_serializer_data(self, model, serializer_class, queryset, export_field_paths=None):
         """Serialize the queryset with flat natural-key lookups for related fields, M2M included."""
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
+        selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
 
         # select_related the single-valued relations so each exported row's natural-key columns
         # (e.g. device_type__manufacturer__name) resolve in the JOIN rather than a per-row FK lookup.
-        fk_field_names = [field.name for field in model._meta.fields if field.is_relation]
+        fk_field_names = [
+            field.name
+            for field in model._meta.fields
+            if field.is_relation and (selected_heads is None or field.name in selected_heads)
+        ]
         if fk_field_names:
             queryset = queryset.select_related(*fk_field_names)
 
@@ -211,6 +250,8 @@ class ExportObjectList(Job):
         # members (whose natural key spans an FK) don't trigger a nested per-member lookup.
         m2m_prefetches = []
         for m2m_field in model._meta.many_to_many:
+            if selected_heads is not None and m2m_field.name not in selected_heads:
+                continue
             member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
             if member_fks:
                 m2m_prefetches.append(
@@ -222,6 +263,8 @@ class ExportObjectList(Job):
             queryset = queryset.prefetch_related(*m2m_prefetches)
 
         context = {"request": None, "exclude_m2m": False}
+        if export_field_paths:
+            context["export_fields"] = export_field_paths
         serializer = serializer_class(queryset, many=True, context=context, force_csv=True)
         return serializer.data
 
@@ -321,7 +364,9 @@ class ExportObjectList(Job):
         yaml_data = [obj.to_yaml() for obj in queryset]
         self.create_file(filename + ".yaml", "---\n".join(yaml_data))
 
-    def _render_serialized(self, export_format, model, content_type, queryset, match_fields, filename):
+    def _render_serialized(
+        self, export_format, model, content_type, queryset, export_field_paths, match_fields, filename
+    ):
         """Serialize the queryset once, then write that normalized record set as CSV or a JSON/YAML document.
 
         `records` is the single normalized structure: the flat, natural-key-flattened rows the CSV renderer
@@ -333,11 +378,11 @@ class ExportObjectList(Job):
         self.logger.info(
             "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
         )
-        records = self._get_serializer_data(model, serializer_class, queryset)
+        records = self._get_serializer_data(model, serializer_class, queryset, export_field_paths)
         if export_format in ("json", "yaml"):
             self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
         else:
-            self._render_csv(records, match_fields, filename)
+            self._render_csv(records, export_field_paths, match_fields, filename)
 
     def _render_document(self, export_format, serializer_class, content_type, records, match_fields, filename):
         # Generic JSON/YAML export: reshape the flat records into nested records wrapped in the metadata
@@ -356,10 +401,12 @@ class ExportObjectList(Job):
             plain_document = json.loads(json.dumps(document, default=str))
             self.create_file(filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
 
-    def _render_csv(self, records, match_fields, filename):
+    def _render_csv(self, records, export_field_paths, match_fields, filename):
         # Generic CSV export
         renderer = NautobotCSVRenderer()
         renderer_context = {}
+        if export_field_paths:
+            renderer_context["field_order"] = export_field_paths
         # Stamp the file with its own import instructions (the model's natural key as the match key),
         # so that an unmodified export can be re-imported as an update with no additional configuration.
         if match_fields:
@@ -368,7 +415,7 @@ class ExportObjectList(Job):
         csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
         self.create_file(filename + ".csv", csv_data)
 
-    def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
+    def run(self, *, content_type, query_string="", export_format="csv", export_template=None, export_fields=""):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have view permissions on the requested content-type")
@@ -419,8 +466,11 @@ class ExportObjectList(Job):
             return
 
         # CSV and JSON/YAML share one normalized serialization, written per-format.
-        match_fields = self._get_match_fields(model)
-        self._render_serialized(export_format, model, content_type, queryset, match_fields, filename)
+        export_field_paths = self._resolve_export_field_paths(model, export_fields)
+        match_fields = self._get_match_fields(model, export_field_paths)
+        self._render_serialized(
+            export_format, model, content_type, queryset, export_field_paths, match_fields, filename
+        )
 
 
 class ImportObjects(Job):
