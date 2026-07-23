@@ -7,6 +7,7 @@ from django.apps import apps as global_apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
+    FieldDoesNotExist,
     PermissionDenied,
 )
 from django.db import transaction
@@ -154,10 +155,10 @@ class ExportObjectList(Job):
         required=False,
     )
     export_format = ChoiceVar(
-        choices=(("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
+        choices=(("", "Auto (saved view's format, otherwise CSV)"), ("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
         description="Format to export to if not using an Export Template<br>"
         "(note, <code>dcim | device type</code> YAML export uses the devicetype-library format)",
-        default="csv",
+        default="",
         required=False,
     )
     export_template = ObjectVar(
@@ -178,6 +179,14 @@ class ExportObjectList(Job):
         "If unspecified, all fields are exported. Not applicable to Export Templates or "
         "devicetype-library YAML exports.",
     )
+    use_current_view = BooleanVar(
+        label="Use Current View",
+        default=False,
+        required=False,
+        description="Export exactly what the current list view shows: its filters and sort order, plus — for "
+        "a saved view — its saved field selection and format. Explicitly provided fields/format still take "
+        "precedence. When off, every object is exported in the model's default order.",
+    )
 
     class Meta:
         name = "Export Object List"
@@ -190,11 +199,26 @@ class ExportObjectList(Job):
     def _get_saved_view_filter_params(self, query_params):
         """Extract filter params from saved view if applicable."""
         if "saved_view" in query_params and "all_filters_removed" not in query_params:
-            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            try:
+                saved_view = SavedView.objects.get(pk=query_params["saved_view"])
+            except SavedView.DoesNotExist:
+                # A stale/deleted saved_view id in the query string degrades to no saved filters,
+                # matching _get_saved_view_export_config's handling.
+                return {}
+            saved_view_filters = saved_view.config.get("filter_params", {})
             if len(query_params) > 1:
                 # Retain only filters also present in query_params
                 saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
             return saved_view_filters
+        return {}
+
+    def _get_saved_view_export_config(self, query_params):
+        """Extract the saved export configuration (`{"fields": [...], "format": "..."}`) from the saved view, if any."""
+        if "saved_view" in query_params:
+            try:
+                return SavedView.objects.get(pk=query_params["saved_view"]).config.get("export_config", {})
+            except SavedView.DoesNotExist:
+                return {}
         return {}
 
     @staticmethod
@@ -216,18 +240,6 @@ class ExportObjectList(Job):
                 if match_field not in export_field_paths and head not in export_field_paths:
                     return None
         return match_fields
-
-    def _resolve_export_field_paths(self, model, export_fields):
-        """Parse the field-selection string into validated field paths (empty = export all fields)."""
-        export_field_paths = import_utils.parse_match_fields(export_fields)
-        if export_field_paths:
-            try:
-                validate_field_paths(get_serializer_for_model(model), export_field_paths)
-            except ValueError as exc:
-                self.logger.error("%s", exc)
-                raise RunJobTaskFailed(str(exc)) from exc
-            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
-        return export_field_paths
 
     def _get_serializer_data(self, model, serializer_class, queryset, export_field_paths=None):
         """Serialize the queryset with flat natural-key lookups for related fields, M2M included."""
@@ -334,6 +346,95 @@ class ExportObjectList(Job):
             records.append(nested)
         return records
 
+    # ---- RESOLVE QUERYSET (what to export) ----
+
+    def _require_view_permission(self, content_type):
+        """Abort unless the user may view the requested content-type."""
+        if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
+            self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
+            raise PermissionDenied("User does not have view permissions on the requested content-type")
+
+    def _get_queryset(self, model):
+        """All objects of the requested type, restricted to those the user may view (no filtering applied)."""
+        return model.objects.all().restrict(self.user, "view")
+
+    def _filter_queryset(self, model, queryset, query_params):
+        """Narrow and order the queryset to the launching list view: saved-view + request filters, then sort."""
+        filterset_class = get_filterset_for_model(model)
+        self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
+        # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
+        #       such that they never are even seen here.
+        default_non_filter_params = (
+            "all_filters_removed",
+            "export",
+            "page",
+            "per_page",
+            "saved_view",
+            "sort",
+            "table_changes_pending",
+        )
+        filter_params = self._get_saved_view_filter_params(query_params)
+        filter_params.update(
+            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
+        )
+        self.logger.debug("Filterset params: `%s`", filter_params)
+        filterset = filterset_class(filter_params, queryset)
+        if not filterset.is_valid():
+            self.logger.error("Invalid filters were specified: %s", filterset.errors)
+            raise RunJobTaskFailed("Invalid query_string value for this content_type")
+        return self._apply_current_view_sort(model, filterset.qs, query_params)
+
+    def _apply_current_view_sort(self, model, queryset, query_params):
+        """Apply the current view's sort order (best effort).
+
+        Validate only the head segment so related-field (`location__name`) and custom-field (`cf_*`) sorts
+        — both supported by order_by — are allowed; table-only/computed sort keys are skipped with a
+        warning rather than failing the export.
+        """
+        sortable = []
+        for sort_param in (param for param in query_params.getlist("sort") if param):
+            head = sort_param.lstrip("-").split("__", 1)[0]
+            if head.startswith("cf_"):
+                sortable.append(sort_param)
+                continue
+            try:
+                model._meta.get_field(head)
+                sortable.append(sort_param)
+            except FieldDoesNotExist:
+                self.logger.warning("Ignoring sort on `%s`; not a sortable field for this model", sort_param)
+        if sortable:
+            queryset = queryset.order_by(*sortable)
+        return queryset
+
+    # ---- RESOLVE FIELDS / MATCH (which columns, and the re-import match key) ----
+
+    def _resolve_export_fields(self, export_fields, saved_export_config):
+        """The effective field-selection string: the explicit choice, else the saved view's selection."""
+        if not export_fields and saved_export_config.get("fields"):
+            saved_fields = saved_export_config["fields"]
+            export_fields = ",".join(saved_fields) if isinstance(saved_fields, (list, tuple)) else saved_fields
+            self.logger.info("Applying the saved view's export field selection")
+        return export_fields
+
+    @staticmethod
+    def _normalize_export_format(export_format, saved_export_config):
+        """The effective output format: the explicit choice, else the saved view's, else CSV."""
+        return export_format or saved_export_config.get("format") or "csv"
+
+    def _resolve_export_field_paths(self, model, export_fields):
+        """Parse the field-selection string into validated field paths (empty = export all fields)."""
+        export_field_paths = import_utils.parse_match_fields(export_fields)
+        if export_field_paths:
+            try:
+                validate_field_paths(get_serializer_for_model(model), export_field_paths)
+            except ValueError as exc:
+                self.logger.error("%s", exc)
+                raise RunJobTaskFailed(str(exc)) from exc
+            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
+        return export_field_paths
+
+    # ---- RENDER (normalize to the requested output, then write the file) ----
+
     @staticmethod
     def _export_filename(model):
         """The branded, extension-less base filename for the export."""
@@ -380,9 +481,12 @@ class ExportObjectList(Job):
         )
         records = self._get_serializer_data(model, serializer_class, queryset, export_field_paths)
         if export_format in ("json", "yaml"):
-            self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
+            _filename, content = self._render_document(
+                export_format, serializer_class, content_type, records, match_fields, filename
+            )
         else:
-            self._render_csv(records, export_field_paths, match_fields, filename)
+            _filename, content = self._render_csv(records, export_field_paths, match_fields, filename)
+        self.create_file(_filename, content)
 
     def _render_document(self, export_format, serializer_class, content_type, records, match_fields, filename):
         # Generic JSON/YAML export: reshape the flat records into nested records wrapped in the metadata
@@ -394,12 +498,12 @@ class ExportObjectList(Job):
             match_fields=match_fields,
         )
         if export_format == "json":
-            self.create_file(filename + ".json", json.dumps(document, indent=2, default=str))
+            return (filename + ".json", json.dumps(document, indent=2, default=str))
         else:
             # Round-trip through JSON first to reduce DRF's ReturnDict/OrderedDict and other
             # non-primitive values to plain types that yaml.safe_dump can represent.
             plain_document = json.loads(json.dumps(document, default=str))
-            self.create_file(filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
+            return (filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
 
     def _render_csv(self, records, export_field_paths, match_fields, filename):
         # Generic CSV export
@@ -413,61 +517,49 @@ class ExportObjectList(Job):
             renderer_context["import_directives"] = {"match_fields": match_fields}
         # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
         csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
-        self.create_file(filename + ".csv", csv_data)
+        return (filename + ".csv", csv_data)
 
-    def run(self, *, content_type, query_string="", export_format="csv", export_template=None, export_fields=""):  # pylint:disable=arguments-differ
-        if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
-            self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
-            raise PermissionDenied("User does not have view permissions on the requested content-type")
-
+    def run(
+        self,
+        *,
+        content_type,
+        query_string="",
+        export_format="",
+        export_template=None,
+        export_fields="",
+        use_current_view=False,
+    ):  # pylint:disable=arguments-differ
+        self._require_view_permission(content_type)
         model = content_type.model_class()
-
-        # Start with all objects of the requested type
-        queryset = model.objects.all()
-        # Enforce user permissions
-        queryset = queryset.restrict(self.user, "view")
-
-        # Filter the queryset based on the provided query_string
-        filterset_class = get_filterset_for_model(model)
-        self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
-        # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
-        #       such that they never are even seen here.
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
-        default_non_filter_params = (
-            "all_filters_removed",
-            "export",
-            "page",
-            "per_page",
-            "saved_view",
-            "sort",
-            "table_changes_pending",
-        )
-        filter_params = self._get_saved_view_filter_params(query_params)
-        filter_params.update(
-            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
-        )
-        self.logger.debug("Filterset params: `%s`", filter_params)
-        filterset = filterset_class(filter_params, queryset)
-        if not filterset.is_valid():
-            self.logger.error("Invalid filters were specified: %s", filterset.errors)
-            raise RunJobTaskFailed("Invalid query_string value for this content_type")
-        queryset = filterset.qs
+
+        # RESOLVE QUERYSET — "use current view" honors the launching list view: its filters, its sort
+        # order, and (for a saved view) its saved export configuration. Otherwise this is a full export
+        # of every object in the model's default order.
+        queryset = self._get_queryset(model)
+        saved_export_config = self._get_saved_view_export_config(query_params) if use_current_view else {}
+        if use_current_view:
+            queryset = self._filter_queryset(model, queryset, query_params)
 
         filename = self._export_filename(model)
 
         # ExportTemplate and legacy (`to_yaml`) exports render straight from the queryset and bypass the
-        # serializer, so they need no match key — handle them here and return.
+        # serializer, so they need neither field selection nor a match key — handle them here and return.
         if export_template is not None:
             self._render_export_template(export_template, content_type, queryset, filename)
             return
+        export_format = self._normalize_export_format(export_format, saved_export_config)
         if export_format == "yaml" and hasattr(model, "to_yaml"):
             self._render_legacy_yaml(queryset, filename)
             return
 
-        # CSV and JSON/YAML share one normalized serialization, written per-format.
+        # RESOLVE FIELDS / MATCH
+        export_fields = self._resolve_export_fields(export_fields, saved_export_config)
         export_field_paths = self._resolve_export_field_paths(model, export_fields)
         match_fields = self._get_match_fields(model, export_field_paths)
+
+        # RENDER — CSV and JSON/YAML share one normalized serialization, written per-format
         self._render_serialized(
             export_format, model, content_type, queryset, export_field_paths, match_fields, filename
         )
