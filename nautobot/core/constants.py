@@ -88,6 +88,8 @@ NAUTOBOT_BOOL_ITERATOR_DEFAULT_PROBABILITY = 50
 
 CSV_NULL_TYPE = "NULL"
 CSV_NO_OBJECT = "NoObject"
+# The leaf values that an import treats as "no value here", i.e. None
+CSV_NULL_SENTINELS = (CSV_NO_OBJECT, CSV_NULL_TYPE)
 # VarbinaryIPField Represents b'NoObject' as `::4e6f:4f62:6a65:6374`
 VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT = "::4e6f:4f62:6a65:6374"
 
