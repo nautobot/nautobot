@@ -15,3 +15,24 @@ def parse_match_fields(value):
     else:
         fields = [field for field in value if field]
     return fields or None
+
+
+def detect_import_format(filename=None, text=None):
+    """Detect the import format ("csv"/"json"/"yaml") from a filename extension, then the content, else CSV.
+
+    Shared by the ImportObjects job and the `import_objects` management command so extension/content
+    sniffing stays consistent between them.
+    """
+    lowered = (str(filename) if filename else "").lower()
+    if lowered.endswith(".json"):
+        return "json"
+    if lowered.endswith((".yaml", ".yml")):
+        return "yaml"
+    if lowered.endswith(".csv"):
+        return "csv"
+    head = (text or "").lstrip()[:200]
+    if head.startswith(("{", "[")):
+        return "json"
+    if head.startswith(("---", "%YAML")) or "nautobot_import:" in head:
+        return "yaml"
+    return "csv"

@@ -19,7 +19,11 @@ import yaml
 
 from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
-from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.parsers import (
+    NautobotCSVParser,
+    NautobotJSONImportParser,
+    NautobotYAMLImportParser,
+)
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import (
     build_import_document,
@@ -576,8 +580,17 @@ class ImportObjects(Job):
         description="Type of objects to import",
         query_params={"can_add": True, "has_serializer": True},
     )
-    csv_data = TextVar(label="CSV Data", required=False)
-    csv_file = FileVar(label="CSV File", required=False)
+    # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
+    # but accept CSV, JSON, or YAML data (see import_format).
+    csv_data = TextVar(label="Import Data (CSV/JSON/YAML)", required=False)
+    csv_file = FileVar(label="Import File (CSV/JSON/YAML)", required=False)
+    import_format = ChoiceVar(
+        choices=(("auto", "Auto-detect"), ("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
+        label="Format",
+        default="auto",
+        required=False,
+        description="Format of the import data; auto-detected from the file extension or content if not specified.",
+    )
     roll_back_if_error = BooleanVar(
         label="Rollback Changes on Failure",
         required=False,
@@ -594,6 +607,12 @@ class ImportObjects(Job):
         # Importing large files may take substantial processing time
         soft_time_limit = 1800
         time_limit = 2000
+
+    IMPORT_PARSERS = {
+        "csv": NautobotCSVParser,
+        "json": NautobotJSONImportParser,
+        "yaml": NautobotYAMLImportParser,
+    }
 
     def _perform_atomic_operation(self, data, serializer_class, queryset):
         new_objs = []
@@ -634,7 +653,7 @@ class ImportObjects(Job):
                         self.logger.error("Row %d: `%s`: `%s`", row, field, err)
         return new_objs, validation_failed
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
+    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False, import_format="auto"):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -661,18 +680,36 @@ class ImportObjects(Job):
         if not csv_data and not csv_file:
             raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
         if csv_file:
-            # data_encoding is utf-8 and file_encoding is utf-8-sig
-            # Bytes read from the original file are decoded according to file_encoding, and the result is encoded using data_encoding.
-            csv_bytes = codecs.EncodedFile(csv_file, "utf-8", "utf-8-sig")
+            raw = csv_file.read()
+            text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
+            filename = getattr(csv_file, "name", "")
         else:
-            csv_bytes = BytesIO(csv_data.encode("utf-8"))
+            text = csv_data
+            filename = ""
+
+        if not import_format or import_format == "auto":
+            import_format = import_utils.detect_import_format(filename, text)
+        parser_class = self.IMPORT_PARSERS.get(import_format)
+        if parser_class is None:
+            raise RunJobTaskFailed(f'Unsupported import format "{import_format}"')
+        self.logger.info("Importing data as %s", import_format.upper())
 
         new_objs = []
         try:
-            data = NautobotCSVParser().parse(
-                stream=csv_bytes,
-                parser_context={"request": None, "serializer_class": serializer_class},
-            )
+            parser_context = {"request": None, "serializer_class": serializer_class, "strict_fields": True}
+            data = parser_class().parse(stream=BytesIO(text.encode("utf-8")), parser_context=parser_context)
+
+            # A file-carried model declaration must agree with the requested content-type
+            import_model = parser_context.get("import_model")
+            if import_model and import_model.lower() != f"{content_type.app_label}.{content_type.model}":
+                self.logger.error(
+                    'The file declares model "%s" but this import was requested for "%s.%s"',
+                    import_model,
+                    content_type.app_label,
+                    content_type.model,
+                )
+                raise RunJobTaskFailed("Import file model does not match the requested content-type")
+
             self.logger.info("Processing %d rows of data", len(data))
             if roll_back_if_error:
                 new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)

@@ -28,17 +28,23 @@ import json
 from pathlib import Path
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.files.base import ContentFile
 from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
+from rest_framework.exceptions import ParseError
 import yaml
 
-from nautobot.core.api.utils import nest_flat_dict
+from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
+from nautobot.core.api.parsers import ImportDocumentParserMixin
+from nautobot.core.api.utils import build_import_document, nest_flat_dict
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
+from nautobot.core.jobs.import_utils import detect_import_format
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
 from nautobot.dcim.models import Device, DeviceType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import ExportTemplate, JobLogEntry, SavedView, Status
+from nautobot.extras.models import ExportTemplate, FileProxy, JobLogEntry, SavedView, Status
+from nautobot.ipam.models import Prefix
 
 # ===========================================================================
 # Layer 1c — shared pure functions (format-agnostic core, no DB)
@@ -604,3 +610,89 @@ class ExportResultModalTests(ImportExportJobTestCase):
         content = response.content.decode(response.charset)
         self.assertIn("data-nb-auto-download", content)
         self.assertIn("Download", content)
+
+
+# ===========================================================================
+# Import — document wire format & format detection (pure)
+# ===========================================================================
+class ImportDocumentTests(SimpleTestCase):
+    """`build_import_document` (writer) and `unwrap_document` (reader) share one wire format."""
+
+    def test_core_document__build(self):
+        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
+        self.assertEqual(list(doc.keys()), ["nautobot_import", "model", "match_fields", "records"])
+        self.assertEqual(doc["nautobot_import"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(doc["model"], "dcim.manufacturer")
+        self.assertEqual(doc["match_fields"], ["name"])
+        self.assertEqual(doc["records"], [{"name": "Cisco"}])
+
+    def test_core_document__build_omits_empty_match_fields(self):
+        self.assertNotIn("match_fields", build_import_document("dcim.manufacturer", [{"name": "Cisco"}]))
+
+    def test_core_document__unwrap_envelope(self):
+        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
+        metadata, records = ImportDocumentParserMixin.unwrap_document(doc)
+        self.assertEqual(metadata["model"], "dcim.manufacturer")
+        self.assertEqual(metadata["match_fields"], ["name"])
+        self.assertEqual(records, [{"name": "Cisco"}])
+
+    def test_core_document__unwrap_bare_list(self):
+        metadata, records = ImportDocumentParserMixin.unwrap_document([{"name": "Cisco"}])
+        self.assertEqual(metadata, {})
+        self.assertEqual(records, [{"name": "Cisco"}])
+
+    def test_core_document__unwrap_bad_version(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"nautobot_import": "999", "records": []})
+
+    def test_core_document__unwrap_mapping_without_records(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"model": "dcim.manufacturer"})
+
+    def test_core_document__unwrap_records_not_a_list(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"records": {"not": "a list"}})
+
+
+class DetectImportFormatTests(SimpleTestCase):
+    """`detect_import_format` sniffs by filename first, then content, else CSV."""
+
+    def test_core_detect__by_extension(self):
+        self.assertEqual(detect_import_format(filename="x.json"), "json")
+        self.assertEqual(detect_import_format(filename="x.yaml"), "yaml")
+        self.assertEqual(detect_import_format(filename="x.yml"), "yaml")
+        self.assertEqual(detect_import_format(filename="x.csv"), "csv")
+
+    def test_core_detect__by_content_json(self):
+        self.assertEqual(detect_import_format(text='{"records": []}'), "json")
+        self.assertEqual(detect_import_format(text="[{}]"), "json")
+
+    def test_core_detect__by_content_yaml(self):
+        self.assertEqual(detect_import_format(text="---\nname: x"), "yaml")
+        self.assertEqual(detect_import_format(text="nautobot_import: '1'\nrecords: []"), "yaml")
+
+    def test_core_detect__default_csv(self):
+        self.assertEqual(detect_import_format(text="name,color\nx,111111"), "csv")
+        self.assertEqual(detect_import_format(), "csv")
+
+
+# ===========================================================================
+# Layer 2 — import format adapters (create)
+# ===========================================================================
+class ImportAdapterTests(ImportExportJobTestCase):
+    def test_adapter_import__bom(self):
+        """A .csv file with utf-8-with-BOM encoding imports successfully (#5812, #5985)."""
+        status = Status.objects.get(name="Active").pk
+        content = f"prefix,status\n192.168.1.1/32,{status}".encode("utf-8-sig")
+        csv_file = FileProxy.objects.create(name="test.csv", file=ContentFile(content, name="test.csv"))
+        job_result = self.run_import(model=Prefix, csv_file=csv_file.id)
+        self.assertNoIssues(job_result)
+        self.assertEqual(
+            1, Prefix.objects.filter(status=Status.objects.get(name="Active"), prefix="192.168.1.1/32").count()
+        )
+
+    def test_adapter_import__bare_list_yaml(self):
+        """A bare YAML list of records (no document) imports with the model supplied by the job form."""
+        yaml_data = "\n".join(["- name: test_yaml_bare_status", "  color: '334455'", "  content_types: [dcim.device]"])
+        self.run_import(yaml_data, import_format="yaml")
+        self.assertTrue(Status.objects.filter(name="test_yaml_bare_status", color="334455").exists())

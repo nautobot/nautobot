@@ -1,16 +1,21 @@
 import csv
 import io
+import json
 from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, RequestFactory, TestCase
 from django.urls import reverse
+from rest_framework.exceptions import ParseError
 
 from nautobot.core.api import serializers as core_api_serializers
+from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from nautobot.dcim.api.serializers import DeviceSerializer
 from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.dcim.models.locations import Location
+from nautobot.extras.api.serializers import StatusSerializer
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag
@@ -434,3 +439,178 @@ TestDevice7,{self.device.device_type.pk},{self.device.location.pk},{self.device.
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, "Incorrect number of values provided for the software_image_files field")
             self.assertEqual(Device.objects.count(), 4)
+
+
+class CSVImportDirectiveTestCase(TestCase):
+    """Tests for the `# nautobot-import:` directive parsing and rendering."""
+
+    parser_class = NautobotCSVParser
+
+    def _parse(self, csv_text):
+        """Parse the given CSV text as Status data and return (parsed data, parser_context)."""
+        parser_context = {"request": None, "serializer_class": StatusSerializer}
+        data = NautobotCSVParser().parse(io.BytesIO(csv_text.encode("utf-8")), parser_context=parser_context)
+        return data, parser_context
+
+    def test_parse_directive_cell(self):
+        """Directive cells parse in all supported value-separator forms; plain comments parse to nothing."""
+        for cell in (
+            "# nautobot-import: match_fields=name serial",
+            "#nautobot-import: match_fields=name;serial",
+            "# nautobot-import: match_fields=name,serial",
+            "#  NAUTOBOT-IMPORT:  MATCH_FIELDS=name  serial ;",
+        ):
+            with self.subTest(cell=cell):
+                self.assertEqual(self.parser_class.parse_directive_cell(cell), {"match_fields": ["name", "serial"]})
+        self.assertEqual(self.parser_class.parse_directive_cell("# just an ordinary comment"), {})
+
+    def test_parse_directive_cell_invalid(self):
+        """Unsupported or malformed directives raise a clear ParseError."""
+        with self.assertRaisesRegex(ParseError, "Unsupported import directive"):
+            self.parser_class.parse_directive_cell("# nautobot-import: no_such_directive=foo")
+        with self.assertRaisesRegex(ParseError, "No value"):
+            self.parser_class.parse_directive_cell("# nautobot-import: match_fields=")
+        with self.assertRaisesRegex(ParseError, "Malformed import directive"):
+            self.parser_class.parse_directive_cell("# nautobot-import: name serial")
+
+    def test_parse_consumes_directive_rows(self):
+        """Leading directive rows are consumed into parser_context and the data parses normally."""
+        csv_text = "\n".join(
+            [
+                "# nautobot-import: match_fields=name",
+                "name,color",
+                "test_status,111111",
+            ]
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(parser_context["import_directives"], {"match_fields": ["name"]})
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_without_directive_is_unchanged(self):
+        """A file with no directive parses exactly as before, with no directives surfaced."""
+        data, parser_context = self._parse("name,color\ntest_status,111111")
+        self.assertNotIn("import_directives", parser_context)
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_directive_survives_spreadsheet_quoting(self):
+        """A directive that came back from Excel as a quoted first cell (with trailing empty cells) still parses."""
+        csv_text = "\n".join(
+            [
+                '"# nautobot-import: match_fields=name",,',
+                "name,color",
+                "test_status,111111",
+            ]
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(parser_context["import_directives"], {"match_fields": ["name"]})
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_directive_with_byte_order_mark(self):
+        """A leading UTF-8 BOM doesn't defeat directive detection."""
+        csv_text = "\ufeff" + "# nautobot-import: match_fields=name\nname,color\ntest_status,111111"
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(parser_context["import_directives"], {"match_fields": ["name"]})
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_render_directive_row(self):
+        """The renderer stamps a directive row when (and only when) asked to via renderer_context."""
+        records = [{"name": "test_status", "color": "111111"}]
+        renderer = NautobotCSVRenderer()
+        output = renderer.render(records, renderer_context={"import_directives": {"match_fields": ["name", "serial"]}})
+        self.assertEqual(output.splitlines()[0], "# nautobot-import: match_fields=name serial")
+        # Without renderer_context the output is unchanged (the REST API path)
+        output = renderer.render(records)
+        self.assertEqual(output.splitlines()[0], "name,color")
+
+    def test_render_parse_round_trip(self):
+        """A stamped rendering parses back to the same directives and data."""
+        records = [{"name": "test_status", "color": "111111"}]
+        output = NautobotCSVRenderer().render(
+            records, renderer_context={"import_directives": {"match_fields": ["name"]}}
+        )
+        data, parser_context = self._parse(output)
+        self.assertEqual(parser_context["import_directives"], {"match_fields": ["name"]})
+        self.assertEqual(data, records)
+
+
+class CSVM2MRepresentationTestCase(TestCase):
+    """Tests for the two-tier M2M representation on CSV export/import."""
+
+    def setUp(self):
+        location = Location.objects.filter(
+            location_type__content_types__in=[ContentType.objects.get_for_model(Device)],
+        ).first()
+        Controller.objects.filter(controller_device__isnull=False).delete()
+        Device.objects.all().delete()
+        self.device = Device.objects.create(
+            device_type=DeviceType.objects.first(),
+            role=Role.objects.get_for_model(Device).first(),
+            name="TestDeviceM2M",
+            status=Status.objects.get_for_model(Device).first(),
+            location=location,
+        )
+        self.tags = list(Tag.objects.get_for_model(Device).all()[:3])
+        self.device.tags.set(self.tags)
+        software_version = SoftwareVersion.objects.create(
+            platform=Platform.objects.first(),
+            version="m2m-test-1.0",
+            status=Status.objects.get_for_model(SoftwareVersion).first(),
+        )
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+        self.image_files = [
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name=f"m2m_test_{i}.bin",
+                status=software_image_file_status,
+            )
+            for i in range(2)
+        ]
+        self.device.software_image_files.set(self.image_files)
+
+    def _export_row(self):
+        serializer = DeviceSerializer(self.device, context={"request": None, "exclude_m2m": False}, force_csv=True)
+        return dict(serializer.data)
+
+    def test_tags_export_as_comma_separated_names(self):
+        """Scalar-keyed M2M members (tags) render as a comma-separated list of names in the CSV cell."""
+        rendered = NautobotCSVRenderer().render([self._export_row()])
+        parsed_rows = list(csv.DictReader(io.StringIO(rendered)))
+        cell = parsed_rows[0]["tags"]
+        self.assertEqual(sorted(cell.split(",")), sorted(tag.name for tag in self.tags))
+
+    def test_composite_m2m_exports_as_json_cell(self):
+        """Composite-keyed M2M members render as a JSON-encoded cell of natural-key dicts."""
+        row = self._export_row()
+        value = row["software_image_files"]
+        self.assertIsInstance(value, list)
+        self.assertEqual(len(value), 2)
+        for member in value:
+            self.assertIsInstance(member, dict)
+            self.assertIn("image_file_name", member)
+        rendered = NautobotCSVRenderer().render([row])
+        parsed_rows = list(csv.DictReader(io.StringIO(rendered)))
+        cell = parsed_rows[0]["software_image_files"]
+        self.assertTrue(cell.lstrip().startswith("["), cell)
+        self.assertEqual(json.loads(cell), list(value))
+
+    def test_m2m_round_trip_import(self):
+        """A rendered row with M2M cells parses and imports back with the same memberships."""
+        row = self._export_row()
+        row["name"] = "TestDeviceM2MRoundTrip"
+        row.pop("id")
+        rendered = NautobotCSVRenderer().render([row])
+        data = NautobotCSVParser().parse(
+            io.BytesIO(rendered.encode("utf-8")),
+            parser_context={"request": None, "serializer_class": DeviceSerializer},
+        )
+        serializer = DeviceSerializer(data=data[0], context={"request": None})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        new_device = serializer.save()
+        self.assertEqual(
+            sorted(tag.name for tag in new_device.tags.all()),
+            sorted(tag.name for tag in self.tags),
+        )
+        self.assertEqual(
+            set(new_device.software_image_files.values_list("pk", flat=True)),
+            {image_file.pk for image_file in self.image_files},
+        )
