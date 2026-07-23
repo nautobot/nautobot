@@ -3255,7 +3255,7 @@ class GitRepositoryTestCase(
                         reverse("extras:gitrepository_result", kwargs={"pk": instance2.pk}),
                         fetch_redirect_response=False,
                     )
-                    mock_sync.assert_called_once_with(user=self.user)
+                    mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
