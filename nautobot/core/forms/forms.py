@@ -32,6 +32,7 @@ __all__ = (
     "ConfirmationForm",
     "DynamicFilterForm",
     "EmbeddedActionsFormMixin",
+    "ExportFieldsForm",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
@@ -438,6 +439,91 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
+
+
+class ExportFieldsForm(BootstrapMixin, forms.Form):
+    """
+    Orderable selection of serializer fields to export.
+
+    Mirrors `TableConfigForm`: a single `MultipleChoiceField` rendered with `SelectMultipleOrderable`
+    whose choices are built dynamically for a content type, seeded (and pre-ordered) from an initial
+    field list (typically the current view's visible columns). On submit the checked values arrive in
+    drag order, giving the export a user-controlled column order.
+    """
+
+    export_fields = forms.MultipleChoiceField(
+        choices=[],
+        required=False,
+        widget=nautobot_widgets.ExportFieldSelect(),
+        help_text="Select and drag to order the fields to export. Leave all unchecked to export every field.",
+    )
+
+    def __init__(self, content_type, initial_fields=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Lazy imports to avoid a circular import at module load (views.utils imports forms).
+        from django.apps import apps
+
+        from nautobot.core.api.exceptions import SerializerNotFound
+        from nautobot.core.api.utils import EXPORT_FIELD_MAX_DEPTH, get_serializer_for_model
+        from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
+
+        # Enumerate paths up to this many `__`-separated segments (e.g. device_type__manufacturer__name),
+        # derived from the export's relation-depth constant so the two stay in lockstep. This is one
+        # segment shallower than the validator's absolute allowance (`len(parts) - 1 <= EXPORT_FIELD_MAX_DEPTH`).
+        max_segments = EXPORT_FIELD_MAX_DEPTH
+
+        initial_fields = [field for field in (initial_fields or []) if field]
+
+        def _label(path, required):
+            return path + (" *" if required else "")
+
+        fields_cache = {}
+
+        def _fields_for(model):
+            # Memoize per model so a serializer shared by many relations is built only once.
+            if model not in fields_cache:
+                try:
+                    fields_cache[model] = get_csv_form_fields_from_serializer_class(get_serializer_for_model(model))
+                except SerializerNotFound:
+                    fields_cache[model] = []
+            return fields_cache[model]
+
+        choices = []
+
+        def _expand(prefix, model, segments):
+            for field in _fields_for(model):
+                # Only offer M2M columns at the top level (e.g. tags, content_types), where they export as
+                # a comma-joined list. A M2M reached through a relation (e.g. status__content_types) can't
+                # serialize to a single cell and isn't round-trippable, so it is not offered.
+                if prefix and field.get("many"):
+                    continue
+                path = f"{prefix}__{field['name']}" if prefix else field["name"]
+                choices.append((path, _label(path, field["required"])))
+                # Expand single-FK relations into their natural-key columns (e.g. device_type__manufacturer,
+                # device_type__manufacturer__name). M2M relations are not traversable — a M2M column would
+                # multiply rows — so they are left as a single column, not expanded. Depth is capped.
+                if field["foreign_key"] and not field.get("many") and segments < max_segments:
+                    try:
+                        related_model = apps.get_model(field["foreign_key"])
+                    except LookupError:
+                        continue
+                    _expand(path, related_model, segments + 1)
+
+        model = content_type.model_class() if content_type is not None else None
+        if model is not None:
+            _expand("", model, 1)
+
+        # Include any seeded paths (e.g. deeper view columns) not already enumerated, so the current
+        # view's selection is preserved and selectable. The widget groups paths under their top-level
+        # parent by name, so ordering here need not keep parents and children adjacent.
+        present = {choice[0] for choice in choices}
+        for path in initial_fields:
+            if path not in present:
+                choices.append((path, path))
+                present.add(path)
+
+        self.fields["export_fields"].choices = choices
+        self.fields["export_fields"].initial = [path for path in initial_fields if path in present]
 
 
 class DynamicFilterForm(BootstrapMixin, forms.Form):

@@ -67,3 +67,15 @@
         -->Close
     </button>
 </div>
+
+{# When a redirect button opts into auto-download (e.g. the Export job's file), trigger it once. #}
+{# The done fragment renders a single time (polling stops when the job finishes), so this fires once. #}
+<script type="text/javascript">
+    (function () {
+        const el = document.querySelector("#modal-content-container [data-nb-auto-download]");
+        if (el && !el.dataset.autoDownloaded) {
+            el.dataset.autoDownloaded = "1";
+            el.click();
+        }
+    })();
+</script>

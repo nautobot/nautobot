@@ -133,6 +133,7 @@ from nautobot.extras.models import (
     CustomField,
     CustomFieldChoice,
     ExternalIntegration,
+    Job,
     JobResult,
     Relationship,
     RelationshipAssociation,
@@ -987,7 +988,13 @@ class DeviceTypeTestCase(
 
     def test_list_has_correct_links(self):
         """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
-        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype")
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.view_job", "extras.run_job")
+        # The export/import triggers reuse the job-modal framework's gate (view permission + enabled Job),
+        # so enable the system Jobs for the buttons to render enabled (as they are in production).
+        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
+            job_model = Job.objects.get_for_class_path(class_path)
+            job_model.enabled = True
+            job_model.save()
         response = self.client.get(reverse("dcim:devicetype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -1000,26 +1007,20 @@ class DeviceTypeTestCase(
             content,
         )
         self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from file (multiple records)</a>',
             content,
         )
 
         export_url = job_export_url()
-        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
-        self.assertIn(f'<form action="{export_url}" method="post">', content)
-        self.assertInHTML(
-            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(self.model).pk}">',
+        # Export now opens the ExportObjectList job form in the shared generic modal via HTMX.
+        self.assertIn(f'hx-post="{export_url}"', content)
+        self.assertIn('data-bs-target="#nautobot-generic-modal"', content)
+        # hx-vals JSON is HTML-escaped in the attribute (Django auto-escaping), so match the escaped form.
+        self.assertIn(
+            f"content_type&quot;: &quot;{ContentType.objects.get_for_model(self.model).pk}",
             content,
         )
-        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
-        self.assertInHTML(
-            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
-            content,
-        )
-        self.assertInHTML(
-            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
-            content,
-        )
+        self.assertIn("Export to file", content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
@@ -1404,7 +1405,13 @@ class ModuleTypeTestCase(
 
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
-        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype")
+        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.view_job", "extras.run_job")
+        # The export/import triggers reuse the job-modal framework's gate (view permission + enabled Job),
+        # so enable the system Jobs for the buttons to render enabled (as they are in production).
+        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
+            job_model = Job.objects.get_for_class_path(class_path)
+            job_model.enabled = True
+            job_model.save()
         response = self.client.get(reverse("dcim:moduletype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -1417,26 +1424,20 @@ class ModuleTypeTestCase(
             content,
         )
         self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from file (multiple records)</a>',
             content,
         )
 
         export_url = job_export_url()
-        # Export is a little trickier to check since it's done as a form submission rather than an <a> element.
-        self.assertIn(f'<form action="{export_url}" method="post">', content)
-        self.assertInHTML(
-            f'<input type="hidden" name="content_type" value="{ContentType.objects.get_for_model(self.model).pk}">',
+        # Export now opens the ExportObjectList job form in the shared generic modal via HTMX.
+        self.assertIn(f'hx-post="{export_url}"', content)
+        self.assertIn('data-bs-target="#nautobot-generic-modal"', content)
+        # hx-vals JSON is HTML-escaped in the attribute (Django auto-escaping), so match the escaped form.
+        self.assertIn(
+            f"content_type&quot;: &quot;{ContentType.objects.get_for_model(self.model).pk}",
             content,
         )
-        self.assertInHTML('<input type="hidden" name="export_format" value="yaml">', content)
-        self.assertInHTML(
-            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as YAML</button>',
-            content,
-        )
-        self.assertInHTML(
-            '<button class="dropdown-item" type="submit"><span class="mdi mdi-database-export text-secondary" aria-hidden="true"></span> Export as CSV</button>',
-            content,
-        )
+        self.assertIn("Export to file", content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):

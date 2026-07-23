@@ -194,6 +194,8 @@
         {% saved_view_modal request.GET.urlencode list_url model request %}
     {% endif %}
     {% dynamic_group_assignment_modal request=request content_type=content_type %}
+    {# Shared modal shell used by the HTMX job-modal framework (e.g. the Export job form). #}
+    {% include 'inc/generic_modal.html' %}
 {% endblock %}
 
 {% block drawer %}

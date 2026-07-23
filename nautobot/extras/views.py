@@ -3486,6 +3486,20 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+def file_proxy_download_url(file_proxy):
+    """
+    Build the download URL for a single FileProxy, respecting the configured job-files storage backend.
+
+    Returns an empty string if the FileProxy has no underlying file.
+    """
+    if not file_proxy or not file_proxy.file:
+        return ""
+    # Pick URL depending on storage backend
+    if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
+        return f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
+    return file_proxy.file.url
+
+
 def render_jobresult_files(files_manager):
     """
     Render job result files as an HTML <ul> list with download links.
@@ -3502,14 +3516,9 @@ def render_jobresult_files(files_manager):
 
     links = []
     for file_proxy in files_manager.all():
-        if not file_proxy.file:
+        href = file_proxy_download_url(file_proxy)
+        if not href:
             continue
-
-        # Pick URL depending on storage backend
-        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
-            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
-        else:
-            href = file_proxy.file.url
 
         links.append(
             format_html(

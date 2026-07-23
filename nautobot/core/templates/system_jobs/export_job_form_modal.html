@@ -1,0 +1,99 @@
+{% extends "extras/htmx/job_form_modal.html" %}
+{% load buttons %}
+
+{% comment %}
+Custom job-form modal for the ExportObjectList system job. Renders the standard job form plus the
+orderable field selector (the same SelectMultipleOrderable widget the table-config UI uses). The raw
+`export_fields` text field is hidden; a small script serializes the selector's checked-in-order values
+into it, so the export runs with a user-ordered field list.
+{% endcomment %}
+
+{% block job_form_wrapper %}
+    {{ block.super }}
+    {% export_fields_selector job_form.content_type.value job_form.export_fields.value %}
+{% endblock job_form_wrapper %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        (function () {
+            const container = document.getElementById("modal-content-container");
+            if (!container) return;
+            const exportFieldsInput = container.querySelector("#id_export_fields");
+            const selector = container.querySelector(".export-fields-selector .nb-select-multiple-orderable-list");
+            if (!exportFieldsInput || !selector) return;
+
+            // The orderable selector drives the job's export_fields variable; hide the raw text field.
+            const rawContainer = document.getElementById("id_export_fields-container");
+            if (rawContainer) rawContainer.style.display = "none";
+
+            const boxes = () => Array.from(selector.querySelectorAll('input[type="checkbox"]'));
+
+            // Serialize the checked options in DOM (drag) order into export_fields.
+            function sync() {
+                exportFieldsInput.value = boxes()
+                    .filter((checkbox) => checkbox.checked)
+                    .map((checkbox) => checkbox.value)
+                    .join(",");
+            }
+
+            // A relation exports its natural key when selected on its own, but a selected descendant
+            // *replaces* that expansion (the backend uses the descendant, not the parent). Enforce that a
+            // node and any of its descendants are mutually exclusive, so the displayed state always equals
+            // what will export: selecting a node clears its descendants, and vice versa.
+            function enforceExclusivity(changed) {
+                if (!changed.checked) return;
+                const value = changed.value;
+                boxes().forEach((checkbox) => {
+                    if (checkbox === changed) return;
+                    const isDescendant = checkbox.value.startsWith(value + "__");
+                    const isAncestor = value.startsWith(checkbox.value + "__");
+                    if (isDescendant || isAncestor) {
+                        checkbox.checked = false;
+                    }
+                });
+            }
+
+            // A relation with a selected descendant (but not itself selected) is shown indeterminate,
+            // signalling "customized — exporting specific columns, not the natural key".
+            function refreshIndeterminate() {
+                const checkedValues = boxes().filter((checkbox) => checkbox.checked).map((checkbox) => checkbox.value);
+                boxes().forEach((checkbox) => {
+                    checkbox.indeterminate =
+                        !checkbox.checked && checkedValues.some((value) => value.startsWith(checkbox.value + "__"));
+                });
+            }
+
+            selector.addEventListener("change", function (event) {
+                if (!event.target.classList.contains("form-check-input")) return;
+                enforceExclusivity(event.target);
+                refreshIndeterminate();
+                sync();
+            });
+            // Drag reordering doesn't fire "change", so also re-sync when a drag completes. draggable.js
+            // reorders the DOM in its own handlers (bound at page load, so they run before these), and
+            // dragend/mouseup bubble up to the list container.
+            selector.addEventListener("dragend", sync);
+            selector.addEventListener("mouseup", sync);
+
+            // Collapse/expand a relation's nested columns (at any depth).
+            selector.addEventListener("click", function (event) {
+                const caret = event.target.closest(".export-field-caret");
+                if (!caret) return;
+                const row = caret.closest("li");
+                const nested = row ? row.querySelector(":scope > .export-nested") : null;
+                if (!nested) return;
+                const collapsed = nested.classList.toggle("d-none");
+                caret.setAttribute("aria-expanded", String(!collapsed));
+                const icon = caret.querySelector(".mdi");
+                if (icon) {
+                    icon.classList.toggle("mdi-chevron-down", collapsed);
+                    icon.classList.toggle("mdi-chevron-up", !collapsed);
+                }
+            });
+
+            refreshIndeterminate();
+            sync();
+        })();
+    </script>
+{% endblock javascript %}

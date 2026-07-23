@@ -142,6 +142,9 @@ class GitRepositoryDryRun(Job):
 class ExportObjectList(Job):
     """System Job to export a list of objects via CSV or ExportTemplate."""
 
+    # Custom HTMX job-modal template that renders the standard job form plus the field-selection tree picker.
+    htmx_template_name = "system_jobs/export_job_form_modal.html"
+
     content_type = ObjectVar(
         model=ContentType,
         description="Type of objects to export",

@@ -5,6 +5,7 @@ from urllib.parse import urljoin
 from django import forms
 from django.forms.models import ModelChoiceIterator
 from django.urls import get_script_prefix
+from django.utils.html import format_html, format_html_join
 
 from nautobot.core import choices as core_choices
 from nautobot.core.forms import utils
@@ -19,6 +20,7 @@ __all__ = (
     "ContentTypeSelect",
     "DatePicker",
     "DateTimePicker",
+    "ExportFieldSelect",
     "NumberWithSelect",
     "SelectMultipleOrderable",
     "SelectWithDisabled",
@@ -106,6 +108,105 @@ class SelectMultipleOrderable(forms.SelectMultiple):
         self.attrs["class"] = (
             "list-group nb-draggable-container nb-select-multiple-orderable-list flex-grow-1 mx-n20 py-16"
         )
+
+
+class ExportFieldSelect(SelectMultipleOrderable):
+    """
+    `SelectMultipleOrderable` variant that groups dunder-nested paths under their top-level parent.
+
+    Top-level fields are draggable/orderable rows; nested paths (e.g. `device_type__manufacturer`) are
+    rendered as indented, collapsible checkboxes inside their parent row, so reordering a parent moves its
+    nested columns with it and nested columns are not independently orderable.
+
+    The markup is built in Python rather than via a template: the field tree can hold hundreds of nodes,
+    and a recursive per-node ``{% include %}`` is instrumented per render by dev tooling (debug-toolbar),
+    turning a ~25ms render into many seconds. Building the HTML directly keeps it fast in every environment.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Fit the standard modal form column: drop the table-config drawer's negative side margins and
+        # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
+        # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
+        self.attrs["class"] = "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list py-8"
+
+    def render(self, name, value, attrs=None, renderer=None):
+        context = super().get_context(name, value, attrs)
+        widget = context["widget"]
+        options = [option for _group, subgroup, _index in widget["optgroups"] for option in subgroup]
+
+        # Build a tree keyed by full dunder path: each path attaches under its immediate parent path
+        # (value minus the last segment), so parents/children nest to any depth.
+        nodes = {str(option["value"]): {"option": option, "children": []} for option in options}
+        roots = []
+        for path, node in nodes.items():
+            parent = nodes.get(path.rsplit("__", 1)[0]) if "__" in path else None
+            (parent["children"] if parent is not None else roots).append(node)
+
+        rows = format_html_join(
+            "", "{}", ((self._render_node(node, widget["attrs"].get("id") or "", name, True),) for node in roots)
+        )
+        return format_html(
+            '<ol id="{}" class="{}">{}</ol>', widget["attrs"].get("id") or "", widget["attrs"].get("class") or "", rows
+        )
+
+    def _render_node(self, node, widget_id, name, is_root):
+        option = node["option"]
+        value = str(option["value"])
+        has_children = bool(node["children"])
+        checked = format_html(" checked") if option["attrs"].get("selected") else ""
+        handle = (
+            format_html(
+                '<span class="nb-draggable-handle pt-4 px-10"><span class="mdi mdi-drag-vertical text-secondary"></span></span>'
+            )
+            if is_root
+            else ""
+        )
+        checkbox = format_html(
+            '<div class="form-check flex-grow-1 my-0">'
+            '<input class="form-check-input my-6" id="{wid}_option_{value}" name="{name}" type="checkbox" value="{value}"{checked}>'
+            '<label class="form-check-label py-6{pe}" for="{wid}_option_{value}">{label}</label>'
+            "</div>",
+            wid=widget_id,
+            value=value,
+            name=name,
+            checked=checked,
+            pe="" if is_root else " pe-20",
+            label=option["label"],
+        )
+        caret = (
+            format_html(
+                '<button type="button" class="btn btn-link btn-sm p-0 ms-auto pe-10 export-field-caret" '
+                'aria-expanded="false" title="Show/hide related fields">'
+                '<span class="mdi mdi-chevron-down" aria-hidden="true"></span></button>'
+            )
+            if has_children
+            else ""
+        )
+        header = format_html('<div class="d-flex align-items-center">{}{}{}</div>', handle, checkbox, caret)
+
+        nested = ""
+        if has_children:
+            children = format_html_join(
+                "", "{}", ((self._render_node(child, widget_id, name, False),) for child in node["children"])
+            )
+            # First nested level clears the drag handle and parent checkbox; deeper levels compound.
+            nested = format_html(
+                '<ul class="export-nested list-unstyled mb-0 d-none" style="margin-left: {}">{}</ul>',
+                "4.5rem" if is_root else "2rem",
+                children,
+            )
+
+        if is_root:
+            return format_html(
+                '<li class="list-group-item-action nb-draggable my-0 export-field-group" '
+                'id="{}_option_{}_container" tabindex="0">{}{}</li>',
+                widget_id,
+                value,
+                header,
+                nested,
+            )
+        return format_html('<li class="my-0 export-field-node">{}{}</li>', header, nested)
 
 
 class SelectWithDisabled(forms.Select):

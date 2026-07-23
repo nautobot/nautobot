@@ -1,14 +1,18 @@
+import json
+
 from django import template
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import CharField
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 
+from nautobot.core.api import utils as api_utils
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.templatetags.perms import can_add, can_change, can_delete
 from nautobot.core.utils import lookup
 from nautobot.core.views import utils as views_utils
-from nautobot.extras import models
+from nautobot.extras.registry import registry
 
 register = template.Library()
 
@@ -504,16 +508,34 @@ def consolidate_detail_view_action_buttons(context):
     }
 
 
-@register.inclusion_tag("buttons/job_import.html")
-def job_import_button(content_type, list_element=False):
+@register.inclusion_tag("buttons/job_import.html", takes_context=True)
+def job_import_button(context, content_type, list_element=False):
     """Display an Import Button/List Element on the page.
 
     This allows an Import Button to either be displayed on a page or within a Button Group.
     Args:
+        context (dict): current Django Template context
         content_type (str): Django.contrib.ContentType for the model.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """
-    return {"import_url": job_import_url(content_type), "list_element": list_element}
+    # Reuse the registered ImportObjectsModalButton to build the HTMX wiring that opens the ImportObjects
+    # job form in the shared generic modal, so the run-view URL, base hx-vals, and disabled logic aren't
+    # duplicated here. The registered button_id lets the job-result modal resolve this trigger; the button
+    # sets refresh_on_close_if_done so the list refreshes on close and newly imported objects appear.
+    button = registry["job_modal_buttons"].get("core.import_objects")
+    if content_type is None or button is None:
+        return {"import_url": None, "list_element": list_element}
+    trigger = button.build_trigger_context(
+        user=getattr(context.get("request"), "user", None),
+        extra_hx_vals={"content_type": str(content_type.id)},
+    )
+    return {
+        "import_url": job_import_url(content_type),
+        "import_hx_vals": json.dumps(trigger["hx_vals"]),
+        "list_element": list_element,
+        "disabled": trigger["disabled"],
+        "disabled_title": trigger["disabled_title"],
+    }
 
 
 @register.simple_tag
@@ -541,21 +563,60 @@ def export_button(context, content_type=None, list_element=False):
         content_type (content_type, optional): Django Content Type for the model. Defaults to None.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """
-    if content_type is not None:
-        user = context["request"].user
-        export_templates = models.ExportTemplate.objects.restrict(user, "view").filter(content_type=content_type)
-        export_url = job_export_url()
-        include_yaml_option = hasattr(content_type.model_class(), "to_yaml")
-    else:
-        export_templates = []
-        export_url = None
-        include_yaml_option = False
+    button = registry["job_modal_buttons"].get("core.export_object_list")
+    if content_type is None or button is None:
+        return {"export_url": None, "list_element": list_element}
 
+    # Default the export field selection to the current view's visible columns, when available.
+    default_export_fields = ""
+    table = context.get("table")
+    if table is not None and hasattr(table, "serializer_paths_for_visible_columns"):
+        try:
+            serializer_class = api_utils.get_serializer_for_model(content_type.model_class())
+            default_export_fields = ",".join(table.serializer_paths_for_visible_columns(serializer_class))
+        except SerializerNotFound:
+            pass
+
+    # Reuse the registered ExportObjectListModalButton to build the HTMX wiring that opens the
+    # ExportObjectList job form in the shared generic modal, so the run-view URL, base hx-vals, and
+    # disabled logic aren't duplicated here. The job's own fields (format, template, field selection,
+    # use_current_view) replace the previous per-format / saved-view dropdown entries; the registered
+    # button_id lets the job-result modal offer a file download once the export completes.
+    trigger = button.build_trigger_context(
+        user=getattr(context.get("request"), "user", None),
+        extra_hx_vals={
+            "content_type": str(content_type.pk),
+            "query_string": context["request"].GET.urlencode(),
+            "export_fields": default_export_fields,
+        },
+    )
     return {
-        "export_url": export_url,
-        "query_string": context["request"].GET.urlencode(),
-        "content_type": content_type,
-        "export_templates": export_templates,
-        "include_yaml_option": include_yaml_option,
+        "export_url": trigger["url"],
+        "export_hx_vals": json.dumps(trigger["hx_vals"]),
         "list_element": list_element,
+        "disabled": trigger["disabled"],
+        "disabled_title": trigger["disabled_title"],
     }
+
+
+@register.inclusion_tag("buttons/export_fields_selector.html")
+def export_fields_selector(content_type_id, initial_fields=""):
+    """Render the orderable export field selector for a content type.
+
+    Reuses the `SelectMultipleOrderable` pattern (as `TableConfigForm` does). The field is prefixed so its
+    inputs do not collide with the job form's own `export_fields` variable; a small script in the export
+    job modal serializes the checked-in-order selection into that variable.
+
+    Args:
+        content_type_id: PK of the ContentType being exported.
+        initial_fields (str): Comma-separated field paths to pre-select and order first (the view's
+            visible columns).
+    """
+    from django.contrib.contenttypes.models import ContentType
+
+    from nautobot.core.forms import ExportFieldsForm
+
+    content_type = ContentType.objects.filter(pk=content_type_id).first() if content_type_id else None
+    initial_list = [field for field in (initial_fields or "").split(",") if field]
+    form = ExportFieldsForm(content_type=content_type, initial_fields=initial_list, prefix="export_selector")
+    return {"export_fields_form": form}

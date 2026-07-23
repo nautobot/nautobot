@@ -26,10 +26,9 @@ import csv
 from io import StringIO
 import json
 from pathlib import Path
-from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase
 from django.urls import reverse
 import yaml
 
@@ -377,7 +376,6 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertLog(job_result, "no_such_field", level=LogLevelChoices.LOG_ERROR)
 
-    @skip("Enable in X5: needs ExportFieldsForm (export UI)")
     def test_select__form_expands_single_fk_relations(self):
         """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
         from nautobot.core.forms import ExportFieldsForm
@@ -394,7 +392,6 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("export-nested", rendered)
         self.assertIn('value="device_type__manufacturer"', rendered)
 
-    @skip("Enable in X5: needs the export job-form modal template + modal button")
     def test_select__modal_renders_selector(self):
         """The ExportObjectList job form renders via the custom modal template with the orderable selector."""
         get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")  # ensure the job model is enabled
@@ -410,6 +407,9 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
+        # Assert the template path explicitly: JobView._get_template_name falls back to the generic modal
+        # (with only a message) if htmx_template_name can't be loaded, so a bad path degrades silently.
+        self.assertTemplateUsed(response, "system_jobs/export_job_form_modal.html")
         content = response.content.decode(response.charset)
         self.assertIn("export-fields-selector", content)
         self.assertIn("nb-select-multiple-orderable-list", content)
@@ -569,3 +569,38 @@ class ExportScopeTests(ImportExportJobTestCase):
         job_result = self.run_export(use_current_view=True, query_string="sort=not_a_real_field")
         self.assertTrue(job_result.files.exists())
         self.assertLog(job_result, "Ignoring sort", level=LogLevelChoices.LOG_WARNING)
+
+
+# ===========================================================================
+# Export result modal & download
+# ===========================================================================
+class ExportResultModalTests(ImportExportJobTestCase):
+    def test_export_modal_button_get_redirect_button(self):
+        """The registered export job-modal button offers a file download for a completed export, else nothing."""
+        from nautobot.extras.registry import registry
+
+        button = registry["job_modal_buttons"]["core.export_object_list"]
+        job_result = self.run_export()
+        redirect_button = button.get_redirect_button(job_result, RequestFactory().get("/"))
+        self.assertTrue(redirect_button["url"])
+        self.assertIn("Download", redirect_button["label"])
+        self.assertEqual(redirect_button["color"], "success")
+        self.assertEqual(redirect_button["attributes"]["data-nb-auto-download"], "true")
+
+        job_result.status = JobResultStatusChoices.STATUS_FAILURE
+        job_result.save()
+        self.assertEqual(button.get_redirect_button(job_result, RequestFactory().get("/")), {})
+
+    def test_jobresult_modal_offers_export_download(self):
+        """The job-result modal renders the auto-downloading Download button for a completed export."""
+        job_result = self.run_export()
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.post(
+            reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk}),
+            data={"job_modal_button": "core.export_object_list"},
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("data-nb-auto-download", content)
+        self.assertIn("Download", content)

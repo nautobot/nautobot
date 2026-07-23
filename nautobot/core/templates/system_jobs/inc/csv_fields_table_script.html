@@ -1,0 +1,132 @@
+{% comment %}
+Shared client-side script that populates the CSV/JSON/YAML import field-reference table when the
+content type changes. Included by both the full-page import (system_jobs/import_objects.html) and the
+import job modal (extras/htmx/import_job_form_modal.html); both render the same element ids
+(#id_content_type, #id_csv_data, #csv-fetch-failure, #csv-fields-info, #csv-fields-table,
+#csv-fields-tbody). The field metadata comes from the csv-import-fields UI-API (developer-controlled).
+{% endcomment %}
+<script type="text/javascript">
+    /* jquery here because select2 doesn't fire native events - https://github.com/select2/select2/issues/1908 */
+    $("#id_content_type").on("change", async (event) => {
+        const csv_data = document.getElementById("id_csv_data");
+        /* If user has already input csv_data, don't clobber it */
+        const updateCsvData = csv_data && csv_data.value.split("\n").length <= 1;
+        if (updateCsvData) {
+            csv_data.value = "";
+        }
+
+        const fetch_failure = document.getElementById("csv-fetch-failure");
+        const table_info = document.getElementById("csv-fields-info");
+        const table = document.getElementById("csv-fields-table");
+        const tbody = document.getElementById("csv-fields-tbody");
+
+        fetch_failure.style.display = "none";
+
+        const ct_id = event.target.value;
+        if (!ct_id) {
+            table_info.style.display = "none";
+            table.style.display = "none";
+            return;
+        }
+
+        const response = await fetch(`{% url 'ui-api:core-api:csv-import-fields' %}?content-type-id=${ct_id}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            table_info.style.display = "none";
+            table.style.display = "none";
+            fetch_failure.innerHTML = data.detail + " CSV cannot be imported for this content-type.";
+            fetch_failure.style.display = "";
+            return;
+        }
+
+        table_info.style.display = "";
+        table.style.display = "";
+
+        tbody.innerHTML = "";
+        for (const field of data.fields) {
+            let tr = document.createElement("tr");
+
+            /* Field */
+            let td = document.createElement("td");
+            td.innerHTML = `<code>${field.name}</code>`;
+            tr.appendChild(td);
+
+            /* Required */
+            td = document.createElement("td");
+            if (field.required) {
+                td.innerHTML = '<span class="text-success"><i class="mdi mdi-check-bold" title="Yes"></i></span>';
+                if (updateCsvData) {
+                    if (csv_data.value != "") {
+                        csv_data.value += ",";
+                    }
+                    csv_data.value += field.name;
+                }
+            } else {
+                td.innerHTML = '<span class="text-danger"><i class="mdi mdi-close-thick" title="No"></i></span>';
+            }
+            tr.appendChild(td);
+
+            /* Related Object */
+            td = document.createElement("td");
+            if (field.foreign_key) {
+                td.innerHTML = `<span class="text-warning"><i class="mdi mdi-key-link"></i></span><code>${field.foreign_key}</code>`;
+            } else {
+                td.innerHTML = '<span class="text-secondary">—</span>';
+            }
+            tr.appendChild(td);
+
+            /* Choices */
+            td = document.createElement("td");
+            if (field.choices) {
+                let choicesHTML = "";
+                for (const [value, label] of Object.entries(field.choices)) {
+                    if (value) {
+                        choicesHTML += `<tr><td><samp>${value}</samp></td><td>${label}</td></tr>`;
+                    }
+                }
+                td.innerHTML += `
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#${field.name}_choices">
+                        <i class="mdi mdi-help-circle"></i>
+                    </button>
+                    <div class="modal fade" id="${field.name}_choices" tabindex="-1" role="dialog">
+                        <div class="modal-dialog" role="document">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h4 class="modal-title">${field.name} Choices</h4>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <table class="table table-hover modal-body">
+                                    <tr><th>Import Value</th><th>Label</th></tr>
+                                    ${choicesHTML}
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                td.innerHTML = '<span class="text-secondary">—</span>';
+            }
+            tr.appendChild(td);
+
+            /* Description */
+            td = document.createElement("td");
+            if (field.help_text) {
+                td.innerHTML += `${field.help_text}<br>`;
+            } else if (field.label) {
+                td.innerHTML += `${field.label}<br>`;
+            }
+            if (field.format) {
+                td.innerHTML += `<small class="text-secondary">Format: ${field.format}</small>`;
+            }
+            tr.appendChild(td);
+
+            tbody.appendChild(tr);
+        }
+    });
+
+    if ($("#id_content_type").val()) {
+        $("#id_content_type").change();
+    }
+</script>
