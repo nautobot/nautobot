@@ -332,6 +332,14 @@ class CoreConfig(NautobotConfig):
 
         import nautobot.core.jobs  # noqa: F401  # unused-import -- but this import registers the system jobs
 
+        # Register the list-view Export/Import job-modal buttons so the job-result modal can resolve them
+        # (Export offers a file download; Import shows the created/updated/unchanged summary).
+        from nautobot.core.ui.object_detail import ExportObjectListModalButton
+        from nautobot.extras.registry import registry as _registry
+
+        if "core.export_object_list" not in _registry["job_modal_buttons"]:
+            ExportObjectListModalButton()
+
         @convert_django_field.register(JSONField)
         def convert_json(field, registry=None):  # pylint: disable=redefined-outer-name
             """Convert JSONField to GenericScalar."""

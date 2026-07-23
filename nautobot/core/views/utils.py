@@ -206,6 +206,7 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
             "name": field_name,
             "required": field.required,
             "foreign_key": False,
+            "many": isinstance(field, (serializers.ManyRelatedField, serializers.ListField)),
             "label": field.label,
             "help_text": field.help_text,
         }

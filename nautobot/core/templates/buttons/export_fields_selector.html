@@ -1,0 +1,14 @@
+{% comment %}
+Orderable export field selector, rendered inside the ExportObjectList job modal. Uses the same
+SelectMultipleOrderable/draggable machinery as the table-config (configurable columns) UI. Its inputs are
+prefixed (export_selector-*) so they do not submit as the job's `export_fields` variable; the modal's
+script serializes the checked-in-order selection into that hidden variable. Wrapped in the standard
+form grid (col-md-3 label / col-md-9 field) so it aligns with the rest of the job form.
+{% endcomment %}
+<div class="mb-10 d-md-flex justify-content-center export-fields-selector">
+    <label class="col-md-3 col-form-label">Fields to Export</label>
+    <div class="col-md-9">
+        <span class="form-text d-block mb-6">{{ export_fields_form.export_fields.help_text }}</span>
+        {{ export_fields_form.export_fields }}
+    </div>
+</div>
