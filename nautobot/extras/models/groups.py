@@ -546,7 +546,7 @@ class DynamicGroup(PrimaryModel):
         # Safety cannot change during the cascade, so share one memo across all of its safety checks.
         safety_by_pk = {}
         # All groups in a hierarchy share a content type, so one filterset serves every safety check below.
-        filterset_filters = self.filterset_class().filters if self.filterset_class is not None else None
+        filterset_filters = self.filterset_class().filters if self.filterset_class is not None else None  # pylint: disable=not-callable
         fresh_group_pks = set()
         # Guard against circular references: a cache-reading filter (e.g. `dynamic_groups`) may reference an
         # ancestor, so the refreshes below could invalidate even this group's just-refreshed cache.
