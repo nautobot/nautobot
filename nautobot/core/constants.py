@@ -36,6 +36,10 @@ FILTER_NUMERIC_BASED_LOOKUP_MAP = {
 
 FILTER_NEGATION_LOOKUP_MAP = {"n": "exact"}
 
+# For filters against JSON list values (multi-select custom fields), where negation must invert a `contains`
+# lookup rather than an `exact` comparison against the whole list.
+FILTER_CONTAINS_NEGATION_LOOKUP_MAP = {"n": "contains"}
+
 #
 # User input sanitization
 #
