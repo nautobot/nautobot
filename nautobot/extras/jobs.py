@@ -1324,7 +1324,11 @@ def _prepare_job(job_class_path, request, kwargs) -> tuple[Job, dict]:
     if not job.job_model.has_sensitive_variables:
         event_payload["job_kwargs"] = kwargs
     publish_event(topic="nautobot.jobs.job.started", payload=event_payload)
-    job.logger.info("Running job", extra={"grouping": "initialization", "object": job.job_model})
+    job.logger.info(
+        "Running job (source version: %s)",
+        job.job_model.source_version or "unknown",
+        extra={"grouping": "initialization", "object": job.job_model},
+    )
 
     # Return the job, ready to run
     return job, event_payload
@@ -1503,6 +1507,6 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         elif get_job(job_model.class_path) is None:
             logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
         else:
-            JobResult.enqueue_job(job_model, object_change.user, object_change=object_change.pk)
+            JobResult.enqueue_job(job_model, object_change.user, job_kwargs={"object_change": object_change.pk})
 
     return jobs_reloaded, jobhook_queryset

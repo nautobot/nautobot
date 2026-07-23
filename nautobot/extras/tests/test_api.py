@@ -47,6 +47,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
@@ -56,6 +57,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs_cancel import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -106,7 +108,7 @@ from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -1011,7 +1013,7 @@ class ApprovalWorkflowStageTest(
 
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
-    choices_fields = ["content_type"]
+    choices_fields = ["content_type", "output_type"]
     create_data = [
         {
             "content_type": "dcim.location",
@@ -2932,7 +2934,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
         # No new scheduled job should be created
@@ -2972,7 +2974,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
 
@@ -3774,6 +3776,281 @@ class JobResultTest(
             task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             scheduled_job=None,
         )
+        cls.pending_job_result = JobResult.objects.filter(
+            status=JobResultStatusChoices.STATUS_PENDING, job_model__isnull=False
+        ).first()
+
+    @staticmethod
+    def _fake_cancel_success_termination_path(job_result, user):
+        """Simulate a successful cancel by flipping the job to REVOKED.
+
+        Stand-in for `CeleryStrategy.cancel` in tests of the TERMINATE path,
+        where the real code relies on Celery's async catchup to set the
+        REVOKED status. Writes the status synchronously so the view's
+        post-cancel check sees the expected terminal state.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_REVOKED
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "canceled": True}
+
+    @staticmethod
+    def _fake_cancel_no_action_termination_path(job_result, user):
+        """Simulate a cancel that lost the race to natural completion.
+
+        Stand-in for `CeleryStrategy.cancel` in tests where the job finishes
+        between the view's pre-check and the strategy call. Leaves the job
+        in a non-REVOKED terminal state (COMPLETED) so the view's post-cancel
+        check trips and returns 409.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "canceled": False}
+
+    def test_post_cancel_already_finished_returns_409(self):
+        """A finished job cannot be canceled."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("already finished", response.data["detail"].lower())
+
+    def test_get_cancel_already_finished(self):
+        """A finished job cannot be canceled: POST returns 409, GET returns a NOOP preview."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
+
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertNotIn("irreversible", response.data)
+        self.assertIn("message", response.data)
+        self.assertIn("timestamp", response.data)
+
+    def test_cancel_non_owner_without_cancel_job_permission_denied(self):
+        """A non-owner without cancel_job cannot cancel someone else's job."""
+        other = User.objects.create_user(username="other-owner")
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        job_result.user = other
+        job_result.save()
+
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_non_owner_with_dismatch_constrained_cancel_job_permission_denied(self):
+        """A non-owner whose cancel_job is constrained to a different Job is denied."""
+        other = User.objects.create_user(username="dismatch-owner")
+        other_job = Job.objects.exclude(pk=self.pending_job_result.job_model.pk).first()
+        self.pending_job_result.user = other
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.cancel_job", constraints={"pk": str(other_job.pk)})
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_orphaned_result_non_owner_without_cancel_job_denied(self):
+        """When job_model is None, a non-owner without cancel_job is still denied."""
+        other = User.objects.create_user(username="orphan-non-owner-noperm")
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending2",
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_without_view_jobresult_permission_denied(self):
+        """Without view_jobresult the endpoint is not reachable, even for the submitter."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        # deliberately no permissions added
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @mock.patch.object(JobResult, "log")
+    def test_cancel_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+        """Unsuporrted queue type should abandon job."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.pending_job_result.refresh_from_db()
+        self.assertEqual(self.pending_job_result.status, "REVOKED")
+
+        mock_job_log.assert_called_once_with(
+            f"Abandoned job {self.pending_job_result.pk} by {self.user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="canceling",
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": None})
+    def test_cancel_get_returns_terminate_preview(self, mock_cancel, mock_liveness):
+        """GET returns the cancel TERMINATE preview payload and does not invoke cancel."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], "RUNNING")
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": None})
+    def test_cancel_get_returns_reap_preview(self, mock_cancel, mock_liveness):
+        """GET returns the cancel REAP preview payload and does not invoke cancel."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], "NOT RUNNING")
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_submitter_without_cancel_job_permission_can_cancel(self, mock_cancel, mock_liveness):
+        """The submitter can cancel their own job without holding cancel_job (submitter bypass)."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_non_owner_with_unconstrained_cancel_job_permission_can_cancel(self, mock_cancel, mock_liveness):
+        """A non-owner with unconstrained cancel_job can cancel."""
+        other = User.objects.create_user(username="some-other-owner")
+        self.pending_job_result.user = other
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_non_owner_with_matching_constrained_cancel_job_permission(self, mock_cancel, mock_liveness):
+        """A non-owner with cancel_job constrained to this result's Job can cancel."""
+        other = User.objects.create_user(username="constrained-owner")
+        self.pending_job_result.user = other
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.cancel_job", constraints={"pk": str(self.pending_job_result.job_model.pk)})
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": "Cancel failed: worker not responding."})
+    def test_cancel_strategy_error_returns_500(self, mock_cancel, mock_liveness):
+        """When the cancel strategy returns an error, the endpoint returns 500 with the error detail."""
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["detail"], "Cancel failed: worker not responding.")
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_no_action_termination_path)
+    def test_cancel_status_not_flipped_returns_409(self, mock_cancel, mock_liveness):
+        """If the strategy reports success but the job didn't end up REVOKED, return 409."""
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn(response.data["detail"], "Job finished before it could be canceled. No action was taken.")
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_orphaned_result_submitter_can_cancel(self, mock_cancel, mock_liveness):
+        """When job_model is None (Job deleted/uninstalled), the submitter can still cancel."""
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending",
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_orphaned_result_non_owner_with_cancel_job_can_cancel(self, mock_cancel, mock_liveness):
+        """When job_model is None, a non-owner with cancel_job can cancel."""
+        other = User.objects.create_user(username="orphan-non-owner")
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending2",
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_cancel.assert_called_once()
 
 
 class JobLogEntryTest(
@@ -4554,6 +4831,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         ControllerManagedDeviceGroup.objects.all().delete()

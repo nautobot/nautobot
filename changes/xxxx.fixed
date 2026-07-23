@@ -1,0 +1,1 @@
+Fixed `ComputedFieldColumn` rendering its fallback value on non-matching row types in interleaved tables (e.g. Prefix > IP Addresses). Such cells now render a placeholder.

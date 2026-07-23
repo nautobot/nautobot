@@ -1,0 +1,7 @@
+services:
+  nautobot:
+    volumes:
+      - ${SRC_KUBERNETES_TOKEN_PATH-/tmp/src_token_path}:${DESC_KUBERNETES_TOKEN_PATH-/tmp/desc_token_path}:ro"
+  redis:
+    ports:
+      - "6379:6379"

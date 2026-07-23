@@ -1,0 +1,5 @@
+Renamed the feature from `Job Revocation` to `Job Cancel`. All user-facing terminology now uses `cancel` instead of `revoke`.
+The cancel API preview (`GET` on the cancel endpoint) no longer returns the `action` and `action_description` fields.
+Reworked the Cancel Job confirmation popup.
+Renamed Job Result columns to use "cancel" terminology and Title Case.
+`ButtonsColumn` now treats `buttons=()` as "no buttons" instead of falling back to the default set.

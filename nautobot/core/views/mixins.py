@@ -1178,7 +1178,7 @@ class BulkEditAndBulkDeleteModelMixin:
             scheduled_job = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                **BulkDeleteObjects.serialize_data(job_kwargs),
+                job_kwargs=BulkDeleteObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
                 messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -1189,7 +1189,7 @@ class BulkEditAndBulkDeleteModelMixin:
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            **BulkDeleteObjects.serialize_data(job_kwargs),
+            job_kwargs=BulkDeleteObjects.serialize_data(job_kwargs),
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
@@ -1213,7 +1213,7 @@ class BulkEditAndBulkDeleteModelMixin:
             scheduled_job = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                **BulkEditObjects.serialize_data(job_kwargs),
+                job_kwargs=BulkEditObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
                 messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -1224,7 +1224,7 @@ class BulkEditAndBulkDeleteModelMixin:
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            **BulkEditObjects.serialize_data(job_kwargs),
+            job_kwargs=BulkEditObjects.serialize_data(job_kwargs),
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
@@ -1737,7 +1737,7 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     def _render_form_response(self, request, form, selected_objects):
         return Response(
             {
-                "template": self.bulk_rename_template_name,
+                "template": self.get_template_name(),
                 "form": form,
                 "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,

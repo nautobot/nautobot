@@ -163,7 +163,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         interface1 = Interface.objects.create(device=device1, name="eth0", status=interface_status, role=interface_role)
         interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
-        circuit_terminations = CircuitTermination.objects.all()
+        circuit_terminations = list(CircuitTermination.objects.filter(provider_network__isnull=True)[:2])
         circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -191,11 +191,11 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
     def test_connected(self):
         params = {"connected": True}
         filterset_result = self.filterset(params, self.queryset).qs
-        qs_result = self.queryset.filter(_path__is_active=True).distinct()
+        qs_result = self.queryset.filter(cable_paths__is_active=True).distinct()
         self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
         params = {"connected": False}
         filterset_result = self.filterset(params, self.queryset).qs
-        qs_result = self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)).distinct()
+        qs_result = self.queryset.filter(Q(cable_paths__isnull=True) | Q(cable_paths__is_active=False)).distinct()
         self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
 

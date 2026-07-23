@@ -1,0 +1,18 @@
+{% if object.is_unready_state %}
+    <div id="wrapper-component-{{ component.component_id }}"
+         hx-get=""
+         hx-swap="outerHTML"
+         hx-trigger="every 3s"
+         hx-vals='{"component_id": "{{ component.component_id }}"}'
+    >
+{% else %}
+    <div id="wrapper-component-{{ component.component_id }}">
+{% endif %}
+{% if link %}<a href="{{ link }}" {% else %}<button type="button"{% endif %}
+        id="component-{{ component.component_id }}"
+        class="btn btn-{{ color }}{% if size %} btn-{{ size }}{% endif %}"
+        {% for key, value in attributes.items %} {{ key }}="{{ value }}"{% endfor %}>
+{% if icon %}<span class="mdi {{ icon }}" aria-hidden="true"></span>{% endif %}
+{{ label }}
+{% if link %}</a>{% else %}</button>{% endif %}
+</div>
