@@ -1,1 +1,0 @@
-Fixed negation (`__n`) filtering of multi-select custom fields, which previously matched all records instead of excluding records containing the specified value.

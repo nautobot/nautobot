@@ -222,6 +222,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 - [#8677](https://github.com/nautobot/nautobot/issues/8677) - Fixed Provider `noc_contact` and `admin_contact` fields no longer being rendered as Markdown on the Provider detail view.
 - [#9062](https://github.com/nautobot/nautobot/issues/9062) - Fixed duplicated parent form dropdowns when an embedded "Add a new ..." modal was submitted with a validation error and then dismissed.
+- [#9120](https://github.com/nautobot/nautobot/issues/9120) - Fixed negation (`__n`) filtering of multi-select custom fields, which previously matched all records instead of excluding records containing the specified value.
 - [#9194](https://github.com/nautobot/nautobot/issues/9194) - Fixed UI horizontal "wiggle" when opening/closing various modal dialogs.
 - [#9208](https://github.com/nautobot/nautobot/issues/9208) - Fixed the Worker and Traceback sections on the Job Result "Advanced" tab not updating without a manual page refresh while a job runs or after it completes.
 - [#9229](https://github.com/nautobot/nautobot/issues/9229) - Fixed a race condition in the cable type creation form where submitting immediately after changing the connector counts or total lanes could fail validation because the lane mapping table had not finished regenerating.
@@ -237,6 +238,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#9273](https://github.com/nautobot/nautobot/issues/9273) - Fixed the worker liveness probe file to be updated based on the consumer's connection.
 - [#9276](https://github.com/nautobot/nautobot/issues/9276) - Fixed an N+1 query problem on the Interfaces REST API.
 - [#9277](https://github.com/nautobot/nautobot/issues/9277) - Improved performance of "ip address ranges" feature.
+- [#9283](https://github.com/nautobot/nautobot/issues/9283) - Fixed docs link pointing to an authenticated link when on an unauthenticated page.
 
 ### Dependencies in v3.2.0b2
 
