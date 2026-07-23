@@ -28,6 +28,7 @@ from nautobot.dcim.forms import (
     InterfaceBulkEditForm,
     InterfaceCreateForm,
     InterfaceForm,
+    ModuleForm,
     PopulateDeviceBayForm,
     RackForm,
 )
@@ -44,6 +45,8 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    ModuleBay,
+    ModuleFamily,
     Platform,
     PowerFeed,
     PowerPanel,
@@ -1386,3 +1389,32 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         # Each column's rowspans tile the two rows exactly — no overlap, no skipped-only row.
         self.assertEqual(sum(row["a_rowspan"] for row in rows), 2)
         self.assertEqual(sum(row["b_rowspan"] for row in rows), 2)
+
+
+class ModuleFormTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        manufacturer = Manufacturer.objects.first() or Manufacturer.objects.create(name="Module Form Manufacturer")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Module Form DeviceType")
+        device = Device.objects.create(
+            name="Module Form Device",
+            device_type=device_type,
+            role=Role.objects.get_for_model(Device).first(),
+            location=location,
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        cls.module_family = ModuleFamily.objects.create(name='<script>alert("XSS")</script>')
+        cls.parent_module_bay = ModuleBay.objects.create(
+            name="Module Form Bay", position="1", parent_device=device, module_family=cls.module_family
+        )
+
+    def test_module_family_help_text_escaped(self):
+        """The parent module bay's family name is HTML-escaped before being used as form field help_text.
+
+        Regression test for GHSA-56v6-2fhr-wxgq
+        """
+        form = ModuleForm(initial={"parent_module_bay": self.parent_module_bay.pk})
+        help_text = form.fields["module_family"].help_text
+        self.assertNotIn("<script>", help_text)
+        self.assertIn("&lt;script&gt;", help_text)

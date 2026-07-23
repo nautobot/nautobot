@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import connection, IntegrityError
+from django.db import connection, IntegrityError, transaction
 from django.db.models import ProtectedError
 import netaddr
 
@@ -3058,6 +3058,90 @@ class VRFDeviceAssignmentSignalTest(TestCase):
                 pk_set={self.vrf1.pk},
             )
             mock_validated_save.assert_not_called()
+
+    def _device_interface_with_vrf(self, device, vrf):
+        """Assign `vrf` to `device` and create an interface on `device` using that VRF."""
+        device.vrfs.add(vrf)
+        return Interface.objects.create(
+            device=device,
+            name="GigabitEthernet0/0",
+            status=Status.objects.get_for_model(Interface).first(),
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+            vrf=vrf,
+        )
+
+    def _vm_interface_with_vrf(self, virtual_machine, vrf):
+        """Assign `vrf` to `virtual_machine` and create a VM interface using that VRF."""
+        virtual_machine.vrfs.add(vrf)
+        return VMInterface.objects.create(
+            virtual_machine=virtual_machine,
+            name="eth0",
+            status=Status.objects.get_for_model(VMInterface).first(),
+            vrf=vrf,
+        )
+
+    def test_cannot_remove_vrf_from_device_with_interface(self):
+        """Removing a VRF from a device is blocked while one of its interfaces still uses the VRF."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.device1.vrfs.remove(self.vrf1)
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_cannot_clear_vrfs_from_device_with_interface(self):
+        """Clearing a device's VRFs via set([]) is blocked while one of its interfaces still uses a VRF."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.device1.vrfs.set([])
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_cannot_remove_vrf_from_device_forward_direction(self):
+        """The block also applies when removing from the VRF side (vrf.devices.remove)."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.vrf1.devices.remove(self.device1)
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_cannot_remove_vrf_from_vm_with_interface(self):
+        """Removing a VRF from a virtual machine is blocked while one of its interfaces still uses the VRF."""
+        self._vm_interface_with_vrf(self.vm1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.vm1.vrfs.remove(self.vrf1)
+        self.assertTrue(self.vm1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_remove_device_helper_raises_protected_error(self):
+        """The programmatic VRF.remove_device() helper is also blocked via a ProtectedError."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ProtectedError), transaction.atomic():
+            self.vrf1.remove_device(self.device1)
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_can_remove_vrf_from_device_after_clearing_interface(self):
+        """Removal from a device succeeds once the VRF is cleared from the interface."""
+        interface = self._device_interface_with_vrf(self.device1, self.vrf1)
+        interface.vrf = None
+        interface.save()
+        self.device1.vrfs.remove(self.vrf1)
+        self.assertFalse(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_can_remove_vrf_from_vm_after_clearing_interface(self):
+        """Removal from a virtual machine succeeds once the VRF is cleared from the interface."""
+        interface = self._vm_interface_with_vrf(self.vm1, self.vrf1)
+        interface.vrf = None
+        interface.save()
+        self.vm1.vrfs.remove(self.vrf1)
+        self.assertFalse(self.vm1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_deleting_device_not_blocked_by_interface_vrf(self):
+        """Cascade deletion of the parent Device is not blocked, even when an interface uses the VRF."""
+        self._device_interface_with_vrf(self.device2, self.vrf1)
+        self.device2.delete()
+        self.assertFalse(Device.objects.filter(pk=self.device2.pk).exists())
+
+    def test_deleting_vrf_not_blocked_by_interface_vrf(self):
+        """Cascade deletion of the VRF itself is not blocked, even when an interface uses it."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        self.vrf1.delete()
+        self.assertFalse(VRF.objects.filter(pk=self.vrf1.pk).exists())
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

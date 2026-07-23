@@ -674,6 +674,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
+    "nautobot.core.middleware.GraphQLOpenTelemetryMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -735,6 +736,11 @@ AUTHENTICATION_BACKENDS = [
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
 USE_TZ = True
+# Group numbers into thousands (e.g. 1,009,518) for filters that force grouping such as `intcomma`.
+# Because our FORMAT_MODULE_PATH stub proxies format lookups to settings, this would otherwise fall
+# back to Django's default of 0, which disables grouping. USE_THOUSAND_SEPARATOR remains False, so
+# general number rendering is unaffected.
+NUMBER_GROUPING = 3
 
 # WSGI
 WSGI_APPLICATION = "nautobot.core.wsgi.application"
@@ -1312,3 +1318,39 @@ KUBERNETES_TOKEN_PATH = os.getenv(
 # Internal/dev-only: disables TLS verification for the Kubernetes API connection. Required for local clusters
 # WARNING: never set to False in production.
 KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL", "True"))
+
+#
+# OTEL Settings
+#
+
+OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False"))
+OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
+OTEL_TRACES_EXPORTER = [
+    exporter
+    for exporter in os.getenv("OTEL_TRACES_EXPORTER", "otlp").split(_CONFIG_SETTING_SEPARATOR)
+    if exporter != ""
+]
+OTEL_METRICS_EXPORTER = [
+    exporter
+    for exporter in os.getenv("OTEL_METRICS_EXPORTER", "otlp").split(_CONFIG_SETTING_SEPARATOR)
+    if exporter != ""
+]
+
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+OTEL_EXPORTER_OTLP_PROTOCOL = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+OTEL_EXPORTER_OTLP_INSECURE = is_truthy(os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "False"))
+# OTEL-SDK-standard env var: an empty value means "unlimited" (SDK sentinel _ENV_VALUE_UNSET == "").
+# Nautobot applies a protective default cap of 8192 chars; set the env var to "" to restore the
+# SDK's unlimited behavior. None flows through to SpanLimits(max_span_attribute_length=None).
+OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT = (
+    int(_value) if (_value := os.getenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "8192")) != "" else None
+)
+del _value
+# Extra OpenTelemetry instrumentors to enable at startup, as dotted import paths to instrumentor
+# classes (e.g. "opentelemetry.instrumentation.botocore.BotocoreInstrumentor"). Nautobot core installs
+# each one against its own TracerProvider during instrument(), so apps do not need to call
+# .instrument() from AppConfig.ready() (which races when multiple apps enable the same instrumentor).
+# This is a Nautobot-specific setting (not read by the OTEL SDK), so it carries the NAUTOBOT_ prefix.
+NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS = [
+    path for path in os.getenv("NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", "").split(_CONFIG_SETTING_SEPARATOR) if path != ""
+]

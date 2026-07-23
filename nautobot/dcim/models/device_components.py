@@ -1993,6 +1993,18 @@ class ModuleBay(PrimaryModel):
         """Walk up parent chain to find the Device that this ModuleBay is installed in, if one exists."""
         return self.parent_device
 
+    @property
+    def installed_child_bays(self):
+        """Return the queryset of ModuleBays belonging to the Module (if any) installed in this bay.
+
+        These are the "children" of this bay in the Device/Module nesting hierarchy, used to render the
+        HTMX expandable-tree in the Device "Module Bays" tab.
+        """
+        installed_module = getattr(self, "installed_module", None)
+        if installed_module is None:
+            return ModuleBay.objects.none()
+        return installed_module.module_bays.all()
+
     def __str__(self):
         if self.parent_device is not None:
             return f"{self.parent_device} ({self.name})"
