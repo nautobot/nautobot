@@ -61,7 +61,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import CustomFieldTypeChoices, JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import CustomField, JobLogEntry, Role, SecretsGroup, Status, Tag
+from nautobot.extras.models import CustomField, JobLogEntry, Role, SavedView, SecretsGroup, Status, Tag
 from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import Namespace, RouteTarget, VLAN, VRF, VRFDeviceAssignment
 from nautobot.users.api.serializers import UserSerializer
@@ -380,6 +380,15 @@ class ImportExportJobTestCase(TransactionTestCase):
     databases = ("default", "job_logs")
 
     # -- scenario setup --------------------------------------------------------
+    def create_saved_view(self, model_class=Status, config=None):
+        return SavedView.objects.create(
+            name="Global default View",
+            owner=self.user,
+            view=f"{model_class._meta.app_label}:{model_class._meta.model_name}_list",
+            is_global_default=True,
+            config=config or {},
+        )
+
     def create_status(self, name="test_update_status", color="111111"):
         status = Status.objects.create(name=name, color=color)
         status.content_types.set([ContentType.objects.get_for_model(Device)])
@@ -1222,7 +1231,10 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         DeviceType.objects.create(manufacturer=mfr, model="Selection DT", u_height=1)
         lines = self.export_lines(
             self.run_export(
-                model=DeviceType, query_string="model=Selection+DT", export_fields="model,manufacturer__name"
+                model=DeviceType,
+                query_string="model=Selection+DT",
+                export_fields="model,manufacturer__name",
+                use_current_view=True,
             )
         )
         self.assertEqual(
@@ -1317,7 +1329,6 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         # ...and the records really do carry only the selected field, so the dropped key is not recoverable
         self.assertEqual(uncovered["records"], [{"model": "Doc Key DT"}])
 
-    @skip("Enable in X4: uses use_current_view (sort + saved-view export config)")
     def test_select__omits_directive_when_key_not_covered(self):
         """If the selection omits the natural key, the export is not stamped with a match directive."""
         Status.objects.create(name="test_selection_status", color="445566")
@@ -1337,6 +1348,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 query_string="model=Selection+JSON+DT",
                 export_format="json",
                 export_fields="model,manufacturer__name",
+                use_current_view=True,
             )
         )
         self.assertEqual(
@@ -1571,3 +1583,153 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
             'name="export_selector-export_fields" type="checkbox" value="name" checked>',
             content,
         )
+
+
+# ===========================================================================
+# Export scope — "Use Current View" (filters + sort + saved views)
+# ===========================================================================
+class ExportScopeTests(ImportExportJobTestCase):
+    def test_scope__ignores_saved_view_by_default(self):
+        """A saved view's export settings apply only on explicit request, never implicitly."""
+        Status.objects.create(name="test_saved_ignored_status", color="556677")
+        saved_view = self.create_saved_view(config={"export_config": {"fields": ["color"], "format": "json"}})
+        job_result = self.run_export(query_string=f"saved_view={saved_view.pk}&name=test_saved_ignored_status")
+        self.assertTrue(self.export_filename(job_result).endswith(".csv"))
+        header = next(line for line in self.export_lines(job_result) if not line.startswith("#"))
+        self.assertIn("name", header.split(","))
+
+    def test_scope__current_view_applies_sort(self):
+        """Use Current View applies the current view's sort order to the export."""
+        Status.objects.create(name="zzz_sort_a", color="111111")
+        Status.objects.create(name="zzz_sort_b", color="222222")
+        rows = self.export_rows(
+            self.run_export(query_string="name=zzz_sort_a&name=zzz_sort_b&sort=-name", use_current_view=True)
+        )
+        self.assertEqual([row["name"] for row in rows], ["zzz_sort_b", "zzz_sort_a"])
+
+    def test_scope__without_current_view_ignores_filters(self):
+        """Without Use Current View, the export is a full export and the view's filters are ignored."""
+        Status.objects.create(name="zzz_only_me", color="111111")
+        names = [row["name"] for row in self.export_rows(self.run_export(query_string="name=zzz_only_me"))]
+        self.assertIn("zzz_only_me", names)
+        self.assertGreater(len(names), 1)
+
+    def test_scope__uses_saved_view_export_config(self):
+        """A saved view's export_config supplies the field selection and format when not explicitly given."""
+        Status.objects.create(name="test_saved_export_status", color="667788")
+        saved_view = self.create_saved_view(config={"export_config": {"fields": ["name", "color"], "format": "csv"}})
+        lines = [
+            line
+            for line in self.export_lines(
+                self.run_export(
+                    query_string=f"saved_view={saved_view.pk}&name=test_saved_export_status", use_current_view=True
+                )
+            )
+            if not line.startswith("#")
+        ]
+        self.assertEqual(lines[0], "name,color")
+        self.assertEqual(lines[1], "test_saved_export_status,667788")
+
+    def test_scope__saved_view_config_format(self):
+        """A saved view's export_config format applies when no explicit format is given."""
+        Status.objects.create(name="test_saved_json_status", color="778899")
+        saved_view = self.create_saved_view(config={"export_config": {"fields": ["name", "color"], "format": "json"}})
+        doc = self.export_document(
+            self.run_export(
+                query_string=f"saved_view={saved_view.pk}&name=test_saved_json_status", use_current_view=True
+            )
+        )
+        self.assertEqual(doc["records"], [{"name": "test_saved_json_status", "color": "778899"}])
+
+    def test_scope__explicit_fields_override_saved_view(self):
+        """Explicit export_fields takes precedence over the saved view's export_config."""
+        Status.objects.create(name="test_saved_override_status", color="8899aa")
+        saved_view = self.create_saved_view(config={"export_config": {"fields": ["name", "color"]}})
+        lines = self.export_lines(
+            self.run_export(
+                query_string=f"saved_view={saved_view.pk}&name=test_saved_override_status",
+                use_current_view=True,
+                export_fields="color",
+            )
+        )
+        self.assertEqual(lines[0], "color")
+
+    def test_scope__get_saved_view_filter_params(self):
+        """Test various cases for the saved view filter parameters."""
+        saved_view = self.create_saved_view(config={"filter_params": {"name": ["Active"]}})
+        test_cases = [
+            ({"saved_view": saved_view.pk}, {"name": ["Active"]}),
+            (
+                {"saved_view": saved_view.pk, "name": ["Active"], "content_types": ["dcim.devices"]},
+                {"name": ["Active"]},
+            ),
+            ({"saved_view": saved_view.pk, "content_types": ["dcim.devices"]}, {}),
+            ({"saved_view": saved_view.pk, "all_filters_removed": "true"}, {}),
+            ({"name": ["Active"]}, {}),
+        ]
+        for query_params, expected_output in test_cases:
+            with self.subTest(query_params=query_params, expected_output=expected_output):
+                self.assertEqual(ExportObjectList()._get_saved_view_filter_params(query_params), expected_output)
+
+    def test_scope__saved_view_to_csv_without_filters(self):
+        sv = self.create_saved_view()
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={sv.pk}", use_current_view=True))
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_scope__saved_view_to_csv_with_filters_from_saved_view(self):
+        filter_name = Status.objects.first().name
+        sv = self.create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={sv.pk}", use_current_view=True))
+        self.assertGreaterEqual(Status.objects.count(), 1)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], filter_name)
+
+    def test_scope__saved_view_to_csv_with_combined_filters(self):
+        filter_name = Status.objects.first().name
+        filter_name2 = Status.objects.last().name
+        sv = self.create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self.export_rows(
+            self.run_export(
+                query_string=f"saved_view={sv.pk}&name={filter_name}&name={filter_name2}", use_current_view=True
+            )
+        )
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["name"], filter_name)
+        self.assertEqual(rows[1]["name"], filter_name2)
+
+    def test_scope__saved_view_manufacturer_with_replaced_filters(self):
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        manufacturer2 = Manufacturer.objects.create(name="Test2 Manufacturer", description="test filter")
+        sv = self.create_saved_view(model_class=Manufacturer, config={"filter_params": {"name": [manufacturer.name]}})
+        rows = self.export_rows(
+            self.run_export(
+                model=Manufacturer,
+                query_string=f"saved_view={sv.pk}&description={manufacturer2.description}",
+                use_current_view=True,
+            )
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], manufacturer2.name)
+        self.assertEqual(rows[0]["description"], manufacturer2.description)
+        self.assertTrue(all(row["name"] != manufacturer.name for row in rows))
+
+    def test_scope__saved_view_to_csv_after_removing_all_filters(self):
+        filter_name = Status.objects.first().name
+        sv = self.create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self.export_rows(
+            self.run_export(query_string=f"saved_view={sv.pk}&all_filters_removed=true", use_current_view=True)
+        )
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_scope__stale_saved_view(self):
+        """A deleted/nonexistent saved_view reference falls back to a full export rather than erroring."""
+        job_result = self.run_export(
+            use_current_view=True, query_string="saved_view=00000000-0000-0000-0000-000000000000"
+        )
+        self.assertGreaterEqual(len(self.export_lines(job_result)), Status.objects.count() + 1)
+
+    def test_scope__bad_sort_key(self):
+        """A sort on a non-sortable key is ignored with a warning; the export still succeeds."""
+        job_result = self.run_export(use_current_view=True, query_string="sort=not_a_real_field")
+        self.assertTrue(job_result.files.exists())
+        self.assertLog(job_result, "Ignoring sort", level=LogLevelChoices.LOG_WARNING)
