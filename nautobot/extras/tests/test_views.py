@@ -3220,6 +3220,43 @@ class GitRepositoryTestCase(
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
 
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions_with_constrained_permission(self, _):
+        """Sync/dry-run return 404 when the user's change permission doesn't cover the object."""
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Grant change permission constrained to instance2 only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance2.pk},
+            actions=["change"],
+        )
+        obj_perm.validated_save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        for action_name, dry_run in [("dryrun", True), ("sync", False)]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    # Object outside the constraint: 404, and nothing enqueued
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance1.pk})
+                    response = self.client.post(url)
+                    self.assertHttpStatus(response, 404)
+                    mock_sync.assert_not_called()
+
+                    # Object inside the constraint: succeeds
+                    mock_sync.return_value = JobResult.objects.create(
+                        name=f"git-repository-{action_name}", user=self.user
+                    )
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance2.pk})
+                    response = self.client.post(url)
+                    self.assertRedirects(
+                        response,
+                        reverse("extras:gitrepository_result", kwargs={"pk": instance2.pk}),
+                        fetch_redirect_response=False,
+                    )
+                    mock_sync.assert_called_once_with(user=self.user)
+
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = MetadataType
