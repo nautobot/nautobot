@@ -1,1 +1,0 @@
-Fixed bulk IP address creation silently doing nothing (raising an uncaught `IntegrityError`) when a pattern collided with an existing address. The collision is now reported as a validation error on the form.

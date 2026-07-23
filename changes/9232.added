@@ -1,1 +1,0 @@
-Added a "Searchable Fields by Model" documentation page and a search bar tooltip, both listing the fields matched by each model's list-view search bar. The documentation page is generated from each model's `SearchFilter` via the new `generate_searchable_fields` management command, and the tooltip appears when hovering over the help icon in the search bar.

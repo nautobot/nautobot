@@ -1,1 +1,0 @@
-Fixed the worker liveness probe file to be updated based on the consumer's connection.
