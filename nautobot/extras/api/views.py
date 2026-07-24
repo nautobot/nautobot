@@ -33,13 +33,12 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.extras import filters
-from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
-from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     JobExecutionType,
     JobQueueTypeChoices,
 )
+from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.jobs_cancel import CancelFactory, JobLiveness, user_can_cancel_job_result
