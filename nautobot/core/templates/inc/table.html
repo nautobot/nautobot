@@ -1,4 +1,4 @@
-{% load querystring from django_tables2 %}
+{% load querystring_replace from django_tables2 %}
 {% load get_item table_config_button from helpers %}
 
 {% with last_column_name=table.visible_columns|last visible_column_count=table.visible_columns|length %}
@@ -15,9 +15,9 @@
                                             Tri-state sorting toggle: unsorted → ascending → descending → unsorted
                                         {% endcomment %}
                                         {% if column.order_by_alias.is_ascending or not column.is_ordered %}
-                                            <a href="{% querystring table.prefixed_order_by_field=column.order_by_alias.next %}">
+                                            <a href="{% querystring_replace table.prefixed_order_by_field=column.order_by_alias.next %}">
                                         {% else %}
-                                            <a href="{% querystring without table.prefixed_order_by_field %}">
+                                            <a href="{% querystring_replace without table.prefixed_order_by_field %}">
                                         {% endif %}
                                         {{ column.header }}
                                         {% if column.is_ordered %}

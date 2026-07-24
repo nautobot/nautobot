@@ -93,9 +93,9 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             "meta": meta,
             "date_done": None,
             "task_name": task_name,
-            "task_args": task_args,
-            "task_kwargs": task_kwargs,
-            "celery_kwargs": celery_kwargs,
+            "task_args": task_args if task_args else [],
+            "task_kwargs": task_kwargs if task_kwargs else {},
+            "celery_kwargs": celery_kwargs if celery_kwargs else {},
             "job_model_id": job_model_id,
             "scheduled_job_id": scheduled_job_id,
             "user_id": user_id,
@@ -119,7 +119,7 @@ class JobResultManager(BaseManager.from_queryset(RestrictedQuerySet), TaskResult
             fields["date_started"] = kwargs["date_started"]
 
         with BranchContext(
-            branch_name=celery_kwargs.get("nautobot_job_branch_name", None),
+            branch_name=celery_kwargs.get("nautobot_job_branch_name", None) if celery_kwargs else None,
             user=User.objects.get(id=user_id) if user_id else None,
             using=using,
         ):

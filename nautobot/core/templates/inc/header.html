@@ -3,12 +3,14 @@
 
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
-        <form action="{% url 'search' %}" class="col-4 text-center" id="header_search" method="get" role="search">
+        <form action="{% url 'search' %}" class="col-4 text-center" data-nb-live-search-path="{% url 'live_search' %}" id="header_search" method="get" role="search">
             <label class="position-relative w-100">
                 <input
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
+                    autocomplete="off"
                     class="form-control nb-text-transparent"
                     name="q"
+                    role="searchbox"
                     type="search"
                     value="{{ request.GET.q }}"
                 />

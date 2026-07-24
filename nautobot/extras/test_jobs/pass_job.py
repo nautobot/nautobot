@@ -20,8 +20,8 @@ class TestPassJob(Job):
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
-        if kwargs:
-            raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
+        if kwargs != {}:
+            raise RuntimeError(f"Expected kwargs to be empty dict, but it was {kwargs!r}")
         logger.info("before_start() was called as expected")
 
     def run(self):  # pylint: disable=arguments-differ
@@ -38,8 +38,8 @@ class TestPassJob(Job):
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
-        if kwargs:
-            raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
+        if kwargs != {}:
+            raise RuntimeError(f"Expected kwargs to be empty dict, but it was {kwargs!r}")
         logger.info("on_success() was called as expected")
 
     def on_failure(self, exc, task_id, args, kwargs, einfo):
@@ -54,8 +54,8 @@ class TestPassJob(Job):
             raise RuntimeError(f"Expected task_id {task_id} to equal self.request.id {self.request.id}")
         if args:
             raise RuntimeError(f"Expected args to be empty, but it was {args!r}")
-        if kwargs:
-            raise RuntimeError(f"Expected kwargs to be empty, but it was {kwargs!r}")
+        if kwargs != {}:
+            raise RuntimeError(f"Expected kwargs to be empty dict, but it was {kwargs!r}")
         if einfo is not None:
             raise RuntimeError(f"Expected einfo to be None, but it was {einfo!r}")
         logger.info("after_return() was called as expected")

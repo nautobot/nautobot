@@ -228,12 +228,35 @@ After:
 ```html
 <span>
     <span id="uuid_copy">{{ object.id }}</span>
-    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
         <span aria-hidden="true" class="mdi mdi-content-copy"></span>
         <span class="visually-hidden">Copy</span>
     </button>
 </span>
 ```
+
+### Reusable `copy_button` template tag
+
++++ 3.2.0
+
+Rather than hand-writing the markup above, use the reusable `copy_button` template tag from the `buttons` template tag library. It renders the canonical hover-copy button markup for you, and the global ClipboardJS handler (initialized once in `nautobot.js`) automatically wires up the copy behavior and a transient "Copied!" feedback tooltip — no per-page `new ClipboardJS(...)` initialization is required.
+
+Provide exactly one of `target` (a CSS selector of the element whose text content to copy) or `text` (a literal string to copy):
+
+```html
+{% load buttons %}
+
+<!-- Copy the text content of another element -->
+<span>
+    <span id="uuid_copy">{{ object.id }}</span>
+    {% copy_button target="#uuid_copy" %}
+</span>
+
+<!-- Copy a literal value -->
+{% copy_button text=object.name label="Copy name" %}
+```
+
+The tag also accepts `label` (accessible label, defaults to `"Copy"`), `size` (Bootstrap-style suffix such as `"sm"`, applied as `btn-{size}`), and `css_class` (extra CSS classes).
 
 ## Toggle All Groups (Collapse All Groups / Expand All Groups)
 

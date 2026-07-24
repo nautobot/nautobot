@@ -38,6 +38,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.choices import (
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -227,6 +228,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
+    output_type = ChoiceField(choices=ComputedFieldTypeChoices, required=False)
 
     class Meta:
         model = ComputedField
@@ -765,6 +767,20 @@ class JobRunResponseSerializer(serializers.Serializer):
 
     schedule = ScheduledJobSerializer(read_only=True, required=False)
     job_result = JobResultSerializer(read_only=True, required=False)
+
+
+class JobResultCancelPreviewSerializer(serializers.Serializer):
+    """Describes what a cancel action would do, returned by GET on the cancel endpoint."""
+
+    message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
+    job_status = serializers.ChoiceField(
+        choices=["RUNNING", "NOT RUNNING", "UNKNOWN", *JobResultStatusChoices.ALL_STATES],
+        help_text=("For unready jobs: RUNNING, NOT RUNNING, or UNKNOWN. For ready jobs: the terminal state."),
+    )
+    irreversible = serializers.CharField(
+        required=False, help_text="Warning that the action cannot be undone. Omitted when the job is already finished."
+    )
+    timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
 
 
 #

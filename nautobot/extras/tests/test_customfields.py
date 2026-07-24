@@ -2370,6 +2370,23 @@ class CustomFieldFilterTest(TestCase):
             self.filterset({"cf_cf9": str(self.multiselect_choices[0].pk)}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains=self.multiselect_choices[0].value),
         )
+        # Negation excludes records containing the value (https://github.com/nautobot/nautobot/issues/9120)
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9__n": ["Foo"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf9__contains="Foo")
+            | self.queryset.filter(_custom_field_data__cf9__isnull=True),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9__n": ["Bar"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf9__contains="Bar")
+            | self.queryset.filter(_custom_field_data__cf9__isnull=True),
+        )
+        # Negation by choice PK, mirroring the positive-filter case above
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9__n": [str(self.multiselect_choices[0].pk)]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf9__contains=self.multiselect_choices[0].value)
+            | self.queryset.filter(_custom_field_data__cf9__isnull=True),
+        )
 
 
 @tag("example_app")
