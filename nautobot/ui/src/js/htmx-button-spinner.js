@@ -2,6 +2,12 @@
 // (`mdi ...` + `aria-hidden`) so it can be applied by swapping an existing icon's classes.
 const SPINNER_CLASS = 'mdi spinner-border spinner-border-sm';
 
+// State-tracking attributes. Read/written with plain get/set/removeAttribute rather than
+// `dataset` so the names below appear verbatim everywhere they are used.
+const ACTIVE_ATTR = 'data-nb-spinner-active';
+const ICON_CLASS_ATTR = 'data-nb-spinner-icon-class';
+const INJECTED_SPINNER_ATTR = 'data-nb-injected-spinner';
+
 /**
  * Show a loading spinner on a `.btn` element while it issues an HTMX request.
  *
@@ -24,31 +30,33 @@ export const initializeHtmxButtonSpinner = () => {
     if (!(button instanceof HTMLElement) || !button.classList.contains('btn')) {
       return;
     }
-    if (button.dataset.nbSpinnerActive) {
+    if (button.hasAttribute(ACTIVE_ATTR)) {
       return; // A spinner is already showing for an in-flight request on this button.
     }
 
     const icon = button.querySelector('.mdi');
     if (icon) {
       // Temporarily replace the existing icon by swapping its classes; restored on completion.
-      button.dataset.nbSpinnerIconClass = icon.className;
+      button.setAttribute(ICON_CLASS_ATTR, icon.className);
       icon.className = SPINNER_CLASS;
-      button.dataset.nbSpinnerActive = 'icon';
+      button.setAttribute(ACTIVE_ATTR, 'icon');
     } else {
-      // No icon: prepend a spinner (plus a trailing space) before the label.
+      // No icon: prepend a spinner before the label, with `me-4` providing the gap.
       const spinner = document.createElement('span');
-      spinner.className = SPINNER_CLASS;
+      spinner.className = `${SPINNER_CLASS} me-4`;
       spinner.setAttribute('aria-hidden', 'true');
-      spinner.dataset.nbInjectedSpinner = 'true';
+      spinner.setAttribute(INJECTED_SPINNER_ATTR, 'true');
       button.insertBefore(spinner, button.firstChild);
-      spinner.after(' ');
-      button.dataset.nbSpinnerActive = 'injected';
+      button.setAttribute(ACTIVE_ATTR, 'injected');
     }
   };
 
   const onAfterRequest = (event) => {
     const button = event.detail?.elt;
-    const mode = button?.dataset?.nbSpinnerActive;
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+    const mode = button.getAttribute(ACTIVE_ATTR);
     if (!mode) {
       return;
     }
@@ -56,21 +64,14 @@ export const initializeHtmxButtonSpinner = () => {
     if (mode === 'icon') {
       const icon = button.querySelector('.mdi');
       if (icon) {
-        icon.className = button.dataset.nbSpinnerIconClass;
+        icon.className = button.getAttribute(ICON_CLASS_ATTR);
       }
-      delete button.dataset.nbSpinnerIconClass;
+      button.removeAttribute(ICON_CLASS_ATTR);
     } else {
-      const spinner = button.querySelector('[data-nb-injected-spinner]');
-      if (spinner) {
-        const trailingSpace = spinner.nextSibling;
-        if (trailingSpace?.nodeType === Node.TEXT_NODE && !trailingSpace.textContent.trim()) {
-          trailingSpace.remove();
-        }
-        spinner.remove();
-      }
+      button.querySelector(`[${INJECTED_SPINNER_ATTR}]`)?.remove();
     }
 
-    delete button.dataset.nbSpinnerActive;
+    button.removeAttribute(ACTIVE_ATTR);
   };
 
   // Body-level delegation catches every HTMX request; matches the pattern in `modal.js`.
