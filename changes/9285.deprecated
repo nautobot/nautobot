@@ -1,0 +1,1 @@
+Deprecated `check_and_call_git_repository_function` in favor of `git_repository_sync_view`.
