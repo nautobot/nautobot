@@ -72,7 +72,8 @@ dependencies = [
     # REST API framework
     "djangorestframework (>=3.17.1,<3.18)",
     # OpenAPI 3.0 schema generation for the REST API
-    "drf-spectacular[sidecar] (>=0.30.0,<0.31)",
+    # v0.30.0 is impacted by https://github.com/tfranzel/drf-spectacular/issues/1517
+    "drf-spectacular[sidecar] (>=0.29.0,<0.30)",
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
