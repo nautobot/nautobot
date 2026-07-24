@@ -1,0 +1,1 @@
+Fixed a bug in which "resolve_<foo>" methods in a graphql/types.py files were not called where <foo> was a reverse relationship.
