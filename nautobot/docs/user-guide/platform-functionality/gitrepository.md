@@ -19,8 +19,8 @@ Some text-based content is more conveniently stored in a separate Git repository
 
     Treat the permissions to create, change, or sync a Git repository (`extras.add_gitrepository`, `extras.change_gitrepository`) as equivalent to granting code execution on the worker. Grant them only to trusted administrators.
 
-!!! note "Syncing a repository implies a Job run permission"
-    Syncing triggers the `GitRepositorySync` system job, which imports and therefore executes any Jobs the repository provides. This is gated by the Git repository permissions alone, not by the Job `run` permission. As a result, a user who can sync a repository can cause its job code to run during the sync even without the `run` permission needed to start those Jobs from the Jobs UI or API. This is by design.
+!!! note "Syncing a repository runs a Job but does not require `run_job` permission"
+    Syncing triggers the `GitRepositorySync` system job. This is considered an internal implementation detail, and so it is gated by the Git repository `change` permissions, not by the Job `run` permission. This is by design.
 
 ## Repository Configuration
 
