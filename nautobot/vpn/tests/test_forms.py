@@ -242,7 +242,7 @@ class VPNTunnelFormTest(FormTestCases.BaseFormTestCase):
 
     def test_specifying_all_fields_success(self):
         """Test specifying all fields."""
-        endpoints = models.VPNTunnelEndpoint.objects.all()
+        endpoints = list(models.VPNTunnelEndpoint.objects.order_by("pk"))
         tunnel_role, _ = Role.objects.get_or_create(name="Default")
         tunnel_role.content_types.add(ContentType.objects.get_for_model(models.VPNTunnel))
         data = {

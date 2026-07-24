@@ -1,2 +1,0 @@
-Fixed VPNTunnelEndpoint source_interface field from OneToOne to ForeignKey. In Hub and Spoke topology this change
-allows all VPNTunnelEndpoints to be sourced from the same source_interface on the Hub.
