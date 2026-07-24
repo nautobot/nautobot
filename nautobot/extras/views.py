@@ -54,6 +54,7 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
     get_form_for_model,
@@ -2119,6 +2120,37 @@ def git_repository_sync_view(request, pk, dry_run):
         return redirect(repository.get_absolute_url(), permanent=False)
 
     repository.sync(user=request.user, dry_run=dry_run)
+    return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
+
+
+def check_and_call_git_repository_function(request, pk, func):
+    """Helper for checking Git permissions and worker availability, then calling provided function if all is well.
+
+    Deprecated:
+        3.2.0: Use `git_repository_sync_view()` instead. This function is retained for backwards
+        compatibility with downstream apps that call it directly with a custom enqueue function.
+
+    Args:
+        request (HttpRequest): request object.
+        pk (UUID): GitRepository pk value.
+        func (function): Enqueue git repo function, called as `func(repository, request.user)`.
+    Returns:
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
+    """
+    warn_deprecated_at_caller(
+        "check_and_call_git_repository_function() is deprecated; use git_repository_sync_view() instead."
+    )
+    try:
+        repository = get_git_repository_for_sync(request, pk)
+    except PermissionDenied:
+        return HttpResponseForbidden()
+    except CeleryWorkerNotRunningException:
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+        messages.error(request, "Unable to run job: Celery worker process not running.")
+        return redirect(repository.get_absolute_url(), permanent=False)
+
+    func(repository, request.user)
     return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
 
 

@@ -14,7 +14,7 @@ from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
-from django.test import override_settings, tag
+from django.test import override_settings, RequestFactory, tag
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -3299,6 +3299,30 @@ class GitRepositoryTestCase(
                     response = self.client.post(url)
                     self.assertHttpStatus(response, 404)
                     mock_sync.assert_not_called()
+
+    def test_check_and_call_git_repository_function_backwards_compat(self):
+        """The deprecated `check_and_call_git_repository_function` helper still works for downstream callers."""
+        instance = self._get_queryset().first()
+        request = RequestFactory().post(reverse("extras:gitrepository_sync", kwargs={"pk": instance.pk}))
+        request.user = self.user
+
+        # Without permission -> 403, provided function not called
+        mock_func = mock.Mock()
+        with self.assertWarns(DeprecationWarning):
+            response = views.check_and_call_git_repository_function(request, instance.pk, mock_func)
+        self.assertEqual(response.status_code, 403)
+        mock_func.assert_not_called()
+
+        # With permission and an available worker -> provided function called with (repository, user), then redirect
+        self.add_permissions("extras.change_gitrepository")
+        # Re-fetch the user so the permission cache reflects the newly-added permission.
+        request.user = User.objects.get(pk=self.user.pk)
+        mock_func = mock.Mock()
+        with mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1):
+            with self.assertWarns(DeprecationWarning):
+                response = views.check_and_call_git_repository_function(request, instance.pk, mock_func)
+        self.assertEqual(response.status_code, 302)
+        mock_func.assert_called_once_with(instance, request.user)
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
