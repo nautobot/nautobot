@@ -1,0 +1,1 @@
+Added a loading spinner to HTMX-driven buttons while their request is in flight.
