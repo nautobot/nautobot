@@ -1,1 +1,0 @@
-Fixed inability to swap or reassign a saved cable's terminations in the cable edit form by filtering termination dropdowns server-side to endpoints that are uncabled or already on the cable being edited.

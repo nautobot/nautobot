@@ -1210,6 +1210,10 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
         cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=prefix_status)
         cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace, status=prefix_status)
 
+        # cross-family byte-match
+        cls.prefix6_low = Prefix.objects.create(prefix="0800::/5", namespace=cls.namespace, status=prefix_status)
+        cls.prefix4_high = Prefix.objects.create(prefix="32.0.0.0/4", namespace=cls.namespace, status=prefix_status)
+
         # Ranges are intentionally disjoint (no overlaps allowed within a parent).
         cls.ip_address_range1_v4 = IPAddressRange.objects.create(
             name="IP Range Alpha",
@@ -1263,6 +1267,26 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
             status=cls.status_a,
             count_as_utilized=False,
             is_exclusive=True,
+        )
+
+        # cross-family byte-match
+        cls.ip_address_range_v6_cross_family = IPAddressRange.objects.create(
+            name="IP Range Foxtrot",
+            start_address="0800::1",
+            end_address="0fff::1",
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=False,
+        )
+        cls.ip_address_range_v4_cross_family = IPAddressRange.objects.create(
+            name="IP Range Golf",
+            start_address="32.0.0.1",
+            end_address="40.0.0.1",
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=False,
         )
 
     def test_search(self):
@@ -1410,6 +1434,18 @@ class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.Ten
                 fs.filter_contains(self.queryset, "contains", []),
                 self.queryset.none(),
             )
+
+        with self.subTest("v4 query must not match byte-overlapping v6 range"):
+            params = {"contains": ["10.0.0.15"], "namespace": [self.namespace.id]}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertIn(self.ip_address_range1_v4, qs)
+            self.assertNotIn(self.ip_address_range_v6_cross_family, qs)
+
+        with self.subTest("v6 query must not match byte-overlapping v4 range"):
+            params = {"contains": ["2001:db8::150"], "namespace": [self.namespace.id]}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertIn(self.ip_address_range2_v6, qs)
+            self.assertNotIn(self.ip_address_range_v4_cross_family, qs)
 
 
 class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):

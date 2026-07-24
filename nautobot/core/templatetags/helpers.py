@@ -1011,6 +1011,21 @@ def table_config_button(table, table_name=None, extra_classes="", disabled=False
     return format_html(html_template, extra_classes, table_name, "disabled" if disabled else "", table_name)
 
 
+@register.simple_tag()
+def searchable_fields_for_content_type(content_type):
+    """Return the fields searchable via the list-view search bar for the given ContentType's model.
+
+    Returns `None` if `content_type` is falsy, its model can't be resolved, or the model's FilterSet does
+    not define a `q` `SearchFilter`. Used to render the search bar help tooltip.
+    """
+    if not content_type:
+        return None
+    model = content_type.model_class()
+    if model is None:
+        return None
+    return lookup.get_searchable_fields_for_model(model)
+
+
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
 def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=90):
     """Wrapper for a horizontal bar graph indicating a percentage of utilization from a tuple of data.

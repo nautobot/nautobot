@@ -1,4 +1,5 @@
 import contextvars
+import heapq
 import logging
 import operator
 from typing import Optional
@@ -166,6 +167,11 @@ class Namespace(PrimaryModel):
     def ip_addresses(self):
         """Return all IPAddresses associated to this Namespace through their parent Prefix."""
         return IPAddress.objects.filter(parent__namespace=self).distinct()
+
+    @property
+    def ip_address_ranges(self):
+        """Return all IPAddressRanges associated to this Namespace through their parent Prefix."""
+        return IPAddressRange.objects.filter(parent__namespace=self).distinct()
 
     class Meta:
         ordering = ("name",)
@@ -817,8 +823,8 @@ class Prefix(PrimaryModel):
             if self.parent is None and self.ip_addresses.exists():
                 raise models.ProtectedError(
                     msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddress objects that "
-                        "would no longer have a valid parent."
+                        f"Cannot delete Prefix {self} because it has child IP Address objects that "
+                        "would no longer have a valid parent: "
                     ),
                     protected_objects=self.ip_addresses.all(),
                 )
@@ -826,8 +832,8 @@ class Prefix(PrimaryModel):
             if self.parent is None and self.ip_address_ranges.exists():
                 raise models.ProtectedError(
                     msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddressRanges objects that "
-                        "would no longer have a valid parent."
+                        f"Cannot delete Prefix {self} because it has child IP Address Range objects that "
+                        "would no longer have a valid parent: "
                     ),
                     protected_objects=self.ip_address_ranges.all(),
                 )
@@ -1389,24 +1395,26 @@ class Prefix(PrimaryModel):
 
         return available_prefixes
 
-    def get_available_ips(self, exclude_child_ips=True):
+    def get_available_ips(self):
         """
         Return all available IPs within this prefix as an IPSet.
 
-        exclude_child_ips: when False, existing IP Addresses are NOT removed from
-        the set. Used when pre-filling a new (non-exclusive) IP Address Range,
-        which may legitimately overlap already-assigned IPs.
+        Addresses inside exclusive IP Address Ranges are excluded (IPAddress
+        creation there is forbidden); non-exclusive ranges are NOT excluded,
+        consistent with IPAddress validation.
         """
         available_ips = netaddr.IPSet(self.prefix)
+        child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
+        available_ips -= child_ips
 
-        if exclude_child_ips:
-            child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
-            available_ips -= child_ips
-
-        for ip_range in self.get_all_ip_address_ranges():
-            start = netaddr.IPAddress(ip_range.start_address)
-            end = netaddr.IPAddress(ip_range.end_address)
-            available_ips -= netaddr.IPSet(netaddr.IPRange(start, end))
+        # Subtract all exclusive ranges as a single IPSet operation; per-range
+        # subtraction in a loop rebuilds the set on every iteration.
+        range_cidrs = []
+        qs = self.get_all_ip_address_ranges().filter(is_exclusive=True)
+        for start_host, end_host in qs.values_list("start_host", "end_host"):
+            range_cidrs.extend(netaddr.IPRange(start_host, end_host).cidrs())
+        if range_cidrs:
+            available_ips -= netaddr.IPSet(range_cidrs)
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
@@ -1494,10 +1502,10 @@ class Prefix(PrimaryModel):
         """
         Return the first available IP within the prefix (or None).
         """
-        available_ips = self.get_available_ips()
-        if not available_ips:
+        first = self._first_available_host(exclude_child_ips=True)
+        if first is None:
             return None
-        return f"{next(available_ips.__iter__())}/{self.prefix_length}"
+        return f"{first}/{self.prefix_length}"
 
     def get_first_available_ip_for_range(self):
         """
@@ -1507,10 +1515,83 @@ class Prefix(PrimaryModel):
         Unlike get_first_available_ip(), this ignores existing IP Addresses,
         since a non-exclusive Range may contain them.
         """
-        available_ips = self.get_available_ips(exclude_child_ips=False)
-        if not available_ips:
+        first = self._first_available_host(exclude_child_ips=False)
+        if first is None:
             return None
-        return str(next(available_ips.__iter__()))
+        return str(first)
+
+    def _first_available_host(self, exclude_child_ips=True):
+        """
+        Find the first host address in this prefix not covered by any blocker,
+        without materializing the full availability set.
+
+        Blockers are contained IPAddressRanges and (optionally) IPAddresses,
+        streamed from the DB in ascending order and merged lazily; the scan
+        stops at the first gap.
+
+        All contained IPAddressRanges are treated as blockers, regardless of
+        their `count_as_utilized` or `is_exclusive` flags:
+
+        - When pre-filling a new IPAddressRange (exclude_child_ips=False), any
+        overlap with an existing range is rejected by validation
+        (`IPAddressRange._validate_no_range_overlap`), so every existing range
+        must be skipped no matter its flags.
+        - The flags have narrower, unrelated roles: `count_as_utilized` only
+        affects utilization statistics, and `is_exclusive` only affects
+        validation of creating individual IPAddresses inside the range.
+        Neither defines availability in the sense of this method.
+
+        Returns:
+            netaddr.IPAddress or None
+        """
+        fully_usable = any(
+            [
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_6,
+                self.type == choices.PrefixTypeChoices.TYPE_POOL,
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_4 and self.prefix_length >= 31,
+            ]
+        )
+        candidate = self.prefix.first
+        last_usable = self.prefix.last
+        if not fully_usable:
+            # Omit the prefix's own network and broadcast addresses.
+            candidate += 1
+            last_usable -= 1
+        if candidate > last_usable:
+            return None
+
+        def range_intervals():
+            qs = self.get_all_ip_address_ranges().order_by("start_host").values_list("start_host", "end_host")
+            for start_host, end_host in qs.iterator(chunk_size=1000):
+                yield (int(netaddr.IPAddress(start_host)), int(netaddr.IPAddress(end_host)))
+
+        def ip_intervals():
+            qs = self.get_all_ips().order_by("host").values_list("host", flat=True)
+            for host in qs.iterator(chunk_size=1000):
+                value = int(netaddr.IPAddress(host))
+                yield (value, value)
+
+        if exclude_child_ips:
+            # Both streams are sorted ascending by their first element (VarbinaryIPField
+            # byte ordering == numeric ordering within a single ip_version, and both
+            # querysets are already filtered to self.ip_version). heapq.merge keeps the
+            # combined stream sorted while consuming both lazily.
+            blockers = heapq.merge(range_intervals(), ip_intervals())
+        else:
+            blockers = range_intervals()
+
+        for start, end in blockers:
+            if candidate < start:
+                # Found a gap before this blocker.
+                break
+            # This blocker starts at/before the candidate; skip past it if it covers it.
+            # (end may be < candidate for stale/overtaken blockers - just ignore those.)
+            if end >= candidate:
+                candidate = end + 1
+                if candidate > last_usable:
+                    return None
+
+        return netaddr.IPAddress(candidate, version=self.ip_version)
 
     def get_utilization(self):
         """Return the utilization of this prefix as a UtilizationData object.
@@ -1985,7 +2066,10 @@ class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
             self._deconstruct_end_address(end_address)
 
     def __str__(self):
-        return f"{self.start_address} - {self.end_address}"
+        if self.name:
+            return f"{self.name}: {self.start_address} - {self.end_address}"
+        else:
+            return f"{self.start_address} - {self.end_address}"
 
     def _deconstruct_start_address(self, address):
         if address:

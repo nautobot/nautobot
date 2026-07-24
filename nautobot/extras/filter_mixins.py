@@ -8,7 +8,7 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NEGATION_LOOKUP_MAP,
+    FILTER_CONTAINS_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.core.filters import (
@@ -108,7 +108,9 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         ):
             return FILTER_NUMERIC_BASED_LOOKUP_MAP
         elif issubclass(filter_type, CustomFieldMultiSelectFilter):
-            return FILTER_NEGATION_LOOKUP_MAP
+            # Multi-select values are JSON lists; negation must invert the `contains` lookup used by the base
+            # filter, as excluding on `exact` compares the whole list against a single value and matches nothing.
+            return FILTER_CONTAINS_NEGATION_LOOKUP_MAP
         else:
             return FILTER_CHAR_BASED_LOOKUP_MAP
 

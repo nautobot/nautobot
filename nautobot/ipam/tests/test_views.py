@@ -61,6 +61,7 @@ class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         "ipam:namespace_vrfs": ["ipam.view_namespace", "ipam.view_vrf"],
         "ipam:namespace_prefixes": ["ipam.view_namespace", "ipam.view_prefix"],
         "ipam:namespace_ip_addresses": ["ipam.view_namespace", "ipam.view_ipaddress"],
+        "ipam:namespace_ipaddressranges": ["ipam.view_namespace", "ipam.view_ipaddressrange"],
     }
 
     @classmethod
@@ -80,6 +81,28 @@ class NamespaceTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "tenant": tenants[1].pk,
             "location": locations[1].pk,
         }
+
+    def _get_ip_address_ranges_table(self):
+        instance = Namespace.objects.first()
+        url = reverse("ipam:namespace_ipaddressranges", kwargs={"pk": instance.pk})
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        return response.context["ip_address_range_table"]
+
+    def test_ip_address_ranges_tab_select_column_hidden_for_viewer(self):
+        self.add_permissions("ipam.view_namespace", "ipam.view_ipaddressrange")
+        table = self._get_ip_address_ranges_table()
+        self.assertFalse(table.columns["pk"].visible)
+
+    def test_ip_address_ranges_tab_select_column_shown_with_change(self):
+        self.add_permissions("ipam.view_namespace", "ipam.view_ipaddressrange", "ipam.change_ipaddressrange")
+        table = self._get_ip_address_ranges_table()
+        self.assertTrue(table.columns["pk"].visible)
+
+    def test_ip_address_ranges_tab_select_column_shown_with_delete(self):
+        self.add_permissions("ipam.view_namespace", "ipam.view_ipaddressrange", "ipam.delete_ipaddressrange")
+        table = self._get_ip_address_ranges_table()
+        self.assertTrue(table.columns["pk"].visible)
 
 
 class VRFTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -1300,6 +1323,33 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn(self.visible_vm_interface.name, content)
         self.assertNotIn(self.hidden_vm_interface.name, content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_embedded_create_form_invalid_returns_modal_partial(self):
+        """
+        An invalid HTMX (embedded modal) submission returns the modal partial, not the full create page.
+
+        Regression test for https://github.com/nautobot/nautobot/issues/9062.
+        """
+        self.add_permissions("ipam.add_ipaddress")
+        response = self.client.post(
+            reverse("ipam:ipaddress_add"),
+            data=post_data(
+                {
+                    "address": "192.0.2.3",  # Invalid: CIDR mask intentionally omitted.
+                    "namespace": self.namespace.pk,
+                    "status": self.statuses[1].pk,
+                    "type": IPAddressTypeChoices.TYPE_HOST,
+                }
+            ),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn('data-nb-obj-type="IP address"', content)
+        self.assertIn("embedded_id_", content)
+        self.assertNotIn('id="nb-create-form"', content)
+        self.assertNotIn("<!DOCTYPE", content)
 
 
 class IPAddressMergeTestCase(ModelViewTestCase):

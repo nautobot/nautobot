@@ -866,8 +866,8 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     # `SerializerMethodField` (rather than a declared nested field) so the per-request `?depth=N`
     # context drives the brief-vs-nested rendering of each slot. Writes are handled separately by
     # peeking at `self.initial_data` in `validate()` and applying via `_apply_terminations()`; see
-    # those methods below. The on-wire shape is a `{"a": {<connector>: ...}, "b": {...}}` dict
-    # keyed by cable side then connector index, mirroring the physical structure of the cable.
+    # those methods below. The on-wire shape is a flat dict keyed by side plus 1-indexed connector
+    # number (e.g. "a1", "b1"), one key per physical connector on the cable.
     terminations = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -898,32 +898,19 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         {
             "type": "object",
             "description": (
-                "Terminations on this cable, keyed by side ('a'/'b') then 1-indexed connector "
-                "number (as string). Each slot value is a brief representation (default depth) "
-                "or the full nested serializer (`?depth>=1`) of the termination at that connector "
-                "— polymorphic across Interface / CircuitTermination / ConsolePort / FrontPort / "
-                "RearPort / PowerPort / PowerOutlet / PowerFeed. Uncabled connectors on breakout "
-                "cables are represented as `null`."
+                "Terminations on this cable, keyed by side ('a'/'b') plus 1-indexed connector "
+                "number. A standard cable has one connector per side ('a1', 'b1'); higher "
+                "connector numbers ('a2', 'b2', ...) appear only on breakout cables with "
+                "multiple connectors per side. Each value is a brief representation (default "
+                "depth) or the full nested serializer (`?depth>=1`) of the termination at that "
+                "connector; polymorphic across Interface / CircuitTermination / ConsolePort / "
+                "FrontPort / RearPort / PowerPort / PowerOutlet / PowerFeed. Uncabled connectors "
+                "on breakout cables are represented as `null`."
             ),
-            "properties": {
-                "a": {
-                    "type": "object",
-                    "description": "A-side connector slots, keyed by 1-indexed connector number as string.",
-                    "additionalProperties": {
-                        "allOf": [{"$ref": "#/components/schemas/CableTermination"}],
-                        "nullable": True,
-                    },
-                },
-                "b": {
-                    "type": "object",
-                    "description": "B-side connector slots, keyed by 1-indexed connector number as string.",
-                    "additionalProperties": {
-                        "allOf": [{"$ref": "#/components/schemas/CableTermination"}],
-                        "nullable": True,
-                    },
-                },
+            "additionalProperties": {
+                "allOf": [{"$ref": "#/components/schemas/CableTermination"}],
+                "nullable": True,
             },
-            "required": ["a", "b"],
         }
     )
     def get_terminations(self, obj):
@@ -1017,7 +1004,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         """Translate the dict-shape `terminations` input into internal `_apply_terminations` entries.
 
         Input shape:
-            {"a1": {"<connector>": null | {"object_type": "<app.model>", "id": "<uuid>"}}, "b1": {...}}
+            {"a1": null | {"object_type": "<app.model>", "id": "<uuid>"}, "b1": ...}
 
         Output: list of {"cable_end": "A"/"B", "connector": int, <fk>: id?} dicts. A slot whose
         value is `null` (or an empty dict) yields an entry with no FK set, signaling delete to
@@ -1157,55 +1144,51 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         return cable
 
 
+@extend_schema_field(
+    {
+        "type": "object",
+        "description": (
+            "Terminations to apply, keyed by side ('a'/'b') plus 1-indexed connector number. "
+            "A standard cable has one connector per side ('a1', 'b1'); higher connector numbers "
+            "('a2', 'b2', ...) apply only to breakout cables with multiple connectors per side. "
+            "Each value is either `null` (delete the existing termination at this connector) or "
+            'an `{"object_type": "<app.model>", "id": "<uuid>"}` reference to the termination '
+            "to plug in. Connectors omitted from the payload are left untouched (PATCH-style "
+            "merge semantics)."
+        ),
+        "additionalProperties": {
+            "nullable": True,
+            "type": "object",
+            "properties": {
+                "object_type": {"type": "string", "example": "dcim.interface"},
+                "id": {"type": "string", "format": "uuid"},
+            },
+            "required": ["object_type", "id"],
+        },
+    }
+)
+class CableTerminationsPayloadField(serializers.JSONField):
+    """JSONField carrying the OpenAPI schema for the writable Cable `terminations` payload.
+
+    The `extend_schema_field` annotation must live on this class rather than on a field instance:
+    DRF's `Field.__deepcopy__` re-instantiates declared fields from their original constructor
+    arguments when a serializer binds its fields, discarding instance attributes such as the
+    schema override (which would leave the field typed as a bare untyped object in the schema).
+    """
+
+
 class WritableCableSerializer(CableSerializer):
     """Schema-only variant of `CableSerializer` advertising the writable `terminations` payload.
 
     The runtime `CableSerializer.terminations` field is a `SerializerMethodField` (for depth-aware
-    reads) — so drf-spectacular marks it `readOnly: true` by default. This subclass overrides the
-    field with a writable `JSONField` purely so the OpenAPI request body schema for POST/PATCH on
-    `/api/dcim/cables/` advertises `terminations` as writable, and documents its accepted shape.
+    reads), so drf-spectacular marks it `readOnly: true` by default. This subclass overrides the
+    field with a writable JSON field purely so the OpenAPI request body schema for POST/PUT/PATCH
+    on `/api/dcim/cables/` advertises `terminations` as writable, and documents its accepted shape.
 
     Not used at runtime; referenced only from `@extend_schema_view` on `CableViewSet`.
     """
 
-    terminations = extend_schema_field(
-        {
-            "type": "object",
-            "description": (
-                "Terminations to apply, keyed by side ('a'/'b') then 1-indexed connector number. "
-                "Each slot value is either `null` (delete the existing row at this connector) or "
-                'an `{"object_type": "<app.model>", "id": "<uuid>"}` reference to the '
-                "termination to plug in. Sides and connectors omitted from the payload are left "
-                "untouched (PATCH-style merge semantics)."
-            ),
-            "properties": {
-                "a": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "nullable": True,
-                        "type": "object",
-                        "properties": {
-                            "object_type": {"type": "string", "example": "dcim.interface"},
-                            "id": {"type": "string", "format": "uuid"},
-                        },
-                        "required": ["object_type", "id"],
-                    },
-                },
-                "b": {
-                    "type": "object",
-                    "additionalProperties": {
-                        "nullable": True,
-                        "type": "object",
-                        "properties": {
-                            "object_type": {"type": "string", "example": "dcim.interface"},
-                            "id": {"type": "string", "format": "uuid"},
-                        },
-                        "required": ["object_type", "id"],
-                    },
-                },
-            },
-        }
-    )(serializers.JSONField(required=False))
+    terminations = CableTerminationsPayloadField(required=False)
 
 
 class TracedCableSerializer(serializers.ModelSerializer):
