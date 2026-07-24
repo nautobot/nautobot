@@ -1,0 +1,1 @@
+Fixed `contains` filter on IP Address Ranges matching ranges of the wrong IP family due to raw byte comparison without IP version scoping.
