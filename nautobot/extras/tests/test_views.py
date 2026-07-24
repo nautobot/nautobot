@@ -3264,6 +3264,42 @@ class GitRepositoryTestCase(
                     )
                     mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
 
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=0)
+    def test_git_repository_custom_actions_no_celery_worker(self, _):
+        """Sync/dry-run redirect to the repository detail page with an error message if no worker is running."""
+        self.add_permissions("extras.change_gitrepository")
+        self.add_permissions("extras.view_gitrepository")
+        instance = self._get_queryset().first()
+
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                    response = self.client.post(url, follow=True)
+                    self.assertHttpStatus(response, 200)
+                    self.assertRedirects(response, instance.get_absolute_url())
+                    # No job should have been enqueued
+                    mock_sync.assert_not_called()
+                    # An error message should have been queued for display
+                    message = next(iter(response.context["messages"]))
+                    self.assertEqual(str(message), "Unable to run job: Celery worker process not running.")
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions_nonexistent_repo(self, _):
+        """Sync/dry-run return 404 for a nonexistent repository."""
+        self.add_permissions("extras.change_gitrepository")
+
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    url = reverse(
+                        f"extras:gitrepository_{action_name}",
+                        kwargs={"pk": "11111111-1111-1111-1111-111111111111"},
+                    )
+                    response = self.client.post(url)
+                    self.assertHttpStatus(response, 404)
+                    mock_sync.assert_not_called()
+
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = MetadataType

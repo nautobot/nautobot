@@ -1,0 +1,1 @@
+Changed `check_and_call_git_repository_function` to `git_repository_sync_view`.

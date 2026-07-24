@@ -2091,29 +2091,6 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 #
 
 
-def check_and_call_git_repository_function(request, pk, func):
-    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
-    Args:
-        request (HttpRequest): request object.
-        pk (UUID): GitRepository pk value.
-        func (function): Enqueue git repo function.
-    Returns:
-        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
-            otherwise redirect to the job result page.
-    """
-    if not request.user.has_perm("extras.change_gitrepository"):
-        return HttpResponseForbidden()
-
-    # Allow execution only if a worker process is running.
-    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
-    if not get_worker_count():
-        messages.error(request, "Unable to run job: Celery worker process not running.")
-        return redirect(repository.get_absolute_url(), permanent=False)
-    else:
-        func(repository, request.user)
-        return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
-
-
 def git_repository_sync_view(request, pk, dry_run):
     """
     Shared UI view logic for the GitRepository `sync` and `dry-run` actions.
