@@ -53,7 +53,7 @@ export const initializeHtmxButtonSpinner = () => {
 
   const onAfterRequest = (event) => {
     const button = event.detail?.elt;
-    if (!(button instanceof HTMLElement)) {
+    if (!(button instanceof HTMLElement) || !button.classList.contains('btn')) {
       return;
     }
     const mode = button.getAttribute(ACTIVE_ATTR);
