@@ -740,8 +740,9 @@ class IPAddressRangeFilterSet(
         """Find ranges whose span (start_host..end_host) includes the given address(es)."""
         query = Q()
         for val in value:
-            host = bytes(netaddr.IPNetwork(val).ip)
-            query |= Q(start_host__lte=host, end_host__gte=host)
+            ip = netaddr.IPNetwork(val)
+            host = bytes(ip.ip)
+            query |= Q(start_host__lte=host, end_host__gte=host, ip_version=ip.version)
         return query
 
     def filter_contains(self, queryset, name, value):
