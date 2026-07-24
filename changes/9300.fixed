@@ -1,0 +1,1 @@
+Fixed `JobConsoleEntry` model incorrectly being flagged as supporting object-metadata and data-compliance features.
