@@ -509,7 +509,10 @@ class PrefixTest(APIViewTestCases.APIViewTestCase):
         Test that the `display` field is correctly populated.
         """
         url = reverse("ipam-api:prefix-list")
-        self.add_permissions("ipam.view_prefix")
+        # ipam.view_namespace is required in addition to ipam.view_prefix because the namespace is a
+        # related object traversed at depth=1; without permission to view it, it would be downgraded to
+        # its brief {id, object_type, url} representation (which lacks the "name" field checked below).
+        self.add_permissions("ipam.view_prefix", "ipam.view_namespace")
 
         response = self.client.get(f"{url}?depth=1", **self.header)
         for p in response.data["results"]:

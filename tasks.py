@@ -953,7 +953,7 @@ def djhtml(context, fix=False):
 @task
 def djlint(context):  # djLint auto-formatter is a beta feature at the time of implementing this task, so skip fix mode.
     """Lint and check Django template files formatting."""
-    command = "djlint . --lint"
+    command = "djlint nautobot examples --lint"
     run_command(context, command)
 
 

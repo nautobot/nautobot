@@ -3905,7 +3905,10 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         """
         Check that `include=relationships` query parameter on a model endpoint includes relationships/associations.
         """
-        self.add_permissions("dcim.view_location")
+        # dcim.view_device is required in addition to dcim.view_location because the relationship's
+        # destination objects (Devices) are related objects traversed at depth=1; without permission to
+        # view them they would be downgraded to their brief {id, object_type, url} representation.
+        self.add_permissions("dcim.view_location", "dcim.view_device")
         response = self.client.get(
             reverse("dcim-api:location-detail", kwargs={"pk": self.locations[0].pk})
             + "?include=relationships"

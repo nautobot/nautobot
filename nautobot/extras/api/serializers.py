@@ -894,7 +894,7 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
 #
 
 
-class NoteSerializer(BaseModelSerializer):
+class NoteSerializer(ValidatedModelSerializer):
     assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
     assigned_object = serializers.SerializerMethodField()
 

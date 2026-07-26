@@ -2,6 +2,8 @@
 
 This document describes all new features and changes in Nautobot 2.4.
 
++**Security Note:** Several CVE fixes in the 2.4.38 release introduce [Breaking Changes](#breaking-changes). These changes most commonly surface as unexpected `TypeError`, `AttributeError`, or `KeyError` responses for REST API and GraphQL clients.
+
 ## Upgrade Actions
 
 ### Administrators
@@ -20,6 +22,117 @@ This document describes all new features and changes in Nautobot 2.4.
 - Job authors should be aware of the introduction of [Job Queues](#kubernetes-job-execution-and-job-queue-data-model-experimental) as a general-purpose replacement for the Celery-specific `Job.task_queues` attribute, and if a Job specifies its preferred `task_queues`, should verify that the queue selected as its `default_job_queue` after the Nautobot upgrade is correct.
 
 ## Release Overview
+
+### Breaking Changes
+
+#### REST API Permissions Enforcement on Related Objects
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx), the REST API now enforces object-level `view` permissions when traversing from a requested object to its related objects via the [`?depth` query parameter](../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter). At `?depth=1` and beyond, a related object that the requesting user does not have permission to view is no longer serialized in full, but is instead restricted to a brief representation containing only its `id`, `object_type`, `url`, and `display` values. See [REST API Object Permissions](../user-guide/platform-functionality/rest-api/object-permissions.md) for full details.
+
+REST API clients operating with limited permissions may now receive the brief representation where a fully serialized related object was previously returned, client code that assumes the presence of other nested fields will typically surface this as a `TypeError`, `AttributeError`, or `KeyError`.
+
+For example, consider a user with `view` permission on `Devices` but not on `Locations` requesting `GET /api/dcim/devices/<uuid>/?depth=1`. Previously, the device's location was serialized in full:
+
+```json
+{
+    "name": "device1",
+    "location": {
+        "id": "8badf00d-0000-0000-0000-000000000000",
+        "object_type": "dcim.location",
+        "url": "https://nautobot.example.com/api/dcim/locations/8badf00d-0000-0000-0000-000000000000/",
+        "name": "AMER",
+        "description": "North and South America",
+        "...": "..."
+    }
+}
+```
+
+Now, because the user lacks permission to view the Location, only the brief representation is returned:
+
+```json
+{
+    "name": "device1",
+    "location": {
+        "id": "8badf00d-0000-0000-0000-000000000000",
+        "object_type": "dcim.location",
+        "url": "https://nautobot.example.com/api/dcim/locations/8badf00d-0000-0000-0000-000000000000/",
+        "display": "AMER"
+    }
+}
+```
+
+Client code such as `response["location"]["name"]` that previously worked will now raise a `KeyError`. To restore the previous behavior, grant the requesting user `view` permission on the related model (in this example, `dcim.location`), with [constraints](../user-guide/platform-functionality/users/objectpermission.md) as appropriate. Alternatively, update the client code to tolerate the brief representation, for example by falling back to the `display` value or by retrieving the related object separately via its `url`.
+
+#### GraphQL Permissions Enforcement on Related Objects
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2), GraphQL queries now enforce object-level `view` permissions when traversing the object graph into related models, not just at the root of the query. A query field resolving to a single related object now returns `null` if the user lacks permission to view that object, and a field resolving to a list of objects now includes only the objects the user is permitted to view. See [GraphQL Permissions Enforcement](../user-guide/platform-functionality/graphql.md#permissions-enforcement) for full details.
+
+GraphQL clients operating with limited permissions may now receive `null` values or shorter lists where full data was previously returned. Client code that assumes a related object is present will typically surface as a `TypeError`, `AttributeError`, or `KeyError`.
+
+For example, consider a user with `view` permission on `Devices` but not on `Locations` or `Interfaces` running the following query:
+
+```graphql
+query {
+  devices {
+    name
+    location {
+      name
+    }
+    interfaces {
+      name
+    }
+  }
+}
+```
+
+Previously, the related objects were returned in full:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": {
+          "name": "AMER"
+        },
+        "interfaces": [
+          {"name": "Ethernet1"},
+          {"name": "Ethernet2"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+Now, the single related object resolves to `null` and the list contains only viewable objects:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": null,
+        "interfaces": []
+      }
+    ]
+  }
+}
+```
+
+Client code such as `devices[0]["location"]["name"]` that previously worked will now raise a `TypeError`. To restore the previous behavior, grant the requesting user `view` permission on the related models (in this example, `dcim.location` and `dcim.interface`), with [constraints](../user-guide/platform-functionality/users/objectpermission.md) as appropriate. Alternatively, update the client code to handle `null` related objects and filtered lists.
+
+#### Jinja2 Template Rendering Restrictions
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4), Nautobot's Jinja rendering of user-configurable Jinja2 templates (computed fields, custom links, webhooks, etc.) is now more restrictive. Jinja template snippets may no longer read arbitrary values from the Django `settings` object.
 
 ### Added
 
