@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 from django.core.validators import ValidationError
-from django.db.models import ManyToManyField
+from django.db.models import ForeignKey, ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel, OneToOneRel
 import graphene
 from graphene.types import generic
@@ -20,13 +20,15 @@ from nautobot.core.graphql.generators import (
     generate_computed_field_resolver,
     generate_custom_field_resolver,
     generate_filter_resolver,
+    generate_fk_resolver,
     generate_list_search_parameters,
     generate_null_choices_resolver,
     generate_relationship_resolver,
     generate_schema_type,
+    generate_single_relation_resolver,
 )
 from nautobot.core.graphql.types import ContentTypeType, DateType, JSON
-from nautobot.core.graphql.utils import str_to_var_name
+from nautobot.core.graphql.utils import permission_safe_resolver, str_to_var_name
 from nautobot.dcim.graphql.types import (
     CablePathType,
     CableType,
@@ -158,6 +160,52 @@ def extend_schema_type(schema_type):
     #
     schema_type = extend_schema_type_filter(schema_type, model)
 
+    #
+    # Enforce object permissions on forward FK / one-to-one traversal
+    #
+    schema_type = extend_schema_type_fk(schema_type, model)
+
+    return schema_type
+
+
+def extend_schema_type_fk(schema_type, model):
+    """Extend `schema_type` to enforce view permissions when traversing forward FK / one-to-one fields.
+
+    graphene-django resolves forward FK / one-to-one fields with a default resolver that does not apply
+    object permissions (and we intentionally do not override `get_queryset`; see
+    `nautobot.core.graphql.types.OptimizedNautobotObjectType`). For each such field whose related model has a
+    registered GraphQL type, we install a resolver that hides the related object when the requesting user is
+    not permitted to view it.
+
+    Because a restricted related object is hidden by returning `null`, each such field is re-mounted as a
+    *nullable* `graphene.Field`. Otherwise a required (non-nullable) FK such as `Rack.location` would raise
+    `Cannot return null for non-nullable field` when the related object is not viewable.
+
+    Args:
+        schema_type (DjangoObjectType): GraphQL Object type for a given model
+        model (Model): Django model
+
+    Returns:
+        (DjangoObjectType): The extended schema_type object
+    """
+    for field in model._meta.get_fields():
+        # `OneToOneField` subclasses `ForeignKey`, so this covers forward FK and forward one-to-one fields;
+        # reverse relations (`ManyToOneRel`, `OneToOneRel`, etc.) are not instances of `ForeignKey`.
+        if not isinstance(field, ForeignKey):
+            continue
+        related_model = field.related_model
+        # Only restrict related models that have a registered GraphQL type (built-in models such as
+        # `ContentType` have no such type and no `restrict()` method).
+        rel_schema_type = registry["graphql_types"].get(related_model._meta.label_lower)
+        if rel_schema_type is None:
+            continue
+        resolver_name = f"resolve_{field.name}"
+        # Don't override a more specific resolver that has already been defined for this field.
+        if hasattr(schema_type, resolver_name):
+            continue
+        # Re-mount as a nullable field so a non-viewable related object can be hidden by returning null.
+        schema_type._meta.fields[field.name] = graphene.Field(rel_schema_type)
+        setattr(schema_type, resolver_name, generate_fk_resolver(field.name, resolver_name, related_model))
     return schema_type
 
 
@@ -200,7 +248,17 @@ def extend_schema_type_null_field_choice(schema_type, model):
 
 
 def extend_schema_type_filter(schema_type, model):
-    """Extend schema_type object to be able to filter on multiple levels of a query
+    """Extend schema_type object to be able to filter on multiple levels of a query.
+
+    This also enforces object-level view permissions on related objects reached through these fields:
+    graphene-django resolves reverse relations with default resolvers that do not apply permissions, so we
+    install enforcing resolvers here.
+
+    Reverse relations are exposed by graphene-django under their *accessor* name (e.g. `jobbutton_set` when
+    there is no `related_name`), so we key the field/resolver on the accessor name -- keying on `field.name`
+    (as an earlier implementation did) both missed the accessor-named field graphene actually exposes and
+    produced a broken field whose resolver called `getattr(self, "<model>")`. Forward M2M and generic
+    relations have no accessor name and continue to use `field.name`.
 
     Args:
         schema_type (DjangoObjectType): GraphQL Object type for a given model
@@ -212,19 +270,23 @@ def extend_schema_type_filter(schema_type, model):
     for field in model._meta.get_fields():
         if not isinstance(field, (ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)):
             continue
-        # OneToOneRel is a subclass of ManyToOneRel, but we don't want to treat it as a list
-        if isinstance(field, OneToOneRel):
-            continue
         child_schema_type = registry["graphql_types"].get(field.related_model._meta.label_lower)
-        if child_schema_type:
-            resolver_name = f"resolve_{field.name}"
-            search_params = generate_list_search_parameters(child_schema_type)
-            # Add OneToMany field to schema_type
-            schema_type._meta.fields[field.name] = graphene.Field.mounted(
-                graphene.List(child_schema_type, **search_params)
-            )
-            # Add resolve function to schema_type
-            setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field.name))
+        if not child_schema_type:
+            continue
+
+        # Reverse relations are accessed by their accessor name; forward M2M / generic relations by field.name.
+        field_name = field.get_accessor_name() if hasattr(field, "get_accessor_name") else field.name
+        resolver_name = f"resolve_{field_name}"
+
+        # OneToOneRel is a subclass of ManyToOneRel but yields a single object, not a list.
+        if isinstance(field, OneToOneRel):
+            schema_type._meta.fields[field_name] = graphene.Field(child_schema_type)
+            setattr(schema_type, resolver_name, generate_single_relation_resolver(field_name, resolver_name))
+            continue
+
+        search_params = generate_list_search_parameters(child_schema_type)
+        schema_type._meta.fields[field_name] = graphene.Field.mounted(graphene.List(child_schema_type, **search_params))
+        setattr(schema_type, resolver_name, generate_filter_resolver(child_schema_type, resolver_name, field_name))
     return schema_type
 
 
@@ -345,8 +407,11 @@ def extend_schema_type_tags(schema_type, model):
     if "tags" not in fields_name:
         return schema_type
 
+    # `resolver_hints` stays outermost so the optimizer still prefetches `tags`; `permission_safe_resolver`
+    # then drops any tags the requesting user is not permitted to view.
     @gql_optimizer.resolver_hints(prefetch_related="tags")
-    def resolve_tags(self, args):
+    @permission_safe_resolver
+    def resolve_tags(self, info):
         return self.tags.all()
 
     setattr(schema_type, "resolve_tags", resolve_tags)
@@ -385,7 +450,8 @@ def extend_schema_type_global_features(schema_type, model):
     # associated_contacts and associated_object_metadata are handled elsewhere by extend_schema_type_filter()
     if getattr(model, "is_dynamic_group_associable_model", False):
 
-        def resolve_dynamic_groups(self, args):
+        @permission_safe_resolver
+        def resolve_dynamic_groups(self, info):
             return self.dynamic_groups
 
         setattr(schema_type, "resolve_dynamic_groups", resolve_dynamic_groups)

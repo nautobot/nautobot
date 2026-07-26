@@ -1,0 +1,1 @@
+Added GraphQL type-definition helper methods `permission_safe_resolver` and `permission_safe_attribute_resolver`. Apps defining custom GraphQL type classes may need to use these methods in some cases to prevent object-permission enforcement gaps similar to GHSA-mfwj-pjgx-22v2.
