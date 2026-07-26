@@ -1,7 +1,7 @@
 import graphene
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
-from nautobot.extras.models import DynamicGroup
+from nautobot.core.graphql.utils import permission_safe_attribute_resolver
 from nautobot.ipam import filters, models
 
 
@@ -10,14 +10,10 @@ class IPAddressType(OptimizedNautobotObjectType):
 
     address = graphene.String()
     ip_version = graphene.Int()
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
 
     class Meta:
         model = models.IPAddress
         filterset_class = filters.IPAddressFilterSet
-
-    def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
 
 
 class PrefixType(OptimizedNautobotObjectType):
@@ -25,15 +21,15 @@ class PrefixType(OptimizedNautobotObjectType):
 
     prefix = graphene.String()
     ip_version = graphene.Int()
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
     location = graphene.Field("nautobot.dcim.graphql.types.LocationType")
 
     class Meta:
         model = models.Prefix
         filterset_class = filters.PrefixFilterSet
 
-    def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+    # `location` is a legacy model property (Prefix uses the `locations` M2M), so it bypasses the
+    # auto-generated permission-enforcing resolvers; wrap it to hide a location the user may not view.
+    resolve_location = permission_safe_attribute_resolver("location")
 
 
 class VLANType(OptimizedNautobotObjectType):
@@ -44,3 +40,7 @@ class VLANType(OptimizedNautobotObjectType):
     class Meta:
         model = models.VLAN
         filterset_class = filters.VLANFilterSet
+
+    # `location` is a legacy model property (VLAN uses the `locations` M2M), so it bypasses the
+    # auto-generated permission-enforcing resolvers; wrap it to hide a location the user may not view.
+    resolve_location = permission_safe_attribute_resolver("location")

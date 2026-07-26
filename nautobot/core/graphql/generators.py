@@ -2,12 +2,19 @@
 
 import logging
 
+from django.core.exceptions import ObjectDoesNotExist
 import graphene
 import graphene_django_optimizer as gql_optimizer
 from graphql import GraphQLError
 
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
-from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
+from nautobot.core.graphql.utils import (
+    filter_permitted_objects,
+    get_filtering_args_from_filterset,
+    get_permitted_pks,
+    mark_permission_enforced,
+    str_to_var_name,
+)
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.extras.choices import RelationshipSideChoices
 from nautobot.extras.models import RelationshipAssociation
@@ -102,9 +109,19 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
     @gql_optimizer.resolver_hints(model_field=field_name)
     def resolve_filter(self, info, **kwargs):
         field = getattr(self, field_name)
+        related_model = field.model
+
+        # Object-permission enforcement: the related manager (`field`) is prefetched by the optimizer, so we
+        # keep it intact and filter the loaded objects in Python against the user's permitted PKs, rather than
+        # re-querying with `restrict()` (which would defeat the prefetch and cause N+1 queries).
+        # `None` means unrestricted access, in which case no permission filtering is applied.
+        permitted_ids = get_permitted_pks(info, related_model)
 
         if not filterset_class or not kwargs:
-            return field.all()
+            objects = field.all()
+            if permitted_ids is None:
+                return objects
+            return [obj for obj in objects if obj.pk in permitted_ids]
 
         # Inverse of substitution logic from get_filtering_args_from_filterset() - transform "_type" back to "type"
         if "_type" in kwargs:
@@ -113,7 +130,6 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
         if not hasattr(info.context, "_gql_filter_cache"):
             info.context._gql_filter_cache = {}
 
-        related_model = field.model
         cache_key = (related_model._meta.label, field_name, _make_filter_cache_key(kwargs))
 
         if cache_key not in info.context._gql_filter_cache:
@@ -126,10 +142,65 @@ def generate_filter_resolver(schema_type, resolver_name, field_name):
             info.context._gql_filter_cache[cache_key] = set(resolved_obj.qs.values_list("pk", flat=True))
 
         matching_ids = info.context._gql_filter_cache[cache_key]
-        return [obj for obj in field.all() if obj.pk in matching_ids]
+        return [
+            obj for obj in field.all() if obj.pk in matching_ids and (permitted_ids is None or obj.pk in permitted_ids)
+        ]
 
     resolve_filter.__name__ = resolver_name
-    return resolve_filter
+    return mark_permission_enforced(resolve_filter)
+
+
+def generate_single_relation_resolver(field_name, resolver_name):
+    """Generate a resolver for a reverse one-to-one relation that enforces view permissions on the related object.
+
+    graphene-django resolves reverse one-to-one relations with a default resolver that does not apply object
+    permissions. This resolver returns the related object only if the requesting user is permitted to view it
+    (and `None` if there is no related object or it is not viewable). The permission check reuses the
+    per-request permitted-PK cache, so it does not add a query per object.
+
+    Args:
+        field_name (str): accessor name of the reverse one-to-one relation (e.g. `installed_module`)
+        resolver_name (str): name of the resolver as declared on the DjangoObjectType
+    """
+
+    @gql_optimizer.resolver_hints(model_field=field_name)
+    def resolve_single_relation(self, info, **kwargs):
+        try:
+            related_obj = getattr(self, field_name)
+        except ObjectDoesNotExist:
+            return None
+        return filter_permitted_objects(info, related_obj)
+
+    resolve_single_relation.__name__ = resolver_name
+    return mark_permission_enforced(resolve_single_relation)
+
+
+def generate_fk_resolver(field_name, resolver_name, related_model):
+    """Generate a resolver for a forward FK / one-to-one field that enforces view permissions on the related object.
+
+    graphene-django resolves forward FK / one-to-one fields with a default resolver that does not apply
+    object permissions. This resolver returns the related object (already loaded via `select_related` by the
+    optimizer) only if the requesting user is permitted to view it, and `None` otherwise. The permission
+    check reuses the per-request permitted-PK cache, so it does not add a query per object.
+
+    Args:
+        field_name (str): name of the FK / one-to-one field to resolve
+        resolver_name (str): name of the resolver as declared on the DjangoObjectType
+        related_model (Model): the Django model referenced by the FK / one-to-one field
+    """
+
+    @gql_optimizer.resolver_hints(model_field=field_name)
+    def resolve_fk(self, info, **kwargs):
+        related_obj = getattr(self, field_name)
+        if related_obj is None:
+            return None
+        permitted_ids = get_permitted_pks(info, related_model)
+        if permitted_ids is None or related_obj.pk in permitted_ids:
+            return related_obj
+        return None
+
+    resolve_fk.__name__ = resolver_name
+    return mark_permission_enforced(resolve_fk)
 
 
 def generate_custom_field_resolver(key, resolver_name):
@@ -230,19 +301,25 @@ def generate_relationship_resolver(name, resolver_name, relationship, side, peer
                     ),
                 )
 
+        # Object-permission enforcement on the remote model. This resolver already issues a fresh query per
+        # parent object, so `restrict()` only adds a WHERE clause here and does not introduce extra queries.
+        peer_queryset = peer_model.objects.filter(id__in=queryset_ids)
+        if hasattr(peer_queryset, "restrict"):
+            peer_queryset = peer_queryset.restrict(info.context.user, "view")
+
         if relationship.has_many(peer_side):
-            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids), info)
+            return gql_optimizer.query(peer_queryset, info)
 
         # Also apparently a graphene_django_optimizer bug - in the same query case as described above, here we may see:
         # AttributeError: object has no attribute "only"
         try:
-            return gql_optimizer.query(peer_model.objects.filter(id__in=queryset_ids).first(), info)
+            return gql_optimizer.query(peer_queryset.first(), info)
         except AttributeError:
             logger.debug("Caught AttributeError in graphene_django_optimizer, falling back to un-optimized query")
-            return peer_model.objects.filter(id__in=queryset_ids).first()
+            return peer_queryset.first()
 
     resolve_relationship.__name__ = resolver_name
-    return resolve_relationship
+    return mark_permission_enforced(resolve_relationship)
 
 
 def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjectType:

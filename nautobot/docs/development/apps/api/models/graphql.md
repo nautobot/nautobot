@@ -64,6 +64,20 @@ class AnimalType(OptimizedNautobotObjectType):
 graphql_types = [AnimalType]
 ```
 
+!!! warning
+    To correctly enforce object permissions on related objects, any fields you add to a GraphQL type class that implement custom `resolve_*` methods **must** use the `permission_safe_resolver` or `permission_safe_attribute_resolver` methods/decorators from `nautobot.core.graphql.utils`. For example, the Nautobot DCIM `Device` model has an `@property all_interfaces()` method - to expose this property in the GraphQL type, the correct declaration must be:
+
+```python
+class DeviceType(OptimizedNautobotObjectType):
+    ...
+    all_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")  # declare what type this field is
+    ...
+    resolve_all_interfaces = permission_safe_attribute_resolver("all_interfaces")  # apply permissions to this property
+```
+
+!!! note
+    The `permission_safe_resolver` and `permission_safe_attribute_resolver` methods were added as a security fix in Nautobot versions 2.4.38 and 3.2.0, so your app, by adopting these methods, will not be backwards-compatible with older Nautobot versions.
+
 ## Using GraphQL ORM Utilities
 
 GraphQL utility functions:
