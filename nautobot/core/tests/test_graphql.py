@@ -1,8 +1,9 @@
 import contextlib
 import datetime
 import random
+from textwrap import dedent
 import types
-from unittest import skip, TestCase as UnitTestTestCase
+from unittest import TestCase as UnitTestTestCase
 import uuid
 
 from django.apps import apps
@@ -17,7 +18,15 @@ from django.urls import reverse
 import graphene.types
 from graphene_django.registry import get_global_registry
 from graphene_django.settings import graphene_settings
-from graphql import execute, get_introspection_query, graphql_sync, GraphQLError, parse
+from graphql import (
+    execute,
+    get_introspection_query,
+    graphql_sync,
+    GraphQLError,
+    GraphQLObjectType,
+    GraphQLUnionType,
+    parse,
+)
 import redis.exceptions
 from rest_framework import status
 
@@ -36,9 +45,14 @@ from nautobot.core.graphql.schema import (
     extend_schema_type_null_field_choice,
     extend_schema_type_relationships,
     extend_schema_type_tags,
+    generate_query_mixin,
 )
 from nautobot.core.graphql.types import DateType, OptimizedNautobotObjectType
-from nautobot.core.graphql.utils import get_filtering_args_from_filterset, str_to_var_name
+from nautobot.core.graphql.utils import (
+    get_filtering_args_from_filterset,
+    PERMISSION_ENFORCED_RESOLVER_ATTR,
+    str_to_var_name,
+)
 from nautobot.core.testing import AssertNoRepeatedQueries, create_test_user, NautobotTestClient, TestCase
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.dcim.choices import ConsolePortTypeChoices, InterfaceModeChoices, InterfaceTypeChoices, PortTypeChoices
@@ -77,6 +91,7 @@ from nautobot.extras.models import (
     RelationshipAssociation,
     Role,
     Status,
+    Tag,
     Webhook,
 )
 from nautobot.extras.registry import registry
@@ -98,6 +113,40 @@ from nautobot.virtualization.models import Cluster, VirtualMachine, VMInterface
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+def rebuild_graphql_schema():
+    """
+    Rebuild and return a fresh executable GraphQL schema reflecting the current database state.
+
+    The module-level schema in `nautobot.core.graphql.schema_init` is generated once at import time, so
+    Relationships and Custom Fields created during a test are not reflected in the global schema (#446).
+    Re-running `generate_query_mixin()` and using the freshly generated schema avoids this issue for test purposes.
+    """
+    query_type = type("Query", (graphene.ObjectType, generate_query_mixin()), {})
+    return graphene.Schema(query=query_type, auto_camelcase=False)
+
+
+def execute_query_on_rebuilt_schema(query, variables=None, request=None, user=None):
+    """Execute `query` against a freshly rebuilt schema (see `rebuild_graphql_schema`).
+
+    Either `request` or `user` must be provided.
+
+    Mirrors `nautobot.core.graphql.execute_query`, but runs against a schema rebuilt at call time so that
+    Relationships / Custom Fields created during the test are present.
+    """
+    if not request and not user:
+        raise ValueError("Either request or user should be provided")
+    if not request:
+        request = RequestFactory().post("/graphql/")
+        request.user = user
+    schema = rebuild_graphql_schema()
+    document = parse(query)
+    if variables:
+        return execute(
+            schema=schema.graphql_schema, document=document, context_value=request, variable_values=variables
+        )
+    return execute(schema=schema.graphql_schema, document=document, context_value=request)
 
 
 class GraphQLTestCaseBase(TestCase):
@@ -145,7 +194,6 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         self.assertIsNone(resp.errors)
         self.assertEqual(resp.data["content_type"]["model"], ct.model)
 
-    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_custom_field_type_date(self):
         """Test Custom Field with Date type returns valid Date object and not string. Fix for bug #3664"""
@@ -158,10 +206,12 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         self.locations[0]._custom_field_data = custom_field_data
         self.locations[0].save()
         query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_date_field} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Location-1"})
-        self.assertEqual(resp.data["locations"]["cf_custom_date_field"], custom_field_data)
+        # The custom field is created at runtime, so the schema must be rebuilt for `cf_*` to be present (#446).
+        resp = execute_query_on_rebuilt_schema(query, user=self.user, variables={"name": "Location-1"})
+        self.assertIsNone(resp.errors)
+        self.assertEqual(resp.data["locations"][0]["cf_custom_date_field"], "2023-01-23")
+        self.assertEqual(resp.data["locations"][0]["_custom_field_data"], custom_field_data)
 
-    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_custom_field_type_json(self):
         """Test Custom Field with JSON type returns valid JSON object and not string. Fix for bug #4627"""
@@ -174,8 +224,13 @@ class GraphQLTestCase(GraphQLTestCaseBase):
         self.locations[0]._custom_field_data = custom_field_data
         self.locations[0].save()
         query = "query ($name: [String!]) { locations(name:$name) {name, _custom_field_data, cf_custom_json_field} }"
-        resp = execute_query(query, user=self.user, variables={"name": "Location-1"})
-        self.assertEqual(resp.data["locations"]["cf_custom_json_field"], custom_field_data)
+        # The custom field is created at runtime, so the schema must be rebuilt for `cf_*` to be present (#446).
+        resp = execute_query_on_rebuilt_schema(query, user=self.user, variables={"name": "Location-1"})
+        self.assertIsNone(resp.errors)
+        self.assertEqual(
+            resp.data["locations"][0]["cf_custom_json_field"], {"name": "Custom Example", "is_customfield": True}
+        )
+        self.assertEqual(resp.data["locations"][0]["_custom_field_data"], custom_field_data)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_execute_query_with_variable(self):
@@ -301,6 +356,381 @@ class GraphQLGetNodePermissionTest(GraphQLTestCaseBase):
 
         nonexistent_node = StatusType.get_node(info, str(uuid.uuid4()))
         self.assertIsNone(nonexistent_node)
+
+
+class GraphQLRelatedObjectPermissionTest(GraphQLTestCaseBase):
+    """
+    Verify object-level view permissions are enforced when GraphQL traverses to *related* objects.
+
+    Object permissions are reliably enforced for top-level list/single queries (see `GraphQLAPIPermissionTest`),
+    but each way of reaching a *related* object goes through a different resolver, so each needs its own coverage:
+
+    1. Filtering a related manager (reverse FK / M2M) -- `generators.generate_filter_resolver`
+    2. Traversing a custom Relationship/RelationshipAssociation -- `generators.generate_relationship_resolver`
+    3. Forward FK traversal -- the default graphene-django resolver (see `types.OptimizedNautobotObjectType`)
+
+    Each test grants the user permission to view the parent object plus a *constrained* permission on the
+    related model, then asserts that only the permitted related objects are returned.
+
+    Regression tests for NAUTOBOT-1435 / GHSA-mfwj-pjgx-22v2.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create(username="related_perm_user", is_active=True)
+
+        cls.location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location)[0]
+        cls.location = Location.objects.create(
+            name="Perm Test Location", location_type=cls.location_type, status=location_status
+        )
+
+        # Two racks in the same location; the user will be permitted to view only one of them (concerns 1 & 3).
+        rack_status = Status.objects.get_for_model(Rack)[0]
+        cls.visible_rack = Rack.objects.create(name="Visible Rack", location=cls.location, status=rack_status)
+        cls.hidden_rack = Rack.objects.create(name="Hidden Rack", location=cls.location, status=rack_status)
+
+        # Two VLANs associated to the location via a custom Relationship; only one is viewable (concern 2).
+        vlan_status = Status.objects.get_for_model(VLAN)[0]
+        cls.visible_vlan = VLAN.objects.create(name="Visible VLAN", vid=3401, status=vlan_status)
+        cls.hidden_vlan = VLAN.objects.create(name="Hidden VLAN", vid=3402, status=vlan_status)
+
+        cls.relationship = Relationship(
+            label="Perm Location to VLANs",
+            key="perm_location_to_vlans",
+            source_type=ContentType.objects.get_for_model(Location),
+            destination_type=ContentType.objects.get_for_model(VLAN),
+            type="many-to-many",
+        )
+        cls.relationship.validated_save()
+        cls.rel_field_name = f"rel_{str_to_var_name(cls.relationship.key)}"
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationship, source=cls.location, destination=cls.visible_vlan
+        )
+        RelationshipAssociation.objects.create(
+            relationship=cls.relationship, source=cls.location, destination=cls.hidden_vlan
+        )
+
+    @staticmethod
+    def _grant_view(user, model, constraints=None):
+        """Create an `ObjectPermission` granting `user` the `view` action on `model`, optionally constrained."""
+        obj_perm = ObjectPermission.objects.create(
+            name=f"View {model._meta.label} for {user.username} ({constraints})",
+            actions=["view"],
+            constraints=constraints or {},
+        )
+        obj_perm.object_types.add(ContentType.objects.get_for_model(model))
+        obj_perm.users.add(user)
+        return obj_perm
+
+    def test_unfiltered_related_objects_enforce_related_model_permissions(self):
+        """Unfiltered related manager (`locations { racks { name }}`) must apply view permissions on related model."""
+        self._grant_view(self.user, Location)  # may view all locations
+        self._grant_view(self.user, Rack, {"name": "Visible Rack"})  # may view only one of the two racks
+
+        query = """
+        query {
+            locations(name: "Perm Test Location") {
+                name
+                racks {
+                    name
+                }
+            }
+        }
+        """
+        result = execute_query(query, user=self.user)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["locations"]), 1)
+        rack_names = sorted(rack["name"] for rack in result.data["locations"][0]["racks"])
+        self.assertEqual(rack_names, ["Visible Rack"])
+
+    def test_filtering_related_objects_enforces_related_model_permissions(self):
+        """Filtering a related manager must also apply view permissions on the related model."""
+        self._grant_view(self.user, Location)  # may view all locations
+        self._grant_view(self.user, Rack, {"name": "Visible Rack"})  # may view only one of the two racks
+
+        query = """
+        query {
+            locations(name: "Perm Test Location") {
+                name
+                racks(location: "Perm Test Location") {
+                    name
+                }
+            }
+        }
+        """
+        result = execute_query(query, user=self.user)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["locations"]), 1)
+        rack_names = sorted(rack["name"] for rack in result.data["locations"][0]["racks"])
+        self.assertEqual(rack_names, ["Visible Rack"])
+
+    def test_relationship_traversal_enforces_remote_model_permissions(self):
+        """Traversing a Relationship must respect view permissions on the remote (peer) model."""
+        self._grant_view(self.user, Location)
+        self._grant_view(self.user, VLAN, {"name": "Visible VLAN"})
+
+        query = f"""
+        query {{
+            locations(name: "Perm Test Location") {{
+                name
+                {self.rel_field_name} {{
+                    name
+                }}
+            }}
+        }}
+        """
+        result = execute_query_on_rebuilt_schema(query, user=self.user)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["locations"]), 1)
+        vlan_names = sorted(vlan["name"] for vlan in result.data["locations"][0][self.rel_field_name])
+        self.assertEqual(vlan_names, ["Visible VLAN"])
+
+    def test_fk_traversal_enforces_related_model_permissions(self):
+        """Forward FK traversal must respect view permissions on the related model."""
+        # The user may view the rack, but is granted NO permission to view its location.
+        self._grant_view(self.user, Rack, {"name": "Visible Rack"})
+
+        query = """
+        query {
+            racks(name: "Visible Rack") {
+                name
+                location {
+                    name
+                }
+            }
+        }
+        """
+        result = execute_query(query, user=self.user)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["racks"]), 1)
+        self.assertEqual(result.data["racks"][0]["name"], "Visible Rack")
+        # The related location is not viewable by this user, so it must not be exposed.
+        self.assertIsNone(result.data["racks"][0]["location"])
+
+    def test_property_backed_accessor_enforces_related_model_permissions(self):
+        """A property-backed accessor wrapped with `permission_safe_attribute_resolver` must enforce permissions.
+
+        e.g. `devices { all_interfaces { name } }` -- `Device.all_interfaces` is a model property (not a
+        filterset/FK), so its resolver goes through `permission_safe_attribute_resolver`, which must drop
+        interfaces the user is not permitted to view.
+        """
+        manufacturer = Manufacturer.objects.create(name="Perm Manufacturer")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Perm Model")
+        device_role = Role.objects.create(name="Perm Device Role")
+        device_role.content_types.add(ContentType.objects.get_for_model(Device))
+        device = Device.objects.create(
+            name="Perm Device",
+            device_type=device_type,
+            role=device_role,
+            location=self.location,
+            status=Status.objects.get_for_model(Device)[0],
+        )
+        interface_status = Status.objects.get_for_model(Interface)[0]
+        Interface.objects.create(
+            device=device, name="Visible Interface", status=interface_status, type=InterfaceTypeChoices.TYPE_VIRTUAL
+        )
+        Interface.objects.create(
+            device=device, name="Hidden Interface", status=interface_status, type=InterfaceTypeChoices.TYPE_VIRTUAL
+        )
+
+        self._grant_view(self.user, Device)
+        self._grant_view(self.user, Interface, {"name": "Visible Interface"})
+
+        query = """
+        query {
+            devices(name: "Perm Device") {
+                name
+                all_interfaces {
+                    name
+                }
+            }
+        }
+        """
+        result = execute_query(query, user=self.user)
+        self.assertIsNone(result.errors)
+        self.assertEqual(len(result.data["devices"]), 1)
+        interface_names = sorted(iface["name"] for iface in result.data["devices"][0]["all_interfaces"])
+        self.assertEqual(interface_names, ["Visible Interface"])
+
+    def test_tags_accessor_enforces_permissions_without_n_plus_one(self):
+        """The `tags` accessor must enforce Tag view permissions while staying prefetched (no N+1).
+
+        `resolve_tags` is wrapped with `permission_safe_resolver` while keeping the optimizer's
+        `prefetch_related("tags")` hint, so tags the user may not view are dropped in Python without
+        re-querying per parent object.
+        """
+        location_ct = ContentType.objects.get_for_model(Location)
+        visible_tag = Tag.objects.create(name="Visible Tag")
+        visible_tag.content_types.add(location_ct)
+        hidden_tag = Tag.objects.create(name="Hidden Tag")
+        hidden_tag.content_types.add(location_ct)
+
+        location_status = Status.objects.get_for_model(Location)[0]
+        tagged_locations = [self.location]
+        for i in range(3):
+            tagged_locations.append(
+                Location.objects.create(
+                    name=f"Tagged Location {i}", location_type=self.location_type, status=location_status
+                )
+            )
+        for location in tagged_locations:
+            location.tags.add(visible_tag, hidden_tag)
+
+        self._grant_view(self.user, Location)
+        self._grant_view(self.user, Tag, {"name": "Visible Tag"})
+
+        query = "query { locations { name tags { name } } }"
+        # Prewarm request-independent caches (content types, the user's permission cache, etc.).
+        self.assertIsNone(execute_query(query, user=self.user).errors)
+        # The query count must be constant regardless of the number of parent locations (prefetch preserved).
+        with AssertNoRepeatedQueries(self, threshold=3):
+            result = execute_query(query, user=self.user)
+        self.assertIsNone(result.errors)
+
+        expected_tagged = {location.name for location in tagged_locations}
+        seen_visible_on = set()
+        for location in result.data["locations"]:
+            tag_names = {tag["name"] for tag in location["tags"]}
+            # The non-viewable tag must never be exposed, on any location.
+            self.assertNotIn("Hidden Tag", tag_names)
+            if "Visible Tag" in tag_names:
+                seen_visible_on.add(location["name"])
+        # Every location we tagged should still expose the viewable tag.
+        self.assertEqual(seen_visible_on, expected_tagged)
+
+    def test_related_object_permission_enforcement_no_n_plus_one(self):
+        """Enforcing related-object permissions must not introduce N+1 queries.
+
+        This exercises the *constrained-user* path that the existing N+1 suite (which runs as superuser /
+        with exempt permissions) does not: the permitted-PK lookup used to restrict related objects must be
+        evaluated once per model per request and cached, not re-run once per parent object.
+
+        Performance regression guard for NAUTOBOT-1435.
+        """
+        location_status = Status.objects.get_for_model(Location)[0]
+        rack_status = Status.objects.get_for_model(Rack)[0]
+        # Several parent locations, each with a viewable and a non-viewable rack, so an N+1 in the related
+        # (racks) restriction would repeat the permitted-PK query once per location.
+        for i in range(4):
+            location = Location.objects.create(
+                name=f"N+1 Location {i}", location_type=self.location_type, status=location_status
+            )
+            Rack.objects.create(name=f"Visible Rack {i}", location=location, status=rack_status)
+            Rack.objects.create(name=f"Hidden Rack {i}", location=location, status=rack_status)
+
+        self._grant_view(self.user, Location)
+        self._grant_view(self.user, Rack, {"name__istartswith": "Visible Rack"})
+
+        query = """
+        query {
+            locations {
+                name
+                racks {
+                    name
+                }
+            }
+        }
+        """
+        # Prewarm request-independent caches (content types, the user's permission cache, etc.).
+        self.assertIsNone(execute_query(query, user=self.user).errors)
+        # The query count must be constant regardless of the number of parent locations.
+        with AssertNoRepeatedQueries(self, threshold=3):
+            result = execute_query(query, user=self.user)
+        self.assertIsNone(result.errors)
+        # Correctness: every returned rack (across all parents) is one the user is permitted to view.
+        returned_racks = [rack["name"] for location in result.data["locations"] for rack in location["racks"]]
+        self.assertGreater(len(returned_racks), 0)
+        for rack_name in returned_racks:
+            self.assertTrue(rack_name.startswith("Visible Rack"), rack_name)
+
+        # Forward-FK traversal must likewise stay select_related'd through the custom resolver:
+        # traversing `racks { location }` across many racks must not issue one location query per rack.
+        fk_query = """
+        query {
+            racks {
+                name
+                location {
+                    name
+                }
+            }
+        }
+        """
+        self.assertIsNone(execute_query(fk_query, user=self.user).errors)
+        with AssertNoRepeatedQueries(self, threshold=3):
+            fk_result = execute_query(fk_query, user=self.user)
+        self.assertIsNone(fk_result.errors)
+        # The user may view all locations here, so every permitted rack still exposes its location.
+        self.assertGreater(len(fk_result.data["racks"]), 1)
+        for rack in fk_result.data["racks"]:
+            self.assertIsNotNone(rack["location"])
+
+    def test_all_related_object_fields_are_permission_enforced(self):
+        """Guard: every GraphQL field that returns a restrictable related object must enforce view permissions.
+
+        This scans the whole schema (all model-backed object types) and, for every field whose output type is
+        -- or, for unions, may be -- a restrictable model, asserts the field's resolver is marked as
+        permission-enforcing (see `nautobot.core.graphql.utils.mark_permission_enforced`, which is set by
+        `permission_safe_resolver` / `permission_safe_attribute_resolver` and the auto-generated FK / filter /
+        relationship resolvers). A newly-added accessor that returns related objects via the default resolver
+        (or an unwrapped custom resolver) is caught here rather than shipping as a permission leak.
+
+        The Query root's top-level list/single fields are covered separately by `GraphQLAPIPermissionTest` and
+        are intentionally out of scope here (Query is not a model-backed type in the registry).
+        """
+        # (schema type name, field name) -> justification, for fields that intentionally do not enforce.
+        allowed_unenforced = {}
+
+        schema = rebuild_graphql_schema()
+        registry_by_name = {schema_type._meta.name: schema_type for schema_type in registry["graphql_types"].values()}
+
+        def restrictable_models(output_type):
+            """Restrictable Django models a (possibly List/NonNull/Union) output type can yield."""
+            named_type = output_type
+            while hasattr(named_type, "of_type"):  # unwrap NonNull / List wrappers
+                named_type = named_type.of_type
+            if isinstance(named_type, GraphQLUnionType):
+                members = named_type.types
+            elif isinstance(named_type, GraphQLObjectType):
+                members = [named_type]
+            else:
+                members = []
+            models = set()
+            for member in members:
+                schema_type = registry_by_name.get(member.name)
+                if schema_type is None:
+                    continue
+                manager = getattr(schema_type._meta.model, "_default_manager", None)
+                if manager is not None and hasattr(manager, "restrict"):
+                    models.add(schema_type._meta.model._meta.label_lower)
+            return models
+
+        unenforced = []
+        for type_name, graphql_type in schema.graphql_schema.type_map.items():
+            schema_type = registry_by_name.get(type_name)
+            if schema_type is None or not isinstance(graphql_type, GraphQLObjectType):
+                continue  # skip Query root, introspection types, scalars, and non-model types
+            for field_name, field in graphql_type.fields.items():
+                models = restrictable_models(field.type)
+                if not models:
+                    continue
+                resolver = getattr(schema_type, f"resolve_{field_name}", None)
+                if resolver is not None and getattr(resolver, PERMISSION_ENFORCED_RESOLVER_ATTR, False):
+                    continue
+                if (type_name, field_name) in allowed_unenforced:
+                    continue
+                resolver_desc = (
+                    getattr(resolver, "__qualname__", "<default resolver>") if resolver else "<default resolver>"
+                )
+                unenforced.append(f"{type_name}.{field_name} -> {sorted(models)} (resolver: {resolver_desc})")
+
+        self.assertEqual(
+            sorted(unenforced),
+            [],
+            "GraphQL fields returning restrictable related objects without a permission-enforcing resolver. "
+            "Wrap each with permission_safe_resolver / permission_safe_attribute_resolver (or allow-list with "
+            "justification):\n" + "\n".join(sorted(unenforced)),
+        )
 
 
 class GraphQLExtendSchemaType(GraphQLTestCaseBase):
@@ -983,7 +1413,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         interface_role = Role.objects.get_for_model(Interface).first()
         cls.interface11 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             mac_address="00:11:11:11:11:11",
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -993,7 +1423,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface12 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device1,
             status=interface_status,
             role=interface_role,
@@ -1073,7 +1503,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface21 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device2,
             untagged_vlan=cls.vlan2,
             mode=InterfaceModeChoices.MODE_ACCESS,
@@ -1082,7 +1512,7 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
         )
         cls.interface22 = Interface.objects.create(
             name="Int2",
-            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device2,
             mac_address="00:12:12:12:12:12",
             status=interface_status,
@@ -1106,12 +1536,12 @@ class GraphQLQueryTest(GraphQLTestCaseBase):
 
         cls.interface31 = Interface.objects.create(
             name="Int1",
-            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
             device=cls.device3,
             status=interface_status,
             role=interface_role,
         )
-        cls.interface31 = Interface.objects.create(
+        cls.interface32 = Interface.objects.create(
             name="Mgmt1",
             type=InterfaceTypeChoices.TYPE_VIRTUAL,
             device=cls.device3,
@@ -1557,7 +1987,6 @@ query {
             # Assert GraphQL returned properties match those expected
             self.assertEqual(console_server_port_entry["connected_console_port"], connected_console_port)
 
-    @skip("Works in isolation, fails as part of the overall test suite due to issue #446")
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_relationship_associations(self):
         """Test queries involving relationship associations."""
@@ -1581,7 +2010,9 @@ query {
             """
             % (self.device1.id)
         )
-        result = self.execute_query(query)
+        # The Relationships are created in setUpTestData, so the schema must be rebuilt for the `rel_*` fields
+        # to be present in the full-suite run (#446).
+        result = execute_query_on_rebuilt_schema(query, request=self.request)
 
         self.assertIsInstance(result.data, dict, result)
         self.assertIsInstance(result.data["device"], dict, result)
@@ -2328,26 +2759,28 @@ query {
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_query_interface_pagination(self):
-        query_pagination = """\
-query {
-    interfaces(limit: 2, offset: 3) {
-        id
-        name
-        device {
-          name
-        }
-    }
-}"""
-        query_all = """\
-query {
-    interfaces {
-        id
-        name
-        device {
-          name
-        }
-    }
-}"""
+        offset = 3
+        limit = 2
+        query_pagination = dedent("""\
+            query {
+                interfaces(limit: %s, offset: %s) {
+                    id
+                    name
+                    device {
+                    name
+                    }
+                }
+            }""") % (limit, offset)
+        query_all = dedent("""\
+            query {
+                interfaces {
+                    id
+                    name
+                    device {
+                    name
+                    }
+                }
+            }""")
 
         result_1 = self.execute_query(query_pagination)
         self.assertEqual(len(result_1.data.get("interfaces", [])), 2)
@@ -2355,9 +2788,10 @@ query {
         # With the limit and skip implemented in the GQL query, this should return Device 2 (Int1) and
         # Device 3 (Int2). This test will validate that the correct device/interface combinations are returned.
         device_names = [item["device"]["name"] for item in result_1.data.get("interfaces", [])]
-        self.assertEqual(sorted(device_names), ["Device 2", "Device 3"])
+        exp_order = list(Interface.objects.only("id", "name", "device")[offset : offset + limit])
+        self.assertEqual(device_names, [i.device.name for i in exp_order])
         interface_names = [item["name"] for item in result_1.data.get("interfaces", [])]
-        self.assertEqual(interface_names, ["Int2", "Int1"])
+        self.assertEqual(interface_names, [i.name for i in exp_order])
 
         result_2 = self.execute_query(query_all)
         self.assertEqual(len(result_2.data.get("interfaces", [])), Interface.objects.count())

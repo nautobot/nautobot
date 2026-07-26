@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.db.models import IntegerField, Value
 from django.test import tag, TestCase
@@ -8,10 +9,12 @@ from django.test.utils import CaptureQueriesContext
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
-from nautobot.core.tables import LinkedCountColumn
+from nautobot.core.tables import ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
+from nautobot.core.templatetags import helpers
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
-from nautobot.extras.models import JobLogEntry
+from nautobot.extras.choices import ComputedFieldTypeChoices
+from nautobot.extras.models import ComputedField, JobLogEntry
 from nautobot.extras.tables import JobLogEntryTable
 from nautobot.ipam.models import RIR
 from nautobot.ipam.tables import RIRTable
@@ -270,3 +273,80 @@ class LinkedCountColumnRenderTestCase(TestCase):
         )
         rendered = column.render(bound_column=None, record=record, value=1)
         self.assertIn("badge", rendered)
+
+
+class ButtonsColumnTestCase(TestCase):
+    """Covers how ButtonsColumn resolves the `buttons` argument."""
+
+    def test_default_buttons_when_arg_omitted(self):
+        """Omitting `buttons` falls back to the class default set."""
+        column = ButtonsColumn(RIR)
+        self.assertEqual(column.extra_context["buttons"], ButtonsColumn.buttons)
+
+    def test_default_buttons_when_arg_none(self):
+        """Passing buttons=None explicitly also falls back to the class default set."""
+        column = ButtonsColumn(RIR, buttons=None)
+        self.assertEqual(column.extra_context["buttons"], ButtonsColumn.buttons)
+
+    def test_default_buttons_when_buttons_arg_is_missing(self):
+        """Missing buttons argument falls back to the class default set."""
+        column = ButtonsColumn(RIR)
+        self.assertEqual(column.extra_context["buttons"], ButtonsColumn.buttons)
+
+    def test_empty_tuple_means_no_buttons(self):
+        """An empty tuple means no buttons, and must not fall back to the defaults."""
+        column = ButtonsColumn(RIR, buttons=())
+        self.assertEqual(column.extra_context["buttons"], ())
+
+    def test_explicit_subset_is_preserved(self):
+        """An explicit non-empty subset is passed through unchanged."""
+        column = ButtonsColumn(RIR, buttons=("delete",))
+        self.assertEqual(column.extra_context["buttons"], ("delete",))
+
+
+class ComputedFieldColumnRenderTestCase(TestCase):
+    """Covers the content-type guard in `ComputedFieldColumn.render`."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_ct = ContentType.objects.get_for_model(Location)
+        cls.text_field = ComputedField.objects.create(
+            key="cf_render_text",
+            label="Computed Field Text",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=location_ct,
+        )
+        cls.markdown_field = ComputedField.objects.create(
+            key="cf_render_markdown",
+            label="Computed Field Markdown",
+            template="**{{ obj.name }}**",
+            fallback_value="error",
+            content_type=location_ct,
+        )
+
+    def test_render_evaluates_template_for_matching_row_type(self):
+        """A record matching the computed field's content type is rendered via the template."""
+        column = ComputedFieldColumn(self.text_field)
+        record = Location(name="Matching Location")
+        self.assertEqual(column.render(record=record), "Matching Location")
+
+    def test_render_returns_placeholder_for_foreign_row_type(self):
+        """A foreign model instance yields the placeholder, not the template output or fallback."""
+        column = ComputedFieldColumn(self.text_field)
+        # If the guard were missing, the template would render this name instead of a placeholder.
+        record = LocationType(name="Should Not Render")
+        self.assertEqual(column.render(record=record), helpers.placeholder(None))
+
+    def test_render_returns_placeholder_for_non_model_row(self):
+        """`available`-style rows (not model instances at all) also skip template evaluation."""
+        column = ComputedFieldColumn(self.text_field)
+        record = SimpleNamespace(name="Should Not Render")
+        self.assertEqual(column.render(record=record), helpers.placeholder(None))
+
+    def test_render_applies_markdown_output_type_for_matching_row(self):
+        """Markdown computed fields still pass through the markdown renderer for matching rows."""
+        self.markdown_field.output_type = ComputedFieldTypeChoices.TYPE_MARKDOWN
+        column = ComputedFieldColumn(self.markdown_field)
+        record = Location(name="Bold")
+        self.assertEqual(column.render(record=record), helpers.render_markdown("**Bold**"))

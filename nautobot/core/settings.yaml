@@ -183,6 +183,7 @@ properties:
       icon_192: null
       icon_mask: null
       logo: null
+      navbar_icon: null
     description: >-
       A set of filepaths relative to the [`MEDIA_ROOT`](#media_root) which locate assets used for
       custom branding of your Nautobot instance.
@@ -198,6 +199,9 @@ properties:
 
       --- 3.0.0
           The `header_bullet`, `nav_bullet`, `javascript`, and `css` assets were removed.
+
+      +++ 3.2.0
+          The `navbar_icon` asset was added as an option, replacing `icon_32` as the source for the navbar brand icon.
     properties:
       favicon:
         "$ref": "#/definitions/relative_path"
@@ -234,6 +238,11 @@ properties:
         default: null
         description: "Navbar logo"
         environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_LOGO"
+      navbar_icon:
+        "$ref": "#/definitions/relative_path"
+        default: null
+        description: "Collapsed navbar brand icon"
+        environment_variable: "NAUTOBOT_BRANDING_FILEPATHS_NAVBAR_ICON"
     type: "object"
     version_added: "1.2.0"
   BRANDING_PREPENDED_FILENAME:
@@ -766,6 +775,16 @@ properties:
     see_also:
       "Django documentation for `DEBUG`": "https://docs.djangoproject.com/en/stable/ref/settings/#debug"
     type: "boolean"
+  DEFAULT_FROM_EMAIL:
+    default: "webmaster@localhost"
+    description: >-
+      Default sender address for emails sent by Nautobot, such as error reports to `ADMINS`
+      and emails sent by Jobs.
+    environment_variable: "NAUTOBOT_DEFAULT_FROM_EMAIL"
+    see_also:
+      "Django documentation for `DEFAULT_FROM_EMAIL`": "https://docs.djangoproject.com/en/stable/ref/settings/#default-from-email"
+    type: "string"
+    version_added: "3.2.0"
   DEPLOYMENT_ID:
     default: ""
     description: >-
@@ -797,6 +816,88 @@ properties:
     is_constance_config: true
     type: "string"
     version_added: "3.0.0"
+  EMAIL_HOST:
+    default: "localhost"
+    description: "Hostname or IP address of the SMTP server to use for sending email."
+    environment_variable: "NAUTOBOT_EMAIL_HOST"
+    see_also:
+      "Django documentation for `EMAIL_HOST`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-host"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_HOST_PASSWORD:
+    default: ""
+    description: "Password to use when authenticating to the SMTP server, used together with `EMAIL_HOST_USER`."
+    environment_variable: "NAUTOBOT_EMAIL_HOST_PASSWORD"
+    see_also:
+      "Django documentation for `EMAIL_HOST_PASSWORD`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-host-password"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_HOST_USER:
+    default: ""
+    description: >-
+      Username to use when authenticating to the SMTP server.
+      If empty, authentication will not be attempted.
+    environment_variable: "NAUTOBOT_EMAIL_HOST_USER"
+    see_also:
+      "Django documentation for `EMAIL_HOST_USER`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-host-user"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_PORT:
+    default: 25
+    description: "TCP port to use when connecting to the SMTP server."
+    environment_variable: "NAUTOBOT_EMAIL_PORT"
+    see_also:
+      "Django documentation for `EMAIL_PORT`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-port"
+    type: "integer"
+    version_added: "3.2.0"
+  EMAIL_SSL_CERTFILE:
+    default: null
+    description: >-
+      Optional path to a PEM-formatted certificate chain file to use for the SSL connection
+      to the SMTP server. Only used when `EMAIL_USE_SSL` or `EMAIL_USE_TLS` is enabled.
+    environment_variable: "NAUTOBOT_EMAIL_SSL_CERTFILE"
+    see_also:
+      "Django documentation for `EMAIL_SSL_CERTFILE`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-ssl-certfile"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_SSL_KEYFILE:
+    default: null
+    description: >-
+      Optional path to a PEM-formatted private key file to use for the SSL connection
+      to the SMTP server. Only used when `EMAIL_USE_SSL` or `EMAIL_USE_TLS` is enabled.
+    environment_variable: "NAUTOBOT_EMAIL_SSL_KEYFILE"
+    see_also:
+      "Django documentation for `EMAIL_SSL_KEYFILE`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-ssl-keyfile"
+    type: "string"
+    version_added: "3.2.0"
+  EMAIL_TIMEOUT:
+    default: 30
+    description: "Timeout in seconds for blocking operations such as connecting to the SMTP server."
+    environment_variable: "NAUTOBOT_EMAIL_TIMEOUT"
+    see_also:
+      "Django documentation for `EMAIL_TIMEOUT`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-timeout"
+    type: "integer"
+    version_added: "3.2.0"
+  EMAIL_USE_SSL:
+    default: false
+    description: >-
+      Use an implicit TLS (secure) connection when talking to the SMTP server, generally on port 465.
+      Mutually exclusive with `EMAIL_USE_TLS`.
+    environment_variable: "NAUTOBOT_EMAIL_USE_SSL"
+    see_also:
+      "Django documentation for `EMAIL_USE_SSL`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-use-ssl"
+    type: "boolean"
+    version_added: "3.2.0"
+  EMAIL_USE_TLS:
+    default: false
+    description: >-
+      Use an explicit TLS (STARTTLS) connection when talking to the SMTP server, generally on port 587.
+      Mutually exclusive with `EMAIL_USE_SSL`.
+    environment_variable: "NAUTOBOT_EMAIL_USE_TLS"
+    see_also:
+      "Django documentation for `EMAIL_USE_TLS`": "https://docs.djangoproject.com/en/stable/ref/settings/#email-use-tls"
+    type: "boolean"
+    version_added: "3.2.0"
   EVENT_BROKERS:
     default: {}
     description: >-
@@ -1092,6 +1193,13 @@ properties:
     environment_variable: "NAUTOBOT_KUBERNETES_TOKEN_PATH"
     type: "string"
     version_added: "2.4.0"
+  KUBERNETES_VERIFY_SSL:
+    default: true
+    description: "Internal/development-only. Toggles TLS certificate verification for the Nautobot connection to the Kubernetes API."
+    details: "Intended ONLY for local development against Docker Desktop."
+    environment_variable: "NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL"
+    type: "boolean"
+    version_added: "3.2.0"
   LOCATION_LIST_DEFAULT_MAX_DEPTH:
     default: 0
     description: >-
@@ -1471,6 +1579,21 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
+  NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
+    type: "array"
+    items:
+      type: "string"
+    default: []
+    description: >-
+      A list of dotted import paths to additional OpenTelemetry instrumentor classes for Nautobot to
+      install at startup, for example
+      `opentelemetry.instrumentation.botocore.BotocoreInstrumentor`. Nautobot core installs each one
+      against its own tracer provider, so apps do not need to call `.instrument()` from their
+      `AppConfig.ready()` method (which conflicts when multiple apps enable the same instrumentor).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
+    environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
+    version_added: "3.2.0"
   NAUTOBOT_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/"
@@ -1519,6 +1642,88 @@ properties:
     environment_variable: "NAUTOBOT_NTC_SUPPORT_CONTRACT_EXPIRATION_DATE"
     is_constance_config: true
     version_added: "2.4.0"
+  OTEL_EXPORTER_OTLP_ENDPOINT:
+    type: "string"
+    format: "uri"
+    default: ""
+    description: "OTLP Exporter Endpoint."
+    environment_variable: "OTEL_EXPORTER_OTLP_ENDPOINT"
+    version_added: "3.2.0"
+  OTEL_EXPORTER_OTLP_INSECURE:
+    type: "boolean"
+    default: false
+    description: "Setting this to true will send OTLP data over insecure connection."
+    environment_variable: "OTEL_EXPORTER_OTLP_INSECURE"
+    version_added: "3.2.0"
+  OTEL_EXPORTER_OTLP_PROTOCOL:
+    type: "string"
+    enum:
+    - "grpc"
+    - "http"
+    default: "grpc"
+    description: "OTLP Exporter Protocol."
+    environment_variable: "OTEL_EXPORTER_OTLP_PROTOCOL"
+    version_added: "3.2.0"
+  OTEL_METRICS_EXPORTER:
+    type: "array"
+    items:
+      type: "string"
+      enum:
+      - "otlp"
+      - "console"
+      - "none"
+    default:
+    - "otlp"
+    description: >-
+      A list of OpenTelemetry metrics exporters to enable (`otlp`, `console`, or `none`).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `OTEL_METRICS_EXPORTER="otlp,console"`.)
+    environment_variable: "OTEL_METRICS_EXPORTER"
+    version_added: "3.2.0"
+  OTEL_PYTHON_DJANGO_INSTRUMENT:
+    type: "boolean"
+    default: false
+    description: >-
+      Setting this to true enables OpenTelemetry instrumentation (traces, metrics, and logs) for
+      Nautobot, including propagating the Traceparent header in API requests.
+    environment_variable: "OTEL_PYTHON_DJANGO_INSTRUMENT"
+    version_added: "3.2.0"
+  OTEL_PYTHON_LOG_CORRELATION:
+    type: "boolean"
+    default: true
+    description: >-
+      Setting this to true enables OpenTelemetry Log correlation which
+      will add the trace id, span id, and resource details to the log.
+    environment_variable: "OTEL_PYTHON_LOG_CORRELATION"
+    version_added: "3.2.0"
+  OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT:
+    type: "integer"
+    minimum: 1
+    default: 8192
+    description: >-
+      Maximum number of characters recorded for any single span attribute value, applied as an
+      SDK-side safety net so large values (for example GraphQL query documents) do not bloat spans.
+      Nautobot defaults this to 8192 characters; the OpenTelemetry SDK itself is unlimited by
+      default. Set the environment variable to an empty string to restore the SDK's unlimited
+      behavior.
+    environment_variable: "OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT"
+    version_added: "3.2.0"
+  OTEL_TRACES_EXPORTER:
+    type: "array"
+    items:
+      type: "string"
+      enum:
+      - "otlp"
+      - "console"
+      - "none"
+    default:
+    - "otlp"
+    description: >-
+      A list of OpenTelemetry trace exporters to enable (`otlp`, `console`, or `none`).
+      (If provided as an environment variable, it should be a comma-separated string, for example
+      `OTEL_TRACES_EXPORTER="otlp,console"`.)
+    environment_variable: "OTEL_TRACES_EXPORTER"
+    version_added: "3.2.0"
   PAGINATE_COUNT:
     default: 50
     description: >-

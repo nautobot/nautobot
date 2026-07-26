@@ -1,5 +1,15 @@
 # Release Notes
 
+## [3.2 - July 2026](version-3.2.md)
+
+- Breakout Cables
+- IP Address Range Model
+- Job Cancel
+- Model Search Typeahead
+- Live Search
+- Homepage Stickiness
+- Modules Hierarchy Refinements
+
 ## [3.1 - April 2026](version-3.1.md)
 
 - Job Console Logging

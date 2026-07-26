@@ -224,6 +224,9 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             return None
 
         try:
+            if entry.kwargs is None:
+                raise ValueError("Job `kwargs` has to be defined. Now is set to `None`.")
+
             entry_args = _evaluate_entry_args(entry.args)
             entry_kwargs = _evaluate_entry_kwargs(entry.kwargs)
 
