@@ -43,6 +43,7 @@ from nautobot.extras.context_managers import change_logging, JobHookChangeContex
 from nautobot.extras.jobs import BaseJob, get_job, get_jobs
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
+from nautobot.users.models import ObjectPermission
 
 
 class JobTest(TestCase):
@@ -1307,7 +1308,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         self.job_class, self.job_model = get_job_class_and_model(module, name)
         self.assertIsNotNone(self.job_class)
         self.assertIsNotNone(self.job_model)
-        job_hook = models.JobHook(
+        self.job_hook = models.JobHook(
             name="JobHookTest",
             type_create=True,
             type_update=True,
@@ -1315,10 +1316,40 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         )
         obj_type = ContentType.objects.get_for_model(Location)
         self.location_type = LocationType.objects.create(name="Test Root Type 2")
-        job_hook.save()
-        job_hook.content_types.set([obj_type])
+        self.job_hook.save()
+        self.job_hook.content_types.set([obj_type])
+
+    def test_job_hook_dispatch_requires_run_permission(self):
+        """Job Hook can't run job for user without run permission."""
+
+        self.job_model.enabled = True
+        self.job_model.save()
+
+        self.assertFalse(self.user.has_perm("extras.run_job"))
+        self.assertFalse(Job.objects.restrict(self.user, "run").filter(pk=self.job_model.pk).exists())
+
+        # edit matching object doesn't run a job, because permission is missing
+        with self.assertLogs("nautobot.extras.jobs", level="WARNING") as logs:
+            with web_request_context(user=self.user):
+                status = models.Status.objects.get_for_model(Location).first()
+                Location.objects.create(
+                    name="Test Run-Gap Location",
+                    location_type=self.location_type,
+                    status=status,
+                )
+
+        ran = models.JobResult.objects.filter(job_model=self.job_model).exists()
+        self.assertFalse(ran, "security: Job Hook was run for user without run permissions")
+        self.assertTrue(
+            any(
+                f"JobHook {self.job_hook} did not run: user {self.user} lacks permission to run Job {self.job_model}"
+                in message
+                for message in logs.output
+            )
+        )
 
     def test_enqueue_job_hook(self):
+        self.add_permissions("extras.run_job")
         with web_request_context(user=self.user):
             status = models.Status.objects.get_for_model(Location).first()
             Location.objects.create(name="Test Job Hook Location 1", location_type=self.location_type, status=status)
@@ -1346,6 +1377,7 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         models.ObjectChange.objects.all().delete()
         tag = models.Tag.objects.create(name="A Test Tag")
         tag.content_types.add(ContentType.objects.get_for_model(Location))
+        self.add_permissions("extras.run_job")
         with web_request_context(user=self.user):
             loc.tags.add(tag)
         job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
@@ -1360,6 +1392,68 @@ class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mi
         ]
         log_messages = models.JobLogEntry.objects.filter(job_result=job_result).values_list("log_level", "message")
         self.assertSequenceEqual(log_messages, expected_log_messages)
+
+    def test_job_hook_object_level_run_permission_mismatch_does_not_run(self):
+        """Object-level run permission that does NOT cover this Job must not let the hook fire."""
+        self.job_model.enabled = True
+        self.job_model.save()
+
+        obj_perm = ObjectPermission(
+            name="Run only pass_job",
+            actions=["run"],
+            constraints={"module_name": "pass_job"},
+        )
+        obj_perm.save()
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        obj_perm.users.add(self.user)
+
+        self.assertTrue(self.user.has_perm("extras.run_job"))
+        self.assertFalse(Job.objects.restrict(self.user, "run").filter(pk=self.job_model.pk).exists())
+
+        with web_request_context(user=self.user):
+            status = models.Status.objects.get_for_model(Location).first()
+            Location.objects.create(
+                name="Test Object-Level Mismatch Location",
+                location_type=self.location_type,
+                status=status,
+            )
+
+        ran = models.JobResult.objects.filter(job_model=self.job_model).exists()
+        self.assertFalse(
+            ran,
+            "security: Job Hook ran despite object-level run permission excluding this Job",
+        )
+
+    def test_job_hook_object_level_run_permission_match_runs(self):
+        """Object-level run permission that DOES cover this Job lets the hook fire normally."""
+        self.job_model.enabled = True
+        self.job_model.save()
+
+        obj_perm = ObjectPermission(
+            name="Run job_hook_receiver jobs",
+            actions=["run"],
+            constraints={"module_name": "job_hook_receiver"},
+        )
+        obj_perm.save()
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Job))
+        obj_perm.users.add(self.user)
+
+        self.assertTrue(Job.objects.restrict(self.user, "run").filter(pk=self.job_model.pk).exists())
+
+        with web_request_context(user=self.user):
+            status = models.Status.objects.get_for_model(Location).first()
+            Location.objects.create(
+                name="Test Object-Level Match Location",
+                location_type=self.location_type,
+                status=status,
+            )
+
+        job_result = models.JobResult.objects.filter(job_model=self.job_model).first()
+        self.assertIsNotNone(
+            job_result,
+            "Job Hook should run when object-level run permission covers this Job",
+        )
+        self.assertEqual(job_result.user_id, self.user.pk)
 
 
 class RemoveScheduledJobManagementCommandTestCase(TestCase):
