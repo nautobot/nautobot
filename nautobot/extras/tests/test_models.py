@@ -2337,19 +2337,20 @@ class ObjectMetadataTest(ModelTestCases.BaseModelTestCase):
         """
         Test that overlapping scoped_fields of ObjectMetadata with same metadata_type/assigned_object is not allowed.
         """
+        ip_address = IPAddress.objects.filter(associated_object_metadata__isnull=True).first()
         ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
             scoped_fields=["host", "mask_length", "type", "role", "status"],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            assigned_object_id=ip_address.pk,
         )
         instance2 = ObjectMetadata.objects.create(
             metadata_type=MetadataType.objects.first(),
             contact=Contact.objects.first(),
             scoped_fields=[],
             assigned_object_type=ContentType.objects.get_for_model(IPAddress),
-            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+            assigned_object_id=ip_address.pk,
         )
         with self.assertRaises(ValidationError):
             # try scope all fields

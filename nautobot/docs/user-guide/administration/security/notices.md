@@ -33,8 +33,8 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
-        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/ebe90c5f171ce0b6956c13972717a4b608d99923">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/05104dff0206bca429db384e6eab7f57f4ed6991">patch</a>)</li>
       </ul>
     </td>
   </tr>
@@ -69,8 +69,8 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
-        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/1daea48586bb90ea52dda28218761e57aa6ed65e">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/590888d3fc95123f5f23538adbe3cba04b9dae0e">patch</a>)</li>
       </ul>
     </td>
   </tr>
@@ -105,8 +105,8 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
-        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/dc8761e206ea982efea76479575e2ba9b5715ff4">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/55c341593b731d3a134422657d39ff755836a913">patch</a>)</li>
       </ul>
     </td>
   </tr>
@@ -141,8 +141,8 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
-        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/52a17d8e4806b909d5de9f0a121c92c2bbc6d719">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/a05eb7d0c939dd4205aca839955e4b3ee5f32af4">patch</a>)</li>
       </ul>
     </td>
   </tr>
@@ -177,8 +177,8 @@ As a part of the Nautobot development team's commitment to security, we maintain
     <th>Patched&nbsp;Versions</th>
     <td>
       <ul>
-        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
-        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/TODO">patch</a>)</li>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/afa5c09e603dee3934853fcac1464293b566364c">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/0b073599210249843a44f30a6c939331007196df">patch</a>)</li>
       </ul>
     </td>
   </tr>
