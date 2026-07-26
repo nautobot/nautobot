@@ -1,2 +1,0 @@
-Restricted the `settings_or_config` template filter and the template `settings` context to a non-sensitive allowlist of Django settings and Constance configuration values.
-Removed the ability to pass an `app_name` argument to the `settings_or_config` filter to retrieve values from an app's `PLUGINS_CONFIG` in Jinja templates (this is still supported in Django templates).

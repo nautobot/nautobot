@@ -282,6 +282,41 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.38 (2026-07-27)
+
+### Breaking Changes in v2.4.38
+
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - It is no longer possible to pass an `app_name` argument to the `settings_or_config` **Jinja** template filter; this functionality is still supported in Django templates.
+
+### Security in v2.4.38
+
+- [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx) - Fixed a REST API information-disclosure issue where the `?depth=N` query parameter exposed the full detail of related objects that the requesting user did not have permission to view. Related objects that the user cannot view are now rendered in a brief `{id, object_type, url, display}` form instead of full detail. The `display` value is included for parity with the UI, where a related object's display value is visible without requiring full view permission on that object. Additionally, the Notes REST API now enforces `view` permission on the object a note is being assigned to on write (POST/PATCH), consistent with other object references.
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - Restricted the `settings_or_config` template filter and the template `settings` context to a non-sensitive allowlist of Django settings and Constance configuration values.
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - Removed the ability to pass an `app_name` argument to the `settings_or_config` filter to retrieve values from an app's `PLUGINS_CONFIG` in Jinja templates (this is still supported in Django templates).
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Fixed GraphQL not enforcing object-level permissions when traversing to related objects: filtering related objects (e.g. `locations { racks(...) }`), traversing Relationship associations (e.g. `rel_*` fields), forward foreign-key traversal (e.g. `racks { location }`), reverse relations (reverse foreign keys such as `*_set` fields and reverse one-to-one relations such as `module_bay { installed_module }`), and other custom/property-backed related-object accessors (e.g. a Device's `all_interfaces`, cable/connection peers, dynamic group memberships, assigned tags, and legacy `location` accessors on `Prefix`/`VLAN`) now respect the requesting user's view permissions on the related model ([GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2)).
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Changed GraphQL schema to represent all forward foreign-key fields as nullable (even if not actually nullable as database fields), since a related object the user is not permitted to view is now returned as `null`.
+- [GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach the database cursor via the Django ORM and execute arbitrary SQL.
+- [GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach arbitrary models via the Django application registry.
+- [GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q) - Added enforcement of the `run` permission on the Job Hook dispatch path, fixing a privilege escalation in which a user without the run permission could execute a Job by triggering a Job Hook.
+- [#9279](https://github.com/nautobot/nautobot/issues/9279) - Updated dependency `GitPython` to `~3.1.54` to mitigate multiple security vulnerabilities.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `gitpython` to `~3.1.55` to mitigate GHSA-94p4-4cq8-9g67.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated documentation dependency `mkdocs-material` to `~9.7.7` to mitigate GHSA-xvg9-69gf-fjrf.
+
+### Added in v2.4.38
+
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Added GraphQL type-definition helper methods `permission_safe_resolver` and `permission_safe_attribute_resolver`. Apps defining custom GraphQL type classes may need to use these methods in some cases to prevent object-permission enforcement gaps similar to GHSA-mfwj-pjgx-22v2.
+
+### Documentation in v2.4.38
+
+- [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx) - Added documentation describing the behavior of the REST API with respect to object permissions.
+- [GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q) - Added documentation clarifying that a Job Hook is only dispatched when the user responsible for the triggering change has permission to run the target Job.
+- [#9304](https://github.com/nautobot/nautobot/issues/9304) - Update `notices.md` release notes.
+
+### Housekeeping in v2.4.38
+
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--no-input` option to `invoke tests` task.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--command` option to `invoke nbshell` task.
+
 ## v2.4.37 (2026-07-17)
 
 ### Security in v2.4.37
