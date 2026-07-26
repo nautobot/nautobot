@@ -268,6 +268,68 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.0 (2026-07-27)
+
+### Breaking Changes in v3.2.0
+
+- [#GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/issues/GHSA-6jmc-h6f2-46j4) - It is no longer possible to pass an `app_name` argument to the `settings_or_config` **Jinja** template filter; this functionality is still supported in Django templates.
+
+### Security in v3.2.0
+
+- [#GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/issues/GHSA-h8rv-c7c8-cvmx) - Fixed a REST API information-disclosure issue where the `?depth=N` query parameter exposed the full detail of related objects that the requesting user did not have permission to view. Related objects that the user cannot view are now rendered in a brief `{id, object_type, url, display}` form instead of full detail. The `display` value is included for parity with the UI, where a related object's display value is visible without requiring full view permission on that object. Additionally, the Notes REST API now enforces `view` permission on the object a note is being assigned to on write (POST/PATCH), consistent with other object references.
+- [#GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/issues/GHSA-6jmc-h6f2-46j4) - Restricted the `settings_or_config` template filter and the template `settings` context to a non-sensitive allowlist of Django settings and Constance configuration values.
+- [#GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/issues/GHSA-6jmc-h6f2-46j4) - Removed the ability to pass an `app_name` argument to the `settings_or_config` filter to retrieve values from an app's `PLUGINS_CONFIG` in Jinja templates (this is still supported in Django templates).
+- [#GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/issues/GHSA-mfwj-pjgx-22v2) - Fixed GraphQL not enforcing object-level permissions when traversing to related objects: filtering related objects (e.g. `locations { racks(...) }`), traversing Relationship associations (e.g. `rel_*` fields), forward foreign-key traversal (e.g. `racks { location }`), reverse relations (reverse foreign keys such as `*_set` fields and reverse one-to-one relations such as `module_bay { installed_module }`), and other custom/property-backed related-object accessors (e.g. a Device's `all_interfaces`, cable/connection peers, dynamic group memberships, assigned tags, and legacy `location` accessors on `Prefix`/`VLAN`) now respect the requesting user's view permissions on the related model ([GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2)).
+- [#GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/issues/GHSA-mfwj-pjgx-22v2) - Changed GraphQL schema to represent all forward foreign-key fields as nullable (even if not actually nullable as database fields), since a related object the user is not permitted to view is now returned as `null`.
+- [#GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/issues/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach the database cursor via the Django ORM and execute arbitrary SQL.
+- [#GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/issues/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach arbitrary models via the Django application registry.
+- [#GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/issues/GHSA-qr7c-g3j2-hw5q) - Added enforcement of the `run` permission on the Job Hook dispatch path, fixing a privilege escalation in which a user without the run permission could execute a Job by triggering a Job Hook.
+- [#9293](https://github.com/nautobot/nautobot/issues/9293) - Updated development NPM dependency `postcss` to `^8.5.22` to mitigate GHSA-r28c-9q8g-f849.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `gitpython` to `>=3.1.55,<3.2` to mitigate GHSA-94p4-4cq8-9g67.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated documentation dependency `mkdocs-material` to `~9.7.7` to mitigate GHSA-xvg9-69gf-fjrf.
+
+### Added in v3.2.0
+
+- [#GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/issues/GHSA-mfwj-pjgx-22v2) - Added GraphQL type-definition helper methods `permission_safe_resolver` and `permission_safe_attribute_resolver`. Apps defining custom GraphQL type classes may need to use these methods in some cases to prevent object-permission enforcement gaps similar to GHSA-mfwj-pjgx-22v2.
+- [#9281](https://github.com/nautobot/nautobot/issues/9281) - Added a loading spinner to HTMX-driven buttons while their request is in flight.
+
+### Deprecated in v3.2.0
+
+- [#9285](https://github.com/nautobot/nautobot/issues/9285) - Deprecated `check_and_call_git_repository_function` in favor of `git_repository_sync_view`.
+
+### Fixed in v3.2.0
+
+- [#9174](https://github.com/nautobot/nautobot/issues/9174) - Fixed the OpenAPI schema for the Cable `terminations` field.
+- [#9252](https://github.com/nautobot/nautobot/issues/9252) - Fixed the action button showing a caret when `add` is present but neither `import` nor `export` is.
+- [#9285](https://github.com/nautobot/nautobot/issues/9285) - Fixed GitRepository sync REST API endpoint not applying object-level permission restrictions (`restrict()`) when retrieving the repository.
+- [#9295](https://github.com/nautobot/nautobot/issues/9295) - Fixed `contains` filter on IP Address Ranges matching ranges of the wrong IP family due to raw byte comparison without IP version scoping.
+- [#9299](https://github.com/nautobot/nautobot/issues/9299) - Fixed an `IndentationError` in the generated `nautobot_config.py` caused by an uncommented `EMAIL_SSL_KEYFILE` line in the configuration template.
+- [#9300](https://github.com/nautobot/nautobot/issues/9300) - Fixed `JobConsoleEntry` model incorrectly being flagged as supporting object-metadata and data-compliance features.
+
+### Dependencies in v3.2.0
+
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `kubernetes` to `>=36.0.3,<37`.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `packaging` to `>=23.2`.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `regex` to `>=2026.7.19`.
+
+### Documentation in v3.2.0
+
+- [#GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/issues/GHSA-h8rv-c7c8-cvmx) - Added documentation describing the behavior of the REST API with respect to object permissions.
+- [#GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/issues/GHSA-qr7c-g3j2-hw5q) - Added documentation clarifying that a Job Hook is only dispatched when the user responsible for the triggering change has permission to run the target Job.
+- [#9285](https://github.com/nautobot/nautobot/issues/9285) - Clarified that managing a Git repository (create, change, sync) grants arbitrary code execution on the worker and that syncing repository-provided Jobs does not require the Job run permission.
+- [#9291](https://github.com/nautobot/nautobot/issues/9291) - Fixed a minor documentation issue with the 3.2 release notes.
+- [#9303](https://github.com/nautobot/nautobot/issues/9303) - Update `notices.md` release notes.
+
+### Housekeeping in v3.2.0
+
+- [#9285](https://github.com/nautobot/nautobot/issues/9285) - Refactored GitRepository sync/dry-run logic so that both the UI and REST API views share a common validation helper (`get_git_repository_for_sync()`) and enqueue jobs exclusively through the `GitRepository.sync()` model method, instead of calling the `enqueue_*` datasource functions directly.
+- [#9293](https://github.com/nautobot/nautobot/issues/9293) - Updated development NPM dependencies `eslint` and `@eslint/js` to `^9.39.5`.
+- [#9293](https://github.com/nautobot/nautobot/issues/9293) - Updated development NPM dependency `autoprefixer` to `^10.5.4`.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated development dependency `coverage` to `~7.15.2`.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated development dependency `faker` to `^40.35.0`.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated documentation dependency `mkdocstrings` to `~1.0.6`.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated development dependency `pymarkdownlnt` to `~0.9.39`.
+
 ## v3.2.0b2 (2026-07-23)
 
 ### Security in v3.2.0b2

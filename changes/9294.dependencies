@@ -1,3 +1,0 @@
-Updated dependency `kubernetes` to `>=36.0.3,<37`.
-Updated dependency `packaging` to `>=23.2`.
-Updated dependency `regex` to `>=2026.7.19`.

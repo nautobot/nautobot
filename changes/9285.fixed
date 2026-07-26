@@ -1,1 +1,0 @@
-Fixed GitRepository sync REST API endpoint not applying object-level permission restrictions (`restrict()`) when retrieving the repository.

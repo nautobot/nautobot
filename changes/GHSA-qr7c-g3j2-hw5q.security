@@ -1,1 +1,0 @@
-Added enforcement of the `run` permission on the Job Hook dispatch path, fixing a privilege escalation in which a user without the run permission could execute a Job by triggering a Job Hook.
