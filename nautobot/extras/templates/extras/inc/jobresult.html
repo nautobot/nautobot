@@ -60,12 +60,13 @@
             <tr>
                 <td>File Output(s)</td>
                 <td>
+                    {% job_files_use_database_storage as use_database_file_storage %}
                     <ul>
                         {% for file_proxy in result.files.all %}
                             {% if file_proxy.file %}
                                 <li>
                                     <a
-                                        {% if settings.STORAGES.nautobotjobfiles.BACKEND == "db_file_storage.storage.DatabaseFileStorage" %}
+                                        {% if use_database_file_storage %}
                                             href="{% url "db_file_storage.download_file" %}?name={{ file_proxy.file }}"
                                         {% else %}
                                             href="{{ file_proxy.file.url }}"

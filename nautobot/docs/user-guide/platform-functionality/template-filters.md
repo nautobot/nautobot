@@ -355,6 +355,9 @@ Get a value from Django settings (if specified) or Constance configuration (othe
 {{ "RELEASE_CHECK_URL" | settings_or_config }}
 ```
 
+!!! note
+    For security, this filter only returns an explicitly allowlisted set of non-sensitive Django settings and Constance configuration values. Requesting any other setting (such as `SECRET_KEY` or a database password) is treated as though the setting does not exist and raises an error.
+
 +++ 2.0.0
     This filter now accepts an optional `app_name` parameter, which allows you to use this filter for Third-Party Nautobot Apps.
 
@@ -363,6 +366,9 @@ Get a value from Django settings (if specified) or Constance configuration (othe
     {{ "SAMPLE_VARIABLE" | settings_or_config:"example_app" }}
     {{ "lowercase_example" | settings_or_config:"example_app" }}
     ```
+
+    !!! warning
+        The `app_name` parameter is supported only in Django templates (server-side HTML templates). It is not available when the filter is used in a Jinja template (for example the Jinja template renderer, computed fields, or job buttons).
 
 ### slugify
 

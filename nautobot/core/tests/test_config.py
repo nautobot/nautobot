@@ -37,6 +37,44 @@ class GetSettingsOrConfigTestCase(TestCase):
         self.assertRaises(AttributeError, config.get_settings_or_config, "FAKE_SETTING")
 
 
+class TemplateExposableSettingsTestCase(TestCase):
+    """Test the settings allowlisting used at the template boundaries (GHSA-6jmc-h6f2-46j4)."""
+
+    def test_constance_config_keys_are_exposable(self):
+        self.assertTrue(config.is_template_exposable_setting("BANNER_TOP"))
+        self.assertTrue(config.is_template_exposable_setting("PAGINATE_COUNT"))
+
+    def test_allowlisted_settings_are_exposable(self):
+        self.assertTrue(config.is_template_exposable_setting("VERSION"))
+        self.assertTrue(config.is_template_exposable_setting("BRANDING_TITLE"))
+
+    def test_settings_read_via_filter_from_python_are_exposable(self):
+        """Non-Constance settings that nautobot itself reads through the settings_or_config filter (e.g. from
+        nautobot.extras.jobs_ui) must be allowlisted so those reads don't raise."""
+        self.assertTrue(config.is_template_exposable_setting("CELERY_TASK_SOFT_TIME_LIMIT"))
+        self.assertTrue(config.is_template_exposable_setting("CELERY_TASK_TIME_LIMIT"))
+
+    def test_secrets_are_not_exposable(self):
+        for name in ("SECRET_KEY", "DATABASES", "CELERY_BROKER_URL", "FAKE_SETTING"):
+            with self.subTest(name=name):
+                self.assertFalse(config.is_template_exposable_setting(name))
+
+    @override_settings(VERSION="1.2.3")
+    def test_exposed_settings_proxy(self):
+        proxy = config.ExposedSettings()
+        # Allowlisted settings are readable through the proxy.
+        self.assertEqual(proxy.VERSION, "1.2.3")
+        # Non-allowlisted settings raise AttributeError (rendered as empty by the template engines).
+        with self.assertRaises(AttributeError):
+            _ = proxy.SECRET_KEY
+
+    def test_settings_context_processor_uses_proxy(self):
+        """The template `settings` context must be the allowlisting proxy, not the raw settings module."""
+        from nautobot.core.context_processors import settings as settings_context_processor
+
+        self.assertIsInstance(settings_context_processor(None)["settings"], config.ExposedSettings)
+
+
 class GetAppSettingsOrConfigTestCase(TestCase):
     """Test the get_app_settings_or_config() helper function."""
 

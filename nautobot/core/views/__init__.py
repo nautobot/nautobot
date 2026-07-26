@@ -49,7 +49,7 @@ from nautobot.core.celery import app
 from nautobot.core.constants import SEARCH_MAX_RESULTS
 from nautobot.core.forms import SearchForm
 from nautobot.core.releases import get_latest_release
-from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.config import ExposedSettings, get_settings_or_config
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views.utils import (
@@ -415,7 +415,7 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     t = loader.get_template(template_name)
     context = {
         "reason": reason,
-        "settings": settings,
+        "settings": ExposedSettings(),
         "nautobot_version": settings.VERSION,
         "python_version": platform.python_version(),
     }

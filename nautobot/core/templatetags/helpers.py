@@ -616,13 +616,44 @@ def get_item(d, key):
     return d.get(key)
 
 
-@library.filter()
 @register.filter()
 def settings_or_config(key, app_name=None):
-    """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
+    """Get a value from Django settings/Constance, or from an app's `PLUGINS_CONFIG` (Django template filter).
+
+    Passing `app_name` returns a value from that app's `PLUGINS_CONFIG`. This is supported only in the
+    Django template filter, which is usable from trusted server-side HTML templates.
+    For core settings/config, only non-sensitive allowlisted values may be read;
+    requesting any other setting is treated as though it does not exist.
+    """
     if app_name:
         return get_app_settings_or_config(app_name, key)
+    if not config.is_template_exposable_setting(key):
+        # Treat a non-exposable setting as though it does not exist.
+        raise AttributeError(key)
     return config.get_settings_or_config(key)
+
+
+# Using name="settings_or_config" allows us to define the same filter as above in both places with different function names.
+# This is for backwards compatibility with existing Jinja2 templates that may legitimately use the "settings_or_config" filter.
+@library.filter(name="settings_or_config")
+def settings_or_config_jinja(key, app_name=None):
+    """Get a value from Django settings or Constance configuration (Jinja template filter).
+
+    Unlike the Django template filter, this Jinja variant does not support the `app_name` argument:
+    user-authored templates must not be able to read arbitrary app `PLUGINS_CONFIG` values, which may
+    contain secrets. Only non-sensitive allowlisted settings and Constance configuration may be read.
+    """
+    if app_name is not None:
+        raise ValueError("The 'settings_or_config' filter does not support the 'app_name' argument in Jinja templates.")
+    return settings_or_config(key)
+
+
+@register.simple_tag()
+def job_files_use_database_storage():
+    """Return whether job file output uses the database file storage backend."""
+    storages = getattr(settings, "STORAGES", {}) or {}
+    backend = storages.get("nautobotjobfiles", {}).get("BACKEND")
+    return backend == "db_file_storage.storage.DatabaseFileStorage"
 
 
 @library.filter()

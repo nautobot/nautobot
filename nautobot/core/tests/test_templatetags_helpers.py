@@ -245,6 +245,28 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.get_item(data, "first"), "1st")
         self.assertEqual(helpers.get_item(data, "second"), "2nd")
 
+    @override_config(BANNER_TOP="Hello, world!")
+    def test_settings_or_config_returns_config_value(self):
+        self.assertEqual(helpers.settings_or_config("BANNER_TOP"), "Hello, world!")
+
+    def test_settings_or_config_blocks_non_allowlisted_settings(self):
+        """Regression test for GHSA-6jmc-h6f2-46j4: secrets are not readable through the filter.
+
+        A non-allowlisted key is treated as though the setting does not exist, raising `AttributeError`
+        instead of returning its value.
+        """
+        for name in ("SECRET_KEY", "DATABASES", "FAKE_SETTING"):
+            with self.subTest(name=name):
+                self.assertRaises(AttributeError, helpers.settings_or_config, name)
+
+    @override_settings(STORAGES={"nautobotjobfiles": {"BACKEND": "db_file_storage.storage.DatabaseFileStorage"}})
+    def test_job_files_use_database_storage_true(self):
+        self.assertTrue(helpers.job_files_use_database_storage())
+
+    @override_settings(STORAGES={"nautobotjobfiles": {"BACKEND": "django.core.files.storage.FileSystemStorage"}})
+    def test_job_files_use_database_storage_false(self):
+        self.assertFalse(helpers.job_files_use_database_storage())
+
     def test_render_boolean(self):
         for value in [True, "arbitrary string", 1]:
             self.assertEqual(

@@ -1,0 +1,1 @@
+It is no longer possible to pass an `app_name` argument to the `settings_or_config` **Jinja** template filter; this functionality is still supported in Django templates.
