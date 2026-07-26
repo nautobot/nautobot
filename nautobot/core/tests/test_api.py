@@ -1007,6 +1007,21 @@ class RenderJinjaViewTest(testing.APITestCase):
         self.assertEqual(response.data["rendered_template"], expected_response)
         self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
 
+    def test_render_jinja_template_does_not_expose_secrets(self):
+        """Regression test for GHSA-6jmc-h6f2-46j4: secrets must not be readable through the renderer.
+
+        A non-allowlisted setting fails to render as though it did not exist, rather than returning its
+        value.
+        """
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {"template_code": '{{ "SECRET_KEY" | settings_or_config }}', "context": {}},
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Failed to render Jinja template: SECRET_KEY")
+
     def test_render_jinja_template_failures(self):
         """
         Test rendering invalid Jinja templates.

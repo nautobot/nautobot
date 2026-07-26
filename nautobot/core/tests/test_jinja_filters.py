@@ -71,6 +71,11 @@ class NautobotJinjaFilterTest(TestCase):
             except Exception:  # noqa: S110  # try-except-pass -- an antipattern in general, but OK here
                 pass
 
+    def test_settings_or_config_app_name_not_supported_in_jinja(self):
+        """Regression test for GHSA-6jmc-h6f2-46j4: the Jinja filter must not read app PLUGINS_CONFIG values."""
+        with self.assertRaises(ValueError):
+            data.render_jinja2("{{ 'SAMPLE_VARIABLE' | settings_or_config('example_app') }}", {})
+
     def test_sandboxed_render(self):
         """Assert that Jinja template rendering is sandboxed."""
         template_code = "{{ ''.__class__.__name__ }}"
