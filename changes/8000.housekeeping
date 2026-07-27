@@ -1,4 +1,0 @@
-Updated development dependency `django-debug-toolbar` to `~7.0.0`.
-Updated development dependency `invoke` to `~3.0.3`.
-Updated development dependency `rich` to `~15.0.0`.
-Updated development dependency `requests` to `~2.34.2`.

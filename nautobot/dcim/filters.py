@@ -1104,6 +1104,7 @@ class InterfaceFilterSet(
     kind = django_filters.ChoiceFilter(
         choices=[("physical", "Physical"), ("virtual", "Virtual"), ("wireless", "Wireless")],
         method="filter_kind",
+        field_name="type",  # prevents unnecessary queryset logic in REST API schema generation
         label="Kind of interface",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly

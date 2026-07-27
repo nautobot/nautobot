@@ -963,7 +963,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
         return Response(
             {
-                "first_available_ip": instance.get_first_available_ip(),
                 "first_available_ip_for_range": instance.get_first_available_ip_for_range(),
                 "ipaddressrange_table": ip_address_range_table,
                 "permissions": permissions,

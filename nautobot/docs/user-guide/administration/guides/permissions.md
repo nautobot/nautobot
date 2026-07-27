@@ -133,5 +133,12 @@ Create a Permission to allow users to view the results of Export jobs they ran:
 - Users/Groups: Any user or restrict as needed
 - Constraints: `[{"user": "$user", "task_name": "nautobot.core.jobs.ExportObjectList"}]`
 
+Create a Permission to allow users to download a job's output file(s), such as the result file produced by an Export job:
+
+- Permission Name: `Download Job output files`
+- Object type: `Extras > File proxy`
+- Action: `View`
+- Users/Groups: Any user or restrict as needed
+
 !!! info
     Export jobs run with the permissions of the user that start the job.

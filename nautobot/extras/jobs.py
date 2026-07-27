@@ -1506,6 +1506,19 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
             )
         elif get_job(job_model.class_path) is None:
             logger.error("JobHook %s is enabled, but the underlying Job implementation is missing", job_hook)
+        elif (
+            object_change.user is None
+            or not JobModel.objects.restrict(object_change.user, "run").filter(pk=job_model.pk).exists()
+        ):
+            # A JobHook runs arbitrary Python; require the same "run" permission that the REST
+            # (/run/) and UI run paths enforce. Skip (and warn) instead of raising, so that a
+            # single unpermitted hook can't abort the triggering request/transaction.
+            logger.warning(
+                "JobHook %s did not run: user %s lacks permission to run Job %s",
+                job_hook,
+                object_change.user,
+                job_model,
+            )
         else:
             JobResult.enqueue_job(job_model, object_change.user, job_kwargs={"object_change": object_change.pk})
 

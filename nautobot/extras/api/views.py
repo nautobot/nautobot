@@ -38,6 +38,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
 )
+from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
 from nautobot.extras.jobs_cancel import CancelFactory, JobLiveness, user_can_cancel_job_result
@@ -698,13 +699,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
         """
         Enqueue pull git repository and refresh data.
         """
-        if not request.user.has_perm("extras.change_gitrepository"):
-            raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
-
-        if not get_worker_count():
-            raise CeleryWorkerNotRunningException()
-
-        repository = get_object_or_404(GitRepository, id=pk)
+        repository = get_git_repository_for_sync(request, pk)
         job_result = repository.sync(user=request.user)
 
         data = {

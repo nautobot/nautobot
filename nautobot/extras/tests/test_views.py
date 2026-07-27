@@ -14,7 +14,7 @@ from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
-from django.test import override_settings, tag
+from django.test import override_settings, RequestFactory, tag
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
@@ -3200,11 +3200,11 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
     def test_git_repository_custom_actions(self, _):
         """GitRepository custom actions redirect instead of returning 403/404."""
         instance = self._get_queryset().first()
-        for action_name in ["dryrun", "sync"]:
+        for action_name, dry_run in [("dryrun", True), ("sync", False)]:
             with self.subTest(action=action_name):
                 url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
                 # Without permissions, should get 403
@@ -3214,22 +3214,115 @@ class GitRepositoryTestCase(
                 # With permissions, should redirect to job result
                 self.add_permissions("extras.change_gitrepository")
                 self.add_permissions("extras.view_gitrepository")
-                with mock.patch(
-                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
-                    if action_name == "dryrun"
-                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
-                ) as mock_enqueue:
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
                     job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
-                    mock_enqueue.return_value = job_result
+                    mock_sync.return_value = job_result
                     response = self.client.post(url)
                     self.assertRedirects(
                         response,
                         reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}),
                         fetch_redirect_response=False,
                     )
-                    mock_enqueue.assert_called_once_with(instance, self.user)
+                    mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions_with_constrained_permission(self, _):
+        """Sync/dry-run return 404 when the user's change permission doesn't cover the object."""
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Grant change permission constrained to instance2 only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance2.pk},
+            actions=["change"],
+        )
+        obj_perm.validated_save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        for action_name, dry_run in [("dryrun", True), ("sync", False)]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    # Object outside the constraint: 404, and nothing enqueued
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance1.pk})
+                    response = self.client.post(url)
+                    self.assertHttpStatus(response, 404)
+                    mock_sync.assert_not_called()
+
+                    # Object inside the constraint: succeeds
+                    mock_sync.return_value = JobResult.objects.create(
+                        name=f"git-repository-{action_name}", user=self.user
+                    )
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance2.pk})
+                    response = self.client.post(url)
+                    self.assertRedirects(
+                        response,
+                        reverse("extras:gitrepository_result", kwargs={"pk": instance2.pk}),
+                        fetch_redirect_response=False,
+                    )
+                    mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=0)
+    def test_git_repository_custom_actions_no_celery_worker(self, _):
+        """Sync/dry-run redirect to the repository detail page with an error message if no worker is running."""
+        self.add_permissions("extras.change_gitrepository")
+        self.add_permissions("extras.view_gitrepository")
+        instance = self._get_queryset().first()
+
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                    response = self.client.post(url, follow=True)
+                    self.assertHttpStatus(response, 200)
+                    self.assertRedirects(response, instance.get_absolute_url())
+                    # No job should have been enqueued
+                    mock_sync.assert_not_called()
+                    # An error message should have been queued for display
+                    message = next(iter(response.context["messages"]))
+                    self.assertEqual(str(message), "Unable to run job: Celery worker process not running.")
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions_nonexistent_repo(self, _):
+        """Sync/dry-run return 404 for a nonexistent repository."""
+        self.add_permissions("extras.change_gitrepository")
+
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    url = reverse(
+                        f"extras:gitrepository_{action_name}",
+                        kwargs={"pk": "11111111-1111-1111-1111-111111111111"},
+                    )
+                    response = self.client.post(url)
+                    self.assertHttpStatus(response, 404)
+                    mock_sync.assert_not_called()
+
+    def test_check_and_call_git_repository_function_backwards_compat(self):
+        """The deprecated `check_and_call_git_repository_function` helper still works for downstream callers."""
+        instance = self._get_queryset().first()
+        request = RequestFactory().post(reverse("extras:gitrepository_sync", kwargs={"pk": instance.pk}))
+        request.user = self.user
+
+        # Without permission -> 403, provided function not called
+        mock_func = mock.Mock()
+        with self.assertWarns(DeprecationWarning):
+            response = views.check_and_call_git_repository_function(request, instance.pk, mock_func)
+        self.assertEqual(response.status_code, 403)
+        mock_func.assert_not_called()
+
+        # With permission and an available worker -> provided function called with (repository, user), then redirect
+        self.add_permissions("extras.change_gitrepository")
+        # Re-fetch the user so the permission cache reflects the newly-added permission.
+        request.user = User.objects.get(pk=self.user.pk)
+        mock_func = mock.Mock()
+        with mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1):
+            with self.assertWarns(DeprecationWarning):
+                response = views.check_and_call_git_repository_function(request, instance.pk, mock_func)
+        self.assertEqual(response.status_code, 302)
+        mock_func.assert_called_once_with(instance, request.user)
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):

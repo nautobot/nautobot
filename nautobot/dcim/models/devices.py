@@ -2366,6 +2366,7 @@ class InterfaceVDCAssignment(BaseModel):
     interface = models.ForeignKey(
         Interface, on_delete=models.CASCADE, related_name="virtual_device_context_assignments"
     )
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["virtual_device_context", "interface"]

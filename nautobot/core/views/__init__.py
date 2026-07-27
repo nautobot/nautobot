@@ -65,7 +65,7 @@ from nautobot.core.releases import get_latest_release
 from nautobot.core.templatetags.helpers import has_one_or_more_perms, slugify
 from nautobot.core.ui.breadcrumbs import Breadcrumbs, ViewNameBreadcrumbItem
 from nautobot.core.ui.titles import Titles
-from nautobot.core.utils.config import get_nautobot_edition, get_settings_or_config
+from nautobot.core.utils.config import ExposedSettings, get_nautobot_edition, get_settings_or_config
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
     get_model_for_view_name,
@@ -664,7 +664,7 @@ def csrf_failure(request, reason="", template_name="403_csrf_failure.html"):
     t = loader.get_template(template_name)
     context = {
         "reason": reason,
-        "settings": settings,
+        "settings": ExposedSettings(),
         "nautobot_version": settings.VERSION,
         "python_version": platform.python_version(),
     }

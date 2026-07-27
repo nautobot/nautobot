@@ -1,3 +1,0 @@
-Updated dependency `cryptography` to `>=49.0.0,<50`.
-Updated dependency `django-redis` to `>=7.0.0,<7.1`.
-Updated dependency `django-tables2` to `>=3.0.0,<3.1`. Note that this is a new major version of this dependency and includes a small number of breaking changes which may impact Nautobot Apps. Review the [change log](https://github.com/jieter/django-tables2/blob/v3.0.0/CHANGELOG.md#300-2026-04-13) for details.

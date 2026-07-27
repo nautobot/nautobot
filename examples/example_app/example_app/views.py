@@ -255,6 +255,20 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
         ),
     )
 
+    def alter_queryset(self, request):
+        """Hide "archived" records (negative `number`) from the default list view.
+
+        If the user explicitly filters on `number` (e.g., `number` or `number__lt`),
+        return the queryset as is.
+        """
+        queryset = super().alter_queryset(request)
+        filter_params = self.get_filter_params(request)
+        # This is fragile and can create a false positive if we add another filter
+        # that starts with "number", but it's just an example.
+        if not any(param.startswith("number") for param in filter_params):
+            queryset = queryset.exclude(number__lt=0)
+        return queryset
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":

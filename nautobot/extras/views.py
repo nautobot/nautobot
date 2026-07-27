@@ -8,7 +8,7 @@ from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.utils import pretty_name
@@ -34,7 +34,7 @@ from rest_framework.response import Response
 
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
-from nautobot.core.exceptions import FilterSetFieldNotFound
+from nautobot.core.exceptions import CeleryWorkerNotRunningException, FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.models.querysets import count_related
@@ -54,6 +54,7 @@ from nautobot.core.ui.breadcrumbs import (
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import Titles
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.deprecation import warn_deprecated_at_caller
 from nautobot.core.utils.lookup import (
     get_filterset_for_model,
     get_form_for_model,
@@ -127,9 +128,8 @@ from .choices import (
     ScheduledJobStateChoices,
 )
 from .datasources import (
-    enqueue_git_repository_diff_origin_and_local,
-    enqueue_pull_git_repository_and_refresh_data,
     get_datasource_contents,
+    get_git_repository_for_sync,
 )
 from .jobs import get_job
 from .models import (
@@ -2092,27 +2092,66 @@ class ExternalIntegrationUIViewSet(NautobotUIViewSet):
 #
 
 
-def check_and_call_git_repository_function(request, pk, func):
-    """Helper for checking Git permissions and worker availability, then calling provided function if all is well
+def git_repository_sync_view(request, pk, dry_run):
+    """
+    Shared UI view logic for the GitRepository `sync` and `dry-run` actions.
+
+    Validates user permissions and Celery worker availability via
+    `get_git_repository_for_sync()`, then enqueues the appropriate job
+    through `GitRepository.sync()`.
+
     Args:
-        request (HttpRequest): request object.
+        request (HttpRequest): Request object.
         pk (UUID): GitRepository pk value.
-        func (function): Enqueue git repo function.
+        dry_run (bool): If True, enqueue a dry-run (diff origin and local) job
+            instead of a full sync.
+
     Returns:
         (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
             otherwise redirect to the job result page.
     """
-    if not request.user.has_perm("extras.change_gitrepository"):
+    try:
+        repository = get_git_repository_for_sync(request, pk)
+    except PermissionDenied:
         return HttpResponseForbidden()
-
-    # Allow execution only if a worker process is running.
-    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
-    if not get_worker_count():
+    except CeleryWorkerNotRunningException:
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         messages.error(request, "Unable to run job: Celery worker process not running.")
         return redirect(repository.get_absolute_url(), permanent=False)
-    else:
-        func(repository, request.user)
-        return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
+
+    repository.sync(user=request.user, dry_run=dry_run)
+    return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
+
+
+def check_and_call_git_repository_function(request, pk, func):
+    """Helper for checking Git permissions and worker availability, then calling provided function if all is well.
+
+    Deprecated:
+        3.2.0: Use `git_repository_sync_view()` instead. This function is retained for backwards
+        compatibility with downstream apps that call it directly with a custom enqueue function.
+
+    Args:
+        request (HttpRequest): request object.
+        pk (UUID): GitRepository pk value.
+        func (function): Enqueue git repo function, called as `func(repository, request.user)`.
+    Returns:
+        (Union[HttpResponseForbidden,redirect]): HttpResponseForbidden if user does not have permission to run the job,
+            otherwise redirect to the job result page.
+    """
+    warn_deprecated_at_caller(
+        "check_and_call_git_repository_function() is deprecated; use git_repository_sync_view() instead."
+    )
+    try:
+        repository = get_git_repository_for_sync(request, pk)
+    except PermissionDenied:
+        return HttpResponseForbidden()
+    except CeleryWorkerNotRunningException:
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+        messages.error(request, "Unable to run job: Celery worker process not running.")
+        return redirect(repository.get_absolute_url(), permanent=False)
+
+    func(repository, request.user)
+    return redirect(reverse("extras:gitrepository_result", kwargs={"pk": pk}))
 
 
 class DatasourceContentsPanel(object_detail.Panel):
@@ -2288,7 +2327,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["extras.change_gitrepository"],
     )
     def sync(self, request, pk=None):
-        return check_and_call_git_repository_function(request, pk, enqueue_pull_git_repository_and_refresh_data)
+        return git_repository_sync_view(request, pk, dry_run=False)
 
     @action(
         detail=True,
@@ -2299,7 +2338,7 @@ class GitRepositoryUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["extras.change_gitrepository"],
     )
     def dry_run(self, request, pk=None):
-        return check_and_call_git_repository_function(request, pk, enqueue_git_repository_diff_origin_and_local)
+        return git_repository_sync_view(request, pk, dry_run=True)
 
 
 #
