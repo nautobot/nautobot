@@ -1,1 +1,0 @@
-Refactored GitRepository sync/dry-run logic so that both the UI and REST API views share a common validation helper (`get_git_repository_for_sync()`) and enqueue jobs exclusively through the `GitRepository.sync()` model method, instead of calling the `enqueue_*` datasource functions directly.

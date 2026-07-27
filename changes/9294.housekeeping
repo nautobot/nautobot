@@ -1,4 +1,0 @@
-Updated development dependency `coverage` to `~7.15.2`.
-Updated development dependency `faker` to `^40.35.0`.
-Updated documentation dependency `mkdocstrings` to `~1.0.6`.
-Updated development dependency `pymarkdownlnt` to `~0.9.39`.

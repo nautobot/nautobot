@@ -1,1 +1,0 @@
-Updated development NPM dependency `postcss` to `^8.5.22` to mitigate GHSA-r28c-9q8g-f849.

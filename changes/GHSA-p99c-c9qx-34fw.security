@@ -1,2 +1,0 @@
-Fixed a Jinja2 template sandbox escape that allowed users to reach the database cursor via the Django ORM and execute arbitrary SQL.
-Fixed a Jinja2 template sandbox escape that allowed users to reach arbitrary models via the Django application registry.
