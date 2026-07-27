@@ -2241,7 +2241,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
         self.add_permissions("extras.change_gitrepository")
@@ -2298,6 +2298,35 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         repo.refresh_from_db()
         self.assertEqual(repo.current_head, original_head)
         self.assertNotEqual(response.data["current_head"], bogus_sha)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_run_git_sync_with_constrained_permission(self, _):
+        """Git sync returns 404 when the user's change permission doesn't cover the object."""
+        # Grant change permission constrained to repos[1] only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.repos[1].pk},
+            actions=["change"],
+        )
+        obj_perm.validated_save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        with mock.patch.object(GitRepository, "sync") as mock_sync:
+            # Object outside the constraint: 404, and nothing enqueued
+            url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
+            response = self.client.post(url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            mock_sync.assert_not_called()
+
+            # Object inside the constraint: succeeds
+            mock_sync.return_value = JobResult.objects.create(name="git-repository-sync", user=self.user)
+            url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[1].id})
+            response = self.client.post(url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIn("job_result", response.data)
+            mock_sync.assert_called_once_with(user=self.user)
 
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
@@ -5117,7 +5146,10 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         """
         Check that `include=relationships` query parameter on a model endpoint includes relationships/associations.
         """
-        self.add_permissions("dcim.view_location")
+        # dcim.view_device is required in addition to dcim.view_location because the relationship's
+        # destination objects (Devices) are related objects traversed at depth=1; without permission to
+        # view them they would be downgraded to their brief {id, object_type, url} representation.
+        self.add_permissions("dcim.view_location", "dcim.view_device")
         response = self.client.get(
             reverse("dcim-api:location-detail", kwargs={"pk": self.locations[0].pk})
             + "?include=relationships"

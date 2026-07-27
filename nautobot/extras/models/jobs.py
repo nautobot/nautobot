@@ -1320,6 +1320,9 @@ class JobConsoleEntry(BaseModel):
     text = models.TextField(help_text="Actual line of output data")
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    is_metadata_associable_model = False
+    is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         ordering = ["timestamp"]

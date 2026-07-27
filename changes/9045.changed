@@ -1,1 +1,0 @@
-Changed the device/module component bulk-create form (`name_pattern`/`label_pattern`) to render and validate custom fields, relationships, object notes, and dynamic group assignments by borrowing those fields onto the create form from the per-instance model form.

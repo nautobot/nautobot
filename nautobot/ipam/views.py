@@ -87,6 +87,15 @@ class NamespaceUIViewSet(NautobotUIViewSet):
     queryset = Namespace.objects.all()
     serializer_class = serializers.NamespaceSerializer
     table_class = tables.NamespaceTable
+    view_titles = Titles(
+        titles={
+            "vrfs": f"{DEFAULT_TITLES['detail']} - VRFs",
+            "prefixes": f"{DEFAULT_TITLES['detail']} - Prefixes",
+            "ip_addresses": f"{DEFAULT_TITLES['detail']} - IP Addresses",
+            "ip_address_ranges": f"{DEFAULT_TITLES['detail']} - IP Address Ranges",
+        }
+    )
+
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(object_detail.ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__"),),
         extra_tabs=(
@@ -96,6 +105,22 @@ class NamespaceUIViewSet(NautobotUIViewSet):
                 label="VRFs",
                 url_name="ipam:namespace_vrfs",
                 related_object_attribute="vrfs",
+                panels=[
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="vrf_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="namespace",
+                        form_id="vrf_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="vrf_form", model=VRF),
+                            BulkDeleteButton(form_id="vrf_form", model=VRF),
+                        ],
+                    ),
+                ],
             ),
             object_detail.DistinctViewTab(
                 weight=900,
@@ -103,21 +128,71 @@ class NamespaceUIViewSet(NautobotUIViewSet):
                 label="Prefixes",
                 url_name="ipam:namespace_prefixes",
                 related_object_attribute="prefixes",
+                panels=[
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="prefix_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="namespace",
+                        form_id="prefix_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="prefix_form", model=Prefix),
+                            BulkDeleteButton(form_id="prefix_form", model=Prefix),
+                        ],
+                    ),
+                ],
             ),
             object_detail.DistinctViewTab(
                 weight=1000,
-                tab_id="ip_addresses",
+                tab_id="ip-addresses",
                 label="IP Addresses",
                 url_name="ipam:namespace_ip_addresses",
                 related_object_attribute="ip_addresses",
+                panels=[
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="ip_address_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="namespace",
+                        form_id="ipaddress_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="ipaddress_form", model=IPAddress),
+                            BulkDeleteButton(form_id="ipaddress_form", model=IPAddress),
+                        ],
+                    ),
+                ],
+            ),
+            object_detail.DistinctViewTab(
+                weight=1100,
+                tab_id="ip-address-ranges",
+                label="IP Address Ranges",
+                related_object_attribute="ip_address_ranges",
+                url_name="ipam:namespace_ipaddressranges",
+                panels=[
+                    object_detail.ObjectsTablePanel(
+                        section=SectionChoices.FULL_WIDTH,
+                        weight=100,
+                        context_table_key="ip_address_range_table",
+                        add_button_route=None,
+                        include_paginator=True,
+                        related_field_name="namespace",
+                        form_id="ipaddressrange_form",
+                        enable_bulk_actions=True,
+                        footer_buttons=[
+                            BulkEditButton(form_id="ipaddressrange_form", model=IPAddressRange),
+                            BulkDeleteButton(form_id="ipaddressrange_form", model=IPAddressRange),
+                        ],
+                    ),
+                ],
             ),
         ),
     )
-
-    def get_extra_context(self, request, instance):
-        context = super().get_extra_context(request, instance)
-        context.update({"object_detail_content": self.object_detail_content})
-        return context
 
     @action(
         detail=True,
@@ -128,11 +203,7 @@ class NamespaceUIViewSet(NautobotUIViewSet):
     def vrfs(self, request, *args, **kwargs):
         instance = self.get_object()
         vrfs = instance.vrfs.restrict(request.user, "view")
-        vrf_table = tables.VRFTable(
-            data=vrfs,
-            user=request.user,
-            exclude=["namespace"],
-        )
+        vrf_table = tables.VRFTable(data=vrfs, user=request.user, exclude=["namespace"])
         if request.user.has_perm("ipam.change_vrf") or request.user.has_perm("ipam.delete_vrf"):
             vrf_table.columns.show("pk")
 
@@ -143,6 +214,8 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             {
                 "vrf_table": vrf_table,
                 "active_tab": "vrfs",
+                "view_action": "vrfs",
+                "badge_count_override": vrfs.count(),
             }
         )
 
@@ -154,7 +227,7 @@ class NamespaceUIViewSet(NautobotUIViewSet):
     )
     def prefixes(self, request, *args, **kwargs):
         instance = self.get_object()
-        prefixes = instance.prefixes.restrict(request.user, "view").select_related("status")
+        prefixes = instance.prefixes.restrict(request.user, "view")
         prefix_table = tables.PrefixTable(data=prefixes, user=request.user, exclude=["namespace"])
         if request.user.has_perm("ipam.change_prefix") or request.user.has_perm("ipam.delete_prefix"):
             prefix_table.columns.show("pk")
@@ -166,6 +239,8 @@ class NamespaceUIViewSet(NautobotUIViewSet):
             {
                 "prefix_table": prefix_table,
                 "active_tab": "prefixes",
+                "view_action": "prefixes",
+                "badge_count_override": prefixes.count(),
             }
         )
 
@@ -178,7 +253,7 @@ class NamespaceUIViewSet(NautobotUIViewSet):
     )
     def ip_addresses(self, request, *args, **kwargs):
         instance = self.get_object()
-        ip_addresses = instance.ip_addresses.restrict(request.user, "view").select_related("role", "status", "tenant")
+        ip_addresses = instance.ip_addresses.restrict(request.user, "view")
         ip_address_table = tables.IPAddressTable(data=ip_addresses, user=request.user, exclude=["namespace"])
         if request.user.has_perm("ipam.change_ipaddress") or request.user.has_perm("ipam.delete_ipaddress"):
             ip_address_table.columns.show("pk")
@@ -189,7 +264,37 @@ class NamespaceUIViewSet(NautobotUIViewSet):
         return Response(
             {
                 "ip_address_table": ip_address_table,
-                "active_tab": "ip_addresses",
+                "active_tab": "ip-addresses",
+                "view_action": "ip_addresses",
+                "badge_count_override": ip_addresses.count(),
+            }
+        )
+
+    @action(
+        detail=True,
+        url_path="ip-address-ranges",
+        url_name="ipaddressranges",
+        custom_view_base_action="view",
+        custom_view_additional_permissions=["ipam.view_ipaddressrange"],
+    )
+    def ip_address_ranges(self, request, *args, **kwargs):
+        instance = self.get_object()
+        ip_address_ranges = instance.ip_address_ranges.restrict(request.user, "view")
+        ip_address_range_table = tables.IPAddressRangeTable(
+            data=ip_address_ranges, user=request.user, exclude=["namespace"]
+        )
+        if request.user.has_perm("ipam.change_ipaddressrange") or request.user.has_perm("ipam.delete_ipaddressrange"):
+            ip_address_range_table.columns.show("pk")
+
+        RequestConfig(
+            request, paginate={"paginator_class": EnhancedPaginator, "per_page": get_paginate_count(request)}
+        ).configure(ip_address_range_table)
+        return Response(
+            {
+                "ip_address_range_table": ip_address_range_table,
+                "active_tab": "ip-address-ranges",
+                "view_action": "ip_address_ranges",
+                "badge_count_override": ip_address_ranges.count(),
             }
         )
 
@@ -556,6 +661,7 @@ class PrefixUIViewSet(NautobotUIViewSet):
                         form_id="ipaddressrange_form",
                         enable_bulk_actions=True,
                         footer_buttons=[
+                            BulkEditButton(form_id="ipaddressrange_form", model=IPAddressRange),
                             BulkDeleteButton(form_id="ipaddressrange_form", model=IPAddressRange),
                         ],
                     ),
@@ -857,7 +963,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
 
         return Response(
             {
-                "first_available_ip": instance.get_first_available_ip(),
                 "first_available_ip_for_range": instance.get_first_available_ip_for_range(),
                 "ipaddressrange_table": ip_address_range_table,
                 "permissions": permissions,

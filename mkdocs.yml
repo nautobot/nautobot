@@ -595,6 +595,7 @@ nav:
               - "user-guide/platform-functionality/rest-api/overview.md"
               - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
+              - Object Permissions: "user-guide/platform-functionality/rest-api/object-permissions.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
           - Secrets: "user-guide/platform-functionality/secret.md"
@@ -605,6 +606,7 @@ nav:
               - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
               - Search: "user-guide/platform-functionality/user-interface/search.md"
+              - Searchable Fields: "user-guide/platform-functionality/user-interface/searchable-fields.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"

@@ -750,7 +750,7 @@ class CableTypeViewSet(NautobotModelViewSet):
 # depth support, but the endpoint accepts a writable `terminations` payload via custom
 # `validate()` / `_apply_terminations()` logic. Advertise that writability to OpenAPI clients by
 # pointing the request schema at `WritableCableSerializer`, which differs only in declaring
-# `terminations` as a writable nested serializer field.
+# `terminations` as a writable JSON field.
 @extend_schema_view(
     create=extend_schema(request=serializers.WritableCableSerializer),
     update=extend_schema(request=serializers.WritableCableSerializer),
