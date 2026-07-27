@@ -1,1 +1,1 @@
-Added `BOOLEAN_WITH_BLANK_CHOICES` to the `nautobot.apps.constants` public API.
+Added `BOOLEAN_CHOICES` and `BOOLEAN_WITH_BLANK_CHOICES` to the `nautobot.apps.constants` public API.
