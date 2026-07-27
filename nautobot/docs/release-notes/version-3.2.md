@@ -268,6 +268,16 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.1 (2026-07-27)
+
+### Added in v3.2.1
+
+- [#9302](https://github.com/nautobot/nautobot/issues/9302) - Added `BOOLEAN_CHOICES` and `BOOLEAN_WITH_BLANK_CHOICES` to the `nautobot.apps.constants` public API.
+
+### Dependencies in v3.2.1
+
+- [#9313](https://github.com/nautobot/nautobot/issues/9313) - Widened the range of acceptable `cryptography` versions to `>=48.0.1,<50` due to some App dependencies not yet supporting v49 of `cryptography`.
+
 ## v3.2.0 (2026-07-27)
 
 ### Breaking Changes in v3.2.0
