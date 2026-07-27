@@ -22,6 +22,7 @@ from nautobot.core.api.utils import (
     get_serializer_for_model,
     nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
+    user_can_view_object,
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
@@ -941,13 +942,18 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Populate termination fields from model properties for read
-        content_type_a = instance.termination_a_type
-        content_type_b = instance.termination_b_type
-        data["termination_a_type"] = f"{content_type_a.app_label}.{content_type_a.model}" if content_type_a else None
-        data["termination_b_type"] = f"{content_type_b.app_label}.{content_type_b.model}" if content_type_b else None
-        data["termination_a_id"] = str(instance.termination_a_id) if instance.termination_a_id else None
-        data["termination_b_id"] = str(instance.termination_b_id) if instance.termination_b_id else None
+        if user_can_view_object(self.context.get("request"), instance) or not self.is_nested:
+            # Populate termination fields from model properties for read
+            content_type_a = instance.termination_a_type
+            content_type_b = instance.termination_b_type
+            data["termination_a_type"] = (
+                f"{content_type_a.app_label}.{content_type_a.model}" if content_type_a else None
+            )
+            data["termination_b_type"] = (
+                f"{content_type_b.app_label}.{content_type_b.model}" if content_type_b else None
+            )
+            data["termination_a_id"] = str(instance.termination_a_id) if instance.termination_a_id else None
+            data["termination_b_id"] = str(instance.termination_b_id) if instance.termination_b_id else None
 
         return data
 

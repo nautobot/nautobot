@@ -118,6 +118,23 @@ class APITestCase(views.ModelTestCase):
         result.update(getattr(serializer_class.Meta, "default_m2m_fields", ()))
         return result
 
+    def get_depth_fields(self):
+        """Get a list of model fields that could be tested with the ?depth query parameter"""
+        depth_fields = []
+        for field in self.model._meta.get_fields():
+            if not field.name.startswith("_"):
+                if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
+                    # we represent content-types as "app_label.modelname" rather than as FKs
+                    field.related_model not in [ContentType, Group]
+                    # user is a model field on Token but not a field on TokenSerializer
+                    and not (field.name == "user" and self.model == users_models.Token)
+                ):
+                    depth_fields.append(field.name)
+        serializer_class = get_serializer_for_model(self.model)
+        serializer = serializer_class()
+        depth_fields = [field_name for field_name in depth_fields if field_name in serializer.fields]
+        return depth_fields
+
     @staticmethod
     def add_query_params_to_url(url: str, query_dict: dict) -> str:
         query = QueryDict(mutable=True)
@@ -242,6 +259,49 @@ class APIViewTestCases:
                 else:
                     self.assertNotIn("relationships", response.data)
 
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_get_object_depth_1_constrained_permission(self):
+            """
+            GET a single object at "?depth=1" as a user permitted to view only the primary object.
+
+            Related objects that the user is NOT permitted to view must be downgraded to their brief
+            {id, object_type, url, display} representation, rather than exposing full detail or being
+            hidden/reported as null. The `display` value is included (unlike a depth-0 leaf brief) because
+            these objects would otherwise have been fully serialized due to `?depth`.
+            """
+            depth_fields = self.get_depth_fields()
+            if not depth_fields:
+                self.skipTest("No depth fields to test")
+
+            instance = self._get_queryset().first()
+            # Grant unconstrained view permission on the primary model ONLY; no permission on related models.
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            root_object_type = self.model._meta.label_lower
+
+            response = self.client.get(f"{self._get_detail_url(instance)}?depth=1", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            for field in depth_fields:
+                value = response.data.get(field)
+                entries = value if isinstance(value, list) else [value]
+                for entry in entries:
+                    if entry is None:
+                        continue
+                    self.assertIsInstance(entry, dict)
+                    # The user CAN view objects of the primary model (unconstrained), so same-model
+                    # related objects may legitimately be rendered in full.
+                    if entry.get("object_type") == root_object_type:
+                        continue
+                    # A top-level related object at depth=1 would be fully serialized, so when the user
+                    # cannot view it, it must be downgraded to the brief form plus `display` - not full,
+                    # and not null.
+                    self.assertEqual(
+                        set(entry.keys()),
+                        {"id", "object_type", "url", "display"},
+                        f"Related '{field}' object was not downgraded to brief+display form: {entry}",
+                    )
+            self.assert_no_verboten_content(response)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_options_object(self):
             """
@@ -257,23 +317,6 @@ class APIViewTestCases:
 
         def get_filterset(self):
             return self.filterset or lookup.get_filterset_for_model(self.model)
-
-        def get_depth_fields(self):
-            """Get a list of model fields that could be tested with the ?depth query parameter"""
-            depth_fields = []
-            for field in self.model._meta.get_fields():
-                if not field.name.startswith("_"):
-                    if isinstance(field, (ForeignKey, GenericForeignKey, ManyToManyField, core_fields.TagsField)) and (
-                        # we represent content-types as "app_label.modelname" rather than as FKs
-                        field.related_model not in [ContentType, Group]
-                        # user is a model field on Token but not a field on TokenSerializer
-                        and not (field.name == "user" and self.model == users_models.Token)
-                    ):
-                        depth_fields.append(field.name)
-            serializer_class = get_serializer_for_model(self.model)
-            serializer = serializer_class()
-            depth_fields = [field_name for field_name in depth_fields if field_name in serializer.fields]
-            return depth_fields
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -397,7 +440,11 @@ class APIViewTestCases:
             """
             depth_fields = self.get_depth_fields()
             m2m_fields = self.get_m2m_fields()
-            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            # Run as a superuser so that all related objects are viewable and rendered in full; the
+            # permission-aware downgrade of unviewable related objects is covered by
+            # test_list_objects_depth_1_constrained_permission below.
+            self.user.is_superuser = True
+            self.user.save()
             list_url = f"{self._get_list_url()}?depth=1"
             # With exclude_m2m query parameter set to False
             with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as cqc:
@@ -470,6 +517,56 @@ class APIViewTestCases:
                 for field in m2m_fields:
                     self.assertNotIn(field, response_data)
                 # TODO: we should assert that all other fields are still present, but there's a few corner cases...
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_1_constrained_permission(self):
+            """
+            GET a list of objects at "?depth=1" as a user permitted to view only the primary objects.
+
+            Related objects that the user is NOT permitted to view must be downgraded to their brief
+            {id, object_type, url, display} representation, rather than exposing full detail or being
+            hidden/reported as null. The `display` value is included (unlike a depth-0 leaf brief) because
+            these objects would otherwise have been fully serialized due to `?depth`.
+            """
+            depth_fields = self.get_depth_fields()
+            if not depth_fields:
+                self.skipTest("No depth fields to test")
+
+            # Grant unconstrained view permission on the primary model ONLY; no permission on related models.
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            root_object_type = self.model._meta.label_lower
+            # exclude_m2m=false so that many-to-many related objects are also serialized and checked.
+            list_url = f"{self._get_list_url()}?depth=1&exclude_m2m=false"
+
+            response = self.client.get(list_url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(len(response.data["results"]), self._get_queryset().count())
+            self.assert_no_verboten_content(response)
+
+            for response_data in response.data["results"]:
+                for field in depth_fields:
+                    value = response_data.get(field)
+                    entries = value if isinstance(value, list) else [value]
+                    for entry in entries:
+                        if entry is None:
+                            continue
+                        self.assertIsInstance(entry, dict)
+                        # The user CAN view objects of the primary model (unconstrained), so same-model
+                        # related objects may legitimately be rendered in full.
+                        if entry.get("object_type") == root_object_type:
+                            continue
+                        # A top-level related object at depth=1 would be fully serialized, so when the user
+                        # cannot view it, it must be downgraded to the brief form plus `display` - not full,
+                        # and not null.
+                        self.assertEqual(
+                            set(entry.keys()),
+                            {"id", "object_type", "url", "display"},
+                            f"Related '{field}' object was not downgraded to brief+display form: {entry}",
+                        )
+
+            # Note: efficiency (no per-object N+1 queries introduced by the permission check, including with
+            # ?exclude_m2m=false) is verified by
+            # nautobot.core.tests.test_api.DepthPermissionEnforcementTest.test_constrained_permission_check_is_memoized
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_exclude_m2m(self):
@@ -1281,7 +1378,11 @@ class APIViewTestCases:
             """
             field = "parent"
 
-            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            # Run as a superuser so that all related objects are viewable and rendered in full; the
+            # permission-aware downgrade of unviewable related objects is covered by
+            # test_list_objects_depth_2_constrained_permission below.
+            self.user.is_superuser = True
+            self.user.save()
             url = f"{self._get_list_url()}?depth=2"
             response = self.client.get(url, **self.header)
 
@@ -1302,6 +1403,54 @@ class APIViewTestCases:
                     if data[field][field] is not None:
                         self.assertIsInstance(data[field][field], dict)
                         self.assertTrue(is_uuid(data[field][field]["id"]))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_list_objects_depth_2_constrained_permission(self):
+            """
+            GET a list of objects at "?depth=2" as a user permitted to view only the primary (tree) model.
+
+            The parent chain is the same model as the primary object, so it remains fully rendered; any
+            OTHER related object the user cannot view (at either nesting level) must be downgraded to its
+            brief {id, object_type, url} representation - plus `display` if it would otherwise have been
+            fully serialized at that depth - rather than exposing full detail or being null.
+            """
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+            root_object_type = self.model._meta.label_lower
+            url = f"{self._get_list_url()}?depth=2"
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+
+            def assert_brief_if_unviewable(value):
+                if isinstance(value, list):
+                    for item in value:
+                        assert_brief_if_unviewable(item)
+                    return
+                if not isinstance(value, dict):
+                    return
+                object_type = value.get("object_type")
+                if object_type is None or object_type == root_object_type:
+                    # Not a related-object representation (e.g. custom_fields), or a same-model object the
+                    # user is permitted to view - descend into any further nested related objects.
+                    for nested_value in value.values():
+                        assert_brief_if_unviewable(nested_value)
+                    return
+                # A related object of a different model that the user cannot view must be brief. Depending on
+                # the nesting level it is either a depth-0 leaf brief ({id, object_type, url}) or a downgraded
+                # would-be-full object that additionally carries `display`; either way it must not be full.
+                self.assertLessEqual(
+                    set(value.keys()),
+                    {"id", "object_type", "url", "display"},
+                    f"Related object was not downgraded to brief form: {value}",
+                )
+                self.assertGreaterEqual(
+                    set(value.keys()),
+                    {"id", "object_type", "url"},
+                    f"Related object is missing brief fields: {value}",
+                )
+
+            for data in response.data["results"]:
+                for value in data.values():
+                    assert_brief_if_unviewable(value)
 
     class APIViewTestCase(
         GetObjectViewTestCase,

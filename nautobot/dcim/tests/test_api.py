@@ -3557,10 +3557,22 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
         self.assertEqual(set(terminations), {"a1", "b1"})
-        # Depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
+        # Without view_interface permission, we get the constrained representation even at depth=1:
+        a_slot = terminations["a1"]
+        self.assertIsInstance(a_slot, dict)
+        self.assertIn("display", a_slot)
+        self.assertNotIn("name", a_slot)
+
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        self.assertEqual(set(terminations), {"a1", "b1"})
+        # With view_interface, depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
         # serializer payload (which carries fields like `name`).
         a_slot = terminations["a1"]
         self.assertIsInstance(a_slot, dict)
+        self.assertIn("display", a_slot)
         self.assertIn("name", a_slot)
 
     def test_list_query_count_does_not_grow_with_cable_count(self):

@@ -2,7 +2,187 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-<!-- pyml disable-num-lines 700 proper-names -->
+<!-- pyml disable-num-lines 900 proper-names -->
+
+## GHSA-h8rv-c7c8-cvmx
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>July 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot's REST API "depth" query parameter allows data traversal from an initial root object or objects to other related objects. While user "view" object permissions were correctly enforced for the root object(s), traversal to related objects was missing similar permissions enforcement. Therefore, a user with limited permissions to view a specific object or class of objects could potentially view the details of other objects beyond the scope of their granted permissions.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx">GHSA-h8rv-c7c8-cvmx</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.38</li>
+        <li>&ge;3.0.0, &lt;3.2.0</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/ebe90c5f171ce0b6956c13972717a4b608d99923">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/05104dff0206bca429db384e6eab7f57f4ed6991">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-qr7c-g3j2-hw5q
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>July 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot gates Job execution behind the <code>run_job</code> permission, but the Job Hook dispatch path never checked it. A user with permission to manage Job Hooks (but without run permission) could point a hook at any JobHookReceiver and trigger it by editing a matching object, running the JobHookReceiver code on the worker where they would be disallowed from running equivalent Job code.
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q">GHSA-qr7c-g3j2-hw5q</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.38</li>
+        <li>&ge;3.0.0, &lt;3.2.0</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/1daea48586bb90ea52dda28218761e57aa6ed65e">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/590888d3fc95123f5f23538adbe3cba04b9dae0e">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-p99c-c9qx-34fw
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>July 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot renders various user-configurable templates in Jinja2's <code>SandboxedEnvironment</code>. While the sandbox blocked Python's usual escape techniques, it did not, by default, prevent a template from traversing the object relational mapper (ORM) from an ordinary model object down to lower-level database interfaces. By chaining together attributes and methods that are individually legitimate, a template author could reach an interface capable of issuing arbitrary database queries, and can similarly pivot to objects other than the one being rendered.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw">GHSA-p99c-c9qx-34fw</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.38</li>
+        <li>&ge;3.0.0, &lt;3.2.0</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/dc8761e206ea982efea76479575e2ba9b5715ff4">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/55c341593b731d3a134422657d39ff755836a913">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-mfwj-pjgx-22v2
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>July 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot's GraphQL implementation enforced object permissions at the root of the query, but failed to enforce permissions when traversing the object graph into other related models. As a result, users with access to some models but not others could use a crafted GraphQL query to retrieve fields from models they were not intended to be able to access.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2">GHSA-mfwj-pjgx-22v2</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.38</li>
+        <li>&ge;3.0.0, &lt;3.2.0</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/52a17d8e4806b909d5de9f0a121c92c2bbc6d719">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/a05eb7d0c939dd4205aca839955e4b3ee5f32af4">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-6jmc-h6f2-46j4
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>July 27, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot rendered user-supplied Jinja2 templates without restricting which Django settings a template may read, and it injected the entire Django <code>settings</code> object into the template context. As a result, any authenticated user who can render a template could read arbitrary values from Django settings.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4">GHSA-6jmc-h6f2-46j4</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.38</li>
+        <li>&ge;3.0.0, &lt;3.2.0</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.38 (<a href="https://github.com/nautobot/nautobot/commit/afa5c09e603dee3934853fcac1464293b566364c">patch</a>)</li>
+        <li>3.2.0 (<a href="https://github.com/nautobot/nautobot/commit/0b073599210249843a44f30a6c939331007196df">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ## GHSA-q4c5-2j6f-r476
 

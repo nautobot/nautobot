@@ -595,6 +595,7 @@ nav:
               - "user-guide/platform-functionality/rest-api/overview.md"
               - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
+              - Object Permissions: "user-guide/platform-functionality/rest-api/object-permissions.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
           - Secrets: "user-guide/platform-functionality/secret.md"
