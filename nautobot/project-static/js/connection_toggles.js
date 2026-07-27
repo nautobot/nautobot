@@ -6,11 +6,23 @@ function setLabel(elem, icon, text) {
     elem.append(text);
 }
 
+function changeCableTerminationColors(cablePk, newStatus) {
+    if (!cablePk) {
+        return;
+    }
+    const cableRows = document.querySelectorAll(`tr[cable_pk="${cablePk}"]`);
+    cableRows.forEach(function(cableRow) {
+        cableRow.classList.remove('table-success', 'table-info', 'table-warning');
+        cableRow.classList.add(newStatus === 'Connected' ? 'table-success' : 'table-info');
+    });
+}
+
 function toggleConnection(elem) {
     const url = nautobot_api_path + "dcim/cables/" + elem.getAttribute('data') + "/";
     const wasConnected = elem.classList.contains('connected');
     const oldStatus = wasConnected ? 'Connected' : 'Planned';
     const newStatus = wasConnected ? 'Planned' : 'Connected';
+    const cablePk = elem.getAttribute('data');
 
     fetch(url, {
         method: 'PATCH',
@@ -26,6 +38,7 @@ function toggleConnection(elem) {
         }
         const row = elem.closest('tr');
         const icon = elem.querySelector(':scope > span');
+        changeCableTerminationColors(cablePk, newStatus);
         if (row) {
             row.classList.toggle('table-success', newStatus === 'Connected');
             row.classList.toggle('table-info', newStatus === 'Planned');

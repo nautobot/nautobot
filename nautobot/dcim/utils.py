@@ -71,6 +71,17 @@ def cable_status_color_css(record):
     return CABLE_STATUS_TO_CSS_CLASS.get(status_color, "")
 
 
+def get_cable_pk(record):
+    """Given an interface, try to return its cable's primary key."""
+    if not record.cable:
+        breakout_lane = record.get_breakout_lane() if getattr(record, "parent_interface_id", None) else None
+        if breakout_lane and breakout_lane.far_termination:
+            parent_interface_cable = record.parent_interface.cable
+            return parent_interface_cable.pk if parent_interface_cable else ""
+        return ""
+    return record.cable.pk
+
+
 def get_network_driver_mapping_tool_names():
     """
     Return a list of all available network driver tool names derived from the netutils library and the optional NETWORK_DRIVERS setting.
