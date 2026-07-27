@@ -79,9 +79,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
     def test_device_detail_view_interface_tab_colors_change_after_cable_toggled_from_connected_to_planned(self):
         _, local_device, local_interface, local_interface_children, _, _ = self.create1x2BreakoutCable()
 
-        self.browser.visit(
-            self.live_server_url + reverse("dcim:device_interfaces", kwargs={"pk": local_device.pk})
-        )
+        self.browser.visit(self.live_server_url + reverse("dcim:device_interfaces", kwargs={"pk": local_device.pk}))
 
         self.assertTrue(
             self.browser.is_element_present_by_css(
@@ -91,9 +89,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
         )
         for child in local_interface_children:
             self.assertTrue(
-                self.browser.is_element_present_by_css(
-                    f'tr[data-name="{child.name}"].table-success', wait_time=10
-                ),
+                self.browser.is_element_present_by_css(f'tr[data-name="{child.name}"].table-success', wait_time=10),
                 f"{child.name} row did not start green",
             )
 
@@ -105,22 +101,16 @@ class BreakoutCablesTestCase(SeleniumTestCase):
         self.browser.driver.execute_script("arguments[0].click();", toggle)
 
         self.assertTrue(
-            self.browser.is_element_present_by_css(
-                f'tr[data-name="{local_interface.name}"].table-info', wait_time=10
-            ),
+            self.browser.is_element_present_by_css(f'tr[data-name="{local_interface.name}"].table-info', wait_time=10),
             "Parent interface row did not turn blue after toggling its cable to Planned",
         )
         for child in local_interface_children:
             self.assertTrue(
-                self.browser.is_element_present_by_css(
-                    f'tr[data-name="{child.name}"].table-info', wait_time=10
-                ),
+                self.browser.is_element_present_by_css(f'tr[data-name="{child.name}"].table-info', wait_time=10),
                 f"{child.name} row did not turn blue after toggling the parent cable",
             )
             self.assertFalse(
-                self.browser.is_element_present_by_css(
-                    f'tr[data-name="{child.name}"].table-success', wait_time=1
-                ),
+                self.browser.is_element_present_by_css(f'tr[data-name="{child.name}"].table-success', wait_time=1),
                 f"{child.name} row is still green after toggling the parent cable",
             )
 
