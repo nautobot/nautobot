@@ -1,0 +1,1 @@
+Added support for a top-level `PASSWORD` key in `EVENT_CONSUMERS` entries, passed through to the consumer for authenticating the broker connection (e.g. a Redis password).

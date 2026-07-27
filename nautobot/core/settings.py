@@ -122,6 +122,9 @@ EMAIL_USE_TLS = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_TLS", "False"))
 # Event Brokers
 EVENT_BROKERS = {}
 
+# Event Consumers
+EVENT_CONSUMERS = {}
+
 # Exclude potentially sensitive models from wildcard view exemption. These may still be exempted
 # by specifying the model individually in the EXEMPT_VIEW_PERMISSIONS configuration parameter.
 EXEMPT_EXCLUDE_MODELS = (
