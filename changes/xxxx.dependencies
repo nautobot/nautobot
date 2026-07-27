@@ -1,0 +1,1 @@
+Widened the range of acceptable `cryptography` versions to `>=48.0.1,<50` due to some App dependencies not yet supporting v49 of `cryptography`.

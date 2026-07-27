@@ -27,7 +27,9 @@ dependencies = [
     # Cryptographic recipes and primitives.
     # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
     # Added as an explicit dependency to protect against various CVEs in older versions.
-    "cryptography (>=49.0.0,<50)",
+    # Note that some of nautobot-app-ssot's dependencies in particular tend to be slow to support new versions,
+    # so we keep this to a wider range than just "latest" to avoid breaking compatibility there.
+    "cryptography (>=48.0.1,<50)",
     # Fundamental web framework for Nautobot
     "django (>=5.2.16,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
