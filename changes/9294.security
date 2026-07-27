@@ -1,2 +1,0 @@
-Updated dependency `gitpython` to `>=3.1.55,<3.2` to mitigate GHSA-94p4-4cq8-9g67.
-Updated documentation dependency `mkdocs-material` to `~9.7.7` to mitigate GHSA-xvg9-69gf-fjrf.

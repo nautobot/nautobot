@@ -1,1 +1,0 @@
-Fixed an `IndentationError` in the generated `nautobot_config.py` caused by an uncommented `EMAIL_SSL_KEYFILE` line in the configuration template.
