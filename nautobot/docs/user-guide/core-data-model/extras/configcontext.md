@@ -2,18 +2,20 @@
 
 Sometimes it is desirable to associate additional data with a group of devices or virtual machines to aid in automated configuration. For example, you might want to associate a set of syslog servers for all devices within a particular region. Context data enables the association of extra user-defined data with devices and virtual machines grouped by one or more of the following assignments:
 
-* Location
-* Role
-* Device type
-* Device family
-* Device redundancy group
-* Platform
-* Cluster group
-* Cluster
-* Tenant group
-* Tenant
-* Tag
-* Dynamic group - Need to set `settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED` to `True`. [See notes here](../../administration/configuration/settings.md#config_context_dynamic_groups_enabled)
+* Location (`locations`)
+* Role (`roles`)
+* Device type (`device_types`)
+* Device family (`device_families`)
+* Device redundancy group (`device_redundancy_groups`)
+* Platform (`platforms`)
+* Cluster group (`cluster_groups`)
+* Cluster (`clusters`)
+* Tenant group (`tenant_groups`)
+* Tenant (`tenants`)
+* Tag (`tags`)
+* Dynamic group (`dynamic_groups`) - Need to set `settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED` to `True`. [See notes here](../../administration/configuration/settings.md#config_context_dynamic_groups_enabled)
+
+The name in parentheses is the field name used to assign a config context to that group via the REST API or a Git repository (see below).
 
 +++ 3.0.0 "Device family support"
     Support for assigning config contexts by device families was added in Nautobot v3.0.0.
@@ -21,6 +23,23 @@ Sometimes it is desirable to associate additional data with a group of devices o
 Context data not specifically assigned to one or more of the above groups is by default associated with **all** devices and virtual machines.
 
 Configuration contexts may be managed within Nautobot via the UI and/or API; they may also be managed externally to Nautobot in a Git repository if desired.
+
+!!! warning "Assignment keys are the plural field names"
+    When assigning a config context through the REST API or a Git repository, the assignment key must be the field name shown in parentheses above (for example `locations`, not `location`). An unrecognized key is silently ignored, so the config context is still created or synced successfully but is not filtered to that group.
+
+    For example, a Git-managed config context assigned to a location uses the `locations` key in its `_metadata`:
+
+    ```yaml
+    ---
+    _metadata:
+      name: "dns test for cc"
+      weight: 1000
+      description: "apply to a specific location"
+      is_active: true
+      locations:
+        - name: "Site 1"
+    dns: "acme.net"
+    ```
 
 ## Hierarchical Rendering
 
