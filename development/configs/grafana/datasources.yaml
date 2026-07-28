@@ -42,14 +42,3 @@ datasources:
         datasourceUid: "mimir"
       lokiSearch:
         datasourceUid: 'loki'
-  - name: "Nautobot"
-    type: "yesoreyeram-infinity-datasource"
-    orgId: 1
-    jsonData:
-      allowedHosts:
-        - "http://nautobot:8080"
-      apiKeyKey: "Authorization"
-      auth_method: "apiKey"
-    editable: true
-    secureJsonData:
-      apiKeyValue: "0123456789abcdef0123456789abcdef01234567"

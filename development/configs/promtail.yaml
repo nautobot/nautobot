@@ -15,6 +15,13 @@ scrape_configs:
       - host: "unix:///var/run/docker.sock"
         refresh_interval: "5s"
     relabel_configs:
+      # Only scrape containers from this Nautobot dev stack. docker_sd_configs otherwise
+      # discovers every container on the host and ships all their logs to Loki. The invoke
+      # tasks name the compose project "nautobot-<major>-<minor>" (see tasks.py docker_compose),
+      # so keep containers whose compose-project label starts with "nautobot" and drop the rest.
+      - source_labels: ["__meta_docker_container_label_com_docker_compose_project"]
+        regex: "nautobot.*"
+        action: "keep"
       - source_labels: ["__meta_docker_container_name"]
         regex: "/(.*)"
         target_label: "container"

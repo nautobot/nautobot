@@ -1,0 +1,1 @@
+Corrected the local observability stack documentation to note that host ports 4317/4318 are published by Tempo, while the OpenTelemetry Collector is reachable only as `otel:4317` on the internal Docker network.

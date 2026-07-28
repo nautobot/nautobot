@@ -329,6 +329,100 @@ class APITraceGenerationTest(testing.APITestCase):
         self.assertIn(url, path, "Expected span to contain the request path")
 
 
+# SILKY_INTERCEPT_FUNC that always profiles, so the test exercises SilkyMiddleware's
+# request/response wrapping regardless of the per-session ``silk_record_requests`` flag
+# (token-authenticated API requests don't carry that session flag).
+def _always_profile(request):  # pragma: no cover - trivial test hook
+    return True
+
+
+@override_settings(ALLOW_REQUEST_PROFILING=True, SILKY_INTERCEPT_FUNC=_always_profile)
+class OtelWithSilkProfilingTest(testing.APITestCase):
+    """Guard against 5xx (e.g. 502) when OpenTelemetry and django-silk profiling are both active.
+
+    ``SilkyMiddleware`` (outer) wraps the request/response streams while it profiles, the OTEL
+    ``DjangoInstrumentor`` wraps the WSGI/view layer, and ``GraphQLOpenTelemetryMiddleware`` (inner)
+    reads ``request.body`` on GraphQL POSTs. This combination is where a stream re-read or
+    double-wrapping could surface as a gateway 502. There is no other test that drives the full
+    middleware stack with both features enabled, so this is the regression alarm.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self._exporter = InMemorySpanExporter()
+        self._provider = TracerProvider()
+        self._provider.add_span_processor(SimpleSpanProcessor(self._exporter))
+        # DjangoInstrumentor.instrument() is a no-op while OTEL_PYTHON_DJANGO_INSTRUMENT == "False"
+        # (the dev/test default). Force it on and attach our in-memory provider, mirroring
+        # APITraceGenerationTest, then rebuild the middleware stack so instrumentation attaches.
+        self._env_patcher = patch.dict(os.environ, {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True"})
+        self._env_patcher.start()
+        self._settings_override = override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
+        self._settings_override.enable()
+        # SilkyConfig is a Singleton that snapshots SILKY_* settings at first instantiation, so the
+        # class-level @override_settings(SILKY_INTERCEPT_FUNC=...) above is not picked up until we
+        # re-read settings. Force a re-setup now (and again in tearDown) so Silk actually profiles.
+        from silk.config import SilkyConfig
+
+        SilkyConfig()._setup()
+        DjangoInstrumentor().uninstrument()
+        DjangoInstrumentor().instrument(tracer_provider=self._provider)
+        self.client.handler.load_middleware()
+        # GraphQLOpenTelemetryMiddleware reads the process-global tracer provider (set once at
+        # startup), which our in-memory exporter is not attached to. Patch the middleware's `trace`
+        # so its GraphQL span is routed to our exporter, letting us assert it stays active (and that
+        # enduser.id resolves to the token user) alongside Silk. Mirrors GraphQLOpenTelemetryMiddlewareTest.
+        self._trace_patcher = patch("nautobot.core.middleware.trace")
+        mock_trace = self._trace_patcher.start()
+        mock_trace.get_tracer.return_value = self._provider.get_tracer("nautobot.graphql")
+
+    def tearDown(self):
+        self._trace_patcher.stop()
+        DjangoInstrumentor().uninstrument()
+        self.client.handler.load_middleware()
+        self._settings_override.disable()
+        self._env_patcher.stop()
+        # Restore SilkyConfig from the (now-reverted) settings so the always-profile hook doesn't leak.
+        from silk.config import SilkyConfig
+
+        SilkyConfig()._setup()
+        super().tearDown()
+
+    def test_graphql_post_with_otel_and_silk_returns_200(self):
+        """A token-authenticated GraphQL POST must succeed (not 5xx) with OTEL + Silk both active."""
+        self.add_permissions("dcim.view_location")
+        url = reverse("graphql-api")
+        response = self.client.post(
+            url,
+            data=json.dumps({"query": "query GetLocations { locations { id name } }"}),
+            content_type="application/json",
+            **self.header,
+        )
+        self.assertLess(
+            response.status_code,
+            500,
+            f"OTEL + Silk profiling produced a server error ({response.status_code}) on a GraphQL POST: "
+            f"{getattr(response, 'content', b'')!r}",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # OTEL must genuinely still be active alongside Silk (otherwise a 200 would prove nothing).
+        spans = self._exporter.get_finished_spans()
+        self.assertGreater(len(spans), 0, "Expected at least one span; OTEL should stay active with Silk on.")
+
+        # The GraphQL middleware span must attribute the request to the token user, not "anonymous"
+        # (DRF resolves the user during view dispatch, after middleware; the span reads it post-response).
+        graphql_spans = [s for s in spans if s.attributes.get("nautobot.core.graphql.document")]
+        self.assertTrue(graphql_spans, "Expected a GraphQL span carrying nautobot.core.graphql.document.")
+        self.assertEqual(graphql_spans[0].attributes.get("enduser.id"), self.user.username)
+
+    def test_non_graphql_request_with_otel_and_silk_returns_200(self):
+        """A non-GraphQL API request must also succeed with OTEL + Silk both active (control case)."""
+        response = self.client.get(reverse("api-status"), **self.header)
+        self.assertLess(response.status_code, 500, "OTEL + Silk profiling produced a server error on /api/status/.")
+        self.assertEqual(response.status_code, 200)
+
+
 class RequestsInstrumentationTraceparentTest(testing.TestCase):
     """Verify that OpenTelemetry Requests instrumentation injects the traceparent header into outgoing HTTP requests."""
 
@@ -464,17 +558,36 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         attrs = span.attributes
         self.assertEqual(attrs.get("enduser.id"), self.user.username)
         self.assertEqual(attrs.get("http.client_ip"), "203.0.113.5", "Should use the leftmost X-Forwarded-For entry.")
-        self.assertEqual(attrs.get("graphql.document"), self._SAMPLE_QUERY)
-        self.assertEqual(attrs.get("graphql.variables"), json.dumps(self._SAMPLE_VARIABLES))
-        self.assertEqual(attrs.get("graphql.operation.type"), "query")
+        self.assertEqual(attrs.get("nautobot.core.graphql.document"), self._SAMPLE_QUERY)
+        self.assertEqual(attrs.get("nautobot.core.graphql.variables"), json.dumps(self._SAMPLE_VARIABLES))
+        self.assertEqual(attrs.get("nautobot.core.graphql.operation.type"), "query")
         self.assertEqual(attrs.get("http.status_code"), 200)
 
+    def test_operation_type_detected_past_leading_comment(self):
+        """A leading GraphQL # comment (and blank lines) must not defeat operation-type detection.
+
+        Regression: the detector previously matched the operation keyword only after leading
+        whitespace, so a document beginning with a `# ...` comment line produced operation_type=None,
+        degrading the span name to bare "graphql" and dropping the operation.type attribute.
+        """
+        commented_query = "# fetch all locations\n\nquery GetLocations { locations { id name } }"
+        middleware = self._make_middleware(status_code=200)
+        request = self._build_request(query=commented_query)
+
+        middleware(request)
+
+        spans = self._exporter.get_finished_spans()
+        self.assertEqual(len(spans), 1)
+        span = spans[0]
+        self.assertEqual(span.name, "graphql query", "Span name should reflect the detected operation type.")
+        self.assertEqual(span.attributes.get("nautobot.core.graphql.operation.type"), "query")
+
     def test_long_document_truncated_by_span_limits(self):
-        """A large graphql.document is truncated by the SDK's OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
+        """A large nautobot.core.graphql.document is truncated by OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
 
         The middleware itself does not truncate; it relies on the standard OTel span attribute value
         length limit, which the production TracerProvider picks up from the environment. Here we build a
-        provider with an explicit limit to confirm our graphql.document attribute is subject to it.
+        provider with an explicit limit to confirm our graphql document attribute is subject to it.
         """
         limit = 64
         limited_provider = TracerProvider(span_limits=SpanLimits(max_span_attribute_length=limit))
@@ -489,8 +602,8 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
 
         spans = self._exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
-        document = spans[0].attributes.get("graphql.document")
-        self.assertEqual(len(document), limit, "graphql.document should be truncated to the span attribute limit.")
+        document = spans[0].attributes.get("nautobot.core.graphql.document")
+        self.assertEqual(len(document), limit, "graphql document should be truncated to the span attribute limit.")
         self.assertEqual(document, long_query[:limit])
 
     def test_log_emitted_with_correct_fields(self):

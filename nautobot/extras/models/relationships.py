@@ -555,7 +555,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
                 cache.set(cache_key, queryset, timeout=None)
             else:
-                _span.set_attribute("relationship_cache.hit", True)
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", True)
             if not get_queryset:
                 listing = list(queryset)
                 # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache

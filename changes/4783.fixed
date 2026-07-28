@@ -1,0 +1,4 @@
+Fixed GraphQL OpenTelemetry span attributes to be consistently namespaced under `nautobot.core.` and `nautobot.extras.`.
+Fixed GraphQL operation-type detection so a leading comment in the query no longer prevents the operation type from being recorded.
+Fixed API-token GraphQL requests recording `enduser.id` as `anonymous` instead of the authenticated user.
+Fixed the local development observability stack so it starts cleanly, including Mimir no longer exiting on startup, Grafana anonymous users being able to use Explore, and Promtail only scraping the Nautobot stack's containers.
