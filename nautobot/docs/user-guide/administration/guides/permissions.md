@@ -2,7 +2,7 @@
 
 Nautobot provides an object-based permissions framework, which replace's Django's built-in permissions model. Object-based permissions enable an administrator to grant users or groups the ability to perform an action on arbitrary subsets of objects in Nautobot, rather than all objects of a certain type. For example, it is possible to grant a user permission to view only locations within a particular parent location, or to modify only VLANs with a numeric ID within a certain range.
 
-See the documentation on [user permissions](../../platform-functionality/users/objectpermission.md).
+See also the documentation on [user permissions](../../platform-functionality/users/objectpermission.md).
 
 ## Example Constraint Definitions
 
@@ -59,6 +59,51 @@ Permissions constraints can be defined by using the special token `$user` to ref
 
 The same sort of logic is in play when a user attempts to create or modify an object in Nautobot, with a twist. Once validation has completed, Nautobot starts an atomic database transaction to facilitate the change, and the object is created or saved normally. Next, still within the transaction, Nautobot issues a second query to retrieve the newly created/updated object, filtering the restricted queryset with the object's primary key. If this query fails to return the object, Nautobot knows that the new revision does not match the constraints imposed by the permission. The transaction is then rolled back, leaving the database in its original state prior to the change, and the user is informed of the violation.
 
+## Accounts with Elevated Access
+
+Two user account flags exist outside of the object permissions framework entirely: `is_superuser` and `is_staff`. Neither is granted through an `ObjectPermission`, and neither can be constrained by one.
+
+### Superusers
+
+A superuser implicitly holds **every permission on every object**. The superuser check happens *before* any object permission is evaluated: the authentication backend returns "allowed" for any object-permission check, and restricted querysets return all rows unfiltered. As a consequence:
+
+- Assigning an `ObjectPermission` with constraints to a superuser has **no effect** — constraints are never evaluated for superusers.
+- A superuser does not need (and is not limited by) any permission recipe described in this document.
+
+!!! warning
+    Superuser status is distinct from staff status. A superuser without `is_staff` cannot log into the Django admin UI, but still has unrestricted access to all objects via the Nautobot UI and APIs.
+
+### Staff Users (`is_staff`)
+
+The `is_staff` flag primarily controls access to the [Django admin UI](#the-django-admin), but a few Nautobot views are also gated on it (staff *or* superuser):
+
+- The **Worker Status** view (Celery worker/queue details).
+- Certain administrative configuration views (for example, the data validation device-uniqueness constraints configuration).
+- The "new release available" banner on the home page.
+
+`is_staff` by itself grants **no object permissions** — a staff user still needs `ObjectPermission` assignments (or superuser status) to view or modify objects in the Nautobot UI and APIs. However, staff status combined with certain permissions unlocks high-impact actions in the Django admin, described below.
+
+### The Django Admin
+
+The Django admin UI (`/admin/`) is intentionally trimmed down in Nautobot, but the models it does expose are among the most security-sensitive in the application:
+
+| Model | Risk if misused |
+| ----- | --------------- |
+| Users | Password resets, granting `is_staff`/`is_superuser`, assigning permissions |
+| Groups | Adding oneself/others to privileged groups |
+| Object Permissions | Authoring or widening any permission in the system |
+| Tokens | Creating an API token **for any user**, with a chosen key |
+| Configuration (Constance) | Changing runtime application settings |
+| File Proxies, Job Results, Admin Log Entries | Reading operational data |
+
+Access to each admin page still requires the corresponding model permission (e.g. `users.change_user`), but note the following:
+
+!!! warning "Staff users can reset other users' passwords"
+    When using local (database-backed) authentication, a staff user with `users.change_user` permission can set a new password for **any** user account — including superusers — through the admin UI's password change form, without knowing the current password. Treat `is_staff` + `users.change_user` as equivalent to full control of the system.
+
+!!! warning "Token administration allows impersonation"
+    A staff user with token permissions can create or modify an API token for **any other user**, including choosing the token key. Since API requests authenticate as the token's owner, this is effectively the ability to impersonate any user (including superusers). This is the only place in Nautobot where one user can access another user's tokens — see [API Tokens](#api-tokens) below.
+
 ## Assigning Permissions
 
 Permissions are implemented by assigning them to specific users and/or to groups of users. Users can have a combination of permissions and groups assigned to their account. All of the permissions granted to the user's groups and directly to the user's account will be used when determining authorization to access an object or view.
@@ -109,6 +154,155 @@ Multiple permissions can be assigned to a user group.
 
 !!! info
     Group permission relationships can be managed in the Admin UI by modifying the group (superusers only) or the permission.
+
+## Special Permission Behaviors
+
+Most models follow the standard pattern: `view`/`add`/`change`/`delete` actions enforced against a queryset restricted by your permission constraints. The features below deviate from that pattern, usually because a user has inherent access to *their own* objects that differs from the model-level permission.
+
+### Self-Service Behaviors ("mine" vs. "everyone's")
+
+Several features grant a user access to objects they own without requiring any explicit permission. This is a summary; details follow in the subsections below.
+
+| Feature | Access to your own | Access to others' |
+| ------- | ------------------ | ----------------- |
+| API tokens | Always (list/create/edit/delete your own) | Never via UI or REST API, even for superusers (Django admin is the exception) |
+| Saved views | Always (view/create/edit your own), plus all *shared* views | Requires `extras.view_savedview` / `extras.change_savedview` |
+| Job results (cancel) | Always (cancel a job you submitted) | Requires `extras.cancel_job` on the Job |
+| User profile / preferences | Always (profile, config, navbar favorites, own password) | Never |
+| Approval requests ("My Requests") | Always (view workflows you submitted) | Standard model permissions |
+
+### API Tokens
+
+Token access is hard-scoped to the requesting user rather than governed by object permissions:
+
+- Any authenticated user can list, create, edit, and delete **their own** tokens from their user profile. The token key is displayed in clear text on this page.
+- The REST API `/api/users/tokens/` endpoint requires the `users.view_token` permission, but the results are **always filtered to the requesting user's own tokens** — granting `users.view_token` (even without constraints) does *not* expose other users' tokens.
+- Not even a superuser can view another user's tokens through the Nautobot UI or REST API.
+- The one exception is the [Django admin](#the-django-admin), where staff users with token permissions can view and manage all users' tokens.
+
+### Saved Views
+
+Saved views intentionally relax the standard permission model so that any user who can view a list page can also use saved views of it:
+
+- Any authenticated user can **create** saved views and view/edit/delete **their own**, with no `extras.*_savedview` permissions required.
+- Any authenticated user can see saved views that are marked **shared**.
+- The dedicated saved views *list* page, and access to other users' non-shared views, require `extras.view_savedview`; editing views you don't own requires `extras.change_savedview`.
+- These relaxations apply to the UI only — the REST API endpoint for saved views enforces standard object permissions.
+
+### Change Log
+
+!!! warning
+    The `extras.view_objectchange` permission grants visibility into change records for **all** objects — including full before/after snapshots of objects the user has no `view` permission on. The change log does not re-check the viewing user's permission on the *changed object*, only on the `ObjectChange` record itself.
+
+If a user can view change log entries, they can read the serialized contents (including all field values captured in the diff) of any object type that is change-logged. To limit this, add constraints to the `view_objectchange` permission itself, for example:
+
+- `{"user": "$user"}` — only changes the user made themselves.
+- `{"changed_object_type__app_label": "dcim"}` — only changes to DCIM objects.
+
+Note that the per-object "Change Log" tab additionally requires `view` permission on the parent object, but the global change log list and change detail pages do not.
+
+### Jobs
+
+Jobs deserve special attention because they execute code:
+
+- **Running**: requires the `run` action on the Job model (`extras.run_job`). Constraints can limit which specific jobs a user may run (see the [Export Job recipe](#export-job) below).
+- **Database access**: the permission check gates only whether the job may be *launched*. Once running, job code accesses the database **without any per-user restriction** — a job can read and write objects its submitter has no permission on, unless the job's own code enforces otherwise. Grant `run` on a job only if you trust what that job does with full database access.
+- **Canceling**: a user can always cancel a job **they submitted**, with no additional permission. Canceling another user's job requires the `cancel` action (`extras.cancel_job`), which is object-level and can be constrained to specific jobs.
+- **Re-running**: re-running a previous job result is gated by the same `run` permission as a fresh run.
+- **Scheduled jobs**: visibility of scheduled jobs follows the standard `extras.view_scheduledjob` permission — it is *not* limited to your own schedules. Taking ownership of another user's schedule requires `extras.change_scheduledjob` plus `run` on the underlying job.
+- **Sensitive variables**: jobs flagged as having sensitive input variables cannot be scheduled (only run immediately) and cannot be combined with approval workflows, so that sensitive input is never persisted.
+
+### Approval Workflows
+
+Approval of a workflow stage requires membership in the stage's designated **approver group** (or superuser status), plus `change` permission on the object under review.
+
+!!! warning "No self-approval prevention"
+    Nautobot does not currently prevent a user from approving a request **they themselves submitted**, as long as they are a member of the approver group. If your process requires separation of duties, ensure that users who submit requests subject to a workflow are not members of that workflow's approver groups.
+
+Other notable behaviors:
+
+- Only the **submitter** (or a superuser) can cancel an in-flight approval workflow.
+- Any authenticated user with view access can **comment** on a workflow — commenting is not limited to approvers.
+
+## Limitations and Edge Cases
+
+### No Field-Level Permissions
+
+Nautobot's permission model is attribute-based (ABAC) at the **object instance** level: constraints select *which objects* a user may act on, not *which fields* they may modify. There is no way to express "may edit `status` on a device, but not `name`". A user with `change` permission on an object can modify **any** field of that object.
+
+Constraint enforcement on writes validates the *final state* of the object (the save is rolled back if the resulting object no longer matches your constraints). This has two practical consequences:
+
+- A user cannot move an object *out of* their permitted set (the post-save check fails and the change is rolled back).
+- A constraint cannot forbid changing a particular field, as long as the object still matches the constraint after the change.
+
+If you need field-level control, the available approximations are constraining on that field's value (e.g. `{"status__name": "Active"}` prevents saving the object in any other status) or splitting the workflow so the sensitive field is managed by a job or a more privileged team.
+
+### Related Objects on Forms
+
+When a user edits object A that references a related object B (for example, a device and its location), form dropdowns only offer related objects the user has `view` permission on. Two situations can be confusing:
+
+- If the object's *currently assigned* related object is one the user cannot view, re-submitting the form fails with a generic "Select a valid choice" validation error. The error does not explain that the underlying cause is a missing `view` permission on the related object. If the field is required, the user may be unable to save the object at all.
+- Users can only *assign* related objects they can view. When a user reports they "can't find" an object in a dropdown that clearly exists, a missing `view` permission on the related model is the most common cause.
+
+When granting `change` on a model, remember to also grant `view` on the models it commonly references (status, role, location, tenant, etc.), scoped appropriately.
+
+### Tree Models and Ancestor Permissions
+
+For hierarchical models (Locations, Rack Groups, Tenant Groups, etc.), it is the administrator's responsibility to grant `view` permission on an object's **ancestors** along with the object itself. If a user is granted a child location but not its parents:
+
+- List views render the child indented at its true depth with no visible parent rows above it, which looks like a misrendered or orphaned entry.
+- Ancestor names still appear in breadcrumbs and hierarchical display names (the hierarchy is rendered from the database, not from the user's permitted set), so ancestor *names* are not hidden by the permission — but the links to them will return 403/404.
+
+When writing constraints for tree models, prefer constraints that naturally include ancestors — e.g. granting a subtree via `{"name": "Region-X"}` on the ancestor *plus* `{"ancestors__name": "Region-X"}` style constraints for descendants — and verify the rendered hierarchy as one of the affected users.
+
+### GraphQL
+
+GraphQL enforces `view` permissions on top-level queries and on node lookups. However, once a user retrieves a permitted object, **nested traversal to related objects is not permission-checked** — for example, a user with permission to view devices but not locations can still read a device's location (and its parent, tenant, and so on) through a nested GraphQL query. If you rely on `view` restrictions to hide sensitive data, be aware that GraphQL relationship traversal can walk around them from any permitted starting object.
+
+### `EXEMPT_VIEW_PERMISSIONS`
+
+The [`EXEMPT_VIEW_PERMISSIONS`](../configuration/settings.md#exempt_view_permissions) setting globally disables `view` permission enforcement for the listed models (or all models, with `"*"`). This applies to anonymous users as well as authenticated ones. The wildcard deliberately never exempts users, groups, or object permissions, but any other model listed becomes world-viewable. Audit this setting first when reviewing a deployment's exposure — it neutralizes every `view` constraint discussed on this page.
+
+## Baseline Secure Configuration
+
+The permissions framework is flexible enough to hang yourself with. The guidance below is a conservative starting point for a typical deployment.
+
+### Use External Authentication
+
+Prefer [SSO](../configuration/authentication/sso.md) or [LDAP](../configuration/authentication/ldap.md) over local passwords. This centralizes credential policy (MFA, lockout, offboarding) and lets you drive group membership — and therefore permissions — from your identity provider via [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../configuration/settings.md#external_auth_default_groups) or SSO group sync. With external authentication, the [staff password-reset concern](#the-django-admin) above is largely moot because local passwords are not used for login.
+
+### Permissions Reserved for Highly Trusted Users
+
+Grant the following only to administrators — each is an escalation path to full control of Nautobot, regardless of any constraints on the user's other permissions:
+
+| Permission | Escalation path |
+| ---------- | --------------- |
+| `users.add_objectpermission` / `users.change_objectpermission` | Author or widen any permission, including their own |
+| `users.add_user` / `users.change_user` | Edit users — including granting themselves or others elevated permissions, superuser/staff flags, or (via the admin, if staff) resetting passwords |
+| `users.delete_user` | Lock others out |
+| `auth.add_group` / `auth.change_group` | Join themselves to privileged groups |
+| `users.*_token` + `is_staff` | Mint API tokens as any user (impersonation) |
+| `extras.add_gitrepository` / `extras.change_gitrepository` | Point Nautobot at a repository containing attacker-controlled job code |
+| `extras.change_job` | Enable disabled jobs, override job settings (e.g. approval and sensitive-variable overrides) || `extras.run_job` (unconstrained) | Run any job — jobs execute with unrestricted database access |
+| `extras.*_secret` / `extras.*_secretsgroup` | Re-point secrets and potentially exfiltrate credentials |
+| `extras.*_approvalworkflowdefinition` | Weaken or remove approval requirements |
+| `is_staff` flag | Django admin access; combined with the model permissions above, full takeover |
+
+Broadly: **permissions about *who can do what* (users, groups, permissions, tokens) and permissions about *what code runs* (git repositories, jobs) are administrative.** Constraints do not meaningfully contain them.
+
+### Permissions That Are Generally Safe to Delegate
+
+Day-to-day network data management is what the constraint system is designed for. Granting `view`/`add`/`change`/`delete` (scoped by constraints as needed) on models in these areas is the intended use:
+
+- DCIM (devices, interfaces, racks, cables, locations — remember [ancestor permissions](#tree-models-and-ancestor-permissions))
+- IPAM (prefixes, IP addresses, VLANs, VRFs)
+- Circuits, Tenancy, Virtualization, Wireless
+- Extras data models such as tags, notes, and custom field *data* (but not custom field *definitions*, which affect all users)
+
+When delegating, also grant `run` on the specific system jobs users need (exports, bulk edits) with constraints, per the recipes below, and remember:
+
+- Scope `extras.view_objectchange` (e.g. `{"user": "$user"}`) unless users may see all change history.
+- Do not grant `view` on models you consider sensitive if GraphQL is in use and related objects link to them (see [GraphQL](#graphql) above).
 
 ## Recipes
 
