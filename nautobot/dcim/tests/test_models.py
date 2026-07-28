@@ -2714,6 +2714,46 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         self.assertIn(parent_child_device, nested_devices)
         self.assertIn(child_device, nested_devices)
 
+    def test_device_get_cables(self):
+        """Test Device.get_cables() returns the Cables connected to the device's components."""
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        peer_device = Device.objects.create(
+            location=self.location_3,
+            device_type=self.device_type,
+            role=self.device_role,
+            status=self.device_status,
+            name="Cable Peer Device",
+        )
+        cables = []
+        for i in range(2):
+            local_interface = Interface.objects.create(
+                device=self.device,
+                name=f"eth{i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            )
+            peer_interface = Interface.objects.create(
+                device=peer_device,
+                name=f"eth{i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            )
+            cable = Cable(status=cable_status)
+            cable.validated_save()
+            cable.add_termination(local_interface, "A")
+            cable.add_termination(peer_interface, "B")
+            cables.append(cable)
+        Interface.objects.create(
+            device=self.device,
+            name="eth-uncabled",
+            status=interface_status,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+
+        self.assertQuerysetEqualAndNotEmpty(self.device.get_cables(), cables, ordered=False)
+        self.assertEqual(set(self.device.get_cables(pk_list=True)), {cable.pk for cable in cables})
+
 
 class DeviceBayTestCase(ModelTestCases.BaseModelTestCase):
     model = DeviceBay
@@ -5983,6 +6023,39 @@ class ModuleTestCase(ModelTestCases.BaseModelTestCase):
 
         module.full_clean()
         module.save()
+
+    def test_module_get_cables(self):
+        """Test Module.get_cables() returns the Cables connected to the module's components."""
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cable_status = Status.objects.get_for_model(Cable).first()
+        cables = []
+        for i in range(2):
+            module_interface = Interface.objects.create(
+                module=self.module,
+                name=f"Module Interface {i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            )
+            peer_interface = Interface.objects.create(
+                device=self.device,
+                name=f"Module cable peer {i}",
+                status=interface_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            )
+            cable = Cable(status=cable_status)
+            cable.validated_save()
+            cable.add_termination(module_interface, "A")
+            cable.add_termination(peer_interface, "B")
+            cables.append(cable)
+        Interface.objects.create(
+            module=self.module,
+            name="Module Interface uncabled",
+            status=interface_status,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+
+        self.assertQuerysetEqualAndNotEmpty(self.module.get_cables(), cables, ordered=False)
+        self.assertEqual(set(self.module.get_cables(pk_list=True)), {cable.pk for cable in cables})
 
 
 class ModuleTypeTestCase(ModelTestCases.BaseModelTestCase):
