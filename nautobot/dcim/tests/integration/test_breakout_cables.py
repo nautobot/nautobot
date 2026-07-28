@@ -134,7 +134,6 @@ class BreakoutCablesTestCase(SeleniumTestCase):
         )
         self.browser.driver.execute_script("arguments[0].click();", toggle)
 
-        # After toggling to Planned, EVERY termination's icon should flip to `mdi-lan-connect`.
         for interface in leaf_interfaces:
             self.assertTrue(
                 self.browser.is_element_present_by_css(
