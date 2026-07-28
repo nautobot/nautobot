@@ -6,10 +6,42 @@ function setLabel(elem, icon, text) {
     elem.append(text);
 }
 
+function changeCableTerminationColors(cablePk, newStatus) {
+    if (!cablePk) {
+        return;
+    }
+
+    const cableRows = document.querySelectorAll(`tr[cable_pk="${cablePk}"]`);
+    cableRows.forEach(function(cableRow) {
+        cableRow.classList.remove('table-success', 'table-info', 'table-warning');
+        cableRow.classList.add(newStatus === 'Connected' ? 'table-success' : 'table-info');
+    });
+}
+
+function changeCableTerminationToggleButtons(cablePk, newStatus) {
+    if (!cablePk) {
+        return;
+    }
+
+    const nextAction = newStatus === 'Connected' ? 'Planned' : 'Connected';
+    const toggles = document.querySelectorAll(`a.cable-toggle[data="${cablePk}"]`);
+    toggles.forEach(function(toggle) {
+        const icon = toggle.querySelector(':scope > span');
+        toggle.classList.toggle('connected', newStatus === 'Connected');
+        toggle.classList.toggle('text-warning', newStatus === 'Connected');
+        toggle.classList.toggle('text-success', newStatus === 'Planned');
+        if (icon) {
+            icon.classList.toggle('mdi-lan-connect', newStatus === 'Planned');
+            icon.classList.toggle('mdi-lan-pending', newStatus === 'Connected');
+        }
+        setLabel(toggle, icon, `Mark cable as ${nextAction}`);
+    });
+}
+
 function toggleConnection(elem) {
-    const url = nautobot_api_path + "dcim/cables/" + elem.getAttribute('data') + "/";
+    const cablePk = elem.getAttribute('data');
+    const url = nautobot_api_path + "dcim/cables/" + cablePk + "/";
     const wasConnected = elem.classList.contains('connected');
-    const oldStatus = wasConnected ? 'Connected' : 'Planned';
     const newStatus = wasConnected ? 'Planned' : 'Connected';
 
     fetch(url, {
@@ -24,20 +56,15 @@ function toggleConnection(elem) {
         if (!response.ok) {
             return;
         }
+
         const row = elem.closest('tr');
-        const icon = elem.querySelector(':scope > span');
         if (row) {
             row.classList.toggle('table-success', newStatus === 'Connected');
             row.classList.toggle('table-info', newStatus === 'Planned');
         }
-        elem.classList.toggle('connected', newStatus === 'Connected');
-        elem.classList.toggle('text-warning', newStatus === 'Connected');
-        elem.classList.toggle('text-success', newStatus === 'Planned');
-        if (icon) {
-            icon.classList.toggle('mdi-lan-connect', newStatus === 'Planned');
-            icon.classList.toggle('mdi-lan-pending', newStatus === 'Connected');
-        }
-        setLabel(elem, icon, `Mark cable as ${oldStatus}`);
+
+        changeCableTerminationColors(cablePk, newStatus);
+        changeCableTerminationToggleButtons(cablePk, newStatus);
     });
     return false;
 }
