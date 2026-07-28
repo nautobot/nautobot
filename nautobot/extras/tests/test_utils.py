@@ -13,17 +13,58 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.exceptions import KubernetesJobManifestError
-from nautobot.extras.models import JobQueue, JobResult
+from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, TaggedItem
+from nautobot.extras.models.models import UserSavedViewAssociation
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
     get_base_template,
     get_celery_queues,
+    get_explicit_m2m_through_side_field_names,
     get_kubernetes_job_manifest,
     get_worker_count,
     populate_model_features_registry,
     run_kubernetes_job_and_return_job_result,
 )
+from nautobot.ipam.models import IPAddressToInterface, VRF, VRFDeviceAssignment, VRFPrefixAssignment
 from nautobot.users.models import Token
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
+
+
+class GetExplicitM2MThroughSideFieldNamesTest(TestCase):
+    """Tests for the registry of explicit M2M through models used for automatic association change logging."""
+
+    def test_side_field_names(self):
+        mapping = get_explicit_m2m_through_side_field_names()
+
+        with self.subTest("through model with multiple M2M relations and nullable sides"):
+            self.assertEqual(mapping[IPAddressToInterface], ("interface", "ip_address", "vm_interface"))
+            self.assertEqual(
+                mapping[VRFDeviceAssignment], ("device", "virtual_device_context", "virtual_machine", "vrf")
+            )
+
+        with self.subTest("simple two-sided through model"):
+            self.assertEqual(mapping[VRFPrefixAssignment], ("prefix", "vrf"))
+
+        with self.subTest("extra foreign keys that are not M2M sides are excluded"):
+            self.assertEqual(
+                mapping[ControllerManagedDeviceGroupWirelessNetworkAssignment],
+                ("controller_managed_device_group", "wireless_network"),
+            )
+
+        with self.subTest("self-referential M2M with through_fields"):
+            self.assertEqual(mapping[DynamicGroupMembership], ("group", "parent_group"))
+
+    def test_excluded_models(self):
+        mapping = get_explicit_m2m_through_side_field_names()
+
+        with self.subTest("taggit through model (GenericForeignKey-based) is excluded"):
+            self.assertNotIn(TaggedItem, mapping)
+
+        with self.subTest("auto-created through models are excluded"):
+            self.assertNotIn(VRF.import_targets.through, mapping)
+
+        with self.subTest("through models with is_m2m_change_logged = False are excluded"):
+            self.assertNotIn(UserSavedViewAssociation, mapping)
 
 
 class UtilsTestCase(TestCase):

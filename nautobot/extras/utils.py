@@ -1,6 +1,7 @@
 import collections
 import contextlib
 import copy
+import functools
 import hashlib
 import hmac
 import json
@@ -17,7 +18,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import ValidationError
 from django.db import transaction
-from django.db.models import Model, Q
+from django.db.models import ForeignKey, ManyToManyField, Model, Q
 from django.db.models.deletion import Collector
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
@@ -155,6 +156,47 @@ def change_logged_models_queryset():
             # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
             cache.set(cache_key, queryset, timeout=None)
     return queryset
+
+
+@functools.cache
+def get_explicit_m2m_through_side_field_names():
+    """Map each explicitly-declared M2M "through" model class to the names of its "side" foreign key fields.
+
+    A "side" field is a foreign key on the through model that constitutes one end of the many-to-many
+    relation(s) the through model implements. Extra foreign keys on the through model that are not declared
+    as a side of any `ManyToManyField` (e.g. `ControllerManagedDeviceGroupWirelessNetworkAssignment.vlan`)
+    are not included. A through model may implement several M2M relations (e.g. `VRFDeviceAssignment` serves
+    `VRF.devices`, `VRF.virtual_machines`, and `VRF.virtual_device_contexts`), in which case the union of all
+    of their side field names is returned; sides not participating in a given row are simply null.
+
+    Through models may opt out of the automatic change logging of their side objects by setting the class
+    attribute `is_m2m_change_logged = False` (e.g. `UserSavedViewAssociation`, which records per-user
+    preferences rather than shared data).
+
+    Cache is cleared by the post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+
+    Returns:
+        dict: `{through_model_class: (side_field_name, ...)}`
+    """
+    mapping = {}
+    for model in apps.get_models():
+        for field in model._meta.local_many_to_many:
+            # TaggableManager (TagsField) also appears in local_many_to_many but is not a ManyToManyField;
+            # its taggit through model (TaggedItem) uses a GenericForeignKey and must not be included here.
+            if not isinstance(field, ManyToManyField):
+                continue
+            through = field.remote_field.through
+            if through is None or through._meta.auto_created:
+                continue
+            if not getattr(through, "is_m2m_change_logged", True):
+                continue
+            side_field_names = set()
+            for side_field_name in (field.m2m_field_name(), field.m2m_reverse_field_name()):
+                side_field = through._meta.get_field(side_field_name)
+                if isinstance(side_field, ForeignKey):
+                    side_field_names.add(side_field_name)
+            mapping.setdefault(through, set()).update(side_field_names)
+    return {through: tuple(sorted(sides)) for through, sides in mapping.items()}
 
 
 @deconstructible
