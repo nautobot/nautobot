@@ -268,7 +268,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
-## v3.2.1 (2026-07-27)
+## v3.2.1 (2026-07-28)
 
 ### Added in v3.2.1
 
