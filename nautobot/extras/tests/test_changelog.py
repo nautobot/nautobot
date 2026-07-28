@@ -1,3 +1,4 @@
+from unittest import mock
 import uuid
 
 from django.contrib.auth.models import AnonymousUser
@@ -958,3 +959,31 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assertIsNone(self.device.primary_ip4)
         self.assert_single_update_change(self.interface, change_id)
         self.assert_single_update_change(ip_address, change_id)
+
+    @mock.patch("nautobot.extras.context_managers.publish_event")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(False, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_hooks_and_events_dispatched_for_both_sides(
+        self, mock_enqueue_webhooks, mock_enqueue_job_hooks, mock_publish_event
+    ):
+        """Creating a through record dispatches job hooks, webhooks, and events for both side objects (#9270)."""
+        ip_address = self.ip_addresses[0]
+        with context_managers.web_request_context(self.user):
+            IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+
+        expected_changed_objects = {
+            (ContentType.objects.get_for_model(Interface), self.interface.pk),
+            (ContentType.objects.get_for_model(IPAddress), ip_address.pk),
+        }
+        webhook_changed_objects = {
+            (call.args[0].changed_object_type, call.args[0].changed_object_id)
+            for call in mock_enqueue_webhooks.call_args_list
+        }
+        self.assertEqual(webhook_changed_objects, expected_changed_objects)
+        jobhook_changed_objects = {
+            (call.args[0].changed_object_type, call.args[0].changed_object_id)
+            for call in mock_enqueue_job_hooks.call_args_list
+        }
+        self.assertEqual(jobhook_changed_objects, expected_changed_objects)
+        event_topics = {call.kwargs["topic"] for call in mock_publish_event.call_args_list}
+        self.assertEqual(event_topics, {"nautobot.update.dcim.interface", "nautobot.update.ipam.ipaddress"})
