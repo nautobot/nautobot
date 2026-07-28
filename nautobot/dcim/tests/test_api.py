@@ -2270,6 +2270,74 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         child_device.refresh_from_db()
         self.assertEqual(child_device.parent_bay.pk, device_bay_1.pk)
 
+    def test_parent_bay_location_and_rack_must_match_parent_device(self):
+        """Installing a device in a device bay requires matching the parent's location/rack (#8497)."""
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+        rack = Rack.objects.create(
+            name="Parent bay test rack",
+            location=parent_device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        parent_device.rack = rack
+        parent_device.save()
+
+        self.add_permissions(
+            "dcim.add_device",
+            "dcim.change_device",
+            "dcim.view_device",
+            "dcim.view_devicetype",
+            "extras.view_role",
+            "extras.view_status",
+            "dcim.view_location",
+            "dcim.view_rack",
+            "dcim.view_devicebay",
+        )
+        url = reverse("dcim-api:device-list")
+
+        # An unracked child cannot be installed in a bay of a racked parent device
+        data = {
+            "device_type": device_type_child.pk,
+            "role": parent_device.role.pk,
+            "location": parent_device.location.pk,
+            "name": "Device parent bay test #7",
+            "status": parent_device.status.pk,
+            "parent_bay": device_bay_1.pk,
+        }
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(
+            "must first be assigned to the location/rack of the parent device",
+            response.content.decode(response.charset),
+        )
+        device_bay_1.refresh_from_db()
+        self.assertIsNone(device_bay_1.installed_device)
+
+        # A child assigned to the parent's location and rack installs successfully
+        data["rack"] = rack.pk
+        response = self.client.post(url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        created_device = Device.objects.get(name="Device parent bay test #7")
+        self.assertEqual(created_device.parent_bay.pk, device_bay_1.pk)
+
+        # An existing child in a different location cannot be installed via PATCH
+        other_location = (
+            Location.objects.filter(location_type=LocationType.objects.get(name="Campus"))
+            .exclude(pk=parent_device.location.pk)
+            .first()
+        )
+        child_device = Device.objects.create(
+            device_type=device_type_child,
+            role=parent_device.role,
+            location=other_location,
+            name="Device parent bay test #8",
+            status=parent_device.status,
+        )
+        patch_data = {"parent_bay": device_bay_2.pk}
+        response = self.client.patch(self._get_detail_url(child_device), patch_data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        device_bay_2.refresh_from_db()
+        self.assertIsNone(device_bay_2.installed_device)
+
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     model = Module
