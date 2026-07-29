@@ -77,7 +77,15 @@ def instrument():
     CeleryInstrumentor().instrument(tracer_provider=provider)
 
     if nautobot_config.OTEL_PYTHON_LOG_CORRELATION:
-        LoggingInstrumentor().instrument(tracer_provider=provider, set_logging_format=True)
+        # inject_trace_context=True adds otelTraceID/otelSpanID/otelTraceSampled/otelServiceName to
+        # every log record so logs can be correlated to their trace. Do NOT use set_logging_format=True:
+        # that additionally calls logging.basicConfig(), which attaches a StreamHandler to the root
+        # logger. Nautobot's own LOGGING config (settings.py) sets handlers on the "nautobot"/"django"
+        # loggers, which propagate to root by default, so the added root handler re-emits every record
+        # in a different format -- producing duplicate, oddly-formatted log lines. Injection alone gives
+        # the correlation attributes without clobbering the operator's LOGGING config; operators surface
+        # the IDs by adding e.g. %(otelTraceID)s to their own formatters.
+        LoggingInstrumentor().instrument(tracer_provider=provider, inject_trace_context=True)
 
     if "mysql" in nautobot_config.DATABASES["default"]["ENGINE"]:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor

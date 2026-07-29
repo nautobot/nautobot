@@ -31,7 +31,7 @@ Nautobot's OpenTelemetry support is structured in layers. Each layer can be enab
 Setting `OTEL_PYTHON_DJANGO_INSTRUMENT=True` activates the core instrumentation layer. This enables:
 
 - **HTTP request tracing** - A span is created for every HTTP request, including path, method, status code, and username. The `traceparent` W3C header is read from incoming requests, allowing Nautobot to participate in a distributed trace originating from an upstream service.
-- **Log correlation** - When `OTEL_PYTHON_LOG_CORRELATION=True`, trace and span IDs are injected into every log record, making it possible to correlate logs to the trace that produced them.
+- **Log correlation** - When `OTEL_PYTHON_LOG_CORRELATION=True`, the attributes `otelTraceID`, `otelSpanID`, `otelTraceSampled`, and `otelServiceName` are injected onto every log record, making it possible to correlate logs to the trace that produced them. This only adds the attributes to records; it does not change your logging format or add any log handlers, so it never conflicts with your `LOGGING` configuration. To make the IDs appear in your logs, reference them in your own formatters, for example `%(otelTraceID)s`/`%(otelSpanID)s`.
 - **GraphQL request tracing** - Requests to `/graphql` and `/api/graphql` receive additional spans with the full query document, operation type, and variables.
 - **Database query spans** - Every SQL query is captured as a child span with the query text and SQL commenter annotations.
 - **Redis command spans** - Every Redis command is captured as a child span.

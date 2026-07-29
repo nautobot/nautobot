@@ -183,6 +183,38 @@ class InstrumentFunctionTest(testing.TestCase):
         mock_mysql.return_value.instrument.assert_called_once()
         mock_psycopg2.return_value.instrument.assert_not_called()
 
+    def test_log_correlation_injects_context_without_clobbering_logging(self):
+        """OTEL_PYTHON_LOG_CORRELATION=True must inject trace context, not override the logging format.
+
+        set_logging_format=True would call logging.basicConfig() and attach a StreamHandler to the root
+        logger; Nautobot's own loggers propagate to root, so that handler re-emits every record in a
+        different format, producing duplicate, oddly-formatted log lines. instrument() must instead pass
+        inject_trace_context=True, which adds the otel* attributes without touching handlers/format.
+        """
+        with patch("nautobot.core.cli.opentelemetry.LoggingInstrumentor") as mock_logging:
+            with patch.dict(
+                "sys.modules",
+                {"nautobot_config": _fake_otel_config(OTEL_PYTHON_LOG_CORRELATION=True)},
+            ):
+                instrument()
+
+        mock_logging.return_value.instrument.assert_called_once()
+        _, kwargs = mock_logging.return_value.instrument.call_args
+        self.assertTrue(kwargs.get("inject_trace_context"))
+        # Guard against a regression back to the root-handler-clobbering behavior.
+        self.assertNotIn("set_logging_format", kwargs)
+
+    def test_log_correlation_disabled_skips_logging_instrumentor(self):
+        """OTEL_PYTHON_LOG_CORRELATION=False must not instrument stdlib logging at all."""
+        with patch("nautobot.core.cli.opentelemetry.LoggingInstrumentor") as mock_logging:
+            with patch.dict(
+                "sys.modules",
+                {"nautobot_config": _fake_otel_config(OTEL_PYTHON_LOG_CORRELATION=False)},
+            ):
+                instrument()
+
+        mock_logging.return_value.instrument.assert_not_called()
+
 
 class InstrumentExporterBranchTest(testing.TestCase):
     """Verify install_exporters() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard.

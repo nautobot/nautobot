@@ -1324,6 +1324,10 @@ KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTE
 #
 
 OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False"))
+# When True (and tracing is enabled), inject otelTraceID/otelSpanID/otelTraceSampled/otelServiceName
+# onto every log record so logs can be correlated to their trace. This only injects the attributes; it
+# does not change the logging format or add any handlers, so it never conflicts with this module's
+# LOGGING config. To make the injected IDs visible, add e.g. %(otelTraceID)s to your LOGGING formatters.
 OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
 OTEL_TRACES_EXPORTER = [
     exporter
