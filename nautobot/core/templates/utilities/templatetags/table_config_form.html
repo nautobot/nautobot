@@ -16,7 +16,7 @@
                     </a>
                 </div>
                 {% with field=table_config_form.visible_fields.0 %}
-                    <span class="form-text mb-n8 mt-0">{{ field.help_text|safe }}</span>
+                    <span class="form-text mb-n8 mt-0" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</span>
                     {{ field }}
                 {% endwith %}
             </div>

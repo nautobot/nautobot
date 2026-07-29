@@ -8,7 +8,7 @@
     </label>
     <div class="col-lg-9">
         {{ field }}
-        {% if field.help_text %}<span class="form-text">{{ field.help_text|safe }}</span>{% endif %}
+        {% if field.help_text %}<span class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</span>{% endif %}
         {% if field.errors %}
             <ul>
                 {% for error in field.errors %}
@@ -30,7 +30,7 @@
                 <i>Clear override</i>
             </label>
             {% if override_field.help_text %}
-                <span class="form-text w-100">{{ override_field.help_text|safe }}</span>
+                <span class="form-text w-100" id="{{ override_field.auto_id }}_helptext">{{ override_field.help_text|safe }}</span>
             {% endif %}
         </div>
     </div>
