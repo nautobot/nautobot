@@ -210,6 +210,10 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         original `apply_async()` call, it synchronizes `total_run_count` and saves the model. This
         prevents the same task from being started again while it is still running.
 
+        A PENDING JobResult is created before publishing the task to the broker, so that the
+        dispatch is visible in the database even when no Celery worker is consuming the queue
+        at the scheduled time. If publishing fails, the JobResult is marked as FAILURE.
+
         Ref: https://github.com/celery/django-celery-beat/issues/558#issuecomment-1162730008
         """
         resp = None
@@ -223,6 +227,7 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         if isinstance(entry, NautobotScheduleEntry) and "nautobot_job_user_id" not in entry.options:
             return None
 
+        job_result = None
         try:
             if entry.kwargs is None:
                 raise ValueError("Job `kwargs` has to be defined. Now is set to `None`.")
@@ -230,30 +235,40 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry_args = _evaluate_entry_args(entry.args)
             entry_kwargs = _evaluate_entry_kwargs(entry.kwargs)
 
-            if task:
-                scheduled_job = entry.model
-                job_queue = scheduled_job.job_queue
+            scheduled_job = entry.model
+            job_model = scheduled_job.job_model
+            celery_kwargs = dict(entry.options)
+            job_queue = scheduled_job.job_queue
 
-                # Distinguish between Celery and Kubernetes job queues
-                if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-                    celery_kwargs = dict(entry.options)
-                    celery_kwargs.setdefault("queue", job_queue.name)
-                    job_result = JobResult.objects.create(
-                        name=scheduled_job.job_model.name,
-                        job_model=scheduled_job.job_model,
-                        scheduled_job=scheduled_job,
-                        user=scheduled_job.user,
-                        task_name=scheduled_job.job_model.class_path,
-                        celery_kwargs=celery_kwargs,
-                    )
-                    job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
-                    # Return an AsyncResult object to mimic the behavior of Celery tasks after the job is finished by Kubernetes Job Pod.
-                    resp = AsyncResult(job_result.id)
-                else:
-                    resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **entry.options)
+            if job_queue is not None:
+                celery_kwargs.setdefault("queue", job_queue.name)
+
+            job_result = JobResult.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                scheduled_job=scheduled_job,
+                user=scheduled_job.user,
+                task_name=job_model.class_path,
+                celery_kwargs=celery_kwargs,
+            )
+
+            # Distinguish between Celery and Kubernetes job queues
+            if task and job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
+                # Return an AsyncResult object to mimic the behavior of Celery tasks
+                # after the job is finished by the Kubernetes Job Pod.
+                resp = AsyncResult(job_result.id)
             else:
-                resp = self.send_task(entry.task, entry_args, entry_kwargs, producer=producer, **entry.options)
+                dispatch_kwargs = dict(entry.options)
+                dispatch_kwargs["task_id"] = str(job_result.id)
+                if task:
+                    resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **dispatch_kwargs)
+                else:
+                    resp = self.send_task(entry.task, entry_args, entry_kwargs, producer=producer, **dispatch_kwargs)
         except Exception as exc:  # pylint: disable=broad-except
+            if job_result is not None and job_result.status == JobResultStatusChoices.STATUS_PENDING:
+                job_result.status = JobResultStatusChoices.STATUS_FAILURE
+                job_result.save()
             reraise(
                 SchedulingError,
                 SchedulingError(f"Couldn't apply scheduled task {entry.name}: {exc}"),

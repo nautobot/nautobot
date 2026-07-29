@@ -1,0 +1,1 @@
+Fixed missing JobResult when a scheduled job fires while no Celery worker is running. The scheduler (Celery Beat) now creates a PENDING JobResult before publishing the task to the broker, and marks it as FAILURE if publishing fails.
