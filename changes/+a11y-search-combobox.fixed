@@ -1,0 +1,1 @@
+Fixed the global search bar having no accessible name and not announcing its results or the currently highlighted result during keyboard navigation.

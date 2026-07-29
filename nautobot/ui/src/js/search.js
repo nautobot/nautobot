@@ -13,6 +13,14 @@ const MAX_BADGE_COUNT = 1;
 const MAX_TYPEAHEAD_RESULT_COUNT = 3;
 const MIN_CONTENT_TYPE_LIVE_SEARCH_PHRASE_LENGTH = 3;
 
+/*
+ * Ids used to wire up the ARIA 1.2 combobox relationships between the search input and its results. The input needs to
+ * point at the results container (`aria-controls`) and at whichever individual result is currently highlighted
+ * (`aria-activedescendant`), so both need stable ids.
+ */
+const RESULTS_ID = 'search_popup_results';
+const RESULT_ITEM_ID_PREFIX = 'search_popup_result_';
+
 export const initializeSearch = () => {
   const headerSearch = document.getElementById('header_search');
 
@@ -112,6 +120,21 @@ export const initializeSearch = () => {
     });
 
     const input = createElement('input', {
+      /*
+       * ARIA 1.2 combobox. This input drives a popup list of results that is navigated with the arrow keys without focus
+       * ever leaving the input, which is exactly the combobox pattern; declaring it as such is what lets assistive
+       * technology report the expanded/collapsed state and the currently highlighted result.
+       *
+       * `role="combobox"` replaces the previous `role="searchbox"`, which was redundant anyway -- `<input type="search">`
+       * already has that role implicitly.
+       *
+       * `aria-expanded` is maintained by `toggleResultsVisible` and `aria-activedescendant` by `toggleResultItemActive`.
+       */
+      'aria-autocomplete': 'list',
+      'aria-controls': RESULTS_ID,
+      'aria-expanded': 'false',
+      // The input has no associated `<label>`, so without this it has no accessible name at all.
+      'aria-label': 'Search',
       autocomplete: 'off',
       className: 'form-control w-100',
       'hx-indicator': '#search_popup .htmx-indicator',
@@ -123,7 +146,7 @@ export const initializeSearch = () => {
       'hx-vals': 'javascript:{...Object.fromEntries([...new FormData(document.querySelector("#search_popup form"))])}',
       name: 'q',
       required: 'true',
-      role: 'searchbox',
+      role: 'combobox',
       style: `padding-inline: ${BASE_SEARCH_INPUT_PADDING_X};`,
       type: 'search',
       value: headerSearchInput.value,
@@ -197,16 +220,30 @@ export const initializeSearch = () => {
       'div',
       {
         className: 'bg-body mt-10 overflow-x-hidden overflow-y-auto pe-auto rounded w-100',
+        id: RESULTS_ID, // Referenced by the input's `aria-controls`.
         style: `max-height: calc(100% - 0.625rem - ${inputHeight});`, // `0.625rem` subtraction compensates for `mt-10`.
       },
       spinner,
     );
+
+    /*
+     * How many results are showing is purely visual information otherwise. Results arrive asynchronously (typeahead
+     * synchronously, live search after a debounced HTMX request), so without a live region a screen reader user gets no
+     * indication that anything happened at all after they stop typing.
+     */
+    const status = createElement('div', {
+      'aria-atomic': 'true',
+      'aria-live': 'polite',
+      className: 'visually-hidden',
+      role: 'status',
+    });
 
     const popup = createElement(
       'div',
       { className: 'h-100 mx-auto pe-none w-100', style: `max-width: ${rem(720)}rem;` },
       form,
       results,
+      status,
     );
 
     const overlay = createElement(
@@ -262,6 +299,30 @@ export const initializeSearch = () => {
 
     const getResultItems = () => [...results.querySelectorAll('.nb-search-list-group-item, .table > tbody > tr')];
 
+    /*
+     * `aria-activedescendant` can only reference an element that has an id, and live search rows are rendered by the
+     * server without one. Assign ids from a monotonic counter rather than from the item's index, so that ids stay unique
+     * as lists are added and removed, and never overwrite an id the server did supply.
+     */
+    const resultItemIdRef = { current: 0 };
+
+    const ensureResultItemIds = () =>
+      getResultItems().forEach((item) => {
+        if (!item.id) {
+          resultItemIdRef.current += 1;
+          item.id = `${RESULT_ITEM_ID_PREFIX}${resultItemIdRef.current}`;
+        }
+      });
+
+    /**
+     * Announce how many results are currently showing.
+     * @param {number} count - Number of results.
+     * @returns {void} Do not return any value, update the live region text instead.
+     */
+    const announceResultCount = (count) => {
+      status.textContent = count === 1 ? '1 result available.' : `${count} results available.`;
+    };
+
     const isResultItemActive = (item) => item.classList.contains('active');
 
     const isResultItemTentativelySelected = (item) => item.getAttribute('aria-selected') === 'true';
@@ -281,6 +342,18 @@ export const initializeSearch = () => {
     const toggleResultItemActive = (item, active, tentativelySelect) => {
       const isActive = item?.classList.toggle('active', active);
       item?.setAttribute('aria-selected', String(Boolean(tentativelySelect && isActive)));
+
+      /*
+       * Mirror the visual highlight into `aria-activedescendant` on the input. This is what makes arrow-key navigation
+       * audible: focus deliberately stays in the input, so moving a CSS class alone tells assistive technology nothing.
+       * Only keyboard (*tentative*) selection is mirrored -- mouse hover also sets `active`, and hijacking the screen
+       * reader's position on hover would be wrong.
+       */
+      if (tentativelySelect && isActive && item?.id) {
+        input.setAttribute('aria-activedescendant', item.id);
+      } else if (!isActive && item?.id && input.getAttribute('aria-activedescendant') === item.id) {
+        input.removeAttribute('aria-activedescendant');
+      }
     };
 
     const toggleResultsVisible = (force) => {
@@ -288,9 +361,12 @@ export const initializeSearch = () => {
       const args = typeof force === 'boolean' ? [!force] : [];
       const isHidden = results.classList.toggle('invisible', ...args);
 
+      input.setAttribute('aria-expanded', String(!isHidden));
+
       if (isHidden) {
         // When results are hidden, cancel any existing result item selection.
         getResultItems().forEach((item) => toggleResultItemActive(item, false));
+        input.removeAttribute('aria-activedescendant');
       }
     };
 
@@ -364,7 +440,16 @@ export const initializeSearch = () => {
             const itemBadge = createElement('span', { className: 'badge border' }, `in: ${item.name}`);
             const itemButton = createElement(
               'button',
-              { 'aria-selected': 'false', className: 'nb-search-list-group-item', type: 'button' },
+              {
+                'aria-selected': 'false',
+                className: 'nb-search-list-group-item',
+                /*
+                 * `role="option"` sits on the button rather than the `<li>` so that the listbox directly owns a single
+                 * focusable element per option, instead of nesting a button inside an option.
+                 */
+                role: 'option',
+                type: 'button',
+              },
               itemIcon,
               itemBadge,
             );
@@ -374,14 +459,22 @@ export const initializeSearch = () => {
               input.dispatchEvent(new InputEvent('input'));
               input.focus();
             });
-            return createElement('li', {}, itemButton);
+            // `role="presentation"` drops the `<li>` from the accessibility tree, leaving the option as a direct child.
+            return createElement('li', { role: 'presentation' }, itemButton);
           });
           const typeaheadResults = createElement(
             'ul',
-            { className: 'nb-search-list-group', 'data-nb-results-type': 'typeahead' },
+            {
+              'aria-label': 'Model suggestions',
+              className: 'nb-search-list-group',
+              'data-nb-results-type': 'typeahead',
+              role: 'listbox',
+            },
             ...typeaheadResultItems,
           );
           results.insertBefore(typeaheadResults, spinner);
+          ensureResultItemIds();
+          announceResultCount(typeaheadResultItems.length);
           return;
         }
 
@@ -513,6 +606,16 @@ export const initializeSearch = () => {
       const resultsList = document.querySelector('[data-nb-results-type="live-search"]');
       const shouldFadeOut = resultsList && resultsList.scrollWidth > resultsList.parentElement.scrollWidth;
       resultsList?.classList.toggle('nb-live-search-results-fade-out', shouldFadeOut);
+
+      /*
+       * Live search results are server-rendered rows that have just entered the DOM, so they need ids assigned before
+       * `aria-activedescendant` can reference them, and the new count needs announcing.
+       *
+       * Note the rows deliberately keep their native table semantics rather than being given `role="option"`: they are a
+       * real table with meaningful column headers, and overriding that would lose more than it gains.
+       */
+      ensureResultItemIds();
+      announceResultCount(getResultItems().length);
     });
 
     // When mouse is moved over or leaves the `results` element, track the item highlight accordingly.
@@ -532,6 +635,13 @@ export const initializeSearch = () => {
 
     // When search popup is open, copy existing badges from `#header_search` to search popup input.
     headerSearch.querySelectorAll('[data-nb-link]').forEach((badge) => addBadge(badge.dataset.nbLink));
+
+    /*
+     * Sync `aria-expanded` with the results container's actual initial visibility. The attribute is declared as `false`
+     * when the input is created, but `results` is appended without the `invisible` class, and nothing has called
+     * `toggleResultsVisible` yet at this point.
+     */
+    input.setAttribute('aria-expanded', String(!results.classList.contains('invisible')));
 
     // Automatically focus search popup input when opened and move cursor to the end of input field.
     input.focus();

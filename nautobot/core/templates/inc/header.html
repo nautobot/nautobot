@@ -5,12 +5,19 @@
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
         <form action="{% url 'search' %}" class="col-4 text-center" data-nb-live-search-path="{% url 'live_search' %}" id="header_search" method="get" role="search">
             <label class="position-relative w-100">
+                {% comment %}
+                The visible "Press Ctrl+K to search" text is a decorative overlay marked `aria-hidden` further down, and
+                the wrapping `<label>` has no text of its own, so `aria-label` is what gives this input its accessible
+                name. `aria-placeholder` was doing nothing useful here -- it is not a labelling mechanism, and it is only
+                meant for elements that cannot use the native `placeholder` attribute.
+
+                `role="searchbox"` was also removed: `<input type="search">` already has that role implicitly.
+                {% endcomment %}
                 <input
-                    aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
+                    aria-label="Search"
                     autocomplete="off"
                     class="form-control nb-text-transparent"
                     name="q"
-                    role="searchbox"
                     type="search"
                     value="{{ request.GET.q }}"
                 />
