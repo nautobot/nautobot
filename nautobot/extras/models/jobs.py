@@ -375,7 +375,7 @@ class Job(PrimaryModel):
     @property
     def task_queues(self) -> list[str]:
         """Deprecated backward-compatibility property for the list of queue names for this Job."""
-        return self.job_queues.values_list("name", flat=True)
+        return list(self.job_queues.values_list("name", flat=True))
 
     @task_queues.setter
     def task_queues(self, value: Union[str, list[str]]):
