@@ -1,0 +1,1 @@
+Added a "Skip to main content" bypass link to all base templates so that keyboard and screen reader users can jump past the navigation sidebar (WCAG 2.4.1).
