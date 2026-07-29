@@ -2292,7 +2292,7 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
             device_bay.installed_device = child_device
             device_bay.save()
 
-        with self.assertNumQueries(13):
+        with AssertNoRepeatedQueries(self):
             response = self.client.get(list_url, **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
 
