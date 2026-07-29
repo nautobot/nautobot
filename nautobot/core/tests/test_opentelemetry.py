@@ -514,7 +514,7 @@ def _always_profile(request):  # pragma: no cover - trivial test hook
     return True
 
 
-@override_settings(ALLOW_REQUEST_PROFILING=True, SILKY_INTERCEPT_FUNC=_always_profile)
+@override_settings(ALLOW_REQUEST_PROFILING=True)
 class OtelWithSilkProfilingTest(testing.APITestCase):
     """Guard against 5xx (e.g. 502) when OpenTelemetry and django-silk profiling are both active.
 
@@ -545,11 +545,17 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
         self._env_patcher.start()
         self._settings_override = override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
         self._settings_override.enable()
-        # SilkyConfig is a Singleton that snapshots SILKY_* settings at first instantiation, so the
-        # class-level @override_settings(SILKY_INTERCEPT_FUNC=...) above is not picked up until we
-        # re-read settings. Force a re-setup now (and again in tearDown) so Silk actually profiles.
+        # Force Silk to profile every request (token-authenticated API requests don't carry the
+        # per-session silk_record_requests flag). SilkyConfig is a process-wide Singleton that
+        # snapshots SILKY_* settings on _setup(), so overriding SILKY_INTERCEPT_FUNC in settings has
+        # no effect until we re-run _setup(). Manage this at the instance level (rather than via a
+        # class-level @override_settings) so the enable/disable pairing is deterministic and Silk is
+        # restored in tearDown -- the class decorator's revert runs too late (after tearDownClass) and
+        # would leak the always-profile hook into every subsequent test in the process.
         from silk.config import SilkyConfig
 
+        self._silk_override = override_settings(SILKY_INTERCEPT_FUNC=_always_profile)
+        self._silk_override.enable()
         SilkyConfig()._setup()
         DjangoInstrumentor().uninstrument()
         DjangoInstrumentor().instrument(tracer_provider=self._provider)
@@ -566,12 +572,17 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
         self._trace_patcher.stop()
         DjangoInstrumentor().uninstrument()
         self.client.handler.load_middleware()
-        self._settings_override.disable()
-        self._env_patcher.stop()
-        # Restore SilkyConfig from the (now-reverted) settings so the always-profile hook doesn't leak.
+        # Revert the SILKY_INTERCEPT_FUNC override first, then re-read SilkyConfig from the restored
+        # settings so the always-profile hook does not leak into subsequent tests in this process.
+        self._silk_override.disable()
         from silk.config import SilkyConfig
 
         SilkyConfig()._setup()
+        # Regression guard: the process-wide SilkyConfig singleton must no longer carry our
+        # always-profile hook, or every subsequent test in this process would be profiled by Silk.
+        self.assertIsNot(SilkyConfig().SILKY_INTERCEPT_FUNC, _always_profile)
+        self._settings_override.disable()
+        self._env_patcher.stop()
         super().tearDown()
 
     def test_graphql_post_with_otel_and_silk_returns_200(self):
