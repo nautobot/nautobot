@@ -1,0 +1,1 @@
+Added support for `termination_id` filter to CableFilterSet.

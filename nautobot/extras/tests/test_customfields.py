@@ -8,6 +8,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
 from django.db.models.signals import m2m_changed
@@ -24,6 +25,7 @@ from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import extract_page_body, post_data
+from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
@@ -1984,6 +1986,19 @@ class CustomFieldFilterTest(TestCase):
             location_type=cls.location_type,
             status=location_status,
             _custom_field_data={},
+        )
+
+    def test_filterset_construction_does_not_repeatedly_look_up_choices_per_custom_field(self):
+        """FilterSet construction should read a CustomField's cached `choices` at most once, not once per filter."""
+        cf8 = CustomField.objects.get(label="CF8")  # TYPE_SELECT, has choices
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+            self.filterset({}, self.queryset)
+        choices_cache_key = construct_cache_key(cf8, method_name="choices", branch_aware=True)
+        choices_lookups = [call for call in mock_cache_get.call_args_list if call.args[0] == choices_cache_key]
+        self.assertLessEqual(
+            len(choices_lookups),
+            1,
+            f"Expected at most 1 Redis lookup for {choices_cache_key}, got {len(choices_lookups)}",
         )
 
     def test_filter_integer(self):
