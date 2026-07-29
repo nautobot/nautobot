@@ -4,15 +4,23 @@ import logging
 import re
 
 from django import forms
+from django.contrib.auth.models import AnonymousUser
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models.fields.related import ManyToManyField, ManyToManyRel
 from django.forms import formset_factory
-from django.urls import reverse
+from django.urls import NoReverseMatch, reverse
 import yaml
 
 from nautobot.core.forms import widgets as nautobot_widgets
-from nautobot.core.forms.fields import CommentField
-from nautobot.core.utils.filtering import build_lookup_label, get_filter_field_label, get_filterset_parameter_form_field
+from nautobot.core.forms.fields import CommentField, DynamicModelChoiceField, DynamicModelMultipleChoiceField
+from nautobot.core.utils.filtering import (
+    build_lookup_label,
+    get_filter_field_label,
+    get_filterset_for_model,
+    get_filterset_parameter_form_field,
+)
+from nautobot.core.utils.lookup import get_related_class_for_model, get_route_for_model
 from nautobot.ipam import formfields
 
 __all__ = (
@@ -23,6 +31,7 @@ __all__ = (
     "CSVModelForm",
     "ConfirmationForm",
     "DynamicFilterForm",
+    "EmbeddedActionsFormMixin",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
@@ -81,6 +90,7 @@ class BootstrapMixin(forms.BaseForm):
             forms.FileInput,
             forms.RadioSelect,
             nautobot_widgets.ClearableFileInput,
+            nautobot_widgets.SelectMultipleOrderable,
         ]
 
         for field in self.fields.values():
@@ -96,6 +106,77 @@ class BootstrapMixin(forms.BaseForm):
                 field.widget.attrs["required"] = "required"
             if "placeholder" not in field.widget.attrs:
                 field.widget.attrs["placeholder"] = field.label
+
+
+class EmbeddedActionsFormMixin(forms.Form):
+    """
+    Mixin to derive dynamic model choice fields embedded actions availability from form meta attributes.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        meta = getattr(self, "Meta", None)
+
+        for mutually_exclusive_attributes in [
+            ("embedded_create", "exclude_embedded_create"),
+            ("embedded_search", "exclude_embedded_search"),
+        ]:
+            self.validate_mutually_exclusive_attributes(meta, *mutually_exclusive_attributes)
+
+        for name, field in self.fields.items():
+            if isinstance(field, (DynamicModelChoiceField, DynamicModelMultipleChoiceField)):
+                for action in ["create", "search"]:
+                    has_field_embedded_action = self.has_field_embedded_action(action, field, name)
+                    setattr(field, f"embedded_{action}", has_field_embedded_action)
+
+    def has_field_embedded_action(self, action, field, name):
+        """
+        Check whether an embedded `action` should be enabled on given `field`.
+        """
+        meta = getattr(self, "Meta", None)
+        field_embedded_action = getattr(field, f"embedded_{action}", None)
+        form_meta_embedded_action = getattr(meta, f"embedded_{action}", None)
+        form_meta_exclude_embedded_action = getattr(meta, f"exclude_embedded_{action}", None)
+
+        if field_embedded_action is not None:
+            enabled = field_embedded_action
+        elif form_meta_embedded_action is not None:
+            enabled = name in form_meta_embedded_action
+        elif form_meta_exclude_embedded_action is not None:
+            enabled = name not in form_meta_exclude_embedded_action
+        else:
+            enabled = True
+
+        if not enabled:
+            return False
+
+        model = field.queryset.model
+        # ContentType is a Django built-in model that is not user-creatable and has no UI list view,
+        # so neither embedded create nor search apply.
+        if model is ContentType:
+            return False
+        # Disable when the target model lacks the required UI infrastructure.
+        if action == "create":
+            try:
+                reverse(get_route_for_model(model, "add"))
+            except NoReverseMatch:
+                return False
+        elif action == "search":
+            if (
+                get_filterset_for_model(model) is None
+                or get_related_class_for_model(model, module_name="forms", object_suffix="FilterForm") is None
+            ):
+                return False
+        return True
+
+    def validate_mutually_exclusive_attributes(self, obj, *attributes):
+        """
+        Validate that only one or none of the listed `attributes` is defined on given `obj`.
+        """
+        existing_attributes = [attribute for attribute in attributes if getattr(obj, attribute, None) is not None]
+        if len(existing_attributes) > 1:
+            raise AttributeError(f"Only one of the following attributes can be defined on {obj} at once: {attributes}.")
 
 
 class ReturnURLForm(forms.Form):
@@ -137,8 +218,8 @@ class BulkEditForm(forms.Form):
         self.nullable_fields = []
 
         # Copy any nullable fields defined in Meta
-        if hasattr(self.Meta, "nullable_fields"):
-            self.nullable_fields = self.Meta.nullable_fields
+        if hasattr(self.Meta, "nullable_fields"):  # pylint: disable=no-member
+            self.nullable_fields = self.Meta.nullable_fields  # pylint: disable=no-member
 
         if edit_all:
             self.fields["pk"].required = False
@@ -287,8 +368,8 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     columns = forms.MultipleChoiceField(
         choices=[],
         required=False,
-        widget=forms.SelectMultiple(attrs={"size": 20}),
-        help_text="Use the buttons below to arrange columns in the desired order, then select all columns to display.",
+        widget=nautobot_widgets.SelectMultipleOrderable(),
+        help_text="Use the controls below to arrange columns in the desired order and select which columns to display.",
     )
 
     def __init__(self, table, *args, **kwargs):
@@ -296,8 +377,62 @@ class TableConfigForm(BootstrapMixin, forms.Form):
 
         super().__init__(*args, **kwargs)
 
-        # Initialize columns field based on table attributes
-        self.fields["columns"].choices = table.configurable_columns
+        def _resolve_columns_order(request):
+            """
+            Precedence:
+            1) saved_view table_config override (if present and accessible)
+            2) If table_changes_pending, return columns_order as-is (to preserve unsaved changes)
+            3) user config tables.<self.table_name>.columns_order
+            4) None
+            """
+            if request is None or request.user is None or isinstance(request.user, AnonymousUser):
+                return None
+
+            # Default from user config
+            columns_order = request.user.get_config(f"tables.{self.table_name}.columns_order")
+            if not isinstance(columns_order, list):
+                columns_order = None
+
+            saved_view_id = request.GET.get("saved_view")
+            if not saved_view_id:
+                return columns_order
+
+            table_changes_pending = request.GET.get("table_changes_pending")
+            if table_changes_pending:
+                return columns_order
+
+            # Don't import from core to extras at module level to avoid circular imports
+            from nautobot.extras.models import SavedView
+
+            saved_view = SavedView.objects.restrict(request.user, "view").filter(pk=saved_view_id).first()
+            if not saved_view or not saved_view.config:
+                return columns_order
+
+            try:
+                view_table_order = (saved_view.config or {})["table_config"][self.table_name]["columns_order"]
+            except (AttributeError, KeyError, TypeError):
+                return columns_order
+
+            if isinstance(view_table_order, list):
+                return view_table_order
+
+            return columns_order
+
+        request = getattr(table, "request", None)
+        columns_order = _resolve_columns_order(request=request)
+
+        # Reorder configurable_columns (example [('name', 'Name'), ('location', 'Location')] based on the user config
+        # columns_order (example ['location', 'name']) and ensure all columns in configurable_columns are present
+        if isinstance(columns_order, list):
+            by_key = {col[0]: col for col in table.configurable_columns}
+
+            ordered = [by_key[key] for key in columns_order if key in by_key]
+            ordered_keys = set(key for key in columns_order if key in by_key)
+            remaining = [col for col in table.configurable_columns if col[0] not in ordered_keys]
+
+            self.fields["columns"].choices = ordered + remaining
+        else:
+            self.fields["columns"].choices = table.configurable_columns
         self.fields["columns"].initial = table.visible_columns
 
     @property
@@ -324,7 +459,7 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
         label="Value",
     )
 
-    def __init__(self, *args, filterset=None, **kwargs):
+    def __init__(self, *args, filterset=None, filter_fields_prefix=None, **kwargs):
         super().__init__(*args, **kwargs)
         from nautobot.core.forms import add_blank_choice  # Avoid circular import
 
@@ -344,6 +479,8 @@ class DynamicFilterForm(BootstrapMixin, forms.Form):
             # Configure fields: Add css class and set choices for lookup_field
             self.fields["lookup_field"].choices = add_blank_choice(self._get_lookup_field_choices())
             self.fields["lookup_field"].widget.attrs["class"] = "nautobot-select2-static lookup_field-select"
+            if filter_fields_prefix:
+                self.fields["lookup_field"].widget.attrs["data-nb-prefix"] = filter_fields_prefix
 
             # Update lookup_type and lookup_value fields to match expected field types derived from data
             # e.g status expects a ChoiceField with APISelectMultiple widget, while name expects a CharField etc.

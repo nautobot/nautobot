@@ -34,6 +34,7 @@ class VPNProfileTable(RoleTableMixin, BaseTable):
         verbose_name="Phase 2 Policies",
         url_params={"vpn_profiles": "pk"},
     )
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNProfile)
     tags = TagColumn(url_name="vpn:vpnprofile_list")
@@ -228,7 +229,7 @@ class VPNProfilePhase2PolicyAssignmentTable(BaseTable):
         )
 
 
-class VPNTable(RoleTableMixin, BaseTable):
+class VPNTable(StatusTableMixin, RoleTableMixin, BaseTable):
     # pylint: disable=too-few-public-methods
     """Table for VPN list view."""
 
@@ -237,6 +238,11 @@ class VPNTable(RoleTableMixin, BaseTable):
     tunnel_count = LinkedCountColumn(
         viewname="vpn:vpntunnel_list",
         verbose_name="VPN Tunnels",
+        url_params={"vpn": "pk"},
+    )
+    termination_count = LinkedCountColumn(
+        viewname="vpn:vpntermination_list",
+        verbose_name="Terminations",
         url_params={"vpn": "pk"},
     )
     vpn_profile = tables.Column(linkify=True)
@@ -253,8 +259,11 @@ class VPNTable(RoleTableMixin, BaseTable):
             "name",
             "description",
             "tunnel_count",
+            "termination_count",
             "vpn_profile",
             "vpn_id",
+            "service_type",
+            "status",
             "role",
             "tenant",
         )
@@ -264,7 +273,10 @@ class VPNTable(RoleTableMixin, BaseTable):
             "name",
             "description",
             "tunnel_count",
+            "termination_count",
             "vpn_id",
+            "service_type",
+            "status",
             "role",
             "tenant",
             "actions",
@@ -282,6 +294,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
     vpn_profile = tables.Column(linkify=True)
     endpoint_a = tables.Column(linkify=True)
     endpoint_z = tables.Column(linkify=True)
+    secrets_group = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(models.VPNTunnel)
     tags = TagColumn(url_name="vpn:vpntunnel_list")
@@ -302,6 +315,7 @@ class VPNTunnelTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "encapsulation",
             "role",
             "status",
+            "secrets_group",
             "tenant",
         )
         default_columns = (
@@ -339,12 +353,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
         url_params={"vpn_tunnel_endpoints": "pk"},
         reverse_lookup="vpn_tunnel_endpoints",
     )
-    protected_prefixes_dg_count = LinkedCountColumn(
-        viewname="extras:dynamicgroup_list",
-        verbose_name="Protected Prefixes Dynamic Group",
-        url_params={"vpn_tunnel_endpoints": "pk"},
-        reverse_lookup="vpn_tunnel_endpoints",
-    )
     actions = ButtonsColumn(models.VPNTunnelEndpoint)
     tenant = TenantColumn()
     tags = TagColumn(url_name="vpn:vpntunnelendpoint_list")
@@ -362,7 +370,6 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "source_ipaddress",
             "tunnel_interface",
             "source_fqdn",
-            "protected_prefixes_dg_count",
             "protected_prefixes_count",
             "role",
             "tenant",
@@ -379,5 +386,39 @@ class VPNTunnelEndpointTable(RoleTableMixin, BaseTable):
             "protected_prefixes_count",
             "role",
             "tenant",
+            "actions",
+        )
+
+
+class VPNTerminationTable(BaseTable):
+    # pylint: disable=too-few-public-methods
+    """Table for VPNTermination list view."""
+
+    pk = ToggleColumn()
+    vpn = tables.Column(linkify=True)
+    assigned_object_type = tables.Column(verbose_name="Object Type", orderable=False)
+    assigned_object = tables.Column(linkify=True, orderable=False, verbose_name="Object")
+    assigned_object_parent = tables.Column(linkify=True, orderable=False, verbose_name="Parent")
+    actions = ButtonsColumn(models.VPNTermination)
+    tags = TagColumn(url_name="vpn:vpntermination_list")
+
+    class Meta(BaseTable.Meta):
+        """Meta attributes."""
+
+        model = models.VPNTermination
+        fields = (
+            "pk",
+            "vpn",
+            "assigned_object_type",
+            "assigned_object_parent",
+            "assigned_object",
+            "tags",
+        )
+        default_columns = (
+            "pk",
+            "vpn",
+            "assigned_object_type",
+            "assigned_object_parent",
+            "assigned_object",
             "actions",
         )

@@ -9,7 +9,7 @@
             </span>
             <br>
             <small>
-                <span class="text-secondary">{{ result.user }} - {{ result.date_done|date:settings.SHORT_DATETIME_FORMAT }}</span>
+                <span class="text-secondary">{{ result.user }} - {{ result.date_done|date:"SHORT_DATETIME_FORMAT" }}</span>
             </small>
         </div>
         {% if forloop.last %}

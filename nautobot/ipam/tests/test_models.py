@@ -3,19 +3,30 @@ from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import connection, IntegrityError
+from django.db import connection, IntegrityError, transaction
 from django.db.models import ProtectedError
 import netaddr
 
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim import choices as dcim_choices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Module, ModuleBay, ModuleType
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Module,
+    ModuleBay,
+    ModuleType,
+    VirtualDeviceContext,
+)
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import IPAddressTypeChoices, PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.models import (
     get_default_namespace,
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -25,6 +36,7 @@ from nautobot.ipam.models import (
     VLAN,
     VLANGroup,
     VRF,
+    VRFDeviceAssignment,
 )
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
@@ -828,6 +840,7 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         # `parent` first in an `update()` query which doesn't call `save()` or `fire `(pre|post)_save` signals.
         IPAddress.objects.update(parent=None)
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         self.namespace = Namespace.objects.first()
@@ -881,6 +894,19 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
                 prefix.description = "Sample Description"
                 prefix.save()
                 reparent_ips.assert_not_called()
+                prefix.delete()
+
+        with self.subTest("Assert reparent_ip_address_ranges"):
+            with patch.object(Prefix, "reparent_ip_address_ranges", return_value=None) as reparent_ranges:
+                Prefix.objects.create(prefix=prefix_ip, status=self.status, namespace=self.namespace)
+                reparent_ranges.assert_called_once()
+
+            with patch.object(Prefix, "reparent_ip_address_ranges", return_value=None) as reparent_ranges:
+                prefix = Prefix.objects.get(prefix=prefix_ip)
+                prefix.description = "Sample Description"
+                prefix.save()
+                reparent_ranges.assert_not_called()
+                prefix.delete()
 
     def test_location_queries(self):
         locations = Location.objects.all()[:4]
@@ -892,24 +918,24 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
                 pfx.locations.set(locations)
 
         with self.subTest("Assert filtering and excluding `location`"):
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.filter(location=locations[0]),
                 Prefix.objects.filter(locations__in=[locations[0]]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.exclude(location=locations[0]),
                 Prefix.objects.exclude(locations__in=[locations[0]]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.filter(location__in=[locations[0]]),
                 Prefix.objects.filter(locations__in=[locations[0]]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 Prefix.objects.exclude(location__in=[locations[0]]),
                 Prefix.objects.exclude(locations__in=[locations[0]]),
             )
 
-        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # We use `assertQuerySetEqualAndNotEmpty` for test validation. Including a nullable field could lead
         # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
         # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "location_type", "status"]
@@ -917,11 +943,11 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         for field_name in query_params:
             with self.subTest(f"Assert location__{field_name} query."):
                 value = getattr(locations[0], field_name)
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     Prefix.objects.filter(**{f"location__{field_name}": value}),
                     Prefix.objects.filter(**{f"locations__{field_name}": value}),
                 )
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     Prefix.objects.exclude(**{f"location__{field_name}": value}),
                     Prefix.objects.exclude(**{f"locations__{field_name}": value}),
                 )
@@ -1411,8 +1437,8 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="10.0.2.1/24", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="10.0.3.1/24", status=self.status, namespace=self.namespace),
         )
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_child_ips())
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_all_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_child_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix.ip_addresses.all(), parent_prefix.get_all_ips())
         child_ip_pks = {p.pk for p in parent_prefix.ip_addresses.all()}
         # Global container should return all children
         self.assertSetEqual(child_ip_pks, {ips[0].pk, ips[1].pk, ips[2].pk, ips[3].pk})
@@ -1423,8 +1449,8 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address="20.0.4.0/31", status=self.status, namespace=self.namespace),
             IPAddress.objects.create(address="20.0.4.1/31", status=self.status, namespace=self.namespace),
         )
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_child_ips())
-        self.assertQuerysetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_all_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_child_ips())
+        self.assertQuerySetEqualAndNotEmpty(parent_prefix_31.ip_addresses.all(), parent_prefix_31.get_all_ips())
         child_ip_pks = {p.pk for p in parent_prefix_31.ip_addresses.all()}
         self.assertSetEqual(child_ip_pks, {ips_31[0].pk, ips_31[1].pk})
 
@@ -1528,10 +1554,10 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         )
         IPAddress.objects.create(address="::0102:0304/128", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="1.2.3.4/32", status=self.status, namespace=self.namespace)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix_v6.get_all_ips(), IPAddress.objects.filter(ip_version=6, parent__namespace=self.namespace)
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix_v4.get_all_ips(), IPAddress.objects.filter(ip_version=4, parent__namespace=self.namespace)
         )
 
@@ -1549,14 +1575,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             IPAddress.objects.create(address=f"10.0.0.{i}/32", status=self.status, namespace=self.namespace)
 
         # Assert differing behavior of get_all_ips() versus get_child_ips() for the /24 and /26 prefixes
-        self.assertQuerysetEqual(prefix.get_child_ips(), IPAddress.objects.none())
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(prefix.get_child_ips(), IPAddress.objects.none())
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
 
@@ -1570,14 +1596,14 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         IPAddress.objects.create(address="10.0.0.0/32", status=self.status, namespace=self.namespace)
         IPAddress.objects.create(address="10.0.0.63/32", status=self.status, namespace=self.namespace)
 
-        self.assertQuerysetEqual(prefix.get_child_ips(), IPAddress.objects.none())
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqual(prefix.get_child_ips(), IPAddress.objects.none())
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
 
@@ -1589,41 +1615,41 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix="10.0.0.128/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
         )
         self.assertEqual(slash25.get_utilization(), (4, 128))
+        pool.delete()
 
         # When the pool does not overlap with broadcast or network address, the denominator decrements by 2
-        pool.delete()
-        pool = Prefix.objects.create(
+        Prefix.objects.create(
             prefix="10.0.0.132/30", type=PrefixTypeChoices.TYPE_POOL, status=self.status, namespace=self.namespace
         )
         self.assertEqual(slash25.get_utilization(), (4, 126))
 
         # Further distinguishing between get_child_ips() and get_all_ips():
         IPAddress.objects.create(address="10.0.0.64/32", status=self.status, namespace=self.namespace)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.64/26")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
 
         slash27 = Prefix.objects.create(prefix="10.0.0.0/27", status=self.status, namespace=self.namespace)
         self.assertEqual(slash27.get_utilization(), (32, 32))
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.64/26")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             prefix.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/24")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.32/27")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash26.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/26")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash27.get_child_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/27")
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             slash27.get_all_ips(), IPAddress.objects.filter(host__net_host_contained="10.0.0.0/27")
         )
 
@@ -1697,6 +1723,41 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
             prefix="0a00::/8", type=PrefixTypeChoices.TYPE_NETWORK, status=self.status, namespace=self.namespace
         )
         self.assertSequenceEqual(v4_10dot_address_space_in_v6.get_utilization(), (0, 2**120))
+
+    def test_get_utilization_count_as_utilized_range(self):
+        namespace = Namespace.objects.create(name="get_utilization_test")
+        prefix = Prefix.objects.create(
+            prefix="10.88.0.0/28",
+            namespace=namespace,
+            status=self.status,
+        )
+        with self.subTest("counts_as_full"):
+            """A range with count_as_utilized=True adds its entire span to the numerator."""
+            ip_range = IPAddressRange.objects.create(
+                start_address="10.88.0.1",
+                end_address="10.88.0.5",  # 5 addresses
+                namespace=namespace,
+                status=self.status,
+                count_as_utilized=True,
+            )
+            utilization = prefix.get_utilization()
+            # 5 addresses from the count_as_utilized range out of 14 usable host addresses
+            self.assertEqual(utilization.numerator, 5)
+            self.assertEqual(utilization.denominator, 14)
+            ip_range.delete()
+
+        with self.subTest("counts_as_full"):
+            """A range without count_as_utilized does not inflate the numerator."""
+            ip_range = IPAddressRange.objects.create(
+                start_address="10.88.0.1",
+                end_address="10.88.0.5",
+                namespace=namespace,
+                status=self.status,
+                count_as_utilized=False,
+            )
+            utilization = prefix.get_utilization()
+            self.assertEqual(utilization.numerator, 0)
+            ip_range.delete()
 
     #
     # Uniqueness enforcement tests
@@ -1798,6 +1859,270 @@ class TestPrefix(ModelTestCases.BaseModelTestCase):
         with self.subTest("Test that deleting all child IPs of a network prefix allows the prefix to be deleted"):
             ip.delete()
             network.delete()
+
+    def test_narrowing_prefix_that_would_orphan_range_is_rejected(self):
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        prefix.prefix = "10.0.0.0/26"  # range .50-.200 no longer fits (/26 ends at .63)
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            prefix.validated_save()
+
+    def test_narrowing_prefix_that_would_partially_orphan_range_is_rejected(self):
+        """Range partially overlaps the narrowed prefix (start inside, end outside).
+        Reparenting to the former parent would be wrong, so the edit must be rejected."""
+        Prefix.objects.create(
+            prefix="10.0.0.0/8",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_CONTAINER,
+        )
+        mid = Prefix.objects.create(
+            prefix="10.1.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.1.1.0",
+            end_address="10.1.10.0",  # fits in /16, not in /24
+            status=self.status,
+            namespace=self.namespace,
+        )
+        # Narrow /16 to /24 — range start (10.1.1.0) is inside /24 but end (10.1.10.0) is outside.
+        mid.prefix = "10.1.1.0/24"
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            mid.validated_save()
+
+    def test_narrowing_prefix_that_would_orphan_range_is_rejected_on_bare_save(self):
+        prefix = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        prefix.prefix = "10.0.0.0/26"
+        with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+            prefix.save()
+
+    def test_deleting_parentless_prefix_with_ranges_is_protected(self):
+        """A top-level Prefix (parent=None) containing IP Address Ranges cannot be deleted."""
+        # self.root is 101.102.0.0/16, parent=None (top-level container)
+        IPAddressRange.objects.create(
+            start_address="101.102.50.10",
+            end_address="101.102.50.20",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaises(ProtectedError):
+            self.root.delete()
+
+    def test_range_reparented_to_closer_child_prefix(self):
+        """When a narrower Prefix that fully contains a range is created, the range reparents to it."""
+        wide = Prefix.objects.create(
+            prefix="60.0.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip_range = IPAddressRange.objects.create(
+            start_address="60.0.1.10",
+            end_address="60.0.1.20",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        self.assertEqual(ip_range.parent, wide)
+        narrow = Prefix.objects.create(
+            prefix="60.0.1.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, narrow)
+
+    def test_widening_prefix_reparents_range_down_to_swallowed_prefix(self):
+        """Widening a Prefix so that it swallows a previously-wider Prefix must push a range
+        that is attached directly to this Prefix down into the newly-claimed child, which is
+        now the closest parent fully containing the range.
+
+        Exercises the `if closest != self:` branch in reparent_ip_address_ranges().
+        """
+        # A /24 as a top-level prefix...
+        swallowed = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        # ...with a narrower /26 nested inside it.
+        inner = Prefix.objects.create(
+            prefix="10.0.0.0/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        self.assertEqual(inner.parent, swallowed)
+
+        # The range fits inside the /26, so its closest parent is the /26.
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.10",
+            end_address="10.0.0.20",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        self.assertEqual(ip_range.parent, inner)
+
+        # Widen the /26 to a /23. The /23 now contains the /24, so the /24 becomes a child of
+        # `inner`, and that /24 is now the closest parent of the range.
+        inner.prefix = "10.0.0.0/23"
+        inner.validated_save()
+
+        swallowed.refresh_from_db()
+        self.assertEqual(swallowed.parent, inner)  # the tree has flipped
+
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, swallowed)  # range pushed down to the closest child
+
+    def test_range_straddling_two_children_stays_at_parent(self):
+        """When a range's endpoints fall into two different children, closest_start != closest_end,
+        so closest = self and the range is NOT reparented downward — it stays on the parent.
+
+        Exercises the `else` (closest = self) path in reparent_ip_address_ranges().
+        """
+        parent = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        # Create the range before any children exist; the child-overlap validator would reject it otherwise.
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.70",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        self.assertEqual(ip_range.parent, parent)
+
+        # Two /26s — the range .50-.70 straddles both (.50 in the first, .70 in the second).
+        Prefix.objects.create(
+            prefix="10.0.0.0/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        Prefix.objects.create(
+            prefix="10.0.0.64/26",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, parent)  # no single child contains the whole range
+
+        # Changing the parent's network (/24 -> /23) triggers the _networking_values_changed branch.
+        parent.prefix = "10.0.0.0/23"
+        parent.validated_save()
+
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.parent, parent)  # still on the parent
+
+    def test_get_available_ips_excludes_exclusive_range(self):
+        """Addresses within an exclusive IP Address Range are removed from available IPs."""
+        prefix = Prefix.objects.create(
+            prefix="70.0.0.0/28",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="70.0.0.4",
+            end_address="70.0.0.8",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=True,
+        )
+        available = prefix.get_available_ips()
+        for addr in ("70.0.0.4", "70.0.0.5", "70.0.0.6", "70.0.0.7", "70.0.0.8"):
+            self.assertNotIn(netaddr.IPAddress(addr), available)
+        # an address outside the exclusive range is still available
+        self.assertIn(netaddr.IPAddress("70.0.0.10"), available)
+
+    def test_clean_rejects_all_network_edits_that_would_orphan_a_range(self):
+        """The orphaned-range guard in clean() must fire for every kind of networking change that
+        pushes a contained range outside the new span."""
+        parent = Prefix.objects.create(
+            prefix="40.0.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="40.0.50.0",
+            end_address="40.0.60.0",
+            status=self.status,
+            namespace=self.namespace,
+        )
+
+        with self.subTest("Narrowing prefix_length pushes the range out"):
+            parent.refresh_from_db()
+            parent.prefix = "40.0.0.0/24"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                parent.validated_save()
+
+        with self.subTest("Changing network pushes the range out"):
+            parent.refresh_from_db()
+            parent.prefix = "41.0.0.0/16"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                parent.validated_save()
+
+        with self.subTest("Partial overlap (start inside, end outside) is also rejected"):
+            parent.refresh_from_db()
+            parent.prefix = "40.0.50.0/24"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                parent.validated_save()
+
+    def test_clean_blocks_orphaning_edit_before_reparent_runs(self):
+        """A network edit that would orphan a contained range is rejected by clean() before
+        reparent_ip_address_ranges() ever runs"""
+        # top-level prefix (parent=None) with a contained range
+        top = Prefix.objects.create(
+            prefix="50.0.0.0/16",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        self.assertIsNone(top.parent)
+        IPAddressRange.objects.create(
+            start_address="50.0.50.0",
+            end_address="50.0.60.0",
+            status=self.status,
+            namespace=self.namespace,
+        )
+
+        with patch.object(Prefix, "reparent_ip_address_ranges", return_value=None) as mock_reparent:
+            top.refresh_from_db()
+            top.prefix = "50.0.0.0/24"
+            with self.assertRaisesRegex(ValidationError, "would no longer be fully contained"):
+                top.validated_save()
+            # clean() raised, so save() and therefore reparent never ran.
+            mock_reparent.assert_not_called()
 
 
 class TestIPAddress(ModelTestCases.BaseModelTestCase):
@@ -2127,6 +2452,343 @@ class TestIPAddress(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(IntegrityError):
             IPAddress.objects.create(mask_length=32, status=self.status)
 
+            self.parent = Prefix.objects.create(
+                prefix="10.0.0.0/24",
+                status=self.status,
+                namespace=self.namespace,
+                type=PrefixTypeChoices.TYPE_NETWORK,
+            )
+
+    def test_creating_ip_inside_exclusive_range_is_blocked(self):
+        Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=True,
+        )
+        ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        with self.assertRaises(ValidationError) as cm:
+            ip.validated_save()
+        self.assertIn("falls within exclusive IP Address Range", str(cm.exception))
+
+    def test_creating_ip_inside_non_exclusive_range_is_allowed(self):
+        Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=False,
+        )
+        ip = IPAddress(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        ip.validated_save()
+        self.assertTrue(IPAddress.objects.filter(host="10.0.0.75").exists())
+
+
+class TestIPAddressRange(ModelTestCases.BaseModelTestCase):
+    model = IPAddressRange
+
+    @classmethod
+    def setUpTestData(cls):
+        namespace = Namespace.objects.first()
+        status = Status.objects.get(name="Active")
+        Prefix.objects.create(  # parent
+            prefix="10.99.0.0/24",
+            status=status,
+            namespace=namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+        IPAddressRange.objects.create(
+            start_address="10.99.0.10",
+            end_address="10.99.0.20",
+            status=status,
+            namespace=namespace,
+        )
+
+    def setUp(self):
+        super().setUp()
+        self.namespace = Namespace.objects.first()
+        self.status = Status.objects.get(name="Active")
+        self.parent = Prefix.objects.create(
+            prefix="10.0.0.0/24",
+            status=self.status,
+            namespace=self.namespace,
+            type=PrefixTypeChoices.TYPE_NETWORK,
+        )
+
+    def test_create_field_population(self):
+        """Test that creating an IPAddressRange populates derived fields correctly."""
+        ip_range = IPAddressRange(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        ip_range.save()
+        ip_range.refresh_from_db()
+        self.assertEqual(ip_range.start_host, "10.0.0.50")
+        self.assertEqual(ip_range.end_host, "10.0.0.100")
+        self.assertEqual(ip_range.ip_version, 4)
+        self.assertEqual(ip_range.parent, self.parent)  # auto-resolved
+        self.assertFalse(ip_range.is_exclusive)
+        self.assertFalse(ip_range.count_as_utilized)
+
+    def test_start_end_must_be_same_ip_version(self):
+        """start_address and end_address must be of the same IP version."""
+        Prefix.objects.create(
+            prefix="::/0", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        ip_range = IPAddressRange(
+            start_address="10.0.0.1",
+            end_address="::1",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaisesRegex(ValidationError, "must be of the same IP version"):
+            ip_range.validated_save()
+
+    def test_start_must_not_be_greater_than_end(self):
+        """start_address must be <= end_address."""
+        ip_range = IPAddressRange(
+            start_address="10.0.0.100",
+            end_address="10.0.0.50",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaisesRegex(ValidationError, "start_address must be less than or equal to end_address"):
+            ip_range.validated_save()
+
+    def test_endpoints_must_resolve_to_same_parent(self):
+        """start and end resolving to different parents is rejected."""
+        namespace = Namespace.objects.create(name="test_iprange_two_parents")
+        Prefix.objects.create(
+            prefix="10.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        Prefix.objects.create(
+            prefix="11.0.0.0/8", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        ip_range = IPAddressRange(
+            start_address="10.0.0.1",
+            end_address="11.0.0.255",
+            status=self.status,
+            namespace=namespace,
+        )
+        with self.assertRaisesRegex(ValidationError, "must be fully contained within a single parent Prefix"):
+            ip_range.validated_save()
+
+    def test_no_suitable_parent_raises(self):
+        """A range whose endpoints have no parent Prefix is rejected."""
+        namespace = Namespace.objects.create(name="test_iprange_no_parent")
+        Prefix.objects.create(
+            prefix="192.168.0.0/16", status=self.status, namespace=namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        ip_range = IPAddressRange(
+            start_address="10.0.0.1",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=namespace,
+        )
+        with self.assertRaisesRegex(
+            ValidationError, "No suitable parent Prefix for 10.0.0.1 exists in Namespace test_iprange_no_parent"
+        ):
+            ip_range.validated_save()
+
+    def test_no_overlap_with_other_range(self):
+        """Two intersecting ranges in the same namespace are rejected."""
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        overlapping = IPAddressRange(
+            start_address="10.0.0.80",
+            end_address="10.0.0.150",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaisesRegex(ValidationError, "intersects with existing range"):
+            overlapping.validated_save()
+
+    def test_adjacent_ranges_do_not_overlap(self):
+        """Touching-but-not-overlapping ranges are allowed (boundary check)."""
+        IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        adjacent = IPAddressRange(
+            start_address="10.0.0.101",
+            end_address="10.0.0.150",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        adjacent.validated_save()  # should not raise
+        self.assertTrue(IPAddressRange.objects.filter(start_host="10.0.0.101").exists())
+
+    def test_exclusive_range_rejects_existing_ip(self):
+        """Creating an exclusive range over an existing IPAddress is rejected."""
+        IPAddress.objects.create(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        ip_range = IPAddressRange(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=True,
+        )
+        with self.assertRaisesRegex(ValidationError, "10.0.0.75"):
+            ip_range.validated_save()
+
+    def test_non_exclusive_range_allows_existing_ip(self):
+        """A non-exclusive range over an existing IPAddress is allowed."""
+        IPAddress.objects.create(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        ip_range = IPAddressRange(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=False,
+        )
+        ip_range.validated_save()  # should not raise
+        self.assertTrue(IPAddressRange.objects.filter(start_host="10.0.0.50").exists())
+
+    def test_enabling_is_exclusive_rejects_existing_ip(self):
+        """Editing an existing range to is_exclusive=True with contained IPs is rejected."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.0.0.50",
+            end_address="10.0.0.100",
+            status=self.status,
+            namespace=self.namespace,
+            is_exclusive=False,
+        )
+        IPAddress.objects.create(address="10.0.0.75/24", status=self.status, namespace=self.namespace)
+        ip_range.is_exclusive = True
+        with self.assertRaisesRegex(ValidationError, "10.0.0.75"):
+            ip_range.validated_save()
+
+    def test_child_prefix_at_range_boundary_caught_by_parent_check(self):
+        """A child prefix overlapping the range edge makes endpoints resolve to different
+        parents, so rule #3 (single parent) catches it before #6 — verifying the two rules
+        are complementary (per Glenn's note)."""
+        Prefix.objects.create(
+            prefix="10.0.0.128/25", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        ip_range = IPAddressRange(
+            start_address="10.0.0.100",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaisesRegex(ValidationError, "must be fully contained within a single parent Prefix"):
+            ip_range.validated_save()
+
+    def test_child_prefix_fully_inside_range_is_rejected(self):
+        """Rule #6 catches a child prefix mid-range that #3 would not (per Glenn's note)."""
+        # parent /24, child /26 in the middle; both endpoints still resolve to /24.
+        Prefix.objects.create(
+            prefix="10.0.0.64/26", status=self.status, namespace=self.namespace, type=PrefixTypeChoices.TYPE_NETWORK
+        )
+        ip_range = IPAddressRange(
+            start_address="10.0.0.10",
+            end_address="10.0.0.200",
+            status=self.status,
+            namespace=self.namespace,
+        )
+        with self.assertRaisesRegex(ValidationError, "overlaps with child Prefix"):
+            ip_range.validated_save()
+
+    def test_size_is_readonly(self):
+        """Check ipv4 inner octet size is correct."""
+        ip_range = IPAddressRange(start_address="10.0.0.10", end_address="10.0.0.20")
+        self.assertRaises(AttributeError, lambda: setattr(ip_range, "size", 100))
+
+    def test_size_ipv4_inner_octect_range(self):
+        """Check ipv4 inner octet size is correct."""
+        ip_range = IPAddressRange(start_address="10.0.0.10", end_address="10.0.0.20")
+        self.assertEqual(ip_range.size, 11)
+
+    def test_size_ipv4_single_address_range(self):
+        """Check single ip address range is possible."""
+        ip_range = IPAddressRange(start_address="10.0.0.50", end_address="10.0.0.50")
+        self.assertEqual(ip_range.size, 1)
+
+    def test_size_ipv4_range_crossing_octet_boundary(self):
+        """Check ipv4 calculates correctly across octet boundary."""
+        ip_range = IPAddressRange(start_address="10.0.1.0", end_address="10.0.4.255")
+        self.assertEqual(ip_range.size, 1024)
+
+    def test_size_ipv6_inner_hextet_range(self):
+        """Check ipv6  inner octect size is correct"""
+        ip_range = IPAddressRange(start_address="2001:db8:abcd:50:0:0:0:1", end_address="2001:db8:abcd:50:0:0:0:ffff")
+        self.assertEqual(ip_range.size, 65535)
+
+    def test_size_ipv6_compressed_notation(self):
+        """Check ipv6 size is calculated correctly when compression notation is used."""
+        compressed = IPAddressRange(start_address="2001:db8:abcd::1", end_address="2001:db8:abcd::2:0")
+        uncompressed = IPAddressRange(start_address="2001:db8:abcd:0:0:0:0:1", end_address="2001:db8:abcd:0:0:0:2:0")
+        self.assertEqual(compressed.size, 131072)
+        self.assertEqual(compressed.size, uncompressed.size)
+
+    def test_size_none_when_endpoints_unset(self):
+        """size returns None when either host is missing (guard clause in the property)."""
+        self.assertIsNone(IPAddressRange().size)
+        self.assertIsNone(IPAddressRange(start_address="10.0.0.10").size)
+        self.assertIsNone(IPAddressRange(end_address="10.0.0.10").size)
+
+    def test_get_utilization_no_ips(self):
+        """Empty range: no addresses occupied."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.99.0.200",
+            end_address="10.99.0.209",  # 10 addresses
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.assertEqual(ip_range.get_utilization(), (0, 10))
+
+    def test_get_utilization_partial(self):
+        """Range with some addresses occupied by IPAddress objects."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.99.0.100",
+            end_address="10.99.0.109",  # 10 addresses
+            namespace=self.namespace,
+            status=self.status,
+        )
+        IPAddress.objects.create(
+            address="10.99.0.100/24",
+            namespace=self.namespace,
+            status=self.status,
+        )
+        self.assertEqual(ip_range.get_utilization(), (1, 10))
+
+    def test_get_utilization_full(self):
+        """Range where every address has an IPAddress object."""
+        ip_range = IPAddressRange.objects.create(
+            start_address="10.99.0.110",
+            end_address="10.99.0.112",  # 3 addresses
+            namespace=self.namespace,
+            status=self.status,
+        )
+        for i in range(110, 113):
+            IPAddress.objects.create(
+                address=f"10.99.0.{i}/24",
+                namespace=self.namespace,
+                status=self.status,
+            )
+        self.assertEqual(ip_range.get_utilization(), (3, 3))
+
 
 class TestRIR(ModelTestCases.BaseModelTestCase):
     model = RIR
@@ -2242,24 +2904,24 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         location = VLAN.objects.filter(locations__isnull=False).first().locations.first()
 
         with self.subTest("Assert filtering and excluding `location`"):
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.filter(location=location),
                 VLAN.objects.filter(locations__in=[location]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.exclude(location=location),
                 VLAN.objects.exclude(locations__in=[location]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.filter(location__in=[location]),
                 VLAN.objects.filter(locations__in=[location]),
             )
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 VLAN.objects.exclude(location__in=[location]),
                 VLAN.objects.exclude(locations__in=[location]),
             )
 
-        # We use `assertQuerysetEqualAndNotEmpty` for test validation. Including a nullable field could lead
+        # We use `assertQuerySetEqualAndNotEmpty` for test validation. Including a nullable field could lead
         # to flaky tests where querysets might return None, causing tests to fail. Therefore, we select
         # fields that consistently contain values to ensure reliable filtering.
         query_params = ["name", "location_type", "status"]
@@ -2267,14 +2929,219 @@ class TestVLAN(ModelTestCases.BaseModelTestCase):
         for field_name in query_params:
             with self.subTest(f"Assert location__{field_name} query."):
                 value = getattr(location, field_name)
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     VLAN.objects.filter(**{f"location__{field_name}": value}),
                     VLAN.objects.filter(**{f"locations__{field_name}": value}),
                 )
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     VLAN.objects.exclude(**{f"location__{field_name}": value}),
                     VLAN.objects.exclude(**{f"locations__{field_name}": value}),
                 )
+
+
+class VRFDeviceAssignmentSignalTest(TestCase):
+    """Tests for the vrf_device_associated signal handler."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.namespace = Namespace.objects.first()
+        cls.vrf1 = VRF.objects.create(name="VRF Signal Test 1", rd="65000:100", namespace=cls.namespace)
+        cls.vrf2 = VRF.objects.create(name="VRF Signal Test 2", rd="65000:200", namespace=cls.namespace)
+        cls.device1 = Device.objects.create(
+            name="signal-test-device1",
+            role=Role.objects.get_for_model(Device).first(),
+            device_type=DeviceType.objects.first(),
+            location=Location.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        cls.device2 = Device.objects.create(
+            name="signal-test-device2",
+            role=Role.objects.get_for_model(Device).first(),
+            device_type=DeviceType.objects.first(),
+            location=Location.objects.get_for_model(Device).first(),
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        cluster_type = ClusterType.objects.create(name="VRF Signal Test Cluster Type")
+        cluster = Cluster.objects.create(name="VRF Signal Test Cluster", cluster_type=cluster_type)
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        vm_role = Role.objects.get_for_model(VirtualMachine).first()
+        cls.vm1 = VirtualMachine.objects.create(name="signal-test-vm1", cluster=cluster, status=vm_status, role=vm_role)
+        cls.vm2 = VirtualMachine.objects.create(name="signal-test-vm2", cluster=cluster, status=vm_status, role=vm_role)
+        vdc_status = Status.objects.get_for_model(VirtualDeviceContext).first()
+        cls.vdc1 = VirtualDeviceContext.objects.create(
+            device=cls.device1, name="signal-test-vdc1", status=vdc_status, identifier=100
+        )
+        cls.vdc2 = VirtualDeviceContext.objects.create(
+            device=cls.device2, name="signal-test-vdc2", status=vdc_status, identifier=200
+        )
+
+    def test_vrf_device_associated_signal_only_validates_new_assignments(self):
+        """Adding a device to a VRF should only validate the new assignment, not all existing ones."""
+        self.vrf1.devices.add(self.device1)
+        self.assertEqual(self.vrf1.device_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vrf1.devices.add(self.device2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_device_vrf_associated_signal_only_validates_new_assignments(self):
+        """Adding a VRF to a device should only validate the new assignment, not all existing ones."""
+        self.device1.vrfs.add(self.vrf1)
+        self.assertEqual(self.device1.vrf_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.device1.vrfs.add(self.vrf2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vrf_vm_associated_signal_only_validates_new_assignments(self):
+        """Adding a VM to a VRF should only validate the new assignment, not all existing ones."""
+        self.vrf1.virtual_machines.add(self.vm1)
+        self.assertEqual(self.vrf1.device_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vrf1.virtual_machines.add(self.vm2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vm_vrf_associated_signal_only_validates_new_assignments(self):
+        """Adding a VRF to a VM should only validate the new assignment, not all existing ones."""
+        self.vm1.vrfs.add(self.vrf1)
+        self.assertEqual(self.vm1.vrf_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vm1.vrfs.add(self.vrf2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vrf_vdc_associated_signal_only_validates_new_assignments(self):
+        """Adding a VDC to a VRF should only validate the new assignment, not all existing ones."""
+        self.vrf1.virtual_device_contexts.add(self.vdc1)
+        self.assertEqual(self.vrf1.device_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vrf1.virtual_device_contexts.add(self.vdc2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vdc_vrf_associated_signal_only_validates_new_assignments(self):
+        """Adding a VRF to a VDC should only validate the new assignment, not all existing ones."""
+        self.vdc1.vrfs.add(self.vrf1)
+        self.assertEqual(self.vdc1.vrf_assignments.count(), 1)
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            self.vdc1.vrfs.add(self.vrf2)
+            self.assertEqual(mock_validated_save.call_count, 1)
+
+    def test_vrf_device_associated_signal_ignores_unknown_model(self):
+        """Signal should return early when model is not Device, VirtualMachine, or VirtualDeviceContext."""
+        from nautobot.ipam.signals import vrf_device_associated
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            vrf_device_associated(
+                sender=VRFDeviceAssignment,
+                instance=self.vrf1,
+                action="post_add",
+                reverse=False,
+                model=VRF,  # unexpected model type
+                pk_set={self.device1.pk},
+            )
+            mock_validated_save.assert_not_called()
+
+    def test_vrf_device_associated_signal_ignores_unknown_instance(self):
+        """Signal should return early when instance is not VRF, Device, VirtualMachine, or VirtualDeviceContext."""
+        from nautobot.ipam.signals import vrf_device_associated
+
+        with patch.object(VRFDeviceAssignment, "validated_save", autospec=True) as mock_validated_save:
+            vrf_device_associated(
+                sender=VRFDeviceAssignment,
+                instance=Namespace.objects.first(),  # unexpected instance type
+                action="post_add",
+                reverse=False,
+                model=VRF,
+                pk_set={self.vrf1.pk},
+            )
+            mock_validated_save.assert_not_called()
+
+    def _device_interface_with_vrf(self, device, vrf):
+        """Assign `vrf` to `device` and create an interface on `device` using that VRF."""
+        device.vrfs.add(vrf)
+        return Interface.objects.create(
+            device=device,
+            name="GigabitEthernet0/0",
+            status=Status.objects.get_for_model(Interface).first(),
+            type=dcim_choices.InterfaceTypeChoices.TYPE_1GE_FIXED,
+            vrf=vrf,
+        )
+
+    def _vm_interface_with_vrf(self, virtual_machine, vrf):
+        """Assign `vrf` to `virtual_machine` and create a VM interface using that VRF."""
+        virtual_machine.vrfs.add(vrf)
+        return VMInterface.objects.create(
+            virtual_machine=virtual_machine,
+            name="eth0",
+            status=Status.objects.get_for_model(VMInterface).first(),
+            vrf=vrf,
+        )
+
+    def test_cannot_remove_vrf_from_device_with_interface(self):
+        """Removing a VRF from a device is blocked while one of its interfaces still uses the VRF."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.device1.vrfs.remove(self.vrf1)
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_cannot_clear_vrfs_from_device_with_interface(self):
+        """Clearing a device's VRFs via set([]) is blocked while one of its interfaces still uses a VRF."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.device1.vrfs.set([])
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_cannot_remove_vrf_from_device_forward_direction(self):
+        """The block also applies when removing from the VRF side (vrf.devices.remove)."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.vrf1.devices.remove(self.device1)
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_cannot_remove_vrf_from_vm_with_interface(self):
+        """Removing a VRF from a virtual machine is blocked while one of its interfaces still uses the VRF."""
+        self._vm_interface_with_vrf(self.vm1, self.vrf1)
+        with self.assertRaises(ValidationError), transaction.atomic():
+            self.vm1.vrfs.remove(self.vrf1)
+        self.assertTrue(self.vm1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_remove_device_helper_raises_protected_error(self):
+        """The programmatic VRF.remove_device() helper is also blocked via a ProtectedError."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        with self.assertRaises(ProtectedError), transaction.atomic():
+            self.vrf1.remove_device(self.device1)
+        self.assertTrue(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_can_remove_vrf_from_device_after_clearing_interface(self):
+        """Removal from a device succeeds once the VRF is cleared from the interface."""
+        interface = self._device_interface_with_vrf(self.device1, self.vrf1)
+        interface.vrf = None
+        interface.save()
+        self.device1.vrfs.remove(self.vrf1)
+        self.assertFalse(self.device1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_can_remove_vrf_from_vm_after_clearing_interface(self):
+        """Removal from a virtual machine succeeds once the VRF is cleared from the interface."""
+        interface = self._vm_interface_with_vrf(self.vm1, self.vrf1)
+        interface.vrf = None
+        interface.save()
+        self.vm1.vrfs.remove(self.vrf1)
+        self.assertFalse(self.vm1.vrf_assignments.filter(vrf=self.vrf1).exists())
+
+    def test_deleting_device_not_blocked_by_interface_vrf(self):
+        """Cascade deletion of the parent Device is not blocked, even when an interface uses the VRF."""
+        self._device_interface_with_vrf(self.device2, self.vrf1)
+        self.device2.delete()
+        self.assertFalse(Device.objects.filter(pk=self.device2.pk).exists())
+
+    def test_deleting_vrf_not_blocked_by_interface_vrf(self):
+        """Cascade deletion of the VRF itself is not blocked, even when an interface uses it."""
+        self._device_interface_with_vrf(self.device1, self.vrf1)
+        self.vrf1.delete()
+        self.assertFalse(VRF.objects.filter(pk=self.vrf1.pk).exists())
 
 
 class TestVRF(ModelTestCases.BaseModelTestCase):

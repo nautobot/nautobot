@@ -4,6 +4,7 @@ from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from rest_framework.response import Response
 
+from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.cloud.views import CloudResourceTypeUIViewSet
 from nautobot.core.testing import TestCase
 from nautobot.core.ui.titles import Titles
@@ -57,3 +58,17 @@ class ObjectListViewTitlesTest(TestCase):
             # Finally, render the view and verify the title appears in the response
             response = self.client.get(path)
             self.assertContains(response, "Burritos")
+
+
+class NautobotHTMLRendererFilterSetNoneTest(TestCase):
+    user_permissions = ["circuits.view_provider", "circuits.view_circuit"]
+
+    def test_filterset_class_none(self):
+        """Assert that the list view loads when filterset and filterset form are None."""
+        url = reverse("circuits:provider_list")
+        with (
+            patch.object(ProviderUIViewSet, "filterset_class", None),
+            patch.object(ProviderUIViewSet, "filterset_form_class", None),
+        ):
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)

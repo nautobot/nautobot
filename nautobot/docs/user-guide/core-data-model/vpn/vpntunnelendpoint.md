@@ -24,6 +24,6 @@ This allows for flexible and dynamic management of the networks associated with 
 
 Additionally, contextual information about VPN Tunnel Endpoints may be found in the following components:
 
-- Under Device, in the `VPN Endpoints` tab
-- Under Interface, as a `VPN Endpoints` side panel
-- Under Prefix, as a `VPN Endpoints` side panel
+- Under Device, in the **VPN Endpoints** tab
+- Under Interface, as a **VPN Endpoints** side panel
+- Under Prefix, as a **VPN Endpoints** side panel

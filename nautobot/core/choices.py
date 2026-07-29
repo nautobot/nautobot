@@ -149,6 +149,38 @@ class ColorChoices(ChoiceSet):
 
 
 #
+# Nautobot edition
+#
+
+
+class NautobotEditionChoices(ChoiceSet):
+    """The active Nautobot edition (see `nautobot.core.utils.config.get_nautobot_edition`)."""
+
+    COMMUNITY = "community"
+    PROFESSIONAL = "professional"
+    ENTERPRISE = "enterprise"
+    CLOUD = "cloud"
+
+    DEFAULT = COMMUNITY
+    COMMERCIAL_EDITIONS = (PROFESSIONAL, ENTERPRISE, CLOUD)
+
+    CHOICES = (
+        (COMMUNITY, "Community"),
+        (PROFESSIONAL, "Professional"),
+        (ENTERPRISE, "Enterprise"),
+        (CLOUD, "Cloud"),
+    )
+
+    # Relative precedence of each edition.
+    WEIGHTS = {
+        COMMUNITY: 10,
+        PROFESSIONAL: 20,
+        ENTERPRISE: 30,
+        CLOUD: 40,
+    }
+
+
+#
 # Button color choices
 #
 
@@ -195,6 +227,8 @@ class ButtonActionColorChoices(ChoiceSet):
     IMPORT = "primary"
     INFO = "info"
     RENAME = "warning"
+    RERUN = "success"
+    RUN = "primary"
     SUBMIT = "primary"
     SWAP = "primary"
 
@@ -212,6 +246,8 @@ class ButtonActionColorChoices(ChoiceSet):
         (IMPORT, "Import"),
         (INFO, "Info"),
         (RENAME, "Rename"),
+        (RERUN, "Rerun"),
+        (RUN, "Run"),
         (SUBMIT, "Submit"),
         (SWAP, "Swap"),
     )

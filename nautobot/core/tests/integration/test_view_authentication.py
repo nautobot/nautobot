@@ -19,6 +19,11 @@ class AuthenticationEnforcedTestCase(TestCase):
         for url_pattern in url_patterns:
             with self.subTest(url_pattern=url_pattern):
                 url = get_url_for_url_pattern(url_pattern)
+
+                if "/plugins/example-app/" in url and not url.startswith("/plugins/example-app/docs/"):
+                    # We're generally not interested in whether the example-app enforces authentication
+                    continue
+
                 response = self.client.get(url, follow=True)
 
                 if response.status_code == 405:  # Method not allowed
@@ -27,7 +32,6 @@ class AuthenticationEnforcedTestCase(TestCase):
                 # Is a view that *should* be open to unauthenticated users?
                 if url in [
                     "/admin/login/",
-                    "/api/plugins/example-app/webhook/",
                     "/health/",
                     "/login/",
                     "/media-failure/",

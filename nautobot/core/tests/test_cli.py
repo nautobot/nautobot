@@ -1,6 +1,5 @@
 import importlib.util
 import os.path
-import sys
 from unittest import mock
 
 from nautobot.core.cli import _preprocess_settings, migrate_deprecated_templates
@@ -123,37 +122,3 @@ class TestPreprocessSettings(TestCase):
         self.assertIn("baz.bat", settings_module.MIDDLEWARE)
         # more specifically:
         self.assertEqual("baz.bat", settings_module.MIDDLEWARE[-1])
-
-    def test_legacy_storage_behavior(self, *args):
-        """Handling legacy storage settings."""
-        settings_module, config_path = self.load_settings_module()
-
-        settings_module.DEFAULT_FILE_STORAGE = "storages.some_custom_backend"
-        settings_module.JOB_FILE_IO_STORAGE = "some_custom_job_file_storage"
-        settings_module.STATICFILES_STORAGE = "some_custom_static_storage"
-        settings_module.STORAGE_BACKEND = "storages.some_custom_backend"
-        settings_module.STORAGE_CONFIG = {"MY_BACKEND_OPTION": "some_value"}
-
-        import storages.utils
-
-        original_setting = storages.utils.setting
-        del sys.modules["storages.utils"]
-        del storages.utils
-
-        try:
-            # Process the settings module
-            _preprocess_settings(settings_module, config_path)
-
-            self.assertFalse(hasattr(settings_module, "DEFAULT_FILE_STORAGE"))  # unset to avoid a Django exception
-            self.assertEqual("storages.some_custom_backend", settings_module.STORAGES["default"]["BACKEND"])
-            self.assertEqual("some_custom_job_file_storage", settings_module.STORAGES["nautobotjobfiles"]["BACKEND"])
-            self.assertFalse(hasattr(settings_module, "STATICFILES_STORAGE"))  # unset to avoid a Django exception
-            self.assertEqual("some_custom_static_storage", settings_module.STORAGES["staticfiles"]["BACKEND"])
-
-            self.assertEqual("some_value", storages.utils.setting("MY_BACKEND_OPTION"))
-        finally:
-            # Clean up the STORAGE_CONFIG monkeypatch
-            import storages.utils  # pylint: disable=reimported
-
-            storages.utils.setting = original_setting
-            self.assertIsNone(storages.utils.setting("MY_BACKEND_OPTION"))

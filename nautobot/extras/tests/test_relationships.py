@@ -26,6 +26,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    InventoryItem,
     Location,
     LocationType,
     Platform,
@@ -47,7 +48,8 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.extras.models.jobs import JobLogEntry
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup
+from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 
@@ -426,6 +428,27 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         self.assertFalse(field.required)
         self.assertIsInstance(field, DynamicModelChoiceField)
         self.assertEqual(field.label, "rack")
+
+    def test_to_form_field_description_sanitized(self):
+        """A Relationship description is sanitized before being used as form field help_text.
+
+        Regression test for GHSA-56v6-2fhr-wxgq
+        """
+        relationship = Relationship(
+            label="XSS Relationship",
+            key="xss_relationship",
+            source_type=self.rack_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            description='<script>alert("XSS")</script>**bold**',
+        )
+        relationship.validated_save()
+
+        field = relationship.to_form_field("source")
+        # The script tag is stripped by the Markdown/nh3 sanitization...
+        self.assertNotIn("<script>", field.help_text)
+        # ...while legitimate Markdown is still rendered to HTML.
+        self.assertIn("<strong>bold</strong>", field.help_text)
 
     def test_check_if_key_is_graphql_safe(self):
         """
@@ -1432,6 +1455,8 @@ class RequiredRelationshipTestMixin:
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         ControllerManagedDeviceGroup.objects.all().delete()
         Controller.objects.all().delete()
@@ -1778,6 +1803,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()

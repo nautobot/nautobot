@@ -46,6 +46,7 @@ from nautobot.core.views.utils import (
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.extras.views import (
     check_and_call_git_repository_function,
+    git_repository_sync_view,
     ObjectApprovalWorkflowView,
     ObjectDynamicGroupsView,
     ObjectNotesView,
@@ -94,6 +95,7 @@ __all__ = (
     "get_csv_form_fields_from_serializer_class",
     "get_obj_from_context",
     "get_paginate_count",
+    "git_repository_sync_view",
     "handle_protectederror",
     "prepare_cloned_fields",
 )

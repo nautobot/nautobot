@@ -192,7 +192,6 @@ class EventNotificationTest(TestCase):
 
         sub = None
         try:
-            connection = redis.StrictRedis.from_url(url, decode_responses=True)
             sub = connection.pubsub()
             sub.psubscribe("nautobot.*")
             self.assertEqual(

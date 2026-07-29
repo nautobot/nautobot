@@ -72,7 +72,7 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
 
 
 class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
-    timezone = TimeZoneFormField(required=False, help_text="Set your default timezone", widget=StaticSelect2)
+    timezone = TimeZoneFormField(required=False, help_text="Set your preferred timezone.", widget=StaticSelect2)
 
 
 class NavbarFavoritesAddForm(forms.Form):

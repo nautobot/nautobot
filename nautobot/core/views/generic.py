@@ -1,6 +1,5 @@
 from copy import deepcopy
 import logging
-import re
 from typing import ClassVar, Optional
 
 from django.conf import settings
@@ -18,12 +17,14 @@ from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import resolve, reverse
+from django.utils.cache import patch_vary_headers
 from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.generic import View
 from django_filters import FilterSet
 from django_tables2 import RequestConfig, Table
+import regex
 
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT
@@ -41,6 +42,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
@@ -56,6 +58,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
+    borrow_extras_fields,
     check_filter_for_display,
     common_detail_view_context,
     get_bulk_queryset_from_view,
@@ -136,12 +139,24 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             **self.get_extra_context(request, instance),
         }
 
+        if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+            component = (
+                self.object_detail_content.get_component_by_id(request.GET["component_id"])
+                if self.object_detail_content is not None
+                else None
+            )
+            context["component"] = component
+
         # Some of the legacy views overriding title in `get_extra_context` method.
         # But if not, we will generate the default `title` using the default `Titles` class or one set in class under `view_titles`.
         if context.get("title") is None:
             context["title"] = self.get_view_titles(model, view_type="").render(context)
 
-        return render(request, self.get_template_name(), context)
+        if request.headers.get("HX-Request", False) and "component_id" in request.GET:
+            template_name = "components/htmx/component.html"
+        else:
+            template_name = self.get_template_name()
+        return render(request, template_name, context)
 
 
 class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
@@ -230,11 +245,14 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         resolved_path = resolve(request.path)
         # Note that `resolved_path.app_name` does work even for nested paths like `plugins:example_app:...`
         list_url = f"{resolved_path.app_name}:{resolved_path.url_name}"
+        htmx_request = self.request.headers.get("HX-Request", False)
+        htmx_trigger = request.headers.get("HX-Trigger", None)
+        is_object_embedded_search_request = htmx_trigger == "object_embedded_search_form"
 
         skip_user_and_global_default_saved_view = False
         if self.filterset is not None:
             skip_user_and_global_default_saved_view = get_filterable_params_from_filter_params(
-                request.GET.copy(),
+                filter_params,
                 self.non_filter_params,
                 self.filterset(),
             )
@@ -356,12 +374,13 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             table_changes_pending = self.request.GET.get("table_changes_pending", False)
 
             table = self.table(  # pylint: disable=not-callable  # we confirmed that self.table is not None
-                self.queryset,
+                self.queryset if htmx_request else self.queryset.none(),
                 table_changes_pending=table_changes_pending,
                 saved_view=current_saved_view,
                 user=request.user,
                 hide_hierarchy_ui=hide_hierarchy_ui,
                 configurable=True,
+                is_object_embedded_search_results=is_object_embedded_search_request,
             )
             if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):
                 table.columns.show("pk")
@@ -369,7 +388,9 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             # Apply the request context
             paginate = {
                 "paginator_class": EnhancedPaginator,
-                "per_page": get_paginate_count(request, current_saved_view),
+                "per_page": get_paginate_count(
+                    request, current_saved_view, save_user_config=not is_object_embedded_search_request
+                ),
             }
             RequestConfig(request, paginate).configure(table)
             table_config_form = TableConfigForm(table=table)
@@ -377,7 +398,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             if max_page_size and paginate["per_page"] > max_page_size:
                 messages.warning(
                     request,
-                    f'Requested "per_page" is too large. No more than {max_page_size} items may be displayed at a time.',
+                    'Requested "per_page" is too large. '
+                    f"No more than {max_page_size} items may be displayed at a time.",
                 )
 
         valid_actions = self.validate_action_buttons(request)
@@ -418,7 +440,12 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         if context.get("title") is None:
             context["title"] = self.get_view_titles(model).render(context)
 
-        return render(request, self.template_name, context)
+        if htmx_request:
+            response = render(request, "components/htmx/list_view_table.html", context)
+        else:
+            response = render(request, self.template_name, context)
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def alter_queryset(self, request):
         # .all() is necessary to avoid caching queries
@@ -484,13 +511,20 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         initial_data = normalize_querydict(request.GET, form_class=self.model_form)
         if self.model_form is None:
             raise RuntimeError("self.model_form must not be None")
-        form = self.model_form(instance=obj, initial=initial_data)  # pylint: disable=not-callable
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+        form = self.model_form(instance=obj, initial=initial_data, **form_kwargs)  # pylint: disable=not-callable
         restrict_form_fields(form, request.user)
 
-        return render(
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
+        response = render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
@@ -501,6 +535,8 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                 **self.get_extra_context(request, obj),
             },
         )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def successful_post(self, request, obj, created, logger):
         """Callback after the form is successfully saved but before redirecting the user."""
@@ -518,11 +554,13 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         if self.model_form is None:
             raise RuntimeError("self.model_form must not be None")
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = self.model_form(  # pylint: disable=not-callable
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=self.model_form),
             instance=obj,
+            **form_kwargs,
         )
         restrict_form_fields(form, request.user)
 
@@ -541,6 +579,9 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                     form.save_note(instance=obj, user=request.user)
 
                 self.successful_post(request, obj, object_created, logger)
+
+                if self.request.headers.get("HX-Request", False):
+                    return redirect(reverse(get_route_for_model(obj, "detail", api=True), args=[obj.pk]))
 
                 if "_addanother" in request.POST:
                     # If the object has clone_fields, pre-populate a new instance of the form
@@ -564,10 +605,16 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         else:
             logger.debug("Form validation failed")
 
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
         return render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
@@ -1138,6 +1185,7 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
 
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     template_name = "generic/object_bulk_rename.html"
+    bulk_rename_regex_timeout = 1.0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1164,26 +1212,40 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         if "_preview" in request.POST or "_apply" in request.POST:
             form = self.form(request.POST, initial={"pk": query_pks})
             if form.is_valid():
-                try:
-                    with transaction.atomic():
-                        renamed_pks = []
-                        for obj in selected_objects:
-                            find = form.cleaned_data["find"]
-                            replace = form.cleaned_data["replace"]
-                            if form.cleaned_data["use_regex"]:
-                                try:
-                                    obj.new_name = re.sub(find, replace, obj.name)
-                                # Catch regex group reference errors
-                                except re.error:
-                                    obj.new_name = obj.name
-                            else:
-                                obj.new_name = obj.name.replace(find, replace)
-                            renamed_pks.append(obj.pk)
+                find = form.cleaned_data["find"]
+                replace = form.cleaned_data["replace"]
+                use_regex = form.cleaned_data["use_regex"]
 
-                        if "_apply" in request.POST:
+                # Phase 1: compute new_name for each object so the preview can show old → new,
+                # surfacing any regex compile error or timeout to the form.
+                if use_regex:
+                    try:
+                        pattern = regex.compile(find)
+                    except regex.error as e:
+                        form.add_error("find", f"Invalid regex: {e}")
+                    else:
+                        try:
+                            for obj in selected_objects:
+                                obj.new_name = pattern.sub(replace, obj.name, timeout=self.bulk_rename_regex_timeout)
+                        except TimeoutError:
+                            form.add_error(
+                                "find",
+                                f"Regex matching exceeded {self.bulk_rename_regex_timeout}s and was aborted; "
+                                "the pattern may have catastrophic backtracking. Please simplify the expression.",
+                            )
+                else:
+                    for obj in selected_objects:
+                        obj.new_name = obj.name.replace(find, replace)
+
+                # Phase 2: persist the rename only if "Apply" was clicked and Phase 1 succeeded.
+                if "_apply" in request.POST and not form.errors:
+                    try:
+                        with transaction.atomic():
+                            renamed_pks = []
                             for obj in selected_objects:
                                 obj.name = obj.new_name
                                 obj.save()
+                                renamed_pks.append(obj.pk)
 
                             # Enforce constrained permissions
                             if self.queryset.filter(pk__in=renamed_pks).count() != len(selected_objects):
@@ -1194,11 +1256,10 @@ class BulkRenameView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                                 f"Renamed {len(selected_objects)} {self.queryset.model._meta.verbose_name_plural}",
                             )
                             return redirect(self.get_return_url(request))
-
-                except ObjectDoesNotExist:
-                    msg = "Object update failed due to object-level permissions violation"
-                    logger.debug(msg)
-                    form.add_error(None, msg)
+                    except ObjectDoesNotExist:
+                        msg = "Object update failed due to object-level permissions violation"
+                        logger.debug(msg)
+                        form.add_error(None, msg)
 
         else:
             form = self.form(initial={"pk": query_pks})
@@ -1356,7 +1417,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "dcim/device_component_add.html"
+    template_name = "generic/object_create.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -1364,19 +1425,31 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
     def get(self, request):
         if self.form is None or self.model_form is None:
             raise RuntimeError("self.form and self.model_form must not be None")
-        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
+        form = self.form(initial=normalize_querydict(request.GET, form_class=self.form), **form_kwargs)  # pylint: disable=not-callable
         model_form = self.model_form(request.GET)  # pylint: disable=not-callable
+        borrow_extras_fields(form, model_form)
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
 
-        return render(
+        response = render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "component_type": self.queryset.model._meta.verbose_name,
+                # Required by the generic create template (title, header, `data-nb-obj-type`).
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "model_form": model_form,
                 "form": form,
                 "return_url": self.get_return_url(request),
             },
         )
+        patch_vary_headers(response, ["HX-Request"])
+        return response
 
     def post(self, request):
         logger = logging.getLogger(__name__ + ".ComponentCreateView")
@@ -1384,6 +1457,11 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             raise RuntimeError("self.form, self.model_form, and self.queryset must not be None")
         form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
         model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))  # pylint: disable=not-callable
+        # Borrow the model form's "extras" fields onto the create form so they validate as part of it; their
+        # values then flow through `form.cleaned_data` into each per-instance form below. Only these borrowed
+        # fields (plus the create form's own) reach `data`, so model fields deliberately omitted from the
+        # create UI cannot be set via a crafted POST request.
+        borrow_extras_fields(form, model_form)
 
         if form.is_valid():
             new_components = []
@@ -1411,9 +1489,15 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
                             field = "name_pattern"
                         elif field == "label":
                             field = "label_pattern"
+                        elif field == "breakout_position":
+                            field = "breakout_position_pattern"
                         for e in errors:
                             err_str = ", ".join(e)
-                            form.add_error(field, f"{name}: {err_str}")
+                            if field not in form.fields:
+                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                form.add_error(None, f"{name}: {field}: {err_str}")
+                            else:
+                                form.add_error(field, f"{name}: {err_str}")
 
             if not form.errors:
                 try:
@@ -1447,6 +1531,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             self.template_name,
             {
                 "component_type": self.queryset.model._meta.verbose_name,
+                # Required by the generic create template (title, header, `data-nb-obj-type`).
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "model_form": model_form,
                 "return_url": self.get_return_url(request),
@@ -1537,10 +1623,11 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
                                     ) in component_form.errors.as_data().items():
                                         for e in errors:
                                             err_str = ", ".join(e)
-                                            form.add_error(
-                                                field,
-                                                f"{obj} {name}: {err_str}",
-                                            )
+                                            if field not in form.fields:
+                                                # Add generic errors for fields of the model form that are not declared in the create form.
+                                                form.add_error(None, f"{obj} {name}: {field}: {err_str}")
+                                            else:
+                                                form.add_error(field, f"{obj} {name}: {err_str}")
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(

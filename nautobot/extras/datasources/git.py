@@ -11,11 +11,13 @@ from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
+from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist, PermissionDenied
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from git import InvalidGitRepositoryError, Repo
 import yaml
 
+from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.utils.git import GitRepo
 from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_modules_privately
 from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
@@ -37,8 +39,8 @@ from nautobot.extras.models import (
     Role,
     Tag,
 )
-from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry
-from nautobot.extras.utils import refresh_job_model_from_job_class
+from nautobot.extras.registry import DatasourceContent, register_datasource_contents, registry, registry_jobs_lock
+from nautobot.extras.utils import get_worker_count, refresh_job_model_from_job_class
 from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, ClusterGroup, VirtualMachine
 
@@ -53,13 +55,33 @@ GitJobResult = namedtuple("GitJobResult", ["job_result", "repository_record"])
 GitRepoInfo = namedtuple("GitRepoInfo", ["from_url", "to_path", "from_branch"])
 
 
+def get_git_repository_for_sync(request, pk):
+    """
+    Shared validation for both UI and API sync/dry-run entry points.
+
+    Raises:
+        PermissionDenied: if the user lacks extras.change_gitrepository.
+        CeleryWorkerNotRunningException: if no worker is available.
+        Http404: if the repository doesn't exist or isn't visible to the user.
+    """
+    if not request.user.has_perm("extras.change_gitrepository"):
+        raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
+
+    repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+
+    if not get_worker_count():
+        raise CeleryWorkerNotRunningException()
+
+    return repository
+
+
 def enqueue_git_repository_helper(repository, user, job_class, **kwargs):
     """
     Wrapper for JobResult.enqueue_job() to enqueue one of several possible Git repository functions.
     """
     job_model = job_class().job_model
 
-    return JobResult.enqueue_job(job_model, user, repository=repository.pk)
+    return JobResult.enqueue_job(job_model, user, job_kwargs={"repository": repository.pk})
 
 
 def enqueue_git_repository_diff_origin_and_local(repository, user):
@@ -161,15 +183,15 @@ def ensure_git_repository(repository_record, logger=None, head=None):  # pylint:
     if head is not None:
         # If the repo exists and has HEAD already checked out, the repo is present and has the correct branch selected.
         with suppress(InvalidGitRepositoryError):
-            if Path(repository_record.filesystem_path).exists() and str(
-                Repo(repository_record.filesystem_path).rev_parse("HEAD")
-            ) == str(head):
-                return False
+            if Path(repository_record.filesystem_path).exists():
+                with Repo(repository_record.filesystem_path) as repo:
+                    if str(repo.rev_parse("HEAD")) == str(head):
+                        return False
 
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
     try:
-        repo_helper = GitRepo(to_path, from_url)
-        head, changed = repo_helper.checkout(from_branch, head)
+        with GitRepo(to_path, from_url) as repo_helper:
+            head, changed = repo_helper.checkout(from_branch, head)
         if repository_record.current_head != head:
             repository_record.current_head = head
             repository_record.save()
@@ -205,9 +227,9 @@ def git_repository_dry_run(repository_record, logger):  # pylint: disable=redefi
     from_url, to_path, from_branch = get_repo_from_url_to_path_and_from_branch(repository_record)
 
     try:
-        repo_helper = GitRepo(to_path, from_url, clone_initially=False)
-        logger.info("Fetching from origin")
-        modified_files = repo_helper.diff_remote(from_branch)
+        with GitRepo(to_path, from_url, clone_initially=False) as repo_helper:
+            logger.info("Fetching from origin")
+            modified_files = repo_helper.diff_remote(from_branch)
         if modified_files:
             # Log each modified files
             for item in modified_files:
@@ -468,6 +490,7 @@ def import_config_context(context_data, repository_record, job_result):
                     schema = ConfigContextSchema.objects.get(name=context_metadata["config_context_schema"])
                     context_record.config_context_schema = schema
                     modified = True
+                    save_needed = True
                 except ConfigContextSchema.DoesNotExist:
                     msg = f"ConfigContextSchema {context_metadata['config_context_schema']} does not exist."
                     logger.error(msg)
@@ -478,6 +501,7 @@ def import_config_context(context_data, repository_record, job_result):
             if context_record.config_context_schema is not None:
                 context_record.config_context_schema = None
                 modified = True
+                save_needed = True
 
         if context_record.data != data:
             context_record.data = data
@@ -735,32 +759,35 @@ def refresh_job_code_from_repository(repository_slug, skip_reimport=False, ignor
             return
         raise ValueError(f"The repository_slug {repository_slug!r} is invalid as it is {reason}")
 
-    # Unload any previous version of this module and its submodules if present
-    for job_class_path in list(registry["jobs"]):
-        if job_class_path.startswith(f"{repository_slug}."):
-            del registry["jobs"][job_class_path]
+    with registry_jobs_lock:
+        # Unload any previous version of this module and its submodules if present
+        for job_class_path in list(registry["jobs"]):
+            if job_class_path.startswith(f"{repository_slug}."):
+                registry["jobs"].pop(job_class_path, None)
 
-    if skip_reimport:
-        return
+        if skip_reimport:
+            return
 
-    try:
-        repository = GitRepository.objects.get(slug=repository_slug)
-        if "extras.job" in repository.provided_contents:
-            if not (
-                os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
-                or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
-            ):
-                logger.error("No `jobs` submodule found in Git repository %s", repository)
-                if not ignore_import_errors:
-                    raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
-            else:
-                import_modules_privately(
-                    settings.GIT_ROOT, module_path=[repository_slug, "jobs"], ignore_import_errors=ignore_import_errors
-                )
-    except GitRepository.DoesNotExist as exc:
-        logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
-        if not ignore_import_errors:
-            raise
+        try:
+            repository = GitRepository.objects.get(slug=repository_slug)
+            if "extras.job" in repository.provided_contents:
+                if not (
+                    os.path.isdir(os.path.join(repository.filesystem_path, "jobs"))
+                    or os.path.isfile(os.path.join(repository.filesystem_path, "jobs.py"))
+                ):
+                    logger.error("No `jobs` submodule found in Git repository %s", repository)
+                    if not ignore_import_errors:
+                        raise FileNotFoundError(f"No `jobs` submodule found in Git repository {repository}")
+                else:
+                    import_modules_privately(
+                        settings.GIT_ROOT,
+                        module_path=[repository_slug, "jobs"],
+                        ignore_import_errors=ignore_import_errors,
+                    )
+        except GitRepository.DoesNotExist as exc:
+            logger.error("Unable to reload Jobs from %s.jobs: %s", repository_slug, exc)
+            if not ignore_import_errors:
+                raise
 
 
 def refresh_git_jobs(repository_record, job_result, delete=False):

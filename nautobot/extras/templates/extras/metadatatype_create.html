@@ -73,7 +73,6 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
     <script type="text/javascript">
         $('.formset_row-{{ choices.prefix }}').formset({
             addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Choice',

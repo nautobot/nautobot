@@ -17,7 +17,9 @@
                     <input class="form-control interface-filter" type="text" placeholder="Filter" title="Filter text (regular expressions supported)" style="height: 23px" />
                 </div>
             </div>
-            {% render_table interface_table 'inc/table.html' %}
+            <div class="table-responsive">
+                {% render_table interface_table 'inc/table.html' %}
+            </div>
         </div>
     </form>
     {% if interface_table.paginator.num_pages > 1 %}
@@ -29,5 +31,4 @@
     {{ block.super }}
     <script src="{% versioned_static 'js/connection_toggles.js' %}"></script>
     <script src="{% versioned_static 'js/interface_filtering.js' %}"></script>
-    <script src="{% versioned_static 'js/tableconfig.js' %}"></script>
 {% endblock javascript %}

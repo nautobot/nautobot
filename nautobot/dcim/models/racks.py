@@ -15,11 +15,12 @@ from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
-from nautobot.dcim.elevations import RackElevationSVG
+from nautobot.dcim.svg.rack_elevation import RackElevationSVG
+from nautobot.dcim.utils import power_ports_connected_to
 from nautobot.extras.models import RoleField, StatusField
 from nautobot.extras.utils import extras_features
 
-from .device_components import PowerOutlet, PowerPort
+from .device_components import PowerOutlet
 from .devices import Device
 from .power import PowerFeed
 
@@ -252,6 +253,14 @@ class Rack(PrimaryModel):
             return f"{self.name} ({self.facility_id})"
         return self.name
 
+    @property
+    def space_utilization(self):
+        return self.get_utilization()
+
+    @property
+    def power_utilization(self):
+        return self.get_power_utilization()
+
     def get_rack_units(
         self,
         user=None,
@@ -432,19 +441,15 @@ class Rack(PrimaryModel):
         if not available_power_total:
             return UtilizationData(numerator=0, denominator=0)
 
-        pf_powerports = PowerPort.objects.filter(
-            _cable_peer_type=ContentType.objects.get_for_model(PowerFeed),
-            _cable_peer_id__in=powerfeeds.values_list("id", flat=True),
-        )
+        pf_powerports = power_ports_connected_to(powerfeeds)
         direct_allocated_draw = int(
             pf_powerports.aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"] or 0
         )
         poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
         allocated_draw_total = int(
-            PowerPort.objects.filter(
-                _cable_peer_type=ContentType.objects.get_for_model(PowerOutlet),
-                _cable_peer_id__in=poweroutlets.values_list("id", flat=True),
-            ).aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"]
+            power_ports_connected_to(poweroutlets).aggregate(total=Sum(F("allocated_draw") / F("power_factor")))[
+                "total"
+            ]
             or 0
         )
         allocated_draw_total += direct_allocated_draw

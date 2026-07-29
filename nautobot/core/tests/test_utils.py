@@ -1,6 +1,9 @@
+import os
 import sys
+import tempfile
 from unittest import mock
 import uuid
+import warnings
 
 from django import forms as django_forms
 from django.apps import apps
@@ -17,10 +20,14 @@ from nautobot.core.api import utils as api_utils
 from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
-from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
+from nautobot.core.utils import data as data_utils, deprecation, filtering, lookup, querysets, requests
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
+from nautobot.core.utils.module_loading import (
+    check_name_safe_to_import_privately,
+    import_modules_privately,
+    import_string_optional,
+)
 from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import (
     filters as dcim_filters,
@@ -566,6 +573,69 @@ class IsTruthyTest(TestCase):
         self.assertFalse(settings_funcs.is_truthy("0"))
 
 
+class WarnDeprecatedAtCallerTest(TestCase):
+    """Tests for `warn_deprecated_at_caller()`."""
+
+    @staticmethod
+    def _make_shim():
+        """Build a deprecation shim that lives in a *different* file than this test module.
+
+        `warn_deprecated_at_caller()` walks out of its immediate caller's module (the shim) before
+        attributing the warning, so exercising that walk correctly requires the shim's `co_filename`
+        to differ from this test's -- otherwise the walk would step over the test frame too.
+        `compile()` with an explicit filename gives us that distinct frame without a second source
+        file on disk. The returned `shim(message)` simply forwards to `warn_deprecated_at_caller()`.
+        """
+        namespace = {"warn_deprecated_at_caller": deprecation.warn_deprecated_at_caller}
+        code = compile(
+            "def shim(message):\n    warn_deprecated_at_caller(message)\n",
+            "<deprecation-shim-stand-in>",
+            "exec",
+        )
+        exec(code, namespace)  # noqa: S102  # pylint: disable=exec-used  # controlled, test-only source
+        return namespace["shim"]
+
+    def test_emits_deprecation_warning(self):
+        """The message is emitted as a `DeprecationWarning`."""
+        with self.assertWarns(DeprecationWarning) as cm:
+            deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
+        self.assertEqual(str(cm.warning), "legacy thing is deprecated")
+
+    def test_warning_is_attributed_to_caller_of_shim(self):
+        """`stacklevel` skips the shim frame so the warning points at the app code that called it."""
+        shim = self._make_shim()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+            shim("legacy thing is deprecated")
+        self.assertEqual(len(caught), 1)
+        # Blamed here (the shim's caller), not on the shim's file or on deprecation.py.
+        self.assertEqual(os.path.basename(caught[0].filename), os.path.basename(__file__))
+        self.assertEqual(caught[0].lineno, expected_lineno)
+
+    def test_logs_warning_with_matching_stacklevel_when_enabled(self):
+        """With `LOG_DEPRECATION_WARNINGS` set, a `logger.warning` fires, attributed to the same caller."""
+        shim = self._make_shim()
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", True):
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                with self.assertLogs(deprecation.logger, level="WARNING") as logs:
+                    expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+                    shim("legacy thing is deprecated")
+        self.assertEqual(len(logs.records), 1)
+        record = logs.records[0]
+        self.assertIn("legacy thing is deprecated", record.getMessage())
+        self.assertEqual(os.path.basename(record.pathname), os.path.basename(__file__))
+        self.assertEqual(record.lineno, expected_lineno)
+
+    def test_does_not_log_when_log_deprecation_warnings_disabled(self):
+        """With the setting off, only the (silenced) warning fires -- no log line."""
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", False):
+            with self.assertWarns(DeprecationWarning):
+                with self.assertNoLogs(deprecation.logger, level="WARNING"):
+                    deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
+
+
 class PrettyPrintQueryTest(TestCase):
     """Tests for `pretty_print_query()."""
 
@@ -922,11 +992,11 @@ class LookupRelatedFunctionTest(TestCase):
             # Assert total ContentTypes generated by form_field is == total `content_types` generated by TaggableClassesQuery
             form_field = filtering.get_filterset_parameter_form_field(extras_models.Tag, "content_types")
             self.assertIsInstance(form_field, forms.MultipleContentTypeField)
-            self.assertQuerysetEqualAndNotEmpty(form_field.queryset, extras_utils.TaggableClassesQuery().as_queryset())
+            self.assertQuerySetEqualAndNotEmpty(form_field.queryset, extras_utils.TaggableClassesQuery().as_queryset())
 
             form_field = filtering.get_filterset_parameter_form_field(extras_models.JobHook, "content_types")
             self.assertIsInstance(form_field, forms.MultipleContentTypeField)
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 form_field.queryset, extras_utils.ChangeLoggedModelsQuery().as_queryset()
             )
 
@@ -934,7 +1004,7 @@ class LookupRelatedFunctionTest(TestCase):
                 extras_models.ObjectMetadata, "assigned_object_type"
             )
             self.assertIsInstance(form_field, forms.MultipleContentTypeField)
-            self.assertQuerysetEqualAndNotEmpty(
+            self.assertQuerySetEqualAndNotEmpty(
                 form_field.queryset,
                 ContentType.objects.filter(extras_utils.FeatureQuery("metadata").get_query()).order_by(
                     "app_label", "model"
@@ -1212,6 +1282,141 @@ class TestModuleLoadingUtils(TestCase):
             self.assertEqual(
                 import_string_optional("nautobot.core.tests.test_utils.TestModuleLoadingUtils"), self.__class__
             )
+
+    def _write_consumer_shared_fixture(self, package_dir):
+        """
+        Write the minimal 3-file fixture that exposes class-identity divergence.
+
+        `consumer.py` sorts before `shared.py` alphabetically, so the walker re-execs
+        `shared.py` after `consumer.py` has already captured `Widget`.
+        """
+        os.makedirs(package_dir, exist_ok=True)
+        with open(os.path.join(package_dir, "__init__.py"), "w"):
+            pass
+        with open(os.path.join(package_dir, "consumer.py"), "w") as fd:
+            fd.write("from .shared import Widget\nCAPTURED = Widget\n")
+        with open(os.path.join(package_dir, "shared.py"), "w") as fd:
+            fd.write("class Widget:\n    pass\n")
+
+    def _clear_test_modules(self, *prefixes):
+        for cached in list(sys.modules):
+            if any(cached == prefix or cached.startswith(f"{prefix}.") for prefix in prefixes):
+                del sys.modules[cached]
+
+    def test_import_modules_privately_preserves_class_identity(self):
+        """
+        Regression test for NTC-5779: a class imported by one sibling module and re-defined by the
+        walker on a subsequent iteration must remain a single object identity in sys.modules after
+        the loader returns.
+        """
+        package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                self._write_consumer_shared_fixture(os.path.join(tempdir, package_name))
+                import_modules_privately(tempdir)
+
+                consumer_module = sys.modules[f"{package_name}.consumer"]
+                shared_module = sys.modules[f"{package_name}.shared"]
+
+                self.assertIs(consumer_module.CAPTURED, shared_module.Widget)
+                self.assertIsInstance(consumer_module.CAPTURED(), shared_module.Widget)
+        finally:
+            self._clear_test_modules(package_name)
+
+    def test_import_modules_privately_module_path_filter_preserves_class_identity(self):
+        """
+        Same invariant as above, but with `module_path=[outer, pkg]` filtering, and an
+        unrelated sibling package that should not be touched by the loader.
+        """
+        outer_name = f"outer_{uuid.uuid4().hex[:8]}"
+        sibling_name = f"sibling_{uuid.uuid4().hex[:8]}"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                outer_dir = os.path.join(tempdir, outer_name)
+                os.makedirs(outer_dir)
+                with open(os.path.join(outer_dir, "__init__.py"), "w"):
+                    pass
+                self._write_consumer_shared_fixture(os.path.join(outer_dir, "pkg"))
+
+                sibling_dir = os.path.join(tempdir, sibling_name)
+                os.makedirs(sibling_dir)
+                with open(os.path.join(sibling_dir, "__init__.py"), "w"):
+                    pass
+                with open(os.path.join(sibling_dir, "should_not_load.py"), "w") as fd:
+                    fd.write("LOADED = True\n")
+
+                import_modules_privately(tempdir, module_path=[outer_name, "pkg"])
+
+                consumer_module = sys.modules[f"{outer_name}.pkg.consumer"]
+                shared_module = sys.modules[f"{outer_name}.pkg.shared"]
+                self.assertIs(consumer_module.CAPTURED, shared_module.Widget)
+
+                self.assertNotIn(f"{sibling_name}.should_not_load", sys.modules)
+        finally:
+            self._clear_test_modules(outer_name, sibling_name)
+
+    def test_import_modules_privately_cleans_up_deleted_submodules(self):
+        """
+        Loading a package with a submodule, deleting that submodule from disk, and reloading should
+        remove the stale entry from sys.modules so subsequent isinstance/import lookups don't see it.
+        """
+        package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+        submodule = f"{package_name}.removable"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                package_dir = os.path.join(tempdir, package_name)
+                os.makedirs(package_dir)
+                with open(os.path.join(package_dir, "__init__.py"), "w"):
+                    pass
+                removable_path = os.path.join(package_dir, "removable.py")
+                with open(removable_path, "w") as fd:
+                    fd.write("VALUE = 1\n")
+
+                import_modules_privately(tempdir)
+                self.assertIn(submodule, sys.modules)
+                self.assertEqual(sys.modules[submodule].VALUE, 1)
+
+                os.remove(removable_path)
+                import_modules_privately(tempdir)
+                self.assertNotIn(submodule, sys.modules)
+                self.assertIn(package_name, sys.modules)
+        finally:
+            self._clear_test_modules(package_name)
+
+    def test_import_modules_privately_raises_when_ignore_import_errors_false(self):
+        """
+        With ignore_import_errors=False, exceptions raised by either the top-level cascade
+        (Phase 3) or the leaf-sweep (Phase 4) must propagate to the caller.
+        """
+        with self.subTest("Top-level package import error propagates"):
+            package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    package_dir = os.path.join(tempdir, package_name)
+                    os.makedirs(package_dir)
+                    with open(os.path.join(package_dir, "__init__.py"), "w") as fd:
+                        fd.write("raise ValueError('boom from __init__')\n")
+                    with self.assertRaisesRegex(ValueError, "boom from __init__"):
+                        import_modules_privately(tempdir, ignore_import_errors=False)
+                    # Same scenario with ignore_import_errors=True should swallow the exception.
+                    self.assertEqual(import_modules_privately(tempdir), [])
+            finally:
+                self._clear_test_modules(package_name)
+
+        with self.subTest("Leaf-sweep import error propagates"):
+            package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    package_dir = os.path.join(tempdir, package_name)
+                    os.makedirs(package_dir)
+                    with open(os.path.join(package_dir, "__init__.py"), "w"):
+                        pass
+                    with open(os.path.join(package_dir, "leaf.py"), "w") as fd:
+                        fd.write("raise ValueError('boom from leaf')\n")
+                    with self.assertRaisesRegex(ValueError, "boom from leaf"):
+                        import_modules_privately(tempdir, ignore_import_errors=False)
+            finally:
+                self._clear_test_modules(package_name)
 
 
 class TestQuerySetUtils(TestCase):

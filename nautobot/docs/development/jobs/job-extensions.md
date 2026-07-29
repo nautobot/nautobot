@@ -96,6 +96,9 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
 !!! important "No recursive JobHookReceivers"
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` Job will not trigger another `JobHookReceiver` Job to run.
 
+!!! important "Run permission is required to trigger a Job Hook"
+    A Job Hook is only dispatched if the user responsible for the triggering change has permission to run the target Job (the `run` action, e.g. via `extras.run_job` or an equivalent object permission). Changes made by a user without that permission will not trigger the Job Hook.
+
 <!-- pyml disable-num-lines 10 proper-names -->
 !!! example "Example Job Hook Receiver"
     ```py

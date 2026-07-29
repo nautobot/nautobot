@@ -59,7 +59,11 @@ class NautobotDatabaseBackend(DatabaseBackend):
             # Preserve the JobResult data behavior from Nautobot 2.0 through 2.2 (wherein the Job itself was the task)
             # by manipulating `task_name` and `task_args` to hide the fact that we are now calling
             # `run_job.apply(args=[JobClass.class_path, ...])` instead of `JobClass.apply(args=[...])`.
-            if task_name == "nautobot.extras.jobs.run_job" and task_args:
+            if (
+                task_name
+                in ["nautobot.extras.jobs.run_job", "nautobot.extras.jobs.run_console_log_job_and_return_job_result"]
+                and task_args
+            ):
                 task_name = task_args[0]
                 task_args = task_args[1:]
 

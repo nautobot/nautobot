@@ -20,7 +20,7 @@ class ControllerTestCase(SeleniumTestCase):
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_list"))
         self.click_list_view_add_button()
         self.assertEqual(self.browser.url, self.live_server_url + reverse("dcim:locationtype_add"))
-        self.fill_select2_multiselect_field("content_types", "dcim | controller")
+        self.fill_select2_multiselect_field("content_types", "DCIM | controller")
         self.fill_input("name", "Test Location Type 1")
         self.click_edit_form_create_button()
 

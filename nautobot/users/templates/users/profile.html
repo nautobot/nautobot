@@ -28,7 +28,7 @@
                         </tr>
                         <tr>
                             <td>Registered</td>
-                            <td>{{ request.user.date_joined|date:settings.SHORT_DATETIME_FORMAT }}</td>
+                            <td>{{ request.user.date_joined|date:"SHORT_DATETIME_FORMAT" }}</td>
                         </tr>
                         <tr>
                             <td>Groups</td>

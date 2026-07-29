@@ -3,3 +3,102 @@
 {% block form %}
     {% include 'dcim/inc/cable_form.html' %}
 {% endblock %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script>
+        // Select2's jQuery custom select2:select/unselect events don't surface as native
+        // `change` events that HTMX can observe. Bridge them on the cable's HTMX-driven selects.
+        $(document).on("select2:select select2:unselect", "#id_cable_type, select[name$='_type']", function () {
+            htmx.trigger(this, "change");
+        });
+        // Re-initialize Select2 on swapped-in content. We use `htmx:afterSettle` (rather than
+        // `htmx:afterSwap`) so HTMX has finished walking the swapped nodes for hx-* attribute
+        // processing before select2 init runs — running select2 init too early can leave the
+        // underlying <select> without `select2-hidden-accessible`, leaving it visible.
+        document.body.addEventListener("htmx:afterSettle", function (evt) {
+            window.nb.select2.initializeSelect2Fields(evt.detail.target);
+        });
+
+        // When a lane's parent select (e.g. device, circuit, power panel) changes, clear that
+        // lane's termination select. Select2 doesn't auto-clear an already-selected value just
+        // because its API query params reference a changed sibling; without this the user can
+        // be left looking at a stale termination from the previously-chosen parent.
+        $(document).on("change", "select[name$='_parent']", function () {
+            const m = this.name.match(/^([ab]_conn_\d+)_parent$/);
+            if (!m) return;
+            const term = document.querySelector(`select[name="${m[1]}_termination"]`);
+            if (term) {
+                window.nb.select2.setSelect2Value(term, null);
+            }
+        });
+
+        // "Swap A / B" button: rearrange the values across the A and B side lane fields without
+        // firing a full `change` event (which would otherwise trigger HTMX to re-fetch the lane
+        // fields and clobber the values we're trying to set).
+        //
+        // TODO: support cross-type swap (A and B with different termination types) — would
+        // require changing the type on each side first, awaiting HTMX afterSettle for each
+        // lane's parent+termination fields to re-render, then setting the swapped parent and
+        // termination values into the new fields. For now we reject the cross-type case with
+        // a user-facing message and ask the user to change the types manually first.
+        document.addEventListener("click", function (event) {
+            if (!event.target.closest("#cable-swap-sides")) {
+                return;
+            }
+            event.preventDefault();
+
+            // Group all `<side>_conn_<N>_<type|parent|termination>` selects by connector N + side.
+            const selects = document.querySelectorAll(
+                'select[name^="a_conn_"], select[name^="b_conn_"]'
+            );
+            const groups = {};
+            selects.forEach((el) => {
+                const m = el.name.match(/^([ab])_conn_(\d+)_(type|parent|termination)$/);
+                if (!m) return;
+                const [, side, n, suffix] = m;
+                groups[n] = groups[n] || { a: {}, b: {} };
+                groups[n][side][suffix] = el;
+            });
+
+            // Validate: every paired connector must have matching types on both sides.
+            for (const n of Object.keys(groups)) {
+                const { a, b } = groups[n];
+                if (!a.type || !b.type) continue;
+                if (a.type.value && b.type.value && a.type.value !== b.type.value) {
+                    alert(
+                        "Cannot swap: side A and side B have different termination types for connector " +
+                        n +
+                        ". Change the types to match before swapping."
+                    );
+                    return;
+                }
+            }
+
+            const setVal = (sel, val, text) => {
+                if (val && !Array.from(sel.options).some((o) => o.value === val)) {
+                    sel.add(new Option(text, val, true, true));
+                }
+                sel.value = val;
+                // `change.select2` updates the Select2 widget without bubbling to HTMX (which
+                // listens for the native `change` event).
+                $(sel).trigger("change.select2");
+            };
+
+            for (const n of Object.keys(groups)) {
+                const { a, b } = groups[n];
+                for (const suffix of ["type", "parent", "termination"]) {
+                    const aSel = a[suffix];
+                    const bSel = b[suffix];
+                    if (!aSel || !bSel) continue;
+                    const aVal = aSel.value;
+                    const aText = aSel.selectedOptions[0] ? aSel.selectedOptions[0].text : "";
+                    const bVal = bSel.value;
+                    const bText = bSel.selectedOptions[0] ? bSel.selectedOptions[0].text : "";
+                    setVal(aSel, bVal, bText);
+                    setVal(bSel, aVal, aText);
+                }
+            }
+        });
+    </script>
+{% endblock %}

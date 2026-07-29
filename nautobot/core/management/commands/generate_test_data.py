@@ -2,6 +2,7 @@ import hashlib
 import json
 import os
 
+from django.apps import apps
 from django.contrib.contenttypes.models import ContentType
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
@@ -75,7 +76,9 @@ class Command(BaseCommand):
                 CloudResourceTypeFactory,
                 CloudServiceFactory,
             )
+            from nautobot.dcim.constants import DEFAULT_CABLE_TYPES
             from nautobot.dcim.factory import (
+                CableTypeFactory,
                 ConsolePortTemplateFactory,
                 ConsoleServerPortTemplateFactory,
                 ControllerFactory,
@@ -100,6 +103,7 @@ class Command(BaseCommand):
                 SoftwareVersionFactory,
                 VirtualDeviceContextFactory,
             )
+            from nautobot.dcim.models import CableType
             from nautobot.extras.choices import MetadataTypeDataTypeChoices
             from nautobot.extras.factory import (
                 ContactFactory,
@@ -118,11 +122,16 @@ class Command(BaseCommand):
                 TagFactory,
                 TeamFactory,
             )
-            from nautobot.extras.management import populate_role_choices, populate_status_choices
-            from nautobot.extras.models import MetadataType
+            from nautobot.extras.management import (
+                export_metadata_from_choiceset,
+                ROLE_CHOICESET_MAP,
+                STATUS_CHOICESET_MAP,
+            )
+            from nautobot.extras.models import MetadataType, Role, Status
             from nautobot.extras.utils import FeatureQuery, TaggableClassesQuery
             from nautobot.ipam.choices import PrefixTypeChoices
             from nautobot.ipam.factory import (
+                IPAddressRangeFactory,
                 NamespaceFactory,
                 PrefixFactory,
                 RIRFactory,
@@ -138,6 +147,7 @@ class Command(BaseCommand):
                 VPNPhase1PolicyFactory,
                 VPNPhase2PolicyFactory,
                 VPNProfileFactory,
+                VPNTerminationFactory,
                 VPNTunnelEndpointFactory,
                 VPNTunnelFactory,
             )
@@ -169,9 +179,36 @@ class Command(BaseCommand):
                 sha256_hash = hashlib.sha256(json.dumps(model_ids, cls=DjangoJSONEncoder).encode()).hexdigest()
                 self.stdout.write(f"  SHA256: {sha256_hash}")
 
-        populate_role_choices(verbosity=0, using=db_name)
+        self.stdout.write("Creating default Role instances...")
+        for model_path, choiceset in ROLE_CHOICESET_MAP.items():
+            content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
+            choices = export_metadata_from_choiceset(choiceset, metadatamodel="role")
+
+            for choice_kwargs in choices:
+                defaults = choice_kwargs.copy()
+                defaults.pop("slug")
+                try:
+                    role = Role.objects.get(name=defaults["name"])
+                    role.content_types.add(content_type)
+                except Role.DoesNotExist:
+                    role = RoleFactory.create(**defaults, content_types=[content_type], using=db_name)
+
         _create_batch(RoleFactory, 20)
-        populate_status_choices(verbosity=0, using=db_name)
+
+        self.stdout.write("Creating default Status instances...")
+        for model_path, choiceset in STATUS_CHOICESET_MAP.items():
+            content_type = ContentType.objects.get_for_model(apps.get_model(model_path))
+            choices = export_metadata_from_choiceset(choiceset, metadatamodel="status")
+
+            for choice_kwargs in choices:
+                defaults = choice_kwargs.copy()
+                defaults.pop("slug")
+                try:
+                    status = Status.objects.get(name=defaults["name"])
+                    status.content_types.add(content_type)
+                except Status.DoesNotExist:
+                    status = StatusFactory.create(**defaults, content_types=[content_type], using=db_name)
+
         _create_batch(StatusFactory, 10)
         # Ensure that we have some tags that are applicable to all relevant content-types
         _create_batch(
@@ -222,8 +259,15 @@ class Command(BaseCommand):
             description="without a Tenant and without any Prefixes or IPAddresses",
             has_tenant=False,
         )
+        # Must run after IPAddresses exist (created here via PrefixFactory's
+        # children hook, above). IPAddressRangeFactory.is_exclusive is a point-in-time check
+        _create_batch(IPAddressRangeFactory, 25)
+        for name, defaults in DEFAULT_CABLE_TYPES.items():
+            if not CableType.objects.filter(name=name).exists():
+                CableTypeFactory.create(name=name, **defaults)
         _create_batch(DeviceFamilyFactory, 20)
         _create_batch(ManufacturerFactory, 8)  # First 8 hard-coded Manufacturers
+        _create_batch(CableTypeFactory, 10)
         _create_batch(PlatformFactory, 20, description="with Manufacturers", has_manufacturer=True)
         _create_batch(PlatformFactory, 5, description="without Manufacturers", has_manufacturer=False)
         _create_batch(SoftwareVersionFactory, 20, description="to be usable by Devices")
@@ -342,6 +386,7 @@ class Command(BaseCommand):
         _create_batch(VPNPhase2PolicyFactory, 20)
         _create_batch(VPNProfileFactory, 30)
         _create_batch(VPNFactory, 10)
+        _create_batch(VPNTerminationFactory, 9)
         _create_batch(VPNTunnelEndpointFactory, 20)
         _create_batch(VPNTunnelFactory, 10)
         _create_batch(JobQueueFactory, 10)

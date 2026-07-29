@@ -9,7 +9,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form class="form-horizontal userconfigform" data-config-root="forms.{{ form_as_dialog.form_name }}" action="{{ form_action_url }}" method="post">
+                <form action="{{ form_action_url }}" method="post">
                     {% csrf_token %}
                     <h3>
                         {% if obj %}

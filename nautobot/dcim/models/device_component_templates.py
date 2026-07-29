@@ -17,10 +17,10 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
-    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
     COPPER_TWISTED_PAIR_IFACE_TYPES,
+    NONCONNECTABLE_IFACE_TYPES,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
     VIRTUAL_IFACE_TYPES,
@@ -211,6 +211,8 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsolePortTemplate(ModularComponentTemplateModel):
     """
@@ -225,6 +227,8 @@ class ConsolePortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsoleServerPortTemplate(ModularComponentTemplateModel):
     """
@@ -239,6 +243,8 @@ class ConsoleServerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerPortTemplate(ModularComponentTemplateModel):
     """
@@ -289,6 +295,8 @@ class PowerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerOutletTemplate(ModularComponentTemplateModel):
     """
@@ -341,6 +349,8 @@ class PowerOutletTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class InterfaceTemplate(ModularComponentTemplateModel):
     """
@@ -355,6 +365,9 @@ class InterfaceTemplate(ModularComponentTemplateModel):
         blank=True,
     )
     type = models.CharField(max_length=50, choices=InterfaceTypeChoices)
+    port_type = models.CharField(
+        max_length=50, choices=PortTypeChoices, blank=True, help_text="Physical connector type"
+    )
     mgmt_only = models.BooleanField(default=False, verbose_name="Management only")
     speed = models.PositiveIntegerField(null=True, blank=True)
     duplex = models.CharField(max_length=10, choices=InterfaceDuplexChoices, blank=True, default="")
@@ -380,6 +393,9 @@ class InterfaceTemplate(ModularComponentTemplateModel):
         if self.duplex and self.type not in COPPER_TWISTED_PAIR_IFACE_TYPES:
             raise ValidationError({"duplex": "Duplex is only applicable to copper twisted-pair interfaces."})
 
+        if self.type in NONCONNECTABLE_IFACE_TYPES and self.port_type:
+            raise ValidationError({"port_type": "Virtual and wireless interfaces cannot have a port type."})
+
     def instantiate(self, device, module=None):
         try:
             status = Status.objects.get_for_model(Interface).get(name="Active")
@@ -390,6 +406,7 @@ class InterfaceTemplate(ModularComponentTemplateModel):
             device=device,
             module=module,
             type=self.type,
+            port_type=self.port_type,
             mgmt_only=self.mgmt_only,
             speed=self.speed,
             duplex=self.duplex,
@@ -399,6 +416,8 @@ class InterfaceTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class FrontPortTemplate(ModularComponentTemplateModel):
     """
@@ -465,6 +484,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class RearPortTemplate(ModularComponentTemplateModel):
     """
@@ -492,6 +513,8 @@ class RearPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class DeviceBayTemplate(ComponentTemplateModel):
     """
@@ -506,13 +529,13 @@ class DeviceBayTemplate(ComponentTemplateModel):
         return self.instantiate_model(model=DeviceBay, device=device)
 
     def clean(self):
-        if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:  # pylint: disable=no-member
+        if self.device_type and not self.device_type.is_parent_device:  # pylint: disable=no-member
             raise ValidationError(
-                f'Subdevice role of device type ({self.device_type}) must be set to "parent" to allow device bays.'
+                f'Subdevice role of device type ({self.device_type}) must be set to "parent" or "parent-child" to allow device bays.'
             )
 
 
-@extras_features("custom_validators")
+@extras_features("custom_validators", "graphql", "webhooks")
 class ModuleBayTemplate(ModularComponentTemplateModel):
     """Template for a slot in a Device or Module which can contain Modules."""
 

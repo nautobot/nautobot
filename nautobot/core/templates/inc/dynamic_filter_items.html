@@ -1,0 +1,25 @@
+<div class="nb-dynamic-filter-items d-flex flex-wrap gap-10">
+    {% if filter_params %}
+        {% for field in filter_params %}
+            <span class="badge nb-multi-badge" data-nb-field="{{ field.name }}">
+                <button class="nb-dynamic-filter-remove" type="button">
+                    <span aria-hidden="true" class="mdi mdi-close"></span>
+                    <span class="visually-hidden">Remove All</span>
+                </button>
+                {{ field.display }}:
+                <span class="nb-multi-badge-items">
+                    {% for value in field.values %}
+                        <span class="badge" data-nb-value="{{ value.name }}"><!--
+                        --><button class="nb-dynamic-filter-remove" type="button">
+                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                            <span class="visually-hidden">Remove</span>
+                        </button><!--
+                        -->{{ value.display }}<!--
+                        --><input name="{% if field_prefix %}{{ field_prefix }}-{% endif %}{{ field.name }}" type="hidden" value="{{ value.name }}">
+                        </span>
+                    {% endfor %}
+                </span>
+            </span>
+        {% endfor %}
+    {% endif %}
+</div>

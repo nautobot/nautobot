@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from drf_spectacular.utils import extend_schema
+from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -45,3 +46,15 @@ class ExampleModelWebhook(APIView):
         ) as f:
             f.write(json.dumps(self.request.data, indent=4))
         return Response({"message": "Submitted"})
+
+
+@extend_schema(exclude=True)
+class ErrorView(GenericAPIView):
+    """This view always emits a HTTP 500 error.
+
+    This is useful for testing purposes."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, format=None):  # pylint: disable=redefined-builtin
+        raise Exception("Oh no!")  # pylint: disable=broad-exception-raised

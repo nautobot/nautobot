@@ -8,7 +8,7 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NEGATION_LOOKUP_MAP,
+    FILTER_CONTAINS_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.core.filters import (
@@ -29,6 +29,7 @@ from nautobot.extras.filter_mixins_customfields import (
     CustomFieldMultiSelectFilter,
     CustomFieldMultiValueCharFilter,
     CustomFieldMultiValueDateFilter,
+    CustomFieldMultiValueDateTimeFilter,
     CustomFieldMultiValueNumberFilter,
     CustomFieldNumberFilter,
     CustomFieldSelectFilter,
@@ -97,10 +98,19 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
     @staticmethod
     def _get_custom_field_filter_lookup_dict(filter_type):
         # Choose the lookup expression map based on the filter type
-        if issubclass(filter_type, (CustomFieldMultiValueNumberFilter, CustomFieldMultiValueDateFilter)):
+        if issubclass(
+            filter_type,
+            (
+                CustomFieldMultiValueNumberFilter,
+                CustomFieldMultiValueDateFilter,
+                CustomFieldMultiValueDateTimeFilter,
+            ),
+        ):
             return FILTER_NUMERIC_BASED_LOOKUP_MAP
         elif issubclass(filter_type, CustomFieldMultiSelectFilter):
-            return FILTER_NEGATION_LOOKUP_MAP
+            # Multi-select values are JSON lists; negation must invert the `contains` lookup used by the base
+            # filter, as excluding on `exact` compares the whole list against a single value and matches nothing.
+            return FILTER_CONTAINS_NEGATION_LOOKUP_MAP
         else:
             return FILTER_CHAR_BASED_LOOKUP_MAP
 
@@ -116,6 +126,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         magic_filters = {}
         custom_field_type_to_filter_map = {
             CustomFieldTypeChoices.TYPE_DATE: CustomFieldMultiValueDateFilter,
+            CustomFieldTypeChoices.TYPE_DATETIME: CustomFieldMultiValueDateTimeFilter,
             CustomFieldTypeChoices.TYPE_INTEGER: CustomFieldMultiValueNumberFilter,
             CustomFieldTypeChoices.TYPE_SELECT: CustomFieldMultiValueCharFilter,
             CustomFieldTypeChoices.TYPE_MULTISELECT: CustomFieldMultiSelectFilter,

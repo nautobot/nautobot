@@ -3,7 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases, TestCase
-from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.choices import InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -17,6 +17,7 @@ from nautobot.extras.models import Role, Status, Tag
 from nautobot.ipam.choices import PrefixTypeChoices, ServiceProtocolChoices
 from nautobot.ipam.filters import (
     IPAddressFilterSet,
+    IPAddressRangeFilterSet,
     IPAddressToInterfaceFilterSet,
     NamespaceFilterSet,
     PrefixFilterSet,
@@ -33,6 +34,7 @@ from nautobot.ipam.filters import (
 )
 from nautobot.ipam.models import (
     IPAddress,
+    IPAddressRange,
     IPAddressToInterface,
     Namespace,
     Prefix,
@@ -106,7 +108,7 @@ class VRFTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterT
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.filter(prefixes__isnull=False).first().prefixes.first()
         params = {"prefix": [prefix.prefix]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefixes__network=prefix.network, prefixes__prefix_length=prefix.prefix_length),
             ordered=False,
@@ -126,7 +128,7 @@ class VRFPrefixAssignmentTestCase(FilterTestCases.FilterTestCase):
         """Test filtering by prefix strings as an alternative to pk."""
         prefix = self.queryset.first().prefix
         params = {"prefix": [prefix.prefix]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefix__network=prefix.network, prefix__prefix_length=prefix.prefix_length),
             ordered=False,
@@ -163,9 +165,9 @@ class RIRTestCase(FilterTestCases.FilterTestCase):
 
     def test_is_private(self):
         params = {"is_private": "true"}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=True))
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=True))
         params = {"is_private": "false"}
-        self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=False))
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.filter(is_private=False))
 
 
 class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
@@ -224,13 +226,29 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
     def test_ip_version(self):
         params = {"ip_version": "6"}
         ipv6_prefixes = self.queryset.filter(ip_version=6)
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
         params = {"ip_version": "4"}
         ipv4_prefixes = self.queryset.filter(ip_version=4)
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
         params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+
+    def test_max_depth(self):
+        params = {"max_depth": 1}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__isnull=False)
+        )
+        params = {"max_depth": 2}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__isnull=False)
+        )
+        params = {"max_depth": 3}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.exclude(parent__parent__parent__isnull=False)
+        )
+        params = {"max_depth": 0}
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ancestors(self):
         prefixes = (
@@ -241,7 +259,7 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"ancestors": [str(prefixes[2].pk)]}
         filterset = self.filterset(params, self.queryset)
         ancestors = [ancestor.id for ancestor in prefixes[2].ancestors()]
-        self.assertQuerysetEqualAndNotEmpty(filterset.qs, self.queryset.filter(id__in=ancestors))
+        self.assertQuerySetEqualAndNotEmpty(filterset.qs, self.queryset.filter(id__in=ancestors))
 
     def test_prefix(self):
         Prefix.objects.create(
@@ -269,6 +287,17 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
             self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
         self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
 
+    def test_prefix_and_descendants(self):
+        pfx1 = Prefix.objects.filter(children__isnull=False).first()
+        pfx2 = Prefix.objects.filter(children__isnull=True).first()
+        self.assertIsNotNone(pfx1)
+        self.assertIsNotNone(pfx2)
+        params = {"prefix_and_descendants": [pfx1.pk, pfx2.pk]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            pfx1.descendants(include_self=True) | pfx2.descendants(include_self=True),
+        )
+
 
 class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
     queryset = PrefixLocationAssignment.objects.all()
@@ -286,7 +315,7 @@ class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
 
         params = {"prefix": [ipv4_prefix.prefix, ipv6_prefix.pk]}
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefix=ipv6_prefix)
             | self.queryset.filter(
@@ -299,7 +328,7 @@ class PrefixLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
 
         params = {"prefix": [ipv4_prefix.pk, ipv6_prefix.prefix]}
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(prefix=ipv4_prefix)
             | self.queryset.filter(
@@ -320,6 +349,7 @@ class PrefixFilterCustomDataTestCase(TestCase):
     @classmethod
     def setUpTestData(cls):
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
 
@@ -394,21 +424,21 @@ class PrefixFilterCustomDataTestCase(TestCase):
     def test_parent(self):
         parent4 = Prefix.objects.get(prefix="10.0.0.0/16", namespace=self.namespace)
         params = {"parent": [str(parent4.pk)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent4)
         )
         params = {"parent": ["10.0.0.0/16"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(parent__network="10.0.0.0", parent__prefix_length=16),
         )
         parent6 = Prefix.objects.get(prefix="2001:db8::/32", namespace=self.namespace)
         params = {"parent": [str(parent6.pk)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=parent6)
         )
         params = {"parent": ["2001:db8::/32"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(parent__network="2001:db8::", parent__prefix_length=32),
         )
@@ -416,30 +446,30 @@ class PrefixFilterCustomDataTestCase(TestCase):
     def test_ip_version(self):
         params = {"ip_version": "6"}
         ipv6_prefixes = self.queryset.filter(ip_version=6)
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv6_prefixes)
         params = {"ip_version": "4"}
         ipv4_prefixes = self.queryset.filter(ip_version=4)
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, ipv4_prefixes)
         params = {"ip_version": ""}
         all_prefixes = self.queryset.all()
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, all_prefixes)
 
     def test_within(self):
         matches = Prefix.objects.filter(network__in=["10.0.1.0", "10.0.1.2", "10.0.1.4"])
         params = {"within": "10.0.0.0/16"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches)
 
     def test_within_include(self):
         matches = self.queryset.filter(network__in=["10.0.0.0", "10.0.1.0", "10.0.1.2", "10.0.1.4"])
         params = {"within_include": "10.0.0.0/16"}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches)
 
     def test_contains(self):
         matches_ipv4 = self.queryset.filter(network__in=["10.0.0.0", "10.0.1.0"])
         matches_ipv6 = self.queryset.filter(network__in=["2001:db8::", "2001:db8:0:1::"])
 
         params = {"contains": ["10.0.1.0/24", "2001:db8:0:1::"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4 | matches_ipv6)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, matches_ipv4 | matches_ipv6)
 
     def test_vrfs(self):
         prefixes = self.queryset[:2]
@@ -452,12 +482,12 @@ class PrefixFilterCustomDataTestCase(TestCase):
         prefixes[1].vrfs.add(vrfs[0])
         prefixes[1].vrfs.add(vrfs[1])
         params = {"vrfs": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vrfs__in=vrfs).distinct(),
         )
         params = {"vrfs": [vrfs[0].pk, vrfs[1].rd]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vrfs__in=vrfs).distinct(),
         )
@@ -482,19 +512,19 @@ class PrefixFilterCustomDataTestCase(TestCase):
         test_prefixes[0].vrfs.add(vrfs[0], vrfs[1])
         test_prefixes[1].vrfs.add(vrfs[0], vrfs[1])
         test_prefixes[2].vrfs.add(vrfs[0], vrfs[1])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf_id": vrfs[0].pk}, self.queryset).qs,
             self.queryset.filter(Q(vrfs=vrfs[0]) | Q(vrfs__export_targets__in=vrfs[0].import_targets.all())).distinct(),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf_id": vrfs[1].pk}, self.queryset).qs,
             self.queryset.filter(Q(vrfs=vrfs[1]) | Q(vrfs__export_targets__in=vrfs[1].import_targets.all())).distinct(),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf": vrfs[0].rd}, self.queryset).qs,
             self.queryset.filter(Q(vrfs=vrfs[0]) | Q(vrfs__export_targets__in=vrfs[0].import_targets.all())).distinct(),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs,
             self.queryset.filter(Q(vrfs=vrfs[1]) | Q(vrfs__export_targets__in=vrfs[1].import_targets.all())).distinct(),
         )
@@ -515,22 +545,22 @@ class PrefixFilterCustomDataTestCase(TestCase):
         test_prefixes[2].locations.set([test_locations[2]])
 
         params = {"location": [test_locations[0].pk, test_locations[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__in=params["location"]),
         )
         params = {"location": [test_locations[0].name, test_locations[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__name__in=params["location"]),
         )
         params = {"locations": [test_locations[0].pk, test_locations[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__in=params["locations"]),
         )
         params = {"locations": [test_locations[0].name, test_locations[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__name__in=params["locations"]),
         )
@@ -544,11 +574,11 @@ class PrefixFilterCustomDataTestCase(TestCase):
         self.queryset.bulk_update(test_prefixes, ["vlan"])
 
         params = {"vlan_id": [vlans[0].pk, vlans[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vlan__in=vlans)
         )
         params = {"vlan_vid": [vlans[0].vid, vlans[1].vid]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(vlan__vid__in=[vlans[0].vid, vlans[1].vid])
         )
 
@@ -784,44 +814,44 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         for term in search_terms:
             with self.subTest(term):
                 params = {"q": term}
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     self.filterset(params, self.queryset).qs, self.queryset.string_search(term)
                 )
 
         with self.subTest("search that matches no objects"):
             params = {"q": "no objects match this search"}
-            self.assertQuerysetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
 
         with self.subTest("blank query should return all objects"):
             params = {"q": ""}
-            self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
+            self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_ip_version(self):
         params = {"ip_version": "6"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
         )
         params = {"ip_version": "4"}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
         )
         params = {"ip_version": ""}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
 
     def test_dns_name(self):
         names = list(self.queryset.exclude(dns_name="").distinct_values_list("dns_name", flat=True)[:2])
         params = {"dns_name": names}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(dns_name__in=names)
         )
 
     def test_parent(self):
         params = {"parent": [str(self.prefix4.pk)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=self.prefix4)
         )
         params = {"parent": [str(self.prefix6.pk)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent=self.prefix6)
         )
 
@@ -830,7 +860,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ipv6_parent = self.queryset.filter(ip_version=6).first().address.supernet()[-1]
 
         params = {"prefix": [str(ipv4_parent), str(ipv6_parent)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_host_contained(ipv4_parent, ipv6_parent)
         )
 
@@ -868,56 +898,56 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ipv6_addresses = self.queryset.filter(ip_version=6)[:2]
         # single ipv4 address with mask: 10.0.0.1/24
         params = {"address": [str(ipv4_addresses[0].address)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_in(params["address"])
         )
         # single ipv4 address without mask: 10.0.0.1
         params = {"address": [ipv4_addresses[0].host]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_in(params["address"])
         )
         # single ipv6 address with mask: 2001:db8::1/64
         params = {"address": [str(ipv6_addresses[0].address)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_in(params["address"])
         )
         # single ipv6 address without mask: 2001:db8::1
         params = {"address": [ipv6_addresses[0].host]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_in(params["address"])
         )
 
         # two addresses with mask: 10.0.0.1/24, 2001:db8::1/64
         params = {"address": [str(ipv4_addresses[0].address), str(ipv6_addresses[1].address)]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_in(params["address"])
         )
         # two addresses without mask: 10.0.0.1, 2001:db8::1
         params = {"address": [ipv4_addresses[0].host, ipv6_addresses[1].host]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.net_in(params["address"])
         )
 
     def test_mask_length(self):
         # Test filtering by a single integer value
         params = {"mask_length": self.queryset.first().mask_length}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length=params["mask_length"])
         )
         # Test filtering by multiple integer values
         params = {"mask_length": [self.queryset.first().mask_length, self.queryset.last().mask_length]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(mask_length__in=params["mask_length"])
         )
 
     def test_vrfs(self):
         vrfs = list(VRF.objects.filter(prefixes__ip_addresses__isnull=False, rd__isnull=False).distinct())[:2]
         params = {"vrfs": [vrfs[0].pk, vrfs[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent__vrfs__in=vrfs).distinct()
         )
         params = {"vrfs": [vrfs[0].pk, vrfs[1].rd]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(parent__vrfs__in=vrfs).distinct()
         )
 
@@ -925,13 +955,13 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         interfaces = Interface.objects.filter(ip_addresses__isnull=False)
         devices = list(Device.objects.filter(interfaces__in=interfaces).distinct()[:2])
         params = {"device_id": [devices[0].pk, devices[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(interfaces__in=devices[0].interfaces.all() | devices[1].interfaces.all()),
         )
 
         params = {"device": [devices[0].name, devices[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(interfaces__in=devices[0].interfaces.all() | devices[1].interfaces.all()),
         )
@@ -940,7 +970,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         vm_interfaces = VMInterface.objects.filter(ip_addresses__isnull=False)
         virtual_machines = list(VirtualMachine.objects.filter(interfaces__in=vm_interfaces).distinct()[:2])
         params = {"virtual_machine_id": [virtual_machines[0].pk, virtual_machines[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(
                 vm_interfaces__in=virtual_machines[0].interfaces.all() | virtual_machines[1].interfaces.all()
@@ -948,7 +978,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         )
 
         params = {"virtual_machine": [virtual_machines[0].name, virtual_machines[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(
                 vm_interfaces__in=virtual_machines[0].interfaces.all() | virtual_machines[1].interfaces.all()
@@ -958,7 +988,7 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def test_interfaces(self):
         interfaces = list(Interface.objects.filter(ip_addresses__isnull=False)[:2])
         params = {"interfaces": [interfaces[0].pk, interfaces[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(interfaces__in=[interfaces[0], interfaces[1]]),
         )
@@ -966,19 +996,19 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def test_vm_interfaces(self):
         vm_interfaces = list(VMInterface.objects.filter(ip_addresses__isnull=False)[:2])
         params = {"vm_interfaces": [vm_interfaces[0].pk, vm_interfaces[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(vm_interfaces__in=[vm_interfaces[0], vm_interfaces[1]]),
         )
 
     def test_has_interface_assignments(self):
         params = {"has_interface_assignments": True}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(interfaces__isnull=False) | Q(vm_interfaces__isnull=False)),
         )
         params = {"has_interface_assignments": False}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(interfaces__isnull=True) & Q(vm_interfaces__isnull=True)),
         )
@@ -1011,25 +1041,25 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         test_ip_addresses[0].parent.vrfs.add(vrfs[0], vrfs[1], vrfs[2])
         test_ip_addresses[1].parent.vrfs.add(vrfs[0], vrfs[1], vrfs[2])
         test_ip_addresses[2].parent.vrfs.add(vrfs[0], vrfs[1], vrfs[2])
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf_id": vrfs[0].pk}, self.queryset).qs,
             self.queryset.filter(
                 Q(parent__vrfs=vrfs[0]) | Q(parent__vrfs__export_targets__in=vrfs[0].import_targets.all())
             ).distinct(),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf_id": vrfs[1].pk}, self.queryset).qs,
             self.queryset.filter(
                 Q(parent__vrfs=vrfs[1]) | Q(parent__vrfs__export_targets__in=vrfs[1].import_targets.all())
             ).distinct(),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf": vrfs[0].rd}, self.queryset).qs,
             self.queryset.filter(
                 Q(parent__vrfs=vrfs[0]) | Q(parent__vrfs__export_targets__in=vrfs[0].import_targets.all())
             ).distinct(),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"present_in_vrf": vrfs[1].rd}, self.queryset).qs,
             self.queryset.filter(
                 Q(parent__vrfs=vrfs[1]) | Q(parent__vrfs__export_targets__in=vrfs[1].import_targets.all())
@@ -1039,14 +1069,14 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
     def test_status(self):
         statuses = list(Status.objects.get_for_model(IPAddress).filter(ip_addresses__isnull=False)[:2])
         params = {"status": [statuses[0].name, statuses[1].id]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs, self.queryset.filter(status__in=statuses)
         )
 
     def test_role(self):
         roles = list(IPAddress.objects.exclude(role__isnull=True).distinct_values_list("role", flat=True)[:2])
         params = {"role": roles}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(role__in=roles),
         )
@@ -1128,15 +1158,294 @@ class IPAddressToInterfaceTestCase(FilterTestCases.FilterTestCase):
         for test_filter in filters:
             with self.subTest(filter=test_filter):
                 params = {test_filter: True}
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     self.filterset(params, self.queryset).qs, self.queryset.filter(**{test_filter: True}), ordered=False
                 )
                 params = {test_filter: False}
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     self.filterset(params, self.queryset).qs,
                     self.queryset.filter(**{test_filter: False}),
                     ordered=False,
                 )
+
+
+class IPAddressRangeTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilterTestCaseMixin):
+    queryset = IPAddressRange.objects.all()
+    filterset = IPAddressRangeFilterSet
+    tenancy_related_name = "ip_address_ranges"
+    generic_filter_tests = (
+        ("name",),
+        ("namespace", "parent__namespace__name"),
+        ("namespace", "parent__namespace__id"),
+        ("role", "role__id"),
+        ("role", "role__name"),
+        ("status", "status__id"),
+        ("status", "status__name"),
+    )
+
+    v4_range1 = ("10.0.0.10", "10.0.0.20")
+    v4_range2 = ("10.0.0.50", "10.0.0.100")
+    v4_range3 = ("10.0.1.0", "10.0.1.255")
+    v6_range1 = ("2001:db8::10", "2001:db8::20")
+    v6_range2 = ("2001:db8::100", "2001:db8::200")
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.content_type = ContentType.objects.get_for_model(IPAddressRange)
+
+        cls.status_a = Status.objects.create(name="IP Range Status A")
+        cls.status_b = Status.objects.create(name="IP Range Status B")
+        for status in (cls.status_a, cls.status_b):
+            status.content_types.add(cls.content_type)
+
+        cls.role_a = Role.objects.create(name="IP Range Role A")
+        cls.role_b = Role.objects.create(name="IP Range Role B")
+        for role in (cls.role_a, cls.role_b):
+            role.content_types.add(cls.content_type)
+
+        tenants = list(Tenant.objects.filter(tenant_group__isnull=False)[:3])
+
+        cls.namespace = Namespace.objects.create(name="IP Address Range Filter Test Namespace")
+        prefix_status = Status.objects.get_for_model(Prefix).first()
+        cls.prefix4 = Prefix.objects.create(prefix="10.0.0.0/8", namespace=cls.namespace, status=prefix_status)
+        cls.prefix6 = Prefix.objects.create(prefix="2001:db8::/64", namespace=cls.namespace, status=prefix_status)
+
+        # cross-family byte-match
+        cls.prefix6_low = Prefix.objects.create(prefix="0800::/5", namespace=cls.namespace, status=prefix_status)
+        cls.prefix4_high = Prefix.objects.create(prefix="32.0.0.0/4", namespace=cls.namespace, status=prefix_status)
+
+        # Ranges are intentionally disjoint (no overlaps allowed within a parent).
+        cls.ip_address_range1_v4 = IPAddressRange.objects.create(
+            name="IP Range Alpha",
+            description="primary dhcp pool",
+            start_address=cls.v4_range1[0],
+            end_address=cls.v4_range1[1],
+            namespace=cls.namespace,
+            status=cls.status_a,
+            role=cls.role_a,
+            tenant=tenants[0],
+            count_as_utilized=True,
+            is_exclusive=False,
+        )
+        cls.ip_address_range2_v4 = IPAddressRange.objects.create(
+            name="IP Range Bravo",
+            description="reserved span",
+            start_address=cls.v4_range2[0],
+            end_address=cls.v4_range2[1],
+            namespace=cls.namespace,
+            status=cls.status_b,
+            role=cls.role_b,
+            tenant=tenants[1],
+            count_as_utilized=False,
+            is_exclusive=True,
+        )
+        cls.ip_address_range3_v4 = IPAddressRange.objects.create(
+            name="IP Range Charlie",
+            start_address=cls.v4_range3[0],
+            end_address=cls.v4_range3[1],
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=False,
+        )
+        cls.ip_address_range1_v6 = IPAddressRange.objects.create(
+            name="IP Range Delta",
+            start_address=cls.v6_range1[0],
+            end_address=cls.v6_range1[1],
+            namespace=cls.namespace,
+            status=cls.status_b,
+            role=cls.role_a,
+            tenant=tenants[2],
+            count_as_utilized=True,
+            is_exclusive=False,
+        )
+        cls.ip_address_range2_v6 = IPAddressRange.objects.create(
+            name="IP Range Echo",
+            start_address=cls.v6_range2[0],
+            end_address=cls.v6_range2[1],
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=True,
+        )
+
+        # cross-family byte-match
+        cls.ip_address_range_v6_cross_family = IPAddressRange.objects.create(
+            name="IP Range Foxtrot",
+            start_address="0800::1",
+            end_address="0fff::1",
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=False,
+        )
+        cls.ip_address_range_v4_cross_family = IPAddressRange.objects.create(
+            name="IP Range Golf",
+            start_address="32.0.0.1",
+            end_address="40.0.0.1",
+            namespace=cls.namespace,
+            status=cls.status_a,
+            count_as_utilized=False,
+            is_exclusive=False,
+        )
+
+    def test_search(self):
+        with self.subTest("no match"):
+            params = {"q": "no objects match this search"}
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+        with self.subTest("blank query returns all"):
+            params = {"q": ""}
+            self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, self.queryset.all())
+
+    def test_parent(self):
+        # by PK
+        params = {"parent": [str(self.prefix4.pk)]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(parent=self.prefix4)
+        )
+        # by literal prefix string (PrefixFilter -> Prefix.objects.net_equals)
+        params = {"parent": ["10.0.0.0/8"]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(parent__in=Prefix.objects.net_equals("10.0.0.0/8")),
+        )
+
+    def test_ip_version(self):
+        params = {"ip_version": "4"}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=4)
+        )
+        params = {"ip_version": "6"}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(ip_version=6)
+        )
+
+    def test_count_as_utilized(self):
+        params = {"count_as_utilized": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(count_as_utilized=True)
+        )
+        params = {"count_as_utilized": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(count_as_utilized=False)
+        )
+
+    def test_is_exclusive(self):
+        params = {"is_exclusive": True}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_exclusive=True)
+        )
+        params = {"is_exclusive": False}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(is_exclusive=False)
+        )
+
+    def test_start_address(self):
+        # single, v4
+        params = {"start_address": [self.v4_range1[0]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+        )
+        # single, v6
+        params = {"start_address": [self.v6_range1[0]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v6.pk)
+        )
+        # multiple, mixed versions
+        params = {"start_address": [self.v4_range1[0], self.v6_range2[0]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk__in=[self.ip_address_range1_v4.pk, self.ip_address_range2_v6.pk]),
+        )
+        # invalid input -> empty queryset (no error)
+        params = {"start_address": ["not-an-address"]}
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+    def test_end_address(self):
+        # single, v4
+        params = {"end_address": [self.v4_range1[1]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+        )
+        # single, v6
+        params = {"end_address": [self.v6_range1[1]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v6.pk)
+        )
+        # multiple, mixed versions
+        params = {"end_address": [self.v4_range2[1], self.v6_range1[1]]}
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(pk__in=[self.ip_address_range2_v4.pk, self.ip_address_range1_v6.pk]),
+        )
+        # invalid input -> empty queryset (no error)
+        params = {"end_address": ["not-an-address"]}
+        self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+    def test_contains(self):
+        # address inside a v4 range
+        with self.subTest("inside v4 range"):
+            params = {"contains": ["10.0.0.15"], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+            )
+
+        # inclusive on both boundaries
+        with self.subTest("start boundary is inclusive"):
+            params = {"contains": [self.v4_range1[0]], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+            )
+        with self.subTest("end boundary is inclusive"):
+            params = {"contains": [self.v4_range1[1]], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range1_v4.pk)
+            )
+
+        # address inside a v6 range
+        with self.subTest("inside v6 range"):
+            params = {"contains": ["2001:db8::150"], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs, self.queryset.filter(pk=self.ip_address_range2_v6.pk)
+            )
+
+        # multiple values OR'd together
+        with self.subTest("multiple values"):
+            params = {"contains": ["10.0.0.15", "2001:db8::150"], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(pk__in=[self.ip_address_range1_v4.pk, self.ip_address_range2_v6.pk]),
+            )
+
+        # address outside every range
+        with self.subTest("outside all ranges"):
+            params = {"contains": ["10.0.0.200"], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+        # invalid input -> empty queryset (no error)
+        with self.subTest("invalid input"):
+            params = {"contains": ["not-an-address"], "namespace": [self.namespace.id]}
+            self.assertQuerySetEqual(self.filterset(params, self.queryset).qs, self.queryset.none())
+
+        with self.subTest("empty value returns none, not all"):
+            fs = self.filterset({}, self.queryset)
+            self.assertQuerySetEqual(
+                fs.filter_contains(self.queryset, "contains", []),
+                self.queryset.none(),
+            )
+
+        with self.subTest("v4 query must not match byte-overlapping v6 range"):
+            params = {"contains": ["10.0.0.15"], "namespace": [self.namespace.id]}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertIn(self.ip_address_range1_v4, qs)
+            self.assertNotIn(self.ip_address_range_v6_cross_family, qs)
+
+        with self.subTest("v6 query must not match byte-overlapping v4 range"):
+            params = {"contains": ["2001:db8::150"], "namespace": [self.namespace.id]}
+            qs = self.filterset(params, self.queryset).qs
+            self.assertIn(self.ip_address_range2_v6, qs)
+            self.assertNotIn(self.ip_address_range_v4_cross_family, qs)
 
 
 class VRFDeviceAssignmentTestCase(FilterTestCases.FilterTestCase):
@@ -1329,24 +1638,108 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
         vlans[0].tags.set(Tag.objects.all()[:2])
         vlans[1].tags.set(Tag.objects.all()[:2])
 
+        # VLANs assigned to VM interfaces, for the `vm_interfaces` filter. These are global (no location)
+        # so they satisfy the tagged-VLAN location validation regardless of the interface's parent.
+        cls.vm_interface_vlans = (
+            VLAN.objects.create(vid=4001, name="VM Filter VLAN 4001", status=statuses[0]),
+            VLAN.objects.create(vid=4002, name="VM Filter VLAN 4002", status=statuses[0]),
+            VLAN.objects.create(vid=4003, name="VM Filter VLAN 4003", status=statuses[0]),
+        )
+        clustertype = ClusterType.objects.create(name="VLAN Filter Cluster Type")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="VLAN Filter Cluster")
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        virtual_machine = VirtualMachine.objects.create(name="VLAN Filter VM", cluster=cluster, status=vm_status)
+        vmint_status = Status.objects.get_for_model(VMInterface).first()
+        cls.vm_interfaces = (
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine,
+                name="vmint untagged",
+                status=vmint_status,
+                mode=InterfaceModeChoices.MODE_ACCESS,
+                untagged_vlan=cls.vm_interface_vlans[0],
+            ),
+            VMInterface.objects.create(
+                virtual_machine=virtual_machine,
+                name="vmint tagged",
+                status=vmint_status,
+                mode=InterfaceModeChoices.MODE_TAGGED,
+            ),
+        )
+        cls.vm_interfaces[1].tagged_vlans.set([cls.vm_interface_vlans[1], cls.vm_interface_vlans[2]])
+
+        # VLANs assigned to physical Interfaces, for the `interface` filter. Global (no location) so
+        # they satisfy the tagged-VLAN location validation regardless of the interface's device.
+        cls.interface_vlans = (
+            VLAN.objects.create(vid=4011, name="IF Filter VLAN 4011", status=statuses[0]),
+            VLAN.objects.create(vid=4012, name="IF Filter VLAN 4012", status=statuses[0]),
+            VLAN.objects.create(vid=4013, name="IF Filter VLAN 4013", status=statuses[0]),
+        )
+        if_devicetype = DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.first(), model="VLAN Filter Device Type"
+        )
+        if_device = Device.objects.create(
+            device_type=if_devicetype,
+            role=Role.objects.get_for_model(Device).first(),
+            name="VLAN Filter Device",
+            location=cls.locations[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        cls.interfaces = (
+            Interface.objects.create(
+                device=if_device,
+                name="int untagged",
+                status=int_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                mode=InterfaceModeChoices.MODE_ACCESS,
+                untagged_vlan=cls.interface_vlans[0],
+            ),
+            Interface.objects.create(
+                device=if_device,
+                name="int tagged",
+                status=int_status,
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                mode=InterfaceModeChoices.MODE_TAGGED,
+            ),
+        )
+        cls.interfaces[1].tagged_vlans.set([cls.interface_vlans[1], cls.interface_vlans[2]])
+
+    def test_vm_interfaces(self):
+        params = {"vm_interfaces": [self.vm_interfaces[0].pk, self.vm_interfaces[1].name]}
+        self.assertQuerySetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                Q(vminterfaces_as_untagged__in=self.vm_interfaces) | Q(vminterfaces_as_tagged__in=self.vm_interfaces)
+            ).distinct(),
+        )
+
+    def test_interfaces(self):
+        params = {"interfaces": [self.interfaces[0].pk, self.interfaces[1].name]}
+        self.assertQuerySetEqual(
+            self.filterset(params, self.queryset).qs,
+            self.queryset.filter(
+                Q(interfaces_as_untagged__in=self.interfaces) | Q(interfaces_as_tagged__in=self.interfaces)
+            ).distinct(),
+        )
+
     def test_location(self):
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["location"]).distinct()
         )
         params = {"location": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__name__in=params["location"]).distinct(),
         )
 
     def test_locations(self):
         params = {"locations": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs, self.queryset.filter(locations__in=params["locations"]).distinct()
         )
         params = {"locations": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(locations__name__in=params["locations"]).distinct(),
         )
@@ -1361,7 +1754,7 @@ class VLANTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilter
             device_type=devicetype, role=devicerole, name="Device 1", location=location, status=devicestatus
         )
         params = {"available_on_device": [device.pk]}
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             self.filterset(params, self.queryset).qs,
             self.queryset.filter(Q(locations__in=[device.location]) | Q(locations__isnull=True)),
         )
@@ -1402,7 +1795,7 @@ class VLANLocationAssignmentTestCase(FilterTestCases.FilterTestCase):
         queryset = VLANLocationAssignment.objects.exclude(location__name__icontains=vlan_vid)
         filterset = VLANLocationAssignmentFilterSet(params, queryset).qs
         expected_queryset = queryset.filter(vlan__vid__exact=vlan_vid)
-        self.assertQuerysetEqualAndNotEmpty(filterset, expected_queryset)
+        self.assertQuerySetEqualAndNotEmpty(filterset, expected_queryset)
 
 
 class ServiceTestCase(FilterTestCases.FilterTestCase):

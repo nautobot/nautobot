@@ -141,7 +141,7 @@ class TreeModel(TreeNode):
             pk_list = list(queryset.values_list("pk", flat=True))
             # cache is explicitly invalidated by TreeModel.save() and TreeModel.delete() methods
             # However since this is a *per-instance* cache we don't want it to grow indefinitely over time.
-            cache.set(cache_key, pk_list, timeout=settings.CACHES["default"]["TIMEOUT"])
+            cache.set(cache_key, pk_list, timeout=settings.CACHES["default"].get("TIMEOUT", 300))
         return pk_list
 
     @property
@@ -169,6 +169,10 @@ class TreeModel(TreeNode):
         display_str += self.name  # pylint: disable=no-member  # we checked with hasattr() above
         cache.set(cache_key, display_str, timeout=5)
         return display_str
+
+    @property
+    def siblings(self):
+        return self.__class__.objects.without_tree_fields().filter(parent_id=self.parent_id).exclude(pk=self.pk)
 
     @classmethod
     def __init_subclass__(cls, **kwargs):

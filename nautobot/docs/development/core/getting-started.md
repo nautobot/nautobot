@@ -190,6 +190,7 @@ Available tasks:
   dump-service-ports-to-disk   Useful for downstream utilities without direct docker access to determine ports.
   dumpdata                     Dump data from database to db_output file.
   eslint                       Run ESLint to perform JavaScript code linting. Optionally, make an attempt to fix found issues with `--fix` flag.
+  generate-release-notes       Generate Release Notes using Towncrier.
   hadolint                     Check Dockerfile for hadolint compliance and other style issues.
   lint                         Run all linters.
   loaddata                     Load data from file.
@@ -235,15 +236,17 @@ A development environment can be easily started up from the root of the project 
 
 Additional useful commands for the development environment:
 
-* `invoke start [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or a specific container/service, such as `invoke start -s redis`) to run in the background
-* `invoke logs [-s servicename]` - View the logs of the containers (or a specific container/service, such as `invoke logs -s nautobot`)
+* `invoke start [-s servicename] [-s servicename]` - Starts Docker containers for Nautobot, PostgreSQL, Redis, NGINX, Celery, and Celery Beat (or specific containers/services, such as `invoke start -s redis -s db`) to run in the background
+* `invoke logs [-s servicename] [-s servicename]` - View the logs of the containers (or specific containers/services, such as `invoke logs -s nautobot -s celery_worker`)
+    * You can add `-f` or `--follow` to follow the logs in real time.
+    * You can add `-t N` or `--tail N` to specify the number of previous lines to show.
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
-* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
-* `invoke stop [-s servicename]` - Stops all containers (or a specific container/service) created by `invoke start`
+* `invoke cli [-s servicename] [-c command]` - Launches a `bash` shell (or runs the specified `command`) inside the specified service container (if no servicename is specified, defaults to the Nautobot container)
+* `invoke stop [-s servicename] [-s servicename]` - Stops all containers (or specific containers/services) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
 !!! note
-    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke start -s mkdocs`.
+    The `mkdocs` container is not started automatically by `invoke start` or `invoke debug`. If desired, this container may be started manually with `invoke serve-docs`.
 
 !!! tip
     The Nautobot server uses a Django webservice and worker uses watchdog to provide automatic reload of your web and worker servers in **most** cases when using `invoke start` or `invoke debug`.
@@ -263,7 +266,7 @@ There are a few things you'll need:
 * A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/install_system.md)
 * A Redis server, which can also be [installed locally](../../user-guide/administration/installation/install_system.md)
 * A supported version of Python
-* A recent version of [Poetry](https://python-poetry.org/docs/#installation)
+* A recent version (at least 2.1.x) of [Poetry](https://python-poetry.org/docs/#installation)
 
 #### Install Poetry
 
@@ -283,6 +286,12 @@ curl -sSL https://install.python-poetry.org | python3 -
     While there are certain cases where running `pip install poetry` is valid, such as in Nautobot's automated release deployments where Nautobot is not actually installed, installing Poetry into Nautobot's runtime development environment is not one of them!
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
+
+After successfully installing Poetry, you may wish to add the `poetry-plugin-shell` plugin to it:
+
+```no-highlight
+poetry self add poetry-plugin-shell
+```
 
 #### Install Hadolint
 
@@ -323,6 +332,9 @@ Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyD
 . /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
 (nautobot-Ams_xyDt-py3.12) $
 ```
+
+!!! hint
+    If the above command fails, you might need to run `poetry self add poetry-plugin-shell` then try again.
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
 
@@ -388,7 +400,7 @@ Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) 
     Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
-    Use `poetry shell` to enter the virtualenv.
+    If necessary, first run `poetry self add poetry-plugin-shell`, then you can use `poetry shell` to enter the virtualenv.
 
 Nautobot's configuration file is `nautobot_config.py`.
 
@@ -727,10 +739,10 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
 <!-- pyml disable-num-lines 4 no-inline-html -->
-| Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
-| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
+| Docker Compose Workflow | Virtual Environment Workflow                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invoke ruff`           | `ruff format --check development/ examples/ nautobot/ scripts/ tasks.py`<br>and<br>`ruff check development/ examples/ nautobot/ scripts/ tasks.py` |
+| `invoke pylint`         | `pylint --recursive development/ examples/ nautobot/ scripts/ tasks.py`                                                                            |
 
 ### Handling Migrations
 

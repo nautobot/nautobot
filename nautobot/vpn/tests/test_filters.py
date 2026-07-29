@@ -1,7 +1,10 @@
 """Test vpn Filters."""
 
+from django.contrib.contenttypes.models import ContentType
+
 from nautobot.apps.testing import FilterTestCases
-from nautobot.vpn import filters, models
+from nautobot.extras.models import Status
+from nautobot.vpn import choices, factory as vpn_factory, filters, models
 
 
 class VPNProfileFilterTestCase(FilterTestCases.FilterTestCase):
@@ -35,21 +38,21 @@ class VPNPhase1PolicyFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
     def test_encryption_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"encryption_algorithm": "AES-128-CBC"}, self.queryset).qs,
             self.queryset.filter(encryption_algorithm__contains=["AES-128-CBC"]),
             ordered=False,
         )
 
     def test_integrity_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"integrity_algorithm": "SHA256"}, self.queryset).qs,
             self.queryset.filter(integrity_algorithm__contains=["SHA256"]),
             ordered=False,
         )
 
     def test_dh_group(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"dh_group": "14"}, self.queryset).qs,
             self.queryset.filter(dh_group__contains=["14"]),
             ordered=False,
@@ -68,21 +71,21 @@ class VPNPhase2PolicyFilterTestCase(FilterTestCases.FilterTestCase):
     )
 
     def test_encryption_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"encryption_algorithm": "AES-128-CBC"}, self.queryset).qs,
             self.queryset.filter(encryption_algorithm__contains=["AES-128-CBC"]),
             ordered=False,
         )
 
     def test_integrity_algorithm(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"integrity_algorithm": "SHA256"}, self.queryset).qs,
             self.queryset.filter(integrity_algorithm__contains=["SHA256"]),
             ordered=False,
         )
 
     def test_pfs_group(self):
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"pfs_group": "14"}, self.queryset).qs,
             self.queryset.filter(pfs_group__contains=["14"]),
             ordered=False,
@@ -100,7 +103,28 @@ class VPNFilterTestCase(FilterTestCases.FilterTestCase):
         ("name",),
         ("description",),
         ("vpn_id",),
+        ("service_type",),
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        vpn_ct = ContentType.objects.get_for_model(models.VPN)
+        active = Status.objects.get(name="Active")
+        active.content_types.add(vpn_ct)
+        if not models.VPN.objects.filter(name="VPN Filter VXLAN").exists():
+            models.VPN.objects.create(
+                name="VPN Filter VXLAN",
+                service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+                status=active,
+                vpn_id="18001",
+            )
+            models.VPN.objects.create(
+                name="VPN Filter VPLS",
+                service_type=choices.VPNServiceTypeChoices.TYPE_VPLS,
+                status=active,
+                vpn_id="18002",
+            )
 
 
 class VPNTunnelFilterTestCase(FilterTestCases.FilterTestCase):
@@ -137,3 +161,41 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__id"),
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__name"),
     )
+
+
+class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):
+    """VPNTermination filter tests."""
+
+    queryset = models.VPNTermination.objects.all()
+    filterset = filters.VPNTerminationFilterSet
+    generic_filter_tests = (
+        ("vpn", "vpn__id"),
+        ("vpn", "vpn__name"),
+        ("vlan", "vlan__id"),
+        ("interface", "interface__id"),
+        ("vm_interface", "vm_interface__id"),
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        active = Status.objects.get(name="Active")
+        active.content_types.add(ContentType.objects.get_for_model(models.VPN))
+        cls.vpns = [
+            models.VPN.objects.create(
+                name=f"VPN Termination Filter Test {index}",
+                service_type=choices.VPNServiceTypeChoices.TYPE_VXLAN,
+                status=active,
+                vpn_id=f"1500{index}",
+            )
+            for index in range(3)
+        ]
+        cls.terminations = []
+        for target_type in ("vlan", "interface", "vm_interface"):
+            for vpn in cls.vpns:
+                cls.terminations.append(vpn_factory.VPNTerminationFactory.create(vpn=vpn, target_type=target_type))
+
+    def test_search_filter(self):
+        queryset = models.VPNTermination.objects.all()
+        filtered_qs = filters.VPNTerminationFilterSet({"q": self.vpns[0].name}, queryset).qs
+        self.assertTrue(filtered_qs.filter(vpn=self.vpns[0]).exists())

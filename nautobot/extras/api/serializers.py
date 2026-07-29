@@ -3,7 +3,6 @@ import logging
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -39,11 +38,13 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.choices import (
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
     JobResultStatusChoices,
     ObjectChangeActionChoices,
+    ScheduledJobStateChoices,
 )
 from nautobot.extras.datasources import get_datasource_content_choices
 from nautobot.extras.models import (
@@ -102,6 +103,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.users.api.serializers import UserSerializer
 
 from .fields import MultipleChoiceJSONField
 
@@ -164,25 +166,56 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
-    """ApprovalWorkflowStage Serializer."""
-
-    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStage
-        fields = "__all__"
-
-
 class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
-    """ApprovalWorkflowStageResponse Serializer."""
+    """Nested read representer for ApprovalWorkflowStageResponse; not exposed as its own endpoint."""
+
+    user = serializers.SerializerMethodField()
+
+    @extend_schema_field(UserSerializer)
+    def get_user(self, obj):
+        if obj.user is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.user, "user")
+        except SerializerNotFound:
+            return None
 
     class Meta:
         """Meta attributes."""
 
         model = ApprovalWorkflowStageResponse
+        fields = [
+            "id",
+            "user",
+            "comments",
+            "state",
+            "last_updated",
+        ]
+        read_only_fields = ["user", "state"]
+
+
+class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStage Serializer."""
+
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
+    responses = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(ApprovalWorkflowStageResponseSerializer(many=True))
+    def get_responses(self, obj):
+        """Read-only nested responses, filtered by `view` permission like the UI panel."""
+        request = self.context.get("request")
+        if request is None:
+            return None
+        queryset = ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage=obj).restrict(
+            request.user, "view"
+        )
+        return ApprovalWorkflowStageResponseSerializer(queryset, many=True, context=self.context).data
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
         fields = "__all__"
 
 
@@ -195,6 +228,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
+    output_type = ChoiceField(choices=ComputedFieldTypeChoices, required=False)
 
     class Meta:
         model = ComputedField
@@ -308,7 +342,7 @@ class ContactSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
 
 
 class ContactAssociationSerializer(NautobotModelSerializer):
-    associated_object_type = ContentTypeField(queryset=ContentType.objects.all(), many=False)
+    associated_object_type = ContentTypeField(queryset=ContentType.objects.filter(FeatureQuery("contacts").get_query()))
 
     class Meta:
         model = ContactAssociation
@@ -386,6 +420,9 @@ class CustomFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     class Meta:
         model = CustomField
         fields = "__all__"
+        extra_kwargs = {
+            "scope_filter": {"read_only": False, "required": False},
+        }
 
 
 class CustomFieldChoiceSerializer(ValidatedModelSerializer):
@@ -552,6 +589,7 @@ class GitRepositorySerializer(TaggedModelSerializerMixin, NautobotModelSerialize
     class Meta:
         model = GitRepository
         fields = "__all__"
+        read_only_fields = ["current_head"]
 
 
 #
@@ -603,23 +641,16 @@ class GraphQLQueryOutputSerializer(serializers.Serializer):
 
 
 class ImageAttachmentSerializer(ValidatedModelSerializer):
-    content_type = ContentTypeField(queryset=ContentType.objects.all())
+    content_type = ContentTypeField(
+        queryset=ContentType.objects.filter(app_label="dcim", model__in=["device", "location", "rack"])
+    )
 
     class Meta:
         model = ImageAttachment
         fields = "__all__"
-
-    def validate(self, attrs):
-        # Validate that the parent object exists
-        try:
-            attrs["content_type"].get_object_for_this_type(id=attrs["object_id"])
-        except ObjectDoesNotExist:
-            raise serializers.ValidationError(f"Invalid parent object: {attrs['content_type']} ID {attrs['object_id']}")
-
-        # Enforce model validation
-        super().validate(attrs)
-
-        return attrs
+        # image_height and image_width are auto-populated from the uploaded image via the ImageField's
+        # height_field/width_field declaration on the model, so clients must not supply them.
+        read_only_fields = ["image_height", "image_width"]
 
     @extend_schema_field(
         PolymorphicProxySerializer(
@@ -692,10 +723,21 @@ class ScheduledJobSerializer(BaseModelSerializer):
     queue = serializers.CharField(read_only=True, required=False)
     time_zone = TimeZoneSerializerField(required=False)
     associated_approval_workflows = ApprovalWorkflowSerializer(many=True, read_only=True)
+    state = ChoiceField(choices=ScheduledJobStateChoices, read_only=True)
 
     class Meta:
         model = ScheduledJob
-        fields = "__all__"
+        # Exclude database fields that are provided for parity with django-celery-beat but are otherwise unused
+        exclude = [
+            "clocked",
+            "exchange",
+            "expires",
+            "expire_seconds",
+            "headers",
+            "priority",
+            "routing_key",
+            "solar",
+        ]
 
 
 #
@@ -725,6 +767,20 @@ class JobRunResponseSerializer(serializers.Serializer):
 
     schedule = ScheduledJobSerializer(read_only=True, required=False)
     job_result = JobResultSerializer(read_only=True, required=False)
+
+
+class JobResultCancelPreviewSerializer(serializers.Serializer):
+    """Describes what a cancel action would do, returned by GET on the cancel endpoint."""
+
+    message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
+    job_status = serializers.ChoiceField(
+        choices=["RUNNING", "NOT RUNNING", "UNKNOWN", *JobResultStatusChoices.ALL_STATES],
+        help_text=("For unready jobs: RUNNING, NOT RUNNING, or UNKNOWN. For ready jobs: the terminal state."),
+    )
+    irreversible = serializers.CharField(
+        required=False, help_text="Warning that the action cannot be undone. Omitted when the job is already finished."
+    )
+    timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
 
 
 #
@@ -965,7 +1021,7 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
 #
 
 
-class NoteSerializer(BaseModelSerializer):
+class NoteSerializer(ValidatedModelSerializer):
     assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
     assigned_object = serializers.SerializerMethodField()
 

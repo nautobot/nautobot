@@ -1,12 +1,23 @@
+from types import SimpleNamespace
+
+from django.contrib.contenttypes.models import ContentType
+from django.db import connection
+from django.db.models import IntegerField, Value
 from django.test import tag, TestCase
+from django.test.utils import CaptureQueriesContext
 
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
+from nautobot.core.tables import ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
+from nautobot.core.templatetags import helpers
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
-from nautobot.extras.models import JobLogEntry
+from nautobot.extras.choices import ComputedFieldTypeChoices
+from nautobot.extras.models import ComputedField, JobLogEntry
 from nautobot.extras.tables import JobLogEntryTable
+from nautobot.ipam.models import RIR
+from nautobot.ipam.tables import RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.wireless.models import WirelessNetwork
 from nautobot.wireless.tables import WirelessNetworkTable
@@ -129,7 +140,7 @@ class TableTestCase(TestCase):
             ("ssid", "SSID"),
             ("mode", "Mode"),
             ("authentication", "Authentication"),
-            ("secret", "Secret"),
+            ("secrets_group", "Secrets group"),
             ("description", "Description"),
             ("tags", "Tags"),
             ("dynamic_group_count", "Dynamic Groups"),
@@ -203,3 +214,139 @@ class TableTestCase(TestCase):
         ]
         self.assertEqual(job_log_entry_table.visible_columns, expected_visible_columns)
         self.assertEqual(job_log_entry_table.configurable_columns, expected_configurable_columns)
+
+
+class BaseTableLinkedCountColumnTestCase(TestCase):
+    """Covers the `count_fields` annotation pathway in `BaseTable.__init__`."""
+
+    def test_basetable_construction_is_lazy(self):
+        """Constructing a BaseTable around a lazy queryset must not query the DB.
+
+        Querysets are lazy; column setup, annotation chaining, and prefetch
+        wiring are pure-Python operations. Any DB query issued here is a sign
+        that something forced evaluation of the queryset.
+        """
+        with CaptureQueriesContext(connection) as ctx:
+            RIRTable(RIR.objects.all())
+        self.assertEqual(
+            len(ctx.captured_queries),
+            0,
+            f"BaseTable.__init__ issued {len(ctx.captured_queries)} DB queries; "
+            "expected 0 because the input queryset is lazy.\n" + "\n".join(q["sql"] for q in ctx.captured_queries),
+        )
+
+    def test_annotation_applied_when_missing(self):
+        """A LinkedCountColumn's annotation is applied when neither the queryset nor the model has it."""
+        table = RIRTable(RIR.objects.all())
+        self.assertIn("assigned_prefix_count", table.data.data.query.annotations)
+
+    def test_annotation_preserved_when_already_on_queryset(self):
+        """A caller-supplied annotation with the same name as a LinkedCountColumn is preserved, not overwritten."""
+        qs = RIR.objects.annotate(assigned_prefix_count=Value(42, output_field=IntegerField()))
+        table = RIRTable(qs)
+        self.assertIn("assigned_prefix_count", table.data.data.query.annotations)
+        row = table.data.data.first()
+        if row is not None:
+            self.assertEqual(row.assigned_prefix_count, 42)
+
+    def test_annotation_skipped_when_model_defines_attribute(self):
+        """The annotation is not applied if the model class already exposes the attribute."""
+        RIR.assigned_prefix_count = property(lambda self: 999)
+        try:
+            table = RIRTable(RIR.objects.all())
+            self.assertNotIn("assigned_prefix_count", table.data.data.query.annotations)
+        finally:
+            del RIR.assigned_prefix_count
+
+
+class LinkedCountColumnRenderTestCase(TestCase):
+    def test_nested_lookup_with_none_mid_chain_falls_back_to_count(self):
+        """A None partway through a nested `lookup` chain breaks the walk and falls back to the count badge."""
+        column = LinkedCountColumn(
+            viewname="dcim:device_list",
+            url_params={"ip_addresses": "pk"},
+            lookup="interfaces__device__name",
+        )
+        record = SimpleNamespace(
+            pk="00000000-0000-0000-0000-000000000000",
+            interfaces_device_name_list=[SimpleNamespace(device=None)],
+        )
+        rendered = column.render(bound_column=None, record=record, value=1)
+        self.assertIn("badge", rendered)
+
+
+class ButtonsColumnTestCase(TestCase):
+    """Covers how ButtonsColumn resolves the `buttons` argument."""
+
+    def test_default_buttons_when_arg_omitted(self):
+        """Omitting `buttons` falls back to the class default set."""
+        column = ButtonsColumn(RIR)
+        self.assertEqual(column.extra_context["buttons"], ButtonsColumn.buttons)
+
+    def test_default_buttons_when_arg_none(self):
+        """Passing buttons=None explicitly also falls back to the class default set."""
+        column = ButtonsColumn(RIR, buttons=None)
+        self.assertEqual(column.extra_context["buttons"], ButtonsColumn.buttons)
+
+    def test_default_buttons_when_buttons_arg_is_missing(self):
+        """Missing buttons argument falls back to the class default set."""
+        column = ButtonsColumn(RIR)
+        self.assertEqual(column.extra_context["buttons"], ButtonsColumn.buttons)
+
+    def test_empty_tuple_means_no_buttons(self):
+        """An empty tuple means no buttons, and must not fall back to the defaults."""
+        column = ButtonsColumn(RIR, buttons=())
+        self.assertEqual(column.extra_context["buttons"], ())
+
+    def test_explicit_subset_is_preserved(self):
+        """An explicit non-empty subset is passed through unchanged."""
+        column = ButtonsColumn(RIR, buttons=("delete",))
+        self.assertEqual(column.extra_context["buttons"], ("delete",))
+
+
+class ComputedFieldColumnRenderTestCase(TestCase):
+    """Covers the content-type guard in `ComputedFieldColumn.render`."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_ct = ContentType.objects.get_for_model(Location)
+        cls.text_field = ComputedField.objects.create(
+            key="cf_render_text",
+            label="Computed Field Text",
+            template="{{ obj.name }}",
+            fallback_value="error",
+            content_type=location_ct,
+        )
+        cls.markdown_field = ComputedField.objects.create(
+            key="cf_render_markdown",
+            label="Computed Field Markdown",
+            template="**{{ obj.name }}**",
+            fallback_value="error",
+            content_type=location_ct,
+        )
+
+    def test_render_evaluates_template_for_matching_row_type(self):
+        """A record matching the computed field's content type is rendered via the template."""
+        column = ComputedFieldColumn(self.text_field)
+        record = Location(name="Matching Location")
+        self.assertEqual(column.render(record=record), "Matching Location")
+
+    def test_render_returns_placeholder_for_foreign_row_type(self):
+        """A foreign model instance yields the placeholder, not the template output or fallback."""
+        column = ComputedFieldColumn(self.text_field)
+        # If the guard were missing, the template would render this name instead of a placeholder.
+        record = LocationType(name="Should Not Render")
+        self.assertEqual(column.render(record=record), helpers.placeholder(None))
+
+    def test_render_returns_placeholder_for_non_model_row(self):
+        """`available`-style rows (not model instances at all) also skip template evaluation."""
+        column = ComputedFieldColumn(self.text_field)
+        record = SimpleNamespace(name="Should Not Render")
+        self.assertEqual(column.render(record=record), helpers.placeholder(None))
+
+    def test_render_applies_markdown_output_type_for_matching_row(self):
+        """Markdown computed fields still pass through the markdown renderer for matching rows."""
+        self.markdown_field.output_type = ComputedFieldTypeChoices.TYPE_MARKDOWN
+        column = ComputedFieldColumn(self.markdown_field)
+        record = Location(name="Bold")
+        self.assertEqual(column.render(record=record), helpers.render_markdown("**Bold**"))

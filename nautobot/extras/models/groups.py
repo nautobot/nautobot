@@ -22,6 +22,7 @@ from nautobot.core.models.generics import OrganizationalModel, PrimaryModel
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.deprecation import method_deprecated, method_deprecated_in_favor_of
+from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model, get_form_for_model
 from nautobot.extras.choices import DynamicGroupOperatorChoices, DynamicGroupTypeChoices
 from nautobot.extras.querysets import DynamicGroupMembershipQuerySet, DynamicGroupQuerySet
@@ -225,7 +226,7 @@ class DynamicGroup(PrimaryModel):
                 new_modelform_field.widget = modelform_field.widget
                 modelform_field = new_modelform_field
 
-            # FIXME(jathan); Figure out how we can do this autoamtically from the FilterSet so we
+            # FIXME(jathan); Figure out how we can do this automatically from the FilterSet so we
             # don't have to munge it here.
             # Null boolean fields need a special widget that doesn't save `False` when unchecked.
             if isinstance(modelform_field, forms.NullBooleanField):
@@ -525,53 +526,13 @@ class DynamicGroup(PrimaryModel):
         if invalid_filter_exist:
             raise ValidationError(error_message)
 
-        # Populate the filterset from the incoming `form_data`. The filterset's internal form is
-        # used for validation, will be used by us to extract cleaned data for final processing.
         filterset_class = self.filterset_class
         filterset_class.form_prefix = "filter"
-        filterset = filterset_class(form_data)
 
-        # Use the auto-generated filterset form perform creation of the filter dictionary.
-        filterset_form = filterset.form
-
-        # Get the declared form for any overloaded form field definitions.
-        declared_form = get_form_for_model(filterset._meta.model, form_prefix="Filter")
-
-        # It's expected that the incoming data has already been cleaned by a form. This `is_valid()`
-        # call is primarily to reduce the fields down to be able to work with the `cleaned_data` from the
-        # filterset form, but will also catch errors in case a user-created dict is provided instead.
-        if not filterset_form.is_valid():
-            raise ValidationError(filterset_form.errors)
-
-        # Perform some type coercions so that they are URL-friendly and reversible, excluding any
-        # empty/null value fields.
-        new_filter = {}
-        for field_name in filter_fields:
-            field = declared_form.declared_fields.get(field_name, filterset_form.fields[field_name])
-            field_value = filterset_form.cleaned_data[field_name]
-
-            # TODO: This could/should check for both "convenience" FilterForm fields (ex: DynamicModelMultipleChoiceField)
-            # and literal FilterSet fields (ex: MultiValueCharFilter).
-            if isinstance(field, forms.ModelMultipleChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = [getattr(item, field_to_query) for item in field_value]
-
-            elif isinstance(field, forms.ModelChoiceField):
-                field_to_query = field.to_field_name or "pk"
-                new_value = getattr(field_value, field_to_query, None)
-
-            else:
-                new_value = field_value
-
-            # Don't store empty values like `None`, [], etc.
-            if new_value in (None, "", [], {}):
-                logger.debug("[%s] Not storing empty value (%s) for %s", self.name, field_value, field_name)
-                continue
-
-            logger.debug("[%s] Setting filter field {%s: %s}", self.name, field_name, field_value)
-            new_filter[field_name] = new_value
-
-        self.filter = new_filter
+        new_filter_dict = build_filter_dict_from_filterset(
+            filterset_class, form_data, filter_fields, logs_prefix=self.name
+        )
+        self.filter = new_filter_dict
 
     set_filter.alters_data = True
 
@@ -591,7 +552,7 @@ class DynamicGroup(PrimaryModel):
         """
         Generate a `FilterForm` class for use in `DynamicGroup` edit view.
 
-        This form is used to popoulate and validate the filter dictionary.
+        This form is used to populate and validate the filter dictionary.
 
         If a form cannot be created for some reason (such as on a new instance when rendering the UI
         "add" view), this will return `None`.
@@ -736,10 +697,14 @@ class DynamicGroup(PrimaryModel):
 
         # For vanilla multiple-choice filters, we want all values in a set union (boolean OR)
         # because we want ANY of the filter values to match. Unless the filter field is explicitly
-        # conjoining the values, in which case we want a set intersection (boolean AND). We know this isn't right
-        # since the resulting query actually does tag.name == tag_1 AND tag.name == tag_2, but django_filter does
-        # not use Q evaluation for conjoined filters. This function is only used for the display, and the display
-        # is good enough to get the point across.
+        # conjoining the values, in which case we want a set intersection (boolean AND).
+        #
+        # NOTE: for a *conjoined* filter over a many-to-many relationship (e.g. `tags`) this produces a query
+        # that is only correct for *display* purposes, not for evaluation: folding the per-value predicates into
+        # a single `Q` (`tags__name == A AND tags__name == B`) collapses them onto one JOIN, which no row can
+        # satisfy. That is fine here because `generate_query()` is used only to render human-readable filter
+        # logic (see `pretty_print_query`); actual group membership is evaluated by `_generate_membership_queryset()`,
+        # which routes through the FilterSet's own `.qs` and therefore matches the UI/REST behavior exactly.
         elif isinstance(filter_field, django_filters.MultipleChoiceFilter):
             for v in value:
                 if filter_field.conjoined:
@@ -772,7 +737,10 @@ class DynamicGroup(PrimaryModel):
         # AND) because ALL filter conditions must match for the filter parameters to be valid.
         for field_name, value in filterset.data.items():
             filter_field = filterset.filters.get(field_name)
-            query &= self._generate_query_for_filter(filter_field, value)
+            if filter_field.exclude:
+                query &= ~self._generate_query_for_filter(filter_field, value)
+            else:
+                query &= self._generate_query_for_filter(filter_field, value)
 
         return query
 
@@ -827,9 +795,61 @@ class DynamicGroup(PrimaryModel):
 
         raise RuntimeError(f"generate_query not implemented for group_type {self.group_type}")
 
+    def _generate_membership_queryset(self):
+        """
+        Return the queryset of objects that are members of this group, evaluated correctly for membership.
+
+        Unlike `generate_query()` (which builds a single human-readable `Q` object for display), this routes
+        each `dynamic-filter` leaf group through its FilterSet's own `.qs`, so membership matches the UI/REST
+        filtering behavior exactly -- including conjoined many-to-many filters such as `tags`, which require a
+        separate JOIN per value and cannot be represented correctly in a single `Q` object.
+
+        `dynamic-set` groups recursively combine their children's querysets via subquery-based set operations
+        (`IN`/`NOT EXISTS`) so that the result stays a lazy queryset (no Python-side materialization of member
+        PKs) regardless of how large any individual child's membership is.
+        """
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER:
+            # The FilterSet is the authoritative source of truth for what this filter means.
+            filterset = self.filterset_class(self.filter, self.model.objects.all())  # pylint: disable=not-callable
+            # An invalid filter must fail *closed* (no members). django_filters' `.qs` fails *open* -- it returns
+            # the unfiltered queryset when the underlying form is invalid -- so we have to guard on `is_valid()`.
+            if not filterset.is_valid():
+                logger.warning("Filter data is not valid for DynamicGroup %s; group has no members", self)
+                return self.model.objects.none()
+            return filterset.qs
+
+        if self.group_type == DynamicGroupTypeChoices.TYPE_DYNAMIC_SET:
+            queryset = None
+            for membership in self.dynamic_group_memberships.all():
+                operator = membership.operator
+                next_queryset = membership.group._generate_membership_queryset()
+                # Correlated NOT EXISTS anti-join for `difference`; plans more reliably than `NOT IN` at scale.
+                not_in_next = ~models.Exists(next_queryset.filter(pk=models.OuterRef("pk")))
+                if queryset is None:
+                    # Mirror the empty-`Q` seeding of `generate_query()`: the first membership combines against
+                    # "match everything", so `union`/`intersection` reduce to the child itself while `difference`
+                    # reduces to its complement.
+                    if operator == "difference":
+                        queryset = self.model.objects.filter(not_in_next)
+                    else:
+                        queryset = next_queryset
+                    continue
+                if operator == "union":
+                    queryset = self.model.objects.filter(models.Q(pk__in=queryset) | models.Q(pk__in=next_queryset))
+                elif operator == "intersection":
+                    queryset = queryset.filter(pk__in=next_queryset)
+                elif operator == "difference":
+                    queryset = queryset.filter(not_in_next)
+            if queryset is None:
+                # An empty set group matches everything, mirroring `filter(Q())` in the legacy code path.
+                queryset = self.model.objects.all()
+            return queryset
+
+        raise RuntimeError(f"_generate_membership_queryset not implemented for group_type {self.group_type}")
+
     def _get_group_queryset(self):
         """Construct the queryset representing dynamic membership of this group."""
-        query = self.generate_query()
+        queryset = self._generate_membership_queryset()
         # https://github.com/nautobot/nautobot/issues/7631
         #     Some queries may result in duplicate records, hence the need for `.distinct()`.
         #     Use of `.distinct()` in general is a code smell and a performance hit, but given the wide variety of
@@ -839,7 +859,7 @@ class DynamicGroup(PrimaryModel):
         #     Additionally, due to the use of `.distinct()`, in combination with our use of `.only("id")`
         #     on this queryset, e.g. in `_set_members()`, we also need to override any default model ordering on the
         #     queryset in order to avoid SQL errors like "each EXCEPT query must have the same number of columns"
-        return self.model.objects.filter(query).order_by("id").distinct()
+        return queryset.order_by("id").distinct()
 
     # TODO: unused in core
     def add_child(self, child, operator, weight):

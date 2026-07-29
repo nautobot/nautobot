@@ -11,12 +11,12 @@ from django.db.models import JSONField, ManyToManyField, ManyToManyRel
 from django.forms.models import model_to_dict
 from django.test.testcases import assert_and_parse_html
 from django.test.utils import CaptureQueriesContext
-from netaddr import IPNetwork
+from netaddr import IPAddress, IPNetwork
 from rest_framework.test import APIClient, APIRequestFactory
 
 from nautobot.core.models import fields as core_fields
 from nautobot.core.testing import utils
-from nautobot.core.utils import permissions
+from nautobot.core.utils import deprecation, permissions
 from nautobot.extras import management, models as extras_models
 from nautobot.extras.choices import JobResultStatusChoices, RelationshipSideChoices
 from nautobot.ipam.models import default_namespace_pk
@@ -147,11 +147,11 @@ class NautobotTestCaseMixin:
             if api:
                 # Replace ContentType primary keys with <app_label>.<model>
                 if isinstance(getattr(instance, key), ContentType):
-                    ct = ContentType.objects.get(pk=value)
+                    ct = value if isinstance(value, ContentType) else ContentType.objects.get(pk=value)
                     model_dict[key] = f"{ct.app_label}.{ct.model}"
 
-                # Convert IPNetwork instances to strings
-                elif isinstance(value, IPNetwork):
+                # Convert netaddr objects to strings
+                elif isinstance(value, (IPAddress, IPNetwork)):
                     model_dict[key] = str(value)
 
             else:
@@ -220,6 +220,8 @@ class NautobotTestCaseMixin:
             if hasattr(response, "data"):
                 # REST API response; pass the response data through directly
                 err_message += f"\n{response.data}"
+                if "form" in response.data:
+                    err_message += f"\n{response.data['form'].errors}"
             # Attempt to extract form validation errors from the response HTML
             elif form_errors := utils.extract_form_failures(response.content.decode(response.charset)):
                 err_message += f"\n{form_errors}"
@@ -260,7 +262,10 @@ class NautobotTestCaseMixin:
         for k, v in model_dict.items():
             if isinstance(v, list):
                 # Sort lists of values. This includes items like tags, or other M2M fields
-                new_model_dict[k] = sorted(v)
+                if k == "mapping":  # CableType, a list of dicts, not sortable
+                    new_model_dict[k] = json.dumps(v, sort_keys=True)
+                else:
+                    new_model_dict[k] = sorted(v)
             elif k == "data_schema" and isinstance(v, str):
                 # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                 new_model_dict[k] = self.standardize_json(v)
@@ -276,7 +281,10 @@ class NautobotTestCaseMixin:
             if (hasattr(instance, k) or k.startswith(("cf_", "cr_"))) and k not in exclude:
                 if isinstance(v, list):
                     # Sort lists of values. This includes items like tags, or other M2M fields
-                    relevant_data[k] = sorted(v)
+                    if k == "mapping":  # CableType, a list of dicts, not sortable
+                        new_model_dict[k] = json.dumps(v, sort_keys=True)
+                    else:
+                        relevant_data[k] = sorted(v)
                 elif k == "data_schema" and isinstance(v, str):
                     # Standardize the data_schema JSON, since the column is JSON and MySQL/dolt do not guarantee order
                     relevant_data[k] = self.standardize_json(v)
@@ -288,13 +296,17 @@ class NautobotTestCaseMixin:
 
         self.assertEqual(new_model_dict, relevant_data)
 
-    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
-        """Wrapper for assertQuerysetEqual with additional logic to assert input queryset and values are not empty"""
+    def assertQuerySetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        """Wrapper for assertQuerySetEqual with additional logic to assert input queryset and values are not empty"""
 
-        self.assertNotEqual(len(qs), 0, "Queryset cannot be empty")
+        self.assertNotEqual(len(qs), 0, "QuerySet cannot be empty")
         self.assertNotEqual(len(values), 0, "Values cannot be empty")
 
-        return self.assertQuerysetEqual(qs, values, *args, **kwargs)
+        return self.assertQuerySetEqual(qs, values, *args, **kwargs)
+
+    @deprecation.method_deprecated_in_favor_of(assertQuerySetEqualAndNotEmpty)
+    def assertQuerysetEqualAndNotEmpty(self, qs, values, *args, **kwargs):
+        return self.assertQuerySetEqualAndNotEmpty(qs, values, *args, **kwargs)
 
     class _AssertApproximateNumQueriesContext(CaptureQueriesContext):
         """Implementation class underlying the assertApproximateNumQueries decorator/context manager."""

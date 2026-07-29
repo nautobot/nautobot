@@ -72,6 +72,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 {% if attrs.enum|default(None) %}
 **Permitted Values:**
 
+<!-- pyml disable-num-lines 5 blanks-around-lists -->
 {% for enum in attrs.enum %}
 * `{{ enum|pprint }}`
 {% endfor %}
@@ -82,6 +83,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 {% elif attrs.environment_variables|default(None) %}
 **Environment Variables:**
 
+<!-- pyml disable-num-lines 5 blanks-around-lists -->
 {% for environment_variable in attrs.environment_variables %}
 * `{{ environment_variable }}`
 {% endfor %}
@@ -91,6 +93,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 **Environment Variables:**
 
 {% endif %}
+<!-- pyml disable-num-lines 5 blanks-around-lists -->
 {% if property_attrs.environment_variable|default(None) %}
 * `{{ property_attrs.environment_variable }}`
 {% else %}
@@ -105,6 +108,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 **Environment Variables:**
 
 {% endif %}
+<!-- pyml disable-num-lines 5 blanks-around-lists -->
 {% if property_attrs.environment_variable|default(None) %}
 * `{{ property_attrs.environment_variable }}`
 {% else %}
@@ -127,6 +131,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 {% if attrs.see_also|default({}) %}
 **See Also:**
 
+<!-- pyml disable-num-lines 5 blanks-around-lists -->
 {% for text, url in attrs.see_also.items() %}
 * [ {{ text }} ]({{ url }})
 {% endfor %}

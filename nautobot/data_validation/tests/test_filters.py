@@ -37,7 +37,7 @@ class ValidationRuleFilterTestCaseMixin(ValidationRuleTestCaseMixin):
             ]
         ).distinct()
         params = {"content_type": ["dcim.location", "dcim.manufacturer"]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected_queryset)
 
 
 class RegularExpressionValidationRuleFilterTestCase(ValidationRuleFilterTestCaseMixin, FilterTestCases.FilterTestCase):

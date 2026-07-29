@@ -117,10 +117,12 @@ class RackElevationDetailRenderChoices(ChoiceSet):
 class SubdeviceRoleChoices(ChoiceSet):
     ROLE_PARENT = "parent"
     ROLE_CHILD = "child"
+    ROLE_PARENT_CHILD = "parent-child"
 
     CHOICES = (
         (ROLE_PARENT, "Parent"),
         (ROLE_CHILD, "Child"),
+        (ROLE_PARENT_CHILD, "Parent and Child"),
     )
 
 
@@ -220,7 +222,7 @@ class ConsolePortTypeChoices(ChoiceSet):
                 (TYPE_USB_MICRO_AB, "USB Micro AB"),
             ),
         ),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -487,10 +489,10 @@ class PowerPortTypeChoices(ChoiceSet):
             ),
         ),
         (
-            "Other",
+            "Other",  # must remain last in the list
             (
                 (TYPE_HARDWIRED, "Hardwired"),
-                (TYPE_OTHER, "Other"),
+                (TYPE_OTHER, "Other"),  # must remain last in the list
             ),
         ),
     )
@@ -747,10 +749,10 @@ class PowerOutletTypeChoices(ChoiceSet):
             ),
         ),
         (
-            "Other",
+            "Other",  # must remain last in the list
             (
                 (TYPE_HARDWIRED, "Hardwired"),
-                (TYPE_OTHER, "Other"),
+                (TYPE_OTHER, "Other"),  # must remain last in the list
             ),
         ),
     )
@@ -872,7 +874,7 @@ class InterfaceTypeChoices(ChoiceSet):
     TYPE_64GFC_QSFP_PLUS = "64gfc-qsfpp"
     TYPE_64GFC_SFP_DD = "64gfc-sfpdd"
     TYPE_64GFC_SFP_PLUS = "64gfc-sfpp"
-    TYPE_128GFC_QSFP28 = "128gfc-sfp28"
+    TYPE_128GFC_QSFP28 = "128gfc-qsfp28"
 
     # InfiniBand
     TYPE_INFINIBAND_SDR = "infiniband-sdr"
@@ -1138,7 +1140,7 @@ class InterfaceTypeChoices(ChoiceSet):
                 (TYPE_SUMMITSTACK512, "Extreme SummitStack-512"),
             ),
         ),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -1265,6 +1267,9 @@ class PortTypeChoices(ChoiceSet):
     TYPE_LX5_APC = "lx5-apc"
     TYPE_SPLICE = "splice"
     TYPE_CS = "cs"
+    TYPE_CS_PC = "cs-pc"
+    TYPE_CS_UPC = "cs-upc"
+    TYPE_CS_APC = "cs-apc"
     TYPE_SN = "sn"
     TYPE_SMA_905 = "sma-905"
     TYPE_SMA_906 = "sma-906"
@@ -1321,6 +1326,9 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_SC_APC, "SC/APC"),
                 (TYPE_ST, "ST"),
                 (TYPE_CS, "CS"),
+                (TYPE_CS_PC, "CS/PC"),
+                (TYPE_CS_UPC, "CS/UPC"),
+                (TYPE_CS_APC, "CS/APC"),
                 (TYPE_SN, "SN"),
                 (TYPE_SMA_905, "SMA 905"),
                 (TYPE_SMA_906, "SMA 906"),
@@ -1330,7 +1338,7 @@ class PortTypeChoices(ChoiceSet):
                 (TYPE_SPLICE, "Splice"),
             ),
         ),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -1399,7 +1407,7 @@ class CableTypeChoices(ChoiceSet):
             ),
         ),
         (TYPE_POWER, "Power"),
-        ("Other", ((TYPE_OTHER, "Other"),)),
+        ("Other", ((TYPE_OTHER, "Other"),)),  # must remain last in the list
     )
 
 
@@ -1433,6 +1441,25 @@ class CableLengthUnitChoices(ChoiceSet):
         (UNIT_MILE, "Miles"),
         (UNIT_FOOT, "Feet"),
         (UNIT_INCH, "Inches"),
+    )
+
+
+#
+# Polarity Methods (Cable Types)
+#
+
+
+class CableTypePolarityMethodChoices(ChoiceSet):
+    METHOD_STRAIGHT = "straight-through"
+    METHOD_REVERSED = "reversed"
+    METHOD_PAIR_REVERSED = "pair-reversed"
+    METHOD_OTHER = "other"
+
+    CHOICES = (
+        (METHOD_STRAIGHT, "Straight-through"),
+        (METHOD_REVERSED, "Reversed"),
+        (METHOD_PAIR_REVERSED, "Pair-reversed"),
+        (METHOD_OTHER, "Other"),
     )
 
 

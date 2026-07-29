@@ -15,5 +15,5 @@ router.register("vpn-profile-phase-2-policy-assignments", views.VPNProfilePhase2
 router.register("vpns", views.VPNViewSet)
 router.register("vpn-tunnels", views.VPNTunnelViewSet)
 router.register("vpn-tunnel-endpoints", views.VPNTunnelEndpointViewSet)
-
+router.register("vpn-terminations", views.VPNTerminationViewSet)
 urlpatterns = router.urls

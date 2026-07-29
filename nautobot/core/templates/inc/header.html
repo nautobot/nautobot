@@ -3,34 +3,38 @@
 
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
-        <form action="{% url 'search' %}" class="col-4 text-center" id="header_search" method="get" role="search">
+        <form action="{% url 'search' %}" class="col-4 text-center" data-nb-live-search-path="{% url 'live_search' %}" id="header_search" method="get" role="search">
             <label class="position-relative w-100">
                 <input
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
+                    autocomplete="off"
                     class="form-control nb-text-transparent"
                     name="q"
+                    role="searchbox"
                     type="search"
                     value="{{ request.GET.q }}"
                 />
                 <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
                     <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
-                    {% if content_type %}
-                        {% for tab_name, tab_details in nav_menu.tabs.items %}
-                            {% for group_name, group_details in tab_details.groups.items %}
-                                {% for item_link, item_details in group_details.items.items %}
-                                    {% if item_details.is_active %}
-                                        <span class="badge border" data-nb-link="{{ item_link }}"><!--
-                                            -->in: {{ item_details.name }}<!--
-                                            --><button tabindex="-1" type="button">
-                                            <span aria-hidden="true" class="mdi mdi-close"></span>
-                                            <span class="visually-hidden">Remove</span>
-                                        </button>
-                                        </span>
-                                    {% endif %}
+                    {% spaceless %}
+                        {% if content_type %}
+                            {% for tab_name, tab_details in nav_menu.tabs.items %}
+                                {% for group_name, group_details in tab_details.groups.items %}
+                                    {% for item_link, item_details in group_details.items.items %}
+                                        {% if item_details.is_active %}
+                                            <span class="badge border" data-nb-link="{{ item_link }}"><!--
+                                                -->in: {{ item_details.name }}<!--
+                                                --><button tabindex="-1" type="button">
+                                                <span aria-hidden="true" class="mdi mdi-close"></span>
+                                                <span class="visually-hidden">Remove</span>
+                                            </button>
+                                            </span>
+                                        {% endif %}
+                                    {% endfor %}
                                 {% endfor %}
                             {% endfor %}
-                        {% endfor %}
-                    {% endif %}
+                        {% endif %}
+                    {% endspaceless %}
                     <span
                         aria-hidden="true"
                         class="align-items-center d-inline-flex gap-4 text-nowrap{% if not request.GET.q %} text-secondary{% endif %}"
@@ -41,10 +45,12 @@
                             {{ request.GET.q }}
                         {% endif %}
                     </span>
-                    <a class="align-items-center d-inline-flex ms-auto pe-auto"
+                    {% searchable_fields_for_content_type content_type as searchable_fields %}
+                    <a class="align-items-center d-inline-flex ms-auto pe-auto" aria-label="Search help"
                        href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
                        target="_blank"
                        rel="noopener"
+                       {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
                     >
                         <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
                     </a>

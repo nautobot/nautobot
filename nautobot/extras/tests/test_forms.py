@@ -1,3 +1,4 @@
+from datetime import date, datetime, timezone
 import json
 from unittest import skip
 import warnings
@@ -5,27 +6,36 @@ import warnings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
-from django.forms import ChoiceField, MultipleChoiceField
+from django.forms import CharField, ChoiceField, MultipleChoiceField
 from django.test import override_settings, TestCase
 
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
-from nautobot.extras.choices import CustomFieldTypeChoices, RelationshipTypeChoices
+from nautobot.extras.choices import (
+    CustomFieldTypeChoices,
+    MetadataTypeDataTypeChoices,
+    RelationshipTypeChoices,
+)
 from nautobot.extras.forms import (
     ConfigContextFilterForm,
     ConfigContextForm,
-    CustomFieldModelFormMixin,
     JobButtonForm,
     JobHookForm,
+    ObjectMetadataCreateForm,
+    ObjectMetadataForm,
     WebhookForm,
 )
+from nautobot.extras.forms.forms import _direct_field_names_for_content_type
 from nautobot.extras.models import (
+    Contact,
     CustomField,
     Job,
     JobButton,
     JobHook,
+    MetadataType,
     Note,
+    ObjectMetadata,
     Relationship,
     RelationshipAssociation,
     Role,
@@ -94,8 +104,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same content_types, same action and different job from a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverChange")
         """
         form = JobHookForm(data=self.job_hooks_data[0])
 
@@ -109,8 +119,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same content_types, same job and different actions from a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | device type, delete, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[1])
 
@@ -124,8 +134,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same job, same actions and different content types from a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | location, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | location, create, update, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[2])
 
@@ -139,8 +149,8 @@ class JobHookFormTestCase(TestCase):
         Create a new job hook with the same job, common actions and same content types as a job hook that exists
 
         Example:
-            Job hook 1: dcim | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
-            Job hook 2: dcim | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 1: DCIM | device type, create, update, Job(job_class_name="TestJobHookReceiverLog")
+            Job hook 2: DCIM | device type, create, update, delete, Job(job_class_name="TestJobHookReceiverLog")
         """
         form = JobHookForm(data=self.job_hooks_data[3])
 
@@ -151,11 +161,11 @@ class JobHookFormTestCase(TestCase):
         self.assertIn("type_create", error_msg)
         self.assertEqual(
             error_msg["type_create"][0]["message"],
-            "A job hook already exists for create on dcim | device type to job TestJobHookReceiverLog",
+            "A job hook already exists for create on DCIM | device type to job TestJobHookReceiverLog",
         )
         self.assertEqual(
             error_msg["type_update"][0]["message"],
-            "A job hook already exists for update on dcim | device type to job TestJobHookReceiverLog",
+            "A job hook already exists for update on DCIM | device type to job TestJobHookReceiverLog",
         )
 
 
@@ -195,8 +205,8 @@ class JobButtonFormTestCase(TestCase):
         Create a new job button with the same content_types and different job from a job button that exists
 
         Example:
-            Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
-            Job button 2: dcim | device, Job(job_class_name="TestJobButtonReceiverSimple")
+            Job button 1: DCIM | device, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: DCIM | device, Job(job_class_name="TestJobButtonReceiverSimple")
         """
         form = JobButtonForm(data=self.job_buttons_data[0])
 
@@ -210,8 +220,8 @@ class JobButtonFormTestCase(TestCase):
         Create a new job button with the same job and different content types from a job button that exists
 
         Example:
-            Job button 1: dcim | device, Job(job_class_name="TestJobButtonReceiverComplex")
-            Job button 2: dcim | location, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 1: DCIM | device, Job(job_class_name="TestJobButtonReceiverComplex")
+            Job button 2: DCIM | location, Job(job_class_name="TestJobButtonReceiverComplex")
         """
         form = JobButtonForm(data=self.job_buttons_data[1])
 
@@ -1041,8 +1051,8 @@ class WebhookFormTestCase(TestCase):
         Create a new webhook with different content_types, same url and same action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | location, create, http://localhost
+            Webhook 1: DCIM | console port, create, update, http://localhost
+            Webhook 2: DCIM | location, create, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[0])
 
@@ -1056,8 +1066,8 @@ class WebhookFormTestCase(TestCase):
         Create a new webhook with same content_types, same url and diff action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | console port, delete, http://localhost
+            Webhook 1: DCIM | console port, create, update, http://localhost
+            Webhook 2: DCIM | console port, delete, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[1])
 
@@ -1071,8 +1081,8 @@ class WebhookFormTestCase(TestCase):
         Create a new webhook with same content_types, same url and common action with a webhook that exists
 
         Example:
-            Webhook 1: dcim | console port, create, update, http://localhost
-            Webhook 2: dcim | console port, create, update, delete, http://localhost
+            Webhook 1: DCIM | console port, create, update, http://localhost
+            Webhook 2: DCIM | console port, create, update, delete, http://localhost
         """
         form = WebhookForm(data=self.webhooks_data[2])
 
@@ -1083,11 +1093,11 @@ class WebhookFormTestCase(TestCase):
         self.assertIn("type_create", error_msg)
         self.assertEqual(
             error_msg["type_create"][0]["message"],
-            "A webhook already exists for create on dcim | console port to URL http://example.com/test",
+            "A webhook already exists for create on DCIM | console port to URL http://example.com/test",
         )
         self.assertEqual(
             error_msg["type_update"][0]["message"],
-            "A webhook already exists for update on dcim | console port to URL http://example.com/test",
+            "A webhook already exists for update on DCIM | console port to URL http://example.com/test",
         )
 
 
@@ -1171,30 +1181,6 @@ class ConfigContextFilterFormTestCase(TestCase):
         self.assertNotIn("dynamic_groups", context_filter_form.fields)
 
 
-class CustomFieldModelFormMixinTestCase(TestCase):
-    def test_custom_field_data_removed_in_all(self):
-        """Asserts that when `__all__` is set on a CustomFieldModelFormMixin, _custom_field_data is stripped."""
-
-        class TestForm(CustomFieldModelFormMixin):
-            class Meta:
-                model = dcim_models.InterfaceRedundancyGroup
-                fields = "__all__"
-
-        custom_field_form = TestForm()
-        self.assertNotIn("_custom_field_data", custom_field_form.fields)
-
-    def test_custom_field_data_kept_if_explicit(self):
-        """Asserts that _custom_field_data will still show up if explicitly set."""
-
-        class TestForm(CustomFieldModelFormMixin):
-            class Meta:
-                model = dcim_models.InterfaceRedundancyGroup
-                fields = ["_custom_field_data"]
-
-        custom_field_form = TestForm()
-        self.assertIn("_custom_field_data", custom_field_form.fields)
-
-
 class CustomFieldTestCase(TestCase):
     def test_to_form_field_type_select(self):
         """Verify that `to_form_field` and `to_filter_form_field` return the correct field types for a select-type CustomField."""
@@ -1210,3 +1196,226 @@ class CustomFieldTestCase(TestCase):
 
         form = custom_field.to_form_field(for_filter_form=False)
         self.assertIsInstance(form, ChoiceField)
+
+
+class ObjectMetadataFormTestCase(TestCase):
+    """Test field visibility behavior of `ObjectMetadataForm` when editing existing instances."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.get(name="Campus")
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location = Location.objects.create(
+            name="ObjectMetadataForm Test Location",
+            location_type=location_type,
+            status=location_status,
+        )
+        location_ct = ContentType.objects.get_for_model(Location)
+
+        cls.contact_team_mdt = MetadataType.objects.create(
+            name="OMF Contact/Team MDT",
+            data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+        )
+        cls.contact_team_mdt.content_types.set([location_ct])
+        cls.text_mdt = MetadataType.objects.create(
+            name="OMF Text MDT",
+            data_type=MetadataTypeDataTypeChoices.TYPE_TEXT,
+        )
+        cls.text_mdt.content_types.set([location_ct])
+
+        cls.contact_team_om = ObjectMetadata.objects.create(
+            metadata_type=cls.contact_team_mdt,
+            contact=Contact.objects.first(),
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=cls.location.pk,
+        )
+        cls.text_om = ObjectMetadata.objects.create(
+            metadata_type=cls.text_mdt,
+            _value="some text",
+            scoped_fields=["description"],
+            assigned_object_type=location_ct,
+            assigned_object_id=cls.location.pk,
+        )
+
+    def test_edit_contact_team_instance_hides_value_field(self):
+        """When editing a CONTACT_TEAM instance, the form exposes contact/team but not value."""
+        form = ObjectMetadataForm(instance=self.contact_team_om)
+        self.assertIn("contact", form.fields)
+        self.assertIn("team", form.fields)
+        self.assertNotIn("value", form.fields)
+
+    def test_edit_non_contact_team_instance_hides_contact_and_team_fields(self):
+        """When editing a non-CONTACT_TEAM instance, the form exposes value but not contact/team."""
+        form = ObjectMetadataForm(instance=self.text_om)
+        self.assertIn("value", form.fields)
+        self.assertNotIn("contact", form.fields)
+        self.assertNotIn("team", form.fields)
+
+    def test_edit_swaps_value_field_to_data_type_specific_field(self):
+        """`_adapt_value_field` replaces the generic JSONField with one matching the metadata type."""
+        form = ObjectMetadataForm(instance=self.text_om)
+        value_field = form.fields["value"]
+        # `to_form_field` returns a plain CharField for TYPE_TEXT (not a subclass like JSONFormField),
+        # confirming the swap on the last three lines of `_adapt_value_field` ran.
+        self.assertIs(type(value_field), CharField)
+        self.assertEqual(value_field.initial, "some text")
+        self.assertIn(str(self.text_mdt), value_field.help_text)
+        self.assertIn(self.text_mdt.get_data_type_display(), value_field.help_text)
+
+    def test_bound_create_form_swaps_value_field_from_posted_metadata_type(self):
+        """When no instance is saved yet, `_adapt_value_field` resolves metadata_type from bound POST data."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        form = ObjectMetadataForm(
+            data={
+                "metadata_type": str(self.text_mdt.pk),
+                "assigned_object_type": str(location_ct.pk),
+                "assigned_object_id": str(self.location.pk),
+                "scoped_fields": "",
+                "value": "",
+            }
+        )
+        value_field = form.fields["value"]
+        self.assertIs(type(value_field), CharField)
+        self.assertIn(str(self.text_mdt), value_field.help_text)
+
+    def test_clean_flattens_date_value_to_iso_string(self):
+        """`clean()` flattens a `date` object to an ISO date string so JSONField can serialize it."""
+        form = ObjectMetadataForm(instance=self.text_om)
+        form.cleaned_data = {"value": date(2026, 1, 15)}
+        form.clean()
+        self.assertEqual(form.cleaned_data["value"], "2026-01-15")
+
+    def test_clean_flattens_datetime_value_to_iso_string(self):
+        """`clean()` flattens a `datetime` to an ISO string, preserving microseconds and tzinfo."""
+        form = ObjectMetadataForm(instance=self.text_om)
+        form.cleaned_data = {"value": datetime(2026, 1, 15, 10, 20, 30, 123456, tzinfo=timezone.utc)}
+        form.clean()
+        # Microseconds preserved; tzinfo preserved as +00:00.
+        self.assertEqual(form.cleaned_data["value"], "2026-01-15T10:20:30.123456+00:00")
+
+    def test_clean_leaves_non_date_value_unchanged(self):
+        """`clean()` passes through values that aren't date/datetime instances."""
+        form = ObjectMetadataForm(instance=self.text_om)
+        form.cleaned_data = {"value": "already a string"}
+        form.clean()
+        self.assertEqual(form.cleaned_data["value"], "already a string")
+
+    def test_unbound_form_without_instance_or_initial_renders_with_empty_scoped_fields(self):
+        """When no assigned_object_type can be resolved, scoped_fields renders with no choices.
+
+        This is the initial create-form state before the user picks an assigned_object_type;
+        client-side JS later populates the choices via AJAX. The form must not raise.
+        """
+        form = ObjectMetadataForm()
+        scoped = form.fields["scoped_fields"]
+        self.assertFalse(getattr(scoped, "choices", None))
+        self.assertFalse(getattr(scoped, "has_choices", False))
+
+    def test_bound_form_with_nonexistent_assigned_object_type_pk_does_not_raise(self):
+        """A bound submission with a non-existent ContentType pk falls through `ContentType.DoesNotExist`."""
+        # Pick a pk that's guaranteed not to map to any ContentType.
+        bogus_pk = ContentType.objects.order_by("-pk").first().pk + 9999
+        form = ObjectMetadataForm(
+            data={
+                "metadata_type": str(self.text_mdt.pk),
+                "assigned_object_type": str(bogus_pk),
+                "assigned_object_id": str(self.location.pk),
+                "scoped_fields": "",
+                "value": "",
+            }
+        )
+        scoped = form.fields["scoped_fields"]
+        self.assertFalse(getattr(scoped, "choices", None))
+        self.assertFalse(getattr(scoped, "has_choices", False))
+
+    def test_bound_form_with_non_numeric_assigned_object_type_does_not_raise(self):
+        """A bound submission with a non-numeric ContentType pk falls through `ValueError`."""
+        form = ObjectMetadataForm(
+            data={
+                "metadata_type": str(self.text_mdt.pk),
+                "assigned_object_type": "not-a-number",
+                "assigned_object_id": str(self.location.pk),
+                "scoped_fields": "",
+                "value": "",
+            }
+        )
+        scoped = form.fields["scoped_fields"]
+        self.assertFalse(getattr(scoped, "choices", None))
+        self.assertFalse(getattr(scoped, "has_choices", False))
+
+    def test_create_form_with_valid_initial_adds_assigned_object_display_field(self):
+        """When valid `assigned_object_*` initial is supplied, the friendly display field is inserted."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        form = ObjectMetadataCreateForm(
+            initial={
+                "assigned_object_type": location_ct.pk,
+                "assigned_object_id": self.location.pk,
+            }
+        )
+        self.assertIn("assigned_object_display", form.fields)
+        self.assertEqual(form.fields["assigned_object_display"].initial, str(self.location))
+
+    def test_create_form_with_nonexistent_assigned_object_id_does_not_raise(self):
+        """Bogus `assigned_object_id` swallows `ObjectDoesNotExist`; no friendly display, no crash."""
+        location_ct = ContentType.objects.get_for_model(Location)
+        form = ObjectMetadataCreateForm(
+            initial={
+                "assigned_object_type": location_ct.pk,
+                "assigned_object_id": "00000000-0000-0000-0000-000000000000",
+            }
+        )
+        self.assertNotIn("assigned_object_display", form.fields)
+
+    def test_create_form_with_nonexistent_assigned_object_type_pk_does_not_raise(self):
+        """Bogus `assigned_object_type` pk swallows `ContentType.DoesNotExist`; no friendly display, no crash."""
+        bogus_pk = ContentType.objects.order_by("-pk").first().pk + 9999
+        form = ObjectMetadataCreateForm(
+            initial={
+                "assigned_object_type": bogus_pk,
+                "assigned_object_id": self.location.pk,
+            }
+        )
+        self.assertNotIn("assigned_object_display", form.fields)
+
+    def test_create_form_with_non_numeric_assigned_object_type_does_not_raise(self):
+        """Non-numeric `assigned_object_type` swallows `ValueError`; no friendly display, no crash."""
+        form = ObjectMetadataCreateForm(
+            initial={
+                "assigned_object_type": "not-a-number",
+                "assigned_object_id": self.location.pk,
+            }
+        )
+        self.assertNotIn("assigned_object_display", form.fields)
+
+    def test_direct_field_names_helper_returns_empty_for_missing_content_type(self):
+        self.assertEqual(_direct_field_names_for_content_type(None), [])
+
+    def test_adapt_value_field_has_form_control(self):
+        form = ObjectMetadataForm(instance=self.text_om)
+        self.assertIn("form-control", form.fields["value"].widget.attrs.get("class", ""))
+
+    def test_create_form_display_field_has_form_control(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        form = ObjectMetadataCreateForm(
+            initial={
+                "assigned_object_type": location_ct.pk,
+                "assigned_object_id": self.location.pk,
+            }
+        )
+        self.assertIn("form-control", form.fields["assigned_object_display"].widget.attrs.get("class", ""))
+
+    def test_bound_form_with_invalid_metadata_type_pk_silently_skips_value_field_swap(self):
+        location_ct = ContentType.objects.get_for_model(Location)
+        for val in ("not-a-uuid", "00000000-0000-0000-0000-000000000000"):
+            with self.subTest(metadata_type=val):
+                form = ObjectMetadataForm(
+                    data={
+                        "metadata_type": val,
+                        "assigned_object_type": str(location_ct.pk),
+                        "assigned_object_id": str(self.location.pk),
+                        "scoped_fields": "",
+                        "value": "",
+                    }
+                )
+                self.assertIn("value", form.fields)
