@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any, Optional
 
 from django.conf import settings
@@ -24,6 +25,12 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "nautobot")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
+
+# axe-core is installed as an npm devDependency of the UI build; see `nautobot/ui/package.json`.
+AXE_CORE_PATH = Path(settings.BASE_DIR) / "ui" / "node_modules" / "axe-core" / "axe.min.js"
+
+# WCAG 2.1 Level A and AA, which is the conformance target Nautobot aims at.
+AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa")
 
 
 class ObjectsListMixin:
@@ -482,6 +489,59 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.user.save()
         self.login(self.user.username, self.password)
         self.logged_in = True
+
+    def assertNoAccessibilityViolations(self, impacts=("critical", "serious"), tags=AXE_DEFAULT_TAGS, context=None):
+        """
+        Assert that the page currently loaded in the browser has no axe-core accessibility violations.
+
+        Args:
+            impacts (tuple): axe-core impact levels to treat as failures. Defaults to the two highest, since
+                `moderate` and `minor` findings are numerous in a large existing UI and would make this unusable as a
+                gate. Pass a wider tuple to tighten the check for a specific page.
+            tags (tuple): axe-core rule tags to run. Defaults to WCAG 2.1 A and AA.
+            context (str, optional): CSS selector limiting the scan to part of the page. Scans the whole page by default.
+
+        Raises:
+            AssertionError: If any violation at or above the given impact levels is found. The message lists the rule
+                id, impact, help text and the offending element for each, so failures are actionable without rerunning.
+        """
+        if not AXE_CORE_PATH.is_file():
+            self.skipTest(
+                f"axe-core not found at {AXE_CORE_PATH}. Run `npm install` in `nautobot/ui` to enable "
+                "accessibility assertions."
+            )
+
+        # Define `window.axe` in the page. axe-core is self-contained, so injecting its source is all that is needed.
+        self.browser.execute_script(AXE_CORE_PATH.read_text(encoding="utf-8"))
+
+        # `axe.run` is promise-based, so hand the result back through a callback via Selenium's async script support.
+        results = self.browser.driver.execute_async_script(
+            """
+            const [context, tags, done] = [arguments[0], arguments[1], arguments[arguments.length - 1]];
+            axe.run(context || document, { runOnly: { type: 'tag', values: tags } })
+                .then((results) => done({ violations: results.violations }))
+                .catch((error) => done({ error: String(error) }));
+            """,
+            context,
+            list(tags),
+        )
+
+        if results.get("error"):
+            self.fail(f"axe-core failed to run: {results['error']}")
+
+        violations = [violation for violation in results.get("violations", []) if violation.get("impact") in impacts]
+        if not violations:
+            return
+
+        lines = []
+        for violation in violations:
+            lines.append(f"  [{violation['impact']}] {violation['id']}: {violation['help']}")
+            lines.append(f"    {violation['helpUrl']}")
+            for node in violation.get("nodes", [])[:5]:  # Cap per-rule output; the first few are enough to act on.
+                target = ", ".join(node.get("target", []))
+                lines.append(f"    at {target}")
+        details = "\n".join(lines)
+        self.fail(f"{len(violations)} accessibility violation(s) at impact {impacts} on {self.browser.url}:\n{details}")
 
     def scroll_element_into_view(self, element=None, css=None, xpath=None, block="start"):
         """
