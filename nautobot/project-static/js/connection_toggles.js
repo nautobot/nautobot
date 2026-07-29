@@ -11,7 +11,7 @@ function changeCableTerminationColors(cablePk, newStatus) {
         return;
     }
 
-    const cableRows = document.querySelectorAll(`tr[cable_pk="${cablePk}"]`);
+    const cableRows = document.querySelectorAll(`tr[data-cable-pk="${cablePk}"]`);
     cableRows.forEach(function(cableRow) {
         cableRow.classList.remove('table-success', 'table-info', 'table-warning');
         cableRow.classList.add(newStatus === 'Connected' ? 'table-success' : 'table-info');

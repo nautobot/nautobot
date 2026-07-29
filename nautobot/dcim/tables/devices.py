@@ -740,7 +740,7 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
         row_attrs = {
-            "cable_pk": get_cable_pk,
+            "data-cable-pk": get_cable_pk,
             "class": cable_status_color_css,
         }
         fields = (
@@ -873,7 +873,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "actions",
         ]
         row_attrs = {
-            "cable_pk": get_cable_pk,
+            "data-cable-pk": get_cable_pk,
             "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }
