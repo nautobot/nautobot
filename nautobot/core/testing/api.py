@@ -135,9 +135,9 @@ class APITestCase(views.ModelTestCase):
         depth_fields = [field_name for field_name in depth_fields if field_name in serializer.fields]
         return depth_fields
 
-    def get_m2m_side_objects(self, instance):
+    def get_change_logged_m2m_side_objects(self, instance):
         """If self.model is an explicit M2M through model, return the non-null, change-logged objects it associates."""
-        side_field_names = extras_utils.get_explicit_m2m_through_side_field_names().get(self.model, ())
+        side_field_names = extras_utils.get_change_logged_m2m_through_side_field_names().get(self.model, ())
         side_objects = []
         for field_name in side_field_names:
             side_object = getattr(instance, field_name, None)
@@ -934,9 +934,10 @@ class APIViewTestCases:
                     # Verify that at least one ObjectChange record is for this instance
                     self.assertTrue(any(oc.changed_object == instance for oc in objectchanges))
 
-                # Creating a record of an explicit M2M through model must record an ObjectChange
-                # against both of the objects it associates
-                self.assert_m2m_side_objects_change_logged(self.get_m2m_side_objects(instance))
+                if changed_m2m_side_objects := self.get_change_logged_m2m_side_objects(instance):
+                    # This is an explicit M2M through model; creating this record must record
+                    # an ObjectChange against both of the objects it associates between
+                    self.assert_m2m_side_objects_change_logged(changed_m2m_side_objects)
 
         # TODO: The override_settings here is a temporary workaround for not breaking any app tests
         # long term fix should be using appropriate object permissions instead of the blanket override
@@ -1328,7 +1329,7 @@ class APIViewTestCases:
             instance = self.get_deletable_object()
             url = self._get_detail_url(instance)
             # Capture the side objects of an explicit M2M through model before the record is deleted
-            m2m_side_objects = self.get_m2m_side_objects(instance)
+            m2m_side_objects = self.get_change_logged_m2m_side_objects(instance)
 
             # Add object-level permission
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
@@ -1356,7 +1357,7 @@ class APIViewTestCases:
             m2m_side_objects = [
                 side_object
                 for record in self._get_queryset().filter(pk__in=id_list)
-                for side_object in self.get_m2m_side_objects(record)
+                for side_object in self.get_change_logged_m2m_side_objects(record)
             ]
             # Add object-level permission
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")

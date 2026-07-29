@@ -169,10 +169,6 @@ def get_explicit_m2m_through_side_field_names():
     `VRF.devices`, `VRF.virtual_machines`, and `VRF.virtual_device_contexts`), in which case the union of all
     of their side field names is returned; sides not participating in a given row are simply null.
 
-    Through models may opt out of the automatic change logging of their side objects by setting the class
-    attribute `is_m2m_change_logged = False` (e.g. `UserSavedViewAssociation`, which records per-user
-    preferences rather than shared data).
-
     Cache is cleared by the post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
 
     Returns:
@@ -188,8 +184,6 @@ def get_explicit_m2m_through_side_field_names():
             through = field.remote_field.through
             if through is None or through._meta.auto_created:
                 continue
-            if not getattr(through, "is_m2m_change_logged", True):
-                continue
             side_field_names = set()
             for side_field_name in (field.m2m_field_name(), field.m2m_reverse_field_name()):
                 side_field = through._meta.get_field(side_field_name)
@@ -197,6 +191,26 @@ def get_explicit_m2m_through_side_field_names():
                     side_field_names.add(side_field_name)
             mapping.setdefault(through, set()).update(side_field_names)
     return {through: tuple(sorted(sides)) for through, sides in mapping.items()}
+
+
+@functools.cache
+def get_change_logged_m2m_through_side_field_names():
+    """Like `get_explicit_m2m_through_side_field_names`, but only through models subject to association change logging.
+
+    Through models may opt out of the automatic change logging of their side objects by setting the class
+    attribute `is_m2m_change_logged = False` (e.g. `UserSavedViewAssociation`, which records per-user
+    preferences rather than shared data).
+
+    Cache is cleared by the post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+
+    Returns:
+        dict: `{through_model_class: (side_field_name, ...)}`
+    """
+    return {
+        through: side_field_names
+        for through, side_field_names in get_explicit_m2m_through_side_field_names().items()
+        if getattr(through, "is_m2m_change_logged", True)
+    }
 
 
 @deconstructible

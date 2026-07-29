@@ -19,6 +19,7 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
     get_base_template,
     get_celery_queues,
+    get_change_logged_m2m_through_side_field_names,
     get_explicit_m2m_through_side_field_names,
     get_kubernetes_job_manifest,
     get_worker_count,
@@ -63,8 +64,18 @@ class GetExplicitM2MThroughSideFieldNamesTest(TestCase):
         with self.subTest("auto-created through models are excluded"):
             self.assertNotIn(VRF.import_targets.through, mapping)
 
-        with self.subTest("through models with is_m2m_change_logged = False are excluded"):
-            self.assertNotIn(UserSavedViewAssociation, mapping)
+    def test_change_logged_variant_respects_opt_out(self):
+        base_mapping = get_explicit_m2m_through_side_field_names()
+        change_logged_mapping = get_change_logged_m2m_through_side_field_names()
+
+        with self.subTest("is_m2m_change_logged = False models are introspected but not change-logged"):
+            self.assertIn(UserSavedViewAssociation, base_mapping)
+            self.assertNotIn(UserSavedViewAssociation, change_logged_mapping)
+
+        with self.subTest("all other through models are unaffected by the filtering"):
+            expected = dict(base_mapping)
+            del expected[UserSavedViewAssociation]
+            self.assertEqual(change_logged_mapping, expected)
 
 
 class UtilsTestCase(TestCase):
