@@ -1,1 +1,1 @@
-Fixed OpenTelemetry log correlation duplicating and reformatting log lines when `OTEL_PYTHON_LOG_CORRELATION` was enabled, by injecting the trace and span IDs onto log records instead of overriding the root logging configuration.
+Fixed OpenTelemetry log correlation duplicating and reformatting log lines when `OTEL_PYTHON_LOG_CORRELATION` was enabled, by injecting the trace and span IDs onto log records instead of overriding the root logging configuration; the default console logging now surfaces the trace and span IDs when correlation is enabled.

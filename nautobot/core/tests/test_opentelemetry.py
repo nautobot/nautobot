@@ -1,6 +1,7 @@
 """Tests for OpenTelemetry instrumentation in Nautobot."""
 
 import json
+import logging
 import os
 from types import SimpleNamespace
 import unittest
@@ -24,6 +25,7 @@ import requests
 
 from nautobot.core import testing
 from nautobot.core.cli.opentelemetry import instrument
+from nautobot.core.logging import OtelTraceContextFilter
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
 
 try:
@@ -214,6 +216,107 @@ class InstrumentFunctionTest(testing.TestCase):
                 instrument()
 
         mock_logging.return_value.instrument.assert_not_called()
+
+
+class OtelTraceContextFilterTest(testing.TestCase):
+    """Verify OtelTraceContextFilter guarantees the otel* attributes so formatters never raise."""
+
+    def _record(self):
+        return logging.LogRecord("nautobot", logging.INFO, "f.py", 1, "hello", None, None)
+
+    def test_missing_attributes_filled_with_sentinels(self):
+        """A record lacking the otel* attributes gets the standard 'no active span' sentinels."""
+        record = self._record()
+        self.assertFalse(hasattr(record, "otelTraceID"))
+
+        self.assertTrue(OtelTraceContextFilter().filter(record))
+
+        self.assertEqual(record.otelTraceID, "0")
+        self.assertEqual(record.otelSpanID, "0")
+        self.assertFalse(record.otelTraceSampled)
+        self.assertEqual(record.otelServiceName, "")
+
+    def test_existing_attributes_preserved(self):
+        """Real injected trace IDs must not be overwritten by the filter's defaults."""
+        record = self._record()
+        record.otelTraceID = "abc123"
+        record.otelSpanID = "def456"
+
+        OtelTraceContextFilter().filter(record)
+
+        self.assertEqual(record.otelTraceID, "abc123")
+        self.assertEqual(record.otelSpanID, "def456")
+
+    def test_formatter_referencing_ids_survives_attr_less_record(self):
+        """A formatter with %(otelTraceID)s must not raise on a record processed through the filter.
+
+        Without the filter, logging.Formatter raises ValueError: 'Formatting field not found in record'
+        for a record that predates instrumentation. The filter is what makes the default correlation
+        formatters safe for such records.
+        """
+        formatter = logging.Formatter("[trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] %(message)s")
+        record = self._record()
+
+        # Sanity: the unfiltered record would blow up the formatter.
+        with self.assertRaises(ValueError):
+            formatter.format(record)
+
+        OtelTraceContextFilter().filter(record)
+        self.assertEqual(formatter.format(record), "[trace_id=0 span_id=0] hello")
+
+
+class DefaultLoggingCorrelationTest(testing.TestCase):
+    """Verify Nautobot's default LOGGING surfaces trace IDs only when correlation is enabled.
+
+    LOGGING is built from env vars at settings-import time, so these tests reload nautobot.core.settings
+    under a patched environment and inspect the resulting dict (rather than override_settings, which
+    cannot rebuild the already-constructed dict).
+    """
+
+    def _reload_settings_logging(self, env):
+        import importlib
+        import sys
+
+        import nautobot.core.settings as settings_module
+
+        try:
+            # settings.py takes a NullHandler LOGGING branch when TESTING (`"test" in sys.argv`), which
+            # is always true under the test runner. Patch sys.argv so the reload builds the real
+            # (non-TESTING) console LOGGING branch this test targets.
+            with patch.dict(os.environ, env, clear=False), patch.object(sys, "argv", ["nautobot-server"]):
+                logging_dict = importlib.reload(settings_module).LOGGING
+        finally:
+            # Always restore the module to the ambient test environment so later imports/tests see
+            # normal settings, even if the reload under the patched env raised.
+            importlib.reload(settings_module)
+        return logging_dict
+
+    def test_correlation_enabled_adds_ids_and_filter(self):
+        """With tracing + correlation on, the default formatters include the IDs and the filter is wired."""
+        logging_dict = self._reload_settings_logging(
+            {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True", "OTEL_PYTHON_LOG_CORRELATION": "True", "NAUTOBOT_DEBUG": "False"}
+        )
+        self.assertIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
+        self.assertIn("otelTraceID", logging_dict["formatters"]["verbose"]["format"])
+        self.assertIn("otel_trace_context", logging_dict["filters"])
+        self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], ["otel_trace_context"])
+        self.assertEqual(logging_dict["handlers"]["verbose_console"]["filters"], ["otel_trace_context"])
+
+    def test_correlation_disabled_leaves_default_format_untouched(self):
+        """With correlation off, no trace IDs and no filter are added to the default handlers."""
+        logging_dict = self._reload_settings_logging(
+            {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True", "OTEL_PYTHON_LOG_CORRELATION": "False", "NAUTOBOT_DEBUG": "False"}
+        )
+        self.assertNotIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
+        self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], [])
+
+    def test_tracing_disabled_leaves_default_format_untouched(self):
+        """Correlation only takes effect when tracing (OTEL_PYTHON_DJANGO_INSTRUMENT) is enabled."""
+        logging_dict = self._reload_settings_logging(
+            {"OTEL_PYTHON_DJANGO_INSTRUMENT": "False", "OTEL_PYTHON_LOG_CORRELATION": "True", "NAUTOBOT_DEBUG": "False"}
+        )
+        self.assertNotIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
+        self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], [])
 
 
 class InstrumentExporterBranchTest(testing.TestCase):

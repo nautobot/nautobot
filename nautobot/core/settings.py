@@ -563,16 +563,36 @@ if TESTING:
         "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
     }
 else:
+    # When OpenTelemetry log correlation is enabled, the logging instrumentor injects otelTraceID/
+    # otelSpanID onto each record (see nautobot.core.cli.opentelemetry.instrument). Surface them in the
+    # default console output by appending them to the formatters, and attach OtelTraceContextFilter to
+    # the handlers so records emitted before/without instrumentation (which lack the attributes) still
+    # format instead of raising. Read the env vars directly here because the canonical
+    # OTEL_PYTHON_DJANGO_INSTRUMENT / OTEL_PYTHON_LOG_CORRELATION settings are defined later in this
+    # module; keep them in sync.
+    _OTEL_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False")) and is_truthy(
+        os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True")
+    )
+    _OTEL_LOG_SUFFIX = " [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s]" if _OTEL_LOG_CORRELATION else ""
+
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "otel_trace_context": {
+                "()": "nautobot.core.logging.OtelTraceContextFilter",
+            },
+        },
         "formatters": {
             "normal": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+                "format": f"%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s{_OTEL_LOG_SUFFIX} :\n  %(message)s",
                 "datefmt": "%H:%M:%S",
             },
             "verbose": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+                "format": (
+                    f"%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s "
+                    f"%(funcName)30s(){_OTEL_LOG_SUFFIX} :\n  %(message)s"
+                ),
                 "datefmt": "%H:%M:%S",
             },
         },
@@ -581,11 +601,13 @@ else:
                 "level": "INFO",
                 "class": "logging.StreamHandler",
                 "formatter": "normal",
+                "filters": ["otel_trace_context"] if _OTEL_LOG_CORRELATION else [],
             },
             "verbose_console": {
                 "level": "DEBUG",
                 "class": "logging.StreamHandler",
                 "formatter": "verbose",
+                "filters": ["otel_trace_context"] if _OTEL_LOG_CORRELATION else [],
             },
         },
         "loggers": {
@@ -1324,10 +1346,12 @@ KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTE
 #
 
 OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False"))
-# When True (and tracing is enabled), inject otelTraceID/otelSpanID/otelTraceSampled/otelServiceName
-# onto every log record so logs can be correlated to their trace. This only injects the attributes; it
-# does not change the logging format or add any handlers, so it never conflicts with this module's
-# LOGGING config. To make the injected IDs visible, add e.g. %(otelTraceID)s to your LOGGING formatters.
+# When True (and tracing is enabled via OTEL_PYTHON_DJANGO_INSTRUMENT), inject otelTraceID/otelSpanID/
+# otelTraceSampled/otelServiceName onto every log record so logs can be correlated to their trace. This
+# only injects the attributes; it does not add handlers or override your logging format, so it never
+# conflicts with a custom LOGGING config. Nautobot's *default* LOGGING (above) additionally surfaces the
+# trace/span IDs in console output when this is enabled. If you override LOGGING, reference the
+# attributes in your own formatters (e.g. %(otelTraceID)s) to make them visible.
 OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
 OTEL_TRACES_EXPORTER = [
     exporter
