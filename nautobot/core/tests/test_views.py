@@ -284,13 +284,13 @@ class HomeViewTestCase(TestCase):
         def assertBodyContains(html):
             return self.assertBodyContains(response, html, html=True)
 
-        assertBodyContains("""<strong class="nb-text-none text-body">Organization</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/locations/">Locations</a></h4>""")
-        assertBodyContains("""<strong class="nb-text-none text-body">DCIM</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/devices/">Devices</a></h4>""")
-        assertBodyContains("""<strong class="nb-text-none text-body">IPAM</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/prefixes/">Prefixes</a></h4>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h4>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
 
 
 class AppDocsViewTestCase(TestCase):
@@ -499,7 +499,7 @@ class SearchContentTypeView(TestCase):
         response = self.client.get(
             reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
         )
-        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        self.assertBodyContains(response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True)
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
@@ -672,7 +672,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
+            '<input aria-label="Search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -691,7 +691,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
+            '<input aria-label="Search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" value="">',
             html=True,
         )
         self.assertBodyContains(

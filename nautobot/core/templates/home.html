@@ -47,6 +47,12 @@
 
 {% block content %}
     {% registry %}
+    {% comment %}
+    The `page_title` block is deliberately emptied above, so this page would otherwise have no `<h1>` at all and its panel
+    contents would be the first headings on the page. A visually hidden `<h1>` gives the page a top-level heading for
+    screen reader and heading-navigation users without altering the visual design.
+    {% endcomment %}
+    <h1 class="visually-hidden">Home</h1>
     <div
         id="draggable-homepage-panels"
         class="row nb-draggable-container"
@@ -75,7 +81,7 @@
                                 <span aria-hidden="true" class="mdi mdi-drag"></span>
                                 <span class="visually-hidden">Reorder {{ panel_name }} panel</span>
                             </button>
-                            <strong class="text-body nb-text-none">{{ panel_name }}</strong>
+                            <h2 class="d-inline fs-4 fw-bold text-body nb-text-none">{{ panel_name }}</h2>
                             {% comment %}Not using <button> element here because of Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=568313 {% endcomment %}
                             <span
                                 class="btn stretched-link nb-collapse-toggle nb-cursor-unset"
@@ -108,7 +114,7 @@
                                             <li class="list-group-item" data-item-weight="{{ item_details.weight }}">
                                                 {% if request.user|has_perms:item_details.permissions %}
                                                     <span class="badge bg-primary float-end my-1">{{ item_details.count|intcomma }}</span>
-                                                    <h4 class="fw-normal lh-base">
+                                                    <h3 class="fw-normal fs-4 lh-base">
                                                         {% comment %}
                                                             Use 'url xxx as variable' so that an invalid
                                                             link doesn't throw a NoReverseMatch exception.
@@ -119,17 +125,17 @@
                                                         {% else %}
                                                             <a>ERROR: Invalid link!</a>
                                                         {% endif %}
-                                                    </h4>
+                                                    </h3>
                                                 {% else %}
                                                     <span class="badge bg-primary float-end my-1"><span class="mdi mdi-lock" aria-hidden="true"></span></span>
-                                                    <h4 class="fw-normal lh-base">{{ item_name }}</h4>
+                                                    <h3 class="fw-normal fs-4 lh-base">{{ item_name }}</h3>
                                                 {% endif %}
                                                 <p class="fs-5 mb-0 mt-4 text-secondary">{{ item_details.description }}</p>
                                             </li>
                                         {% endif %}
                                     {% else %}
                                         <li class="list-group-item" data-item-weight="{{ item_details.weight }}">
-                                            <h4 class="fw-normal lh-base">{{ item_name }}</h4>
+                                            <h3 class="fw-normal fs-4 lh-base">{{ item_name }}</h3>
                                             {% for group_item_name, group_item_details in item_details.items.items %}
                                                 {% if request.user|has_one_or_more_perms:group_item_details.permissions %}
                                                     {% if request.user|has_perms:group_item_details.permissions %}

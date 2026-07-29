@@ -11,7 +11,7 @@ const REFRESH_ON_CLOSE_SELECTOR = '[data-nb-refresh-on-close="true"]';
  */
 const FALLBACK_CONTENT = `
   <div class="modal-header">
-    <h4 class="modal-title" id="nb-modal-title">Loading...</h4>
+    <h2 class="modal-title" id="nb-modal-title">Loading...</h2>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
   </div>
   <div class="modal-body text-center p-5">
