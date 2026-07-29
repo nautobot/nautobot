@@ -283,9 +283,20 @@ def main():
     # is honored, not just the env-var default.
     nautobot_config = sys.modules["nautobot_config"]
     if nautobot_config.OTEL_PYTHON_DJANGO_INSTRUMENT:
-        from nautobot.core.cli.opentelemetry import instrument
+        from nautobot.core.cli.opentelemetry import install_exporters, instrument
 
         instrument()
+
+        # instrument() installs the auto-instrumentors + tracer provider but NOT the OTLP exporters,
+        # because the OTLP gRPC channel is not fork-safe (grpc's C-core would be inherited broken by
+        # forked workers -> SIGSEGV). The forking servers -- uWSGI (`start`) and Celery
+        # (`worker`/`beat`/`celery`) -- create the exporters per worker AFTER fork via their own
+        # post-fork hooks (nautobot.core.wsgi, nautobot.core.celery). Every other command is
+        # single-process, so install the exporters here where in-process channel creation is safe.
+        _FORKING_COMMANDS = {"start", "worker", "beat", "celery"}
+        django_command = next((arg for arg in unparsed_args if not arg.startswith("-")), None)
+        if django_command not in _FORKING_COMMANDS:
+            install_exporters(config=nautobot_config)
 
     execute_from_command_line([sys.argv[0], *unparsed_args])
 

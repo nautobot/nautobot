@@ -1,0 +1,30 @@
+---
+# Opt-in override for reproducing the OTLP-gRPC + uWSGI-prefork + django-silk-profiling worker
+# SEGFAULT (see development/OTEL_SEGFAULT_REPRO.md). NOT part of normal development; add it to the
+# `compose_files` in your invoke.yml (after docker-compose.dev.yml and docker-compose.observability.yml)
+# only when reproducing this bug.
+#
+# It runs the dev `nautobot` service under uWSGI pre-fork (master + 3 workers) instead of the default
+# `runserver` (which is single-process and cannot fork, so it never reproduces the crash), and turns
+# OpenTelemetry Django instrumentation on. The OTLP endpoint/protocol (otel:4317 / grpc) already come
+# from development/dev.env; the `otel` collector comes from docker-compose.observability.yml.
+#
+# REPRO_LAZY_APPS: set to "true" to pass uWSGI `--lazy-apps=true` (each worker loads the app AFTER its
+# own fork). Used to answer "does lazy-apps avoid it?" - see the repro doc. Defaults to off.
+services:
+  nautobot:
+    # shell form so we can (a) mint the self-signed cert the shipped uwsgi.ini's `https =` line
+    # requires (the dev image ships no cert, and uWSGI `strict`/`need-app` abort without it), and
+    # (b) conditionally append `--lazy-apps=true` from REPRO_LAZY_APPS.
+    command:
+      - "sh"
+      - "-c"
+      - >-
+        (test -f /opt/nautobot/nautobot.crt ||
+        openssl req -x509 -newkey rsa:2048 -nodes -days 1
+        -keyout /opt/nautobot/nautobot.key -out /opt/nautobot/nautobot.crt -subj "/CN=localhost") &&
+        nautobot-server start --ini /source/docker/uwsgi.ini
+        $${REPRO_LAZY_APPS:+--lazy-apps=true}
+    environment:
+      OTEL_PYTHON_DJANGO_INSTRUMENT: "True"
+      REPRO_LAZY_APPS: "${REPRO_LAZY_APPS:-}"

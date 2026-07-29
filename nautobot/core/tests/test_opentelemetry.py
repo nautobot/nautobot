@@ -56,12 +56,11 @@ def _fake_otel_config(**overrides):
 
     ``instrument()`` reads its config from ``sys.modules["nautobot_config"]`` (registered by
     ``load_settings()``), not from ``nautobot.core.settings``. Tests inject this fake via
-    ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``. It must carry every
-    attribute ``instrument()`` reads, with real types: ``DATABASES`` is a real dict so the
-    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int
-    (or ``None`` for unlimited, mirroring an empty env var)
-    (or ``None`` for unlimited, mirroring an empty env var).
-    Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
+    ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``, or pass it directly to
+    ``install_exporters(config=...)``. It carries every attribute both functions read, with real types:
+    ``DATABASES`` is a real dict so the ``"mysql" in ...["ENGINE"]`` check works, and
+    ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int (or ``None`` for unlimited, mirroring an empty
+    env var). Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
     """
     defaults = {
         "OTEL_TRACES_EXPORTER": ["none"],
@@ -186,37 +185,45 @@ class InstrumentFunctionTest(testing.TestCase):
 
 
 class InstrumentExporterBranchTest(testing.TestCase):
-    """Verify instrument() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard."""
+    """Verify install_exporters() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard.
+
+    Exporter creation lives in install_exporters(), NOT instrument(): the OTLP gRPC channel is
+    fork-unsafe, so instrument() (which runs pre-fork) only sets up the provider + auto-instrumentors,
+    and each worker builds its exporters post-fork via install_exporters(). These tests therefore drive
+    install_exporters() directly with a fake config.
+    """
 
     def setUp(self):
         super().setUp()
         self._original_provider = otel_trace.get_tracer_provider()
-        # Include the DB instrumentor matching the live engine (psycopg2 vs mysqlclient), mirroring instrument().
-        self._db_instrumentor_cls = _db_instrumentor_for_engine(settings.DATABASES["default"]["ENGINE"])
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
-            instrumentor().uninstrument()
+        # A real TracerProvider so add_span_processor() (called by install_exporters) has somewhere to go.
+        otel_trace.set_tracer_provider(TracerProvider())
+        self._reset_exporters_guard()
 
     def tearDown(self):
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
-            instrumentor().uninstrument()
         otel_trace.set_tracer_provider(self._original_provider)
+        self._reset_exporters_guard()
         super().tearDown()
 
-    def _patch_settings(self, **overrides):
-        """Patch instrument()'s view of config with sensible defaults that disable noisy layers.
+    @staticmethod
+    def _reset_exporters_guard():
+        """Reset install_exporters()'s idempotency guard so each test starts clean."""
+        import nautobot.core.cli.opentelemetry as otel_module
 
-        instrument() reads the loaded `nautobot_config` from sys.modules (registered by load_settings())
-        because it runs before django.setup(), so override_settings() does not reach it. We replace the
-        whole sys.modules["nautobot_config"] entry with a fake carrying the requested overrides.
-        """
-        return patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(**overrides)})
+        otel_module._exporters_installed = False
+
+    def _install(self, **overrides):
+        """Call install_exporters() with a fake config carrying the requested OTEL_* overrides."""
+        from nautobot.core.cli.opentelemetry import install_exporters
+
+        self._reset_exporters_guard()
+        install_exporters(config=_fake_otel_config(**overrides))
 
     def test_otlp_trace_exporter_skipped_when_endpoint_unset(self):
         """The OTLP trace exporter must be skipped (with a warning) when the endpoint is empty."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
-            with self._patch_settings(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
-                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                    instrument()
+            with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                self._install(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="")
 
         mock_exporter.assert_not_called()
         self.assertTrue(any("OTEL_EXPORTER_OTLP_ENDPOINT is not set" in message for message in logs.output))
@@ -224,9 +231,8 @@ class InstrumentExporterBranchTest(testing.TestCase):
     def test_otlp_metric_exporter_skipped_when_endpoint_unset(self):
         """The OTLP metric exporter must be skipped (with a warning) when the endpoint is empty."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_exporter:
-            with self._patch_settings(OTEL_METRICS_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
-                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                    instrument()
+            with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                self._install(OTEL_METRICS_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="")
 
         mock_exporter.assert_not_called()
         self.assertTrue(any("OTEL_EXPORTER_OTLP_ENDPOINT is not set" in message for message in logs.output))
@@ -234,38 +240,28 @@ class InstrumentExporterBranchTest(testing.TestCase):
     def test_otlp_trace_exporter_created_when_endpoint_set(self):
         """The OTLP trace exporter must be constructed with the configured endpoint when it is set."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
-            with self._patch_settings(
+            self._install(
                 OTEL_TRACES_EXPORTER=["otlp"],
                 OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
                 OTEL_EXPORTER_OTLP_INSECURE=True,
-            ):
-                instrument()
+            )
 
         mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=True)
 
-    def test_otlp_endpoint_override_from_nautobot_config_is_honored(self):
-        """Regression: an OTEL_EXPORTER_OTLP_ENDPOINT set in nautobot_config.py must be honored.
-
-        The base nautobot.core.settings module defaults OTEL_EXPORTER_OTLP_ENDPOINT to "" (no env var).
-        Here the endpoint is set ONLY on the loaded nautobot_config (as a user override would be), not on
-        nautobot.core.settings. Before the fix, instrument() read the base module's empty endpoint, logged
-        "endpoint is not set", and skipped the exporter; after the fix it reads the loaded nautobot_config
-        and builds the exporter. This is the exact scenario from the PR review comment.
-        """
+    def test_otlp_endpoint_override_from_config_is_honored(self):
+        """An OTEL_EXPORTER_OTLP_ENDPOINT set only on the passed config must be honored (endpoint built)."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
-            with self._patch_settings(
+            self._install(
                 OTEL_TRACES_EXPORTER=["otlp"],
                 OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
-            ):
-                instrument()
+            )
 
         mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=False)
 
     def test_console_trace_exporter_used_without_endpoint(self):
         """The console trace exporter does not require an endpoint and must be attached regardless."""
         with patch("nautobot.core.cli.opentelemetry.ConsoleSpanExporter") as mock_exporter:
-            with self._patch_settings(OTEL_TRACES_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
-                instrument()
+            self._install(OTEL_TRACES_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT="")
 
         mock_exporter.assert_called_once()
 
@@ -273,11 +269,58 @@ class InstrumentExporterBranchTest(testing.TestCase):
         """When OTEL_TRACES_EXPORTER is 'none', neither OTLP nor console exporters are constructed."""
         with patch("nautobot.core.cli.opentelemetry.ConsoleSpanExporter") as mock_console:
             with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_otlp:
-                with self._patch_settings(OTEL_TRACES_EXPORTER=["none"]):
-                    instrument()
+                self._install(OTEL_TRACES_EXPORTER=["none"])
 
         mock_console.assert_not_called()
         mock_otlp.assert_not_called()
+
+    def test_instrument_does_not_create_exporters_pre_fork(self):
+        """Regression: instrument() must NOT construct any OTLP exporter (fork-unsafe pre-fork gRPC channel).
+
+        The segfault root cause was building the OTLP gRPC channel in the uWSGI master before fork.
+        instrument() now only installs the provider + auto-instrumentors; exporters come from
+        install_exporters() post-fork. This asserts no exporter is created by instrument() even when
+        an endpoint is configured.
+        """
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor):
+            instrumentor().uninstrument()
+        try:
+            with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_span:
+                with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_metric:
+                    with patch(
+                        "nautobot.core.cli.opentelemetry.trace.set_tracer_provider"
+                    ):  # don't clobber the global provider (set-once)
+                        with patch.dict(
+                            "sys.modules",
+                            {
+                                "nautobot_config": _fake_otel_config(
+                                    OTEL_TRACES_EXPORTER=["otlp"],
+                                    OTEL_METRICS_EXPORTER=["otlp"],
+                                    OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
+                                )
+                            },
+                        ):
+                            instrument()
+            mock_span.assert_not_called()
+            mock_metric.assert_not_called()
+        finally:
+            for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor):
+                instrumentor().uninstrument()
+
+    def test_install_exporters_is_idempotent(self):
+        """install_exporters() must be a no-op after the first call (post-fork hooks may call it repeatedly)."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            self._reset_exporters_guard()
+            from nautobot.core.cli.opentelemetry import install_exporters
+
+            config = _fake_otel_config(
+                OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317"
+            )
+            install_exporters(config=config)
+            install_exporters(config=config)
+            install_exporters(config=config)
+
+        mock_exporter.assert_called_once()
 
 
 class APITraceGenerationTest(testing.APITestCase):
@@ -343,8 +386,16 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
     ``SilkyMiddleware`` (outer) wraps the request/response streams while it profiles, the OTEL
     ``DjangoInstrumentor`` wraps the WSGI/view layer, and ``GraphQLOpenTelemetryMiddleware`` (inner)
     reads ``request.body`` on GraphQL POSTs. This combination is where a stream re-read or
-    double-wrapping could surface as a gateway 502. There is no other test that drives the full
-    middleware stack with both features enabled, so this is the regression alarm.
+    double-wrapping could surface as a gateway 502 at the middleware layer.
+
+    SCOPE / LIMITATION: this runs through the Django test client, which is single-process and in-memory
+    -- there is NO os.fork() and NO OTLP gRPC channel. It therefore CANNOT reproduce the separate,
+    more severe production crash where OTLP-gRPC + uWSGI pre-fork + silk profiling segfaults workers
+    (SIGSEGV) because the fork-unsafe gRPC channel is built in the master pre-fork. A green result here
+    must NOT be read as "OTEL + Silk is safe under uWSGI." That fork/gRPC path is fixed by building the
+    OTLP exporters post-fork (see ``nautobot.core.cli.opentelemetry.install_exporters`` +
+    ``InstrumentExporterBranchTest``) and is exercised end-to-end by the reproduction harness under
+    ``development/`` (see the observability/segfault repro docs), not by this unit test.
     """
 
     def setUp(self):
