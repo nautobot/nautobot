@@ -3,6 +3,13 @@
 
 {% with last_column_name=table.visible_columns|last visible_column_count=table.visible_columns|length %}
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
+        {% comment %}
+            Every table needs an accessible name so that screen reader users can tell one table apart from another when
+            listing the tables on a page. The name is only useful non-visually, so it is visually hidden.
+        {% endcomment %}
+        <caption class="visually-hidden">
+            {% firstof table_caption table.data.verbose_name_plural "Table" %}
+        </caption>
         {% if table.show_header %}
             <thead>
                 <tr>
@@ -10,7 +17,14 @@
                         {% if not table.configurable or not forloop.last or last_column_name != 'actions' %}
                             {% if column.orderable %}
                                 {% spaceless %}
-                                    <th {{ column.attrs.th.as_html }}>
+                                    {% comment %}
+                                        `aria-sort` conveys the current sort state of the column to assistive
+                                        technology. It must appear on at most one column at a time, so unsorted
+                                        columns are explicitly reported as `"none"`.
+                                    {% endcomment %}
+                                    <th aria-sort="{% if not column.is_ordered %}none{% elif column.order_by_alias.is_ascending %}ascending{% else %}descending{% endif %}"
+                                        scope="col"
+                                        {{ column.attrs.th.as_html }}>
                                         {% comment %}
                                             Tri-state sorting toggle: unsorted → ascending → descending → unsorted
                                         {% endcomment %}
@@ -20,27 +34,36 @@
                                             <a href="{% querystring_replace without table.prefixed_order_by_field %}">
                                         {% endif %}
                                         {{ column.header }}
+                                        {% comment %}
+                                            The sort direction arrow is decorative -- it duplicates information that
+                                            `aria-sort` above already exposes -- so hide it from assistive technology
+                                            and describe the action of the link in text instead.
+                                        {% endcomment %}
                                         {% if column.is_ordered %}
                                             {% if column.order_by_alias.is_ascending %}
-                                                <span class="mdi mdi-arrow-up-thin"></span>
+                                                <span aria-hidden="true" class="mdi mdi-arrow-up-thin"></span>
+                                                <span class="visually-hidden">sorted ascending, activate to sort descending</span>
                                             {% else %}
-                                                <span class="mdi mdi-arrow-down-thin"></span>
+                                                <span aria-hidden="true" class="mdi mdi-arrow-down-thin"></span>
+                                                <span class="visually-hidden">sorted descending, activate to remove sorting</span>
                                             {% endif %}
+                                        {% else %}
+                                            <span class="visually-hidden">activate to sort ascending</span>
                                         {% endif %}
                                     </a>
                                     </th>
                                 {% endspaceless %}
                             {% else %}
-                                <th {{ column.attrs.th.as_html }}>{{ column.header }}</th>
+                                <th scope="col" {{ column.attrs.th.as_html }}>{{ column.header }}</th>
                             {% endif %}
                         {% else %}
-                            <th {{ column.attrs.th.as_html }}>
+                            <th scope="col" {{ column.attrs.th.as_html }}>
                                 {% table_config_button table %}
                             </th>
                         {% endif %}
                     {% endfor %}
                     {% if table.configurable and last_column_name != 'actions' %}
-                        <th class="nb-actionable nb-w-0">
+                        <th class="nb-actionable nb-w-0" scope="col">
                             {% table_config_button table %}
                         </th>
                     {% endif %}
@@ -54,7 +77,7 @@
                         <td {{ column.attrs.td.as_html }}>{{ cell }}</td>
                     {% endfor %}
                     {% if table.configurable and last_column_name != "actions" %}
-                        <td class="nb-w-0" />
+                        <td class="nb-w-0"></td>
                     {% endif %}
                 </tr>
             {% empty %}
@@ -77,7 +100,7 @@
                         <td>{{ column.footer }}</td>
                     {% endfor %}
                     {% if table.configurable and last_column_name != "actions" %}
-                        <td class="nb-w-0" />
+                        <td class="nb-w-0"></td>
                     {% endif %}
                 </tr>
             </tfoot>
