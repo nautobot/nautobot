@@ -37,12 +37,16 @@ $danger:    $red-0;
 $light:     $gray-3;
 $dark:      $gray-3;
 
-$primary-text-emphasis:   $blue-0;
+/*
+ * Text emphasis colors are rendered on the tinted `$*-bg-subtle` backgrounds (most visibly alert bodies), so they need
+ * to be a shade darker than the base theme colors to clear 4.5:1 there. See `colors.scss` for the measured ratios.
+ */
+$primary-text-emphasis:   $blue-text;
 $secondary-text-emphasis: $gray-3;
-$success-text-emphasis:   $green-0;
-$info-text-emphasis:      $blue-0;
-$warning-text-emphasis:   $orange-0;
-$danger-text-emphasis:    $red-0;
+$success-text-emphasis:   $green-text;
+$info-text-emphasis:      $blue-text;
+$warning-text-emphasis:   $orange-text;
+$danger-text-emphasis:    $red-text;
 $light-text-emphasis:     $gray-3;
 $dark-text-emphasis:      $gray-3;
 

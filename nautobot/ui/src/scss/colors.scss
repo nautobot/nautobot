@@ -1,4 +1,21 @@
-/* Light mode */
+/*
+ * Light mode
+ *
+ * The `-0` tokens below double as text colors: Bootstrap's `.text-primary`, `.text-success` and `.text-warning`
+ * utilities read the base color rather than the `-text-emphasis` variant, and Nautobot uses those utilities for real
+ * body text throughout its templates and tables. Their contrast against `$white-0`/`$gray-0` must therefore meet the
+ * WCAG 1.4.3 AA threshold of 4.5:1 for normal-size text, not just the 3:1 threshold that would apply if they were only
+ * used as fills. Hue and saturation are preserved; only lightness is reduced.
+ *
+ * Measured against `$white-0: #ffffff` unless noted:
+ *   $gray-2  4.95 (and 4.50 against `$gray-0`, which is the table header background)
+ *   $blue-0  4.50
+ *   $green-0 4.53
+ *   $orange-0 4.51
+ *   $red-0   4.79 (already compliant, unchanged)
+ *
+ * The dark mode tokens further down already clear 4.5:1 and are deliberately left alone.
+ */
 $bg:       #f6f6f6;
 $black-0:  #1a1a1a;
 $white-0:  #ffffff;
@@ -6,22 +23,41 @@ $white-0:  #ffffff;
 $gray-0:   #f4f4f4;
 $gray-05:  #ececec;
 $gray-1:   #dedede;
-$gray-2:   #b0b0b0;
+$gray-2:   #707070;
 $gray-3:   #505d68;
 
-$blue-0:   #007dff;
+$blue-0:   #0073ec;
 $blue-1:   #e5f2ff;
 $blue-2:   #cce5ff;
-$orange-0: #e07807;
+$orange-0: #b46106;
 $orange-1: #fcf1e6;
 $orange-2: #f9e4cd;
 
-$green-0:  #1ca92a;
+$green-0:  #178922;
 $green-1:  #e8f6e9;
 $green-2:  #d2eed4;
 $red-0:    #e01f1f;
 $red-1:    #fce8e8;
 $red-2:    #f9d2d2;
+
+/*
+ * Light mode "text emphasis" colors.
+ *
+ * These back Bootstrap's `$*-text-emphasis` variables, which are used for text placed on the correspondingly tinted
+ * `$*-bg-subtle` backgrounds -- most visibly alert bodies. Because that background is tinted rather than white, the
+ * `-0` tokens above only reach ~4.0:1 there, so these slightly darker variants are needed to clear 4.5:1. They also
+ * clear 4.5:1 against plain white, so they are safe for the link color and other general text use.
+ *
+ * Contrast against the matching `$*-1` subtle background / against `$white-0`:
+ *   $blue-text   4.54 / 5.15   $green-text 4.54 / 5.07
+ *   $orange-text 4.51 / 5.02   $red-text   4.50 / 5.30
+ *
+ * Dark mode needs no equivalents: its `-0-dark` tokens already reach 5.2-7.8:1 on the dark subtle backgrounds.
+ */
+$blue-text:   #006ada;
+$orange-text: #a95b06;
+$green-text:  #168020;
+$red-text:    #d31d1d;
 
 /* Dark mode */
 $bg-dark:       #121212;
@@ -31,7 +67,12 @@ $white-0-dark:  #1a1a1a;
 $gray-0-dark:   #1e1e1e;
 $gray-05-dark:  #2a2a2a;
 $gray-1-dark:   #2f2f2f;
-$gray-2-dark:   #828282;
+/*
+ * Nudged up from `#828282`. As the dark mode `$body-tertiary-color` this is the table header text color, and table
+ * headers sit on `$gray-0-dark: #1e1e1e` rather than on the page background, where `#828282` reached only 4.34:1.
+ * Now 4.52:1 on `#1e1e1e` and 4.72:1 on `$white-0-dark`.
+ */
+$gray-2-dark:   #858585;
 $gray-3-dark:   #b5b5b5;
 
 $blue-0-dark:   #339dff;
