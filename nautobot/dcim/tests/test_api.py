@@ -2270,6 +2270,32 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         child_device.refresh_from_db()
         self.assertEqual(child_device.parent_bay.pk, device_bay_1.pk)
 
+    def test_list_query_count_with_device_bays(self):
+        """
+        Listing devices must not run an extra query per device to resolve the reverse one-to-one `parent_bay`.
+        """
+        self.add_permissions("dcim.view_device")
+        list_url = reverse("dcim-api:device-list")
+
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+        device_status = Status.objects.get_for_model(Device).first()
+        device_role = Role.objects.get_for_model(Device).first()
+
+        for name, device_bay in (("Child device in bay 1", device_bay_1), ("Child device in bay 2", device_bay_2)):
+            child_device = Device.objects.create(
+                device_type=device_type_child,
+                role=device_role,
+                status=device_status,
+                name=name,
+                location=parent_device.location,
+            )
+            device_bay.installed_device = child_device
+            device_bay.save()
+
+        with AssertNoRepeatedQueries(self):
+            response = self.client.get(list_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     model = Module
