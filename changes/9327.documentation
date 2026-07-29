@@ -1,0 +1,1 @@
+Clarified that managing a Git repository (create, change, sync) grants arbitrary code execution on the worker and that syncing repository-provided Jobs does not require the Job run permission.
