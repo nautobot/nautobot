@@ -237,6 +237,17 @@ Constraint enforcement on writes validates the *final state* of the object (the 
 
 If you need field-level control, the available approximations are constraining on that field's value (e.g. `{"status__name": "Active"}` prevents saving the object in any other status) or splitting the workflow so the sensitive field is managed by a job or a more privileged team.
 
+### Related Objects in UI List and Detail Views
+
+When viewing a list of objects, or the details of a single object, in the Nautobot UI, the table row or panel describing an object will often include brief information (such as the "name" or other identifier) of relevant related objects. For example, a Location may display the names of its related Status, Location Type, Tenant, etc. By design, Nautobot does **not** generally enforce view permissions on the related objects before displaying this brief information, as it's considered a necessary part of basic platform functionality. Clicking the hyperlink to any such related object (to view more detailed information about it) *will*, if the user lacks view permission for the related object, result in the expected HTTP 403 or 404 error.
+
+#### Tree Models and Ancestor Permissions
+
+For hierarchical models (Locations, Rack Groups, Tenant Groups, etc.), it is the administrator's responsibility to grant `view` permission on an object's **ancestors** along with the object itself. If a user is granted restricted permission to view "child"/"leaf" records but not their ancestors, various inconsistencies may be seen, for example:
+
+- As described above, brief information about ancestor records (such as their "name") may still appear in various parts of the UI, such as breadcrumbs.
+- List views may render the child indented at its true depth with no visible parent rows above it, which looks like a misrendered or orphaned entry, or may even mistakenly appear to attribute the child to a different parent record entirely. These display artifacts are in general, considered a misconfiguration of Nautobot, rather than a bug in the platform which would justify a code fix.
+
 ### Related Objects on Forms
 
 When a user edits object A that references a related object B (for example, a device and its location), form dropdowns only offer related objects the user has `view` permission on. Two situations can be confusing:
@@ -250,14 +261,19 @@ When a user edits object A that references a related object B (for example, a de
 !!! tip
     For models that have the ability to restrict individual records' applicability by content type ([Status](../../platform-functionality/status.md), [Role](../../platform-functionality/role.md), [Location Type](../../core-data-model/dcim/locationtype.md), etc.) a missing content-type assignment is another common cause of records "missing" from a dropdown.
 
-### Tree Models and Ancestor Permissions
+### Related Objects in the REST API
 
-For hierarchical models (Locations, Rack Groups, Tenant Groups, etc.), it is the administrator's responsibility to grant `view` permission on an object's **ancestors** along with the object itself. If a user is granted a child location but not its parents:
+When the REST API is called with a [`depth` query parameter](../../platform-functionality/rest-api/overview.md#depth-query-parameter) greater than zero, detailed information about related objects may be included in the serialized response. This information is constrained by `view` permissions as appropriate, such that related objects that the user has permissions to view will provide full data, but related objects that the user does *not* have permissions to view will return only a minimal summary of the object, much in the same way as the UI (as described above) will display brief information about related objects even if the user lacks appropriate related-object `view` permissions.
 
-- List views render the child indented at its true depth with no visible parent rows above it, which looks like a misrendered or orphaned entry.
-- Ancestor names still appear in breadcrumbs and hierarchical display names (the hierarchy is rendered from the database, not from the user's permitted set), so ancestor *names* are not hidden by the permission — but the links to them will return 403/404.
+Additionally, object writes (POST/PATCH/PUT) via the REST API also enforce view permissions for related objects - much like the UI behavior described above, a user cannot create or update an object via the REST API to include new references to related objects that they lack `view` permission for.
 
-When writing constraints for tree models, prefer constraints that naturally include ancestors — e.g. granting a subtree via `{"name": "Region-X"}` on the ancestor *plus* `{"parent__name": "Region-X"}` style constraints for descendants — and verify the rendered hierarchy as one of the affected users.
+Refer to [REST API Object Permissions](../../platform-functionality/rest-api/object-permissions.md) for more details.
+
+### Related Objects in GraphQL
+
+When querying related objects via [GraphQL](../../platform-functionality/graphql.md), `view` permissions are also enforced. Unlike the UI or REST API, a GraphQL query is unable to provide "limited" information about a related object, so any queries that traverse from a viewable base object to a non-viewable related object(s) in GraphQL will simply report the related object as being `null`, as if it didn't exist at all (or, equivalently, as if the foreign key on the base object was set to NULL).
+
+Refer to [GraphQL Permissions Enforcement](../../platform-functionality/graphql.md#permissions-enforcement) for more details.
 
 ### `EXEMPT_VIEW_PERMISSIONS`
 
