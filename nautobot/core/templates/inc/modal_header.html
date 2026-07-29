@@ -4,6 +4,6 @@ accessible name from this heading. It has to stay stable across HTMX swaps of th
 passed in by the modal rather than derived from the title text. It defaults to the id used by `inc/generic_modal.html`.
 {% endcomment %}
 <div class="modal-header">
-    <h4 class="modal-title" id="{{ title_id|default:'nb-modal-title' }}">{{ title }}</h4>
+    <h2 class="modal-title" id="{{ title_id|default:'nb-modal-title' }}">{{ title }}</h2>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
