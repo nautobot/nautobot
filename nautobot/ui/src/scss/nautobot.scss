@@ -783,6 +783,23 @@ button {
   }
 }
 
+/*
+ * Skip link (bypass block, WCAG 2.4.1)
+ *
+ * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document
+ * flow, which would shift the whole page down when it appears. Pin it to the top-left corner instead and give it
+ * button-like affordances so that it reads as a deliberate control rather than stray text.
+ */
+.nb-skip-link:focus {
+  background-color: var(--#{$prefix}body-bg);
+  border-radius: var(--#{$prefix}border-radius);
+  inset-block-start: map.get($spacers, 8);
+  inset-inline-start: map.get($spacers, 8);
+  padding: map.get($spacers, 8) map.get($spacers, 12);
+  position: fixed;
+  z-index: $zindex-tooltip;
+}
+
 /* Tables */
 .table {
   margin-block-end: map.get($spacers, 0);
