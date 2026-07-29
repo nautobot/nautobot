@@ -1,11 +1,76 @@
 """Utilities for conveniently working with the Django/Redis cache."""
 
+from contextlib import contextmanager
+import contextvars
 import logging
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 
 logger = logging.getLogger(__name__)
+
+# Holds a dict for the duration of a `request_cache()` context, or None outside of any such context.
+_request_cache_var = contextvars.ContextVar("nautobot_request_cache", default=None)
+
+
+@contextmanager
+def request_cache():
+    """
+    Context manager providing a small in-process cache scoped to the enclosing block (typically a single request).
+
+    Some model-metadata lookups (e.g. `CustomField.objects.get_for_model()`, `Relationship.objects.get_for_model()`)
+    are normally cached in the shared Redis cache with an effectively infinite timeout, invalidated only when the
+    underlying data actually changes. That's efficient across requests, but a *single* request that recursively
+    serializes many related objects (e.g. the REST API's `depth` query parameter) can end up performing the exact
+    same Redis lookup hundreds of times for the exact same cache key, since the data cannot possibly have changed
+    partway through handling one request.
+
+    Call sites that support it use `get_request_cache()` to transparently check/populate this local cache in
+    addition to the shared Redis cache, eliminating those redundant round-trips. Because this cache is discarded
+    the moment the `request_cache()` block exits, it can never serve data that is stale beyond the lifetime of a
+    single request, so no additional invalidation logic is required.
+
+    Nested calls reuse the outermost scope's cache rather than creating a new, empty one.
+    """
+    if _request_cache_var.get() is not None:
+        # Already inside a request_cache() scope (e.g. this request is itself triggering a nested request/job) -
+        # just reuse the existing cache rather than shadowing it with a new, empty one.
+        yield
+        return
+
+    token = _request_cache_var.set({})
+    try:
+        yield
+    finally:
+        _request_cache_var.reset(token)
+
+
+def get_request_cache():
+    """Return the dict backing the current `request_cache()` scope, or `None` if not currently inside one."""
+    return _request_cache_var.get()
+
+
+def cache_get_or_set(cache_key, compute, *, timeout=None):
+    """
+    Get `cache_key` from the current `request_cache()` scope if any, else from Redis, else compute and populate both.
+
+    Returns a `(value, hit)` tuple, where `hit` is `False` only when `compute()` had to be called (i.e. neither the
+    request-local cache nor Redis had a value for `cache_key`).
+    """
+    request_local_cache = get_request_cache()
+    if request_local_cache is not None and cache_key in request_local_cache:
+        return request_local_cache[cache_key], True
+
+    value = cache.get(cache_key)
+    hit = value is not None
+    if not hit:
+        value = compute()
+        cache.set(cache_key, value, timeout=timeout)
+
+    if request_local_cache is not None:
+        request_local_cache[cache_key] = value
+    return value, hit
 
 
 def construct_cache_key(obj, *, method_name=None, branch_aware=True, **params):

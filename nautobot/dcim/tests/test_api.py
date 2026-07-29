@@ -1,11 +1,12 @@
 import datetime
 import json
 import tempfile
-from unittest import skip
+from unittest import mock, skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import override_settings
@@ -3031,6 +3032,37 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         )
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsNone(response.data["duplex"])
+
+    def test_list_with_depth_reduces_redis_lookups(self):
+        """
+        Regression test: a `depth`-expanded list request should not perform one Redis round-trip per related
+        object per model-metadata lookup (CustomField/Relationship/ComputedField definitions), since the
+        RequestCacheMiddleware now memoizes such lookups for the duration of the request.
+        """
+        self.add_permissions("dcim.view_interface")
+        url = reverse("dcim-api:interface-list") + f"?depth=2&device_id={self.devices[0].pk}"
+
+        # Baseline: with request-scoped memoization disabled (simulating pre-fix behavior), every repeated
+        # CustomField/Relationship/ComputedField lookup for the same model round-trips to Redis.
+        with (
+            mock.patch("nautobot.core.utils.cache.get_request_cache", return_value=None),
+            mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get_without,
+        ):
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(response.data["count"], 0)
+
+        # With request-scoped memoization enabled (the fix, wired up via RequestCacheMiddleware), repeated lookups
+        # for the same model within this one request should be served locally instead of hitting Redis again.
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get_with:
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        self.assertLess(
+            mock_cache_get_with.call_count,
+            mock_cache_get_without.call_count,
+            "Request-scoped memoization should reduce the number of Redis cache.get calls",
+        )
 
 
 class FrontPortTest(Mixins.BasePortTestMixin):

@@ -38,7 +38,7 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
@@ -67,30 +67,25 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         list_cache_key = construct_cache_key(
             self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
         )
+
+        def compute_queryset():
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            return self.get_queryset().filter(content_type=content_type)
+
         with traced_span(
             "nautobot.extras.customfields",
             "computed_field_cache.get",
             **{"nautobot.core.computed_field_cache.model": concrete_model._meta.label_lower},
         ) as _span:
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             if not get_queryset:
-                listing = cache.get(list_cache_key)
-                if listing is not None:
-                    _span.set_attribute("nautobot.core.computed_field_cache.hit", True)
-                    return listing
-            queryset = cache.get(cache_key)
-            if queryset is None:
-                _span.set_attribute("nautobot.core.computed_field_cache.hit", False)
-                content_type = ContentType.objects.get_for_model(concrete_model)
-                queryset = self.get_queryset().filter(content_type=content_type)
-                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-                cache.set(cache_key, queryset, timeout=None)
-            else:
-                _span.set_attribute("nautobot.core.computed_field_cache.hit", True)
-            if not get_queryset:
-                listing = list(queryset)
-                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-                cache.set(list_cache_key, listing, timeout=None)
+                listing, hit = cache_get_or_set(
+                    list_cache_key, lambda: list(cache_get_or_set(cache_key, compute_queryset)[0])
+                )
+                _span.set_attribute("nautobot.core.computed_field_cache.hit", hit)
                 return listing
+            queryset, hit = cache_get_or_set(cache_key, compute_queryset)
+            _span.set_attribute("nautobot.core.computed_field_cache.hit", hit)
             return queryset
 
     def populate_list_caches(self):
@@ -485,6 +480,14 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             exclude_filter_disabled=exclude_filter_disabled,
             listing=True,
         )
+
+        def compute_queryset():
+            content_type = ContentType.objects.get_for_model(concrete_model)
+            queryset = self.get_queryset().filter(content_types=content_type)
+            if exclude_filter_disabled:
+                queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+            return queryset
+
         with traced_span(
             "nautobot.extras.customfields",
             "custom_field_cache.get",
@@ -493,27 +496,15 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 "custom_field_cache.exclude_filter_disabled": exclude_filter_disabled,
             },
         ) as _span:
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             if not get_queryset:
-                listing = cache.get(list_cache_key)
-                if listing is not None:
-                    _span.set_attribute("nautobot.core.custom_field_cache.hit", True)
-                    return listing
-            queryset = cache.get(cache_key)
-            if queryset is None:
-                _span.set_attribute("nautobot.core.custom_field_cache.hit", False)
-                content_type = ContentType.objects.get_for_model(concrete_model)
-                queryset = self.get_queryset().filter(content_types=content_type)
-                if exclude_filter_disabled:
-                    queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
-                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-                cache.set(cache_key, queryset, timeout=None)
-            else:
-                _span.set_attribute("nautobot.core.custom_field_cache.hit", True)
-            if not get_queryset:
-                listing = list(queryset)
-                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-                cache.set(list_cache_key, listing, timeout=None)
+                listing, hit = cache_get_or_set(
+                    list_cache_key, lambda: list(cache_get_or_set(cache_key, compute_queryset)[0])
+                )
+                _span.set_attribute("nautobot.core.custom_field_cache.hit", hit)
                 return listing
+            queryset, hit = cache_get_or_set(cache_key, compute_queryset)
+            _span.set_attribute("nautobot.core.custom_field_cache.hit", hit)
             return queryset
 
     def keys_for_model(self, model):
@@ -527,14 +518,11 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             "custom_field_keys_cache.get",
             **{"nautobot.core.custom_field_keys_cache.model": concrete_model._meta.label_lower},
         ) as _span:
-            keys = cache.get(cache_key)
-            if keys is None:
-                _span.set_attribute("nautobot.core.custom_field_keys_cache.hit", False)
-                keys = list(self.get_for_model(model).values_list("key", flat=True))
-                # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-                cache.set(cache_key, keys, timeout=None)
-            else:
-                _span.set_attribute("nautobot.core.custom_field_keys_cache.hit", True)
+            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
+            keys, hit = cache_get_or_set(
+                cache_key, lambda: list(self.get_for_model(model).values_list("key", flat=True))
+            )
+            _span.set_attribute("nautobot.core.custom_field_keys_cache.hit", hit)
             return keys
 
     def populate_list_caches(self):
