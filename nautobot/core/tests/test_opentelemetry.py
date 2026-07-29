@@ -598,8 +598,8 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
 
         # The GraphQL middleware span must attribute the request to the token user, not "anonymous"
         # (DRF resolves the user during view dispatch, after middleware; the span reads it post-response).
-        graphql_spans = [s for s in spans if s.attributes.get("nautobot.core.graphql.document")]
-        self.assertTrue(graphql_spans, "Expected a GraphQL span carrying nautobot.core.graphql.document.")
+        graphql_spans = [s for s in spans if s.attributes.get("graphql.document")]
+        self.assertTrue(graphql_spans, "Expected a GraphQL span carrying graphql.document.")
         self.assertEqual(graphql_spans[0].attributes.get("enduser.id"), self.user.username)
 
     def test_non_graphql_request_with_otel_and_silk_returns_200(self):
@@ -744,9 +744,9 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         attrs = span.attributes
         self.assertEqual(attrs.get("enduser.id"), self.user.username)
         self.assertEqual(attrs.get("http.client_ip"), "203.0.113.5", "Should use the leftmost X-Forwarded-For entry.")
-        self.assertEqual(attrs.get("nautobot.core.graphql.document"), self._SAMPLE_QUERY)
-        self.assertEqual(attrs.get("nautobot.core.graphql.variables"), json.dumps(self._SAMPLE_VARIABLES))
-        self.assertEqual(attrs.get("nautobot.core.graphql.operation.type"), "query")
+        self.assertEqual(attrs.get("graphql.document"), self._SAMPLE_QUERY)
+        self.assertEqual(attrs.get("graphql.variables"), json.dumps(self._SAMPLE_VARIABLES))
+        self.assertEqual(attrs.get("graphql.operation.type"), "query")
         self.assertEqual(attrs.get("http.status_code"), 200)
 
     def test_operation_type_detected_past_leading_comment(self):
@@ -766,10 +766,10 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         self.assertEqual(len(spans), 1)
         span = spans[0]
         self.assertEqual(span.name, "graphql query", "Span name should reflect the detected operation type.")
-        self.assertEqual(span.attributes.get("nautobot.core.graphql.operation.type"), "query")
+        self.assertEqual(span.attributes.get("graphql.operation.type"), "query")
 
     def test_long_document_truncated_by_span_limits(self):
-        """A large nautobot.core.graphql.document is truncated by OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
+        """A large graphql.document is truncated by OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
 
         The middleware itself does not truncate; it relies on the standard OTel span attribute value
         length limit, which the production TracerProvider picks up from the environment. Here we build a
@@ -788,7 +788,7 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
 
         spans = self._exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
-        document = spans[0].attributes.get("nautobot.core.graphql.document")
+        document = spans[0].attributes.get("graphql.document")
         self.assertEqual(len(document), limit, "graphql document should be truncated to the span attribute limit.")
         self.assertEqual(document, long_query[:limit])
 

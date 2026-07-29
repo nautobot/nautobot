@@ -223,9 +223,9 @@ class GraphQLOpenTelemetryMiddleware:
     Span attributes set:
     - `enduser.id`                          - authenticated username
     - `http.client_ip`                      - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
-    - `nautobot.core.graphql.document`      - full query / mutation / subscription text
-    - `nautobot.core.graphql.variables`     - JSON-serialised variables (when present)
-    - `nautobot.core.graphql.operation.type`- `query`, `mutation`, or `subscription`
+    - `graphql.document`                    - full query / mutation / subscription text
+    - `graphql.variables`                   - JSON-serialised variables (when present)
+    - `graphql.operation.type`              - `query`, `mutation`, or `subscription`
     - `http.status_code`                    - HTTP response status code
 
     The INFO log additionally includes `duration_ms`.
@@ -256,12 +256,15 @@ class GraphQLOpenTelemetryMiddleware:
 
         with tracer.start_as_current_span(span_name) as span:
             span.set_attribute("http.client_ip", client_ip)
+            # `graphql.document` and `graphql.operation.type` are OpenTelemetry GraphQL
+            # semantic-convention attributes; `graphql.variables` is Nautobot-specific but kept
+            # under the same namespace. See https://opentelemetry.io/docs/specs/semconv/graphql/graphql-spans/
             if query:
-                span.set_attribute("nautobot.core.graphql.document", query)
+                span.set_attribute("graphql.document", query)
             if variables:
-                span.set_attribute("nautobot.core.graphql.variables", json.dumps(variables))
+                span.set_attribute("graphql.variables", json.dumps(variables))
             if operation_type:
-                span.set_attribute("nautobot.core.graphql.operation.type", operation_type)
+                span.set_attribute("graphql.operation.type", operation_type)
 
             start = time.monotonic()
             response = self.get_response(request)
