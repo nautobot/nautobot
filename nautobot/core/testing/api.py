@@ -24,7 +24,7 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, utils, views
 from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
-from nautobot.extras import choices as extras_choices, models as extras_models, registry
+from nautobot.extras import choices as extras_choices, models as extras_models, registry, utils as extras_utils
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -134,6 +134,28 @@ class APITestCase(views.ModelTestCase):
         serializer = serializer_class()
         depth_fields = [field_name for field_name in depth_fields if field_name in serializer.fields]
         return depth_fields
+
+    def get_change_logged_m2m_side_objects(self, instance):
+        """If self.model is an explicit M2M through model, return the non-null, change-logged objects it associates."""
+        side_field_names = extras_utils.get_change_logged_m2m_through_side_field_names().get(self.model, ())
+        side_objects = []
+        for field_name in side_field_names:
+            side_object = getattr(instance, field_name, None)
+            if side_object is not None and hasattr(side_object, "to_objectchange"):
+                side_objects.append(side_object)
+        return side_objects
+
+    def assert_m2m_side_objects_change_logged(self, side_objects):
+        """Assert that an ACTION_UPDATE ObjectChange exists for each of the given M2M through-model side objects."""
+        for side_object in side_objects:
+            objectchanges = lookup.get_changes_for_model(side_object).filter(
+                action=extras_choices.ObjectChangeActionChoices.ACTION_UPDATE
+            )
+            self.assertTrue(
+                objectchanges.exists(),
+                f"No update ObjectChange was recorded for {side_object._meta.label} {side_object} "
+                f"as a side of a {self.model._meta.label} change",
+            )
 
     @staticmethod
     def add_query_params_to_url(url: str, query_dict: dict) -> str:
@@ -912,6 +934,11 @@ class APIViewTestCases:
                     # Verify that at least one ObjectChange record is for this instance
                     self.assertTrue(any(oc.changed_object == instance for oc in objectchanges))
 
+                if changed_m2m_side_objects := self.get_change_logged_m2m_side_objects(instance):
+                    # This is an explicit M2M through model; creating this record must record
+                    # an ObjectChange against both of the objects it associates between
+                    self.assert_m2m_side_objects_change_logged(changed_m2m_side_objects)
+
         # TODO: The override_settings here is a temporary workaround for not breaking any app tests
         # long term fix should be using appropriate object permissions instead of the blanket override
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
@@ -1301,6 +1328,8 @@ class APIViewTestCases:
             """
             instance = self.get_deletable_object()
             url = self._get_detail_url(instance)
+            # Capture the side objects of an explicit M2M through model before the record is deleted
+            m2m_side_objects = self.get_change_logged_m2m_side_objects(instance)
 
             # Add object-level permission
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
@@ -1314,11 +1343,22 @@ class APIViewTestCases:
                 objectchanges = lookup.get_changes_for_model(instance)
                 self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_DELETE)
 
+            # Deleting a record of an explicit M2M through model must record an ObjectChange
+            # against both of the objects it associated
+            self.assert_m2m_side_objects_change_logged(m2m_side_objects)
+
         def test_bulk_delete_objects(self):
             """
             DELETE a set of objects in a single request.
             """
-            id_list = self.get_deletable_object_pks()
+            # Materialized to a list because MySQL doesn't support a LIMIT-ed queryset inside a `pk__in` filter
+            id_list = list(self.get_deletable_object_pks())
+            # Capture the side objects of an explicit M2M through model before the records are deleted
+            m2m_side_objects = [
+                side_object
+                for record in self._get_queryset().filter(pk__in=id_list)
+                for side_object in self.get_change_logged_m2m_side_objects(record)
+            ]
             # Add object-level permission
             self.add_permissions(f"{self.model._meta.app_label}.delete_{self.model._meta.model_name}")
 
@@ -1328,6 +1368,10 @@ class APIViewTestCases:
             response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self._get_queryset().count(), initial_count - len(id_list))
+
+            # Deleting records of an explicit M2M through model must record ObjectChanges
+            # against the objects they associated
+            self.assert_m2m_side_objects_change_logged(m2m_side_objects)
 
     class NotesURLViewTestCase(APITestCase):
         """Validate Notes URL on objects that have the Note model Mixin."""
