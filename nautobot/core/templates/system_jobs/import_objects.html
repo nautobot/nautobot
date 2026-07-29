@@ -160,11 +160,16 @@
                                 data-bs-target="#${ field.name }_choices">
                             <i class="mdi mdi-help-circle"></i>
                         </button>
-                        <div class="modal fade" id="${field.name}_choices" tabindex="-1" role="dialog">
+                        <div class="modal fade"
+                             id="${field.name}_choices"
+                             tabindex="-1"
+                             role="dialog"
+                             aria-modal="true"
+                             aria-labelledby="${field.name}_choices_title">
                             <div class="modal-dialog" role="document">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h4 class="modal-title">${field.name} Choices</h4>
+                                        <h4 class="modal-title" id="${field.name}_choices_title">${field.name} Choices</h4>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                                         </button>
                                     </div>

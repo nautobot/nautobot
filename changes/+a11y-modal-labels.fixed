@@ -1,0 +1,1 @@
+Fixed modal dialogs having no accessible name by adding `aria-labelledby`, `aria-modal` and `role="dialog"` to all modals.

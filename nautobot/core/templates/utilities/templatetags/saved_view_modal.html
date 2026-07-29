@@ -1,11 +1,16 @@
 {% load helpers %}
 {% load form_helpers %}
 
-<div class="modal fade" tabindex="-1" id="saved_view_modal" role="dialog">
+<div class="modal fade"
+     tabindex="-1"
+     id="saved_view_modal"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="saved_view_modal_title">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">New Saved View</h4>
+                <h4 class="modal-title" id="saved_view_modal_title">New Saved View</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="{% url 'extras:savedview_add' %}" method="post">
