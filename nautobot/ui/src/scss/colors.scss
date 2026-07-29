@@ -23,6 +23,12 @@ $white-0:  #ffffff;
 $gray-0:   #f4f4f4;
 $gray-05:  #ececec;
 $gray-1:   #dedede;
+/*
+ * Form control border color. `$gray-1` is fine for decorative borders such as card outlines and table rules, but the
+ * border of a text input, select or checkbox is the only thing that identifies the control, so WCAG 1.4.11 requires it
+ * to reach 3:1 against the adjacent background. `$gray-1` manages only 1.35:1; this reaches 3.03:1 on `$white-0`.
+ */
+$gray-15:  #949494;
 $gray-2:   #707070;
 $gray-3:   #505d68;
 
@@ -67,6 +73,8 @@ $white-0-dark:  #1a1a1a;
 $gray-0-dark:   #1e1e1e;
 $gray-05-dark:  #2a2a2a;
 $gray-1-dark:   #2f2f2f;
+/* Dark mode form control border color; 3.03:1 against `$white-0-dark`. See `$gray-15` above. */
+$gray-15-dark:  #666666;
 /*
  * Nudged up from `#828282`. As the dark mode `$body-tertiary-color` this is the table header text color, and table
  * headers sit on `$gray-0-dark: #1e1e1e` rather than on the page background, where `#828282` reached only 4.34:1.

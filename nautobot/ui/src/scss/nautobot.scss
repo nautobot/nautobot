@@ -293,6 +293,18 @@ $input-disabled-color:        var(--#{$prefix}tertiary-color);
 $input-disabled-bg:           var(--#{$prefix}tertiary-bg);
 $input-disabled-border-color: var(--#{$prefix}border-color);
 
+/*
+ * Form control borders need 3:1 against the adjacent background (WCAG 1.4.11), because unlike a card outline or a table
+ * rule the border is the only thing that identifies the control. Bootstrap defaults these to `--#{$prefix}border-color`,
+ * which is tuned for decorative borders and reaches only ~1.3:1 in both themes. `--#{$prefix}nb-input-border-color` is
+ * defined per color mode further down this file.
+ *
+ * Disabled controls keep using `--#{$prefix}border-color`: WCAG 1.4.11 exempts inactive controls, and holding them at
+ * the lower contrast is what keeps them reading as disabled.
+ */
+$input-border-color:      var(--#{$prefix}nb-input-border-color);
+$form-check-input-border: var(--#{$prefix}border-width) solid var(--#{$prefix}nb-input-border-color);
+
 $input-box-shadow: 0 0 0 0 transparent;
 
 $input-focus-border-color: var(--#{$prefix}primary-text-emphasis);
@@ -558,6 +570,21 @@ $utilities: map-merge(
 /* 6. Optionally include any other parts as needed */
 /* TODO: review the below and trim it down as appropriate */
 @import "bootstrap/scss/root";
+
+/*
+ * Per-color-mode value for the form control border color referenced by `$input-border-color` and
+ * `$form-check-input-border` above. Bootstrap has no `-dark` counterpart for those variables, so the theme switch has to
+ * happen through a custom property rather than through a Sass variable.
+ */
+:root,
+[data-bs-theme="light"] {
+  --#{$prefix}nb-input-border-color: #{$gray-15};
+}
+
+@include color-mode(dark, true) {
+  --#{$prefix}nb-input-border-color: #{$gray-15-dark};
+}
+
 @import "bootstrap/scss/reboot";
 @import "bootstrap/scss/type";
 @import "bootstrap/scss/images";
