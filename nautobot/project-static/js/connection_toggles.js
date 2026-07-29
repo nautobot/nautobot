@@ -57,12 +57,6 @@ function toggleConnection(elem) {
             return;
         }
 
-        const row = elem.closest('tr');
-        if (row) {
-            row.classList.toggle('table-success', newStatus === 'Connected');
-            row.classList.toggle('table-info', newStatus === 'Planned');
-        }
-
         changeCableTerminationColors(cablePk, newStatus);
         changeCableTerminationToggleButtons(cablePk, newStatus);
     });
