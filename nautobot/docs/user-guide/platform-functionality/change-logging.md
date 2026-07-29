@@ -34,7 +34,7 @@ Change records can also be accessed via the read-only GraphQL endpoint `/api/gra
 
 ## Many-to-Many Association Changes
 
-+++ 3.2.1
++++ 3.2.2
 
 Some many-to-many relationships in Nautobot are implemented with an explicit "through" model that is exposed through its own REST API endpoint, for example `IPAddressToInterface` (`/api/ipam/ip-address-to-interface/`, associating IP addresses with interfaces) or `VRFPrefixAssignment` (`/api/ipam/vrf-prefix-assignments/`, associating VRFs with prefixes).
 
