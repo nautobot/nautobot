@@ -61,6 +61,20 @@
                 {% for panel_name, panel_details in panel_group.items %}
                     <div class="card nb-draggable" id="{{ panel_name|slugify }}" data-panel-weight="{{ panel_details.weight }}">
                         <div class="card-header nb-draggable-handle">
+                            {% comment %}
+                            Keyboard and switch users cannot use the pointer-only drag and drop, so this grip button is
+                            the accessible equivalent (WCAG 2.5.7): Enter or Space picks the panel up, the arrow keys
+                            move it, Enter or Escape drops it. Handled by `nb-draggable-grip` in `draggable.js`.
+                            {% endcomment %}
+                            <button
+                                aria-pressed="false"
+                                class="btn btn-sm nb-draggable-grip"
+                                data-nb-draggable-label="{{ panel_name }}"
+                                type="button"
+                            >
+                                <span aria-hidden="true" class="mdi mdi-drag"></span>
+                                <span class="visually-hidden">Reorder {{ panel_name }} panel</span>
+                            </button>
                             <strong class="text-body nb-text-none">{{ panel_name }}</strong>
                             {% comment %}Not using <button> element here because of Firefox bug: https://bugzilla.mozilla.org/show_bug.cgi?id=568313 {% endcomment %}
                             <span

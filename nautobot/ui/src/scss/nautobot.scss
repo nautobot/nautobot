@@ -2281,6 +2281,22 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
       cursor: move;
     }
   }
+
+  /*
+   * Keyboard reordering grip (see `draggable.js`). The handle it sits in also contains a `.stretched-link` collapse
+   * toggle whose `::after` overlay covers the whole card at `z-index: 1`, so the grip has to be lifted above that to stay
+   * clickable and focusable.
+   */
+  .nb-draggable-grip {
+    position: relative;
+    z-index: 2;
+
+    /* Make it unmistakable which panel is currently picked up for keyboard reordering. */
+    &[aria-pressed="true"] {
+      background-color: var(--#{$prefix}primary-bg-subtle);
+      color: var(--#{$prefix}primary-text-emphasis);
+    }
+  }
 }
 
 /* Select multiple orderable */

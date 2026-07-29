@@ -1,7 +1,10 @@
 const DRAGGABLE_CLASS = 'nb-draggable';
 const DRAGGABLE_CONTAINER_CLASS = 'nb-draggable-container';
+const DRAGGABLE_GRIP_CLASS = 'nb-draggable-grip';
 const DRAGGABLE_HANDLE_CLASS = 'nb-draggable-handle';
 const DRAGGING_CLASS = 'nb-dragging';
+
+const KEYBOARD_MOVE_KEYS = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'];
 
 /*
  * Available draggable flows are:
@@ -226,6 +229,187 @@ export const initializeDraggable = () => {
     }
   };
 
+  /*
+   * ---------------------------------------------------------------------------------------------------------------
+   * Keyboard alternative to dragging (WCAG 2.5.7 Dragging Movements)
+   * ---------------------------------------------------------------------------------------------------------------
+   *
+   * Everything above this point is driven by pointer events only, which left keyboard and switch users with no way to
+   * reorder anything at all. The handler below implements the conventional accessible pattern: a focusable grip button
+   * that is "picked up" with Enter or Space, moved with the arrow keys, and dropped with Enter, Space or Escape.
+   *
+   * Reordering is done purely by moving DOM nodes, which is also how the pointer implementation works. Consumers that
+   * persist the order (the homepage watches its container with a `MutationObserver`) therefore pick keyboard moves up
+   * without any extra wiring.
+   */
+
+  /**
+   * Get the column elements of a draggable container, or the container itself when draggables are not grouped.
+   * @param {HTMLElement} container - Draggable container element.
+   * @returns {HTMLElement[]} Elements that directly hold draggables.
+   */
+  const getColumns = (container) => {
+    const children = [...container.children];
+    const areDraggablesGrouped = children.every((child) => !child.classList.contains(DRAGGABLE_CLASS));
+    return areDraggablesGrouped ? children : [container];
+  };
+
+  const getColumnDraggables = (column) =>
+    [...column.children].filter((child) => child.classList.contains(DRAGGABLE_CLASS));
+
+  /**
+   * Move a draggable one step in the given direction, across columns where relevant.
+   * @param {HTMLElement} draggable - The draggable element to move.
+   * @param {string} key - One of the `KEYBOARD_MOVE_KEYS` values.
+   * @returns {boolean} `true` when the element actually moved, `false` when it was already at the boundary.
+   */
+  const moveDraggableByKey = (draggable, key) => {
+    const container = closest(draggable, DRAGGABLE_CONTAINER_CLASS);
+    if (!container) {
+      return false;
+    }
+
+    const columns = getColumns(container);
+    const column = columns.find((candidate) => candidate.contains(draggable));
+    const columnIndex = columns.indexOf(column);
+    const siblings = getColumnDraggables(column);
+    const index = siblings.indexOf(draggable);
+
+    if (key === 'ArrowUp') {
+      const previous = siblings[index - 1];
+      if (!previous) {
+        return false;
+      }
+      previous.before(draggable);
+      return true;
+    }
+
+    if (key === 'ArrowDown') {
+      const next = siblings[index + 1];
+      if (!next) {
+        return false;
+      }
+      next.after(draggable);
+      return true;
+    }
+
+    // Horizontal movement only means anything when draggables are actually grouped into separate columns.
+    const targetColumn = columns[columnIndex + (key === 'ArrowRight' ? 1 : -1)];
+    if (!targetColumn || targetColumn === column) {
+      return false;
+    }
+
+    /*
+     * Keep the element at a comparable depth in the target column rather than always appending, so that moving right and
+     * then left again lands roughly where it started.
+     */
+    const targetSiblings = getColumnDraggables(targetColumn);
+    const reference = targetSiblings[index];
+    if (reference) {
+      reference.before(draggable);
+    } else {
+      targetColumn.appendChild(draggable);
+    }
+    return true;
+  };
+
+  /**
+   * Describe a draggable's current position for announcement, e.g. "column 2 of 4, position 1 of 3".
+   * @param {HTMLElement} draggable - The draggable element being described.
+   * @returns {string} Human readable position.
+   */
+  const describePosition = (draggable) => {
+    const container = closest(draggable, DRAGGABLE_CONTAINER_CLASS);
+    const columns = container ? getColumns(container) : [];
+    const column = columns.find((candidate) => candidate.contains(draggable));
+    const siblings = column ? getColumnDraggables(column) : [];
+    const position = `position ${siblings.indexOf(draggable) + 1} of ${siblings.length}`;
+    return columns.length > 1 ? `column ${columns.indexOf(column) + 1} of ${columns.length}, ${position}` : position;
+  };
+
+  /*
+   * A single shared live region is enough: only one draggable can be grabbed at a time. It is created lazily so that
+   * pages without any draggables do not grow an extra node.
+   */
+  const liveRegionRef = { current: null };
+
+  const announce = (message) => {
+    if (!liveRegionRef.current) {
+      const liveRegion = document.createElement('div');
+      liveRegion.className = 'visually-hidden';
+      liveRegion.setAttribute('aria-atomic', 'true');
+      liveRegion.setAttribute('aria-live', 'assertive');
+      liveRegion.setAttribute('role', 'status');
+      document.body.appendChild(liveRegion);
+      liveRegionRef.current = liveRegion;
+    }
+    liveRegionRef.current.textContent = message;
+  };
+
+  const grabbedRef = { current: null };
+
+  const setGrabbed = (grip, grabbed) => {
+    const draggable = closest(grip, DRAGGABLE_CLASS);
+    grabbedRef.current = grabbed ? grip : null;
+
+    grip.setAttribute('aria-pressed', String(grabbed));
+    draggable?.classList.toggle(DRAGGING_CLASS, grabbed);
+
+    const name = grip.dataset.nbDraggableLabel || 'Panel';
+    announce(
+      grabbed
+        ? `${name} grabbed. ${describePosition(draggable)}. Use the arrow keys to move it, then press Enter or Escape to drop it.`
+        : `${name} dropped. ${describePosition(draggable)}.`,
+    );
+  };
+
+  const onGripKeyDown = (event) => {
+    const grip = event.target.closest?.(`.${DRAGGABLE_GRIP_CLASS}`);
+    if (!grip) {
+      return;
+    }
+
+    const isGrabbed = grabbedRef.current === grip;
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault(); // Space would otherwise scroll the page, Enter would submit an enclosing form.
+      setGrabbed(grip, !isGrabbed);
+      return;
+    }
+
+    if (event.key === 'Escape' && isGrabbed) {
+      event.preventDefault();
+      event.stopPropagation(); // Do not let an enclosing dismissible component also react to Escape.
+      setGrabbed(grip, false);
+      return;
+    }
+
+    if (isGrabbed && KEYBOARD_MOVE_KEYS.includes(event.key)) {
+      event.preventDefault(); // Arrow keys would otherwise scroll the page while the element is grabbed.
+      const draggable = closest(grip, DRAGGABLE_CLASS);
+      const name = grip.dataset.nbDraggableLabel || 'Panel';
+
+      if (moveDraggableByKey(draggable, event.key)) {
+        /*
+         * Moving the node detaches and reinserts it, which drops focus to `<body>`, so focus has to be restored to the
+         * grip for the interaction to continue.
+         */
+        grip.focus();
+        announce(`${name} moved. ${describePosition(draggable)}.`);
+      } else {
+        announce(`${name} cannot move any further in that direction. ${describePosition(draggable)}.`);
+      }
+    }
+  };
+
+  // Dropping on blur avoids leaving a draggable in a grabbed state that the user can no longer control.
+  const onGripBlur = (event) => {
+    const grip = event.target.closest?.(`.${DRAGGABLE_GRIP_CLASS}`);
+    if (grip && grabbedRef.current === grip) {
+      setGrabbed(grip, false);
+    }
+  };
+
   // Using event delegation pattern here to avoid re-creating listeners each time DOM is modified.
   document.addEventListener('mousedown', onMouseDown);
   document.addEventListener('mouseup', onMouseUp);
@@ -233,4 +417,6 @@ export const initializeDraggable = () => {
   document.addEventListener('dragend', onDragEnd);
   document.addEventListener('dragover', onDragOver);
   document.addEventListener('drop', onDrop);
+  document.addEventListener('keydown', onGripKeyDown);
+  document.addEventListener('focusout', onGripBlur);
 };
