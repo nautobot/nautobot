@@ -1,9 +1,20 @@
 from drf_spectacular.renderers import OpenApiYamlRenderer
 from drf_spectacular.settings import spectacular_settings
+from drf_spectacular.utils import extend_schema_field
 from openapi_spec_validator import validate
+from rest_framework import serializers as drf_serializers
 import yaml
 
 from nautobot.core.testing import TestCase
+
+
+def _fields_with_instance_annotations(serializer_class):
+    """Names of declared fields carrying a drf-spectacular annotation on the field instance itself."""
+    return [
+        name
+        for name, field in getattr(serializer_class, "_declared_fields", {}).items()
+        if "_spectacular_annotation" in field.__dict__
+    ]
 
 
 class OpenAPITest(TestCase):
@@ -74,3 +85,46 @@ class OpenAPITest(TestCase):
         Validate that the generated OpenAPI spec is valid according to the OpenAPI 3.0 schema.
         """
         validate(self.schema)
+
+    def test_no_instance_level_schema_annotations(self):
+        """
+        Assert `extend_schema_field` is never applied to a serializer field instance.
+
+        DRF's `Field.__deepcopy__` re-instantiates declared fields from their original constructor
+        arguments when a serializer binds its fields, silently discarding instance attributes such
+        as the schema override, leaving the field rendered as a bare untyped object in the schema.
+        Apply the annotation to a Field subclass instead; see `CableTerminationsPayloadField` in
+        `nautobot/dcim/api/serializers.py` for the reference pattern.
+        """
+
+        # Negative control: prove the detector actually catches the broken pattern.
+        class BrokenSerializer(drf_serializers.Serializer):
+            broken = extend_schema_field({"type": "object"})(drf_serializers.JSONField())
+
+        self.assertEqual(_fields_with_instance_annotations(BrokenSerializer), ["broken"])
+
+        offenders = {}
+        seen = set()
+        stack = [drf_serializers.Serializer]
+        while stack:
+            for subclass in stack.pop().__subclasses__():
+                if subclass in seen:
+                    continue
+                seen.add(subclass)
+                stack.append(subclass)
+                module = subclass.__module__
+                # Only Nautobot's own serializers are ours to fix; test modules may contain
+                # deliberately-broken fixtures like the negative control above.
+                if module.partition(".")[0] not in ("nautobot", "example_app") or "tests" in module:
+                    continue
+                annotated = _fields_with_instance_annotations(subclass)
+                if annotated:
+                    offenders[f"{module}.{subclass.__name__}"] = annotated
+        self.assertEqual(
+            offenders,
+            {},
+            "extend_schema_field() was applied to serializer field instance(s). DRF's Field.__deepcopy__ "
+            "discards instance-level annotations when a serializer binds its fields, so the schema "
+            "override would be silently lost. Apply @extend_schema_field to a Field subclass instead "
+            "(see CableTerminationsPayloadField in nautobot/dcim/api/serializers.py).",
+        )

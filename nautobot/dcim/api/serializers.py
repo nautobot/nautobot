@@ -336,11 +336,15 @@ class RackUnitSerializer(serializers.Serializer):
 
 
 class RackReservationSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    units = serializers.ListField(
+        child=serializers.IntegerField(),
+        help_text="List of rack unit numbers to reserve",
+    )
+
     class Meta:
         model = RackReservation
         fields = "__all__"
         extra_kwargs = {
-            "units": {"help_text": "List of rack unit numbers to reserve"},
             "user": {
                 "help_text": "User to associate to reservations. If unspecified, the current user will be used.",
                 "required": False,
@@ -529,7 +533,14 @@ class DeviceBayTemplateSerializer(NautobotModelSerializer):
 
 
 class PlatformSerializer(NautobotModelSerializer):
-    network_driver_mappings = serializers.JSONField(read_only=True)
+    network_driver_mappings = serializers.DictField(
+        child=serializers.CharField(),
+        read_only=True,
+        help_text=(
+            "Dictionary of library-specific network drivers, derived from network_driver by the "
+            "netutils library mapping or the NETWORK_DRIVERS setting."
+        ),
+    )
     device_count = serializers.IntegerField(read_only=True)
     virtual_machine_count = serializers.IntegerField(read_only=True)
 
@@ -837,7 +848,40 @@ class InventoryItemSerializer(TaggedModelSerializerMixin, TreeModelSerializerMix
 #
 
 
+@extend_schema_field(
+    {
+        "type": "array",
+        "description": (
+            "A-to-B lane mapping. Each entry represents one logical lane, giving its label and "
+            "its (connector, position) coordinates on each side. If empty on write, it is "
+            "auto-populated from a_connectors / b_connectors / total_lanes."
+        ),
+        "items": {
+            "type": "object",
+            "properties": {
+                "label": {"type": "string"},
+                "a_connector": {"type": "integer"},
+                "a_position": {"type": "integer"},
+                "b_connector": {"type": "integer"},
+                "b_position": {"type": "integer"},
+            },
+            "required": ["label", "a_connector", "a_position", "b_connector", "b_position"],
+        },
+    }
+)
+class CableTypeMappingField(serializers.JSONField):
+    """JSONField carrying the OpenAPI schema for the CableType `mapping` field.
+
+    The `extend_schema_field` annotation must live on this class rather than on a field instance:
+    DRF's `Field.__deepcopy__` re-instantiates declared fields from their original constructor
+    arguments when a serializer binds its fields, discarding instance attributes such as the
+    schema override (see `CableTerminationsPayloadField` below for the same pattern).
+    """
+
+
 class CableTypeSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    mapping = CableTypeMappingField(required=False)
+
     class Meta:
         model = CableType
         fields = "__all__"

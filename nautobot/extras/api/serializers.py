@@ -991,6 +991,11 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
     )
     assigned_object = serializers.SerializerMethodField()
     value = ObjectMetadataValueJSONField(allow_null=True, required=False)
+    scoped_fields = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="List of scoped fields, only direct fields on the model",
+    )
 
     class Meta:
         model = ObjectMetadata
