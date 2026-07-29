@@ -620,7 +620,9 @@ class MessagesViewTestCase(TestCase):
     def test_empty(self):
         """When there are no messages queued, response contains an empty header_messages container."""
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
 
     def test_messages(self):
         """When there are messages queued, response contains them in the header_messages container."""
@@ -634,7 +636,7 @@ class MessagesViewTestCase(TestCase):
         self.assertBodyContains(
             response,
             """
-                <div id="header_messages">
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
                     <div class="alert alert-info alert-dismissable" role="alert">
                         <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
                         Test info message
