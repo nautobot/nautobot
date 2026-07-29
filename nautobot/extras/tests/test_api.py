@@ -1337,6 +1337,35 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.data["message"], f"Repository {self.repos[0].name} sync job added to queue.")
         self.assertIsInstance(response.data["job_result"], dict)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    def test_run_git_sync_with_constrained_permission(self, _):
+        """Git sync returns 404 when the user's change permission doesn't cover the object."""
+        # Grant change permission constrained to repos[1] only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.repos[1].pk},
+            actions=["change"],
+        )
+        obj_perm.validated_save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        with mock.patch.object(GitRepository, "sync") as mock_sync:
+            # Object outside the constraint: 404, and nothing enqueued
+            url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
+            response = self.client.post(url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            mock_sync.assert_not_called()
+
+            # Object inside the constraint: succeeds
+            mock_sync.return_value = JobResult.objects.create(name="git-repository-sync", user=self.user)
+            url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[1].id})
+            response = self.client.post(url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIn("job_result", response.data)
+            mock_sync.assert_called_once_with(user=self.user)
+
     def test_create_with_app_provided_contents(self):
         """Test that `provided_contents` published by an App works."""
         self.add_permissions("extras.add_gitrepository")

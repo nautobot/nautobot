@@ -440,7 +440,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
         if not get_worker_count():
             raise CeleryWorkerNotRunningException()
 
-        repository = get_object_or_404(GitRepository, id=pk)
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
         job_result = repository.sync(user=request.user)
 
         data = {
