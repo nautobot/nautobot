@@ -1,8 +1,36 @@
+{% comment %}
+The elevation is a standalone SVG document pulled in through `<object data="...">`. Assistive technology cannot reach
+into an externally referenced document, so without an accessible name and a text equivalent this view -- one of the most
+important in DCIM -- conveys nothing at all non-visually (WCAG 1.1.1).
+
+Three things address that:
+  1. `aria-label` names the region, so it is not announced as an unlabelled embedded object.
+  2. The markup inside `<object>` is fallback content, rendered when the SVG cannot be loaded at all.
+  3. The "View as device list" link gives everyone -- not only people whose SVG failed to load -- a route to the same
+     information as a real table, filtered to this rack.
+
+The device list URL is written out at each use rather than being hoisted into a `{% templatetag openblock %} with {% templatetag closeblock %}`: the `add`
+filter cannot concatenate a string with the UUID `pk` and silently yields an empty string if asked to.
+{% endcomment %}
 <div style="margin-left: -30px">
-    <object data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation invert-in-dark-mode"></object>
+    <object aria-label="{{ face|capfirst }} elevation of rack {{ object }}"
+            class="rack_elevation invert-in-dark-mode"
+            data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{ face }}&render=svg">
+        <p>
+            The {{ face }} elevation of rack {{ object }} could not be displayed.
+            <a href="{% url 'dcim:device_list' %}?rack={{ object.pk }}">View the devices in this rack as a list</a>
+            instead.
+        </p>
+    </object>
 </div>
 <div class="text-center text-small">
-    <a href="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation_save_svg_link" download="rack_{{ face }}_{{ object }}.svg">
-        <span class="mdi mdi-content-save-outline"></span> Save SVG
+    <a href="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{ face }}&render=svg"
+       class="rack_elevation_save_svg_link"
+       download="rack_{{ face }}_{{ object }}.svg">
+        <span aria-hidden="true" class="mdi mdi-content-save-outline"></span> Save SVG
+    </a>
+    <a class="ms-8" href="{% url 'dcim:device_list' %}?rack={{ object.pk }}">
+        <span aria-hidden="true" class="mdi mdi-format-list-bulleted"></span>
+        View as device list<span class="visually-hidden"> for rack {{ object }}</span>
     </a>
 </div>
