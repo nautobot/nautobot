@@ -88,9 +88,16 @@ export const initializeCheckboxes = () => {
     if (toggleCheckbox) {
       const isChecked = toggleCheckbox.checked;
 
-      // Show/hide the select all objects form that contains the bulk action buttons.
+      /*
+       * Show/hide the select all objects form that contains the bulk action buttons.
+       *
+       * This deliberately uses `d-none` (`display: none`) rather than `visually-hidden`. The latter hides content
+       * visually *while keeping it in the accessibility tree* - that is its entire purpose - so using it here left the
+       * "select all matching query" checkbox and the bulk action buttons permanently reachable by Tab and announced by
+       * screen readers on every list view, even with no rows selected (WCAG 1.3.2, 2.4.3).
+       */
       const selectAllBox = document.querySelector(SELECT_ALL_BOX_SELECTOR);
-      selectAllBox?.classList.toggle('visually-hidden', !isChecked);
+      selectAllBox?.classList.toggle('d-none', !isChecked);
 
       if (selectAllBox && !isChecked) {
         const selectAll = document.querySelector(SELECT_ALL_CHECKBOX_SELECTOR);
