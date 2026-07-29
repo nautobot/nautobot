@@ -23,23 +23,23 @@ class BreakoutCablesTestCase(SeleniumTestCase):
         self.logout()
         super().tearDown()
 
-    def create1x2BreakoutCable(self):
-        spine_device = create_test_device("Breakout Cable Local Device")
-        leaf_device = create_test_device("Breakout Cable Remote Device")
+    def create_1x2_breakout_cable(self):
+        spine_device = create_test_device("Breakout Cable Spine Device")
+        leaf_device = create_test_device("Breakout Cable Leaf Device")
 
-        spine_interface_status = Status.objects.get_for_model(Interface).first()
-        cable_connected_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        status_active = Status.objects.get_for_model(Interface).get(name="Active")
+        status_connected = Status.objects.get_for_model(Cable).get(name="Connected")
 
         spine_interface = Interface.objects.create(
             device=spine_device,
             name="Spine Interface 1",
             type=InterfaceTypeChoices.TYPE_10GE_FIXED,
-            status=spine_interface_status,
+            status=status_active,
         )
 
         leaf_interfaces = [
-            Interface.objects.create(device=leaf_device, name="Leaf Interface 1", status=spine_interface_status),
-            Interface.objects.create(device=leaf_device, name="Leaf Interface 2", status=spine_interface_status),
+            Interface.objects.create(device=leaf_device, name="Leaf Interface 1", status=status_active),
+            Interface.objects.create(device=leaf_device, name="Leaf Interface 2", status=status_active),
         ]
 
         breakout_type = CableType.objects.create(
@@ -50,7 +50,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
             termination_a=spine_interface,
             termination_b=leaf_interfaces[0],
             cable_type=breakout_type,
-            status=cable_connected_status,
+            status=status_connected,
         )
         cable.save()
         cable.add_termination(leaf_interfaces[1], "B", connector=2)
@@ -60,7 +60,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
                 device=spine_device,
                 name="Spine Interface 1/1",
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
-                status=spine_interface_status,
+                status=status_active,
                 parent_interface=spine_interface,
                 breakout_position=1,
             ),
@@ -68,7 +68,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
                 device=spine_device,
                 name="Spine Interface 1/2",
                 type=InterfaceTypeChoices.TYPE_VIRTUAL,
-                status=spine_interface_status,
+                status=status_active,
                 parent_interface=spine_interface,
                 breakout_position=2,
             ),
@@ -77,7 +77,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
         return cable, spine_device, spine_interface, spine_interface_children, leaf_device, leaf_interfaces
 
     def test_device_detail_view_interface_tab_colors_change_after_cable_toggled_from_connected_to_planned(self):
-        _, spine_device, spine_interface, spine_interface_children, _, _ = self.create1x2BreakoutCable()
+        _, spine_device, spine_interface, spine_interface_children, _, _ = self.create_1x2_breakout_cable()
 
         self.browser.visit(self.live_server_url + reverse("dcim:device_interfaces", kwargs={"pk": spine_device.pk}))
 
@@ -115,7 +115,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
             )
 
     def test_device_detail_view_interface_tab_icons_change_after_cable_toggled_from_connected_to_planned(self):
-        _, _, _, _, leaf_device, leaf_interfaces = self.create1x2BreakoutCable()
+        _, _, _, _, leaf_device, leaf_interfaces = self.create_1x2_breakout_cable()
 
         self.browser.visit(self.live_server_url + reverse("dcim:device_interfaces", kwargs={"pk": leaf_device.pk}))
 
@@ -143,7 +143,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
             )
 
     def test_list_interfaces_view_colors_change_after_cable_toggled_from_connected_to_planned(self):
-        _, _, spine_interface, spine_interface_children, _, leaf_interfaces = self.create1x2BreakoutCable()
+        _, _, spine_interface, spine_interface_children, _, leaf_interfaces = self.create_1x2_breakout_cable()
 
         self.browser.visit(self.live_server_url + reverse("dcim:interface_list"))
 
@@ -178,14 +178,14 @@ class BreakoutCablesTestCase(SeleniumTestCase):
             )
 
     def test_list_interfaces_view_unrelated_interface_color_unchanged_when_cable_toggled(self):
-        _, spine_device, spine_interface, _, _, _ = self.create1x2BreakoutCable()
+        _, spine_device, spine_interface, _, _, _ = self.create_1x2_breakout_cable()
 
-        interface_status = Status.objects.get_for_model(Interface).first()
+        status_active = Status.objects.get_for_model(Interface).get(name="Active")
         unrelated_interface = Interface.objects.create(
             device=spine_device,
             name="Unrelated Interface",
             type=InterfaceTypeChoices.TYPE_10GE_FIXED,
-            status=interface_status,
+            status=status_active,
         )
 
         self.browser.visit(self.live_server_url + reverse("dcim:interface_list"))
@@ -228,7 +228,7 @@ class BreakoutCablesTestCase(SeleniumTestCase):
         )
 
     def test_list_interfaces_view_icons_change_after_cable_toggled_from_connected_to_planned(self):
-        _, _, spine_interface, _, _, leaf_interfaces = self.create1x2BreakoutCable()
+        _, _, spine_interface, _, _, leaf_interfaces = self.create_1x2_breakout_cable()
 
         self.browser.visit(self.live_server_url + reverse("dcim:interface_list"))
 
