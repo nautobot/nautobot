@@ -37,14 +37,14 @@ except ImportError:
 
 
 def _db_instrumentor_for_engine(engine):
-    """Return the DB instrumentor class matching ``engine``, mirroring ``instrument()`` in opentelemetry.py.
+    """Return the DB instrumentor class matching `engine`, mirroring `instrument()` in opentelemetry.py.
 
-    Production selects the instrumentor with the same ``"mysql" in engine`` test, so tests read the live
-    ``settings.DATABASES`` engine to instrument/uninstrument the backend the suite is actually running against
+    Production selects the instrumentor with the same `"mysql" in engine` test, so tests read the live
+    `settings.DATABASES` engine to instrument/uninstrument the backend the suite is actually running against
     (e.g. CI's dedicated MySQL job), rather than hardcoding Psycopg2.
 
     The mysqlclient instrumentor is imported lazily (only in the MySQL branch) because its package runs
-    ``import MySQLdb`` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
+    `import MySQLdb` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
     """
     if "mysql" in engine:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
@@ -54,15 +54,15 @@ def _db_instrumentor_for_engine(engine):
 
 
 def _fake_otel_config(**overrides):
-    """Build a stand-in for the loaded ``nautobot_config`` module that ``instrument()`` reads.
+    """Build a stand-in for the loaded `nautobot_config` module that `instrument()` reads.
 
-    ``instrument()`` reads its config from ``sys.modules["nautobot_config"]`` (registered by
-    ``load_settings()``), not from ``nautobot.core.settings``. Tests inject this fake via
-    ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``, or pass it directly to
-    ``install_exporters(config=...)``. It carries every attribute both functions read, with real types:
-    ``DATABASES`` is a real dict so the ``"mysql" in ...["ENGINE"]`` check works, and
-    ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int (or ``None`` for unlimited, mirroring an empty
-    env var). Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
+    `instrument()` reads its config from `sys.modules["nautobot_config"]` (registered by
+    `load_settings()`), not from `nautobot.core.settings`. Tests inject this fake via
+    `patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})`, or pass it directly to
+    `install_exporters(config=...)`. It carries every attribute both functions read, with real types:
+    `DATABASES` is a real dict so the `"mysql" in ...["ENGINE"]` check works, and
+    `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` is an int (or `None` for unlimited, mirroring an empty
+    env var). Defaults disable all noisy exporters/layers; pass `overrides` to drive a specific branch.
     """
     defaults = {
         "OTEL_TRACES_EXPORTER": ["none"],
@@ -508,7 +508,7 @@ class APITraceGenerationTest(testing.APITestCase):
 
 
 # SILKY_INTERCEPT_FUNC that always profiles, so the test exercises SilkyMiddleware's
-# request/response wrapping regardless of the per-session ``silk_record_requests`` flag
+# request/response wrapping regardless of the per-session `silk_record_requests` flag
 # (token-authenticated API requests don't carry that session flag).
 def _always_profile(request):  # pragma: no cover - trivial test hook
     return True
@@ -518,9 +518,9 @@ def _always_profile(request):  # pragma: no cover - trivial test hook
 class OtelWithSilkProfilingTest(testing.APITestCase):
     """Guard against 5xx (e.g. 502) when OpenTelemetry and django-silk profiling are both active.
 
-    ``SilkyMiddleware`` (outer) wraps the request/response streams while it profiles, the OTEL
-    ``DjangoInstrumentor`` wraps the WSGI/view layer, and ``GraphQLOpenTelemetryMiddleware`` (inner)
-    reads ``request.body`` on GraphQL POSTs. This combination is where a stream re-read or
+    `SilkyMiddleware` (outer) wraps the request/response streams while it profiles, the OTEL
+    `DjangoInstrumentor` wraps the WSGI/view layer, and `GraphQLOpenTelemetryMiddleware` (inner)
+    reads `request.body` on GraphQL POSTs. This combination is where a stream re-read or
     double-wrapping could surface as a gateway 502 at the middleware layer.
 
     SCOPE / LIMITATION: this runs through the Django test client, which is single-process and in-memory
@@ -528,9 +528,9 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
     more severe production crash where OTLP-gRPC + uWSGI pre-fork + silk profiling segfaults workers
     (SIGSEGV) because the fork-unsafe gRPC channel is built in the master pre-fork. A green result here
     must NOT be read as "OTEL + Silk is safe under uWSGI." That fork/gRPC path is fixed by building the
-    OTLP exporters post-fork (see ``nautobot.core.cli.opentelemetry.install_exporters`` +
-    ``InstrumentExporterBranchTest``) and is exercised end-to-end by the reproduction harness under
-    ``development/`` (see the observability/segfault repro docs), not by this unit test.
+    OTLP exporters post-fork (see `nautobot.core.cli.opentelemetry.install_exporters` +
+    `InstrumentExporterBranchTest`) and is exercised end-to-end by the reproduction harness under
+    `development/` (see the observability/segfault repro docs), not by this unit test.
     """
 
     def setUp(self):
