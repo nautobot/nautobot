@@ -53,6 +53,9 @@ export const initializeCheckboxes = () => {
         .querySelectorAll(`${ITEM_CHECKBOX_SELECTOR}:not(.visually-hidden)`)
         .forEach((checkbox) => setChecked(checkbox, isChecked));
 
+      // Clicking the toggle directly makes the selection all-or-nothing, so it is no longer a partial selection.
+      toggleCheckbox.indeterminate = false;
+
       // Reset last selected index when using toggle all
       lastSelectedIndex = null;
     }
@@ -117,7 +120,14 @@ export const initializeCheckboxes = () => {
       const tableToggleCheckbox = table.querySelector(TOGGLE_CHECKBOX_SELECTOR);
       if (tableToggleCheckbox) {
         const hasUnchecked = allCheckboxes.some((checkbox) => !checkbox.checked);
+        const hasChecked = allCheckboxes.some((checkbox) => checkbox.checked);
         setChecked(tableToggleCheckbox, !hasUnchecked);
+        /*
+         * Reflect a partial selection as the checkbox's indeterminate state. Without this, selecting some but not all
+         * rows leaves the header checkbox looking and reporting itself as simply unchecked, which misrepresents the
+         * selection to everyone and is all a screen reader user has to go on.
+         */
+        tableToggleCheckbox.indeterminate = hasChecked && hasUnchecked;
       }
     }
 
