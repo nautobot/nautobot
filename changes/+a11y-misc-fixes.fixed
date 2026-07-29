@@ -1,0 +1,1 @@
+Fixed the "toggle all rows" table checkbox lacking an accessible name and not reflecting partial selection, contradictory attributes on the decorative page title chevron, and a missing `lang` attribute on the GraphiQL page.

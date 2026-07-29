@@ -435,8 +435,10 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
 
     @property
     def header(self):
+        # `title` alone is an unreliable accessible name, so pair it with an explicit `aria-label`.
         return mark_safe(
-            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2" title="Toggle all" />'
+            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2"'
+            ' aria-label="Toggle all rows" title="Toggle all" />'
         )
 
 

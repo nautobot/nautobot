@@ -10,7 +10,8 @@ add "&raw" to the end of the URL within a browser.
 {% load helpers %}
 {% load ui_framework %}
 <!DOCTYPE html>
-<html>
+{# `lang` is required so assistive technology knows which language to pronounce the page in (WCAG 3.1.1). #}
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         {% include 'inc/media.html' %}

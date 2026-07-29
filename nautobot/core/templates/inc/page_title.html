@@ -2,10 +2,14 @@
 {% load helpers %}
 
 <h1 class="d-flex fs-2 gap-8 lh-sm py-6">
+    {% comment %}
+    Decorative separator: an empty `alt` is the correct way to hide it, and it makes `role="presentation"` redundant.
+    Carrying both was contradictory -- `role="presentation"` removes the element from the accessibility tree, so the
+    `alt` text could never be reached anyway.
+    {% endcomment %}
     <img
-        alt="Nautobot chevron"
+        alt=""
         class="align-self-start flex-grow-0 flex-shrink-0 my-n4"
-        role="presentation"
         src="{% static 'img/nautobot_chevron.svg' %}"
         style="width: 1.5rem;"
     />
