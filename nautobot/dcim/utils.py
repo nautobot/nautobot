@@ -73,14 +73,11 @@ def cable_status_color_css(record):
 
 def get_cable_pk(record):
     """Given an interface, try to return its cable's primary key."""
-    if not record.cable:
-        breakout_lane = record.get_breakout_lane() if getattr(record, "parent_interface_id", None) else None
-        if breakout_lane and breakout_lane.far_termination:
-            parent_interface_cable = record.parent_interface.cable
-            return parent_interface_cable.pk if parent_interface_cable else ""
-        return ""
-
-    return record.cable.pk
+    if record.cable:
+        return record.cable.pk
+    if record.parent_interface_id and record.parent_interface.cable and record.breakout_position is not None:
+        return parent_interface_cable.pk
+    return ""
 
 
 def get_network_driver_mapping_tool_names():
