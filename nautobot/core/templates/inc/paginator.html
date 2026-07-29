@@ -12,7 +12,11 @@
      {% endif %}
 >
     {% if page %}
-        <div class="nb-paginator-info">
+        {% comment %}
+        `role="status"` makes this a polite live region, so that paging through a list with HTMX -- which replaces this
+        element rather than reloading the page -- announces the new range instead of changing silently.
+        {% endcomment %}
+        <div class="nb-paginator-info" role="status">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
         {% if not exclude_controls %}

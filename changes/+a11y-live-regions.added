@@ -1,0 +1,1 @@
+Added live regions so that messages appended via HTMX and pagination range changes are announced by screen readers.
