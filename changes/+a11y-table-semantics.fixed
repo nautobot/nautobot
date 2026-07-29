@@ -1,0 +1,1 @@
+Fixed data table accessibility by adding `scope="col"` to table headers, exposing sort state via `aria-sort`, giving each table a visually hidden `<caption>`, and correcting invalid self-closing `<td />` markup.
