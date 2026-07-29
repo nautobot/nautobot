@@ -1,0 +1,1 @@
+Implemented in-process per-request cache to prevent duplicate Redis lookups.
