@@ -76,7 +76,7 @@ def get_cable_pk(record):
     if record.cable:
         return record.cable.pk
     if record.parent_interface_id and record.parent_interface.cable and record.breakout_position is not None:
-        return parent_interface_cable.pk
+        return record.parent_interface.cable.pk
     return ""
 
 
