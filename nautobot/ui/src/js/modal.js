@@ -4,9 +4,14 @@ const MODAL_ID = 'nautobot-generic-modal';
 const MODAL_CONTENT_CONTAINER_ID = 'modal-content-container';
 const REFRESH_ON_CLOSE_SELECTOR = '[data-nb-refresh-on-close="true"]';
 
+/*
+ * The heading `id` must stay in sync with the `aria-labelledby` on `#nautobot-generic-modal` (see
+ * `inc/generic_modal.html`) and with the default in `inc/modal_header.html`, so that the dialog keeps an accessible name
+ * no matter whether its content came from the server or from this fallback.
+ */
 const FALLBACK_CONTENT = `
   <div class="modal-header">
-    <h4 class="modal-title" id="modal-fallback-title">Loading...</h4>
+    <h4 class="modal-title" id="nb-modal-title">Loading...</h4>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
   </div>
   <div class="modal-body text-center p-5">

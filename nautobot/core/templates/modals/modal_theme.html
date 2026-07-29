@@ -2,11 +2,16 @@
 {% load form_helpers %}
 {% load helpers %}
 <!-- Theme Setting Modal -->
-<div id="theme_modal" class="modal fade" role="dialog">
+<div id="theme_modal"
+     class="modal fade"
+     role="dialog"
+     tabindex="-1"
+     aria-modal="true"
+     aria-labelledby="theme_modal_title">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">Select a Theme</h4>
+                <h4 class="modal-title" id="theme_modal_title">Select a Theme</h4>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">

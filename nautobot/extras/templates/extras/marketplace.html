@@ -122,11 +122,16 @@
                     </div>
                     </div>
 
-                    <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
+                    <div class="modal fade"
+                         tabindex="-1"
+                         id="modal-{{ app.package_name }}"
+                         role="dialog"
+                         aria-modal="true"
+                         aria-labelledby="modal-{{ app.package_name }}-title">
                         <div class="modal-dialog modal-lg" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h4 class="modal-title">
+                                    <h4 class="modal-title" id="modal-{{ app.package_name }}-title">
                                         {{ app.name }}
                                         {% if app.installed %}<span class="badge bg-success">Installed</span>{% endif %}
                                     </h4>
