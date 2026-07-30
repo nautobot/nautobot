@@ -1,0 +1,1 @@
+Fixed submitting a Location form without a Location Type returning a server error instead of a validation error.

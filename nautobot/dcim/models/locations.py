@@ -276,6 +276,13 @@ class Location(TreeModel, PrimaryModel):
     def clean(self):
         super().clean()
 
+        # Every check below dereferences `self.location_type`. `ModelForm._post_clean()` calls `full_clean()` and so
+        # reaches this method even when `location_type` failed form validation, at which point reading the unset foreign
+        # key raises `RelatedObjectDoesNotExist` and surfaces as a 500 instead of a form error. The missing value is
+        # already reported by field validation, so there is nothing to add here.
+        if self.location_type_id is None:
+            return
+
         # Prevent changing location type as that would require a whole bunch of cascading logic checks,
         # e.g. what if the new type doesn't allow all of the associated objects that the old type did?
         if self.present_in_database:

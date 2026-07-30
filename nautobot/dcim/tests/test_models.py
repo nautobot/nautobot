@@ -35,6 +35,7 @@ from nautobot.dcim.choices import (
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
+from nautobot.dcim.forms import LocationForm
 from nautobot.dcim.models import (
     Cable,
     CableLane,
@@ -1434,6 +1435,25 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
         )
 
         self.status = Status.objects.get_for_model(Location).first()
+
+    def test_clean_without_location_type(self):
+        """
+        `clean()` must not dereference an unset `location_type`.
+
+        `ModelForm._post_clean()` calls `full_clean()` even when `location_type` failed form validation, so `clean()`
+        used to raise `RelatedObjectDoesNotExist` and surface as a 500 rather than a form error.
+        """
+        location = Location(name="No Location Type", status=self.status)
+        with self.assertRaises(ValidationError) as context:
+            location.full_clean()
+        # The missing value should be reported as an ordinary field error.
+        self.assertIn("location_type", context.exception.message_dict)
+
+    def test_form_without_location_type_is_invalid_not_error(self):
+        """Submitting a Location form with no `location_type` should be a validation failure, not an exception."""
+        form = LocationForm(data={"name": "No Location Type", "status": self.status.pk})
+        self.assertFalse(form.is_valid())
+        self.assertIn("location_type", form.errors)
 
     def test_custom_natural_key_field_lookups(self):
         """Test that the custom implementation of Location.natural_key_field_lookups works as intended."""
