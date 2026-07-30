@@ -37,7 +37,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
-from nautobot.dcim.utils import cable_status_color_css
+from nautobot.dcim.utils import cable_status_color_css, get_cable_pk
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
@@ -739,7 +739,10 @@ class InterfaceTable(ModularDeviceComponentTable, BaseInterfaceTable, PathEndpoi
 
     class Meta(ModularDeviceComponentTable.Meta):
         model = Interface
-        row_attrs = {"class": cable_status_color_css}
+        row_attrs = {
+            "data-cable-pk": get_cable_pk,
+            "class": cable_status_color_css,
+        }
         fields = (
             "pk",
             "device",
@@ -870,6 +873,7 @@ class DeviceModuleInterfaceTable(InterfaceTable):
             "actions",
         ]
         row_attrs = {
+            "data-cable-pk": get_cable_pk,
             "class": cable_status_color_css,
             "data-name": lambda record: record.name,
         }

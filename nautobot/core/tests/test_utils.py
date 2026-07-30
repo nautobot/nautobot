@@ -17,6 +17,7 @@ from django.test import override_settings, tag
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
@@ -1456,3 +1457,15 @@ class TestQuerySetUtils(TestCase):
             new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
             mock_prefetch_related.assert_not_called()
             self.assertIs(new_queryset, queryset)
+
+
+class TestSerializeObjectV2(TestCase):
+    def test_serialize_object_v2_json_only(self):
+        """Make sure serialize_object_v2() returns a JSON-serializable dict and no lazy/deferred queryset data."""
+        for model_class in apps.get_models():
+            instance = model_class.objects.first()
+            if instance is None:
+                continue
+            data = models_utils.serialize_object_v2(instance)
+            with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
+                NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)
