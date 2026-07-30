@@ -9,6 +9,7 @@ from celery.beat import _evaluate_entry_args, _evaluate_entry_kwargs, reraise, S
 from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.utils import timezone
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
@@ -300,9 +301,22 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         """
         Run a tick - one iteration of the scheduler.
 
-        This is an extension of `celery.beat.Scheduler.tick()` to touch the `CELERY_BEAT_HEARTBEAT_FILE` file.
+        This is an extension of `celery.beat.Scheduler.tick()` to touch the `CELERY_BEAT_HEARTBEAT_FILE`
+        file and to guard against a single stale schedule entry crashing the whole beat process.
         """
-        interval = super().tick(*args, **kwargs)
+        try:
+            interval = super().tick(*args, **kwargs)
+        except IntegrityError:
+            # A ScheduledJob entry in beat's memory can go stale when a related record (Job,
+            # user) is deleted concurrently: upstream ModelEntry.is_due() full-saves the stale
+            # instance, which raises IntegrityError outside of any of our apply_async() error
+            # handling. Don't let one stale entry kill the whole process — force a schedule
+            # reload instead; rebuilding the entries from fresh database state lets
+            # NautobotScheduleEntry.__init__() disable the orphaned schedule.
+            logger.warning("Database integrity error during scheduler tick; forcing a schedule reload.")
+            self._initial_read = True  # DatabaseScheduler.schedule: force a full re-read from the database
+            self._heap = None  # celery.beat.Scheduler.tick: force heap rebuild from the fresh schedule
+            interval = self.max_interval
         if settings.CELERY_BEAT_HEARTBEAT_FILE:
             Path(settings.CELERY_BEAT_HEARTBEAT_FILE).touch(exist_ok=True)
         return interval
