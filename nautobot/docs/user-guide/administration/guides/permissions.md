@@ -239,39 +239,51 @@ If you need field-level control, the available approximations are constraining o
 
 ### Related Objects in UI List and Detail Views
 
-When viewing a list of objects, or the details of a single object, in the Nautobot UI, the table row or panel describing an object will often include brief information (such as the "name" or other identifier) of relevant related objects. For example, a Location may display the names of its related Status, Location Type, Tenant, etc. By design, Nautobot does **not** generally enforce view permissions on the related objects before displaying this brief information, as it's considered a necessary part of basic platform functionality. Clicking the hyperlink to any such related object (to view more detailed information about it) *will*, if the user lacks view permission for the related object, result in the expected HTTP 403 or 404 error.
+When viewing a list of objects, or the details of a single object, in the Nautobot UI, the table row or panel describing an object will often include brief information (such as the "name" or other identifier) of relevant individual related objects. For example, a Location may display the names of its related Status, Location Type, Tenant, etc. By design, Nautobot does **not** generally enforce view permissions on such related objects before displaying this brief information, as it's considered a necessary part of basic platform functionality. Clicking the hyperlink to any such related object (to view more detailed information about it) *will*, if the user lacks view permission for the related object, result in the expected HTTP 403 or 404 error.
 
-#### Tree Models and Ancestor Permissions
+Note that the behavior for "multiply-related" objects, where the "primary" object relates to a *list* of related objects (a reverse-foreign-key relation, a many-to-many relation, or similar), is different by design. In this case, the Nautobot UI generally *filters* or *restricts* the list of related objects by "view" permission, such that the UI will *omit entirely* from the list any related object(s) that the user lacks permission to view. Similar behavior is seen for multiply-related object retrieval in the [REST API](#related-objects-in-the-rest-api) and [GraphQL](#related-objects-in-graphql), as described below.
 
-For hierarchical models (Locations, Rack Groups, Tenant Groups, etc.), it is the administrator's responsibility to grant `view` permission on an object's **ancestors** along with the object itself. If a user is granted restricted permission to view "child"/"leaf" records but not their ancestors, various inconsistencies may be seen, for example:
+### Distantly Related Objects
 
-- As described above, brief information about ancestor records (such as their "name") may still appear in various parts of the UI, such as breadcrumbs.
-- List views may render the child indented at its true depth with no visible parent rows above it, which looks like a misrendered or orphaned entry, or may even mistakenly appear to attribute the child to a different parent record entirely. These display artifacts are in general, considered a misconfiguration of Nautobot, rather than a bug in the platform which would justify a code fix.
+In some cases, a specific view may, as a part of its functionality, necessarily include brief information about distantly-related objects, that is to say objects that are not directly related to the base object(s) being viewed, but may be related to other objects, which are related to other objects, which are eventually in turn related to the base object(s) in some relevant way. If this information is essential to Nautobot's functionality and usability, even these distantly-related objects may necessarily display some information to the user regardless of their "view" permissions or lack thereof. Some examples:
+
+- Hierarchical models (Locations, Prefixes, Racks and Rack Groups, Tenants and Tenant Groups, etc.) often need to display a summary of their hierarchy (a Location's sequence of ancestors, a Prefix's sequence of container prefixes, a Rack's sequence of containing Rack Groups, etc.) as relevant contextual information.
+- Cable terminations (Interface, Front Port, Console Port, etc.) may necessarily render names or other information about the remote objects to which they are connected.
+- Cable-path tracing views may necessarily render the names and other relevant attributes of all Devices, Interfaces, patch panels, other cables, etc. involved in the trace.
+
+!!! tip
+    In general, the contextual information provided in these various views is considered a necessary aspect of Nautobot's functionality, and by design Nautobot may not necessarily enforce "view" permissions on individual data points in this information. Disclosure of otherwise non-permitted information to the user in these contexts is not *generally* considered to be a security issue in Nautobot; rather it generally points to a less-than-ideal usage of Nautobot's flexible permissions system.
+
+    Conversely, in some cases, overly-restrictive configuration of user "view" permissions may result in "incorrect" or "suboptimal" display of data - for example, the "tree" rendering of Location and Prefix list views may behave oddly if a user's constrained view permissions result in the display of some "leaf" objects but force omission of other "parent" or "ancestor" objects entirely from the list. This too is *generally* considered a misconfiguration of permissions, rather than a Nautobot bug to be fixed in code.
 
 ### Related Objects on Forms
 
-When a user edits object A that references a related object B (for example, a device and its location), form dropdowns only offer related objects the user has `view` permission on. Two situations can be confusing:
+When a user edits object A that references a related object B (for example, a device and its location), form dropdowns only offer related objects the user has `view` permission on. This can be confusing, and in some situations of overly-restrictive permissions, *may actually result in unintended removal of relevant data*, for example:
 
-- If the object's *currently assigned* related object is one the user cannot view, re-submitting the form fails with a generic "Select a valid choice" validation error. The error does not explain that the underlying cause is a missing `view` permission on the related object. If the field is required, the user may be unable to save the object at all.
-- Users can only *assign* related objects they can view. When a user reports they "can't find" an object in a dropdown that clearly exists, a missing `view` permission on the related model is the most common cause.
+- If the object's *currently assigned* related object is one the user cannot view, the form **will not present the currently assigned object as an option**, instead rendering with an empty selection for that relation. If the field is required, submitting the form as-is will fail with a generic "Select a valid choice" validation error. The error does not explain that the underlying cause is a missing `view` permission on the related object. Conversely, if the field is *not* required, submitting the form as-is may **silently unassign the currently assigned related object** from the object being edited.
+- For *multiply-related* objects, where the form permits selection of multiple such related objects, the form **will only include related objects the user is permitted to view, even if other (non-permitted) objects were previously selected and assigned**. A user with limited related-object `view` permissions editing an object may again result in **silently unassigning previously related objects** from the object being edited.
 
 !!! tip
     When granting `add` or `change` on a model, remember to also grant `view` on the models it commonly references (status, role, location, tenant, etc.), scoped appropriately.
+
+- Similarly, users can only *select and assign* related objects they can view. When a user reports they "can't find" an object that clearly exists in a dropdown, a missing `view` permission on the related model is the most common cause.
 
 !!! tip
     For models that have the ability to restrict individual records' applicability by content type ([Status](../../platform-functionality/status.md), [Role](../../platform-functionality/role.md), [Location Type](../../core-data-model/dcim/locationtype.md), etc.) a missing content-type assignment is another common cause of records "missing" from a dropdown.
 
 ### Related Objects in the REST API
 
-When the REST API is called with a [`depth` query parameter](../../platform-functionality/rest-api/overview.md#depth-query-parameter) greater than zero, detailed information about related objects may be included in the serialized response. This information is constrained by `view` permissions as appropriate, such that related objects that the user has permissions to view will provide full data, but related objects that the user does *not* have permissions to view will return only a minimal summary of the object, much in the same way as the UI (as described above) will display brief information about related objects even if the user lacks appropriate related-object `view` permissions.
+Much like the UI behavior, the REST API for a given object(s) will limit the information returned about related objects by the user's `view` permission. Multiply-related object lists will *omit* related objects that the user lacks permission to view, while singly-related objects will provide only very limited information if not viewable by the user.
 
-Additionally, object writes (POST/PATCH/PUT) via the REST API also enforce view permissions for related objects - much like the UI behavior described above, a user cannot create or update an object via the REST API to include new references to related objects that they lack `view` permission for.
+When the REST API is called with a [`depth` query parameter](../../platform-functionality/rest-api/overview.md#depth-query-parameter) greater than zero, detailed information about related objects may be included in the serialized response. This information is constrained by `view` permissions as appropriate, such that related objects that the user has permissions to view will provide full data, but singly-related objects that the user does *not* have permissions to view will return only a minimal summary of the object, much in the same way as the UI (as described above) will display brief information about related objects even if the user lacks appropriate related-object `view` permissions. At depth, multiply-related objects that are not viewable will still be omitted from related-object lists as described above.
+
+Additionally, object writes (POST/PATCH/PUT) via the REST API also enforce view permissions for related objects - much like the UI behavior described above, a user cannot create or update an object via the REST API to include new references to related objects that they lack `view` permission for. Unlike the UI, it's possible via the REST API to *partially* update specific fields on an object (via a `PATCH` request), so a user with limited view permissions on related objects may be able, with appropriately constructed PATCH data, to update related-object fields that they *do* have permission to view, without necessarily causing data loss on related-object fields that they lack permissions for.
 
 Refer to [REST API Object Permissions](../../platform-functionality/rest-api/object-permissions.md) for more details.
 
 ### Related Objects in GraphQL
 
-When querying related objects via [GraphQL](../../platform-functionality/graphql.md), `view` permissions are also enforced. Unlike the UI or REST API, a GraphQL query is unable to provide "limited" information about a related object, so any queries that traverse from a viewable base object to a non-viewable related object(s) in GraphQL will simply report the related object as being `null`, as if it didn't exist at all (or, equivalently, as if the foreign key on the base object was set to NULL).
+When querying related objects via [GraphQL](../../platform-functionality/graphql.md), `view` permissions are also enforced. Traversal from an object to a list of related objects behaves like the UI and REST API in that the related-object list will be filtered/restricted by view permissions, with unviewable related objects omitted entirely from the list as if not present. However, for singly-related objects, unlike the UI or REST API, a GraphQL query is unable to provide "limited" information about a related object, so any queries that traverse from a viewable base object to a non-viewable single related object in GraphQL will simply report the related object as being `null`, as if it didn't exist at all (or, equivalently, as if the foreign key on the base object was set to NULL). This can be surprising to users.
 
 Refer to [GraphQL Permissions Enforcement](../../platform-functionality/graphql.md#permissions-enforcement) for more details.
 
@@ -325,7 +337,7 @@ Day-to-day network data management is what the constraint system is designed for
 
 - Circuits
 - Cloud
-- DCIM (devices, interfaces, racks, cables, locations — remember [ancestor permissions](#tree-models-and-ancestor-permissions))
+- DCIM (devices, interfaces, racks, cables, locations — remember [ancestor permissions](#distantly-related-objects))
 - IPAM (prefixes, IP addresses, VLANs, VRFs)
 - Load Balancers
 - Tenancy
