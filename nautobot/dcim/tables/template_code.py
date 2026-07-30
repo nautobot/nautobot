@@ -227,7 +227,8 @@ LOCATION_TREE_LINK = """
             {% endfor %}
             {% if table_expandable|default:False %}
                 {% if children_exists %}
-                    <button class="nb-subtree nb-subtree-expandable"
+                    <button aria-expanded="false"
+                            class="nb-subtree nb-subtree-expandable"
                             hx-get="{% url 'dcim:location_children' pk=record.pk %}{% django_querystring return_url=return_url %}"
                             hx-indicator="closest .table-responsive"
                             hx-select=".table-responsive tr"
@@ -235,7 +236,7 @@ LOCATION_TREE_LINK = """
                             hx-swap="afterend"
                             hx-target="closest tr"
                             type="button"
-                    ></button>
+                    ><span class="visually-hidden">Show locations below {{ record.name }}</span></button>
                 {% else %}
                     {# placeholder for alignment with expandable rows #}
                     <span class="nb-subtree nb-subtree-not-expandable"></span>
@@ -247,10 +248,8 @@ LOCATION_TREE_LINK = """
                     {% if children_exists %}
                         <a class="mdi mdi-table-filter"
                            href="{% url 'dcim:location_list' %}?subtree={{ record.pk }}"
-                           aria-hidden="true"
                            title="Filter to this location and its descendants"
-                        >
-                        </a>
+                        ><span class="visually-hidden">Filter to {{ record.name }} and its descendants</span></a>
                     {% endif %}
                 </span>
             {% endif %}
@@ -286,7 +285,8 @@ MODULEBAY_TREE_LINK = """
         {% endif %}
         {% if table_expandable|default:False %}
             {% if record.installed_child_bays.exists %}
-                <button class="nb-subtree nb-subtree-expandable"
+                <button aria-expanded="false"
+                        class="nb-subtree nb-subtree-expandable"
                         hx-get="{% url 'dcim:modulebay_nestedbays' pk=record.pk %}?tree_depth={{ tree_depth|default:0|add:1 }}{% if return_url %}&return_url={{ return_url|urlencode }}{% endif %}"
                         hx-indicator="closest .table-responsive"
                         hx-select=".table-responsive tr"
@@ -294,7 +294,7 @@ MODULEBAY_TREE_LINK = """
                         hx-swap="afterend"
                         hx-target="closest tr"
                         type="button"
-                ></button>
+                ><span class="visually-hidden">Show module bays inside {{ record }}</span></button>
             {% else %}
                 {# placeholder for alignment with expandable rows #}
                 <span class="nb-subtree nb-subtree-not-expandable"></span>
