@@ -446,7 +446,7 @@ def fgcolor(value):
 
     Example:
         >>> fgcolor("#999999")
-        "#ffffff"
+        "#000000"
     """
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):

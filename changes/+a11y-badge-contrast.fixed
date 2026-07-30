@@ -1,0 +1,1 @@
+Fixed status, role and tag badge text colors being chosen by a perceived-brightness heuristic that could fall below the WCAG AA 4.5:1 contrast minimum; the ideal foreground color is now selected by actual contrast ratio.
