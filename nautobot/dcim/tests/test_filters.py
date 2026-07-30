@@ -3888,7 +3888,7 @@ class CableTestCase(FilterTestCases.FilterTestCase):
                 ).distinct(),
             )
 
-    def test_termination_a_id_and_b_id(self):
+    def test_termination_id_and_a_id_and_b_id(self):
         """Test the termination_a_id and termination_b_id filters."""
         a_endpoints = list(CableToCableTermination.objects.filter(cable_end="A")[:2])
         b_endpoints = list(CableToCableTermination.objects.filter(cable_end="B")[:2])
@@ -3903,6 +3903,12 @@ class CableTestCase(FilterTestCases.FilterTestCase):
             self.assertQuerySetEqualAndNotEmpty(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(pk__in=[ep.cable_id for ep in b_endpoints]),
+            )
+        with self.subTest("termination_id"):
+            params = {"termination_id": [str(ep.termination_id) for ep in [*a_endpoints, *b_endpoints]]}
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                self.queryset.filter(pk__in=[ep.cable_id for ep in [*a_endpoints, *b_endpoints]]),
             )
 
 

@@ -27,6 +27,7 @@ from nautobot.core.settings_funcs import (
     remote_auth_enabled,
     sso_auth_enabled,
 )
+from nautobot.core.utils.cache import request_cache
 from nautobot.core.views import server_error
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import web_request_context
@@ -88,6 +89,25 @@ class ExternalAuthMiddleware(MiddlewareMixin):
         if settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS:
             # Assign default object permissions to the user
             assign_permissions_to_user(request.user, settings.EXTERNAL_AUTH_DEFAULT_PERMISSIONS)
+
+
+class RequestCacheMiddleware:
+    """
+    Wrap each request in a `request_cache()` scope.
+
+    This provides a small in-process cache (see `nautobot.core.utils.cache.request_cache`) that certain
+    frequently-repeated, rarely-changing model-metadata lookups (e.g. CustomField/Relationship/ComputedField
+    definitions for a given model) use to avoid redundant Redis round-trips when the same lookup is performed many
+    times while handling a single request - most notably when the REST API's `depth` query parameter causes the
+    same small set of model metadata to be looked up once per serialized related object.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        with request_cache():
+            return self.get_response(request)
 
 
 class ObjectChangeMiddleware:

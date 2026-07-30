@@ -1,0 +1,1 @@
+Changed change logging of many-to-many associations declared with an explicit `through` model so that both associated objects now receive a change log entry.

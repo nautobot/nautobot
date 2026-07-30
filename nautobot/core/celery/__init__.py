@@ -12,12 +12,10 @@ from celery.worker.state import revoked as canceled_tasks
 from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
-from django.utils.functional import SimpleLazyObject
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot import add_failure_logger, add_success_logger
-from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
@@ -310,29 +308,6 @@ def setup_prometheus(**kwargs):
         logger.warning("Cannot export Prometheus metrics from worker, no available ports in range.")
 
 
-def nautobot_kombu_json_loads_hook(data):
-    """
-    In concert with the NautobotKombuJSONEncoder json encoder, this object hook method decodes
-    objects that implement the `__nautobot_type__` interface via the `nautobot_deserialize()` class method.
-    """
-    if "__nautobot_type__" in data:
-        qual_name = data.pop("__nautobot_type__")
-        branch_name = data.pop("__nautobot_branch__", None)
-        logger.debug("Performing nautobot deserialization for type %s", qual_name)
-        cls = import_string_optional(qual_name)  # fully qualified dotted import path
-        if cls:
-
-            def get_object():
-                with BranchContext(branch_name=branch_name, autocommit=False):
-                    return cls.objects.get(id=data["id"])
-
-            return SimpleLazyObject(get_object)
-        else:
-            raise TypeError(f"Unable to import {qual_name} during nautobot deserialization")
-    else:
-        return data
-
-
 # Encoder function
 def _dumps(obj):
     return json.dumps(obj, cls=NautobotKombuJSONEncoder, ensure_ascii=False)
@@ -340,7 +315,7 @@ def _dumps(obj):
 
 # Decoder function
 def _loads(obj):
-    return json.loads(obj, object_hook=nautobot_kombu_json_loads_hook)
+    return json.loads(obj)
 
 
 # Register the custom serialization type
