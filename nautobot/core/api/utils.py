@@ -322,11 +322,10 @@ def get_related_field_query_optimizations(serializer, model, max_fields=DEFAULT_
     Returns:
         (list, list): A 2-tuple of (select_related lookup paths, prefetch_related lookup paths).
     """
-    remaining = [max_fields]
-    select_fields, prefetch_fields = _walk_serializer_fields_for_optimizations(
-        serializer, model, prefix="", force_prefetch=False, remaining=remaining
+    select_fields, prefetch_fields, remaining = _walk_serializer_fields_for_optimizations(
+        serializer, model, prefix="", force_prefetch=False, remaining=max_fields
     )
-    if remaining[0] <= 0:
+    if remaining <= 0:
         logger.warning(
             "Reached the maximum number (%s) of select_related()/prefetch_related() optimizations while "
             "inspecting a %s serializer; some nested relations may not be optimized and could result in "
@@ -338,12 +337,18 @@ def get_related_field_query_optimizations(serializer, model, max_fields=DEFAULT_
 
 
 def _walk_serializer_fields_for_optimizations(serializer, model, prefix, force_prefetch, remaining):
-    """Recursive helper for get_related_field_query_optimizations(); see that function's docstring for details."""
+    """
+    Recursive helper for get_related_field_query_optimizations(); see that function's docstring for details.
+
+    `remaining` (int) is the number of additional optimizations still permitted; each call returns the updated
+    count (after any it discovered) alongside its results, so callers can pass the up-to-date value into
+    subsequent sibling/recursive calls rather than relying on shared mutable state.
+    """
     select_fields = []
     prefetch_fields = []
 
     for field_instance in serializer.fields.values():
-        if remaining[0] <= 0:
+        if remaining <= 0:
             break
         if field_instance.write_only:
             continue
@@ -365,14 +370,14 @@ def _walk_serializer_fields_for_optimizations(serializer, model, prefix, force_p
             if not isinstance(model_field, (ManyToManyField, ManyToManyRel, RelatedField, ManyToOneRel, TagsField)):
                 continue
             prefetch_fields.append(source)
-            remaining[0] -= 1
+            remaining -= 1
             # A ListSerializer's `.child` is the per-item (nested) serializer, present only when depth > 0.
             child = getattr(field_instance, "child", None)
-            if child is not None and hasattr(child, "fields") and remaining[0] > 0:
+            if child is not None and hasattr(child, "fields") and remaining > 0:
                 # Everything beneath a to-many relation must be prefetched, even simple FK fields, since
                 # select_related() cannot span M2M/reverse-FK relations. force_prefetch=True guarantees the
                 # recursive call never populates its own "select" list, so only its prefetch list matters here.
-                _, nested_prefetch = _walk_serializer_fields_for_optimizations(
+                _, nested_prefetch, remaining = _walk_serializer_fields_for_optimizations(
                     child, model_field.related_model, f"{source}__", True, remaining
                 )
                 prefetch_fields.extend(nested_prefetch)
@@ -385,15 +390,15 @@ def _walk_serializer_fields_for_optimizations(serializer, model, prefix, force_p
                 prefetch_fields.append(source)
             else:
                 select_fields.append(source)
-            remaining[0] -= 1
-            if isinstance(field_instance, serializers.Serializer) and remaining[0] > 0:
-                nested_select, nested_prefetch = _walk_serializer_fields_for_optimizations(
+            remaining -= 1
+            if isinstance(field_instance, serializers.Serializer) and remaining > 0:
+                nested_select, nested_prefetch, remaining = _walk_serializer_fields_for_optimizations(
                     field_instance, model_field.related_model, f"{source}__", force_prefetch, remaining
                 )
                 select_fields.extend(nested_select)
                 prefetch_fields.extend(nested_prefetch)
 
-    return select_fields, prefetch_fields
+    return select_fields, prefetch_fields, remaining
 
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
