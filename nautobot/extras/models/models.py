@@ -952,6 +952,8 @@ class UserSavedViewAssociation(BaseModel):
     view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     is_metadata_associable_model = False
     is_data_compliance_model = False
+    # A user pinning a personal default view is preference data, not shared data; don't change-log the SavedView.
+    is_m2m_change_logged = False
 
     class Meta:
         unique_together = [["user", "view_name"]]
