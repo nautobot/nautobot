@@ -437,10 +437,11 @@ class GitRepositoryViewSet(NautobotModelViewSet):
         if not request.user.has_perm("extras.change_gitrepository"):
             raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
 
+        repository = get_object_or_404(GitRepository.objects.restrict(request.user, "change"), pk=pk)
+
         if not get_worker_count():
             raise CeleryWorkerNotRunningException()
 
-        repository = get_object_or_404(GitRepository, id=pk)
         job_result = repository.sync(user=request.user)
 
         data = {
