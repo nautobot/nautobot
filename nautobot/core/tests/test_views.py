@@ -499,7 +499,9 @@ class SearchContentTypeView(TestCase):
         response = self.client.get(
             reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
         )
-        self.assertBodyContains(response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True)
+        self.assertBodyContains(
+            response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True
+        )
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)

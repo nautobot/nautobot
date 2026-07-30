@@ -16,7 +16,7 @@ from django.utils.text import Truncator
 import django_tables2
 from django_tables2.data import TableData, TableQuerysetData
 from django_tables2.rows import BoundRows
-from django_tables2.utils import Accessor, OrderBy, OrderByTuple
+from django_tables2.utils import Accessor, AttributeDict, OrderBy, OrderByTuple
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags import helpers
@@ -448,11 +448,21 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         `django_tables2.CheckBoxColumn` emits a bare `<input type="checkbox">` with no label of any kind, which is a
         critical accessibility failure: a screen reader user hears an unlabelled checkbox on every row and has no way to
         tell which object it belongs to. `CheckBoxColumn.render` does not resolve callables in `attrs`, so the per-record
-        name has to be applied here rather than declared in `attrs["input"]`.
+        name cannot be declared in `attrs["input"]` and the input has to be built here instead.
+
+        This mirrors `CheckBoxColumn.render` and additionally sets `aria-label`. `AttributeDict.as_html()` escapes every
+        value and returns a safe string, so no explicit `mark_safe` of interpolated content is needed.
         """
-        checkbox = super().render(value, bound_column, record)
-        label = format_html('aria-label="Select {}"', str(record))
-        return mark_safe(checkbox.replace("<input ", f"<input {label} ", 1))
+        attrs = AttributeDict(
+            {
+                "type": "checkbox",
+                "name": bound_column.name,
+                "value": value,
+                "aria-label": f"Select {record}",
+            },
+            **(self.attrs.get("td__input") or self.attrs.get("input") or {}),
+        )
+        return format_html("<input {} />", attrs.as_html())
 
 
 class BooleanColumn(django_tables2.Column):
