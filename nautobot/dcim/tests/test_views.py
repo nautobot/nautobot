@@ -6231,7 +6231,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[0].pk}))
         self.assertBodyContains(
             response,
-            '<th class="orderable"><a href="?sort=device">Device</a></th>',
+            '<th aria-sort="none" scope="col" class="orderable"><a href="?sort=device">Device<span class="visually-hidden">activate to sort ascending</span></a></th>',
             html=True,
         )
 
@@ -6247,13 +6247,13 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         Interface.objects.create(device=self.devices[1], name="eth3", status=interface_status)
         response = self.client.get(reverse("dcim:device_interfaces", kwargs={"pk": self.devices[1].pk}))
         self.assertNotIn(
-            '<th class="orderable"><a href="?sort=device">Device</a></th>',
+            '<th aria-sort="none" scope="col" class="orderable"><a href="?sort=device">Device<span class="visually-hidden">activate to sort ascending</span></a></th>',
             strip_spaces_between_tags(extract_page_body(response.content.decode(response.charset))),
         )
         # Sanity check:
         self.assertBodyContains(
             response,
-            '<th class="asc orderable"><a href="?sort=-name">Name<span class="mdi mdi-arrow-up-thin"></a></th>',
+            '<th aria-sort="ascending" scope="col" class="asc orderable"><a href="?sort=-name">Name<span aria-hidden="true" class="mdi mdi-arrow-up-thin"></span><span class="visually-hidden">sorted ascending, activate to sort descending</span></a></th>',
             html=True,
         )
 
