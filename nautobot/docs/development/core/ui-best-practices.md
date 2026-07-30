@@ -203,7 +203,7 @@ When `settings.DEBUG` is set to `True`, an authenticated Nautobot user can acces
 
 ## Accessibility
 
-Nautobot targets [WCAG 2.1 Level AA](https://www.w3.org/TR/WCAG21/). The conventions below are the ones core already
+Nautobot targets [WCAG 2.2 Level AA](https://www.w3.org/TR/WCAG22/). The conventions below are the ones core already
 follows; new UI code and Nautobot App code should follow them too.
 
 ### Automated checking
@@ -214,7 +214,7 @@ Two linters enforce a subset of this automatically, so run them before opening a
   either to the ignore list in `pyproject.toml`.
 - Integration tests can assert against [axe-core](https://github.com/dequelabs/axe-core) via
   `SeleniumTestCase.assertNoAccessibilityViolations()`, which scans the page currently loaded in the browser against the
-  WCAG 2.1 A and AA rule tags:
+  WCAG 2.2 A and AA rule tags (which include everything carried forward from 2.0 and 2.1):
 
     ```python
     def test_my_view(self):
@@ -290,6 +290,28 @@ Colour must never be the only signal. Text-coloured links inside a block of pros
 and form control borders need 3:1 against their background (WCAG 1.4.11) -- `--nb-input-border-color` exists for this and
 is deliberately darker than the decorative `--bs-border-color`.
 
+### Pointer target size
+
+Interactive controls need a hit area of at least 24x24 CSS pixels (WCAG 2.5.8). An icon-only control sized to its glyph
+is usually 20px or less, so add `nb-target-size-min`, which applies a 24x24 minimum without enlarging the glyph:
+
+```html
+<a class="align-items-center d-inline-flex justify-content-center nb-target-size-min" href="..." aria-label="Search help">
+    <span aria-hidden="true" class="mdi mdi-help-circle-outline"></span>
+</a>
+```
+
+Not every small control needs it. The criterion exempts targets with 24px of clearance from their neighbours -- which is
+why table row checkboxes pass at 20px, given the surrounding cell padding -- and targets whose size is set by the text
+flow, such as inline links in prose.
+
+### Keeping focus visible
+
+A focused control must not be completely hidden by other content (WCAG 2.4.11). Nautobot pins form actions to the bottom
+of the viewport with `.nb-form-sticky-footer`, so `:root` reserves `scroll-padding-block-end`; the browser then stops
+scrolling short of the bar instead of leaving a newly focused field underneath it. If you add another sticky or fixed
+element that can overlap page content, check that tabbing into content behind it still leaves the focused control visible.
+
 ### Dynamic content
 
 Content that appears without a page load is not announced unless it lands in a live region. `#header_messages` is a
@@ -298,7 +320,7 @@ add a `role="status"` element, as the paginator does for its "Showing X-Y of Z" 
 
 ### Pointer-only interactions
 
-Anything driven by dragging needs a keyboard equivalent (WCAG 2.5.7). `draggable.js` implements the conventional
+Anything driven by dragging needs a keyboard equivalent (WCAG 2.5.7, added in 2.2). `draggable.js` implements the conventional
 pattern -- a focusable grip button that is picked up with Enter or Space, moved with the arrow keys, and dropped with
 Enter or Escape, announcing each move -- and reordering works by moving DOM nodes, so persistence layers that watch for
 mutations keep working. Add `nb-draggable-grip` to a button inside the drag handle to opt into it.
