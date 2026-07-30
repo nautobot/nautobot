@@ -23,12 +23,22 @@ class AccessibilityTestCase(SeleniumTestCase):
         super().setUp()
         self.login_as_superuser()
 
-        # A single object is enough to get a populated list view and a detail view to scan.
-        self.location_type = LocationType.objects.create(name="A11y Test Site")
         self.status = Status.objects.get_for_model(Location).first()
+
+        # A parent/child pair, not a single object: the tree expand caret and the "filter to descendants" link only
+        # render for rows that have children, and scanning a flat list silently skips that markup entirely. Two real
+        # violations in it went unnoticed because the original fixture had no hierarchy.
+        self.location_type = LocationType.objects.create(name="A11y Test Site")
+        self.child_location_type = LocationType.objects.create(name="A11y Test Building", parent=self.location_type)
         self.location = Location.objects.create(
             name="A11y Test Location",
             location_type=self.location_type,
+            status=self.status,
+        )
+        self.child_location = Location.objects.create(
+            name="A11y Test Child Location",
+            location_type=self.child_location_type,
+            parent=self.location,
             status=self.status,
         )
 
