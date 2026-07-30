@@ -784,6 +784,15 @@ button {
 }
 
 /*
+ * Links are otherwise distinguished from surrounding text by colour alone. That is acceptable for standalone links, but
+ * WCAG 1.4.1 requires more than colour for a link sitting inside a block of text, so underline those. Form help text is
+ * where Nautobot most often embeds links in prose.
+ */
+.form-text a {
+  text-decoration: underline;
+}
+
+/*
  * Skip link (bypass block, WCAG 2.4.1)
  *
  * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document
