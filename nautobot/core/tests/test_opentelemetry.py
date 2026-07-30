@@ -962,6 +962,68 @@ class MainInstrumentGatingTest(testing.TestCase):
         mock_instrument.assert_not_called()
 
 
+class MainForkingCommandGatingTest(testing.TestCase):
+    """Verify main() only installs OTLP exporters in-process for non-forking commands.
+
+    instrument() defers exporter creation because the OTLP gRPC channel is fork-unsafe; the forking
+    servers (`start` uWSGI, `celery` worker/beat) build their exporters per process AFTER fork via
+    their own hooks. main() installs them in-process only for single-process commands.
+
+    Regression: the command used to be identified as the first non-option token, so a value-bearing
+    option preceding it (e.g. `--verbosity 2 start`) was misread as the command, wrongly installing the
+    fork-unsafe exporter in the pre-fork parent. The check now skips whenever a forking command appears
+    anywhere in the args, which is robust against argument ordering.
+    """
+
+    def _install_exporters_called_for_argv(self, argv):
+        """Drive main() with the given argv and return whether install_exporters() was called."""
+        fake_settings = MagicMock()
+        fake_settings.OTEL_PYTHON_DJANGO_INSTRUMENT = True
+
+        with (
+            patch("nautobot.core.cli.load_settings"),
+            patch.dict("sys.modules", {"nautobot_config": fake_settings}),
+            patch("nautobot.core.cli.opentelemetry.instrument"),
+            patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install_exporters,
+            patch("nautobot.core.cli.execute_from_command_line"),
+            patch("sys.argv", argv),
+        ):
+            from nautobot.core.cli import main
+
+            main()
+
+        return mock_install_exporters.called
+
+    def test_single_process_command_installs_in_process(self):
+        """A single-process command (migrate) installs the exporters in-process."""
+        self.assertTrue(self._install_exporters_called_for_argv(["nautobot-server", "migrate"]))
+
+    def test_runserver_installs_in_process(self):
+        """runserver is single-process and installs the exporters in-process."""
+        self.assertTrue(self._install_exporters_called_for_argv(["nautobot-server", "runserver"]))
+
+    def test_start_skips_in_process_install(self):
+        """`start` (uWSGI, forking) must not install exporters pre-fork."""
+        self.assertFalse(self._install_exporters_called_for_argv(["nautobot-server", "start", "--ini", "x"]))
+
+    def test_celery_worker_skips_in_process_install(self):
+        """`celery worker` (forking) must not install exporters pre-fork."""
+        self.assertFalse(self._install_exporters_called_for_argv(["nautobot-server", "celery", "worker"]))
+
+    def test_start_with_preceding_value_option_still_skips(self):
+        """Regression: a value-bearing option before `start` must not defeat the forking-command skip."""
+        self.assertFalse(
+            self._install_exporters_called_for_argv(["nautobot-server", "--verbosity", "2", "start"]),
+            "A leading `--verbosity 2` must not cause install_exporters() to run pre-fork for `start`.",
+        )
+
+    def test_celery_with_preceding_value_option_still_skips(self):
+        """Regression: a value-bearing option before `celery` must not defeat the forking-command skip."""
+        self.assertFalse(
+            self._install_exporters_called_for_argv(["nautobot-server", "--pythonpath", "/opt", "celery", "beat"]),
+        )
+
+
 class ExtraInstrumentorsTest(testing.TestCase):
     """Verify instrument() installs the instrumentors listed in NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS."""
 

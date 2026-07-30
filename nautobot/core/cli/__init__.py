@@ -308,22 +308,22 @@ def main():
 
         # instrument() installs the auto-instrumentors + tracer provider but NOT the OTLP exporters,
         # because the OTLP gRPC channel is not fork-safe (grpc's C-core would be inherited broken by
-        # forked workers -> SIGSEGV). These commands therefore defer exporter creation and install it
-        # per process elsewhere:
-        #   - `start` (uWSGI) creates the exporters per worker AFTER fork via the postfork hook in
-        #     nautobot.core.wsgi.
-        #   - `celery` covers every Celery subcommand -- they are all launched as
-        #     `nautobot-server celery <subcommand>`, so the first positional token below is always
-        #     "celery", never "worker"/"beat". The worker builds its exporters post-fork via the
-        #     `worker_process_init` handler in nautobot.core.celery; the (non-forking) beat scheduler
-        #     builds them in-process via the `beat_init` handler there. We do not parse the celery
-        #     subcommand (fragile against value-bearing global flags like `-A`), so both are excluded
-        #     here and handled by those signal handlers.
+        # forked workers -> SIGSEGV). The forking servers install their exporters per process AFTER
+        # fork, via their own hooks:
+        #   - `start` (uWSGI): the postfork hook in nautobot.core.wsgi.
+        #   - `celery`: the worker builds them post-fork via the `worker_process_init` handler, and the
+        #     (non-forking) beat scheduler in-process via the `beat_init` handler -- both in
+        #     nautobot.core.celery. (`celery <subcommand>` is always launched with `celery` as the
+        #     Django subcommand, so its own subcommand/flags never reach this check.)
         # Every other command is single-process, so install the exporters here where in-process channel
-        # creation is safe.
+        # creation is safe. Only do so when we are positively sure NO forking command is present:
+        # checking membership anywhere in unparsed_args (rather than parsing out "the" subcommand) is
+        # robust against value-bearing options preceding it (e.g. `--verbosity 2 start`), which would
+        # otherwise be misread as the command and wrongly install pre-fork. The trade-off -- a command
+        # taking a literal "start"/"celery" argument value would over-skip its in-process exporter -- is
+        # safe: a missed export is far better than a SIGSEGV.
         _FORKING_COMMANDS = {"start", "celery"}
-        django_command = next((arg for arg in unparsed_args if not arg.startswith("-")), None)
-        if django_command not in _FORKING_COMMANDS:
+        if not _FORKING_COMMANDS.intersection(unparsed_args):
             install_exporters(config=nautobot_config)
 
     execute_from_command_line([sys.argv[0], *unparsed_args])
