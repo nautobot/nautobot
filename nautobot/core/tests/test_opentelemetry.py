@@ -458,6 +458,72 @@ class InstrumentExporterBranchTest(testing.TestCase):
         mock_exporter.assert_called_once()
 
 
+class CeleryExporterHookTest(testing.TestCase):
+    """Verify the Celery signal handlers that install OTLP exporters per process.
+
+    `instrument()` runs pre-fork and deliberately defers exporter creation because the OTLP gRPC
+    channel is fork-unsafe. The Celery worker builds its exporters post-fork via the
+    `worker_process_init` handler; the (non-forking) beat scheduler builds them in-process via the
+    `beat_init` handler, because the CLI entrypoint cannot distinguish `celery beat` from
+    `celery worker` and so skips in-process install for every `celery` subcommand. Both handlers must
+    delegate to `install_exporters()` when OTel is enabled and be no-ops when it is disabled.
+    """
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
+    def test_worker_process_init_installs_exporters_when_enabled(self):
+        """The worker_process_init handler must install exporters when OTel is enabled."""
+        from nautobot.core.celery import install_otel_exporters
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters()
+
+        mock_install.assert_called_once_with()
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
+    def test_beat_init_installs_exporters_when_enabled(self):
+        """The beat_init handler must install exporters when OTel is enabled.
+
+        Regression: beat is launched as `celery beat`, which the CLI entrypoint sees only as `celery`
+        and excludes from in-process exporter creation. Without this handler beat would run instrumented
+        but export nothing.
+        """
+        from nautobot.core.celery import install_otel_exporters_beat
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters_beat()
+
+        mock_install.assert_called_once_with()
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=False)
+    def test_beat_init_is_noop_when_disabled(self):
+        """The beat_init handler must not create exporters when OTel is disabled (the default)."""
+        from nautobot.core.celery import install_otel_exporters_beat
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters_beat()
+
+        mock_install.assert_not_called()
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=False)
+    def test_worker_process_init_is_noop_when_disabled(self):
+        """The worker_process_init handler must not create exporters when OTel is disabled (the default)."""
+        from nautobot.core.celery import install_otel_exporters
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters()
+
+        mock_install.assert_not_called()
+
+    def test_beat_init_handler_is_connected_to_signal(self):
+        """The beat_init handler must actually be wired to Celery's beat_init signal."""
+        from celery import signals
+
+        from nautobot.core.celery import install_otel_exporters_beat
+
+        receivers = [ref() for _, ref in signals.beat_init.receivers]
+        self.assertIn(install_otel_exporters_beat, receivers)
+
+
 class APITraceGenerationTest(testing.APITestCase):
     """Verify that OpenTelemetry spans are generated when an API endpoint is called."""
 

@@ -1,0 +1,1 @@
+Fixed the Celery beat scheduler silently dropping all OpenTelemetry telemetry when tracing was enabled, by installing the OTLP exporters in the beat process via a `beat_init` handler (beat does not fork, so it is never covered by the worker's post-fork exporter hook).

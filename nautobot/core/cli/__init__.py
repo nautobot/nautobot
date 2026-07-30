@@ -289,10 +289,14 @@ def main():
 
         # instrument() installs the auto-instrumentors + tracer provider but NOT the OTLP exporters,
         # because the OTLP gRPC channel is not fork-safe (grpc's C-core would be inherited broken by
-        # forked workers -> SIGSEGV). The forking servers -- uWSGI (`start`) and Celery
-        # (`worker`/`beat`/`celery`) -- create the exporters per worker AFTER fork via their own
-        # post-fork hooks (nautobot.core.wsgi, nautobot.core.celery). Every other command is
-        # single-process, so install the exporters here where in-process channel creation is safe.
+        # forked workers -> SIGSEGV). uWSGI (`start`) and the Celery worker (`worker`/`celery`) create
+        # the exporters per worker AFTER fork via their own hooks (nautobot.core.wsgi postfork,
+        # nautobot.core.celery `worker_process_init`). The Celery beat scheduler does not fork but is
+        # launched as `celery beat`, which the top-level arg scan below sees only as `celery`; rather
+        # than parse the celery subcommand (fragile against value-bearing global flags like `-A`), beat
+        # installs its own exporters in-process via the `beat_init` handler in nautobot.core.celery.
+        # Every other command is single-process, so install the exporters here where in-process channel
+        # creation is safe.
         _FORKING_COMMANDS = {"start", "worker", "beat", "celery"}
         django_command = next((arg for arg in unparsed_args if not arg.startswith("-")), None)
         if django_command not in _FORKING_COMMANDS:
