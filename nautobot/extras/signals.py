@@ -41,7 +41,11 @@ from nautobot.extras.models import (
 )
 from nautobot.extras.querysets import NotesQuerySet
 from nautobot.extras.tasks import delete_custom_field_data, provision_field
-from nautobot.extras.utils import refresh_job_model_from_job_class
+from nautobot.extras.utils import (
+    get_change_logged_m2m_through_side_field_names,
+    get_explicit_m2m_through_side_field_names,
+    refresh_job_model_from_job_class,
+)
 
 # thread safe change context state variable
 change_context_state = contextvars.ContextVar("change_context_state", default=None)
@@ -227,66 +231,108 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
 
     # Record an ObjectChange if applicable
     if hasattr(instance, "to_objectchange"):
-        user = change_context.get_user(instance)
-        # save a copy of this instance's field cache so it can be restored after serialization
-        # to prevent unexpected behavior when chaining multiple signal handlers
-        original_cache = instance._state.fields_cache.copy()
+        _create_or_update_object_change(change_context, instance, action)
 
-        changed_object_type = ContentType.objects.get_for_model(instance)
-        changed_object_id = instance.id
+    if kwargs.get("created"):
+        # A new record of an explicit M2M through model (created directly, e.g. via its REST API endpoint,
+        # rather than through an M2M manager, which bulk-creates and so never fires post_save) is an update
+        # to both of the objects it associates. m2m_changed additions are handled separately below.
+        side_field_names = get_change_logged_m2m_through_side_field_names().get(sender)
+        if side_field_names:
+            _record_m2m_side_object_changes(change_context, instance, side_field_names)
 
-        # Generate a unique identifier for this change to stash in the change context
-        # This is used for deferred change logging and for looking up related changes without querying the database
-        unique_object_change_id = None
-        if user is not None:
-            unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
-        else:
-            unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}"
-
-        # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
-        # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
-        if unique_object_change_id in change_context.deferred_object_changes:
-            related_changes = ObjectChange.objects.filter(
-                changed_object_type=changed_object_type,
-                changed_object_id=changed_object_id,
-                user=user,
-                request_id=change_context.change_id,
-            )
-
-            # Skip the database check when deferring object changes
-            if not change_context.defer_object_changes and related_changes.exists():
-                objectchange = instance.to_objectchange(action)
-                if objectchange is not None:
-                    most_recent_change = related_changes.order_by("-time").first()
-                    if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
-                        most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
-                    most_recent_change.object_data = objectchange.object_data
-                    most_recent_change.object_data_v2 = objectchange.object_data_v2
-                    most_recent_change.save()
-
-        else:
-            change_context.deferred_object_changes[unique_object_change_id] = [
-                {"action": action, "instance": instance, "user": user}
-            ]
-            if not change_context.defer_object_changes:
-                objectchange = instance.to_objectchange(action)
-                if objectchange is not None:
-                    objectchange.user = user
-                    objectchange.request_id = change_context.change_id
-                    objectchange.change_context = change_context.context
-                    objectchange.change_context_detail = change_context.context_detail[
-                        :CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
-                    ]
-                    objectchange.save()
-
-        # restore field cache
-        instance._state.fields_cache = original_cache
+    elif kwargs.get("action") == "post_add" and kwargs["pk_set"] and not sender._meta.auto_created:
+        # An M2M manager addition (`.add()`/`.set()`) on a relation with an explicit through model changed
+        # the objects on the *other* side of the relation too; `instance` itself was logged above.
+        # Removals are deliberately not handled here: `.remove()`/`.clear()` delete the through rows one at
+        # a time (Nautobot's global pre_delete receiver rules out Django's fast-delete path), so
+        # _handle_deleted_m2m_through_object records the other side exactly once per object.
+        other_model = kwargs["model"]
+        if sender in get_change_logged_m2m_through_side_field_names() and hasattr(other_model, "to_objectchange"):
+            for other_instance in other_model.objects.filter(pk__in=kwargs["pk_set"]).iterator():
+                _create_or_update_object_change(change_context, other_instance, ObjectChangeActionChoices.ACTION_UPDATE)
 
     # Increment metric counters
     if action == ObjectChangeActionChoices.ACTION_CREATE:
         model_inserts.labels(instance._meta.model_name).inc()
     elif action == ObjectChangeActionChoices.ACTION_UPDATE:
         model_updates.labels(instance._meta.model_name).inc()
+
+
+def _create_or_update_object_change(change_context, instance, action):
+    """
+    Record an ObjectChange of the given action for `instance`, respecting the change context's dedup and
+    deferral semantics: if a change was already recorded for this (object, user, request), the existing
+    ObjectChange is updated in place rather than creating a second entry.
+
+    The caller is responsible for verifying that `instance` has a `to_objectchange` method.
+    """
+    user = change_context.get_user(instance)
+
+    # save a copy of this instance's field cache so it can be restored after serialization
+    # to prevent unexpected behavior when chaining multiple signal handlers
+    original_cache = instance._state.fields_cache.copy()
+
+    changed_object_type = ContentType.objects.get_for_model(instance)
+    changed_object_id = instance.id
+
+    # Generate a unique identifier for this change to stash in the change context
+    # This is used for deferred change logging and for looking up related changes without querying the database
+    unique_object_change_id = None
+    if user is not None:
+        unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}__{user.pk}"
+    else:
+        unique_object_change_id = f"{changed_object_type.pk}__{changed_object_id}"
+
+    # If a change already exists for this change_id, user, and object, update it instead of creating a new one.
+    # If the object was deleted then recreated with the same pk (don't do this), change the action to update.
+    if unique_object_change_id in change_context.deferred_object_changes:
+        related_changes = ObjectChange.objects.filter(
+            changed_object_type=changed_object_type,
+            changed_object_id=changed_object_id,
+            user=user,
+            request_id=change_context.change_id,
+        )
+
+        # Skip the database check when deferring object changes
+        if not change_context.defer_object_changes and related_changes.exists():
+            objectchange = instance.to_objectchange(action)
+            if objectchange is not None:
+                most_recent_change = related_changes.order_by("-time").first()
+                if most_recent_change.action == ObjectChangeActionChoices.ACTION_DELETE:
+                    most_recent_change.action = ObjectChangeActionChoices.ACTION_UPDATE
+                most_recent_change.object_data = objectchange.object_data
+                most_recent_change.object_data_v2 = objectchange.object_data_v2
+                most_recent_change.save()
+
+    else:
+        change_context.deferred_object_changes[unique_object_change_id] = [
+            {"action": action, "instance": instance, "user": user}
+        ]
+        if not change_context.defer_object_changes:
+            objectchange = instance.to_objectchange(action)
+            if objectchange is not None:
+                objectchange.user = user
+                objectchange.request_id = change_context.change_id
+                objectchange.change_context = change_context.context
+                objectchange.change_context_detail = change_context.context_detail[:CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL]
+                objectchange.save()
+
+    # restore field cache
+    instance._state.fields_cache = original_cache
+
+
+def _record_m2m_side_object_changes(change_context, through_instance, side_field_names):
+    """
+    Record an ACTION_UPDATE ObjectChange for each non-null, change-logged M2M "side" of an explicit
+    through-model record, so that association changes appear in (and fire hooks for) both related
+    objects' change logs regardless of which side, or which API endpoint, initiated the change.
+    """
+    for field_name in side_field_names:
+        side_object = getattr(through_instance, field_name, None)
+        if side_object is None or not hasattr(side_object, "to_objectchange"):
+            continue
+        _create_or_update_object_change(change_context, side_object, ObjectChangeActionChoices.ACTION_UPDATE)
 
 
 @receiver(pre_delete)
@@ -381,6 +427,43 @@ def _handle_deleted_object(sender, instance, **kwargs):
     model_deletes.labels(instance._meta.model_name).inc()
 
 
+@receiver(post_delete)
+def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
+    """
+    Fires after any object is deleted; when the object is a record of an explicit M2M through model, record
+    an update to both of the objects it associated.
+
+    post_delete (rather than pre_delete) is required for snapshot correctness: the side objects' serialized
+    data includes their M2M memberships, which must reflect the association's removal. The side objects
+    themselves still exist at this point because cascade deletes are excluded below, and the through
+    record's foreign key values remain readable on the in-memory `instance`.
+    """
+    change_context = change_context_state.get()
+
+    if change_context is None:
+        return
+
+    side_field_names = get_change_logged_m2m_through_side_field_names().get(sender)
+    if not side_field_names:
+        return
+
+    # Only record the side objects when the deletion originated at the through record(s) themselves:
+    # either a single record delete (REST API destroy, ORM `record.delete()`) or a queryset delete of
+    # through records (M2M manager `.remove()`/`.clear()`, job code). Cascades originating from the
+    # deletion of some other object (e.g. a Device deletion cascading to its VRFDeviceAssignments) are
+    # deliberately skipped, meaning the surviving side objects (the VRFs) get no change record and
+    # their webhooks/job hooks do not fire. This is a conscious trade-off: a single delete can cascade
+    # to association records for many thousands of surviving objects (e.g. every Prefix assigned to a
+    # deleted Location), each of which would require full serialization plus webhook/job hook/event
+    # dispatch within that one request. It also matches long-standing behavior, as the m2m_changed
+    # signal never fires for cascades either; the deleted object's own DELETE change record still
+    # captures its association memberships where its REST API representation includes them.
+    if not (origin is instance or getattr(origin, "model", None) is sender):
+        return
+
+    _record_m2m_side_object_changes(change_context, instance, side_field_names)
+
+
 #
 # Content types
 #
@@ -389,6 +472,8 @@ def _handle_deleted_object(sender, instance, **kwargs):
 @receiver(post_migrate)
 def post_migrate_clear_content_type_caches(sender, app_config, signal, **kwargs):
     """Clear various content-type caches after a migration."""
+    get_explicit_m2m_through_side_field_names.cache_clear()
+    get_change_logged_m2m_through_side_field_names.cache_clear()
     with contextlib.suppress(redis.exceptions.ConnectionError):
         cache.delete("nautobot.extras.utils.change_logged_models_queryset")
         cache.delete_pattern("nautobot.extras.utils.FeatureQuery.*")
