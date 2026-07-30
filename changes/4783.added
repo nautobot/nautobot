@@ -1,1 +1,0 @@
-Added a regression test verifying that Nautobot serves requests correctly when OpenTelemetry instrumentation and django-silk request profiling are enabled together.
