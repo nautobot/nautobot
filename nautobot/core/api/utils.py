@@ -5,6 +5,9 @@ import sys
 
 from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.http import JsonResponse
 from django.urls import NoReverseMatch, reverse
 from rest_framework import serializers, status
@@ -13,10 +16,21 @@ from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core.api import exceptions
+from nautobot.core.models.fields import TagsField
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import permission_is_exempt, qs_filter_from_constraints
 
 logger = logging.getLogger(__name__)
+
+# Default cap on the total number of select_related()/prefetch_related() paths that
+# get_related_field_query_optimizations() will discover for a single request. This is a safety valve against
+# pathological cases (e.g. a very high `?depth` on a model with many relations) generating an excessive number of
+# JOINs or prefetch queries; if the cap is hit, further nested relations are simply left unoptimized (falling back
+# to on-demand per-instance queries) rather than raising an error.
+# TODO: 100 is a somewhat arbitrary starting point - revisit once we have real-world data on typical/pathological
+# `?depth` usage (number of relations touched, query-plan cost, etc.) to tune this to a better-justified value,
+# and/or consider making it a configurable Django/Constance setting rather than a hardcoded constant.
+DEFAULT_MAX_RELATED_FIELD_OPTIMIZATIONS = 100
 
 
 def dict_to_filter_params(d, prefix=""):
@@ -280,6 +294,106 @@ def nested_serializer_factory(relation_info, nested_depth):
         field_class = NautobotNestedSerializer
         field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
+
+
+def get_related_field_query_optimizations(serializer, model, max_fields=DEFAULT_MAX_RELATED_FIELD_OPTIMIZATIONS):
+    """
+    Walk a serializer (and any nested serializers constructed for it via `?depth`) to discover the
+    select_related()/prefetch_related() lookup paths needed to avoid N+1 queries when rendering it.
+
+    A `NautobotModelSerializer` only builds one level of relation fields as flat `RelatedField`s when `depth=0`;
+    with `depth>0`, DRF's built-in nested-serializer support (see `nested_serializer_factory()` above) recursively
+    replaces relation fields with nested serializers down to the requested depth, decrementing `Meta.depth` by 1
+    at each level until it bottoms out at 0. Left unaddressed, every relation exposed below the first level is
+    fetched lazily one row/relation at a time (an N+1 query pattern), since `select_related()`/`prefetch_related()`
+    calls only ever considered the outermost serializer's fields.
+
+    This function mirrors that same recursive structure: it walks `serializer.fields`, and for any field that is
+    itself a nested serializer (single object) or a list of nested serializers (to-many relation), it recurses into
+    that nested serializer's own fields, accumulating dotted lookup paths (e.g. "device__location__location_type").
+
+    Args:
+        serializer: A serializer instance (already constructed with the desired `depth` in its context).
+        model (Model): The Django model class that `serializer` represents.
+        max_fields (int): Safety cap on the total number of optimization paths to discover. If exceeded, remaining
+            relations are left unoptimized (silently falling back to on-demand per-instance queries) and a warning
+            is logged, rather than growing `select_related()`/`prefetch_related()` calls without bound.
+
+    Returns:
+        (list, list): A 2-tuple of (select_related lookup paths, prefetch_related lookup paths).
+    """
+    remaining = [max_fields]
+    select_fields, prefetch_fields = _walk_serializer_fields_for_optimizations(
+        serializer, model, prefix="", force_prefetch=False, remaining=remaining
+    )
+    if remaining[0] <= 0:
+        logger.warning(
+            "Reached the maximum number (%s) of select_related()/prefetch_related() optimizations while "
+            "inspecting a %s serializer; some nested relations may not be optimized and could result in "
+            "additional queries. Consider a lower `?depth` value, or increase max_fields if this is expected.",
+            max_fields,
+            model.__name__,
+        )
+    return select_fields, prefetch_fields
+
+
+def _walk_serializer_fields_for_optimizations(serializer, model, prefix, force_prefetch, remaining):
+    """Recursive helper for get_related_field_query_optimizations(); see that function's docstring for details."""
+    select_fields = []
+    prefetch_fields = []
+
+    for field_instance in serializer.fields.values():
+        if remaining[0] <= 0:
+            break
+        if field_instance.write_only:
+            continue
+        if field_instance.source == "*":
+            continue
+        if "." in field_instance.source:
+            # DRF uses `field.nested_field` instead of `field__nested_field`
+            # TODO: We don't currently attempt to optimize nested lookups.
+            continue
+
+        source = f"{prefix}{field_instance.source}"
+        try:
+            model_field = model._meta.get_field(field_instance.source)
+        except FieldDoesNotExist:
+            continue
+
+        if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+            # ManyRelatedField with depth 0, or ListSerializer (of nested serializers) with depth > 0.
+            if not isinstance(model_field, (ManyToManyField, ManyToManyRel, RelatedField, ManyToOneRel, TagsField)):
+                continue
+            prefetch_fields.append(source)
+            remaining[0] -= 1
+            # A ListSerializer's `.child` is the per-item (nested) serializer, present only when depth > 0.
+            child = getattr(field_instance, "child", None)
+            if child is not None and hasattr(child, "fields") and remaining[0] > 0:
+                # Everything beneath a to-many relation must be prefetched, even simple FK fields, since
+                # select_related() cannot span M2M/reverse-FK relations. force_prefetch=True guarantees the
+                # recursive call never populates its own "select" list, so only its prefetch list matters here.
+                _, nested_prefetch = _walk_serializer_fields_for_optimizations(
+                    child, model_field.related_model, f"{source}__", True, remaining
+                )
+                prefetch_fields.extend(nested_prefetch)
+
+        elif isinstance(field_instance, (serializers.RelatedField, serializers.Serializer)):
+            # RelatedField with depth 0, or Serializer (nested) with depth > 0.
+            if not isinstance(model_field, ForeignKey):
+                continue
+            if force_prefetch:
+                prefetch_fields.append(source)
+            else:
+                select_fields.append(source)
+            remaining[0] -= 1
+            if isinstance(field_instance, serializers.Serializer) and remaining[0] > 0:
+                nested_select, nested_prefetch = _walk_serializer_fields_for_optimizations(
+                    field_instance, model_field.related_model, f"{source}__", force_prefetch, remaining
+                )
+                select_fields.extend(nested_select)
+                prefetch_fields.extend(nested_prefetch)
+
+    return select_fields, prefetch_fields
 
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
