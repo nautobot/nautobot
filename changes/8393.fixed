@@ -1,0 +1,1 @@
+Fixed checkboxes being hard to tell apart when checked, by thickening the checkmark stroke and matching table checkbox size to form checkboxes.

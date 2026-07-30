@@ -320,13 +320,13 @@ $form-check-input-border-radius: var(--#{$prefix}border-radius);
 $form-check-input-checked-color:        var(--#{$prefix}primary-text-emphasis);
 $form-check-input-checked-bg-color:     $form-check-input-bg;
 $form-check-input-checked-border-color: $form-check-input-checked-color;
-$form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='m6 10 3 3 6-6'/></svg>");
+$form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 10 3 3 6-6'/></svg>");
 $form-check-radio-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='2' fill='#{$primary-text-emphasis}'/></svg>");
 
 $form-check-input-indeterminate-color:        $form-check-input-checked-color;
 $form-check-input-indeterminate-bg-color:     $form-check-input-checked-bg-color;
 $form-check-input-indeterminate-border-color: $form-check-input-checked-border-color;
-$form-check-input-indeterminate-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M6 10h8'/></svg>");
+$form-check-input-indeterminate-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 10h8'/></svg>");
 
 $form-check-input-disabled-opacity:     1;
 $form-check-label-disabled-opacity:     $form-check-input-disabled-opacity;
@@ -824,6 +824,32 @@ button {
 }
 
 /*
+ * Minimum pointer target (WCAG 2.5.8, AA).
+ *
+ * An icon-only control sized to its glyph is typically 20px or less, below the 24x24 minimum. Apply this to give it a
+ * conforming hit area without enlarging the glyph itself. It is a minimum, so it never shrinks a control that is
+ * already larger.
+ *
+ * Not needed for every small control: the success criterion exempts targets with 24px of clearance from their
+ * neighbours, and targets sized by the surrounding text flow (inline links in prose).
+ */
+.nb-target-size-min {
+  min-block-size: map.get($spacers, 24);
+  min-inline-size: map.get($spacers, 24);
+}
+
+/*
+ * Focus Not Obscured (WCAG 2.4.11, AA).
+ *
+ * `.nb-form-sticky-footer` pins the form's action buttons to the bottom of the viewport, where it can cover a field the
+ * user has just tabbed to. Reserving scroll padding equal to its height means the browser's scroll-into-view on focus
+ * stops short of the bar rather than leaving the focused field underneath it.
+ */
+:root {
+  scroll-padding-block-end: 5rem;
+}
+
+/*
  * Skip link (bypass block, WCAG 2.4.1)
  *
  * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document
@@ -1008,7 +1034,7 @@ table.attr-table td:nth-child(1) {
 .nb-subtree {
   $subtree-chevron-svg: "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill-rule='evenodd' clip-rule='evenodd' d='M14.53 5.46967C14.8229 5.76256 14.8229 6.23744 14.53 6.53033L10.7928 10.2676C10.388 10.6724 10.1167 10.9444 9.92461 11.1708C9.73817 11.3904 9.67071 11.5171 9.6393 11.6137C9.55773 11.8648 9.55773 12.1352 9.6393 12.3863C9.67071 12.4829 9.73817 12.6096 9.92461 12.8292C10.1167 13.0556 10.388 13.3276 10.7928 13.7324L14.53 17.4697C14.8229 17.7626 14.8229 18.2374 14.53 18.5303C14.2371 18.8232 13.7623 18.8232 13.4694 18.5303L9.73211 14.7931L9.71059 14.7715C9.33288 14.3939 9.01761 14.0786 8.7811 13.8C8.53443 13.5094 8.32969 13.2098 8.21272 12.8498C8.03326 12.2975 8.03326 11.7025 8.21272 11.1502C8.32969 10.7902 8.53443 10.4906 8.7811 10.2C9.01761 9.9214 9.33287 9.60615 9.71058 9.22845L9.73211 9.20693L13.4694 5.46967C13.7623 5.17678 14.2371 5.17678 14.53 5.46967Z' fill='#{$white-0}'/></svg>";
   $subtree-icon-height: 5.625rem; /* 90px */
-  $subtree-icon-width: 1.25rem; /* 20px */
+  $subtree-icon-width: 1.5rem; /* 24px; also the expand button's hit area, see WCAG 2.5.8 */
   $subtree-ancestor-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/></svg>";
   $subtree-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='90' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
   $subtree-no-next-sibling-icon-svg: "<svg viewBox='0 0 20 90' xmlns='http://www.w3.org/2000/svg'><line x1='9.5' x2='9.5' y2='45.5' stroke='#{$white-0}'/><line x1='10' y1='45' x2='15' y2='45' stroke='#{$white-0}'/></svg>";
@@ -1305,9 +1331,13 @@ textarea {
   }
 }
 
+/*
+ * Table checkboxes. Previously 16px, which combined with the hairline checkmark made checked/unchecked hard to tell
+ * apart. Now matched to `$form-check-input-width` so a row checkbox is as legible as one on a form.
+ */
 .nb-form-check-input-sm {
-  height: 1rem; /* 16px */
-  width: 1rem; /* 16px */
+  height: 1.25rem; /* 20px */
+  width: 1.25rem; /* 20px */
 }
 
 .form-text {

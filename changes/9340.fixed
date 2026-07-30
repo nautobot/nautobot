@@ -5,3 +5,5 @@ Fixed data tables missing header scopes, sort state and an accessible name.
 Fixed skipped heading levels and invalid list markup that stopped page structure being reported correctly.
 Fixed bulk-action controls remaining reachable by keyboard while visually hidden.
 Fixed images missing `alt` attributes, and re-enabled the djlint accessibility rules that allowed that to happen.
+Fixed pointer targets smaller than the WCAG 2.2 minimum on the search help link and the table tree expand controls.
+Fixed the object table "Actions" column offering a meaningless sort link.
