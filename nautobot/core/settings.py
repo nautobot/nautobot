@@ -177,6 +177,9 @@ if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE
 # optimizer will build for a single request (e.g. when a client requests a large `?depth` value on a model with
 # many relations). Once this cap is reached, any remaining nested relations are left unoptimized (falling back
 # to on-demand per-instance queries) rather than growing the number of JOINs/prefetch queries without bound.
+# On MySQL, watch out for the following issue when tuning this parameter:
+# django.db.utils.OperationalError: (1116, 'Too many tables; MySQL can only use 61 tables in a join')
+
 MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS = int(
     os.getenv("NAUTOBOT_MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS", _MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS_DEFAULT)
 )
