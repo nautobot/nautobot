@@ -1550,4 +1550,28 @@ class GetRelatedFieldQueryOptimizationsTest(TestCase):
         serializer = self._get_serializer(depth=1)
         with self.assertNoLogs("nautobot.core.api.utils", level="WARNING"):
             api_utils.get_related_field_query_optimizations(serializer, ipam_models.IPAddress, max_fields=1000)
->>>>>>> 09a9485d3 (initial draft for automatic prefetch/select related for all depths)
+
+    def test_hard_cap_defaults_to_max_related_field_query_optimizations_setting(self):
+        """
+        When `max_fields` isn't explicitly passed, the cap should come from the `MAX_RELATED_FIELD_QUERY_
+        OPTIMIZATIONS` Nautobot setting (documented in nautobot/core/settings.yaml), not a hardcoded constant.
+        This is verified here by overriding the setting to an artificially low example value and confirming the
+        behavior (truncation + warning) matches what passing that same value as `max_fields` would produce.
+        """
+        serializer = self._get_serializer(depth=4)
+
+        with override_settings(MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS=2):
+            with self.assertLogs("nautobot.core.api.utils", level="WARNING") as cm:
+                select_fields, prefetch_fields = api_utils.get_related_field_query_optimizations(
+                    serializer, ipam_models.IPAddress
+                )
+        self.assertLessEqual(len(select_fields) + len(prefetch_fields), 2)
+        self.assertTrue(any("maximum" in message.lower() for message in cm.output))
+
+        # A generous setting value should not trigger the cap/warning, mirroring test_hard_cap_not_exceeded_does_not_warn
+        # above but exercising the setting instead of the max_fields argument.
+        serializer = self._get_serializer(depth=1)
+        with override_settings(MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS=1000):
+            with self.assertNoLogs("nautobot.core.api.utils", level="WARNING"):
+                api_utils.get_related_field_query_optimizations(serializer, ipam_models.IPAddress)
+

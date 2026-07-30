@@ -22,16 +22,6 @@ from nautobot.core.utils.permissions import permission_is_exempt, qs_filter_from
 
 logger = logging.getLogger(__name__)
 
-# Default cap on the total number of select_related()/prefetch_related() paths that
-# get_related_field_query_optimizations() will discover for a single request. This is a safety valve against
-# pathological cases (e.g. a very high `?depth` on a model with many relations) generating an excessive number of
-# JOINs or prefetch queries; if the cap is hit, further nested relations are simply left unoptimized (falling back
-# to on-demand per-instance queries) rather than raising an error.
-# TODO: 100 is a somewhat arbitrary starting point - revisit once we have real-world data on typical/pathological
-# `?depth` usage (number of relations touched, query-plan cost, etc.) to tune this to a better-justified value,
-# and/or consider making it a configurable Django/Constance setting rather than a hardcoded constant.
-DEFAULT_MAX_RELATED_FIELD_OPTIMIZATIONS = 100
-
 
 def dict_to_filter_params(d, prefix=""):
     """
@@ -296,7 +286,7 @@ def nested_serializer_factory(relation_info, nested_depth):
     return field_class, field_kwargs
 
 
-def get_related_field_query_optimizations(serializer, model, max_fields=DEFAULT_MAX_RELATED_FIELD_OPTIMIZATIONS):
+def get_related_field_query_optimizations(serializer, model, max_fields=None):
     """
     Walk a serializer (and any nested serializers constructed for it via `?depth`) to discover the
     select_related()/prefetch_related() lookup paths needed to avoid N+1 queries when rendering it.
@@ -317,11 +307,14 @@ def get_related_field_query_optimizations(serializer, model, max_fields=DEFAULT_
         model (Model): The Django model class that `serializer` represents.
         max_fields (int): Safety cap on the total number of optimization paths to discover. If exceeded, remaining
             relations are left unoptimized (silently falling back to on-demand per-instance queries) and a warning
-            is logged, rather than growing `select_related()`/`prefetch_related()` calls without bound.
+            is logged, rather than growing `select_related()`/`prefetch_related()` calls without bound. Defaults
+            to the `MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS` Nautobot setting if not explicitly specified.
 
     Returns:
         (list, list): A 2-tuple of (select_related lookup paths, prefetch_related lookup paths).
     """
+    if max_fields is None:
+        max_fields = settings.MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS
     select_fields, prefetch_fields, remaining = _walk_serializer_fields_for_optimizations(
         serializer, model, prefix="", force_prefetch=False, remaining=max_fields
     )
@@ -329,7 +322,8 @@ def get_related_field_query_optimizations(serializer, model, max_fields=DEFAULT_
         logger.warning(
             "Reached the maximum number (%s) of select_related()/prefetch_related() optimizations while "
             "inspecting a %s serializer; some nested relations may not be optimized and could result in "
-            "additional queries. Consider a lower `?depth` value, or increase max_fields if this is expected.",
+            "additional queries. Consider a lower `?depth` value, or increase the MAX_RELATED_FIELD_QUERY_"
+            "OPTIMIZATIONS Nautobot setting (or the max_fields argument) if this is expected.",
             max_fields,
             model.__name__,
         )

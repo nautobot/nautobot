@@ -117,6 +117,11 @@ CHARFIELD_MAX_LENGTH = 255
 MAX_PAGE_SIZE_DEFAULT = 1000
 PAGINATE_COUNT_DEFAULT = 50
 
+# Default cap on the number of select_related()/prefetch_related() lookup paths that the depth-aware API
+# queryset optimizer (nautobot.core.api.utils.get_related_field_query_optimizations()) will discover for a
+# single request. See the MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS setting.
+MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS_DEFAULT = 100
+
 # Models excluded from the global search list
 GLOBAL_SEARCH_EXCLUDE_LIST = [
     "anotherexamplemodel",

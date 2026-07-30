@@ -1457,6 +1457,17 @@ properties:
     environment_variable: "NAUTOBOT_MAX_PAGE_SIZE"
     is_constance_config: true
     type: "integer"
+  MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS:
+    default: 100
+    description: >-
+      Caps the number of `select_related()`/`prefetch_related()` lookup paths that the REST API's depth-aware
+      queryset optimizer will build for a single request, to avoid unbounded query/JOIN growth when a client
+      requests a large `?depth` value on a model with many relations. Once the cap is reached, any remaining
+      nested relations are left unoptimized (falling back to on-demand per-instance queries as needed) rather
+      than continuing to grow the number of JOINs/prefetch queries for that request.
+    environment_variable: "NAUTOBOT_MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS"
+    type: "integer"
+    version_added: "3.2.2"
   MEDIA_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/media"

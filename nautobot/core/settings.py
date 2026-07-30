@@ -15,6 +15,7 @@ from nautobot import __version__
 from nautobot.core.constants import (
     CONFIG_SETTING_SEPARATOR as _CONFIG_SETTING_SEPARATOR,
     MAX_PAGE_SIZE_DEFAULT as _MAX_PAGE_SIZE_DEFAULT,
+    MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS_DEFAULT as _MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS_DEFAULT,
     PAGINATE_COUNT_DEFAULT as _PAGINATE_COUNT_DEFAULT,
 )
 from nautobot.core.settings_funcs import ConstanceConfigItem, is_truthy, parse_redis_connection
@@ -171,6 +172,14 @@ MAINTENANCE_MODE = is_truthy(os.getenv("NAUTOBOT_MAINTENANCE_MODE", "False"))
 # Maximum number of objects that the UI and API will retrieve in a single request. Default is 1000
 if "NAUTOBOT_MAX_PAGE_SIZE" in os.environ and os.environ["NAUTOBOT_MAX_PAGE_SIZE"] != "":
     MAX_PAGE_SIZE = int(os.environ["NAUTOBOT_MAX_PAGE_SIZE"])
+
+# Maximum number of select_related()/prefetch_related() lookup paths that the depth-aware REST API queryset
+# optimizer will build for a single request (e.g. when a client requests a large `?depth` value on a model with
+# many relations). Once this cap is reached, any remaining nested relations are left unoptimized (falling back
+# to on-demand per-instance queries) rather than growing the number of JOINs/prefetch queries without bound.
+MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS = int(
+    os.getenv("NAUTOBOT_MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS", _MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS_DEFAULT)
+)
 
 # Metrics
 METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_METRICS_ENABLED", "False"))
