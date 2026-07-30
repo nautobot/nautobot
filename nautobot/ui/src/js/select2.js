@@ -76,6 +76,48 @@ const parseURL = (url) => {
 };
 
 /**
+ * Give a Select2 component's generated combobox the accessible name of the original `<select>`.
+ *
+ * Select2 hides the real `<select>` and builds its own markup, and the replacement combobox is not associated with the
+ * `<label for="...">` that pointed at the original element. The result is an ARIA input field with no accessible name at
+ * all, which is what a screen reader announces on every Select2 field in Nautobot.
+ * @param {HTMLElement} element - The original `select` element Select2 was initialized on.
+ * @returns {void} Do not return any value, set attributes on the generated markup instead.
+ */
+const labelSelect2Component = (element) => {
+  // Prefer whatever the author already put on the `<select>`, then its associated label, then its placeholder.
+  const label =
+    element.getAttribute('aria-label') ||
+    element.labels?.[0]?.textContent?.trim().replace(/:$/, '') ||
+    element.getAttribute('placeholder');
+
+  if (!label) {
+    return;
+  }
+
+  /*
+   * Select2's single-select markup nests `.select2-selection[role="combobox"]` around
+   * `.select2-selection__rendered[role="textbox"]`, and points the combobox's `aria-labelledby` at that inner element --
+   * which holds the *selected value*, not a label. Labelling the inner element therefore fixes both at once: the inner
+   * element gains a name, and the combobox inherits it through the `aria-labelledby` Select2 already wrote.
+   *
+   * Multi-select instead renders a `.select2-search__field` input, which needs labelling directly.
+   *
+   * `.select2-selection` is included as a fallback for the case where Select2 wrote no `aria-labelledby` at all.
+   */
+  const container = element.nextElementSibling;
+  [
+    container?.querySelector?.('.select2-selection__rendered'),
+    container?.querySelector?.('.select2-search__field'),
+    container?.querySelector?.('.select2-selection'),
+  ].forEach((target) => {
+    if (target && !target.getAttribute('aria-label')) {
+      target.setAttribute('aria-label', label);
+    }
+  });
+};
+
+/**
  * Initialize given Select2 components in passed `context` by `selector`, optionally with `options`.
  * @param {Document|Element|jQuery} context - Context root element.
  * @param {string} selector - CSS query selector of `select` elements to be initialized as Select2 components.
@@ -83,7 +125,7 @@ const parseURL = (url) => {
  * @returns {void} Do not return any value, just initialize given Select2 components.
  */
 const initializeSelect2 = (context, selector, options) =>
-  [...getElement(context).querySelectorAll(selector)].forEach((element) =>
+  [...getElement(context).querySelectorAll(selector)].forEach((element) => {
     $(element).select2({
       allowClear: true,
       placeholder: '---------',
@@ -91,8 +133,11 @@ const initializeSelect2 = (context, selector, options) =>
       theme: 'bootstrap-5',
       width: 'off',
       ...options,
-    }),
-  );
+    });
+    labelSelect2Component(element);
+    // Select2 rebuilds its selection markup when the value changes, which drops the attribute set above.
+    $(element).on('change', () => labelSelect2Component(element));
+  });
 
 const initializeColorPicker = (context, dropdownParent = null) => {
   // Assign color picker selection classes.
