@@ -1471,6 +1471,7 @@ class TestSerializeObjectV2(TestCase):
             with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
                 NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)
 
+
 class GetRelatedFieldQueryOptimizationsTest(TestCase):
     """
     Unit tests for api_utils.get_related_field_query_optimizations().
@@ -1556,4 +1557,3 @@ class GetRelatedFieldQueryOptimizationsTest(TestCase):
         with override_settings(MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS=1000):
             with self.assertNoLogs("nautobot.core.api.utils", level="WARNING"):
                 api_utils.get_related_field_query_optimizations(serializer, ipam_models.IPAddress)
-

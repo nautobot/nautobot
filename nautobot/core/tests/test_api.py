@@ -690,7 +690,8 @@ class ModelViewSetMixinTest(testing.APITestCase):
         self.assertIsNotNone(device, "fixture data must include a Device whose Location uses a nested LocationType")
         interface_status = extras_models.Status.objects.get_for_model(dcim_models.Interface).first()
         interfaces = [
-            dcim_models.Interface.objects.create(device=device, name=f"eth{i}", status=interface_status) for i in range(10)
+            dcim_models.Interface.objects.create(device=device, name=f"eth{i}", status=interface_status)
+            for i in range(10)
         ]
 
         def make_request():
