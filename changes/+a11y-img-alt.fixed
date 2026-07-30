@@ -1,1 +1,0 @@
-Fixed images missing `alt` attributes and re-enabled the djlint `H013` and `H016` accessibility rules so regressions are caught in CI.

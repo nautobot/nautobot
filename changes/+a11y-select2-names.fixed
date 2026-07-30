@@ -1,1 +1,0 @@
-Fixed Select2 dropdown fields having no accessible name, so screen readers announced them as unlabelled combo boxes.

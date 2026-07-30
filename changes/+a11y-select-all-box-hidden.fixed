@@ -1,1 +1,0 @@
-Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.

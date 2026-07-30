@@ -1,0 +1,7 @@
+Fixed text, alert, table header, badge and form control colors that did not meet WCAG AA contrast minimums in light or dark mode.
+Fixed icon-only controls, modal dialogs, Select2 fields, table row checkboxes and the global search bar having no accessible name.
+Fixed form field help text and validation errors not being announced by screen readers.
+Fixed data tables missing header scopes, sort state and an accessible name.
+Fixed skipped heading levels and invalid list markup that stopped page structure being reported correctly.
+Fixed bulk-action controls remaining reachable by keyboard while visually hidden.
+Fixed images missing `alt` attributes, and re-enabled the djlint accessibility rules that allowed that to happen.

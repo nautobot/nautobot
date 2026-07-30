@@ -1,1 +1,0 @@
-Fixed form field help text and validation errors not being announced by screen readers, by giving them the element IDs that Django's generated `aria-describedby` attribute already pointed at.

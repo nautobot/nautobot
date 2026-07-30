@@ -1,0 +1,5 @@
+Added a "Skip to main content" link to all pages, so keyboard and screen reader users can bypass the navigation sidebar.
+Added a keyboard alternative for reordering home page panels, which previously required dragging with a pointer.
+Added a text alternative and a "View as device list" link to rack elevations, which previously conveyed nothing to screen readers.
+Added live regions so that messages and pagination changes applied without a page reload are announced.
+Added axe-core accessibility regression tests covering the home, list, detail, edit, search and login pages.
