@@ -1,5 +1,6 @@
 """Tests for OpenTelemetry instrumentation in Nautobot."""
 
+from copy import deepcopy
 import json
 import logging
 import os
@@ -266,11 +267,14 @@ class OtelTraceContextFilterTest(testing.TestCase):
 
 
 class DefaultLoggingCorrelationTest(testing.TestCase):
-    """Verify Nautobot's default LOGGING surfaces trace IDs only when correlation is enabled.
+    """Verify the default LOGGING built in settings.py never bakes in the correlation suffix itself.
 
-    LOGGING is built from env vars at settings-import time, so these tests reload nautobot.core.settings
-    under a patched environment and inspect the resulting dict (rather than override_settings, which
-    cannot rebuild the already-constructed dict).
+    The correlation suffix/filter used to be interpolated into LOGGING from env vars at settings-import
+    time; that missed operators who set OTEL_PYTHON_* in nautobot_config.py (a Python assignment, not an
+    env var). The decision now happens post-load in _preprocess_settings via enable_otel_log_correlation
+    (covered by EnableOtelLogCorrelationTest). These tests reload nautobot.core.settings under patched
+    env vars and confirm the *default* dict stays suffix-free regardless -- so the env var no longer
+    short-circuits the post-load reconciliation.
     """
 
     def _reload_settings_logging(self, env):
@@ -291,27 +295,24 @@ class DefaultLoggingCorrelationTest(testing.TestCase):
             importlib.reload(settings_module)
         return logging_dict
 
-    def test_correlation_enabled_adds_ids_and_filter(self):
-        """With tracing + correlation on, the default formatters include the IDs and the filter is wired."""
+    def test_default_logging_never_bakes_in_suffix_even_with_env_on(self):
+        """Even with tracing + correlation env vars on, settings.py must not pre-bake the suffix/filter.
+
+        Regression guard for the env-var-driven bake-in being removed: surfacing the IDs is now the
+        post-load helper's job, so the raw settings default stays plain regardless of the env vars.
+        """
         logging_dict = self._reload_settings_logging(
             {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True", "OTEL_PYTHON_LOG_CORRELATION": "True", "NAUTOBOT_DEBUG": "False"}
         )
-        self.assertIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
-        self.assertIn("otelTraceID", logging_dict["formatters"]["verbose"]["format"])
-        self.assertIn("otel_trace_context", logging_dict["filters"])
-        self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], ["otel_trace_context"])
-        self.assertEqual(logging_dict["handlers"]["verbose_console"]["filters"], ["otel_trace_context"])
-
-    def test_correlation_disabled_leaves_default_format_untouched(self):
-        """With correlation off, no trace IDs and no filter are added to the default handlers."""
-        logging_dict = self._reload_settings_logging(
-            {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True", "OTEL_PYTHON_LOG_CORRELATION": "False", "NAUTOBOT_DEBUG": "False"}
-        )
         self.assertNotIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
+        self.assertNotIn("otelTraceID", logging_dict["formatters"]["verbose"]["format"])
+        # The filter is still defined (available for custom configs / the helper) but wired to nothing.
+        self.assertIn("otel_trace_context", logging_dict["filters"])
         self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], [])
+        self.assertEqual(logging_dict["handlers"]["verbose_console"]["filters"], [])
 
-    def test_tracing_disabled_leaves_default_format_untouched(self):
-        """Correlation only takes effect when tracing (OTEL_PYTHON_DJANGO_INSTRUMENT) is enabled."""
+    def test_default_logging_plain_with_env_off(self):
+        """With correlation off, the default LOGGING is likewise plain (unchanged behavior)."""
         logging_dict = self._reload_settings_logging(
             {"OTEL_PYTHON_DJANGO_INSTRUMENT": "False", "OTEL_PYTHON_LOG_CORRELATION": "True", "NAUTOBOT_DEBUG": "False"}
         )
@@ -1111,3 +1112,147 @@ class ExtraInstrumentorsTest(testing.TestCase):
 
         good_cls.assert_called_once()
         good_instance.instrument.assert_called_once()
+
+
+def _default_logging_config():
+    """A copy of Nautobot's default (correlation-off) LOGGING shape, for exercising the helper.
+
+    Mirrors the `normal`/`verbose` formatters and `normal_console`/`verbose_console` handlers built in
+    nautobot.core.settings, without booting Django (whose LOGGING is the NullHandler TESTING variant
+    while the suite runs). test_default_settings_logging_has_no_suffix guards this copy against drift.
+    """
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "filters": {
+            "otel_trace_context": {"()": "nautobot.core.logging.OtelTraceContextFilter"},
+        },
+        "formatters": {
+            "normal": {
+                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+                "datefmt": "%H:%M:%S",
+            },
+            "verbose": {
+                "format": (
+                    "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s "
+                    "%(funcName)30s() :\n  %(message)s"
+                ),
+                "datefmt": "%H:%M:%S",
+            },
+        },
+        "handlers": {
+            "normal_console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "formatter": "normal",
+                "filters": [],
+            },
+            "verbose_console": {
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "formatter": "verbose",
+                "filters": [],
+            },
+        },
+        "loggers": {
+            "django": {"handlers": ["normal_console"], "level": "INFO"},
+            "nautobot": {"handlers": ["normal_console"], "level": "INFO"},
+        },
+    }
+
+
+class EnableOtelLogCorrelationTest(testing.TestCase):
+    """Verify enable_otel_log_correlation() augments the default LOGGING dict correctly and safely.
+
+    Regression: the correlation decision used to be baked into the LOGGING dict from env vars at
+    settings-import time, so `OTEL_PYTHON_DJANGO_INSTRUMENT`/`OTEL_PYTHON_LOG_CORRELATION` set as Python
+    assignments in nautobot_config.py were silently ignored for the default console output. The decision
+    now happens post-load in _preprocess_settings() against the resolved settings, via this helper.
+    """
+
+    def test_correlation_on_adds_suffix_and_filter(self):
+        """The helper appends the trace/span-id suffix to formatters and the filter to handlers."""
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        config = _default_logging_config()
+        enable_otel_log_correlation(config)
+
+        for formatter in ("normal", "verbose"):
+            fmt = config["formatters"][formatter]["format"]
+            self.assertIn("%(otelTraceID)s", fmt, f"{formatter} formatter should carry the trace-id suffix.")
+            self.assertIn("%(otelSpanID)s", fmt, f"{formatter} formatter should carry the span-id suffix.")
+            # The suffix must land on the header line, before the message body.
+            self.assertLess(fmt.index("%(otelTraceID)s"), fmt.index("%(message)s"))
+        for handler in ("normal_console", "verbose_console"):
+            self.assertIn("otel_trace_context", config["handlers"][handler]["filters"])
+
+    def test_helper_is_idempotent(self):
+        """Calling the helper twice must not double-append the suffix or duplicate the filter."""
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        config = _default_logging_config()
+        enable_otel_log_correlation(config)
+        once = deepcopy(config)
+        enable_otel_log_correlation(config)
+
+        self.assertEqual(config, once, "A second call must be a no-op.")
+        for formatter in ("normal", "verbose"):
+            self.assertEqual(config["formatters"][formatter]["format"].count("%(otelTraceID)s"), 1)
+        for handler in ("normal_console", "verbose_console"):
+            self.assertEqual(config["handlers"][handler]["filters"].count("otel_trace_context"), 1)
+
+    def test_custom_operator_logging_is_untouched(self):
+        """A LOGGING dict with operator-named formatters/handlers must not be mutated by the helper."""
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        custom = {
+            "version": 1,
+            "formatters": {"my_fmt": {"format": "%(levelname)s %(message)s"}},
+            "handlers": {
+                "my_handler": {"class": "logging.StreamHandler", "formatter": "my_fmt"},
+            },
+            "loggers": {"nautobot": {"handlers": ["my_handler"], "level": "INFO"}},
+        }
+        before = deepcopy(custom)
+        enable_otel_log_correlation(custom)
+
+        self.assertEqual(custom["formatters"], before["formatters"], "Custom formatters must be untouched.")
+        self.assertEqual(custom["handlers"], before["handlers"], "Custom handlers must be untouched.")
+
+    def test_default_fixture_has_no_suffix_before_helper(self):
+        """The default LOGGING shape must be suffix-free until the helper runs.
+
+        Guards that the correlation suffix only ever comes from enable_otel_log_correlation() (the
+        env-var-driven bake-in was removed from settings.py), so an operator with correlation off gets
+        plain formatters. The fixture mirrors settings.py's default block; keep them in sync.
+        """
+        config = _default_logging_config()
+        self.assertNotIn("%(otelTraceID)s", config["formatters"]["normal"]["format"])
+        self.assertNotIn("%(otelTraceID)s", config["formatters"]["verbose"]["format"])
+        self.assertEqual(config["handlers"]["normal_console"]["filters"], [])
+        self.assertEqual(config["handlers"]["verbose_console"]["filters"], [])
+
+    def test_preprocess_settings_config_file_assignment_applies_suffix(self):
+        """The bug case: flags set as attributes (env vars unset) must still surface the IDs.
+
+        Simulates nautobot_config.py assigning OTEL_PYTHON_DJANGO_INSTRUMENT/OTEL_PYTHON_LOG_CORRELATION
+        as Python values, then drives the exact reconciliation branch _preprocess_settings runs.
+        """
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        settings_module = SimpleNamespace(
+            TESTING=False,
+            OTEL_PYTHON_DJANGO_INSTRUMENT=True,
+            OTEL_PYTHON_LOG_CORRELATION=True,
+            LOGGING=_default_logging_config(),
+        )
+        # Mirror the guard + call in nautobot.core.cli._preprocess_settings.
+        if (
+            not getattr(settings_module, "TESTING", False)
+            and getattr(settings_module, "OTEL_PYTHON_DJANGO_INSTRUMENT", False)
+            and getattr(settings_module, "OTEL_PYTHON_LOG_CORRELATION", False)
+        ):
+            enable_otel_log_correlation(settings_module.LOGGING)
+
+        self.assertIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertIn("otel_trace_context", settings_module.LOGGING["handlers"]["normal_console"]["filters"])

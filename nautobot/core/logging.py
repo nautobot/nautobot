@@ -17,6 +17,53 @@ _OTEL_RECORD_ATTRS = (
     ("otelServiceName", ""),
 )
 
+# Suffix appended to the default console formatters to surface the trace/span IDs. Kept here (rather
+# than in settings.py) as the single source of truth for `enable_otel_log_correlation()`.
+_OTEL_LOG_SUFFIX = " [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s]"
+# Marker in the default `normal`/`verbose` formats that the suffix is inserted immediately before, so
+# the trace/span IDs land at the end of the header line rather than after the message body.
+_OTEL_LOG_SUFFIX_ANCHOR = " :\n  %(message)s"
+# The formatters/handlers Nautobot defines in its default LOGGING config. `enable_otel_log_correlation`
+# only ever touches these by name, so an operator who overrides LOGGING with their own names is
+# untouched (they surface the IDs via their own formatters -- see settings.py OTEL_PYTHON_LOG_CORRELATION).
+_OTEL_DEFAULT_FORMATTERS = ("normal", "verbose")
+_OTEL_DEFAULT_HANDLERS = ("normal_console", "verbose_console")
+_OTEL_TRACE_CONTEXT_FILTER = "otel_trace_context"
+
+
+def enable_otel_log_correlation(logging_config):
+    """Augment a LOGGING dict in place to surface OpenTelemetry trace/span IDs in the default output.
+
+    Called from `nautobot.core.cli._preprocess_settings` *after* the resolved config is known (so a
+    `OTEL_PYTHON_DJANGO_INSTRUMENT`/`OTEL_PYTHON_LOG_CORRELATION` set in `nautobot_config.py` is honored,
+    not just the env-var defaults baked into the LOGGING dict at settings-import time). Only touches the
+    formatters/handlers Nautobot ships by name, so a fully custom operator LOGGING config is left alone.
+
+    Idempotent: appending an already-present suffix or filter is skipped, so repeat calls are safe.
+    """
+    formatters = logging_config.get("formatters", {})
+    for name in _OTEL_DEFAULT_FORMATTERS:
+        formatter = formatters.get(name)
+        if not formatter:
+            continue
+        fmt = formatter.get("format", "")
+        if "%(otelTraceID)s" in fmt or _OTEL_LOG_SUFFIX_ANCHOR not in fmt:
+            continue
+        formatter["format"] = fmt.replace(_OTEL_LOG_SUFFIX_ANCHOR, _OTEL_LOG_SUFFIX + _OTEL_LOG_SUFFIX_ANCHOR, 1)
+
+    logging_config.setdefault("filters", {}).setdefault(
+        _OTEL_TRACE_CONTEXT_FILTER, {"()": "nautobot.core.logging.OtelTraceContextFilter"}
+    )
+
+    handlers = logging_config.get("handlers", {})
+    for name in _OTEL_DEFAULT_HANDLERS:
+        handler = handlers.get(name)
+        if handler is None:
+            continue
+        handler_filters = handler.setdefault("filters", [])
+        if _OTEL_TRACE_CONTEXT_FILTER not in handler_filters:
+            handler_filters.append(_OTEL_TRACE_CONTEXT_FILTER)
+
 
 class OtelTraceContextFilter(logging.Filter):
     """Guarantee the OpenTelemetry trace-context attributes exist on every record.

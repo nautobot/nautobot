@@ -49,6 +49,7 @@ def _preprocess_settings(settings_module, config_path):
     - Set up 'job_logs' database mirror
     - Load plugins based on settings_module.PLUGINS (may affect INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
     - Load event brokers based on settings_module.EVENT_BROKERS
+    - Surface OTEL trace/span IDs in the default LOGGING when OpenTelemetry log correlation is enabled
     """
     settings_module.SETTINGS_PATH = config_path
 
@@ -110,6 +111,24 @@ def _preprocess_settings(settings_module, config_path):
     #
 
     load_event_brokers(settings_module.EVENT_BROKERS)
+
+    #
+    # OpenTelemetry log correlation
+    #
+
+    # Surface the OTEL trace/span IDs in the default console logs when correlation is enabled. Done here
+    # -- after the config is fully loaded, before django.setup() applies dictConfig -- so it honors the
+    # *resolved* settings (which may be overridden in nautobot_config.py), not just the env-var defaults
+    # baked into LOGGING at settings-import time. No-op for a fully custom operator LOGGING config (the
+    # helper only touches the formatters/handlers Nautobot ships by name) and for the TESTING config.
+    if (
+        not getattr(settings_module, "TESTING", False)
+        and getattr(settings_module, "OTEL_PYTHON_DJANGO_INSTRUMENT", False)
+        and getattr(settings_module, "OTEL_PYTHON_LOG_CORRELATION", False)
+    ):
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        enable_otel_log_correlation(settings_module.LOGGING)
 
 
 def load_settings(config_path):
