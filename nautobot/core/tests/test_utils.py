@@ -186,13 +186,13 @@ class CacheGetOrSetTest(TestCase):
 
     def test_computes_and_caches_on_miss(self):
         compute = mock.Mock(return_value="computed value")
-        value, hit = cache_get_or_set(self.cache_key, compute)
+        value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
         self.assertEqual(value, "computed value")
         self.assertFalse(hit)
         compute.assert_called_once()
         # A subsequent call should be served from Redis, not recompute.
         compute.reset_mock()
-        value, hit = cache_get_or_set(self.cache_key, compute)
+        value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
         self.assertEqual(value, "computed value")
         self.assertTrue(hit)
         compute.assert_not_called()
@@ -200,9 +200,9 @@ class CacheGetOrSetTest(TestCase):
     def test_outside_request_cache_scope_still_uses_redis(self):
         self.assertIsNone(get_request_cache())
         compute = mock.Mock(return_value="computed value")
-        cache_get_or_set(self.cache_key, compute)
+        cache_get_or_set(self.cache_key, compute, timeout=None)
         with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
-            value, hit = cache_get_or_set(self.cache_key, compute)
+            value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
         self.assertEqual(value, "computed value")
         self.assertTrue(hit)
         mock_cache_get.assert_called_once_with(self.cache_key)
@@ -210,14 +210,27 @@ class CacheGetOrSetTest(TestCase):
     def test_within_request_cache_scope_avoids_repeated_redis_lookups(self):
         compute = mock.Mock(return_value="computed value")
         with request_cache():
-            cache_get_or_set(self.cache_key, compute)  # First call: Redis miss, computes and populates both caches.
+            cache_get_or_set(
+                self.cache_key, compute, timeout=None
+            )  # First call: Redis miss, computes and populates both caches.
             with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
                 for _ in range(5):
-                    value, hit = cache_get_or_set(self.cache_key, compute)
+                    value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
                     self.assertEqual(value, "computed value")
                     self.assertTrue(hit)
             mock_cache_get.assert_not_called()
         compute.assert_called_once()
+
+    def test_cache_hit_callback_is_called_with_the_hit_value(self):
+        compute = mock.Mock(return_value="computed value")
+        cache_hit_callback = mock.Mock()
+        # Miss: compute() is called, cache_hit_callback should be called with False.
+        cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
+        cache_hit_callback.assert_called_once_with(False)
+        # Hit: compute() is not called, cache_hit_callback should be called with True.
+        cache_hit_callback.reset_mock()
+        cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
+        cache_hit_callback.assert_called_once_with(True)
 
 
 class DictToFilterParamsTest(TestCase):

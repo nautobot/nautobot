@@ -51,25 +51,26 @@ def get_request_cache():
     return _request_cache_var.get()
 
 
-def cache_get_or_set(cache_key, compute, *, timeout=None):
+def cache_get_or_set(cache_key, compute, *, timeout, cache_hit_callback=None):
     """
     Get `cache_key` from the current `request_cache()` scope if any, else from Redis, else compute and populate both.
 
-    Returns a `(value, hit)` tuple, where `hit` is `False` only when `compute()` had to be called (i.e. neither the
-    request-local cache nor Redis had a value for `cache_key`).
+    Optionally run a callback on whether the cache was hit or not.
     """
     request_local_cache = get_request_cache()
     if request_local_cache is not None and cache_key in request_local_cache:
-        return request_local_cache[cache_key], True
+        value, hit = request_local_cache[cache_key], True
+    else:
+        value = cache.get(cache_key)
+        hit = value is not None
+        if not hit:
+            value = compute()
+            cache.set(cache_key, value, timeout=timeout)
+        if request_local_cache is not None:
+            request_local_cache[cache_key] = value
 
-    value = cache.get(cache_key)
-    hit = value is not None
-    if not hit:
-        value = compute()
-        cache.set(cache_key, value, timeout=timeout)
-
-    if request_local_cache is not None:
-        request_local_cache[cache_key] = value
+    if cache_hit_callback is not None:
+        cache_hit_callback(hit)
     return value, hit
 
 

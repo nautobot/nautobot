@@ -77,15 +77,20 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             "computed_field_cache.get",
             **{"nautobot.core.computed_field_cache.model": concrete_model._meta.label_lower},
         ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.core.computed_field_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             if not get_queryset:
-                listing, hit = cache_get_or_set(
-                    list_cache_key, lambda: list(cache_get_or_set(cache_key, compute_queryset)[0])
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
                 )
-                _span.set_attribute("nautobot.core.computed_field_cache.hit", hit)
                 return listing
-            queryset, hit = cache_get_or_set(cache_key, compute_queryset)
-            _span.set_attribute("nautobot.core.computed_field_cache.hit", hit)
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
             return queryset
 
     def populate_list_caches(self):
@@ -496,15 +501,20 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 "custom_field_cache.exclude_filter_disabled": exclude_filter_disabled,
             },
         ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.core.custom_field_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             if not get_queryset:
-                listing, hit = cache_get_or_set(
-                    list_cache_key, lambda: list(cache_get_or_set(cache_key, compute_queryset)[0])
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
                 )
-                _span.set_attribute("nautobot.core.custom_field_cache.hit", hit)
                 return listing
-            queryset, hit = cache_get_or_set(cache_key, compute_queryset)
-            _span.set_attribute("nautobot.core.custom_field_cache.hit", hit)
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
             return queryset
 
     def keys_for_model(self, model):
@@ -518,11 +528,17 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             "custom_field_keys_cache.get",
             **{"nautobot.core.custom_field_keys_cache.model": concrete_model._meta.label_lower},
         ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.core.custom_field_keys_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            keys, hit = cache_get_or_set(
-                cache_key, lambda: list(self.get_for_model(model).values_list("key", flat=True))
+            keys, _ = cache_get_or_set(
+                cache_key,
+                lambda: list(self.get_for_model(model).values_list("key", flat=True)),
+                timeout=None,
+                cache_hit_callback=hit_callback,
             )
-            _span.set_attribute("nautobot.core.custom_field_keys_cache.hit", hit)
             return keys
 
     def populate_list_caches(self):

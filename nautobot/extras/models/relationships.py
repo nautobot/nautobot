@@ -486,15 +486,20 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 "nautobot.extras.relationship_cache.hidden": str(hidden),
             },
         ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
             if not get_queryset:
-                listing, hit = cache_get_or_set(
-                    list_cache_key, lambda: list(cache_get_or_set(cache_key, compute_queryset)[0])
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
                 )
-                _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
                 return listing
-            queryset, hit = cache_get_or_set(cache_key, compute_queryset)
-            _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
             return queryset
 
     def get_for_model_destination(self, model, hidden=None, get_queryset=True):
@@ -542,15 +547,20 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 "nautobot.extras.relationship_cache.hidden": str(hidden),
             },
         ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
             if not get_queryset:
-                listing, hit = cache_get_or_set(
-                    list_cache_key, lambda: list(cache_get_or_set(cache_key, compute_queryset)[0])
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
                 )
-                _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
                 return listing
-            queryset, hit = cache_get_or_set(cache_key, compute_queryset)
-            _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
             return queryset
 
     def get_required_for_model(self, model):
