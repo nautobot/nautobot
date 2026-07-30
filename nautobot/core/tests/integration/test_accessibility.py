@@ -1,0 +1,85 @@
+"""
+Accessibility regression tests.
+
+These run axe-core against a handful of representative pages rather than trying to cover every view: the templates
+exercised here (`base_django.html`, `generic/object_list.html`, `generic/object_retrieve.html`,
+`generic/object_edit.html`) back the overwhelming majority of Nautobot's UI, so a regression in shared markup shows up
+here regardless of which model it was introduced against.
+
+The default impact threshold is `critical` and `serious`. `moderate` and `minor` findings are deliberately not gated:
+there are still a number of them in the existing UI, and failing on them now would mean these tests could not be
+enabled at all. Tighten `impacts` per-test as individual categories get cleaned up.
+"""
+
+from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.dcim.models import Location, LocationType
+from nautobot.extras.models import Status
+
+
+class AccessibilityTestCase(SeleniumTestCase):
+    """Assert that shared page templates have no critical or serious accessibility violations."""
+
+    def setUp(self):
+        super().setUp()
+        self.login_as_superuser()
+
+        # A single object is enough to get a populated list view and a detail view to scan.
+        self.location_type = LocationType.objects.create(name="A11y Test Site")
+        self.status = Status.objects.get_for_model(Location).first()
+        self.location = Location.objects.create(
+            name="A11y Test Location",
+            location_type=self.location_type,
+            status=self.status,
+        )
+
+    def test_home_page(self):
+        self.browser.visit(self.live_server_url)
+        self.assertTrue(self.browser.is_element_present_by_css("#draggable-homepage-panels", wait_time=10))
+        self.assertNoAccessibilityViolations()
+
+    def test_object_list_view(self):
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
+        self.assertTrue(self.browser.is_element_present_by_css("#object_list_form", wait_time=10))
+        self.assertNoAccessibilityViolations()
+
+    def test_object_detail_view(self):
+        self.browser.visit(f"{self.live_server_url}{self.location.get_absolute_url()}")
+        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
+        self.assertNoAccessibilityViolations()
+
+    def test_object_edit_view(self):
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/add/")
+        self.assertTrue(self.browser.is_element_present_by_css("form", wait_time=10))
+        self.assertNoAccessibilityViolations()
+
+    def test_object_edit_view_with_validation_errors(self):
+        """
+        A form re-rendered with validation errors is where `aria-invalid` and the `aria-describedby` wiring for error
+        lists have to hold up, so it needs its own scan.
+
+        Required fields carry the HTML5 `required` attribute, so the browser refuses to submit and the server never gets
+        the chance to produce errors; `required` is stripped first to force server-side validation.
+
+        This uses Location Type rather than Location deliberately. Submitting an empty Location form currently raises
+        `RelatedObjectDoesNotExist` from `Location.clean()`, which reads `self.location_type.parent` without checking
+        that `location_type` was supplied -- a pre-existing bug unrelated to accessibility.
+        """
+        self.browser.visit(f"{self.live_server_url}/dcim/location-types/add/")
+        self.assertTrue(self.browser.is_element_present_by_css("form", wait_time=10))
+        self.browser.execute_script(
+            "document.querySelectorAll('[required]').forEach((element) => element.removeAttribute('required'));"
+        )
+        self.browser.find_by_xpath("//button[@name='_create']").first.click()
+        self.assertTrue(self.browser.is_element_present_by_css("[aria-invalid='true']", wait_time=10))
+        self.assertNoAccessibilityViolations()
+
+    def test_search_page(self):
+        self.browser.visit(f"{self.live_server_url}/search/?q=A11y")
+        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
+        self.assertNoAccessibilityViolations()
+
+    def test_login_page(self):
+        self.logout()
+        self.browser.visit(f"{self.live_server_url}/login/")
+        self.assertTrue(self.browser.is_element_present_by_name("username", wait_time=10))
+        self.assertNoAccessibilityViolations()
