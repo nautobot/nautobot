@@ -200,3 +200,105 @@ As of Nautobot 3.0, any jQuery usage is deprecated. There are other libraries st
 ## Previewing the theme
 
 When `settings.DEBUG` is set to `True`, an authenticated Nautobot user can access the URL `/theme-preview/` to retrieve a templated view that showcases many of the different Nautobot UI elements. While not necessarily comprehensive, this view is designed to provide an overview of the current theme more conveniently than clicking around to various specific pages in the UI. Feel free to add more example content into this view as needed.
+
+## Accessibility
+
+Nautobot targets [WCAG 2.1 Level AA](https://www.w3.org/TR/WCAG21/). The conventions below are the ones core already
+follows; new UI code and Nautobot App code should follow them too.
+
+### Automated checking
+
+Two linters enforce a subset of this automatically, so run them before opening a PR:
+
+- `invoke djlint` includes `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag"). Do not add
+  either to the ignore list in `pyproject.toml`.
+- Integration tests can assert against [axe-core](https://github.com/dequelabs/axe-core) via
+  `SeleniumTestCase.assertNoAccessibilityViolations()`, which scans the page currently loaded in the browser against the
+  WCAG 2.1 A and AA rule tags:
+
+    ```python
+    def test_my_view(self):
+        self.browser.visit(f"{self.live_server_url}/plugins/my-app/things/")
+        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
+        self.assertNoAccessibilityViolations()
+    ```
+
+    It gates on `critical` and `serious` findings by default; pass `impacts` to widen that, or `context` to scan only
+    part of the page. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
+
+Neither linter is a substitute for keyboard-testing a new component: tab through it, operate it with Enter, Space,
+the arrow keys and Escape, and confirm focus is always visible and never trapped.
+
+### Accessible names
+
+Every interactive element needs a name. An icon on its own is not a name, and neither is a tooltip -- `title` and
+`data-bs-title` are unreliable and are not exposed consistently.
+
+For an icon-only control, hide the icon and add visually hidden text:
+
+```html
+<button class="btn btn-primary" type="button">
+    <span aria-hidden="true" class="mdi mdi-plus-thick"></span>
+    <span class="visually-hidden">Add a new device</span>
+</button>
+```
+
+Mark every purely decorative `mdi` glyph `aria-hidden="true"` so it is not announced alongside adjacent text. Decorative
+images take `alt=""` -- an empty `alt`, not a missing one, and not `role="presentation"` alongside `alt` text, since the
+two contradict each other.
+
+### Hiding things
+
+The two mechanisms are not interchangeable:
+
+- `visually-hidden` hides content visually **but keeps it in the accessibility tree and the tab order**. Use it for text
+  that should be announced but not seen.
+- `d-none`, the `hidden` attribute and `visibility: hidden` remove content from both. Use these to hide UI that should be
+  unavailable.
+
+Using `visually-hidden` to hide a control leaves keyboard users tabbing into something they cannot see.
+
+### Forms
+
+Every field needs a label associated with `for="{{ field.id_for_label }}"`. When the design calls for no *visible*
+label, emit a visually hidden one rather than none.
+
+Django already emits `required`, `aria-invalid="true"` on error, and
+`aria-describedby="<auto_id>_helptext <auto_id>_error"` on the widget. Custom form templates must render the matching
+`id="{{ field.auto_id }}_helptext"` and `id="{{ field.auto_id }}_error"` attributes, otherwise the reference dangles and
+neither the help text nor the errors are announced. Prefer `{% render_field %}`, which handles this.
+
+### Tables
+
+`th` elements need `scope="col"`. Sortable columns need `aria-sort` reflecting the current state, since a sort arrow icon
+alone conveys nothing non-visually. Tables need an accessible name; `inc/table.html` supplies a visually hidden
+`<caption>`, overridable with a `table_caption` context variable.
+
+### Dialogs
+
+A modal needs `role="dialog"`, `aria-modal="true"` and `aria-labelledby` pointing at its title's `id`. For a dialog whose
+content is swapped in by HTMX, the title `id` has to be stable across swaps -- see `inc/modal_header.html`'s `title_id`
+parameter.
+
+### Colour
+
+Do not introduce raw colour values. Use the theme tokens in `colors.scss`, whose light and dark values are chosen to
+clear 4.5:1 against the surfaces they appear on. When a colour is user-supplied, derive its text colour with the
+`fgcolor` template filter, which picks black or white by actual WCAG contrast ratio.
+
+Colour must never be the only signal. Text-coloured links inside a block of prose also need an underline (WCAG 1.4.1),
+and form control borders need 3:1 against their background (WCAG 1.4.11) -- `--nb-input-border-color` exists for this and
+is deliberately darker than the decorative `--bs-border-color`.
+
+### Dynamic content
+
+Content that appears without a page load is not announced unless it lands in a live region. `#header_messages` is a
+persistent `aria-live="polite"` region, so anything appended to it is announced. For a component that updates in place,
+add a `role="status"` element, as the paginator does for its "Showing X-Y of Z" range.
+
+### Pointer-only interactions
+
+Anything driven by dragging needs a keyboard equivalent (WCAG 2.5.7). `draggable.js` implements the conventional
+pattern -- a focusable grip button that is picked up with Enter or Space, moved with the arrow keys, and dropped with
+Enter or Escape, announcing each move -- and reordering works by moving DOM nodes, so persistence layers that watch for
+mutations keep working. Add `nb-draggable-grip` to a button inside the drag handle to opt into it.
