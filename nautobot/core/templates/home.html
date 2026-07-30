@@ -92,7 +92,8 @@
                                 aria-expanded="{% if panel_details.collapsed %}false{% else %}true{% endif %}"
                                 aria-controls="homepanel-{{ panel_name|slugify }}"
                             >
-                                <span class="mdi mdi-chevron-down"></span>
+                                <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
+                                <span class="visually-hidden">Toggle {{ panel_name }} panel</span>
                             </span>
                         </div>
                         <ul

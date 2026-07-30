@@ -32,6 +32,14 @@ Hence the `id` attributes below; do not rename them without matching Django's na
             {% endif %}
     {% elif field|widget_type == 'textarea' and not field.label %}
         <div class="col-md-12">
+            {% comment %}
+            This branch exists for full-width textareas that deliberately show no visible label (Comments being the
+            common case). "No visible label" is not the same as "no label", so emit a visually hidden one; otherwise the
+            field is announced as an unlabelled text area. Falls back to the field name when there is no label at all.
+            {% endcomment %}
+            <label class="visually-hidden" for="{{ field.id_for_label }}">
+                {% firstof field.label field.name|title %}
+            </label>
             {{ field }}
             {% if bulk_nullable %}
                 <div class="form-check mt-6">
