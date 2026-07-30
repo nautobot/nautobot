@@ -232,10 +232,11 @@ class OtelTraceContextFilterTest(testing.TestCase):
 
         self.assertTrue(OtelTraceContextFilter().filter(record))
 
+        # The filter sets these dynamically; pylint can't infer them on a bare LogRecord.
         self.assertEqual(record.otelTraceID, "0")
         self.assertEqual(record.otelSpanID, "0")
-        self.assertFalse(record.otelTraceSampled)
-        self.assertEqual(record.otelServiceName, "")
+        self.assertFalse(record.otelTraceSampled)  # pylint: disable=no-member
+        self.assertEqual(record.otelServiceName, "")  # pylint: disable=no-member
 
     def test_existing_attributes_preserved(self):
         """Real injected trace IDs must not be overwritten by the filter's defaults."""
