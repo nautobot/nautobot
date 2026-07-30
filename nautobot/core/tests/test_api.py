@@ -615,7 +615,7 @@ class ModelViewSetMixinTest(testing.APITestCase):
         with self.assertNumQueries(1):
             list(instance.tags.all())
 
-    @override_settings(ALLOWED_HOSTS=["*"])  # serializing hyperlinked fields builds absolute URLs
+    @override_settings(ALLOWED_HOSTS=["*"])
     def test_get_queryset_optimizations_with_depth(self):
         """
         Test that `?depth=N` causes relations exposed by the resulting nested serializers to also be optimized.
@@ -672,10 +672,10 @@ class ModelViewSetMixinTest(testing.APITestCase):
         serializer_class = dcim_serializers.InterfaceSerializer
         filterset_class = dcim_filters.InterfaceFilterSet
 
-    @override_settings(ALLOWED_HOSTS=["*"])  # serializing hyperlinked fields builds absolute URLs
+    @override_settings(ALLOWED_HOSTS=["*"])
     def test_get_queryset_optimizations_with_depth_4(self):
         """
-        Regression test for the N+1 query bug found via tracing `GET /api/dcim/interfaces/?depth=4`: at depth=4,
+        Regression test for a N+1 query bug with `GET /api/dcim/interfaces/?depth=4`: at depth=4,
         `InterfaceSerializer` recurses into nested serializers four levels deep
         (interface -> device -> location -> location_type -> parent), each an FK hop. Prior to this fix,
         get_queryset() only optimized the first hop (`device`), so accessing `device.location`,
@@ -731,12 +731,12 @@ class ModelViewSetMixinTest(testing.APITestCase):
         with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as optimized_10_ctx:
             traverse_four_hops(list(optimized_queryset_10[:10]))
 
-        # Exactly one query (the single JOIN-based SELECT) regardless of row count - flat, not proportional to N.
+        # Exactly one query (the single JOIN-based SELECT) regardless of row count
         self.assertEqual(len(optimized_3_ctx.captured_queries), 1)
         self.assertEqual(len(optimized_10_ctx.captured_queries), 1)
         self.assertEqual(len(optimized_3_ctx.captured_queries), len(optimized_10_ctx.captured_queries))
 
-        # And, most directly: the optimized path is dramatically cheaper than the naive path at the same row count.
+        # And, most directly: the optimized path has less queries cheaper at the same row count.
         self.assertLess(len(optimized_10_ctx.captured_queries), len(naive_10_ctx.captured_queries))
 
 

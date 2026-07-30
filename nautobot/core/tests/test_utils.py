@@ -1533,24 +1533,6 @@ class GetRelatedFieldQueryOptimizationsTest(TestCase):
         self.assertNotIn("interfaces__device", select_fields)
         self.assertNotIn("interfaces__status", select_fields)
 
-    def test_hard_cap_limits_total_optimizations_and_logs_warning(self):
-        """A max_fields cap should bound the total number of optimizations discovered, regardless of depth,
-        and should log a warning so that the truncation is discoverable/debuggable."""
-        serializer = self._get_serializer(depth=4)
-        with self.assertLogs("nautobot.core.api.utils", level="WARNING") as cm:
-            select_fields, prefetch_fields = api_utils.get_related_field_query_optimizations(
-                serializer, ipam_models.IPAddress, max_fields=2
-            )
-
-        self.assertLessEqual(len(select_fields) + len(prefetch_fields), 2)
-        self.assertTrue(any("maximum" in message.lower() for message in cm.output))
-
-    def test_hard_cap_not_exceeded_does_not_warn(self):
-        """A generous cap that isn't hit should not emit a warning."""
-        serializer = self._get_serializer(depth=1)
-        with self.assertNoLogs("nautobot.core.api.utils", level="WARNING"):
-            api_utils.get_related_field_query_optimizations(serializer, ipam_models.IPAddress, max_fields=1000)
-
     def test_hard_cap_defaults_to_max_related_field_query_optimizations_setting(self):
         """
         When `max_fields` isn't explicitly passed, the cap should come from the `MAX_RELATED_FIELD_QUERY_

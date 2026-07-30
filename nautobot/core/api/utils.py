@@ -286,35 +286,15 @@ def nested_serializer_factory(relation_info, nested_depth):
     return field_class, field_kwargs
 
 
-def get_related_field_query_optimizations(serializer, model, max_fields=None):
+def get_related_field_query_optimizations(serializer, model):
     """
     Walk a serializer (and any nested serializers constructed for it via `?depth`) to discover the
     select_related()/prefetch_related() lookup paths needed to avoid N+1 queries when rendering it.
 
-    A `NautobotModelSerializer` only builds one level of relation fields as flat `RelatedField`s when `depth=0`;
-    with `depth>0`, DRF's built-in nested-serializer support (see `nested_serializer_factory()` above) recursively
-    replaces relation fields with nested serializers down to the requested depth, decrementing `Meta.depth` by 1
-    at each level until it bottoms out at 0. Left unaddressed, every relation exposed below the first level is
-    fetched lazily one row/relation at a time (an N+1 query pattern), since `select_related()`/`prefetch_related()`
-    calls only ever considered the outermost serializer's fields.
-
-    This function mirrors that same recursive structure: it walks `serializer.fields`, and for any field that is
-    itself a nested serializer (single object) or a list of nested serializers (to-many relation), it recurses into
-    that nested serializer's own fields, accumulating dotted lookup paths (e.g. "device__location__location_type").
-
-    Args:
-        serializer: A serializer instance (already constructed with the desired `depth` in its context).
-        model (Model): The Django model class that `serializer` represents.
-        max_fields (int): Safety cap on the total number of optimization paths to discover. If exceeded, remaining
-            relations are left unoptimized (silently falling back to on-demand per-instance queries) and a warning
-            is logged, rather than growing `select_related()`/`prefetch_related()` calls without bound. Defaults
-            to the `MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS` Nautobot setting if not explicitly specified.
-
     Returns:
         (list, list): A 2-tuple of (select_related lookup paths, prefetch_related lookup paths).
     """
-    if max_fields is None:
-        max_fields = settings.MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS
+    max_fields = settings.MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS
     select_fields, prefetch_fields, remaining = _walk_serializer_fields_for_optimizations(
         serializer, model, prefix="", force_prefetch=False, remaining=max_fields
     )
@@ -323,7 +303,7 @@ def get_related_field_query_optimizations(serializer, model, max_fields=None):
             "Reached the maximum number (%s) of select_related()/prefetch_related() optimizations while "
             "inspecting a %s serializer; some nested relations may not be optimized and could result in "
             "additional queries. Consider a lower `?depth` value, or increase the MAX_RELATED_FIELD_QUERY_"
-            "OPTIMIZATIONS Nautobot setting (or the max_fields argument) if this is expected.",
+            "OPTIMIZATIONS Nautobot setting if this is expected.",
             max_fields,
             model.__name__,
         )
@@ -333,10 +313,6 @@ def get_related_field_query_optimizations(serializer, model, max_fields=None):
 def _walk_serializer_fields_for_optimizations(serializer, model, prefix, force_prefetch, remaining):
     """
     Recursive helper for get_related_field_query_optimizations(); see that function's docstring for details.
-
-    `remaining` (int) is the number of additional optimizations still permitted; each call returns the updated
-    count (after any it discovered) alongside its results, so callers can pass the up-to-date value into
-    subsequent sibling/recursive calls rather than relying on shared mutable state.
     """
     select_fields = []
     prefetch_fields = []
