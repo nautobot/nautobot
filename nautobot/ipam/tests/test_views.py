@@ -1006,8 +1006,9 @@ class PrefixTestCase(ViewTestCases.PrimaryObjectViewTestCase, ViewTestCases.List
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
 
+        # `aria-label` names which row the checkbox selects; see `ToggleColumn.render`.
         self.assertInHTML(
-            f'<input type="checkbox" name="pk" value="{addr.pk}" '
+            f'<input aria-label="Select {addr}" type="checkbox" name="pk" value="{addr.pk}" '
             f'class="form-check-input nb-form-check-input-sm mt-2" />',
             content,
         )
