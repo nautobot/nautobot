@@ -178,9 +178,11 @@ class HomeViewTestCase(TestCase):
         url = reverse("home")
         response = self.client.get(url)
 
-        # Search bar in header
+        # Search bar in header. It is a button-driven trigger for the search dialog rather than a form, so that
+        # tabbing to it does not open a modal and move focus (WCAG 3.2.1).
         header_search_bar_pattern = re.compile(
-            '<header.*<form action="/search/" class="col-4 text-center" data-nb-live-search-path="/live-search/" id="header_search" method="get" role="search">.*</form>.*</header>'
+            '<header.*<div aria-label="Search".*id="header_search".*role="search">'
+            '.*<button aria-haspopup="dialog".*id="header_search_trigger".*</div>.*</header>'
         )
         header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -694,38 +696,32 @@ class SearchFieldsTestCase(TestCase):
 
         # Assert model search bar present in list UI
         response = self.client.get(reverse("dcim:location_list"))
-        self.assertBodyContains(
-            response,
-            '<input aria-label="Search" autocomplete="off" class="form-control" name="q" type="search" value="">',
-            html=True,
-        )
+        self.assertBodyContains(response, 'id="header_search_trigger"')
+        self.assertBodyContains(response, 'aria-haspopup="dialog"')
         self.assertBodyContains(
             response,
             """
-                <span class="badge border" data-nb-link="/dcim/locations/"><!--
+                <span class="badge border flex-shrink-0" data-nb-link="/dcim/locations/"><!--
                     -->in: Locations<!--
-                    --><button tabindex="-1" type="button">
+                    --><button type="button">
                     <span aria-hidden="true" class="mdi mdi-close"></span>
-                    <span class="visually-hidden">Remove</span>
+                    <span class="visually-hidden">Remove Locations filter</span>
                 </button>
             """,
             html=True,
         )
 
         response = self.client.get(reverse("dcim:device_list"))
-        self.assertBodyContains(
-            response,
-            '<input aria-label="Search" autocomplete="off" class="form-control" name="q" type="search" value="">',
-            html=True,
-        )
+        self.assertBodyContains(response, 'id="header_search_trigger"')
+        self.assertBodyContains(response, 'aria-haspopup="dialog"')
         self.assertBodyContains(
             response,
             """
-                <span class="badge border" data-nb-link="/dcim/devices/"><!--
+                <span class="badge border flex-shrink-0" data-nb-link="/dcim/devices/"><!--
                     -->in: Devices<!--
-                    --><button tabindex="-1" type="button">
+                    --><button type="button">
                     <span aria-hidden="true" class="mdi mdi-close"></span>
-                    <span class="visually-hidden">Remove</span>
+                    <span class="visually-hidden">Remove Devices filter</span>
                 </button>
             """,
             html=True,

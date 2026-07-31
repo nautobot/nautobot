@@ -519,7 +519,6 @@ $utilities: map-merge(
       property: color,
       values: (
         body-bg: var(--#{$prefix}body-bg),
-        transparent: transparent,
       ),
     ),
     "nb-cursor": (
@@ -865,6 +864,25 @@ button {
  */
 :root {
   scroll-padding-block-end: 5rem;
+}
+
+/* Header search trigger */
+#header_search {
+  cursor: pointer;
+
+  /* The container carries `.form-control`, whose default cursor is a text caret; this is not a text field. */
+  #header_search_trigger {
+    cursor: inherit;
+  }
+
+  /*
+   * `.form-control` only shows a focus ring when the control itself is focused, but here focus lands on the trigger
+   * button inside it, so lift the ring to the container that visually reads as the field.
+   */
+  &:has(#header_search_trigger:focus-visible) {
+    @include box-shadow(0 0 0 #{$focus-ring-width} var(--#{$prefix}focus-ring-color));
+    border-color: var(--#{$prefix}primary-text-emphasis);
+  }
 }
 
 /*

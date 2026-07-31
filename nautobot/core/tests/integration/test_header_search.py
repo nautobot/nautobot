@@ -28,9 +28,9 @@ class HeaderSearchTestCase(SeleniumTestCase):
         return self.get_element(f"{self.SEARCH_POPUP_XPATH}//form//following-sibling::div//*[parent::ul|parent::tbody]")
 
     def open_search_popup(self):
-        # Wait for header search input to load into DOM and trigger search popup by clicking on header search input
-        header_search_input = self.get_element("//form[@id='header_search']//input[@name='q' and @type='search']")
-        header_search_input.click()
+        # The header search is a button-driven trigger, not a text field: it opens the dialog on activation rather than
+        # on focus, so that tabbing through the header does not pull the user into a modal (WCAG 3.2.1).
+        self.get_element("//div[@id='header_search']//button[@id='header_search_trigger']").click()
 
         # Wait for search popup to initialize
         self.assertTrue(self.browser.is_element_present_by_xpath(self.SEARCH_POPUP_XPATH, wait_time=10))

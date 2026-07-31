@@ -65,7 +65,12 @@ export const initializeSearch = () => {
     { keys: ['name'], threshold: 0.4, useTokenSearch: true },
   );
 
-  const headerSearchInput = headerSearch.querySelector('input');
+  /*
+   * The trigger is a button, so the current query and the search URL come from the container's data attributes rather
+   * than from a form and an input value.
+   */
+  const headerSearchQuery = headerSearch.dataset.nbQuery ?? '';
+  const headerSearchAction = headerSearch.dataset.nbSearchAction ?? '';
 
   const closeSearchPopup = () => {
     const searchPopup = document.getElementById('search_popup');
@@ -75,21 +80,6 @@ export const initializeSearch = () => {
       document.body.classList.toggle('overflow-y-hidden', false);
     }
   };
-
-  // Focus search input on Cmd+K or Ctrl+K shortcut and close search popup on Escape.
-  const onKeyDown = (event) => {
-    const isPressedCmd = event.getModifierState?.('Meta');
-    const isPressedCtrl = event.ctrlKey;
-
-    if ((isPressedCmd || isPressedCtrl) && event.key === 'k') {
-      event.preventDefault();
-      headerSearchInput.focus();
-    } else if (event.key === 'Escape') {
-      closeSearchPopup();
-    }
-  };
-
-  document.addEventListener('keydown', onKeyDown);
 
   const openSearchPopup = () => {
     const searchPopup = document.getElementById('search_popup');
@@ -105,7 +95,7 @@ export const initializeSearch = () => {
     document.body.classList.toggle('overflow-y-hidden', true);
 
     const { left: mainLeft = 0, right: mainRight = 0 } = document.querySelector('main')?.getBoundingClientRect() ?? {};
-    const { top: headerSearchInputTop } = headerSearchInput.getBoundingClientRect();
+    const { top: headerSearchTop } = headerSearch.getBoundingClientRect();
 
     const icon = createElement('span', {
       'aria-hidden': 'true',
@@ -149,7 +139,7 @@ export const initializeSearch = () => {
       role: 'combobox',
       style: `padding-inline: ${BASE_SEARCH_INPUT_PADDING_X};`,
       type: 'search',
-      value: headerSearchInput.value,
+      value: headerSearchQuery,
     });
 
     const clear = createElement(
@@ -178,7 +168,7 @@ export const initializeSearch = () => {
 
     const form = createElement(
       'form',
-      { action: headerSearch.getAttribute('action'), className: 'pe-auto position-relative w-100', role: 'search' },
+      { action: headerSearchAction, className: 'pe-auto position-relative w-100', role: 'search' },
       icon,
       badges,
       input,
@@ -252,7 +242,7 @@ export const initializeSearch = () => {
         className: 'overflow-auto pb-20 position-fixed top-0 end-0 bottom-0 start-0 nb-z-modal-backdrop',
         id: 'search_popup',
         role: 'dialog',
-        style: `background-color: rgba(0, 0, 0, .5); padding-block-start: ${headerSearchInputTop}px; padding-inline-start: calc(${mainLeft}px + ${rem(20)}rem); padding-inline-end: calc(100% - ${mainRight}px + ${rem(20)}rem);`,
+        style: `background-color: rgba(0, 0, 0, .5); padding-block-start: ${headerSearchTop}px; padding-inline-start: calc(${mainLeft}px + ${rem(20)}rem); padding-inline-end: calc(100% - ${mainRight}px + ${rem(20)}rem);`,
       },
       popup,
     );
@@ -648,23 +638,43 @@ export const initializeSearch = () => {
     input.setSelectionRange(-1, -1);
   };
 
-  /*
-   * Hide the header field's own text now that the facade is active. Focusing it opens the popup, so it is never typed
-   * into, and the overlay renders the value instead so the `in: <Model>` badges can sit inline with it.
-   *
-   * This is applied here rather than in the template on purpose. The header form still submits as a plain GET search
-   * with JavaScript unavailable, and in that state the field *is* typed into directly -- transparent text would leave
-   * the user unable to see what they had entered (WCAG 1.4.3).
-   */
-  const HEADER_INPUT_TEXT_HIDDEN_CLASS = 'nb-text-transparent';
-  headerSearchInput.classList.add(HEADER_INPUT_TEXT_HIDDEN_CLASS);
+  // Open the search popup on Cmd+K or Ctrl+K, and close it on Escape.
+  const onKeyDown = (event) => {
+    const isPressedCmd = event.getModifierState?.('Meta');
+    const isPressedCtrl = event.ctrlKey;
 
-  headerSearchInput.addEventListener('focus', openSearchPopup);
+    if ((isPressedCmd || isPressedCtrl) && event.key === 'k') {
+      event.preventDefault();
+      openSearchPopup();
+    } else if (event.key === 'Escape') {
+      closeSearchPopup();
+    }
+  };
+
+  document.addEventListener('keydown', onKeyDown);
+
+  /*
+   * Open on activation, never on focus. Opening a dialog and moving focus into it merely because the control received
+   * focus is a change of context on focus (WCAG 3.2.1, Level A): a keyboard user tabbing through the header would be
+   * pulled into a modal they had not asked for. The trigger is a `<button>`, so Enter and Space are handled natively.
+   */
+  const onHeaderSearchClick = (event) => {
+    /*
+     * The whole container is the click target, so that clicking the magnifier or the padding around the label works as
+     * it did when this was a full-width field. The badge remove buttons and the help link are real controls inside that
+     * container and must keep their own behaviour.
+     */
+    if (event.target.closest('a, [data-nb-link] button')) {
+      return;
+    }
+    openSearchPopup();
+  };
+
+  headerSearch.addEventListener('click', onHeaderSearchClick);
 
   return () => {
     closeSearchPopup();
-    headerSearchInput.classList.remove(HEADER_INPUT_TEXT_HIDDEN_CLASS);
     document.removeEventListener('keydown', onKeyDown);
-    headerSearchInput.removeEventListener('focus', openSearchPopup);
+    headerSearch.removeEventListener('click', onHeaderSearchClick);
   };
 };

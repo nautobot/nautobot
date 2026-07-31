@@ -3,75 +3,75 @@
 
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
-        <form action="{% url 'search' %}" class="col-4 text-center" data-nb-live-search-path="{% url 'live_search' %}" id="header_search" method="get" role="search">
-            <label class="position-relative w-100">
-                {% comment %}
-                The visible "Press Ctrl+K to search" text is a decorative overlay marked `aria-hidden` further down, and
-                the wrapping `<label>` has no text of its own, so `aria-label` is what gives this input its accessible
-                name. `aria-placeholder` was doing nothing useful here -- it is not a labelling mechanism, and it is only
-                meant for elements that cannot use the native `placeholder` attribute.
+        {% comment %}
+        The header search is a trigger for the search dialog, so it is built as a button rather than a text field.
 
-                `role="searchbox"` was also removed: `<input type="search">` already has that role implicitly.
+        It used to be an `<input>` whose text was made transparent, with an overlay drawn on top rendering the value so
+        that `in: <Model>` badges could sit inline with it. That had two problems. Focusing the field opened the dialog
+        and moved focus into it, which is a change of context on focus (WCAG 3.2.1, Level A) -- a keyboard user tabbing
+        through the header was pulled into a modal they had not asked for. And the transparent text over an overlaid
+        element left automated checkers unable to determine the field's contrast at all.
 
-                This field's text is hidden with `nb-text-transparent`, because when the search facade is active the
-                overlay below renders the value so that the `in: <Model>` badges can sit inline with it. That class is
-                added by `search.js` rather than set here: this form still submits as a plain GET search without
-                JavaScript, and in that state the field is typed into directly, where transparent text would leave the
-                user unable to see what they had entered at all (WCAG 1.4.3).
-                {% endcomment %}
-                <input
-                    aria-label="Search"
-                    autocomplete="off"
-                    class="form-control"
-                    name="q"
-                    type="search"
-                    value="{{ request.GET.q }}"
-                />
-                <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
-                    <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
-                    {% spaceless %}
-                        {% if content_type %}
-                            {% for tab_name, tab_details in nav_menu.tabs.items %}
-                                {% for group_name, group_details in tab_details.groups.items %}
-                                    {% for item_link, item_details in group_details.items.items %}
-                                        {% if item_details.is_active %}
-                                            <span class="badge border" data-nb-link="{{ item_link }}"><!--
-                                                -->in: {{ item_details.name }}<!--
-                                                --><button tabindex="-1" type="button">
-                                                <span aria-hidden="true" class="mdi mdi-close"></span>
-                                                <span class="visually-hidden">Remove</span>
-                                            </button>
-                                            </span>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endfor %}
+        Everything now sits in normal flow inside a `form-control`-styled container: nothing overlaps, no text is
+        transparent, and the badge remove buttons and the help link are siblings of the trigger rather than nested inside
+        it. `search.js` opens the dialog on activation, and widens the click target to the whole container.
+
+        The `<noscript>` block below keeps search working without JavaScript, where there is no dialog to open.
+        {% endcomment %}
+        <div aria-label="Search"
+             class="align-items-center col-4 d-flex form-control gap-6 text-start"
+             data-nb-live-search-path="{% url 'live_search' %}"
+             data-nb-query="{{ request.GET.q }}"
+             data-nb-search-action="{% url 'search' %}"
+             id="header_search"
+             role="search">
+            <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
+            {% spaceless %}
+                {% if content_type %}
+                    {% for tab_name, tab_details in nav_menu.tabs.items %}
+                        {% for group_name, group_details in tab_details.groups.items %}
+                            {% for item_link, item_details in group_details.items.items %}
+                                {% if item_details.is_active %}
+                                    <span class="badge border flex-shrink-0" data-nb-link="{{ item_link }}"><!--
+                                        -->in: {{ item_details.name }}<!--
+                                        --><button type="button">
+                                        <span aria-hidden="true" class="mdi mdi-close"></span>
+                                        <span class="visually-hidden">Remove {{ item_details.name }} filter</span>
+                                    </button>
+                                    </span>
+                                {% endif %}
                             {% endfor %}
-                        {% endif %}
-                    {% endspaceless %}
-                    <span
-                        aria-hidden="true"
-                        class="align-items-center d-inline-flex gap-4 text-nowrap{% if not request.GET.q %} text-secondary{% endif %}"
-                    >
-                        {% if not request.GET.q %}
-                            Press <kbd class="mt-n1">{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
-                        {% else %}
-                            {{ request.GET.q }}
-                        {% endif %}
-                    </span>
-                    {% searchable_fields_for_content_type content_type as searchable_fields %}
-                    {# `nb-target-size-min` gives this icon-only link a 24x24 hit area (WCAG 2.5.8). #}
-                    <a class="align-items-center d-inline-flex justify-content-center ms-auto nb-target-size-min pe-auto"
-                       aria-label="Search help"
-                       href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
-                       target="_blank"
-                       rel="noopener"
-                       {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
-                    >
-                        <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
-                    </a>
-                </span>
-            </label>
-        </form>
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+            {% endspaceless %}
+            <button aria-haspopup="dialog"
+                    class="align-items-center bg-transparent border-0 d-inline-flex flex-grow-1 gap-4 p-0 text-nowrap text-start{% if not request.GET.q %} text-secondary{% endif %}"
+                    id="header_search_trigger"
+                    type="button">
+                {% if not request.GET.q %}
+                    Press <kbd class="mt-n1">{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
+                {% else %}
+                    {{ request.GET.q }}
+                {% endif %}
+            </button>
+            {% searchable_fields_for_content_type content_type as searchable_fields %}
+            {# `nb-target-size-min` gives this icon-only link a 24x24 hit area (WCAG 2.5.8). #}
+            <a class="align-items-center d-inline-flex flex-shrink-0 justify-content-center ms-auto nb-target-size-min"
+               aria-label="Search help"
+               href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
+               target="_blank"
+               rel="noopener"
+               {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
+            >
+                <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
+            </a>
+        </div>
+        <noscript>
+            <form action="{% url 'search' %}" class="col-4" method="get" role="search">
+                <input aria-label="Search" class="form-control" name="q" type="search" value="{{ request.GET.q }}">
+            </form>
+        </noscript>
     {% endwith %}
 
     <div class="col-4 text-end">
