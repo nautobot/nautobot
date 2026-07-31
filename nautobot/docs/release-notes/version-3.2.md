@@ -283,15 +283,14 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed GraphQL OpenTelemetry span attributes: request spans now use the OpenTelemetry GraphQL semantic-convention keys (`graphql.document`, `graphql.operation.type`), and schema-build spans are namespaced under `nautobot.core.graphql.schema.`.
 - [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed GraphQL operation-type detection so a leading comment in the query no longer prevents the operation type from being recorded.
 - [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed API-token GraphQL requests recording `enduser.id` as `anonymous` instead of the authenticated user.
-- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed the local development observability stack so it starts cleanly, including Mimir no longer exiting on startup, Grafana anonymous users being able to use Explore, and Promtail only scraping the Nautobot stack's containers.
 - [#6887](https://github.com/nautobot/nautobot/issues/6887) - Fixed SSO group syncing to also read group attributes from SAML responses.
 - [#9204](https://github.com/nautobot/nautobot/issues/9204), [#9270](https://github.com/nautobot/nautobot/issues/9270) - Fixed missing change log entries, webhooks, job hooks, and events when creating or deleting many-to-many association records via the REST API.
 - [#9320](https://github.com/nautobot/nautobot/issues/9320) - Fixed `Device.get_cables()` and `Module.get_cables()` raising a `FieldError` after the 3.2 cable data model changes.
-- [#9325](https://github.com/nautobot/nautobot/issues/9325) - Fixed breakout cable interfaces to change colors and icons correctly when a cable status is changed.
+- [#9325](https://github.com/nautobot/nautobot/issues/9325) - Fixed breakout subinterfaces to change colors and icons correctly when a cable status is changed.
 - [#9326](https://github.com/nautobot/nautobot/issues/9326) - Added additional `select_related` for device bays in device API view set.
 - [#9328](https://github.com/nautobot/nautobot/issues/9328) - Reduced redundant Redis cache lookups for `CustomField.choices` when constructing FilterSets, by building the choice widget once per CustomField instead of once per generated filter (base filter plus lookup-expression variants).
 - [#9329](https://github.com/nautobot/nautobot/issues/9329) - Fixed missing JobResult when a scheduled job fires while no Celery worker is running. The scheduler (Celery Beat) now creates a PENDING JobResult before publishing the task to the broker, and marks it as FAILURE if publishing fails.
-- [#9332](https://github.com/nautobot/nautobot/issues/9332) - Fixed segmentation faults in uWSGI worker processes when OpenTelemetry tracing used the OTLP gRPC exporter together with django-silk request profiling, by creating the OTLP exporters in each worker after fork instead of in the master process before fork.
+- [#9332](https://github.com/nautobot/nautobot/issues/9332) - Fixed segmentation faults in uWSGI worker processes when OpenTelemetry tracing used the OTLP gRPC exporter together with `django-silk` request profiling, by creating the OTLP exporters in each worker after fork instead of in the master process before fork.
 - [#9333](https://github.com/nautobot/nautobot/issues/9333) - Implemented in-process per-request cache to prevent duplicate Redis lookups.
 - [#9335](https://github.com/nautobot/nautobot/issues/9335) - Fixed OpenTelemetry log correlation duplicating and reformatting log lines when `OTEL_PYTHON_LOG_CORRELATION` was enabled, by injecting the trace and span IDs onto log records instead of overriding the root logging configuration; the default console logging now surfaces the trace and span IDs when correlation is enabled.
 - [#9336](https://github.com/nautobot/nautobot/issues/9336) - Fixed the REST API schema for several structured JSON fields that previously rendered as untyped objects.
@@ -307,6 +306,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Housekeeping in v3.2.2
 
+- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed the local development observability stack so it starts cleanly, including Mimir no longer exiting on startup, Grafana anonymous users being able to use Explore, and Promtail only scraping the Nautobot stack's containers.
 - [#9337](https://github.com/nautobot/nautobot/issues/9337) - Removed some no-longer-used custom logic for serialization/deserialization of Nautobot records to/from JSON.
 
 ## v3.2.1 (2026-07-28)
