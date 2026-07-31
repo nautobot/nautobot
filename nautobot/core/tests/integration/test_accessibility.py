@@ -180,6 +180,58 @@ class AccessibilityTestCase(SeleniumTestCase):
             f"the query being searched for changed the height of the header search: {heights}",
         )
 
+    def test_accessibility_assertion_context_is_honoured(self):
+        """
+        Exercise the `context` and `exclude` plumbing in `assertNoAccessibilityViolations` itself.
+
+        These build an axe context object rather than passing `document`, and axe rejects a malformed one, so a mistake
+        here would not fail loudly -- it would quietly scan the wrong part of the page and report nothing. The default
+        `exclude` covers django-debug-toolbar, which is absent under the test settings, so nothing in the suite as it
+        stands would exercise the argument at all.
+
+        Inject a deliberate contrast failure to check against, rather than relying on a real one: real violations are
+        what the rest of this file exists to remove, so any test depending on one is a test that breaks when the code
+        gets better.
+        """
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
+        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
+        self.browser.execute_script(
+            """
+            const offender = document.createElement('div');
+            offender.id = 'a11y-self-test';
+            /* #777 on #888: 1.2:1, far below the 4.5:1 of 1.4.3 AA, and large enough not to be skipped as decorative. */
+            offender.style.cssText = 'background:#888;color:#777;font-size:16px;padding:8px';
+            offender.textContent = 'Deliberately low contrast text for the harness self-test';
+            document.querySelector('main').append(offender);
+            """
+        )
+
+        with self.assertRaises(AssertionError) as failure:
+            self.assertNoAccessibilityViolations()
+        self.assertIn("color-contrast", str(failure.exception))
+
+        # Excluded, the same page passes -- so `exclude` reaches axe and narrows what it reports.
+        self.assertNoAccessibilityViolations(exclude=("#a11y-self-test",))
+
+        # And `context` still limits the scan, rather than being ignored now that it is wrapped in a context object.
+        self.assertNoAccessibilityViolations(context="header")
+        with self.assertRaises(AssertionError):
+            self.assertNoAccessibilityViolations(context="main")
+
+        # The default exclusion has to cover a subtree, not just the element named: django-debug-toolbar reports against
+        # elements nested inside `#djDebugRoot`, such as the `#djShowToolBarJ` span in its collapsed handle. Stand the
+        # shape of it up here, since the toolbar itself is not installed under the test settings.
+        self.browser.execute_script(
+            """
+            const offender = document.getElementById('a11y-self-test');
+            const toolbar = document.createElement('div');
+            toolbar.id = 'djDebugRoot';
+            document.querySelector('main').append(toolbar);
+            toolbar.append(offender);
+            """
+        )
+        self.assertNoAccessibilityViolations()
+
     def test_header_search_does_not_open_dialog_on_focus(self):
         """
         Moving focus to the search trigger must not open the search dialog (WCAG 3.2.1 On Focus, Level A).

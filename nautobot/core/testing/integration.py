@@ -38,6 +38,15 @@ AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag
 # success criterion is, so a low-impact finding can still be a WCAG AA failure.
 AXE_DEFAULT_IMPACTS = ("critical", "serious", "moderate", "minor")
 
+# Third-party developer tooling that injects itself into the page. It is not part of the shipped UI -- nothing here can
+# reach a Nautobot user -- so its markup is not ours to conform and only obscures findings that are. Keep this list to
+# tools that are dev-only dependencies; anything a user can actually see belongs in the scan.
+#
+# `#djDebugRoot` is the django-debug-toolbar container. The toolbar is a `[tool.poetry.group.dev.dependencies]` entry,
+# and only `development/nautobot_config.py` adds it to `INSTALLED_APPS`, gated on `DEBUG`. Integration tests run with it
+# absent, so this exclusion matters for scans a developer runs by hand against a `DEBUG` dev server.
+AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
+
 
 class ObjectsListMixin:
     """
@@ -496,7 +505,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.login(self.user.username, self.password)
         self.logged_in = True
 
-    def assertNoAccessibilityViolations(self, impacts=AXE_DEFAULT_IMPACTS, tags=AXE_DEFAULT_TAGS, context=None):
+    def assertNoAccessibilityViolations(
+        self, impacts=AXE_DEFAULT_IMPACTS, tags=AXE_DEFAULT_TAGS, context=None, exclude=AXE_EXCLUDE_SELECTORS
+    ):
         """
         Assert that the page currently loaded in the browser has no axe-core accessibility violations.
 
@@ -508,6 +519,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
                 what is being deferred and why.
             tags (tuple): axe-core rule tags to run. Defaults to WCAG 2.2 A and AA.
             context (str, optional): CSS selector limiting the scan to part of the page. Scans the whole page by default.
+            exclude (tuple): CSS selectors to leave out of the scan. Defaults to `AXE_EXCLUDE_SELECTORS`, which covers
+                third-party developer tooling injected into the page rather than anything Nautobot ships. Excluding our
+                own markup to get a scan to pass is not what this is for.
 
         Raises:
             AssertionError: If any violation at one of the given impact levels is found. The message lists the rule id,
@@ -545,12 +559,23 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         # `axe.run` is promise-based, so hand the result back through a callback via Selenium's async script support.
         results = self.browser.driver.execute_async_script(
             """
-            const [context, tags, done] = [arguments[0], arguments[1], arguments[arguments.length - 1]];
-            axe.run(context || document, { runOnly: { type: 'tag', values: tags } })
+            const [context, exclude, tags, done] = [
+                arguments[0], arguments[1], arguments[2], arguments[arguments.length - 1],
+            ];
+            /*
+             * An axe context takes `include`/`exclude` lists of selector arrays. Omit `include` entirely rather than
+             * defaulting it to `document`, which is not a selector and makes axe reject the context.
+             */
+            const axeContext = {};
+            if (context) { axeContext.include = [[context]]; }
+            /* Excluding a selector that matches nothing is harmless, so no need to check whether the tooling is present. */
+            if (exclude && exclude.length) { axeContext.exclude = exclude.map((selector) => [selector]); }
+            axe.run(Object.keys(axeContext).length ? axeContext : document, { runOnly: { type: 'tag', values: tags } })
                 .then((results) => done({ violations: results.violations }))
                 .catch((error) => done({ error: String(error) }));
             """,
             context,
+            list(exclude or ()),
             list(tags),
         )
 
