@@ -273,7 +273,7 @@ VRF_LINK = """
 
 VRF_TARGETS = """
 {% for rt in value.all %}
-    <a href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
+    <a class="nb-stacked-link" href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
     <span class="text-secondary">&mdash;</span>
 {% endfor %}
@@ -295,7 +295,7 @@ VLAN_LINK = """
 
 VLAN_PREFIXES = """
 {% for prefix in record.prefixes.all %}
-    <a href="{% url 'ipam:prefix' pk=prefix.pk %}">{{ prefix }}</a>{% if not forloop.last %}<br />{% endif %}
+    <a class="nb-stacked-link" href="{% url 'ipam:prefix' pk=prefix.pk %}">{{ prefix }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
     <span class="text-secondary">&mdash;</span>
 {% endfor %}

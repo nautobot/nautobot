@@ -867,6 +867,21 @@ button {
 }
 
 /*
+ * Table cells that stack several links, one per line, separated by `<br>` (WCAG 2.5.8, AA).
+ *
+ * An inline anchor is only about 17px tall and `<br>` adds no separation, so vertically adjacent links are both under
+ * the 24x24 minimum and too close to claim the spacing exception -- a 24px circle centred on one overlaps its
+ * neighbour's. Give each a 24px minimum block size, which spaces the centres far enough apart on its own.
+ *
+ * Applied per anchor rather than to the cell, because only the anchors are pointer targets.
+ */
+.nb-stacked-link {
+  align-items: center;
+  display: inline-flex;
+  min-block-size: map.get($spacers, 24);
+}
+
+/*
  * Tag links (WCAG 2.5.8, AA).
  *
  * The link, not the badge inside it, is the pointer target, and as an inline box it was only 17px tall with about 3px
