@@ -1,1 +1,2 @@
 Added an Accessibility section to the UI Best Practices guide, documenting the WCAG 2.2 AA target and the conventions for accessible names, hiding mechanisms, forms, tables, dialogs, color, live regions and keyboard alternatives to dragging.
+Added guidance on scanning pages by hand with a browser extension, including why such a scan should be run with `DEBUG` off.
