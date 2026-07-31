@@ -223,11 +223,33 @@ Two linters enforce a subset of this automatically, so run them before opening a
         self.assertNoAccessibilityViolations()
     ```
 
-    It gates on `critical` and `serious` findings by default; pass `impacts` to widen that, or `context` to scan only
-    part of the page. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
+    It gates on findings at every impact level, because impact describes how badly a violation affects a user rather
+    than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
+    part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
+
+Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated
+on -- they need a human -- but they are where a real defect hides when it produces no violation. A label overflowing its
+container reports only as "background color could not be determined", because contrast is indeterminate for whatever
+part of an element falls outside the ancestor painting its background.
 
 Neither linter is a substitute for keyboard-testing a new component: tab through it, operate it with Enter, Space,
 the arrow keys and Escape, and confirm focus is always visible and never trapped.
+
+### Scanning by hand
+
+Browser extensions such as [Accessibility Insights](https://accessibilityinsights.io/) or axe DevTools inspect the live
+DOM, which the automated tests deliberately cannot substitute for -- they catch anything a runtime class or a piece of
+JavaScript introduces after render.
+
+Do it against a server with `DEBUG` off, or expect noise that is not yours. The development environment runs with
+`DEBUG = True`, which enables Django Debug Toolbar, and the toolbar injects a `#djDebugRoot` element that reports a
+`color-contrast` finding on its own collapsed handle. It is a false positive twice over: the handle measures 5.27:1 in
+light mode and 7.01:1 in dark once its `opacity: 0.6` is composited (18.33:1 as declared), and the toolbar is a dev-only
+dependency that is never installed for a Nautobot user. `assertNoAccessibilityViolations()` excludes it via
+`AXE_EXCLUDE_SELECTORS`; a browser extension will not, so set `NAUTOBOT_DEBUG=False` for the run.
+
+That exclusion list is for third-party developer tooling only. Reach for it when something injected into the page is not
+part of what Nautobot ships -- never to quiet a finding in our own markup.
 
 ### Accessible names
 
