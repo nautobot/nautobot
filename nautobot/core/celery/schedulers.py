@@ -9,6 +9,7 @@ from celery.beat import _evaluate_entry_args, _evaluate_entry_kwargs, reraise, S
 from celery.result import AsyncResult
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.utils import timezone
 from django_celery_beat.schedulers import DatabaseScheduler, ModelEntry
 from kombu.utils.json import loads
@@ -209,8 +210,11 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         This is an override of the `celery.beat.Scheduler.apply_async()` method. After executing
         original `apply_async()` call, it synchronizes `total_run_count` and saves the model. This
         prevents the same task from being started again while it is still running.
-
         Ref: https://github.com/celery/django-celery-beat/issues/558#issuecomment-1162730008
+
+        A PENDING JobResult is created before publishing the task to the broker, so that the
+        dispatch is visible in the database even when no Celery worker is consuming the queue
+        at the scheduled time. If publishing fails, the JobResult is marked as FAILURE.
         """
         resp = None
         entry = self.reserve(entry) if advance else entry
@@ -223,6 +227,7 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         if isinstance(entry, NautobotScheduleEntry) and "nautobot_job_user_id" not in entry.options:
             return None
 
+        job_result = None
         try:
             if entry.kwargs is None:
                 raise ValueError("Job `kwargs` has to be defined. Now is set to `None`.")
@@ -230,30 +235,40 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             entry_args = _evaluate_entry_args(entry.args)
             entry_kwargs = _evaluate_entry_kwargs(entry.kwargs)
 
-            if task:
-                scheduled_job = entry.model
-                job_queue = scheduled_job.job_queue
+            scheduled_job = entry.model
+            job_model = scheduled_job.job_model
+            celery_kwargs = dict(entry.options)
+            job_queue = scheduled_job.job_queue
 
-                # Distinguish between Celery and Kubernetes job queues
-                if job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
-                    celery_kwargs = dict(entry.options)
-                    celery_kwargs.setdefault("queue", job_queue.name)
-                    job_result = JobResult.objects.create(
-                        name=scheduled_job.job_model.name,
-                        job_model=scheduled_job.job_model,
-                        scheduled_job=scheduled_job,
-                        user=scheduled_job.user,
-                        task_name=scheduled_job.job_model.class_path,
-                        celery_kwargs=celery_kwargs,
-                    )
-                    job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
-                    # Return an AsyncResult object to mimic the behavior of Celery tasks after the job is finished by Kubernetes Job Pod.
-                    resp = AsyncResult(job_result.id)
-                else:
-                    resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **entry.options)
+            if job_queue is not None:
+                celery_kwargs.setdefault("queue", job_queue.name)
+
+            job_result = JobResult.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                scheduled_job=scheduled_job,
+                user=scheduled_job.user,
+                task_name=job_model.class_path,
+                celery_kwargs=celery_kwargs,
+            )
+
+            # Distinguish between Celery and Kubernetes job queues
+            if task and job_queue is not None and job_queue.queue_type == JobQueueTypeChoices.TYPE_KUBERNETES:
+                job_result = run_kubernetes_job_and_return_job_result(job_result, entry_kwargs)
+                # Return an AsyncResult object to mimic the behavior of Celery tasks
+                # after the job is finished by the Kubernetes Job Pod.
+                resp = AsyncResult(job_result.id)
             else:
-                resp = self.send_task(entry.task, entry_args, entry_kwargs, producer=producer, **entry.options)
+                dispatch_kwargs = dict(entry.options)
+                dispatch_kwargs["task_id"] = str(job_result.id)
+                if task:
+                    resp = task.apply_async(entry_args, entry_kwargs, producer=producer, **dispatch_kwargs)
+                else:
+                    resp = self.send_task(entry.task, entry_args, entry_kwargs, producer=producer, **dispatch_kwargs)
         except Exception as exc:  # pylint: disable=broad-except
+            if job_result is not None and job_result.status == JobResultStatusChoices.STATUS_PENDING:
+                job_result.status = JobResultStatusChoices.STATUS_FAILURE
+                job_result.save()
             reraise(
                 SchedulingError,
                 SchedulingError(f"Couldn't apply scheduled task {entry.name}: {exc}"),
@@ -286,9 +301,27 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
         """
         Run a tick - one iteration of the scheduler.
 
-        This is an extension of `celery.beat.Scheduler.tick()` to touch the `CELERY_BEAT_HEARTBEAT_FILE` file.
+        This is an extension of `celery.beat.Scheduler.tick()` to touch the `CELERY_BEAT_HEARTBEAT_FILE`
+        file and to guard against a single stale schedule entry crashing the whole beat process.
         """
-        interval = super().tick(*args, **kwargs)
+        try:
+            interval = super().tick(*args, **kwargs)
+        except IntegrityError:
+            # A ScheduledJob entry in beat's memory can go stale when a related record (Job,
+            # user) is deleted concurrently: upstream ModelEntry.is_due() full-saves the stale
+            # instance, which raises IntegrityError outside of any of our apply_async() error
+            # handling. Don't let one stale entry kill the whole process — force a schedule
+            # reload instead; rebuilding the entries from fresh database state lets
+            # NautobotScheduleEntry.__init__() disable the orphaned schedule.
+            # TODO: This works around https://github.com/celery/django-celery-beat/issues/1069
+            #       (fix proposed in https://github.com/celery/django-celery-beat/pull/1070),
+            #       which limits the is_due() one-off save to update_fields). Once that fix is
+            #       released and Nautobot's minimum supported django-celery-beat version
+            #       includes it, this except block can be removed.
+            logger.warning("Database integrity error during scheduler tick; forcing a schedule reload.")
+            self._initial_read = True  # DatabaseScheduler.schedule: force a full re-read from the database
+            self._heap = None  # celery.beat.Scheduler.tick: force heap rebuild from the fresh schedule
+            interval = self.max_interval
         if settings.CELERY_BEAT_HEARTBEAT_FILE:
             Path(settings.CELERY_BEAT_HEARTBEAT_FILE).touch(exist_ok=True)
         return interval
