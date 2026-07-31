@@ -6,9 +6,10 @@ exercised here (`base_django.html`, `generic/object_list.html`, `generic/object_
 `generic/object_edit.html`) back the overwhelming majority of Nautobot's UI, so a regression in shared markup shows up
 here regardless of which model it was introduced against.
 
-The default impact threshold is `critical` and `serious`. `moderate` and `minor` findings are deliberately not gated:
-there are still a number of them in the existing UI, and failing on them now would mean these tests could not be
-enabled at all. Tighten `impacts` per-test as individual categories get cleaned up.
+All four axe-core impact levels are gated on. An earlier version gated only `critical` and `serious`, assuming
+lower-impact findings would be too numerous; an audit across these pages found exactly one, and it was a genuine WCAG AA
+failure (`meta-viewport`) that the threshold had been hiding on every page. Impact describes how badly a violation
+affects a user, not how important the criterion is, so it is a poor thing to filter conformance by.
 """
 
 from nautobot.core.testing.integration import SeleniumTestCase
