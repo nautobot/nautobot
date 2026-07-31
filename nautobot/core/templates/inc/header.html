@@ -12,11 +12,17 @@
                 meant for elements that cannot use the native `placeholder` attribute.
 
                 `role="searchbox"` was also removed: `<input type="search">` already has that role implicitly.
+
+                This field's text is hidden with `nb-text-transparent`, because when the search facade is active the
+                overlay below renders the value so that the `in: <Model>` badges can sit inline with it. That class is
+                added by `search.js` rather than set here: this form still submits as a plain GET search without
+                JavaScript, and in that state the field is typed into directly, where transparent text would leave the
+                user unable to see what they had entered at all (WCAG 1.4.3).
                 {% endcomment %}
                 <input
                     aria-label="Search"
                     autocomplete="off"
-                    class="form-control nb-text-transparent"
+                    class="form-control"
                     name="q"
                     type="search"
                     value="{{ request.GET.q }}"

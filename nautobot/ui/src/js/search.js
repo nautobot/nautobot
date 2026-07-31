@@ -648,10 +648,22 @@ export const initializeSearch = () => {
     input.setSelectionRange(-1, -1);
   };
 
+  /*
+   * Hide the header field's own text now that the facade is active. Focusing it opens the popup, so it is never typed
+   * into, and the overlay renders the value instead so the `in: <Model>` badges can sit inline with it.
+   *
+   * This is applied here rather than in the template on purpose. The header form still submits as a plain GET search
+   * with JavaScript unavailable, and in that state the field *is* typed into directly -- transparent text would leave
+   * the user unable to see what they had entered (WCAG 1.4.3).
+   */
+  const HEADER_INPUT_TEXT_HIDDEN_CLASS = 'nb-text-transparent';
+  headerSearchInput.classList.add(HEADER_INPUT_TEXT_HIDDEN_CLASS);
+
   headerSearchInput.addEventListener('focus', openSearchPopup);
 
   return () => {
     closeSearchPopup();
+    headerSearchInput.classList.remove(HEADER_INPUT_TEXT_HIDDEN_CLASS);
     document.removeEventListener('keydown', onKeyDown);
     headerSearchInput.removeEventListener('focus', openSearchPopup);
   };
