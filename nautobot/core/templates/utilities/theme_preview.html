@@ -92,12 +92,14 @@
             </form>
         <!-- Begin nested example of "inc/paginator.html" -->
             <div class="paginator align-items-center d-flex fs-5 gap-10 justify-content-end mt-16 text-secondary">
-                <div>
+                {# Mirrors `inc/paginator.html`: `role="status"` so an HTMX page change announces the new range. #}
+                <div class="nb-paginator-info" role="status">
                     Showing 50-75 of 250
                 </div>
-                <div class="vr border-start my-8"></div>
+                <div class="vr border-start my-8 nb-paginator-divider"></div>
                 <form class="align-items-center d-flex gap-4" method="get">
-                    <select name="per_page" id="per_page" class="form-select">
+                    {# The visible "per page" text after this select is not associated with it, so it needs an `aria-label`. #}
+                    <select name="per_page" id="per_page" aria-label="Items per page" class="form-select">
                         <option value="25" selected="selected">25</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
