@@ -824,6 +824,24 @@ button {
 }
 
 /*
+ * Prevent iOS Safari from auto-zooming on input focus.
+ *
+ * iOS zooms the viewport whenever a focused form control's font size is below 16px, and `$font-size-base` is 14px. That
+ * behaviour is why the viewport meta tag used to carry `user-scalable=no`, which suppressed the zoom but also blocked
+ * deliberate pinch-zoom and so failed WCAG 1.4.4. Raising the control's font size to 16px removes the trigger without
+ * taking zoom away from anyone.
+ *
+ * Scoped to coarse pointers so this applies on touch devices, where it is also the more comfortable target size, and
+ * leaves pointer-driven layouts untouched.
+ */
+@media (pointer: coarse) {
+  .form-control,
+  .form-select {
+    font-size: $font-size-root;
+  }
+}
+
+/*
  * Minimum pointer target (WCAG 2.5.8, AA).
  *
  * An icon-only control sized to its glyph is typically 20px or less, below the 24x24 minimum. Apply this to give it a
