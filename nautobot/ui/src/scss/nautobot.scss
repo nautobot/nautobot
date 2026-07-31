@@ -866,6 +866,19 @@ button {
   scroll-padding-block-end: 5rem;
 }
 
+/*
+ * Tag links (WCAG 2.5.8, AA).
+ *
+ * The link, not the badge inside it, is the pointer target, and as an inline box it was only 17px tall with about 3px
+ * between adjacent tags -- too small for the 24x24 minimum and far short of the 24px clearance the spacing exception
+ * would need. Size the anchor instead of the badge, so the target grows while the badge keeps its own appearance.
+ */
+.nb-tag-link {
+  align-items: center;
+  display: inline-flex;
+  min-block-size: map.get($spacers, 24);
+}
+
 /* Header search trigger */
 #header_search {
   cursor: pointer;

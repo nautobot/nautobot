@@ -18,60 +18,68 @@
 
         The `<noscript>` block below keeps search working without JavaScript, where there is no dialog to open.
         {% endcomment %}
-        <div aria-label="Search"
-             class="align-items-center col-4 d-flex form-control gap-6 text-start"
-             data-nb-live-search-path="{% url 'live_search' %}"
-             data-nb-query="{{ request.GET.q }}"
-             data-nb-search-action="{% url 'search' %}"
-             id="header_search"
-             role="search">
-            <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
-            {% spaceless %}
-                {% if content_type %}
-                    {% for tab_name, tab_details in nav_menu.tabs.items %}
-                        {% for group_name, group_details in tab_details.groups.items %}
-                            {% for item_link, item_details in group_details.items.items %}
-                                {% if item_details.is_active %}
-                                    <span class="badge border flex-shrink-0" data-nb-link="{{ item_link }}"><!--
+        <div class="col-4">
+            <div aria-label="Search"
+                 class="align-items-center d-flex form-control gap-6 text-start"
+                 data-nb-live-search-path="{% url 'live_search' %}"
+                 data-nb-query="{{ request.GET.q }}"
+                 data-nb-search-action="{% url 'search' %}"
+                 id="header_search"
+                 role="search">
+                <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
+                {% spaceless %}
+                    {% if content_type %}
+                        {% for tab_name, tab_details in nav_menu.tabs.items %}
+                            {% for group_name, group_details in tab_details.groups.items %}
+                                {% for item_link, item_details in group_details.items.items %}
+                                    {% if item_details.is_active %}
+                                        <span class="badge border flex-shrink-0" data-nb-link="{{ item_link }}"><!--
                                         -->in: {{ item_details.name }}<!--
                                         --><button type="button">
-                                        <span aria-hidden="true" class="mdi mdi-close"></span>
-                                        <span class="visually-hidden">Remove {{ item_details.name }} filter</span>
-                                    </button>
-                                    </span>
-                                {% endif %}
+                                            <span aria-hidden="true" class="mdi mdi-close"></span>
+                                            <span class="visually-hidden">Remove {{ item_details.name }} filter</span>
+                                        </button>
+                                        </span>
+                                    {% endif %}
+                                {% endfor %}
                             {% endfor %}
                         {% endfor %}
-                    {% endfor %}
-                {% endif %}
-            {% endspaceless %}
-            <button aria-haspopup="dialog"
-                    class="align-items-center bg-transparent border-0 d-inline-flex flex-grow-1 gap-4 p-0 text-nowrap text-start{% if not request.GET.q %} text-secondary{% endif %}"
-                    id="header_search_trigger"
-                    type="button">
-                {% if not request.GET.q %}
-                    Press <kbd class="mt-n1">{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
-                {% else %}
-                    {{ request.GET.q }}
-                {% endif %}
-            </button>
-            {% searchable_fields_for_content_type content_type as searchable_fields %}
+                    {% endif %}
+                {% endspaceless %}
+                <button aria-haspopup="dialog"
+                        class="align-items-center bg-transparent border-0 d-inline-flex flex-grow-1 gap-4 p-0 text-nowrap text-start{% if not request.GET.q %} text-secondary{% endif %}"
+                        id="header_search_trigger"
+                        type="button">
+                    {% if not request.GET.q %}
+                        Press <kbd class="mt-n1">{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
+                    {% else %}
+                        {{ request.GET.q }}
+                    {% endif %}
+                </button>
+                {% searchable_fields_for_content_type content_type as searchable_fields %}
             {# `nb-target-size-min` gives this icon-only link a 24x24 hit area (WCAG 2.5.8). #}
-            <a class="align-items-center d-inline-flex flex-shrink-0 justify-content-center ms-auto nb-target-size-min"
-               aria-label="Search help"
-               href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
-               target="_blank"
-               rel="noopener"
-               {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
-            >
-                <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
-            </a>
+                <a class="align-items-center d-inline-flex flex-shrink-0 justify-content-center ms-auto nb-target-size-min"
+                   aria-label="Search help"
+                   href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
+                   target="_blank"
+                   rel="noopener"
+                   {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
+                >
+                    <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
+                </a>
+            </div>
+            <noscript>
+                <style>
+                    /* The trigger cannot open its dialog without JavaScript, so hide it and show a real field instead. */
+                    #header_search {
+                        display: none;
+                    }
+                </style>
+                <form action="{% url 'search' %}" method="get" role="search">
+                    <input aria-label="Search" class="form-control" name="q" type="search" value="{{ request.GET.q }}">
+                </form>
+            </noscript>
         </div>
-        <noscript>
-            <form action="{% url 'search' %}" class="col-4" method="get" role="search">
-                <input aria-label="Search" class="form-control" name="q" type="search" value="{{ request.GET.q }}">
-            </form>
-        </noscript>
     {% endwith %}
 
     <div class="col-4 text-end">
