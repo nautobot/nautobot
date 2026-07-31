@@ -279,7 +279,7 @@ query {
 }
 ```
 
-A user with full unrestricted `view` permissions on all Device, Locationm, and Interface records might get a response like:
+A user with full unrestricted `view` permissions on all Device, Location, and Interface records might get a response like:
 
 ```json
 {
