@@ -569,7 +569,7 @@ A group syncing function is provided and but needs to be configured. See [Group 
 
 Nautobot can synchronize a user's group memberships from the SSO response each time they log in, and optionally flag members of specific groups as staff or superusers. This works with OAuth2/OIDC providers, where the group claim appears at the top level of the response, as well as with SAML providers, where the group attribute is nested under the SAML assertion's attributes.
 
-+++ 3.1.8 "SAML support"
++++ 3.2.2 "SAML support"
 
 To do so `nautobot.extras.group_sync.group_sync` must be part of `SOCIAL_AUTH_PIPELINE` which can be achieved
 by setting the environment variable `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true`. Or by setting
