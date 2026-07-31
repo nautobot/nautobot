@@ -122,3 +122,49 @@ class TestPreprocessSettings(TestCase):
         self.assertIn("baz.bat", settings_module.MIDDLEWARE)
         # more specifically:
         self.assertEqual("baz.bat", settings_module.MIDDLEWARE[-1])
+
+    def test_otel_log_correlation_applied_when_enabled(self, *args):
+        """When OTEL tracing + log correlation are enabled, the trace/span IDs are surfaced in LOGGING.
+
+        Covers the _preprocess_settings wiring that calls enable_otel_log_correlation() against the
+        resolved settings, so it works even when the flags are set in nautobot_config.py (not env vars).
+        """
+        settings_module, config_path = self.load_settings_module()
+        settings_module.TESTING = False
+        settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = True
+        settings_module.OTEL_PYTHON_LOG_CORRELATION = True
+        # Default (correlation-off) LOGGING shape, mirroring nautobot.core.settings.
+        settings_module.LOGGING = {
+            "version": 1,
+            "filters": {"otel_trace_context": {"()": "nautobot.core.logging.OtelTraceContextFilter"}},
+            "formatters": {
+                "normal": {"format": "%(asctime)s %(levelname)s %(name)s :\n  %(message)s"},
+                "verbose": {"format": "%(asctime)s %(levelname)s %(name)s %(funcName)s() :\n  %(message)s"},
+            },
+            "handlers": {
+                "normal_console": {"class": "logging.StreamHandler", "formatter": "normal", "filters": []},
+                "verbose_console": {"class": "logging.StreamHandler", "formatter": "verbose", "filters": []},
+            },
+        }
+
+        _preprocess_settings(settings_module, config_path)
+
+        self.assertIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertIn("otel_trace_context", settings_module.LOGGING["handlers"]["normal_console"]["filters"])
+
+    def test_otel_log_correlation_skipped_when_disabled(self, *args):
+        """With OTEL tracing off (the default), _preprocess_settings must not touch LOGGING formatters."""
+        settings_module, config_path = self.load_settings_module()
+        settings_module.TESTING = False
+        settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = False
+        settings_module.OTEL_PYTHON_LOG_CORRELATION = True
+        settings_module.LOGGING = {
+            "version": 1,
+            "formatters": {"normal": {"format": "%(asctime)s %(levelname)s %(name)s :\n  %(message)s"}},
+            "handlers": {"normal_console": {"class": "logging.StreamHandler", "formatter": "normal", "filters": []}},
+        }
+
+        _preprocess_settings(settings_module, config_path)
+
+        self.assertNotIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertEqual(settings_module.LOGGING["handlers"]["normal_console"]["filters"], [])

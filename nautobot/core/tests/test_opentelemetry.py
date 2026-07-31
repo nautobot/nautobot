@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
+from django.http.request import RawPostDataException
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from opentelemetry import trace as otel_trace
@@ -464,6 +465,79 @@ class InstrumentExporterBranchTest(testing.TestCase):
             install_exporters(config=config)
 
         mock_exporter.assert_called_once()
+
+    def test_http_trace_exporter_used_for_http_protocol(self):
+        """OTEL_EXPORTER_OTLP_PROTOCOL='http' selects the HTTP OTLPSpanExporter (not the gRPC one)."""
+        with patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            self._install(
+                OTEL_TRACES_EXPORTER=["otlp"],
+                OTEL_EXPORTER_OTLP_PROTOCOL="http",
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4318",
+            )
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4318")
+
+    def test_otlp_metric_exporter_created_when_endpoint_set(self):
+        """The OTLP metric exporter is constructed and a MeterProvider is installed when metrics are enabled."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_exporter:
+            with patch("nautobot.core.cli.opentelemetry.MeterProvider") as mock_meter_provider:
+                self._install(
+                    OTEL_METRICS_EXPORTER=["otlp"],
+                    OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
+                    OTEL_EXPORTER_OTLP_INSECURE=True,
+                )
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=True)
+        mock_meter_provider.assert_called_once()
+
+    def test_http_metric_exporter_used_for_http_protocol(self):
+        """OTEL_EXPORTER_OTLP_PROTOCOL='http' selects the HTTP OTLPMetricExporter (not the gRPC one)."""
+        with patch("opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter") as mock_exporter:
+            self._install(
+                OTEL_METRICS_EXPORTER=["otlp"],
+                OTEL_EXPORTER_OTLP_PROTOCOL="http",
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4318",
+            )
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4318")
+
+    def test_console_metric_exporter_used_without_endpoint(self):
+        """The console metric exporter needs no endpoint and installs a MeterProvider."""
+        with patch("nautobot.core.cli.opentelemetry.ConsoleMetricExporter") as mock_exporter:
+            with patch("nautobot.core.cli.opentelemetry.MeterProvider") as mock_meter_provider:
+                self._install(OTEL_METRICS_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT="")
+
+        mock_exporter.assert_called_once()
+        mock_meter_provider.assert_called_once()
+
+    def test_install_exporters_uses_otel_config_when_config_arg_omitted(self):
+        """install_exporters() with no config= falls back to _otel_config() (the post-fork/CLI resolver)."""
+        from nautobot.core.cli import opentelemetry as otel_module
+
+        fake = _fake_otel_config(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317")
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            with patch.object(otel_module, "_otel_config", return_value=fake) as mock_otel_config:
+                self._reset_exporters_guard()
+                otel_module.install_exporters()
+
+        mock_otel_config.assert_called_once()
+        mock_exporter.assert_called_once()
+
+    def test_otel_config_prefers_configured_django_settings(self):
+        """_otel_config() returns django settings when configured, else the loaded nautobot_config module."""
+        from django.conf import settings as django_settings
+
+        from nautobot.core.cli import opentelemetry as otel_module
+
+        # django.conf.settings is imported inside _otel_config(); it is already configured in the test
+        # process, so the happy path returns it directly.
+        self.assertIs(otel_module._otel_config(), django_settings)
+
+        # Force the not-configured fallback: _otel_config() then imports the loaded nautobot_config module.
+        fake_config = _fake_otel_config()
+        with patch.object(type(django_settings), "configured", property(lambda self: False)):
+            with patch.dict("sys.modules", {"nautobot_config": fake_config}):
+                self.assertIs(otel_module._otel_config(), fake_config)
 
 
 class CeleryExporterHookTest(testing.TestCase):
@@ -921,6 +995,58 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         self.assertEqual(
             len(self._exporter.get_finished_spans()), 0, "No span should be emitted when OTel is disabled."
         )
+
+    # --- _parse_graphql_body edge cases (called directly; no span needed) ---
+
+    def test_parse_body_non_post_returns_none(self):
+        """A non-POST request yields no query/variables (GraphQL bodies only ride on POST)."""
+        request = RequestFactory().get("/api/graphql")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_malformed_json_returns_none(self):
+        """A POST with `application/json` content type but invalid JSON yields no query/variables."""
+        request = RequestFactory().post("/api/graphql", data="{not valid json", content_type="application/json")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_application_graphql_content_type(self):
+        """A POST with `application/graphql` returns the raw body as the document and no variables."""
+        query = "query Ping { __typename }"
+        request = RequestFactory().post("/api/graphql", data=query, content_type="application/graphql")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (query, None))
+
+    def test_parse_body_application_graphql_invalid_utf8_returns_none(self):
+        """An `application/graphql` body that is not valid UTF-8 yields no query/variables."""
+        request = RequestFactory().post("/api/graphql", data=b"\xff\xfe", content_type="application/graphql")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_unknown_content_type_returns_none(self):
+        """A POST with a content type that is neither json nor graphql yields no query/variables."""
+        request = RequestFactory().post("/api/graphql", data="anything", content_type="text/plain")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_unreadable_body_returns_none(self):
+        """If reading `request.body` raises (e.g. the stream was already consumed), yield no query/variables."""
+
+        class _BodyRaisesRequest:
+            method = "POST"
+            content_type = "application/json"
+
+            @property
+            def body(self):
+                raise RawPostDataException("You cannot access body after reading from request's data stream")
+
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(_BodyRaisesRequest()), (None, None))
+
+    # --- _get_operation_type edge cases ---
+
+    def test_operation_type_empty_query_returns_none(self):
+        """An empty or None query has no detectable operation type."""
+        self.assertIsNone(GraphQLOpenTelemetryMiddleware._get_operation_type(""))
+        self.assertIsNone(GraphQLOpenTelemetryMiddleware._get_operation_type(None))
+
+    def test_operation_type_comment_only_document_returns_none(self):
+        """A document with only comment/blank lines (no operation keyword) has no operation type."""
+        self.assertIsNone(GraphQLOpenTelemetryMiddleware._get_operation_type("# just a comment\n\n"))
 
 
 class MainInstrumentGatingTest(testing.TestCase):
