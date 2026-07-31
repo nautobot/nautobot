@@ -151,6 +151,14 @@ def install_exporters(config=None):
     if config is None:
         config = _otel_config()
 
+    provider = trace.get_tracer_provider()
+    if not isinstance(provider, TracerProvider):
+        logger.warning(
+            "OpenTelemetry tracer provider is not configured; skipping exporter installation. "
+            "Ensure `instrument()` runs before `install_exporters()`."
+        )
+        return
+
     if "none" not in config.OTEL_TRACES_EXPORTER:
         if "console" in config.OTEL_TRACES_EXPORTER:
             trace.get_tracer_provider().add_span_processor(BatchSpanProcessor(ConsoleSpanExporter()))
