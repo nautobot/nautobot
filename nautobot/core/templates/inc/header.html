@@ -46,12 +46,26 @@
                         {% endfor %}
                     {% endif %}
                 {% endspaceless %}
+                {% comment %}
+                `text-truncate` is load-bearing, not cosmetic. The label does not wrap, and a flex item's automatic
+                minimum size is its content unless its `overflow` is something other than `visible` -- so without it the
+                trigger sizes itself to the whole query string and paints outside the field rather than being clipped by
+                it. A long `?q=` value ran about 400px past the right-hand edge, over the user menu and off the viewport;
+                even the short keyboard hint overflowed by ~20px once an `in: <Model>` badge shared the row. The
+                `overflow: hidden` it brings supplies both the shrinking and the ellipsis.
+
+                Removing it to stop the sideways overflow only trades one failure for the other: the label then wraps, and
+                an 85-character query takes the field from 36px to 133px over six lines, dragging the header row with it.
+                `test_header_search_stays_the_size_of_the_field` asserts both axes, because nothing else here can -- a
+                label painting outside its field shows up only as an *incomplete* axe-core contrast check, never a
+                violation.
+                {% endcomment %}
                 <button aria-haspopup="dialog"
-                        class="align-items-center bg-transparent border-0 d-inline-flex flex-grow-1 gap-4 p-0 text-nowrap text-start{% if not request.GET.q %} text-secondary{% endif %}"
+                        class="bg-transparent border-0 flex-grow-1 p-0 text-start text-truncate{% if not request.GET.q %} text-secondary{% endif %}"
                         id="header_search_trigger"
                         type="button">
                     {% if not request.GET.q %}
-                        Press <kbd class="mt-n1">{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
+                        Press <kbd>{% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K</kbd> to search
                     {% else %}
                         {{ request.GET.q }}
                     {% endif %}
