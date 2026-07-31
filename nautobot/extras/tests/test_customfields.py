@@ -758,6 +758,30 @@ class CustomFieldManagerTest(TestCase):
         self.assertEqual(2, len(listing))
         self.assertQuerySetEqualAndNotEmpty(qs, listing)
 
+    def test_populate_list_caches(self):
+        """
+        `populate_list_caches()` should correctly pre-warm the `get_for_model(..., get_queryset=False)` cache for
+        both `exclude_filter_disabled=False` (the default) and `exclude_filter_disabled=True`, so that a
+        subsequent call for either variant is served entirely from cache with no additional queries.
+        """
+        CustomField.objects.populate_list_caches()
+
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(2, len(listing))
+
+        with self.assertNumQueries(0):
+            filtered_listing = CustomField.objects.get_for_model(
+                Location, exclude_filter_disabled=True, get_queryset=False
+            )
+        self.assertIsInstance(filtered_listing, list)
+        self.assertEqual(1, len(filtered_listing))
+
+        with self.assertNumQueries(0):
+            keys = CustomField.objects.keys_for_model(Location)
+        self.assertEqual(2, len(keys))
+
     def test_get_for_model_and_keys_for_model_reduce_redis_lookups_within_request_cache(self):
         """
         Repeated calls to get_for_model()/keys_for_model() for the same model should not each round-trip to Redis
