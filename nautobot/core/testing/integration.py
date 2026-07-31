@@ -34,6 +34,10 @@ AXE_CORE_PATH = Path(settings.BASE_DIR) / "ui" / "node_modules" / "axe-core" / "
 # introduced it rather than restating them under `wcag22*`.
 AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa")
 
+# Gate on every impact level. Impact reflects how severely a violation affects a user, not how important the underlying
+# success criterion is, so a low-impact finding can still be a WCAG AA failure.
+AXE_DEFAULT_IMPACTS = ("critical", "serious", "moderate", "minor")
+
 
 class ObjectsListMixin:
     """
@@ -492,20 +496,27 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.login(self.user.username, self.password)
         self.logged_in = True
 
-    def assertNoAccessibilityViolations(self, impacts=("critical", "serious"), tags=AXE_DEFAULT_TAGS, context=None):
+    def assertNoAccessibilityViolations(self, impacts=AXE_DEFAULT_IMPACTS, tags=AXE_DEFAULT_TAGS, context=None):
         """
         Assert that the page currently loaded in the browser has no axe-core accessibility violations.
 
         Args:
-            impacts (tuple): axe-core impact levels to treat as failures. Defaults to the two highest, since
-                `moderate` and `minor` findings are numerous in a large existing UI and would make this unusable as a
-                gate. Pass a wider tuple to tighten the check for a specific page.
-            tags (tuple): axe-core rule tags to run. Defaults to WCAG 2.1 A and AA.
+            impacts (tuple): axe-core impact levels to treat as failures. Defaults to all four. An earlier version gated
+                only on `critical` and `serious`, on the assumption that lower-impact findings would be too numerous to
+                gate on; that turned out to be wrong, and it hid a real WCAG AA failure (`meta-viewport`, impact
+                `moderate`, present on every page) for as long as it was in place. Narrow this only with a comment saying
+                what is being deferred and why.
+            tags (tuple): axe-core rule tags to run. Defaults to WCAG 2.2 A and AA.
             context (str, optional): CSS selector limiting the scan to part of the page. Scans the whole page by default.
 
         Raises:
-            AssertionError: If any violation at or above the given impact levels is found. The message lists the rule
-                id, impact, help text and the offending element for each, so failures are actionable without rerunning.
+            AssertionError: If any violation at one of the given impact levels is found. The message lists the rule id,
+                impact, help text and the offending element for each, so failures are actionable without rerunning.
+
+        Note:
+            axe-core's `incomplete` results -- checks it could not decide, typically `color-contrast` against a
+            background it cannot compute -- are not gated on, because they need human review and would make this flaky.
+            They are not a substitute for manual testing of new components.
         """
         if not AXE_CORE_PATH.is_file():
             self.skipTest(
