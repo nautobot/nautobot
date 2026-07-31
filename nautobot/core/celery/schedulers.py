@@ -313,6 +313,11 @@ class NautobotDatabaseScheduler(DatabaseScheduler):
             # handling. Don't let one stale entry kill the whole process — force a schedule
             # reload instead; rebuilding the entries from fresh database state lets
             # NautobotScheduleEntry.__init__() disable the orphaned schedule.
+            # TODO: This works around https://github.com/celery/django-celery-beat/issues/1069
+            #       (fix proposed in https://github.com/celery/django-celery-beat/pull/1070),
+            #       which limits the is_due() one-off save to update_fields). Once that fix is
+            #       released and Nautobot's minimum supported django-celery-beat version
+            #       includes it, this except block can be removed.
             logger.warning("Database integrity error during scheduler tick; forcing a schedule reload.")
             self._initial_read = True  # DatabaseScheduler.schedule: force a full re-read from the database
             self._heap = None  # celery.beat.Scheduler.tick: force heap rebuild from the fresh schedule
