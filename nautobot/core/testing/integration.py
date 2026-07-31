@@ -517,6 +517,21 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             axe-core's `incomplete` results -- checks it could not decide, typically `color-contrast` against a
             background it cannot compute -- are not gated on, because they need human review and would make this flaky.
             They are not a substitute for manual testing of new components.
+
+            Do read them, though, rather than treating "no violations" as the whole answer. As of this change the pages
+            scanned here produce exactly one, reviewed and passing:
+
+            - `#per_page` (`.form-select` in `inc/paginator.html`): "background color could not be determined due to a
+              background image". The background image is Bootstrap's own dropdown chevron, an inline SVG data URI
+              positioned clear of the text; axe stops at the presence of any background image and does not work out
+              whether it is actually behind the glyphs. Measured 17.4:1 in both light and dark themes, against a
+              `--bs-body-bg` that is opaque in both, so it passes 1.4.3 AA (4.5:1) with a wide margin.
+
+            An `incomplete` here has twice pointed at a real defect that produced no violation. `#header_search_trigger`
+            reported "partially obscured by another element" because its label was overflowing the search box -- axe
+            cannot determine contrast for a part of an element lying outside the ancestor painting its background, and
+            what looked like a checker limitation was a layout bug (see `test_header_search_stays_the_size_of_the_field`).
+            Treat a new entry in this bucket as unexplained until it has been measured, not as noise.
         """
         if not AXE_CORE_PATH.is_file():
             self.skipTest(
