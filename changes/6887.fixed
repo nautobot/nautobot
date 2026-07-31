@@ -1,1 +1,0 @@
-Fixed SSO group syncing to also read group attributes from SAML responses.

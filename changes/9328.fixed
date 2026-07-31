@@ -1,1 +1,0 @@
-Reduced redundant Redis cache lookups for `CustomField.choices` when constructing FilterSets, by building the choice widget once per CustomField instead of once per generated filter (base filter plus lookup-expression variants).

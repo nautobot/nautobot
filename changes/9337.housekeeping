@@ -1,1 +1,0 @@
-Removed some no-longer-used custom logic for serialization/deserialization of Nautobot records to/from JSON.

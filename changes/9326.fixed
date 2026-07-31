@@ -1,1 +1,0 @@
-Added additional `select_related` for device bays in device API view set.

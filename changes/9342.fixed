@@ -1,1 +1,0 @@
-Fixed `CustomFieldManager.populate_list_caches()` writing the custom field listing under the wrong cache key, causing cache misses during GraphQL schema generation.

@@ -1,1 +1,0 @@
-Fixed `Job.task_queues` property returning a deferred-evaluation QuerySet instead of the documented list of strings. This in turn fixes a potential database deadlock when bulk-deleting Job records.
