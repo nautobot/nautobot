@@ -525,17 +525,15 @@ class InstrumentExporterBranchTest(testing.TestCase):
 
     def test_otel_config_prefers_configured_django_settings(self):
         """_otel_config() returns django settings when configured, else the loaded nautobot_config module."""
-        from django.conf import settings as django_settings
-
         from nautobot.core.cli import opentelemetry as otel_module
 
         # django.conf.settings is imported inside _otel_config(); it is already configured in the test
         # process, so the happy path returns it directly.
-        self.assertIs(otel_module._otel_config(), django_settings)
+        self.assertIs(otel_module._otel_config(), settings)
 
         # Force the not-configured fallback: _otel_config() then imports the loaded nautobot_config module.
         fake_config = _fake_otel_config()
-        with patch.object(type(django_settings), "configured", property(lambda self: False)):
+        with patch.object(type(settings), "configured", property(lambda self: False)):
             with patch.dict("sys.modules", {"nautobot_config": fake_config}):
                 self.assertIs(otel_module._otel_config(), fake_config)
 
