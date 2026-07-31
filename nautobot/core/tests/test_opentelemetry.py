@@ -25,7 +25,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 import requests
 
-from nautobot.core import testing
+from nautobot.core import settings as core_settings, testing
 from nautobot.core.cli.opentelemetry import instrument
 from nautobot.core.logging import OtelTraceContextFilter
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
@@ -283,7 +283,7 @@ class DefaultLoggingCorrelationTest(testing.TestCase):
         import importlib
         import sys
 
-        import nautobot.core.settings as settings_module
+        settings_module = core_settings
 
         try:
             # settings.py takes a NullHandler LOGGING branch when TESTING (`"test" in sys.argv`), which
@@ -1363,11 +1363,24 @@ class EnableOtelLogCorrelationTest(testing.TestCase):
     now happens post-load in _preprocess_settings() against the resolved settings, via this helper.
     """
 
+    def _shipped_default_config(self):
+        """A default-shaped LOGGING dict installed as `nautobot.core.settings.LOGGING` for this test.
+
+        `enable_otel_log_correlation()` no-ops unless handed the exact dict Nautobot ships, so a test
+        exercising the augmentation path must make its fixture *be* that object. Patching is undone on
+        test exit, restoring the real (TESTING/NullHandler) settings value.
+        """
+        config = _default_logging_config()
+        patcher = patch.object(core_settings, "LOGGING", config)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return config
+
     def test_correlation_on_adds_suffix_and_filter(self):
         """The helper appends the trace/span-id suffix to formatters and the filter to handlers."""
         from nautobot.core.logging import enable_otel_log_correlation
 
-        config = _default_logging_config()
+        config = self._shipped_default_config()
         enable_otel_log_correlation(config)
 
         for formatter in ("normal", "verbose"):
@@ -1383,7 +1396,7 @@ class EnableOtelLogCorrelationTest(testing.TestCase):
         """Calling the helper twice must not double-append the suffix or duplicate the filter."""
         from nautobot.core.logging import enable_otel_log_correlation
 
-        config = _default_logging_config()
+        config = self._shipped_default_config()
         enable_otel_log_correlation(config)
         once = deepcopy(config)
         enable_otel_log_correlation(config)
@@ -1393,6 +1406,29 @@ class EnableOtelLogCorrelationTest(testing.TestCase):
             self.assertEqual(config["formatters"][formatter]["format"].count("%(otelTraceID)s"), 1)
         for handler in ("normal_console", "verbose_console"):
             self.assertEqual(config["handlers"][handler]["filters"].count("otel_trace_context"), 1)
+
+    def test_operator_customized_default_shape_is_untouched(self):
+        """An operator LOGGING dict that still uses Nautobot's names must not be mutated.
+
+        The case the name-based guard alone missed: an operator who copies the default LOGGING and
+        tweaks it (here, a level change) keeps the `normal`/`verbose` formatter and handler names, so
+        matching by name would have augmented it. Reassigning LOGGING rebinds the name away from
+        `nautobot.core.settings.LOGGING`, and the identity gate declines to touch it.
+        """
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        # The shipped default is present and augmentable...
+        self._shipped_default_config()
+        # ...but the operator's own near-identical copy is a different object, so it is left alone.
+        operator_config = _default_logging_config()
+        operator_config["handlers"]["normal_console"]["level"] = "DEBUG"
+        before = deepcopy(operator_config)
+
+        enable_otel_log_correlation(operator_config)
+
+        self.assertEqual(operator_config, before, "A reassigned LOGGING dict must not be mutated.")
+        self.assertNotIn("%(otelTraceID)s", operator_config["formatters"]["normal"]["format"])
+        self.assertEqual(operator_config["handlers"]["normal_console"]["filters"], [])
 
     def test_custom_operator_logging_is_untouched(self):
         """A LOGGING dict with operator-named formatters/handlers must not be mutated by the helper."""
@@ -1433,11 +1469,13 @@ class EnableOtelLogCorrelationTest(testing.TestCase):
         """
         from nautobot.core.logging import enable_otel_log_correlation
 
+        # `nautobot_config.py` does `from nautobot.core.settings import *`, so an operator who does not
+        # override LOGGING holds the shipped dict itself -- which is what passes the helper's gate.
         settings_module = SimpleNamespace(
             TESTING=False,
             OTEL_PYTHON_DJANGO_INSTRUMENT=True,
             OTEL_PYTHON_LOG_CORRELATION=True,
-            LOGGING=_default_logging_config(),
+            LOGGING=self._shipped_default_config(),
         )
         # Mirror the guard + call in nautobot.core.cli._preprocess_settings.
         if (

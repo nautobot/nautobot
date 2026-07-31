@@ -119,8 +119,9 @@ def _preprocess_settings(settings_module, config_path):
     # Surface the OTEL trace/span IDs in the default console logs when correlation is enabled. Done here
     # -- after the config is fully loaded, before django.setup() applies dictConfig -- so it honors the
     # *resolved* settings (which may be overridden in nautobot_config.py), not just the env-var defaults
-    # baked into LOGGING at settings-import time. No-op for a fully custom operator LOGGING config (the
-    # helper only touches the formatters/handlers Nautobot ships by name) and for the TESTING config.
+    # baked into LOGGING at settings-import time. The helper itself no-ops unless LOGGING is still the
+    # exact dict Nautobot ships, so any operator customization of LOGGING is left alone; likewise a no-op
+    # for the TESTING config.
     if (
         not getattr(settings_module, "TESTING", False)
         and getattr(settings_module, "OTEL_PYTHON_DJANGO_INSTRUMENT", False)

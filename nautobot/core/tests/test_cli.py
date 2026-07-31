@@ -2,6 +2,7 @@ import importlib.util
 import os.path
 from unittest import mock
 
+from nautobot.core import settings as core_settings
 from nautobot.core.cli import _preprocess_settings, migrate_deprecated_templates
 from nautobot.core.testing import TestCase
 
@@ -133,8 +134,11 @@ class TestPreprocessSettings(TestCase):
         settings_module.TESTING = False
         settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = True
         settings_module.OTEL_PYTHON_LOG_CORRELATION = True
-        # Default (correlation-off) LOGGING shape, mirroring nautobot.core.settings.
-        settings_module.LOGGING = {
+        # Default (correlation-off) LOGGING shape, mirroring nautobot.core.settings. The helper only
+        # augments the dict Nautobot itself ships, so this fixture is installed as that object -- which
+        # is what an operator who never overrides LOGGING actually has (nautobot_config.py star-imports
+        # it from nautobot.core.settings).
+        default_logging = {
             "version": 1,
             "filters": {"otel_trace_context": {"()": "nautobot.core.logging.OtelTraceContextFilter"}},
             "formatters": {
@@ -146,11 +150,34 @@ class TestPreprocessSettings(TestCase):
                 "verbose_console": {"class": "logging.StreamHandler", "formatter": "verbose", "filters": []},
             },
         }
-
-        _preprocess_settings(settings_module, config_path)
+        settings_module.LOGGING = default_logging
+        with mock.patch.object(core_settings, "LOGGING", default_logging):
+            _preprocess_settings(settings_module, config_path)
 
         self.assertIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
         self.assertIn("otel_trace_context", settings_module.LOGGING["handlers"]["normal_console"]["filters"])
+
+    def test_otel_log_correlation_skipped_for_custom_logging(self, *args):
+        """A LOGGING dict the operator reassigned must not be augmented, even with correlation on.
+
+        The identity gate in enable_otel_log_correlation(): any customization of LOGGING rebinds the
+        name away from nautobot.core.settings.LOGGING, so Nautobot leaves the operator's config alone.
+        """
+        settings_module, config_path = self.load_settings_module()
+        settings_module.TESTING = False
+        settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = True
+        settings_module.OTEL_PYTHON_LOG_CORRELATION = True
+        # Same names/shape as the default, but a distinct object -- i.e. an operator-supplied LOGGING.
+        settings_module.LOGGING = {
+            "version": 1,
+            "formatters": {"normal": {"format": "%(asctime)s %(levelname)s %(name)s :\n  %(message)s"}},
+            "handlers": {"normal_console": {"class": "logging.StreamHandler", "formatter": "normal", "filters": []}},
+        }
+
+        _preprocess_settings(settings_module, config_path)
+
+        self.assertNotIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertEqual(settings_module.LOGGING["handlers"]["normal_console"]["filters"], [])
 
     def test_otel_log_correlation_skipped_when_disabled(self, *args):
         """With OTEL tracing off (the default), _preprocess_settings must not touch LOGGING formatters."""

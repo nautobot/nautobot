@@ -24,23 +24,36 @@ _OTEL_LOG_SUFFIX = " [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s]"
 # the trace/span IDs land at the end of the header line rather than after the message body.
 _OTEL_LOG_SUFFIX_ANCHOR = " :\n  %(message)s"
 # The formatters/handlers Nautobot defines in its default LOGGING config. `enable_otel_log_correlation`
-# only ever touches these by name, so an operator who overrides LOGGING with their own names is
-# untouched (they surface the IDs via their own formatters -- see settings.py OTEL_PYTHON_LOG_CORRELATION).
+# only ever touches these by name, and only in the shipped LOGGING dict itself (see its identity gate).
 _OTEL_DEFAULT_FORMATTERS = ("normal", "verbose")
 _OTEL_DEFAULT_HANDLERS = ("normal_console", "verbose_console")
 _OTEL_TRACE_CONTEXT_FILTER = "otel_trace_context"
 
 
 def enable_otel_log_correlation(logging_config):
-    """Augment a LOGGING dict in place to surface OpenTelemetry trace/span IDs in the default output.
+    """Augment Nautobot's default LOGGING dict in place to surface OpenTelemetry trace/span IDs.
 
     Called from `nautobot.core.cli._preprocess_settings` *after* the resolved config is known (so a
     `OTEL_PYTHON_DJANGO_INSTRUMENT`/`OTEL_PYTHON_LOG_CORRELATION` set in `nautobot_config.py` is honored,
-    not just the env-var defaults baked into the LOGGING dict at settings-import time). Only touches the
-    formatters/handlers Nautobot ships by name, so a fully custom operator LOGGING config is left alone.
+    not just the env-var defaults baked into the LOGGING dict at settings-import time).
+
+    No-op unless `logging_config` *is* `nautobot.core.settings.LOGGING`. Because `nautobot_config.py`
+    does `from nautobot.core.settings import *`, an operator who leaves `LOGGING` alone still holds that
+    exact object, while *any* customization -- reassigning `LOGGING` to a new dict, even one that merely
+    tweaks a level -- rebinds the name and so is left entirely untouched. Identity rather than equality:
+    this function mutates in place, so an equality check would accept a pre-mutation copy of the defaults
+    and reject it afterwards. Operators with a custom `LOGGING` surface the IDs via their own formatters
+    (see `OTEL_PYTHON_LOG_CORRELATION` in settings.py).
 
     Idempotent: appending an already-present suffix or filter is skipped, so repeat calls are safe.
     """
+    # Imported lazily: this module is imported *from* nautobot.core.settings while LOGGING is being
+    # built, so a module-level import would be circular.
+    from nautobot.core import settings as core_settings
+
+    if logging_config is not getattr(core_settings, "LOGGING", None):
+        return
+
     formatters = logging_config.get("formatters", {})
     for name in _OTEL_DEFAULT_FORMATTERS:
         formatter = formatters.get(name)

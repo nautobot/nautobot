@@ -1349,8 +1349,9 @@ OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUME
 # conflicts with a custom LOGGING config. When this is enabled, Nautobot's *default* LOGGING additionally
 # surfaces the trace/span IDs in console output -- applied post-load by
 # nautobot.core.logging.enable_otel_log_correlation() using the resolved settings, so it works whether
-# they are set via env var or in nautobot_config.py. If you override LOGGING, reference the attributes
-# in your own formatters (e.g. %(otelTraceID)s) to make them visible.
+# they are set via env var or in nautobot_config.py. If you override LOGGING at all, that step is skipped
+# and your config is left exactly as you wrote it; reference the attributes in your own formatters
+# (e.g. %(otelTraceID)s, with the OtelTraceContextFilter attached) to make them visible.
 OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
 OTEL_TRACES_EXPORTER = [
     exporter
