@@ -75,11 +75,11 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         with traced_span(
             "nautobot.extras.customfields",
             "computed_field_cache.get",
-            **{"nautobot.core.computed_field_cache.model": concrete_model._meta.label_lower},
+            **{"nautobot.extras.computed_field_cache.model": concrete_model._meta.label_lower},
         ) as _span:
 
             def hit_callback(hit):
-                _span.set_attribute("nautobot.core.computed_field_cache.hit", hit)
+                _span.set_attribute("nautobot.extras.computed_field_cache.hit", hit)
 
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             if not get_queryset:
@@ -503,7 +503,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         ) as _span:
 
             def hit_callback(hit):
-                _span.set_attribute("nautobot.core.custom_field_cache.hit", hit)
+                _span.set_attribute("nautobot.extras.custom_field_cache.hit", hit)
 
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             if not get_queryset:
@@ -526,11 +526,11 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         with traced_span(
             "nautobot.extras.customfields",
             "custom_field_keys_cache.get",
-            **{"nautobot.core.custom_field_keys_cache.model": concrete_model._meta.label_lower},
+            **{"nautobot.extras.custom_field_keys_cache.model": concrete_model._meta.label_lower},
         ) as _span:
 
             def hit_callback(hit):
-                _span.set_attribute("nautobot.core.custom_field_keys_cache.hit", hit)
+                _span.set_attribute("nautobot.extras.custom_field_keys_cache.hit", hit)
 
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             keys, _ = cache_get_or_set(

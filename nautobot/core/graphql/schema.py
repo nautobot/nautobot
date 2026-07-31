@@ -598,7 +598,7 @@ def generate_query_mixin():
         else:
             registry["graphql_types"][type_identifier] = schema_type
 
-    _span.set_attribute("graphql.schema.plugin_type_count", len(registry["plugin_graphql_types"]))
+    _span.set_attribute("nautobot.core.graphql.schema.plugin_type_count", len(registry["plugin_graphql_types"]))
     logger.debug("Extending all registered schema types with dynamic attributes")
 
     # Precache all content-types as we'll need them for filtering and the like
@@ -618,5 +618,5 @@ def generate_query_mixin():
 
     QueryMixin = type("QueryMixin", (object,), class_attrs)
     logger.info("Generation of Nautobot GraphQL schema complete")
-    _span.set_attribute("graphql.schema.total_type_count", len(registry["graphql_types"]))
+    _span.set_attribute("nautobot.core.graphql.schema.total_type_count", len(registry["graphql_types"]))
     return QueryMixin

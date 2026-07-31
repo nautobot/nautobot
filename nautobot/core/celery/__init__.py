@@ -71,6 +71,45 @@ def _get_celery_queue_items(queue_name):
     return decoded
 
 
+@signals.worker_process_init.connect
+def install_otel_exporters(sender=None, **kwargs):
+    """Create the OpenTelemetry OTLP exporters in each forked Celery worker child.
+
+    Celery's prefork pool forks child worker processes after `instrument()` has already run in the
+    parent. The OTLP gRPC exporter's channel spins up fork-unsafe C-core threads/fds at construction,
+    so a channel built in the parent is inherited broken by children and segfaults on export.
+    `instrument()` therefore defers exporter creation; this handler installs the exporters per child
+    on `worker_process_init` (fired inside each forked child). `install_exporters()` is idempotent.
+
+    Connected via the `worker_process_init` signal; not intended to be called directly.
+    """
+    if not settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        return
+    from nautobot.core.cli.opentelemetry import install_exporters
+
+    install_exporters()
+
+
+@signals.beat_init.connect
+def install_otel_exporters_beat(sender=None, **kwargs):
+    """Create the OpenTelemetry OTLP exporters in the Celery beat scheduler process.
+
+    Unlike `worker`, `beat` is a single, non-forking process, so `worker_process_init` never fires
+    for it and the CLI entrypoint deliberately skips in-process exporter creation for every `celery`
+    subcommand (it cannot tell `beat` from `worker` without exporting pre-fork in the worker case).
+    Without this handler `instrument()` would run but no exporter would ever be attached, silently
+    dropping all of beat's telemetry. `beat_init` fires in beat's own process where in-process gRPC
+    channel creation is safe (nothing forks after it). `install_exporters()` is idempotent.
+
+    Connected via the `beat_init` signal; not intended to be called directly.
+    """
+    if not settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        return
+    from nautobot.core.cli.opentelemetry import install_exporters
+
+    install_exporters()
+
+
 @signals.worker_ready.connect
 def load_canceled_on_start(sender=None, **kwargs):
     """Re-apply the in-memory canceled set when a Celery worker boots.

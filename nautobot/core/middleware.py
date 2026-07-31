@@ -243,9 +243,9 @@ class GraphQLOpenTelemetryMiddleware:
     Span attributes set:
     - `enduser.id`                          - authenticated username
     - `http.client_ip`                      - originating IP (X-Forwarded-For -> X-Real-IP -> REMOTE_ADDR)
-    - `nautobot.core.graphql.document`      - full query / mutation / subscription text
-    - `nautobot.core.graphql.variables`     - JSON-serialised variables (when present)
-    - `nautobot.core.graphql.operation.type`- `query`, `mutation`, or `subscription`
+    - `graphql.document`                    - full query / mutation / subscription text
+    - `graphql.variables`                   - JSON-serialised variables (when present)
+    - `graphql.operation.type`              - `query`, `mutation`, or `subscription`
     - `http.status_code`                    - HTTP response status code
 
     The INFO log additionally includes `duration_ms`.
@@ -270,14 +270,15 @@ class GraphQLOpenTelemetryMiddleware:
         client_ip = self._get_client_ip(request)
         query, variables = self._parse_graphql_body(request)
         operation_type = self._get_operation_type(query)
-        username = request.user.username if request.user.is_authenticated else "anonymous"
 
         tracer = trace.get_tracer("nautobot.graphql")
         span_name = f"graphql {operation_type}" if operation_type else "graphql"
 
         with tracer.start_as_current_span(span_name) as span:
-            span.set_attribute("enduser.id", username)
             span.set_attribute("http.client_ip", client_ip)
+            # `graphql.document` and `graphql.operation.type` are OpenTelemetry GraphQL
+            # semantic-convention attributes; `graphql.variables` is Nautobot-specific but kept
+            # under the same namespace. See https://opentelemetry.io/docs/specs/semconv/graphql/graphql-spans/
             if query:
                 span.set_attribute("graphql.document", query)
             if variables:
@@ -289,6 +290,12 @@ class GraphQLOpenTelemetryMiddleware:
             response = self.get_response(request)
             duration_ms = round((time.monotonic() - start) * 1000, 2)
 
+            # Resolve the user *after* get_response so token-authenticated API requests are
+            # attributed correctly. For /api/graphql the DRF view resolves request.user lazily
+            # during dispatch (after all Django middleware), so reading it before get_response
+            # would report "anonymous" for a valid API token. By now dispatch has run.
+            username = request.user.username if request.user.is_authenticated else "anonymous"
+            span.set_attribute("enduser.id", username)
             span.set_attribute("http.status_code", response.status_code)
 
             # Use the stdlib logger so this is emitted through Django's LOGGING config
@@ -342,8 +349,18 @@ class GraphQLOpenTelemetryMiddleware:
 
     @staticmethod
     def _get_operation_type(query):
-        """Return `query`, `mutation`, or `subscription` from the document, or `None`."""
+        """Return `query`, `mutation`, or `subscription` from the document, or `None`.
+
+        GraphQL documents may begin with `#` line comments (comments run to end of line) and
+        blank lines before the operation keyword. Strip those so a leading comment does not
+        defeat detection; then match the operation keyword on the first meaningful line.
+        """
         if not query:
             return None
-        match = _GRAPHQL_OPERATION_RE.match(query)
-        return match.group(1).lower() if match else None
+        for line in query.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            match = _GRAPHQL_OPERATION_RE.match(stripped)
+            return match.group(1).lower() if match else None
+        return None

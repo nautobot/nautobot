@@ -1,0 +1,1 @@
+Fixed segmentation faults in uWSGI worker processes when OpenTelemetry tracing used the OTLP gRPC exporter together with django-silk request profiling, by creating the OTLP exporters in each worker after fork instead of in the master process before fork.
