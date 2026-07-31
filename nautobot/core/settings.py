@@ -672,6 +672,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
+    "nautobot.core.middleware.RequestCacheMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
     "nautobot.core.middleware.GraphQLOpenTelemetryMiddleware",
