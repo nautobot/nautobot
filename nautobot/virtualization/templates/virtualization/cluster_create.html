@@ -1,0 +1,22 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>Cluster</strong></div>
+        <div class="card-body">
+            {% render_field form.name %}
+            {% render_field form.cluster_type %}
+            {% render_field form.cluster_group %}
+            {% render_field form.location %}
+        </div>
+    </div>
+    {% include 'inc/tenancy_form_panel.html' %}
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="card">
+        <div class="card-header"><strong>Comments</strong></div>
+        <div class="card-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}

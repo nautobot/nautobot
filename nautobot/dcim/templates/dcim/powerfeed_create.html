@@ -1,0 +1,46 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>Power Panel</strong></div>
+        <div class="card-body">
+            {% render_field form.location %}
+            {% render_field form.power_panel %}
+            {% render_field form.destination_panel %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><strong>Power Feed</strong></div>
+        <div class="card-body">
+            {% render_field form.rack %}
+            {% render_field form.name %}
+            {% render_field form.status %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><strong>Characteristics</strong></div>
+        <div class="card-body">
+            {% render_field form.type %}
+            {% render_field form.supply %}
+            {% render_field form.voltage %}
+            {% render_field form.amperage %}
+            {% render_field form.phase %}
+            {% render_field form.max_utilization %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><strong>Circuit Breaker Configuration</strong></div>
+        <div class="card-body">
+            {% render_field form.breaker_position %}
+            {% render_field form.breaker_pole_count %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+    <div class="card">
+        <div class="card-header"><strong>Comments</strong></div>
+        <div class="card-body">
+            {% render_field form.comments %}
+        </div>
+    </div>
+{% endblock %}
