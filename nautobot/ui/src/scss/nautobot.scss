@@ -793,6 +793,24 @@ button {
 }
 
 /*
+ * Prevent iOS Safari from auto-zooming on input focus.
+ *
+ * iOS zooms the viewport whenever a focused form control's font size is below 16px, and `$font-size-base` is 14px. That
+ * behaviour is why the viewport meta tag used to carry `user-scalable=no`, which suppressed the zoom but also blocked
+ * deliberate pinch-zoom and so failed WCAG 1.4.4. Raising the control's font size to 16px removes the trigger without
+ * taking zoom away from anyone.
+ *
+ * Scoped to coarse pointers so this applies on touch devices, where it is also the more comfortable target size, and
+ * leaves pointer-driven layouts untouched.
+ */
+@media (pointer: coarse) {
+  .form-control,
+  .form-select {
+    font-size: $font-size-root;
+  }
+}
+
+/*
  * Skip link (bypass block, WCAG 2.4.1)
  *
  * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document

@@ -609,6 +609,28 @@ class LiveSearchViewTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class ViewportMetaTestCase(TestCase):
+    """
+    The viewport meta tag must not disable zooming (WCAG 1.4.4 Resize Text).
+
+    This is asserted here, rather than left to the axe-core integration tests, because it is a single-line regression
+    that is easy to reintroduce -- `user-scalable=no` is a common workaround for iOS Safari auto-zooming focused inputs --
+    and because a unit test runs on every suite rather than only when Selenium is available.
+    """
+
+    def test_viewport_permits_zoom(self):
+        response = self.client.get(reverse("home"))
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+
+        match = re.search(r'<meta name="viewport" content="([^"]*)"', body)
+        self.assertIsNotNone(match, "No viewport meta tag found")
+        content = match.group(1)
+
+        self.assertNotIn("user-scalable=no", content.replace(" ", ""))
+        self.assertNotIn("maximum-scale", content, "maximum-scale caps zoom and fails WCAG 1.4.4")
+
+
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
         """Unauthenticated access redirects to the login page."""
