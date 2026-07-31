@@ -335,9 +335,15 @@ class InstrumentExporterBranchTest(testing.TestCase):
         self._original_provider = otel_trace.get_tracer_provider()
         # A real TracerProvider so add_span_processor() (called by install_exporters) has somewhere to go.
         otel_trace.set_tracer_provider(TracerProvider())
+        # install_exporters() may call metrics.set_meter_provider(), which is set-once per process
+        # (like set_tracer_provider) and so can't be captured/restored. Patch it out instead so a test
+        # exercising the metrics branch can't leak a global meter provider into later tests.
+        self._meter_provider_patcher = patch("nautobot.core.cli.opentelemetry.metrics.set_meter_provider")
+        self._meter_provider_patcher.start()
         self._reset_exporters_guard()
 
     def tearDown(self):
+        self._meter_provider_patcher.stop()
         otel_trace.set_tracer_provider(self._original_provider)
         self._reset_exporters_guard()
         super().tearDown()
