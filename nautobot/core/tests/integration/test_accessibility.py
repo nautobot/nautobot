@@ -94,3 +94,122 @@ class AccessibilityTestCase(SeleniumTestCase):
         self.browser.visit(f"{self.live_server_url}/login/")
         self.assertTrue(self.browser.is_element_present_by_name("username", wait_time=10))
         self.assertNoAccessibilityViolations()
+
+    def test_header_search_stays_the_size_of_the_field(self):
+        """
+        The header search must keep the size and shape of a single-line control, whatever the query length.
+
+        This is a geometry assertion rather than an axe-core one because axe cannot see the problem for what it is: a
+        label painting outside its field reports as an *incomplete* `color-contrast` check ("partially obscured by
+        another element"), since contrast is indeterminate for whatever part of an element falls outside the ancestor
+        painting its background. Two size regressions in this component reached review, and neither an axe scan nor any
+        of the markup assertions elsewhere in the suite could have caught either, because both were only visible as boxes
+        on a screen. So assert the boxes -- in both axes.
+
+        Both axes, specifically, because the two failure modes trade off against each other and checking one hides the
+        other. The trigger's label sets its own minimum size, so removing `.text-nowrap` stops it overflowing sideways
+        only by letting it wrap, which grows the field downwards instead: an 85-character query took it from 36px to
+        133px over six lines, dragging the header row with it. `.text-truncate` is what resolves both, since the
+        `overflow: hidden` it carries also drops a flex item's automatic minimum size to zero. An earlier version of this
+        test measured width alone and passed against markup with no truncation at all.
+        """
+        long_query = "a-very-long-search-query-that-should-not-be-allowed-to-overflow-the-header-search-box"
+        measure = """
+            const container = document.querySelector('#header_search');
+            const trigger = document.querySelector('#header_search_trigger');
+            const root = document.documentElement;
+            const containerRect = container.getBoundingClientRect();
+            const triggerRect = trigger.getBoundingClientRect();
+            return {
+                escaping_children: [...container.children]
+                    .filter((child) => {
+                        const rect = child.getBoundingClientRect();
+                        return (
+                            rect.right > containerRect.right + 1 || rect.left < containerRect.left - 1 ||
+                            rect.bottom > containerRect.bottom + 1 || rect.top < containerRect.top - 1
+                        );
+                    })
+                    .map((child) => child.id || child.className),
+                container_height: Math.round(containerRect.height),
+                container_scroll_width: container.scrollWidth,
+                container_client_width: container.clientWidth,
+                document_scroll_width: root.scrollWidth,
+                document_client_width: root.clientWidth,
+                trigger_line_count: Math.round(triggerRect.height / parseFloat(getComputedStyle(trigger).lineHeight)),
+            };
+        """
+
+        heights = {}
+        for label, url in (
+            ("no query", f"{self.live_server_url}/dcim/locations/"),
+            ("long query", f"{self.live_server_url}/dcim/locations/?q={long_query}"),
+        ):
+            with self.subTest(query=label):
+                self.browser.visit(url)
+                self.assertTrue(self.browser.is_element_present_by_css("#header_search_trigger", wait_time=10))
+                metrics = self.browser.driver.execute_script(measure)
+                heights[label] = metrics["container_height"]
+
+                self.assertEqual(
+                    metrics["escaping_children"],
+                    [],
+                    f"header search children painted outside the field with {label}: {metrics}",
+                )
+                # `scrollWidth` over `clientWidth` means content the field cannot show without scrolling, and it has no
+                # scrollbar -- so anything over is content spilling out of, or clipped by, the visible box.
+                self.assertLessEqual(
+                    metrics["container_scroll_width"],
+                    metrics["container_client_width"],
+                    f"header search content overflows the field with {label}: {metrics}",
+                )
+                # Overflow here widened the whole document, which scrolls the page sideways at any window size.
+                self.assertLessEqual(
+                    metrics["document_scroll_width"],
+                    metrics["document_client_width"],
+                    f"page scrolls horizontally with {label}: {metrics}",
+                )
+                self.assertEqual(
+                    metrics["trigger_line_count"],
+                    1,
+                    f"header search label wrapped onto more than one line with {label}: {metrics}",
+                )
+
+        self.assertEqual(
+            heights["long query"],
+            heights["no query"],
+            f"the query being searched for changed the height of the header search: {heights}",
+        )
+
+    def test_header_search_does_not_open_dialog_on_focus(self):
+        """
+        Moving focus to the search trigger must not open the search dialog (WCAG 3.2.1 On Focus, Level A).
+
+        No automated checker can find this one -- it needs something to actually take focus and then look at what
+        happened -- and the component failed it for as long as it was an `<input>` that opened the dialog on `focus`: a
+        keyboard user tabbing through the header landed in a modal they had not asked for. Activation, by click or key,
+        is what should open it.
+        """
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
+        self.assertTrue(self.browser.is_element_present_by_css("#header_search_trigger", wait_time=10))
+
+        # `search.js` builds `#search_popup` on demand and removes it again on close, so presence is the open state. Check
+        # that it also renders, so that a popup left in the DOM but hidden cannot pass for a closed one.
+        visible_dialog_probe = """
+            const popup = document.getElementById('search_popup');
+            return {
+                dialog_visible: !!(
+                    popup && popup.offsetParent !== null && getComputedStyle(popup).visibility !== 'hidden'
+                ),
+                focused: document.activeElement ? document.activeElement.id : null,
+            };
+        """
+        after_focus = self.browser.driver.execute_script(
+            "document.querySelector('#header_search_trigger').focus();" + visible_dialog_probe
+        )
+        self.assertFalse(after_focus["dialog_visible"], "focusing the search trigger opened the search dialog")
+        self.assertEqual(after_focus["focused"], "header_search_trigger", "focus left the search trigger unbidden")
+
+        self.browser.find_by_css("#header_search_trigger").first.click()
+        self.assertTrue(self.browser.is_element_present_by_css("#search_popup", wait_time=10))
+        after_click = self.browser.driver.execute_script(visible_dialog_probe)
+        self.assertTrue(after_click["dialog_visible"], "activating the search trigger did not open the search dialog")
