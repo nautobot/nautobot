@@ -1458,13 +1458,19 @@ properties:
     is_constance_config: true
     type: "integer"
   MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS:
-    default: 100
+    default: 40
     description: >-
       Caps the number of `select_related()`/`prefetch_related()` lookup paths that the REST API's depth-aware
       queryset optimizer will build for a single request, to avoid unbounded query/JOIN growth when a client
       requests a large `?depth` value on a model with many relations. Once the cap is reached, any remaining
       nested relations are left unoptimized (falling back to on-demand per-instance queries as needed) rather
       than continuing to grow the number of JOINs/prefetch queries for that request.
+    details: |-
+      !!! note
+          The default value of `40` is chosen conservatively below MySQL's default `max_join_size`/table-count
+          limits for a single query (MySQL rejects queries joining more than 61 tables), since each
+          `select_related()` optimization adds one JOIN to the underlying query. If you are not using MySQL, or
+          have tuned your database accordingly, you may be able to safely increase this value.
     environment_variable: "NAUTOBOT_MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS"
     type: "integer"
     version_added: "3.2.2"
