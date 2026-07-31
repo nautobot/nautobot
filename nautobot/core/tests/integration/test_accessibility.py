@@ -48,6 +48,40 @@ class AccessibilityTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_element_present_by_css("#draggable-homepage-panels", wait_time=10))
         self.assertNoAccessibilityViolations()
 
+    def test_list_views_across_apps(self):
+        """
+        Scan a list view from each app, not just the one that backs the shared template.
+
+        The premise of the rest of this file -- that shared templates mean one list view stands in for all of them -- is
+        true of the page furniture and false of everything a view contributes itself. Templates that override blocks,
+        columns that render their own markup, and per-app inline `extra_styles` are all invisible to a single-model scan.
+        A sweep across these pages found a WCAG 1.4.3 failure on `/extras/jobs/` affecting 46 links, from styling in that
+        template alone, which every scan up to then had passed.
+
+        These are still list views of the same template, so this is cheap. It is not a substitute for an App scanning its
+        own views.
+        """
+        for path in (
+            "/circuits/circuits/",
+            "/cloud/cloud-accounts/",
+            "/dcim/devices/",
+            "/dcim/interfaces/",
+            "/extras/jobs/",
+            "/extras/job-results/",
+            "/extras/object-changes/",
+            "/ipam/ip-addresses/",
+            "/ipam/prefixes/",
+            "/ipam/vlans/",
+            "/tenancy/tenants/",
+            "/virtualization/virtual-machines/",
+            "/vpn/tunnels/",
+            "/wireless/wireless-networks/",
+        ):
+            with self.subTest(path=path):
+                self.browser.visit(f"{self.live_server_url}{path}")
+                self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
+                self.assertNoAccessibilityViolations()
+
     def test_object_list_view(self):
         self.browser.visit(f"{self.live_server_url}/dcim/locations/")
         self.assertTrue(self.browser.is_element_present_by_css("#object_list_form", wait_time=10))
