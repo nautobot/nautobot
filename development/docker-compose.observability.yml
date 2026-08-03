@@ -42,7 +42,11 @@ services:
       - -server.grpc-listen-port=9096
     volumes:
       - ./configs/:/etc/mimir
-      - ./configs/mimir:/tmp/mimir
+      # Runtime data (TSDB blocks, ruler rules, compactor) lives in a named volume, not a
+      # host bind mount. A bind mount would (a) require the host rules/ dir to pre-exist or
+      # Mimir exits with "unable to read dir /tmp/mimir/rules", and (b) litter the repo tree
+      # with runtime data. Mimir creates rules/ itself inside a writable named volume.
+      - mimir_data:/tmp/mimir
     ports:
       - "9009:9009"
       - "9096:9096"
@@ -63,6 +67,3 @@ services:
       - "./configs/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/all.yml"
       - "./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards"
       - "./configs/grafana/grafana.ini:/etc/grafana/grafana.ini"
-    environment:
-      - "GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource,volkovlabs-echarts-panel,marcusolsson-dynamictext-panel"
-      - "GF_PANELS_DISABLE_SANITIZE_HTML=true"

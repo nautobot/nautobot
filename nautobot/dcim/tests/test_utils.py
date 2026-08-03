@@ -2,13 +2,23 @@ from django.core.exceptions import ValidationError
 
 from nautobot.core.testing import TestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
-from nautobot.dcim.models import Device, DeviceType, Interface, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    Cable,
+    CableType,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+)
 from nautobot.dcim.tests.test_views import create_test_device
 from nautobot.dcim.utils import (
     build_connector_row_layout,
     cable_status_color_css,
     disconnect_termination,
     generate_cable_breakout_mapping,
+    get_cable_pk,
     validate_cable_breakout_mapping,
 )
 from nautobot.extras.models import Role, Status
@@ -252,3 +262,65 @@ class CableStatusColorCssTestCase(TestCase):
         self.assertIsNone(subiface.get_breakout_lane())
 
         self.assertEqual(cable_status_color_css(subiface), "")
+
+
+class GetCablePkTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        status_active = Status.objects.get_for_model(Interface).get(name="Active")
+        status_connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        spine_device = create_test_device("Breakout Cable Spine Device")
+        leaf_device = create_test_device("Breakout Cable Leaf Device")
+
+        cls.spine_interface = Interface.objects.create(
+            device=spine_device,
+            name="Spine Interface 1",
+            type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
+            status=status_active,
+        )
+
+        cls.spine_interface_child = Interface.objects.create(
+            device=spine_device,
+            name="Spine Interface 1/1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            status=status_active,
+            parent_interface=cls.spine_interface,
+            breakout_position=1,
+        )
+
+        cls.uncabled_interface = Interface.objects.create(
+            device=spine_device, name="eth-uncabled", status=status_active
+        )
+
+        leaf_interfaces = [
+            Interface.objects.create(device=leaf_device, name="Leaf 1", status=status_active),
+            Interface.objects.create(device=leaf_device, name="Leaf 2", status=status_active),
+        ]
+        breakout_type = CableType.objects.create(
+            name="1x2 Breakout Cable", a_connectors=1, b_connectors=2, total_lanes=2
+        )
+
+        cls.breakout_cable = Cable(
+            termination_a=cls.spine_interface,
+            termination_b=leaf_interfaces[0],
+            cable_type=breakout_type,
+            status=status_connected,
+        )
+        cls.breakout_cable.save()
+        cls.breakout_cable.add_termination(leaf_interfaces[1], "B", connector=2)
+
+    def test_get_cable_pk_breakout_child_returns_parent_cable_pk(self):
+        self.assertIsNone(self.spine_interface_child.cable)
+        self.assertIsNotNone(self.spine_interface_child.parent_interface_id)
+        self.assertIsNotNone(self.spine_interface_child.breakout_position)
+        self.assertIsNotNone(self.spine_interface.cable)
+
+        self.assertEqual(get_cable_pk(self.spine_interface_child), self.spine_interface.cable.pk)
+
+    def test_get_cable_pk_directly_cabled_interface_returns_own_cable_pk(self):
+        self.assertEqual(get_cable_pk(self.spine_interface), self.breakout_cable.pk)
+
+    def test_get_cable_pk_uncabled_interface_returns_empty_string(self):
+        self.assertIsNone(self.uncabled_interface.cable)
+        self.assertEqual(get_cable_pk(self.uncabled_interface), "")

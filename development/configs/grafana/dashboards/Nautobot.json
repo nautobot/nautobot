@@ -32,7 +32,7 @@
           "uid": "loki"
         },
         "enable": true,
-        "expr": "{service_name=\"nautobot\"} |= `POST /graphql/`",
+        "expr": "{service_name=\"nautobot\"} |~ `POST /(api/)?graphql/`",
         "hide": false,
         "iconColor": "red",
         "name": "GraphQL Query",
@@ -124,11 +124,11 @@
             {
               "id": "span-name",
               "isCustomValue": false,
-              "operator": "=",
+              "operator": "=~",
               "scope": "span",
               "tag": "name",
               "value": [
-                "POST graphql/"
+                "POST .*graphql/"
               ],
               "valueType": "string"
             }
