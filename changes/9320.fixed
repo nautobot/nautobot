@@ -1,1 +1,0 @@
-Fixed `Device.get_cables()` and `Module.get_cables()` raising a `FieldError` after the 3.2 cable data model changes.

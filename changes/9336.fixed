@@ -1,1 +1,0 @@
-Fixed the REST API schema for several structured JSON fields that previously rendered as untyped objects.
