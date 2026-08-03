@@ -31,7 +31,7 @@ Nautobot's OpenTelemetry support is structured in layers. Each layer can be enab
 Setting `OTEL_PYTHON_DJANGO_INSTRUMENT=True` activates the core instrumentation layer. This enables:
 
 - **HTTP request tracing** - A span is created for every HTTP request, including path, method, status code, and username. The `traceparent` W3C header is read from incoming requests, allowing Nautobot to participate in a distributed trace originating from an upstream service.
-- **Log correlation** - When `OTEL_PYTHON_LOG_CORRELATION=True`, trace and span IDs are injected into every log record, making it possible to correlate logs to the trace that produced them.
+- **Log correlation** - When `OTEL_PYTHON_LOG_CORRELATION=True` (the default while tracing is enabled), the attributes `otelTraceID`, `otelSpanID`, `otelTraceSampled`, and `otelServiceName` are injected onto every log record, making it possible to correlate logs to the trace that produced them. Nautobot's default logging surfaces the trace and span IDs in console output automatically; if you supply your own `LOGGING` configuration you reference the attributes in your formatters yourself. See [Showing trace IDs in logs](#showing-trace-ids-in-logs) below. This only injects record attributes and (for the default configuration) adjusts Nautobot's own formatters; it never calls `logging.basicConfig()` or attaches a handler to the root logger, so it does not duplicate or reformat log lines.
 - **GraphQL request tracing** - Requests to `/graphql` and `/api/graphql` receive additional spans with the full query document, operation type, and variables.
 - **Database query spans** - Every SQL query is captured as a child span with the query text and SQL commenter annotations.
 - **Redis command spans** - Every Redis command is captured as a child span.
@@ -39,6 +39,53 @@ Setting `OTEL_PYTHON_DJANGO_INSTRUMENT=True` activates the core instrumentation 
 - **Outbound HTTP propagation** - Outgoing HTTP requests made through the Python `requests` library (webhooks, SSoT data sources, etc.) carry the `traceparent` header via `RequestsInstrumentor`, stitching downstream services into the same trace. Only the `requests` library is auto-instrumented; HTTP calls made by other clients - notably GitPython during Git repository sync - are not traced or propagated.
 
 This layer has the highest value-to-cost ratio. Database and Redis spans in particular are useful for identifying N+1 query patterns and slow cache operations.
+
+#### Showing trace IDs in logs
+
+With `OTEL_PYTHON_LOG_CORRELATION=True`, every log record carries the `otelTraceID`, `otelSpanID`, `otelTraceSampled`, and `otelServiceName` attributes. Whether those values appear in a log line depends on the formatter that renders the record.
+
+If you have **not** overridden `LOGGING`, Nautobot does this for you: its default console formatters automatically append `[trace_id=<...> span_id=<...>]` to each line whenever correlation is enabled, so you get output such as:
+
+```no-highlight
+14:22:07.531 INFO    nautobot.core [trace_id=8f3b1c2d4e5f6a7b8c9d0e1f2a3b4c5d span_id=1a2b3c4d5e6f7a8b] :
+  Request completed
+```
+
+Records emitted outside any request (for example during startup, before instrumentation is active) render as `trace_id=0 span_id=0`.
+
+If you **do** supply your own `LOGGING` dictionary in `nautobot_config.py`, reference the attributes in your own formatters. Two considerations:
+
+- Add the attributes you want to each format string, for example `%(otelTraceID)s`/`%(otelSpanID)s`.
+- Guard against records that lack the attributes (emitted before instrumentation, or constructed by third-party libraries) - otherwise the formatter raises `ValueError: Formatting field not found in record`. Attach the `nautobot.core.logging.OtelTraceContextFilter` to your handlers; it fills any missing attribute with the standard `0` sentinel.
+
+```python
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "otel_trace_context": {"()": "nautobot.core.logging.OtelTraceContextFilter"},
+    },
+    "formatters": {
+        "normal": {
+            "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] :\n  %(message)s",
+            "datefmt": "%H:%M:%S",
+        },
+    },
+    "handlers": {
+        "normal_console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "normal",
+            "filters": ["otel_trace_context"],
+        },
+    },
+    "loggers": {
+        "nautobot": {"handlers": ["normal_console"], "level": "INFO"},
+    },
+}
+```
+
+To keep trace IDs out of your log lines while still injecting the attributes (for a structured/JSON handler to pick up, say), simply omit them from your format strings. To disable correlation entirely, set `OTEL_PYTHON_LOG_CORRELATION=False`.
 
 ### Layer 2 - Metrics export
 

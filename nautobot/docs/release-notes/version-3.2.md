@@ -268,6 +268,47 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.2 (2026-08-03)
+
+### Added in v3.2.2
+
+- [#9323](https://github.com/nautobot/nautobot/issues/9323) - Added support for `termination_id` filter to CableFilterSet.
+
+### Changed in v3.2.2
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204) - Changed change logging of many-to-many associations declared with an explicit `through` model so that both associated objects now receive a change log entry.
+
+### Fixed in v3.2.2
+
+- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed GraphQL OpenTelemetry span attributes: request spans now use the OpenTelemetry GraphQL semantic-convention keys (`graphql.document`, `graphql.operation.type`), and schema-build spans are namespaced under `nautobot.core.graphql.schema.`.
+- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed GraphQL operation-type detection so a leading comment in the query no longer prevents the operation type from being recorded.
+- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed API-token GraphQL requests recording `enduser.id` as `anonymous` instead of the authenticated user.
+- [#6887](https://github.com/nautobot/nautobot/issues/6887) - Fixed SSO group syncing to also read group attributes from SAML responses.
+- [#9204](https://github.com/nautobot/nautobot/issues/9204), [#9270](https://github.com/nautobot/nautobot/issues/9270) - Fixed missing change log entries, webhooks, job hooks, and events when creating or deleting many-to-many association records via the REST API.
+- [#9320](https://github.com/nautobot/nautobot/issues/9320) - Fixed `Device.get_cables()` and `Module.get_cables()` raising a `FieldError` after the 3.2 cable data model changes.
+- [#9325](https://github.com/nautobot/nautobot/issues/9325) - Fixed breakout subinterfaces to change colors and icons correctly when a cable status is changed.
+- [#9326](https://github.com/nautobot/nautobot/issues/9326) - Added additional `select_related` for device bays in device API view set.
+- [#9328](https://github.com/nautobot/nautobot/issues/9328) - Reduced redundant Redis cache lookups for `CustomField.choices` when constructing FilterSets, by building the choice widget once per CustomField instead of once per generated filter (base filter plus lookup-expression variants).
+- [#9329](https://github.com/nautobot/nautobot/issues/9329) - Fixed missing JobResult when a scheduled job fires while no Celery worker is running. The scheduler (Celery Beat) now creates a PENDING JobResult before publishing the task to the broker, and marks it as FAILURE if publishing fails.
+- [#9332](https://github.com/nautobot/nautobot/issues/9332) - Fixed segmentation faults in uWSGI worker processes when OpenTelemetry tracing used the OTLP gRPC exporter together with `django-silk` request profiling, by creating the OTLP exporters in each worker after fork instead of in the master process before fork.
+- [#9333](https://github.com/nautobot/nautobot/issues/9333) - Implemented in-process per-request cache to prevent duplicate Redis lookups.
+- [#9335](https://github.com/nautobot/nautobot/issues/9335) - Fixed OpenTelemetry log correlation duplicating and reformatting log lines when `OTEL_PYTHON_LOG_CORRELATION` was enabled, by injecting the trace and span IDs onto log records instead of overriding the root logging configuration; the default console logging now surfaces the trace and span IDs when correlation is enabled.
+- [#9336](https://github.com/nautobot/nautobot/issues/9336) - Fixed the REST API schema for several structured JSON fields that previously rendered as untyped objects.
+- [#9337](https://github.com/nautobot/nautobot/issues/9337) - Fixed `Job.task_queues` property returning a deferred-evaluation QuerySet instead of the documented list of strings. This in turn fixes a potential database deadlock when bulk-deleting Job records.
+- [#9342](https://github.com/nautobot/nautobot/issues/9342) - Fixed `CustomFieldManager.populate_list_caches()` writing the custom field listing under the wrong cache key, causing cache misses during GraphQL schema generation.
+
+### Documentation in v3.2.2
+
+- [#978](https://github.com/nautobot/nautobot/issues/978) - Added a warning to the SSO documentation that only a single SAML identity provider is supported at a time.
+- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Corrected the local observability stack documentation to note that host ports 4317/4318 are published by Tempo, while the OpenTelemetry Collector is reachable only as `otel:4317` on the internal Docker network.
+- [#6834](https://github.com/nautobot/nautobot/issues/6834) - Fixed the Okta SAML documentation example to set `requestedAuthnContext` via `SOCIAL_AUTH_SAML_SECURITY_CONFIG` instead of the unsupported per-IdP `requested_authn_context`, `force_authn`, and `allow_unsolicited` keys.
+- [#9324](https://github.com/nautobot/nautobot/issues/9324) - Enhanced the ["Permissions" administrator guide](../user-guide/administration/guides/permissions.md) with guidance about which permissions should be restricted to highly-trusted users, which permissions are generally safe to grant to all users, etc.
+
+### Housekeeping in v3.2.2
+
+- [#4783](https://github.com/nautobot/nautobot/issues/4783) - Fixed the local development observability stack so it starts cleanly, including Mimir no longer exiting on startup, Grafana anonymous users being able to use Explore, and Promtail only scraping the Nautobot stack's containers.
+- [#9337](https://github.com/nautobot/nautobot/issues/9337) - Removed some no-longer-used custom logic for serialization/deserialization of Nautobot records to/from JSON.
+
 ## v3.2.1 (2026-07-28)
 
 ### Added in v3.2.1
