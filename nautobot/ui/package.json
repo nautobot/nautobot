@@ -47,7 +47,7 @@
     "globals": "^16.5.0",
     "mini-css-extract-plugin": "^2.10.2",
     "npm-run-all2": "^8.0.4",
-    "postcss": "^8.5.22",
+    "postcss": "^8.5.23",
     "postcss-loader": "^8.2.1",
     "prettier": "^3.8.3",
     "sass": "^1.97.3",
