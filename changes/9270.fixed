@@ -1,1 +1,0 @@
-Fixed missing change log entries, webhooks, job hooks, and events when creating or deleting many-to-many association records via the REST API.

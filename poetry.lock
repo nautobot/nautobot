@@ -437,7 +437,7 @@ files = [
     {file = "cffi-2.1.0-cp315-cp315t-win_arm64.whl", hash = "sha256:cbb7640ce37159548d2147b5b8c241f962143d4c71231431820783f4dc78f210"},
     {file = "cffi-2.1.0.tar.gz", hash = "sha256:efc1cdd798b1aaf39b4610bba7aad28c9bea9b910f25c784ccf9ec1fa719d1f9"},
 ]
-markers = {main = "platform_python_implementation != \"PyPy\" or extra == \"all\" or extra == \"napalm\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\""}
+markers = {main = "platform_python_implementation != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\""}
 
 [package.dependencies]
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
@@ -2750,35 +2750,33 @@ files = [
 
 [[package]]
 name = "napalm"
-version = "5.1.0"
+version = "5.2.0"
 description = "Network Automation and Programmability Abstraction Layer with Multivendor support"
 optional = true
-python-versions = "*"
+python-versions = ">=3.10"
 groups = ["main"]
 markers = "extra == \"all\" or extra == \"napalm\""
 files = [
-    {file = "napalm-5.1.0-py2.py3-none-any.whl", hash = "sha256:626736ccb185676a02390a8d11798f3ad46b62b0e3160874fee5dbff6901261c"},
-    {file = "napalm-5.1.0.tar.gz", hash = "sha256:a9f898f38d4af00f3e7c5b3ad291f49773fc0229be0e83967a34f29cab2d50f4"},
+    {file = "napalm-5.2.0-py3-none-any.whl", hash = "sha256:7de60abd0040f22e131487ff0635320342809e2ac1db44d1bf7dd6fc16604467"},
+    {file = "napalm-5.2.0.tar.gz", hash = "sha256:9d1250d61e9412542263aa14d20e507fd9f34b0483e9e2719aaa00e2fc6c04da"},
 ]
 
 [package.dependencies]
-cffi = ">=1.11.3"
-jinja2 = "*"
+jinja2 = ">=3.1.4"
 junos-eznc = ">=2.7.4"
 lxml = ">=4.3.0"
-ncclient = "*"
-netaddr = "*"
+ncclient = ">=0.6.16"
+netaddr = ">=1.3.0"
 netmiko = ">=4.4.0"
 netutils = ">=1.0.0"
-paramiko = ">=2.6.0"
+paramiko = ">=3.5.0"
 pyeapi = ">=1.0.2"
-pyYAML = "*"
+pyyaml = ">=6.0.2"
 requests = ">=2.7.0"
-setuptools = ">=38.4.0"
-textfsm = "*"
-ttp = "*"
-ttp_templates = "*"
-typing-extensions = ">=4.3.0"
+textfsm = ">=1.1.3"
+ttp = ">=0.9.5"
+ttp-templates = ">=0.3.7"
+typing-extensions = ">=4.12.2"
 
 [[package]]
 name = "ncclient"
@@ -2839,18 +2837,18 @@ textfsm = ">=1.1.3"
 
 [[package]]
 name = "netutils"
-version = "1.17.3"
+version = "1.18.0"
 description = "Common helper functions useful in network automation."
 optional = false
 python-versions = "<3.15,>=3.10"
 groups = ["main"]
 files = [
-    {file = "netutils-1.17.3-py3-none-any.whl", hash = "sha256:2d96faab35a02450b304bc24af7f0547682e044f541100e9bed8087f538c2b48"},
-    {file = "netutils-1.17.3.tar.gz", hash = "sha256:d1b94b2f5ff899824237141eec76b9f75fac44fcf8c0f871520336b8938d2eb4"},
+    {file = "netutils-1.18.0-py3-none-any.whl", hash = "sha256:769bf33695605fc7c9f5ebf5990f3cb4de098fd64185775669c23623008886cd"},
+    {file = "netutils-1.18.0.tar.gz", hash = "sha256:dd584b856f3b454bb8ab00b415c6ca2c11ba254382db9444944e67d71e8bff19"},
 ]
 
 [package.extras]
-optionals = ["jsonschema (>=4.17.3,<5.0.0)", "legacycrypt (==0.3)", "napalm (>=4.1.0,<5.0.0) ; python_version >= \"3.10\" and python_version < \"3.14\"", "napalm (>=5.0.0,<6.0.0) ; python_version >= \"3.14\"", "rpds-py (>=0.28.0)"]
+optionals = ["jinja2 (>=3.1.6,<4.0.0)", "jsonschema (>=4.17.3,<5.0.0)", "legacycrypt (==0.3)", "napalm (>=4.1.0,<5.0.0) ; python_version >= \"3.10\" and python_version < \"3.14\"", "napalm (>=5.0.0,<6.0.0) ; python_version >= \"3.14\"", "rpds-py (>=0.28.0)"]
 
 [[package]]
 name = "nh3"
@@ -3381,7 +3379,7 @@ files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
 ]
-markers = {main = "(platform_python_implementation != \"PyPy\" or extra == \"all\" or extra == \"napalm\") and implementation_name != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\" and implementation_name != \"PyPy\""}
+markers = {main = "platform_python_implementation != \"PyPy\" and implementation_name != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\" and implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -4260,14 +4258,14 @@ pyyaml = "*"
 
 [[package]]
 name = "redis"
-version = "8.0.1"
+version = "8.1.0"
 description = "Python client for Redis database and key-value store"
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "redis-8.0.1-py3-none-any.whl", hash = "sha256:47daa35a058c23468d6437f17a8c76882cb316b838ef763036af99b96cedd743"},
-    {file = "redis-8.0.1.tar.gz", hash = "sha256:afc5a7a2f5a084f5b1880dec548dd45be17db7e43c82a30d84f952aefb05cfb0"},
+    {file = "redis-8.1.0-py3-none-any.whl", hash = "sha256:a4fe1aac3d3b3cc791d4b3d5931c5a956045dc951ee74d1c913ee3ac4d2ee9fb"},
+    {file = "redis-8.1.0.tar.gz", hash = "sha256:6e1a19beef9225c83efd689c7e6b7da2d5215b1f42cd13b7fc3714d0a09c7b25"},
 ]
 
 [package.dependencies]
@@ -4811,15 +4809,15 @@ files = [
 
 [[package]]
 name = "scp"
-version = "0.16.0"
+version = "0.16.1"
 description = "scp module for paramiko"
 optional = true
 python-versions = "*"
 groups = ["main"]
 markers = "extra == \"all\" or extra == \"napalm\""
 files = [
-    {file = "scp-0.16.0-py2.py3-none-any.whl", hash = "sha256:4564d7032522e113c7e56918f99d476ae70dd7c97c6667d0e74b65648d203eca"},
-    {file = "scp-0.16.0.tar.gz", hash = "sha256:1763a4b8ac424ea0c304f58b95a4a4a51d503a834ed77b4e89f1a32b30cbe662"},
+    {file = "scp-0.16.1-py2.py3-none-any.whl", hash = "sha256:52d48423ffb0d22afcec738d66c2c8d5865ab9b45e040a7508789f58b39533fe"},
+    {file = "scp-0.16.1.tar.gz", hash = "sha256:3f2b260bf9bd4c2b6857f697a1d7e8edc26fa569282b77027e849dfe1e48580a"},
 ]
 
 [package.dependencies]
@@ -4921,28 +4919,6 @@ trio-websocket = ">=0.12.2,<1.0"
 typing_extensions = ">=4.14.0,<5.0"
 urllib3 = {version = ">=2.5.0,<3.0", extras = ["socks"]}
 websocket-client = ">=1.8.0,<2.0"
-
-[[package]]
-name = "setuptools"
-version = "83.0.0"
-description = "Most extensible Python build backend with support for C/C++ extension modules"
-optional = true
-python-versions = ">=3.10"
-groups = ["main"]
-markers = "extra == \"all\" or extra == \"napalm\""
-files = [
-    {file = "setuptools-83.0.0-py3-none-any.whl", hash = "sha256:29b23c360f22f414dc7336bb39178cc7bcbf6021ed2733cde173f09dba19abb3"},
-    {file = "setuptools-83.0.0.tar.gz", hash = "sha256:025bccbbf0fa05b6192bc64ae1e7b16e001fd6d6d4d5de03c97b1c1ade523bef"},
-]
-
-[package.extras]
-check = ["pytest-checkdocs (>=2.14)", "pytest-ruff (>=0.2.1) ; sys_platform != \"cygwin\"", "ruff (>=0.13.0) ; sys_platform != \"cygwin\""]
-core = ["importlib_metadata (>=6) ; python_version < \"3.10\"", "jaraco.functools (>=4)", "jaraco.text (>=3.7)", "more_itertools", "more_itertools (>=8.8)", "packaging (>=24.2)", "tomli (>=2.0.1) ; python_version < \"3.11\"", "wheel (>=0.43.0)"]
-cover = ["pytest-cov"]
-doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
-enabler = ["pytest-enabler (>=3.4)"]
-test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21) ; python_version >= \"3.9\" and sys_platform != \"cygwin\"", "jaraco.envs (>=2.2)", "jaraco.path (>=3.7.2)", "jaraco.test (>=5.5)", "packaging (>=24.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.*)", "pytest-home (>=0.5)", "pytest-perf ; sys_platform != \"cygwin\"", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel (>=0.44.0)"]
-type = ["importlib_metadata (>=7.0.2) ; python_version < \"3.10\"", "jaraco.develop (>=7.21) ; sys_platform != \"cygwin\"", "mypy (==1.18.*)", "pytest-mypy (>=1.0.1) ; platform_python_implementation != \"PyPy\""]
 
 [[package]]
 name = "singledispatch"
@@ -5431,14 +5407,14 @@ dev = ["furo (>=2024.05.06)", "nox", "packaging", "sphinx (>=5)", "twisted"]
 
 [[package]]
 name = "tqdm"
-version = "4.69.1"
+version = "4.70.0"
 description = "Fast, Extensible Progress Meter"
 optional = false
 python-versions = ">=3.8"
 groups = ["linting"]
 files = [
-    {file = "tqdm-4.69.1-py3-none-any.whl", hash = "sha256:0a654b96f7a2660cceb615b56f307ec2bef96c515409014a429a561981ab52b4"},
-    {file = "tqdm-4.69.1.tar.gz", hash = "sha256:2be21080a0ce17e902c2f1baeb6a74bf551b67bbdfa4bc0109fad471d0b4cb0d"},
+    {file = "tqdm-4.70.0-py3-none-any.whl", hash = "sha256:7f585706bfddbdebf89daac705b2dfcc16890130727d3197ca62c732b4310953"},
+    {file = "tqdm-4.70.0.tar.gz", hash = "sha256:55b0b0dbd97462d06ebee91e4dac24ed4d4702be82b24f07e6c1d27e08cea220"},
 ]
 
 [package.dependencies]

@@ -282,6 +282,25 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.39 (2026-08-03)
+
+### Added in v2.4.39
+
+- [#9302](https://github.com/nautobot/nautobot/issues/9302) - Added `BOOLEAN_CHOICES` and `BOOLEAN_WITH_BLANK_CHOICES` to the `nautobot.apps.constants` public API.
+
+### Changed in v2.4.39
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204) - Changed change logging of many-to-many associations declared with an explicit `through` model so that both associated objects now receive a change log entry.
+
+### Fixed in v2.4.39
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204), [#9270](https://github.com/nautobot/nautobot/issues/9270) - Fixed missing change log entries, webhooks, job hooks, and events when creating or deleting many-to-many association records via the REST API.
+- [#9327](https://github.com/nautobot/nautobot/issues/9327) - Fixed GitRepository sync REST API endpoint not applying object-level permission restrictions (`restrict()`) when retrieving the repository.
+
+### Documentation in v2.4.39
+
+- [#9327](https://github.com/nautobot/nautobot/issues/9327) - Clarified that managing a Git repository (create, change, sync) grants arbitrary code execution on the worker and that syncing repository-provided Jobs does not require the Job run permission.
+
 ## v2.4.38 (2026-07-27)
 
 ### Breaking Changes in v2.4.38
