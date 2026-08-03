@@ -32,7 +32,11 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.component_creation import is_auto_component_creation_suppressed
 from nautobot.dcim.constants import DEVICE_RECURSION_DEPTH_LIMIT
 from nautobot.dcim.querysets import DeviceQuerySet
-from nautobot.dcim.utils import get_all_network_driver_mappings, get_network_driver_mapping_tool_names
+from nautobot.dcim.utils import (
+    get_all_network_driver_mappings,
+    get_network_driver_mapping_tool_names,
+    validate_breakout_subinterface_name_pattern,
+)
 from nautobot.extras.models import ChangeLoggedModel, ConfigContextModel, RoleField, StatusField
 from nautobot.extras.utils import extras_features
 from nautobot.wireless.models import (
@@ -173,6 +177,11 @@ class DeviceType(PrimaryModel):
     part_number = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH, blank=True, help_text="Discrete part number (optional)"
     )
+    breakout_subinterface_name_pattern = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        help_text="Naming pattern to use when auto-creating breakout child interfaces for this device type.",
+    )
     # 2.0 TODO: Profile filtering on this field if it could benefit from an index
     u_height = models.PositiveSmallIntegerField(default=1, verbose_name="Height (U)")
     # todoindex:
@@ -203,6 +212,7 @@ class DeviceType(PrimaryModel):
 
     clone_fields = [
         "manufacturer",
+        "breakout_subinterface_name_pattern",
         "u_height",
         "is_full_depth",
         "subdevice_role",
@@ -233,6 +243,7 @@ class DeviceType(PrimaryModel):
                 ("manufacturer", self.manufacturer.name),
                 ("model", self.model),
                 ("part_number", self.part_number),
+                ("breakout_subinterface_name_pattern", self.breakout_subinterface_name_pattern),
                 ("u_height", self.u_height),
                 ("is_full_depth", self.is_full_depth),
                 ("subdevice_role", self.subdevice_role),
@@ -327,6 +338,12 @@ class DeviceType(PrimaryModel):
 
     def clean(self):
         super().clean()
+
+        if self.breakout_subinterface_name_pattern:
+            try:
+                validate_breakout_subinterface_name_pattern(self.breakout_subinterface_name_pattern)
+            except ValidationError as err:
+                raise ValidationError({"breakout_subinterface_name_pattern": err}) from err
 
         # If editing an existing DeviceType to have a larger u_height, first validate that *all* instances of it have
         # room to expand within their racks. This validation will impose a very high performance penalty when there are

@@ -831,24 +831,24 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        manufacturer = Manufacturer.objects.first()
-        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Cable Swap DT")
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
+        cls.location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
+        cls.manufacturer = Manufacturer.objects.first()
+        device_type = DeviceType.objects.create(manufacturer=cls.manufacturer, model="Cable Swap DT")
+        cls.device_role = Role.objects.get_for_model(Device).first()
+        cls.device_status = Status.objects.get_for_model(Device).first()
         cls.device = Device.objects.create(
             name="Cable Swap Device",
             device_type=device_type,
-            role=device_role,
-            location=location,
-            status=device_status,
+            role=cls.device_role,
+            location=cls.location,
+            status=cls.device_status,
         )
-        iface_status = Status.objects.get_for_model(Interface).first()
+        cls.iface_status = Status.objects.get_for_model(Interface).first()
         cls.iface_a = Interface.objects.create(
-            device=cls.device, name="iface-a", status=iface_status, type="1000base-t"
+            device=cls.device, name="iface-a", status=cls.iface_status, type="1000base-t"
         )
         cls.iface_b = Interface.objects.create(
-            device=cls.device, name="iface-b", status=iface_status, type="1000base-t"
+            device=cls.device, name="iface-b", status=cls.iface_status, type="1000base-t"
         )
         cls.cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
         cls.cable = Cable.objects.create(termination_a=cls.iface_a, termination_b=cls.iface_b, status=cls.cable_status)
@@ -1119,6 +1119,58 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
             name="Form Test 2x2 Shuffle", a_connectors=2, b_connectors=2, total_lanes=8, mapping=mapping
         )
 
+    def _create_breakout_form_objects(self, pattern="{parent}.{position}", suffix="form-optin"):
+        device_type = DeviceType.objects.create(
+            manufacturer=self.manufacturer,
+            model=f"{suffix} device type",
+            breakout_subinterface_name_pattern=pattern,
+        )
+        device = Device.objects.create(
+            name=f"{suffix} device",
+            device_type=device_type,
+            role=self.device_role,
+            location=self.location,
+            status=self.device_status,
+        )
+        trunk = Interface.objects.create(
+            device=device,
+            name=f"{suffix}-trunk",
+            status=self.iface_status,
+            type=InterfaceTypeChoices.TYPE_100GE_QSFP28,
+        )
+        fanouts = [
+            Interface.objects.create(
+                device=device,
+                name=f"{suffix}-fanout-{i}",
+                status=self.iface_status,
+                type=InterfaceTypeChoices.TYPE_25GE_SFP28,
+            )
+            for i in range(1, 5)
+        ]
+        cable_type = CableType.objects.create(name=f"{suffix} 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        return device, trunk, fanouts, cable_type
+
+    def _breakout_form_data(self, device, trunk, fanouts, cable_type, create_subinterfaces=False):
+        data = {
+            "status": str(self.cable_status.pk),
+            "type": "",
+            "color": "",
+            "length": "",
+            "length_unit": "",
+            "label": "",
+            "cable_type": str(cable_type.pk),
+            "a_conn_1_type": "interface",
+            "a_conn_1_parent": str(device.pk),
+            "a_conn_1_termination": str(trunk.pk),
+        }
+        for connector, fanout in enumerate(fanouts, start=1):
+            data[f"b_conn_{connector}_type"] = "interface"
+            data[f"b_conn_{connector}_parent"] = str(device.pk)
+            data[f"b_conn_{connector}_termination"] = str(fanout.pk)
+        if create_subinterfaces:
+            data["create_breakout_subinterfaces"] = "on"
+        return data
+
     def _minimal_form_data(self):
         """Minimal POST data sufficient to make `is_valid()` run `clean()`.
 
@@ -1149,6 +1201,56 @@ class CableFormTestCase(FormTestCases.BaseFormTestCase):
         self.assertEqual(len(form.connection_info["b_side"]), 4)
         self.assertEqual([conn["connector"] for conn in form.connection_info["b_side"]], [1, 2, 3, 4])
         self.assertIn("b_conn_4_type", form.fields)
+
+    def test_create_breakout_subinterfaces_checkbox_creates_children(self):
+        """Checking the opt-in box creates breakout child interfaces after cable terminations save."""
+        device, trunk, fanouts, cable_type = self._create_breakout_form_objects(suffix="form-optin-create")
+        form = CableForm(
+            data=self._breakout_form_data(device, trunk, fanouts, cable_type, create_subinterfaces=True),
+        )
+
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        form.save()
+
+        self.assertEqual(
+            list(trunk.child_interfaces.order_by("breakout_position").values_list("name", "breakout_position")),
+            [
+                ("form-optin-create-trunk.1", 1),
+                ("form-optin-create-trunk.2", 2),
+                ("form-optin-create-trunk.3", 3),
+                ("form-optin-create-trunk.4", 4),
+            ],
+        )
+
+    def test_create_breakout_subinterfaces_checkbox_defaults_to_noop(self):
+        """Leaving the opt-in box unchecked saves the cable without creating child interfaces."""
+        device, trunk, fanouts, cable_type = self._create_breakout_form_objects(suffix="form-optin-unchecked")
+        form = CableForm(data=self._breakout_form_data(device, trunk, fanouts, cable_type))
+
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        form.save()
+
+        self.assertEqual(trunk.child_interfaces.count(), 0)
+
+    def test_create_breakout_subinterfaces_checkbox_rejects_name_collision(self):
+        """Generated child name collisions surface as form errors before the cable is saved."""
+        device, trunk, fanouts, cable_type = self._create_breakout_form_objects(
+            suffix="form-optin-collision",
+        )
+        Interface.objects.create(
+            device=device,
+            name="form-optin-collision-trunk.1",
+            status=self.iface_status,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+        )
+        form = CableForm(
+            data=self._breakout_form_data(device, trunk, fanouts, cable_type, create_subinterfaces=True),
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("create_breakout_subinterfaces", form.errors)
+        self.assertTrue(any("already in use" in error for error in form.errors["create_breakout_subinterfaces"]))
+        self.assertFalse(Cable.objects.filter(cable_type=cable_type).exists())
 
     def test_init_lane_fields_uses_cable_type_from_submitted_data(self):
         """Validate `cable_type` in the POST data works with no form-validation errors."""

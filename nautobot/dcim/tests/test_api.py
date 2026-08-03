@@ -1250,6 +1250,7 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
     model = DeviceType
     bulk_update_data = {
         "part_number": "ABC123",
+        "breakout_subinterface_name_pattern": "{parent}.{position}",
     }
     choices_fields = ["subdevice_role"]
 
@@ -1263,6 +1264,7 @@ class DeviceTypeTest(Mixins.SoftwareImageFileRelatedModelMixin, APIViewTestCases
                 "manufacturer": manufacturer_id,
                 "model": "Device Type 4",
                 "device_family": device_family_id,
+                "breakout_subinterface_name_pattern": "{parent}.{position}",
             },
             {
                 "manufacturer": manufacturer_id,
@@ -3471,6 +3473,50 @@ class CableTest(Mixins.BaseComponentTestMixin):
             },
         ]
 
+    @classmethod
+    def _create_breakout_api_objects(cls, pattern="{parent}.{position}", suffix="api-optin"):
+        device_type = DeviceType.objects.create(
+            manufacturer=Manufacturer.objects.first(),
+            model=f"{suffix} device type",
+            breakout_subinterface_name_pattern=pattern,
+        )
+        device = Device.objects.create(
+            device_type=device_type,
+            role=cls.device_role,
+            status=cls.device_status,
+            name=f"{suffix} device",
+            location=cls.location,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        trunk = Interface.objects.create(
+            device=device,
+            type=InterfaceTypeChoices.TYPE_100GE_QSFP28,
+            name=f"{suffix}-trunk",
+            status=interface_status,
+        )
+        fanouts = [
+            Interface.objects.create(
+                device=device,
+                type=InterfaceTypeChoices.TYPE_25GE_SFP28,
+                name=f"{suffix}-fanout-{i}",
+                status=interface_status,
+            )
+            for i in range(1, 5)
+        ]
+        cable_type = CableType.objects.create(name=f"{suffix} 1x4", a_connectors=1, b_connectors=4, total_lanes=4)
+        return trunk, fanouts, cable_type
+
+    @staticmethod
+    def _breakout_terminations_payload(trunk, fanouts):
+        payload = {"a1": {"object_type": "dcim.interface", "id": str(trunk.pk)}}
+        payload.update(
+            {
+                f"b{connector}": {"object_type": "dcim.interface", "id": str(fanout.pk)}
+                for connector, fanout in enumerate(fanouts, start=1)
+            }
+        )
+        return payload
+
     def test_terminations_field_on_standard_cable(self):
         """A standard (non-breakout) cable's `terminations` field exposes side-keyed brief reps at default depth."""
         self.add_permissions("dcim.view_cable")
@@ -3700,6 +3746,164 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertEqual(len(rows), 2)
         self.assertEqual({r.cable_end for r in rows}, {"A", "B"})
         self.assertEqual({r.interface_id for r in rows}, {free_ifaces[0].pk, free_ifaces[1].pk})
+
+    def test_create_breakout_subinterfaces_flag_creates_children(self):
+        """POST with the write-only opt-in flag creates breakout child interfaces after terminations."""
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_cabletype",
+            "dcim.view_interface",
+            "extras.view_status",
+        )
+        trunk, fanouts, cable_type = self._create_breakout_api_objects(suffix="api-optin-create")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        response = self.client.post(
+            reverse("dcim-api:cable-list"),
+            {
+                "status": cable_status.pk,
+                "label": "API opt-in breakout cable",
+                "cable_type": cable_type.pk,
+                "terminations": self._breakout_terminations_payload(trunk, fanouts),
+                "create_breakout_subinterfaces": True,
+            },
+            format="json",
+            **self.header,
+        )
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(
+            list(trunk.child_interfaces.order_by("breakout_position").values_list("name", "breakout_position")),
+            [
+                ("api-optin-create-trunk.1", 1),
+                ("api-optin-create-trunk.2", 2),
+                ("api-optin-create-trunk.3", 3),
+                ("api-optin-create-trunk.4", 4),
+            ],
+        )
+
+    def test_create_breakout_subinterfaces_flag_defaults_to_noop(self):
+        """POST without the write-only opt-in flag saves the cable without creating children."""
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_cabletype",
+            "dcim.view_interface",
+            "extras.view_status",
+        )
+        trunk, fanouts, cable_type = self._create_breakout_api_objects(suffix="api-optin-unchecked")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        response = self.client.post(
+            reverse("dcim-api:cable-list"),
+            {
+                "status": cable_status.pk,
+                "label": "API unchecked breakout cable",
+                "cable_type": cable_type.pk,
+                "terminations": self._breakout_terminations_payload(trunk, fanouts),
+            },
+            format="json",
+            **self.header,
+        )
+
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(trunk.child_interfaces.count(), 0)
+
+    def test_patch_breakout_subinterfaces_flag_creates_children(self):
+        """PATCH with the write-only opt-in flag creates children for an existing breakout cable."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.view_cable",
+            "dcim.view_interface",
+        )
+        trunk, fanouts, cable_type = self._create_breakout_api_objects(suffix="api-optin-patch")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cable = Cable.objects.create(
+            termination_a=trunk,
+            termination_b=fanouts[0],
+            cable_type=cable_type,
+            label="API patch breakout cable",
+            status=cable_status,
+        )
+        for connector, fanout in enumerate(fanouts[1:], start=2):
+            cable.add_termination(fanout, "B", connector=connector)
+
+        response = self.client.patch(
+            reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk}),
+            {"create_breakout_subinterfaces": True},
+            format="json",
+            **self.header,
+        )
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(trunk.child_interfaces.count(), 4)
+
+    def test_patch_breakout_subinterfaces_flag_defaults_to_noop(self):
+        """PATCH without the write-only opt-in flag does not create children."""
+        self.add_permissions(
+            "dcim.change_cable",
+            "dcim.view_cable",
+        )
+        trunk, fanouts, cable_type = self._create_breakout_api_objects(suffix="api-optin-patch-unchecked")
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        cable = Cable.objects.create(
+            termination_a=trunk,
+            termination_b=fanouts[0],
+            cable_type=cable_type,
+            label="API patch unchecked breakout cable",
+            status=cable_status,
+        )
+        for connector, fanout in enumerate(fanouts[1:], start=2):
+            cable.add_termination(fanout, "B", connector=connector)
+
+        response = self.client.patch(
+            reverse("dcim-api:cable-detail", kwargs={"pk": cable.pk}),
+            {"label": "API patch unchecked breakout cable updated"},
+            format="json",
+            **self.header,
+        )
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(trunk.child_interfaces.count(), 0)
+
+    def test_create_breakout_subinterfaces_flag_rolls_back_on_error(self):
+        """Helper ValidationError returns 400 and rolls back the cable and child creation."""
+        self.add_permissions(
+            "dcim.add_cable",
+            "dcim.add_cabletocabletermination",
+            "dcim.view_cable",
+            "dcim.view_cabletype",
+            "dcim.view_interface",
+            "extras.view_status",
+        )
+        trunk, fanouts, cable_type = self._create_breakout_api_objects(
+            suffix="api-optin-collision",
+        )
+        Interface.objects.create(
+            device=trunk.device,
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            name="api-optin-collision-trunk.1",
+            status=Status.objects.get_for_model(Interface).first(),
+        )
+        cable_status = Status.objects.get_for_model(Cable).get(name="Connected")
+        response = self.client.post(
+            reverse("dcim-api:cable-list"),
+            {
+                "status": cable_status.pk,
+                "label": "API collision breakout cable",
+                "cable_type": cable_type.pk,
+                "terminations": self._breakout_terminations_payload(trunk, fanouts),
+                "create_breakout_subinterfaces": True,
+            },
+            format="json",
+            **self.header,
+        )
+
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("create_breakout_subinterfaces", response.json())
+        self.assertFalse(Cable.objects.filter(label="API collision breakout cable").exists())
+        self.assertEqual(trunk.child_interfaces.count(), 0)
 
     def test_patch_cable_terminations_add_replace_delete(self):
         """PATCH with `terminations` replaces specified slots, deletes those set to null, and leaves others alone."""

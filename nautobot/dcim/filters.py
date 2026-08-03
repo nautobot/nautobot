@@ -608,6 +608,7 @@ class DeviceTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
             "device_family__name": "icontains",
             "model": "icontains",
             "part_number": "icontains",
+            "breakout_subinterface_name_pattern": "icontains",
             "comments": "icontains",
         },
     )
@@ -672,6 +673,7 @@ class DeviceTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
             "id",
             "model",
             "part_number",
+            "breakout_subinterface_name_pattern",
             "u_height",
             "is_full_depth",
             "subdevice_role",

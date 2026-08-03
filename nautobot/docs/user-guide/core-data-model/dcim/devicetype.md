@@ -42,6 +42,20 @@ Once component templates have been created, every new device that you create as 
 
     Consider also that automatically changing components of existing devices when a device-type changes would require Nautobot to make very dangerous assumptions. For example, suppose you had a device type which included a specific line card with a specific set of interfaces. After creating some devices, representing your existing deployment of this device type, your deployment for new devices of this type changed to include a different line card and hence different interfaces, so you decided to update the device-type templates accordingly. If Nautobot were to automatically propagate this change to all existing devices of this type, it would result in an incorrect reflection of the reality that all existing devices have not yet been retrofitted with the new line card.
 
+## Breakout Subinterface Naming
+
++++ 3.2.0
+
+Device types may define a **Breakout subinterface name pattern**. When a device interface, including a module interface installed in the device, is connected to the trunk side of a breakout cable, this pattern can be used by the cable UI or REST API to create missing child interfaces for the breakout positions.
+
+Supported variables are:
+
+* `{parent}` - the trunk interface name
+* `{position}` - the one-based breakout position, matching the stored `breakout_position`
+* `{position_index}` - the zero-based breakout position
+
+For example, a pattern of `{parent}.{position}` on a trunk interface named `Ethernet1` creates child interface names such as `Ethernet1.1`, `Ethernet1.2`, and so on. A blank pattern disables breakout subinterface auto-creation for this device type.
+
 +++ 2.2.0
     The [Device Family](devicefamily.md) model has been introduced to represent a group of related device types. A device type can be optionally assigned to a device family. Each device family must have a unique name and may have a description assigned to it.
 

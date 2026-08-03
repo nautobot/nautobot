@@ -972,6 +972,7 @@ class DeviceTypeTestCase(
             "device_family": None,
             "model": "Device Type X",
             "part_number": "123ABC",
+            "breakout_subinterface_name_pattern": "{parent}.{position}",
             "u_height": 2,
             "is_full_depth": True,
             "subdevice_role": "",  # CharField
@@ -982,6 +983,7 @@ class DeviceTypeTestCase(
         cls.bulk_edit_data = {
             "u_height": 0,
             "is_full_depth": False,
+            "breakout_subinterface_name_pattern": "{parent}.{position}",
             "comments": "changed comment",
         }
 
@@ -1036,6 +1038,7 @@ model: TEST-1000
 slug: test-1000
 u_height: 2
 subdevice_role: parent
+breakout_subinterface_name_pattern: "{{parent}}.{{position}}"
 comments: test comment
 console-ports:
   - name: Console Port 1
@@ -1130,6 +1133,7 @@ module-bays:
         self.assertHttpStatus(response, 200)
         dt = DeviceType.objects.get(model="TEST-1000")
         self.assertEqual(dt.comments, "test comment")
+        self.assertEqual(dt.breakout_subinterface_name_pattern, "{parent}.{position}")
 
         # Verify all of the components were created
         self.assertEqual(dt.console_port_templates.count(), 3)

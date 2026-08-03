@@ -213,6 +213,7 @@ def common_test_data(cls):
             comments="Device type 1",
             model="Model 1",
             part_number="Part Number 1",
+            breakout_subinterface_name_pattern="{parent}.{position}",
             u_height=1,
             is_full_depth=True,
         ),
@@ -222,6 +223,7 @@ def common_test_data(cls):
             comments="Device type 2",
             model="Model 2",
             part_number="Part Number 2",
+            breakout_subinterface_name_pattern="{parent}:{position}",
             u_height=2,
             is_full_depth=True,
             subdevice_role=SubdeviceRoleChoices.ROLE_PARENT,
@@ -232,6 +234,7 @@ def common_test_data(cls):
             comments="Device type 3",
             model="Model 3",
             part_number="Part Number 3",
+            breakout_subinterface_name_pattern="{parent}/{position}",
             u_height=3,
             is_full_depth=False,
             subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
@@ -713,7 +716,9 @@ def common_test_data(cls):
 
     module_types = (
         ModuleType.objects.create(
-            manufacturer=cls.manufacturers[0], model="Filter Test Module Type 1", comments="Module Type 1"
+            manufacturer=cls.manufacturers[0],
+            model="Filter Test Module Type 1",
+            comments="Module Type 1",
         ),
         ModuleType.objects.create(
             manufacturer=cls.manufacturers[1],
@@ -1436,6 +1441,7 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cus
     queryset = DeviceType.objects.all()
     filterset = DeviceTypeFilterSet
     generic_filter_tests = [
+        ("breakout_subinterface_name_pattern",),
         ("comments",),
         ("console_port_templates", "console_port_templates__id"),
         ("console_port_templates", "console_port_templates__name"),
@@ -1476,6 +1482,7 @@ class DeviceTypeTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cus
             comments="Device type 4",
             model="Model 4",
             part_number="Part Number 4",
+            breakout_subinterface_name_pattern="{parent}.{position}",
             u_height=4,
             is_full_depth=True,
         )
