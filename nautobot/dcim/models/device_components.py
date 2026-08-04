@@ -759,6 +759,33 @@ class PathEndpoint(models.Model):
         """
         return [path.destination for path in self.cable_paths.all() if path.destination is not None]
 
+    @classmethod
+    def connection_destination_querysets(cls):
+        """Per-destination-model querysets for `connection_destination_prefetch()`.
+
+        Empty on the base class, which still batches one query per content type but without joining
+        each destination's `parent`. Overridden by the endpoint types whose connections list view
+        renders the peer's parent.
+        """
+        return []
+
+    @classmethod
+    def connection_destination_prefetch(cls):
+        """A `GenericPrefetch` of this endpoint's CablePath destinations, joining each possible
+        destination model's own `parent` relation.
+
+        `CablePath.destination` is a `GenericForeignKey`, so `select_related` cannot reach it, while
+        the peer-side columns of `ConsoleConnectionTable` / `PowerConnectionTable` render both the
+        destination and its `parent`. Prefetching `cable_paths__destination` also populates the
+        `cable_paths` manager, which is what makes the `path` property query-free: `CablePath.Meta`
+        sets `ordering`, so `first()` slices the populated result cache instead of re-querying.
+
+        Distinct from `_connected_endpoint_destination_prefetch()`, which is tuned for the
+        `connection` column's Interface / CircuitTermination destinations and their breakout
+        annotations; those types never appear as console/power path destinations.
+        """
+        return GenericPrefetch("cable_paths__destination", cls.connection_destination_querysets())
+
 
 #
 # Console ports
@@ -786,6 +813,10 @@ class ConsolePort(ModularComponentModel, CableTermination, PathEndpoint):
     )
 
     objects = CableTerminationManager()
+
+    @classmethod
+    def connection_destination_querysets(cls):
+        return [ConsoleServerPort.objects.select_related("device")]
 
 
 #
@@ -854,6 +885,15 @@ class PowerPort(ModularComponentModel, CableTermination, PathEndpoint):
     )
 
     objects = CableTerminationManager()
+
+    @classmethod
+    def connection_destination_querysets(cls):
+        from nautobot.dcim.models.power import PowerFeed
+
+        return [
+            PowerOutlet.objects.select_related("device"),  # parent -> device
+            PowerFeed.objects.select_related("power_panel"),  # parent -> power_panel
+        ]
 
     def clean(self):
         super().clean()

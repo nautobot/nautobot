@@ -140,21 +140,35 @@ __all__ = (
 
 
 class ConsoleConnectionTable(BaseTable):
+    """Table over `ConsolePort` rows representing console-port-to-console-server-port connections.
+
+    The peer (B) side is reached through `PathEndpoint.path`, a property returning
+    `cable_paths.first()`. It must NOT be written as `cable_paths__...`: `Accessor.resolve()` walks
+    Python attributes, so `cable_paths` yields a related *manager* with no `destination`/`is_active`
+    attribute, and the failed lookup is swallowed into a placeholder (see nautobot#9341). A
+    ConsolePort has at most one `CablePath` -- `BREAKOUT_COMPATIBLE_TERMINATION_TYPES` excludes
+    console terminations -- so `first()` is the whole path, not an arbitrary one of several.
+    """
+
     console_server = tables.Column(
-        accessor=Accessor("cable_paths__destination__parent"),
+        accessor=Accessor("path__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="Console Server",
     )
     console_server_port = tables.Column(
-        accessor=Accessor("cable_paths__destination"),
+        accessor=Accessor("path__destination"),
         orderable=False,
         linkify=True,
         verbose_name="Port",
     )
     device = tables.Column(linkify=True, accessor="parent", orderable=False)
     name = tables.Column(linkify=True, verbose_name="Console Port")
-    reachable = BooleanColumn(accessor=Accessor("cable_paths__is_active"), verbose_name="Reachable")
+    # `order_by` is the ORM equivalent of the `path__is_active` accessor: `path` is a Python property
+    # and cannot be sorted on, but the underlying relation can, so this column stays sortable.
+    reachable = BooleanColumn(
+        accessor=Accessor("path__is_active"), order_by="cable_paths__is_active", verbose_name="Reachable"
+    )
 
     class Meta(BaseTable.Meta):
         model = ConsolePort
@@ -168,21 +182,33 @@ class ConsoleConnectionTable(BaseTable):
 
 
 class PowerConnectionTable(BaseTable):
+    """Table over `PowerPort` rows representing power-port-to-power-outlet/feed connections.
+
+    As with `ConsoleConnectionTable`, the peer (B) side goes through the `PathEndpoint.path` property
+    rather than `cable_paths__...`, which cannot resolve through a related manager (nautobot#9341).
+    The `pdu` column is the peer's `parent`: a `Device` for a `PowerOutlet`, a `PowerPanel` for a
+    `PowerFeed`.
+    """
+
     pdu = tables.Column(
-        accessor=Accessor("cable_paths__destination__parent"),
+        accessor=Accessor("path__destination__parent"),
         orderable=False,
         linkify=True,
         verbose_name="PDU",
     )
     outlet = tables.Column(
-        accessor=Accessor("cable_paths__destination"),
+        accessor=Accessor("path__destination"),
         orderable=False,
         linkify=True,
         verbose_name="Outlet",
     )
     device = tables.Column(linkify=True, accessor="parent", orderable=False)
     name = tables.Column(linkify=True, verbose_name="Power Port")
-    reachable = BooleanColumn(accessor=Accessor("cable_paths__is_active"), verbose_name="Reachable")
+    # `order_by` is the ORM equivalent of the `path__is_active` accessor: `path` is a Python property
+    # and cannot be sorted on, but the underlying relation can, so this column stays sortable.
+    reachable = BooleanColumn(
+        accessor=Accessor("path__is_active"), order_by="cable_paths__is_active", verbose_name="Reachable"
+    )
 
     class Meta(BaseTable.Meta):
         model = PowerPort
@@ -204,7 +230,7 @@ class InterfaceConnectionTable(BaseTable):
         template_code=INTERFACE_CONNECTION_INTERFACE_A, orderable=False, verbose_name="Interface A"
     )
     device_b = tables.Column(
-        accessor=Accessor("destination.parent"), orderable=False, linkify=True, verbose_name="Device B"
+        accessor=Accessor("destination__parent"), orderable=False, linkify=True, verbose_name="Device B"
     )
     interface_b = tables.Column(
         accessor=Accessor("destination"), orderable=False, linkify=True, verbose_name="Interface B"

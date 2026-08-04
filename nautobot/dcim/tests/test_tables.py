@@ -2,12 +2,16 @@ from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django_tables2.rows import BoundRow
 
 from nautobot.core.templatetags import helpers
-from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices
+from nautobot.core.testing import AssertNoRepeatedQueries
+from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceSpeedChoices, InterfaceTypeChoices, PortTypeChoices
 from nautobot.dcim.models import (
     Cable,
     CableType,
+    ConsolePort,
+    ConsoleServerPort,
     Device,
     DeviceType,
     Interface,
@@ -15,9 +19,20 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    PowerFeed,
+    PowerOutlet,
+    PowerPanel,
+    PowerPort,
+    RearPort,
 )
+from nautobot.dcim.tables import ConsoleConnectionTable, InterfaceConnectionTable, PowerConnectionTable
 from nautobot.dcim.tables.devices import DeviceModuleInterfaceTable, InterfaceTable
 from nautobot.dcim.tables.devicetypes import InterfaceTemplateTable
+from nautobot.dcim.views import (
+    ConsoleConnectionsListView,
+    InterfaceConnectionsListView,
+    PowerConnectionsListView,
+)
 from nautobot.extras.models import Role, Status
 
 
@@ -350,3 +365,178 @@ class InterfaceTemplateTableTestCase(TestCase):
         rendered_duplex = bound_row.get_cell("duplex")  # pylint: disable=no-member
         self.assertEqual(rendered_speed, helpers.HTML_NONE)
         self.assertEqual(rendered_duplex, helpers.HTML_NONE)
+
+
+class ConnectionTableTestCase(TestCase):
+    """Render tests for the Console / Power / Interface Connections tables.
+
+    These tables render the far (B) side of each connection through accessors that walk Python
+    attributes rather than ORM fields, and `BoundRow._get_and_render_with` swallows any resolution
+    error and renders the column default instead. A broken accessor is therefore invisible at the
+    HTTP level, which is how nautobot#9341 shipped. Assert on the rendered cells directly.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        manufacturer = Manufacturer.objects.create(name="Test Manuf Conn")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="DT-Conn")
+        device_role = Role.objects.get_for_model(Device).first()
+        location_type = LocationType.objects.get(name="Campus")
+        location = Location.objects.filter(location_type=location_type).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cls.connected = Status.objects.get_for_model(Cable).get(name="Connected")
+        planned = Status.objects.get_for_model(Cable).get(name="Planned")
+
+        cls.device_a = Device.objects.create(
+            name="Conn Device A",
+            device_type=device_type,
+            role=device_role,
+            location=location,
+            status=device_status,
+        )
+        cls.device_b = Device.objects.create(
+            name="Conn Device B",
+            device_type=device_type,
+            role=device_role,
+            location=location,
+            status=device_status,
+        )
+
+        # Console: a reachable connection, an unreachable one, and one dead-ending on a RearPort.
+        cls.console_port = ConsolePort.objects.create(device=cls.device_a, name="cp-active")
+        cls.console_server_port = ConsoleServerPort.objects.create(device=cls.device_b, name="csp-active")
+        Cable.objects.create(
+            termination_a=cls.console_port, termination_b=cls.console_server_port, status=cls.connected
+        )
+
+        cls.console_port_planned = ConsolePort.objects.create(device=cls.device_a, name="cp-planned")
+        cls.console_server_port_planned = ConsoleServerPort.objects.create(device=cls.device_b, name="csp-planned")
+        Cable.objects.create(
+            termination_a=cls.console_port_planned, termination_b=cls.console_server_port_planned, status=planned
+        )
+
+        # A RearPort is a CableTermination but not a PathEndpoint, so the path has no destination.
+        cls.console_port_unresolved = ConsolePort.objects.create(device=cls.device_a, name="cp-deadend")
+        rear_port = RearPort.objects.create(device=cls.device_b, name="rp-deadend", type=PortTypeChoices.TYPE_8P8C)
+        Cable.objects.create(termination_a=cls.console_port_unresolved, termination_b=rear_port, status=cls.connected)
+
+        # Power: one path terminating on a PowerOutlet (parent -> device) and one on a PowerFeed
+        # (parent -> power_panel), so both `pdu` column shapes are covered.
+        cls.power_port_outlet = PowerPort.objects.create(device=cls.device_a, name="pp-outlet")
+        cls.power_outlet = PowerOutlet.objects.create(device=cls.device_b, name="po-1")
+        Cable.objects.create(termination_a=cls.power_port_outlet, termination_b=cls.power_outlet, status=cls.connected)
+
+        cls.power_panel = PowerPanel.objects.create(location=location, name="Conn Power Panel")
+        cls.power_feed = PowerFeed.objects.create(
+            power_panel=cls.power_panel,
+            name="Conn Power Feed",
+            status=Status.objects.get_for_model(PowerFeed).first(),
+        )
+        cls.power_port_feed = PowerPort.objects.create(device=cls.device_a, name="pp-feed")
+        Cable.objects.create(termination_a=cls.power_port_feed, termination_b=cls.power_feed, status=cls.connected)
+
+        # Interface Connections is backed by CablePath and is NOT affected by nautobot#9341.
+        cls.interface_a = Interface.objects.create(device=cls.device_a, name="conn-eth0", status=interface_status)
+        cls.interface_b = Interface.objects.create(device=cls.device_b, name="conn-eth1", status=interface_status)
+        Cable.objects.create(termination_a=cls.interface_a, termination_b=cls.interface_b, status=cls.connected)
+
+    def _first_row(self, table_class, queryset) -> BoundRow:
+        """First bound row of `table_class` rendered over `queryset`."""
+        return table_class(queryset).rows[0]
+
+    def _row_for(self, view_class, table_class, instance) -> BoundRow:
+        """Bound row for `instance`, built from the list view's real (prefetch-carrying) queryset.
+
+        Building from the view's own queryset rather than a bare `objects.filter()` keeps the table
+        and the view in lockstep: these tests fail if either the accessors or the prefetching regress.
+        """
+        return self._first_row(table_class, view_class.queryset.filter(pk=instance.pk))
+
+    def test_console_connection_table_renders_peer_columns(self):
+        row = self._row_for(ConsoleConnectionsListView, ConsoleConnectionTable, self.console_port)
+
+        console_server = row.get_cell("console_server")
+        self.assertIn(self.device_b.get_absolute_url(), console_server)
+        self.assertIn(self.device_b.name, console_server)
+
+        port = row.get_cell("console_server_port")
+        self.assertIn(self.console_server_port.get_absolute_url(), port)
+        self.assertIn(self.console_server_port.name, port)
+
+        self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(True))
+
+        # The near (A) side must keep working too.
+        self.assertIn(self.device_a.get_absolute_url(), row.get_cell("device"))
+        self.assertIn(self.console_port.get_absolute_url(), row.get_cell("name"))
+
+    def test_power_connection_table_renders_power_outlet_peer(self):
+        row = self._row_for(PowerConnectionsListView, PowerConnectionTable, self.power_port_outlet)
+        self.assertIn(self.device_b.get_absolute_url(), row.get_cell("pdu"))
+        self.assertIn(self.power_outlet.get_absolute_url(), row.get_cell("outlet"))
+        self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(True))
+
+    def test_power_connection_table_renders_power_feed_peer(self):
+        """A PowerPort cabled to a PowerFeed shows the PowerPanel as its PDU (`PowerFeed.parent`)."""
+        row = self._row_for(PowerConnectionsListView, PowerConnectionTable, self.power_port_feed)
+        self.assertIn(self.power_panel.get_absolute_url(), row.get_cell("pdu"))
+        self.assertIn(self.power_feed.get_absolute_url(), row.get_cell("outlet"))
+
+    def test_connection_table_renders_unreachable_path(self):
+        """A path whose cable is not Connected renders reachable=False, not the placeholder.
+
+        `render_boolean(None)` is byte-identical to `HTML_NONE`, and `_get_and_render_with` returns
+        the column default *without* calling `render()` when the value is in `Column.empty_values`.
+        So asserting the False markup is the only way to distinguish "resolved to False" from
+        "failed to resolve".
+        """
+        row = self._row_for(ConsoleConnectionsListView, ConsoleConnectionTable, self.console_port_planned)
+        self.assertIn(self.console_server_port_planned.get_absolute_url(), row.get_cell("console_server_port"))
+        self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(False))
+
+    def test_connection_table_unresolved_destination_renders_placeholder(self):
+        """A path dead-ending on a RearPort has no destination; the peer columns blank gracefully."""
+        row = self._row_for(ConsoleConnectionsListView, ConsoleConnectionTable, self.console_port_unresolved)
+        self.assertEqual(row.get_cell("console_server"), helpers.HTML_NONE)
+        self.assertEqual(row.get_cell("console_server_port"), helpers.HTML_NONE)
+        self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(False))
+        # The near side still renders, so the row isn't wholly empty.
+        self.assertIn(self.console_port_unresolved.get_absolute_url(), row.get_cell("name"))
+
+    def test_interface_connection_table_renders_peer_columns(self):
+        """Interface Connections was reworked onto CablePath in 3.2 and is not affected by #9341."""
+        # `interface_connections()` canonicalizes a point-to-point pair onto the single direction where
+        # `origin_id < destination_id`, so which of the two interfaces lands on the A side depends on
+        # randomly generated UUIDs. Assert against the row's own endpoints rather than assuming a side.
+        queryset = InterfaceConnectionsListView.base_queryset().filter(
+            origin_id__in=[self.interface_a.pk, self.interface_b.pk]
+        )
+        path = queryset.get()
+        self.assertIn(path.destination, [self.interface_a, self.interface_b])
+
+        # pylint mis-infers `BoundRows[0]` as `BoundRows` when the table class is statically known, so
+        # `get_cell` reads as a missing member here but not where the class arrives as an argument.
+        row = self._first_row(InterfaceConnectionTable, queryset)
+        self.assertIn(path.destination.parent.get_absolute_url(), row.get_cell("device_b"))  # pylint: disable=no-member
+        self.assertIn(path.destination.get_absolute_url(), row.get_cell("interface_b"))  # pylint: disable=no-member
+        self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(True))  # pylint: disable=no-member
+
+    def test_connection_table_render_has_no_n_plus_one(self):
+        """Rendering the peer-side columns must not issue a query per row.
+
+        Twelve rows against `AssertNoRepeatedQueries`' default threshold of 10 means *any* single
+        per-row query trips the assertion (12 repeats > 10), so this doesn't depend on estimating how
+        many queries per row the accessors happen to cost.
+        """
+        pks = []
+        for i in range(12):
+            console_port = ConsolePort.objects.create(device=self.device_a, name=f"cp-bulk-{i}")
+            peer = ConsoleServerPort.objects.create(device=self.device_b, name=f"csp-bulk-{i}")
+            Cable.objects.create(termination_a=console_port, termination_b=peer, status=self.connected)
+            pks.append(console_port.pk)
+
+        table = ConsoleConnectionTable(ConsoleConnectionsListView.queryset.filter(pk__in=pks))
+        with AssertNoRepeatedQueries(self):
+            for row in table.rows:
+                for column in table.columns:
+                    row.get_cell(column.name)
