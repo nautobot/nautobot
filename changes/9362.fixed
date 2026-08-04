@@ -1,0 +1,1 @@
+Fixed a N+1 issue in the Interface Connections list view and REST API endpoint.

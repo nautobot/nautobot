@@ -515,13 +515,20 @@ class ConnectionTableTestCase(TestCase):
         self.assertIn(path.destination.get_absolute_url(), row.get_cell("interface_b"))  # pylint: disable=no-member
         self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(True))  # pylint: disable=no-member
 
-    def test_connection_table_render_has_no_n_plus_one(self):
-        """Rendering the peer-side columns must not issue a query per row.
+    def _assert_render_has_no_n_plus_one(self, table_class, queryset):
+        """Rendering every cell of `queryset` must not issue a query per row.
 
-        Twelve rows against `AssertNoRepeatedQueries`' default threshold of 10 means *any* single
-        per-row query trips the assertion (12 repeats > 10), so this doesn't depend on estimating how
-        many queries per row the accessors happen to cost.
+        Callers supply at least 12 rows: against `AssertNoRepeatedQueries`' default threshold of 10,
+        *any* single per-row query then trips the assertion (12 repeats > 10), so this doesn't depend
+        on estimating how many queries per row the accessors happen to cost.
         """
+        table = table_class(queryset)
+        with AssertNoRepeatedQueries(self):
+            for row in table.rows:
+                for column in table.columns:
+                    row.get_cell(column.name)
+
+    def test_console_connection_table_render_has_no_n_plus_one(self):
         pks = []
         for i in range(12):
             console_port = ConsolePort.objects.create(device=self.device_a, name=f"cp-bulk-{i}")
@@ -529,8 +536,38 @@ class ConnectionTableTestCase(TestCase):
             Cable.objects.create(termination_a=console_port, termination_b=peer, status=self.connected)
             pks.append(console_port.pk)
 
-        table = ConsoleConnectionTable(ConsoleConnectionsListView.queryset.filter(pk__in=pks))
-        with AssertNoRepeatedQueries(self):
-            for row in table.rows:
-                for column in table.columns:
-                    row.get_cell(column.name)
+        self._assert_render_has_no_n_plus_one(
+            ConsoleConnectionTable, ConsoleConnectionsListView.queryset.filter(pk__in=pks)
+        )
+
+    def test_power_connection_table_render_has_no_n_plus_one(self):
+        """Power rows alternate PowerOutlet and PowerFeed peers, so both destination content types of
+        the `GenericPrefetch` are exercised in one render."""
+        pks = []
+        for i in range(12):
+            power_port = PowerPort.objects.create(device=self.device_a, name=f"pp-bulk-{i}")
+            if i % 2:
+                peer = PowerOutlet.objects.create(device=self.device_b, name=f"po-bulk-{i}")
+            else:
+                peer = PowerFeed.objects.create(
+                    power_panel=self.power_panel,
+                    name=f"pf-bulk-{i}",
+                    status=Status.objects.get_for_model(PowerFeed).first(),
+                )
+            Cable.objects.create(termination_a=power_port, termination_b=peer, status=self.connected)
+            pks.append(power_port.pk)
+
+        self._assert_render_has_no_n_plus_one(
+            PowerConnectionTable, PowerConnectionsListView.queryset.filter(pk__in=pks)
+        )
+
+    def test_interface_connection_table_render_has_no_n_plus_one(self):
+        """The A and B device columns resolve `origin.parent` / `destination.parent`, i.e.
+        `Interface.device`, which `interface_connections()` joins via `GenericPrefetch`."""
+        interface_status = Status.objects.get_for_model(Interface).first()
+        for i in range(12):
+            near = Interface.objects.create(device=self.device_a, name=f"if-bulk-a-{i}", status=interface_status)
+            far = Interface.objects.create(device=self.device_b, name=f"if-bulk-b-{i}", status=interface_status)
+            Cable.objects.create(termination_a=near, termination_b=far, status=self.connected)
+
+        self._assert_render_has_no_n_plus_one(InterfaceConnectionTable, InterfaceConnectionsListView.base_queryset())
