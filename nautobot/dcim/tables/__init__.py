@@ -140,17 +140,8 @@ __all__ = (
 
 
 class ConsoleConnectionTable(BaseTable):
-    """Table over `ConsolePort` rows representing console-port-to-console-server-port connections.
-
-    The peer (B) side is reached through `PathEndpoint.path`, a property returning
-    `cable_paths.first()`. It must NOT be written as `cable_paths__...`: `Accessor.resolve()` walks
-    Python attributes, so `cable_paths` yields a related *manager* with no `destination`/`is_active`
-    attribute, and the failed lookup is swallowed into a placeholder (see nautobot#9341). A
-    ConsolePort has at most one `CablePath` -- `BREAKOUT_COMPATIBLE_TERMINATION_TYPES` excludes
-    console terminations -- so `first()` is the whole path, not an arbitrary one of several.
-    """
-
     console_server = tables.Column(
+        # We cannot use `cable_paths__...` here because it would traverse a related manager, which is not a single object.
         accessor=Accessor("path__destination__parent"),
         orderable=False,
         linkify=True,
@@ -182,15 +173,8 @@ class ConsoleConnectionTable(BaseTable):
 
 
 class PowerConnectionTable(BaseTable):
-    """Table over `PowerPort` rows representing power-port-to-power-outlet/feed connections.
-
-    As with `ConsoleConnectionTable`, the peer (B) side goes through the `PathEndpoint.path` property
-    rather than `cable_paths__...`, which cannot resolve through a related manager (nautobot#9341).
-    The `pdu` column is the peer's `parent`: a `Device` for a `PowerOutlet`, a `PowerPanel` for a
-    `PowerFeed`.
-    """
-
     pdu = tables.Column(
+        # We cannot use `cable_paths__...` here because it would traverse a related manager, which is not a single object.
         accessor=Accessor("path__destination__parent"),
         orderable=False,
         linkify=True,

@@ -483,13 +483,7 @@ class ConnectionTableTestCase(TestCase):
         self.assertIn(self.power_feed.get_absolute_url(), row.get_cell("outlet"))
 
     def test_connection_table_renders_unreachable_path(self):
-        """A path whose cable is not Connected renders reachable=False, not the placeholder.
-
-        `render_boolean(None)` is byte-identical to `HTML_NONE`, and `_get_and_render_with` returns
-        the column default *without* calling `render()` when the value is in `Column.empty_values`.
-        So asserting the False markup is the only way to distinguish "resolved to False" from
-        "failed to resolve".
-        """
+        """A path whose cable is not Connected renders reachable=False, not the placeholder."""
         row = self._row_for(ConsoleConnectionsListView, ConsoleConnectionTable, self.console_port_planned)
         self.assertIn(self.console_server_port_planned.get_absolute_url(), row.get_cell("console_server_port"))
         self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(False))
