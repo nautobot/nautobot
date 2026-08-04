@@ -4,11 +4,11 @@ import pkgutil
 from types import SimpleNamespace
 import warnings
 
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.db import connection
-from django.db.models import IntegerField, ManyToManyField, ManyToManyRel, ManyToOneRel, Value
+from django.db.models import IntegerField, Value
 from django.test import SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
 from django_tables2.utils import Accessor
@@ -387,14 +387,11 @@ def _import_all_table_modules():
 
 
 class TableAccessorAuditTestCase(SimpleTestCase):
-    """Static audit of every declared table column accessor.
+    """Static audit of every table column accessor, whether declared or derived from the column name.
 
     Pure introspection, no database access.
     Regression test for nautobot#9341.
     """
-
-    # Relations that resolve to a *manager* when read off a model instance.
-    TO_MANY_FIELDS = (ManyToManyField, ManyToManyRel, ManyToOneRel, GenericRelation)
 
     def test_no_accessor_traverses_a_to_many_relation(self):
         """No column accessor may traverse a to-many relation and then keep going.
@@ -412,9 +409,8 @@ class TableAccessorAuditTestCase(SimpleTestCase):
             if model is None:
                 continue
             for name, column in table.base_columns.items():
-                if column.accessor is None:
-                    continue  # derived from the column name (e.g. TemplateColumn)
-                bits = str(column.accessor).split(Accessor.SEPARATOR)
+                accessor = column.accessor if column.accessor is not None else name
+                bits = str(accessor).split(Accessor.SEPARATOR)
                 current = model
                 for index, bit in enumerate(bits):
                     if current is None:
@@ -423,9 +419,9 @@ class TableAccessorAuditTestCase(SimpleTestCase):
                         field = current._meta.get_field(bit)
                     except (FieldDoesNotExist, AttributeError):
                         break  # a property or method: not statically decidable, so leave it alone
-                    if isinstance(field, self.TO_MANY_FIELDS):
+                    if field.one_to_many or field.many_to_many:
                         if index < len(bits) - 1:
-                            violations.append(f"{table.__module__}.{table.__name__}.{name} -> {column.accessor}")
+                            violations.append(f"{table.__module__}.{table.__name__}.{name} -> {accessor}")
                         break
                     if isinstance(field, GenericForeignKey):
                         break  # resolves to a single object, but its model isn't knowable statically
