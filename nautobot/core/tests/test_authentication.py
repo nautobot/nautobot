@@ -634,15 +634,20 @@ class ObjectPermissionAPIViewTestCase(TestCase):
         self.assertTrue(self.user.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
         self.assertTrue(obj_user2.has_perms(["extras.view_objectchange", "extras.list_objectchange"]))
 
+        # Each user's request created two change records;
+        # the constraint must limit each user to only their own records.
+
         # Check against 1st user's response
         self.assertEqual(response_user1.status_code, 200)
-        self.assertEqual(response_user1.data["count"], 1)
-        self.assertEqual(response_user1.data["results"][0]["user"]["id"], self.user.pk)
+        self.assertEqual(response_user1.data["count"], 2)
+        for result in response_user1.data["results"]:
+            self.assertEqual(result["user"]["id"], self.user.pk)
 
         # Check against 2nd user's response
         self.assertEqual(response_user2.status_code, 200)
-        self.assertEqual(response_user2.data["count"], 1)
-        self.assertEqual(response_user2.data["results"][0]["user"]["id"], obj_user2.pk)
+        self.assertEqual(response_user2.data["count"], 2)
+        for result in response_user2.data["results"]:
+            self.assertEqual(result["user"]["id"], obj_user2.pk)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_user_token_list_constraints(self):

@@ -15,11 +15,15 @@ This applies to all list and detail requests and is independent of the [`?depth`
 
 ## Related Objects on Read
 
-When a serializer includes related objects — foreign keys, many-to-many relationships, and [generic relations](overview.md#generic-relations) — the amount of detail returned for each related object depends on both the [`?depth` query parameter](overview.md#depth-query-parameter) and the user's permission to view that specific related object.
+When a serializer includes related objects — foreign keys, many-to-many relationships, and [generic relations](overview.md#generic-relations) — the amount of detail returned for each related object depends on the type of relation (single object versus list-of-objects), the [`?depth` query parameter](overview.md#depth-query-parameter), and the user's permission to view that specific related object(s).
+
+### Lists of Related Objects
+
+Lists of related objects (such as reverse foreign-key relations and many-to-many relations) are _filtered_ by view permissions, such that objects that the user is permitted to view are included in the list, and those the user cannot view are omitted from the list. This matches the primary-object listing behavior described above, as well as the behavior of UI "list" views.
 
 ### At `?depth=0` (the default)
 
-Related objects are always represented in _brief_ form — an object containing only its `id`, `object_type`, and `url` — regardless of whether the user has permission to view them:
+At depth 0, single related objects are always represented in _brief_ form — an object containing only its `id`, `object_type`, and `url` — _regardless_ of whether the user has permission to view them:
 
 ```json
 {
@@ -33,7 +37,7 @@ Because only the `id`, `object_type`, and `url` are exposed, this brief represen
 
 ### At `?depth=1` and Beyond
 
-When `?depth` is greater than `0`, each related object is serialized according to the user's permission to view it:
+When `?depth` is greater than `0`, single related objects are serialized according to the user's permission to view them:
 
 - If the user **has** permission to view the related object, it is serialized in full (recursively, up to the requested depth), exactly as it was previously.
 - If the user **does not** have permission to view the related object, it is _restricted_ to a brief representation.
@@ -53,14 +57,14 @@ The `display` value is included for parity with the UI, where the name (or other
 
 The `display` field is added _only_ when the object would otherwise have been serialized in full (that is, when it is reached within the requested `?depth`); related objects at the boundary of the requested depth remain limited to the `{id, object_type, url}` brief form.
 
-This behavior applies uniformly to foreign key fields, many-to-many fields, [generic relations](overview.md#generic-relations), and the objects returned by [`?include=relationships`](overview.md#retrieving-object-relationships-and-relationship-associations).
+This behavior applies to foreign key fields, one-to-one fields, [generic relations](overview.md#generic-relations), and equivalent single-value (one-to-one or many-to-one) [relationships](../relationship.md) returned by [`?include=relationships`](overview.md#retrieving-object-relationships-and-relationship-associations).
 
 !!! note
     Related objects belonging to models that are not subject to object-level permissions — for example Django's built-in `Group` and `ContentType` models — are not downgraded, as there is no object-level `view` permission to enforce for them.
 
 ## Related Objects on Write
 
-When creating (`POST`) or updating (`PATCH`/`PUT`) an object, any related object referenced in the request body must be one that the user has permission to view. This applies whether the related object is referenced by primary key, by URL, or by a dictionary of attributes, and it honors object-level constraints — a user may only reference related objects that fall within their view constraints.
+When creating (`POST`) or updating (`PATCH`/`PUT`) an object, any related object(s) referenced in the request body, whether single-relation or many-relation, must be object(s) that the user has permission to view. This applies whether the related object is referenced by primary key, by URL, or by a dictionary of attributes, and it honors object-level constraints — a user may only reference related objects that fall within their view constraints.
 
 - If the user does not have permission to view a referenced foreign key or many-to-many object, the request is rejected with a `400 Bad Request` and an error such as `"Related object not found using the provided attributes: ..."`.
 - The same applies to [generic relations](overview.md#generic-relations): assigning an object the user cannot view — for example, attaching a [Note](../note.md) to that object — is rejected with an `"Object not found"` error.
