@@ -370,11 +370,7 @@ def _all_subclasses(cls):
 
 
 def _import_all_table_modules():
-    """Import every `tables` module under `nautobot` so all `BaseTable` subclasses are registered.
-
-    A test run only imports the table modules its own imports happen to reach, so the audit below
-    would otherwise silently inspect a subset.
-    """
+    """Import every `tables` module under `nautobot` so all `BaseTable` subclasses are registered."""
     for module_info in pkgutil.walk_packages(nautobot.__path__, f"{nautobot.__name__}."):
         if ".tables" not in module_info.name and not module_info.name.endswith("tables"):
             continue
