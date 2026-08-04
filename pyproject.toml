@@ -38,7 +38,7 @@ celery = "~5.6.2"
 # Cryptographic recipes and primitives.
 # Not directly used by Nautobot itself, but key to many of Nautobot's dependencies.
 # Added as an explicit dependency to protect against various CVEs in older versions.
-cryptography = "^48.0.1"
+cryptography = "^50.0.0"
 # Fundamental web framework for Nautobot
 Django = "~4.2.30"
 # Adds AJAX capabilities to django-tables2
@@ -95,7 +95,7 @@ drf-spectacular = {version = "~0.28.0", extras = ["sidecar"]}
 # Emoji terminal output for Python.
 emoji = "~2.15.0"
 # Git integrations for Python
-GitPython = "~3.1.55"
+GitPython = "~3.1.57"
 # GraphQL support
 # NOTE: graphene-django 3.x is available but includes breaking changes. Will address in a future release.
 graphene-django = "~2.16.0"
