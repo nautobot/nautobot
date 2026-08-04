@@ -761,11 +761,16 @@ class PathEndpoint(models.Model):
 
     @classmethod
     def connection_destination_querysets(cls):
-        """Per-destination-model querysets for `connection_destination_prefetch()`.
+        """Returns a list of querysets, one for each model that can serve as a CablePath destination.
 
-        Empty on the base class, which still batches one query per content type but without joining
-        each destination's `parent`. Overridden by the endpoint types whose connections list view
-        renders the peer's parent.
+        These querysets are passed by `connection_destination_prefetch()` to `GenericPrefetch`, enabling each
+        destination model to prefetch its related `parent` object—such as a `Device` for a `ConsoleServerPort` or
+        a `PowerPanel` for a `PowerFeed`.
+
+        By default, this method returns an empty list, which works but is less efficient. Each destination would be
+        fetched individually using the model's default manager, resulting in an additional query per row to access
+        the `parent`. Subclasses should override this method for endpoint types whose connection list views display
+        the parent, to optimize query performance.
         """
         return []
 
