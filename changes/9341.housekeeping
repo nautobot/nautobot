@@ -1,1 +1,0 @@
-Added a test that detects table column accessors traversing a to-many relation, which silently render as empty placeholders rather than raising.
