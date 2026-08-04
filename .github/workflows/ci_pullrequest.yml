@@ -30,21 +30,21 @@ jobs:
       - name: "Install OSS Nautobot Apps to verify dependency compatibility"
         run: >-
           poetry add
-          'nautobot-bgp-models>=3.1.0'
-          'nautobot-capacity-metrics>=4.1.0'
-          'nautobot-chatops[all]>=4.0.3'
-          'nautobot-circuit-maintenance>=3.1.0'
-          'nautobot-design-builder>=3.1.0'
-          'nautobot-device-lifecycle-mgmt>=4.2.0'
-          'nautobot-device-onboarding>=5.4.0'
-          'nautobot-dns-models>=2.2.0'
-          'nautobot-firewall-models>=3.0.0'
-          'nautobot-floor-plan>=3.0.0'
-          'nautobot-golden-config>=3.0.0'
-          'nautobot-plugin-nornir>=3.2.0'
-          'nautobot-secrets-providers[all]>=4.0.0'
-          'nautobot-ssot[all]>=4.6.0'
-          'nautobot-welcome-wizard>=3.0.0'
+          'git+https://github.com/nautobot/nautobot-app-bgp-models.git@main'
+          'git+https://github.com/nautobot/nautobot-app-capacity-metrics.git@main'
+          'git+https://github.com/nautobot/nautobot-app-chatops.git@main[all]'
+          'git+https://github.com/nautobot/nautobot-app-circuit-maintenance.git@main'
+          'git+https://github.com/nautobot/nautobot-app-design-builder.git@main'
+          'git+https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt.git@main'
+          'git+https://github.com/nautobot/nautobot-app-device-onboarding.git@main'
+          'git+https://github.com/nautobot/nautobot-app-dns-models.git@main'
+          'git+https://github.com/nautobot/nautobot-app-firewall-models.git@main'
+          'git+https://github.com/nautobot/nautobot-app-floor-plan.git@main'
+          'git+https://github.com/nautobot/nautobot-app-golden-config.git@main'
+          'git+https://github.com/nautobot/nautobot-app-secrets-providers.git@main[all]'
+          'git+https://github.com/nautobot/nautobot-app-ssot.git@main[all]'
+          'git+https://github.com/nautobot/nautobot-app-welcome-wizard.git@main'
+          'git+https://github.com/nautobot/nautobot-plugin-nornir.git@main'
   ruff:
     runs-on: "ubuntu-24.04"
     env:
