@@ -1,0 +1,1 @@
+Added `dependencies-check` action to `ci_pullrequest` workflow to verify dependency compatibility with existing open-source Nautobot Apps.
