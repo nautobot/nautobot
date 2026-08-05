@@ -28,7 +28,7 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</span>
+                <span class="form-text"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>
             {% endif %}
     {% elif field|widget_type == 'textarea' and not field.label %}
         <div class="col-md-12">
@@ -48,7 +48,7 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</span>
+                <span class="form-text"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>
             {% endif %}
     {% else %}
         <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
@@ -107,11 +107,11 @@ Hence the `id` attributes below; do not rename them without matching Django's na
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text w-100" id="{{ field.auto_id }}_helptext">{{ field.help_text|safe }}</span>
+                <span class="form-text w-100"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>
             {% endif %}
     {% endif %}
     {% if field.errors %}
-        <ul class="mb-0 mt-4 w-100" id="{{ field.auto_id }}_error">
+        <ul class="mb-0 mt-4 w-100"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>
             {% for error in field.errors %}
                 {# Embed an HTML comment indicating the error for extraction by tests #}
                 <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
