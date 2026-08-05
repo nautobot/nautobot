@@ -299,28 +299,18 @@ alone conveys nothing non-visually. Tables need an accessible name; `inc/table.h
 ### Dialogs
 
 A modal needs `role="dialog"`, `aria-modal="true"` and `aria-labelledby` pointing at its title's `id`. For a dialog whose
-content is swapped in by HTMX, the title `id` has to be stable across swaps -- see `inc/modal_header.html`'s `title_id`
-parameter.
+content is swapped in by HTMX, keep the title's `id` fixed so it always matches the dialog's `aria-labelledby` -- see the
+`components/htmx/object_embedded_*` partials, whose headings carry the `id` that `#embedded_action_modal` points at.
 
 ### Colour
 
-Do not introduce raw colour values. Use the theme tokens in `colors.scss`, whose light and dark values are chosen to
-clear 4.5:1 against the surfaces they appear on. When a colour is user-supplied, derive its text colour with the
-`fgcolor` template filter, which picks black or white by actual WCAG contrast ratio.
+When a colour is user-supplied, derive its text colour with the `fgcolor` template filter, which picks black or white by
+actual WCAG contrast ratio.
 
-Colour must never be the only signal. Text-coloured links inside a block of prose also need an underline (WCAG 1.4.1),
-and form control borders need 3:1 against their background (WCAG 1.4.11) -- `--nb-input-border-color` exists for this and
-is deliberately darker than the decorative `--bs-border-color`.
+Colour must never be the only signal. Text-coloured links inside a block of prose also need an underline (WCAG 1.4.1).
 
 ### Dynamic content
 
 Content that appears without a page load is not announced unless it lands in a live region. `#header_messages` is a
 persistent `aria-live="polite"` region, so anything appended to it is announced. For a component that updates in place,
 add a `role="status"` element, as the paginator does for its "Showing X-Y of Z" range.
-
-### Pointer-only interactions
-
-Anything driven by dragging needs a keyboard equivalent (WCAG 2.5.7). `draggable.js` implements the conventional
-pattern -- a focusable grip button that is picked up with Enter or Space, moved with the arrow keys, and dropped with
-Enter or Escape, announcing each move -- and reordering works by moving DOM nodes, so persistence layers that watch for
-mutations keep working. Add `nb-draggable-grip` to a button inside the drag handle to opt into it.
