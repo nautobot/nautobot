@@ -1780,6 +1780,52 @@ class IPAddressMergeTestCase(ModelViewTestCase):
                 self.assertEqual(num_before, IPAddress.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_restricted_to_permitted_pks(self):
+        """A crafted merge POST must not delete IPs the user lacks object-level "change" permission for.
+
+        _perform_merge builds collapsed_ips from the restricted queryset, so an unpermitted pk in the
+        POST is silently excluded rather than merged/deleted.
+        """
+        # Constrained change permission: the user may only change dup_ip_1 and dup_ip_2, not dup_ip_3.
+        obj_perm = ObjectPermission(
+            name="Constrained change IP",
+            actions=["change"],
+            constraints={"pk__in": [self.dup_ip_1.pk, self.dup_ip_2.pk]},
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        # merge_data["pk"] lists all three duplicates; dup_ip_3 is outside the granted permission.
+        # Source every custom-field value from a permitted IP (the default merge_data pulls the "select"
+        # CF from dup_ip_3, which is no longer part of the restricted collapsed_ips).
+        merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(self.dup_ip_1.pk)}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        # dup_ip_3 must survive -- it was never a permitted merge candidate.
+        self.assertTrue(IPAddress.objects.filter(pk=self.dup_ip_3.pk).exists())
+        # The two permitted duplicates were merged (collapsed away).
+        self.assertFalse(IPAddress.objects.filter(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk]).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_custom_field_source_restricted_to_collapsed_ips(self):
+        """A crafted merge POST cannot source custom-field data from an IP outside the merge set.
+
+        The `cf_<key>` lookup resolves against collapsed_ips, so an out-of-set pk fails and the merge
+        aborts (transaction rolled back) rather than importing that IP's custom-field value.
+        """
+        self.add_permissions("ipam.change_ipaddress")
+        external_ip = IPAddress.objects.exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk]).first()
+        self.assertIsNotNone(external_ip)
+        num_before = IPAddress.objects.count()
+        # Point a custom-field source at an IP that is not among the merge candidates.
+        merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(external_ip.pk)}
+        with self.assertRaises(IPAddress.DoesNotExist):
+            self.client.post(self.merge_url, data=post_data(merge_data))
+        # Nothing was merged or deleted.
+        self.assertEqual(num_before, IPAddress.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):
         self.add_permissions("ipam.change_ipaddress")
         self.assertHttpStatus(self.client.get(self.merge_url), 200)

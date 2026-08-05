@@ -1100,7 +1100,9 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         return redirect(self.get_return_url(request))
 
     def _perform_merge(self, request):
-        collapsed_ips = IPAddress.objects.filter(pk__in=request.POST.getlist("pk"))
+        # Use the viewset's restricted queryset (merge maps to the "change" action) so a crafted POST
+        # cannot merge/delete IPAddresses the user has no object-level "change" permission for.
+        collapsed_ips = self.get_queryset().filter(pk__in=request.POST.getlist("pk"))
         merged_attributes = request.POST
         operation_invalid = len(collapsed_ips) < 2
         # Check if there are at least two IP addresses for us to merge
@@ -1148,10 +1150,11 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                             _custom_field_data=ip_in_the_same_namespace._custom_field_data,
                         )
                         merged_ip.tags.set(tags)
-                        # Update custom_field_data
+                        # Update custom_field_data. Source values only from collapsed_ips (the restricted
+                        # merge set) so a crafted POST cannot pull custom-field data from an arbitrary IP.
                         for key in merged_ip._custom_field_data.keys():
                             ip_pk = merged_attributes.get("cf_" + key)
-                            merged_ip._custom_field_data[key] = IPAddress.objects.get(pk=ip_pk)._custom_field_data[key]
+                            merged_ip._custom_field_data[key] = collapsed_ips.get(pk=ip_pk)._custom_field_data[key]
                         # Update relationship data
                         handle_relationship_changes_when_merging_ips(merged_ip, merged_attributes, collapsed_ips)
                         # Capture relevant device pk_list before updating IPAddress to Interface Assignments.
@@ -1212,8 +1215,8 @@ class IPAddressUIViewSet(NautobotUIViewSet):
                         Device.objects.filter(pk__in=device_ip6).update(primary_ip6=merged_ip)
                         VirtualMachine.objects.filter(pk__in=vm_ip4).update(primary_ip4=merged_ip)
                         VirtualMachine.objects.filter(pk__in=vm_ip6).update(primary_ip6=merged_ip)
-                        for service in services:
-                            Service.objects.get(pk=service).ip_addresses.add(merged_ip)
+                        for service in Service.objects.filter(pk__in=services):
+                            service.ip_addresses.add(merged_ip)
                 except ProtectedError as e:
                     logger.info("Caught ProtectedError while attempting to delete objects")
                     handle_protectederror(collapsed_ips, request, e)
