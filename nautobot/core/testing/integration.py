@@ -29,8 +29,10 @@ LOGIN_URL = reverse(settings.LOGIN_URL)
 # axe-core is installed as an npm devDependency of the UI build; see `nautobot/ui/package.json`.
 AXE_CORE_PATH = Path(settings.BASE_DIR) / "ui" / "node_modules" / "axe-core" / "axe.min.js"
 
-# WCAG 2.1 Level A and AA, which is the conformance target Nautobot aims at.
-AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa")
+# WCAG 2.2 Level A and AA, which is the conformance target Nautobot aims at. The 2.0 and 2.1 tags are included because
+# WCAG is cumulative: 2.2 carries forward every earlier criterion, and axe-core tags each rule with the version that
+# introduced it rather than restating them under `wcag22*`.
+AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa")
 
 # Gate on every impact level. Impact reflects how severely a violation affects a user, not how important the underlying
 # success criterion is, so a low-impact finding can still be a WCAG AA failure.

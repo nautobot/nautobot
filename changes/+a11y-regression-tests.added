@@ -1,1 +1,1 @@
-Added axe-core accessibility regression tests covering the home page, object list, detail, edit and error-state form, search and login pages.
+Added axe-core accessibility regression tests covering the home page, object list, detail, edit and error-state form, search and login pages, gating on the WCAG 2.2 Level A and AA rule tags.

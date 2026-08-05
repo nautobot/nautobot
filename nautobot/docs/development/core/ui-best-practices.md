@@ -214,7 +214,7 @@ Two linters enforce a subset of this automatically, so run them before opening a
   either to the ignore list in `pyproject.toml`.
 - Integration tests can assert against [axe-core](https://github.com/dequelabs/axe-core) via
   `SeleniumTestCase.assertNoAccessibilityViolations()`, which scans the page currently loaded in the browser against the
-  WCAG 2.1 A and AA rule tags:
+  WCAG 2.2 A and AA rule tags (which include everything carried forward from 2.0 and 2.1):
 
     ```python
     def test_my_view(self):
