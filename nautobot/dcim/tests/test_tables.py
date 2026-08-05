@@ -545,10 +545,10 @@ class ConnectionTableTestCase(TestCase):
             deviceless, with_device = "device_a", "device_b"
         else:
             deviceless, with_device = "device_b", "device_a"
-        self.assertEqual(row.get_cell(deviceless).strip(), helpers.HTML_NONE)
-        self.assertIn(self.device_a.get_absolute_url(), row.get_cell(with_device))
+        self.assertEqual(row.get_cell(deviceless).strip(), helpers.HTML_NONE)  # pylint: disable=no-member
+        self.assertIn(self.device_a.get_absolute_url(), row.get_cell(with_device))  # pylint: disable=no-member
         # Both interfaces still render regardless of device assignment.
-        both_interface_cells = row.get_cell("interface_a") + row.get_cell("interface_b")
+        both_interface_cells = row.get_cell("interface_a") + row.get_cell("interface_b")  # pylint: disable=no-member
         self.assertIn(stored.get_absolute_url(), both_interface_cells)
         self.assertIn(peer.get_absolute_url(), both_interface_cells)
 
