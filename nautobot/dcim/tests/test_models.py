@@ -4697,6 +4697,7 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         )
         status = Status.objects.get_for_model(Device).first()
         cls.intf_status = Status.objects.get_for_model(Interface).first()
+        cls.intf_role = Role.objects.get_for_model(Interface).first()
         cls.device = Device.objects.create(
             name="Device 1",
             device_type=devicetype,
@@ -4714,6 +4715,20 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
             vid=100,
             location=location_2,
             status=vlan_status,
+        )
+        cls.parent_interface = Interface.objects.create(
+            name="test_parent_if",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            device=cls.device,
+            status=cls.intf_status,
+            role=cls.intf_role,
+        )
+        cls.lag_interface = Interface.objects.create(
+            name="test_lag_if",
+            type=InterfaceTypeChoices.TYPE_LAG,
+            device=cls.device,
+            status=cls.intf_status,
+            role=cls.intf_role,
         )
 
         cls.namespace = Namespace.objects.create(name="dcim_test_interface_ip_addresses")
@@ -5108,6 +5123,40 @@ class InterfaceTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(
             err.exception.message_dict["port_type"][0], "Virtual and wireless interfaces cannot have a port type."
         )
+
+    def test_error_raised_when_adding_lag_to_virtual_interface(self):
+        """Test that an error is raised when adding a lag to a virtual interface that is not a breakout subinterface"""
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=self.intf_status,
+            role=self.intf_role,
+        )
+        interface.lag = self.lag_interface
+        for parent_if, br_pos in [(None, None), (self.parent_interface, None), (None, 1)]:
+            interface.parent_interface = parent_if
+            interface.breakout_position = br_pos
+            with self.assertRaises(ValidationError) as err:
+                interface.validated_save()
+            self.assertEqual(
+                err.exception.message_dict["lag"][0],
+                "Virtual interfaces other than breakout child interfaces cannot have a parent LAG interface.",
+            )
+
+    def test_adding_lag_for_virtual_breakout_interface(self):
+        "Test that adding a lag to a virtual breakout subinterface is possible"
+        interface = Interface.objects.create(
+            name="Int1",
+            type=InterfaceTypeChoices.TYPE_VIRTUAL,
+            device=self.device,
+            status=self.intf_status,
+            role=self.intf_role,
+            lag=self.lag_interface,
+            parent_interface=self.parent_interface,
+            breakout_position=1,
+        )
+        interface.full_clean()
 
 
 class SoftwareImageFileTestCase(ModelTestCases.BaseModelTestCase):
