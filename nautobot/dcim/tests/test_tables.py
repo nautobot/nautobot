@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
@@ -19,6 +20,8 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
+    ModuleType,
     PowerFeed,
     PowerOutlet,
     PowerPanel,
@@ -514,6 +517,40 @@ class ConnectionTableTestCase(TestCase):
         self.assertIn(path.destination.parent.get_absolute_url(), row.get_cell("device_b"))  # pylint: disable=no-member
         self.assertIn(path.destination.get_absolute_url(), row.get_cell("interface_b"))  # pylint: disable=no-member
         self.assertEqual(row.get_cell("reachable"), helpers.render_boolean(True))  # pylint: disable=no-member
+
+    def test_interface_connection_table_renders_peer_without_device(self):
+        """An interface on a Module sitting in storage has no device, so its `parent` is None."""
+        location = self.device_a.location
+        location.location_type.content_types.add(ContentType.objects.get_for_model(Module))
+        module = Module.objects.create(
+            module_type=ModuleType.objects.create(
+                manufacturer=self.device_a.device_type.manufacturer, model="MT-Storage"
+            ),
+            location=location,
+            status=Status.objects.get_for_model(Module).first(),
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        stored = Interface.objects.create(module=module, name="stored-eth0", status=interface_status)
+        self.assertIsNone(stored.device)  # the premise of this test
+
+        peer = Interface.objects.create(device=self.device_a, name="peer-of-stored", status=interface_status)
+        Cable.objects.create(termination_a=stored, termination_b=peer, status=self.connected)
+
+        queryset = InterfaceConnectionsListView.base_queryset().filter(origin_id__in=[stored.pk, peer.pk])
+        path = queryset.get()
+        row = self._first_row(InterfaceConnectionTable, queryset)
+
+        # Canonicalization picks the A side by UUID order, so derive which column holds which side.
+        if path.origin_id == stored.pk:
+            deviceless, with_device = "device_a", "device_b"
+        else:
+            deviceless, with_device = "device_b", "device_a"
+        self.assertEqual(row.get_cell(deviceless).strip(), helpers.HTML_NONE)
+        self.assertIn(self.device_a.get_absolute_url(), row.get_cell(with_device))
+        # Both interfaces still render regardless of device assignment.
+        both_interface_cells = row.get_cell("interface_a") + row.get_cell("interface_b")
+        self.assertIn(stored.get_absolute_url(), both_interface_cells)
+        self.assertIn(peer.get_absolute_url(), both_interface_cells)
 
     def _assert_render_has_no_n_plus_one(self, table_class, queryset):
         """Rendering every cell of `queryset` must not issue a query per row.
