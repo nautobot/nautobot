@@ -28,11 +28,14 @@ jobs:
           poetry-version: "2.1.4"
           python-version: "3.12"
       - name: "Install OSS Nautobot Apps to verify dependency compatibility"
+        # nautobot-app-chatops[ipfabric] requires `ipfabric<7.0` as it uses APIs that are removed in later versions.
+        # nautobot-app-ssot[ipfabric] requires a more current version of `ipfabric`, so they are incompatible.
+        # This is unlikely to be resolved any time soon so we are skipping the chatops extra intentionally for now.
         run: >-
           poetry add
           'git+https://github.com/nautobot/nautobot-app-bgp-models.git@ltm-2.4'
           'git+https://github.com/nautobot/nautobot-app-capacity-metrics.git@ltm-2.4'
-          'git+https://github.com/nautobot/nautobot-app-chatops.git@ltm-2.4[all]'
+          'git+https://github.com/nautobot/nautobot-app-chatops.git@ltm-2.4[aci,aristacv,ansible,meraki,panorama,slurpit]'
           'git+https://github.com/nautobot/nautobot-app-circuit-maintenance.git@ltm-2.4'
           'git+https://github.com/nautobot/nautobot-app-data-validation-engine.git@ltm-2.4'
           'git+https://github.com/nautobot/nautobot-app-design-builder.git@ltm-2.4'
