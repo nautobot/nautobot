@@ -5884,6 +5884,7 @@ class JobTestCase(
 
     def test_run_missing_schedule(self):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         for run_url in self.run_urls:
             response = self.client.post(run_url)
@@ -5934,6 +5935,7 @@ class JobTestCase(
     def test_render_job_form_modal_scheduling_resolved_from_registered_button(self):
         """The schedule form is rendered based on the registered _JobModalButton, never the POST payload."""
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         button = _JobModalButton(
             weight=100,
@@ -5965,6 +5967,64 @@ class JobTestCase(
             self.assertHttpStatus(response, 200, msg=run_url)
             content = response.content.decode(response.charset)
             self.assertNotIn("id__schedule_type", content, msg=run_url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_render_job_form_modal_scheduling_hidden_without_add_scheduledjob_permission(self):
+        """A registered scheduling button must not render the schedule form without extras.add_scheduledjob."""
+        self.add_permissions("extras.run_job")
+
+        button = _JobModalButton(
+            weight=100,
+            label="Schedule Job",
+            class_path=self.test_pass.class_path,
+            button_id="test_render_modal_scheduling_unauthorized_button",
+            enable_scheduling=True,
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(button.button_id, None))
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url,
+                data={"render_job_form": True, "job_modal_button": button.button_id},
+                HTTP_HX_REQUEST="true",
+            )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertNotIn("id__schedule_type", content, msg=run_url)
+            self.assertNotIn("Schedule name", content, msg=run_url)
+            # hx-vals must force an immediate run so the hidden form cannot be worked around.
+            self.assertIn(JobExecutionType.TYPE_IMMEDIATELY, content, msg=run_url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_job_run_view_hides_schedule_form_without_add_scheduledjob_permission(self):
+        """The full job run view hides the scheduling card and submits as an immediate run."""
+        self.add_permissions("extras.run_job")
+
+        for run_url in self.run_urls:
+            response = self.client.get(run_url)
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertNotIn("Job Schedule Type", content, msg=run_url)
+            # Match the rendered widget rather than the bare id, which also appears in the page's JS selectors.
+            self.assertNotIn('id="id__schedule_type"', content, msg=run_url)
+            self.assertInHTML(
+                f'<input type="hidden" name="_schedule_type" value="{JobExecutionType.TYPE_IMMEDIATELY}">',
+                content,
+                msg_prefix=run_url,
+            )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_job_run_view_shows_schedule_form_with_add_scheduledjob_permission(self):
+        """The full job run view renders the scheduling card for a user that may create schedules."""
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
+
+        for run_url in self.run_urls:
+            response = self.client.get(run_url)
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertIn("Job Schedule Type", content, msg=run_url)
+            self.assertIn('id="id__schedule_type"', content, msg=run_url)
 
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_schedule_job_via_modal_closes_modal_and_queues_message(self, _):
@@ -6211,6 +6271,7 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_name(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         data = {
             "_schedule_type": "future",
@@ -6226,6 +6287,7 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_missing_date(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         data = {
             "_schedule_type": "future",
@@ -6248,6 +6310,7 @@ class JobTestCase(
     @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
     def test_run_later_date_passed(self, _):
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         data = {
             "_schedule_type": "future",

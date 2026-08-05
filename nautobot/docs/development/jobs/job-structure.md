@@ -289,6 +289,9 @@ A template can provide additional JavaScript, CSS, or even display HTML. A good 
 +++ 3.0.0 "Added job_form_wrapper"
     Added the `job_form_wrapper` sub-block to `extras/job.html`, for use by Jobs that additionally want to override the card titles, headers, footers, etc. without replacing all of `{% block content %}`,
 
+!!! note
+    The `schedule_form` sub-block is only rendered for users holding the `extras.add_scheduledjob` permission; see [Job Scheduling](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md#job-scheduling). For users without it, `extras/job.html` omits the scheduling card entirely and submits an immediate run, so anything you place in that block is not rendered for those users. A Job template that replaces all of `{% block content %}` is responsible for its own equivalent handling.
+
 For another example checkout [the template used in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/templates/example_app/example_with_custom_template.html) in the GitHub repo.
 
 ### `time_limit`

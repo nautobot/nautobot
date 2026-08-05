@@ -2852,8 +2852,9 @@ class _JobModalButton(Button):
                 allowing the job to be scheduled for future or recurring execution in addition to immediate
                 execution. Requires button_id to be set, since the view resolves this setting from the
                 registered component (never from request data). Jobs with `has_sensitive_variables = True`
-                cannot be scheduled regardless of this flag. Defaults to `False` (immediate-only, backward
-                compatible).
+                cannot be scheduled regardless of this flag, nor can users lacking the
+                `extras.add_scheduledjob` permission — in both cases the modal falls back to immediate-only
+                execution. Defaults to `False` (immediate-only, backward compatible).
             redirect_button_callback (callable, optional): A callback that returns a redirect button dict for the
                 modal footer after the job completes. Requires button_id to be set.
                 Signature: `callback(job_result, request) -> dict`.

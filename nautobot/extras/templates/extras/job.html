@@ -79,23 +79,28 @@
                             </div>
                         </div>
                     {% endblock job_execution_form_wrapper %}
-                    <div class="card {% if job_model.has_sensitive_variables %}border-warning{% endif %}">
-                        <div class="card-header {% if job_model.has_sensitive_variables %}bg-warning-subtle border-warning{% endif %}">
-                            <strong>Job Schedule Type</strong>
+                    {% if can_schedule %}
+                        <div class="card {% if job_model.has_sensitive_variables %}border-warning{% endif %}">
+                            <div class="card-header {% if job_model.has_sensitive_variables %}bg-warning-subtle border-warning{% endif %}">
+                                <strong>Job Schedule Type</strong>
+                            </div>
+                            <div class="card-body job_execution">
+                                {% block schedule_form %}
+                                    {% render_form schedule_form %}
+                                {% endblock %}
+                            </div>
+                            {% if job_model.has_sensitive_variables %}
+                                <div class="card-footer">
+                                    <span class="form-text">
+                                        This job may have sensitive input variables and therefore can only be executed immediately — it cannot be scheduled for later execution or submitted for approval before execution as those processes may expose sensitive information. <p>If this categorization is inaccurate, it may be appropriate to update the job to set <code>has_sensitive_variables</code> to <code>False</code> if appropriate.
+                                        </span>
+                                    </div>
+                            {% endif %}
                         </div>
-                        <div class="card-body job_execution">
-                            {% block schedule_form %}
-                                {% render_form schedule_form %}
-                            {% endblock %}
-                        </div>
-                        {% if job_model.has_sensitive_variables %}
-                            <div class="card-footer">
-                                <span class="form-text">
-                                    This job may have sensitive input variables and therefore can only be executed immediately — it cannot be scheduled for later execution or submitted for approval before execution as those processes may expose sensitive information. <p>If this categorization is inaccurate, it may be appropriate to update the job to set <code>has_sensitive_variables</code> to <code>False</code> if appropriate.
-                                    </span>
-                                </div>
-                        {% endif %}
-                    </div>
+                    {% else %}
+                        {# No permission to create a ScheduledJob: hide the scheduling form and submit as an immediate run. #}
+                        <input type="hidden" name="_schedule_type" value="{{ immediate_schedule_type }}">
+                    {% endif %}
                 </div>
             </div>
             <div class="nb-form-sticky-footer">
@@ -137,7 +142,10 @@
                         return false;
                     })();
 
-                    const schedule_type = document.querySelector('#id__schedule_type').selectedOptions[0]?.value;
+                    // The scheduling form is absent for users without permission to create a ScheduledJob,
+                    // in which case the run is always immediate.
+                    const scheduleTypeSelect = document.querySelector('#id__schedule_type');
+                    const schedule_type = scheduleTypeSelect?.selectedOptions?.[0]?.value ?? 'immediately';
                     const custom = schedule_type === 'custom';
                     const immediately = schedule_type === 'immediately';
 
@@ -155,6 +163,10 @@
                     // Toggle `'btn-primary'` and `'btn-warning'` classes.
                     run.classList.toggle('btn-primary', immediately);
                     run.classList.toggle('btn-warning', !immediately);
+
+                    // The remaining toggles act on the scheduling fields, which are only rendered
+                    // alongside the schedule type select.
+                    if (!scheduleTypeSelect) return;
 
                     // Toggle schedule name and schedule time field rows.
                     ['#id__schedule_name', '#id__schedule_start_time'].forEach((selector) => {
@@ -187,8 +199,11 @@
                 };
 
                 {% if job_model.has_sensitive_variables %}
-                    document.querySelector('#id__schedule_type').value = 'immediately';
-                    document.querySelector('.job_execution').classList.toggle('d-none', true);
+                    const sensitiveScheduleType = document.querySelector('#id__schedule_type');
+                    if (sensitiveScheduleType) {
+                        sensitiveScheduleType.value = 'immediately';
+                        document.querySelector('.job_execution')?.classList.toggle('d-none', true);
+                    }
                 {% endif %}
 
                 document.addEventListener('change', (event) => {
