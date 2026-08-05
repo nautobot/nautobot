@@ -499,7 +499,9 @@ class SearchContentTypeView(TestCase):
         response = self.client.get(
             reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
         )
-        self.assertBodyContains(response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True)
+        self.assertBodyContains(
+            response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True
+        )
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
@@ -694,7 +696,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-label="Search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -713,7 +715,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-label="Search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(

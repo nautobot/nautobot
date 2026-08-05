@@ -112,6 +112,7 @@ export const initializeSearch = () => {
     });
 
     const input = createElement('input', {
+      'aria-label': 'Search',
       autocomplete: 'off',
       className: 'form-control w-100',
       'hx-indicator': '#search_popup .htmx-indicator',

@@ -10,3 +10,4 @@ Fixed modal dialogs having no accessible name by adding `aria-labelledby`, `aria
 Fixed data table accessibility by adding `scope="col"` to table headers, exposing sort state via `aria-sort`, giving each table a visually hidden `<caption>`, and correcting invalid self-closing `<td />` markup.
 Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.
 Fixed images missing `alt` attributes.
+Fixed the header search input and the search popup input having no accessible name, which was lost when the typeahead placeholder replaced it.
