@@ -2824,6 +2824,7 @@ class _JobModalButton(Button):
     redirect_button_callback = None
     button_id = ""
     enable_scheduling = False
+    modal_template_name = ""
 
     def __init__(self, **kwargs):
         """
@@ -2848,6 +2849,11 @@ class _JobModalButton(Button):
             button_id (str, optional): A globally unique identifier for this button instance. Used as the registry key.
                 Required when using redirect_button_callback.
                 Use your app name as a prefix to avoid collisions, e.g. `"my_app.take_snapshot"`.
+            modal_template_name (str, optional): Template to render for the job *result* page of the modal, instead of
+                the default `"extras/jobresult_modal.html"`. Requires button_id to be set, since the view resolves this
+                setting from the registered component (never from request data). The template should
+                `{% extends "extras/jobresult_modal.html" %}` and override only the blocks it needs, rather than
+                replacing the whole modal, so that polling and modal-close behavior continue to work.
             enable_scheduling (bool, optional): If True, renders the job schedule form inside the modal,
                 allowing the job to be scheduled for future or recurring execution in addition to immediate
                 execution. Requires button_id to be set, since the view resolves this setting from the
@@ -2896,6 +2902,8 @@ class _JobModalButton(Button):
             raise ValueError("A globally unique button_id is required when defining a redirect_button_callback.")
         if self.enable_scheduling and not self.button_id:
             raise ValueError("A globally unique button_id is required when enable_scheduling is True.")
+        if self.modal_template_name and not self.button_id:
+            raise ValueError("A globally unique button_id is required when defining a modal_template_name.")
 
         if self.button_id:
             if self.button_id in registry["job_modal_buttons"]:

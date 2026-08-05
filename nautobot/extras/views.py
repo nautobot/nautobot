@@ -2637,7 +2637,8 @@ class JobUIViewSet(NautobotUIViewSet):
                 "job_result_key": job_result_key,
                 "refresh_on_close_if_done": refresh_on_close_if_done,
             }
-            response = render(request, "extras/jobresult_modal.html", context)
+            template_name = get_jobresult_modal_template_name(job_modal_button_registry_id)
+            response = render(request, template_name, context)
             patch_vary_headers(response, ["HX-Request"])
             return response
 
@@ -3485,6 +3486,43 @@ class JobHookUIViewSet(NautobotUIViewSet):
 # JobResult
 #
 
+JOBRESULT_MODAL_TEMPLATE_NAME = "extras/jobresult_modal.html"
+
+
+def get_jobresult_modal_template_name(job_modal_button_registry_id):
+    """
+    Resolve the template used to render the job result page of the job modal.
+
+    Apps can point a `_JobModalButton` at a custom template via its `modal_template_name` attribute; such a template
+    is expected to extend `extras/jobresult_modal.html` and override only the blocks it needs. The value is resolved
+    from the server-side component registry, never from request data, and falls back to the default template if it
+    cannot be loaded.
+
+    Args:
+        job_modal_button_registry_id (str): The `button_id` of the `_JobModalButton` that opened this modal, if any.
+
+    Returns:
+        str: The template name to render.
+    """
+    if not job_modal_button_registry_id:
+        return JOBRESULT_MODAL_TEMPLATE_NAME
+    job_modal_button = registry["job_modal_buttons"].get(job_modal_button_registry_id)
+    template_name = getattr(job_modal_button, "modal_template_name", "")
+    if not template_name:
+        return JOBRESULT_MODAL_TEMPLATE_NAME
+    try:
+        get_template(template_name)
+    except TemplateDoesNotExist as err:
+        # Not reported via `messages` as this code path is re-entered on every poll of a pending job.
+        logger.warning(
+            'Unable to render requested custom job result modal template "%s" for job modal button "%s": %s',
+            template_name,
+            job_modal_button_registry_id,
+            err,
+        )
+        return JOBRESULT_MODAL_TEMPLATE_NAME
+    return template_name
+
 
 def render_jobresult_files(files_manager):
     """
@@ -3855,6 +3893,12 @@ class JobResultUIViewSet(
             )
 
         return context
+
+    def get_template_name(self):
+        if self.action == "modal":
+            # An App's `_JobModalButton` may render a custom template extending the default job result modal.
+            return get_jobresult_modal_template_name(self.request.POST.get("job_modal_button", ""))
+        return super().get_template_name()
 
     def get_queryset(self):
         queryset = super().get_queryset().select_related("job_model", "user")

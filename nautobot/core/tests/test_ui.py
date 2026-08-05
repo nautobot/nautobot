@@ -1046,6 +1046,48 @@ class _JobModalButtonTest(TestCase):
         hx_vals = json.loads(context["attributes"]["hx-vals"])
         self.assertNotIn("enable_scheduling", hx_vals)
 
+    def test_modal_template_name_defaults_empty(self):
+        """Verify modal_template_name defaults to an empty string and is never exposed through hx_vals."""
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+        )
+        self.assertEqual(btn.modal_template_name, "")
+        device = Device.objects.first()
+        context = btn.get_extra_context(Context({"object": device}))
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
+        # The template is resolved server-side from the registered component, so it must not travel via hx_vals.
+        self.assertNotIn("modal_template_name", hx_vals)
+
+    def test_modal_template_name_requires_button_id(self):
+        """Verify modal_template_name requires a button_id so the view can resolve it from the registry."""
+        with self.assertRaises(ValueError) as cm:
+            _JobModalButton(
+                weight=100,
+                label="Run Job",
+                class_path="nautobot.core.jobs.ValidateModelData",
+                modal_template_name="example_app/custom_jobresult_modal.html",
+            )
+        self.assertIn("button_id is required", str(cm.exception))
+
+    def test_modal_template_name_registered_and_not_in_hx_vals(self):
+        """Verify a registered modal_template_name is stored but does not leak into hx_vals."""
+        btn = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            modal_template_name="example_app/custom_jobresult_modal.html",
+            button_id="test_modal_template_name_button",
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(btn.button_id, None))
+        self.assertEqual(btn.modal_template_name, "example_app/custom_jobresult_modal.html")
+        self.assertIs(registry["job_modal_buttons"][btn.button_id], btn)
+        device = Device.objects.first()
+        context = btn.get_extra_context(Context({"object": device}))
+        hx_vals = json.loads(context["attributes"]["hx-vals"])
+        self.assertNotIn("modal_template_name", hx_vals)
+
 
 class PostButtonTest(TestCase):
     def test_render_uses_request_for_csrf_token_tag(self):

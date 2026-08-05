@@ -1,0 +1,44 @@
+{% extends 'extras/jobresult_modal.html' %}
+<!--
+    Example of customizing the job result page of the Job modal opened by a `_JobModalButton`.
+
+    An App points a button at this template via `_JobModalButton(..., button_id="...", modal_template_name="example_app/custom_jobresult_modal.html")`.
+    Always extend `extras/jobresult_modal.html` and override only the blocks you need; the polling container that drives
+    the every-2-seconds refresh of a running job is deliberately not overridable, so extending keeps polling and the
+    modal's close/refresh behavior working as Nautobot evolves them.
+-->
+
+<!-- Add styles and/or component includes needed by the customizations below. -->
+{% block jobresult_extra_styles %}
+    <style>
+        .example-app-jobresult-banner {
+            margin-bottom: 12px;
+        }
+    </style>
+{% endblock jobresult_extra_styles %}
+
+<!-- Add content above the standard job result rows, outside of the polling container. -->
+{% block jobresult_body_prepend %}
+    <div class="alert alert-info example-app-jobresult-banner" role="alert">
+        <span aria-hidden="true" class="mdi mdi-information-outline me-2"></span>Example App custom job result modal.
+    </div>
+{% endblock jobresult_body_prepend %}
+
+<!--
+    Append a row to the standard rows. Call `block.super` first to keep the Job Status, Duration, and Details rows;
+    omit it to replace them entirely. Note that a row is responsible for rendering both the pending and the finished
+    state of the job, since this template is re-rendered on every poll.
+-->
+{% block jobresult_rows %}
+    {{ block.super }}
+    <div class="row align-items-center" style="margin-bottom: 12px;">
+        <div class="col-4 text-end fw-semibold">Job Name:</div>
+        <div class="col-8">
+            {% if job_is_pending %}
+                <span class="text-secondary">Job is running, please wait...</span>
+            {% else %}
+                <span>{{ result.name }}</span>
+            {% endif %}
+        </div>
+    </div>
+{% endblock jobresult_rows %}

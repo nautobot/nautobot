@@ -5256,6 +5256,77 @@ class JobResultTestCase(
         content = response.content.decode(response.charset)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
+    def _register_job_modal_button(self, button_id, modal_template_name=""):
+        button = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path="nautobot.core.jobs.ValidateModelData",
+            button_id=button_id,
+            modal_template_name=modal_template_name,
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(button.button_id, None))
+        return button
+
+    @tag("example_app")
+    def test_jobresult_modal_custom_template_from_registered_button(self):
+        """A `_JobModalButton` with a `modal_template_name` renders that template instead of the default one."""
+        self.add_permissions("extras.view_jobresult")
+        button = self._register_job_modal_button(
+            "test_jobresult_modal_custom_template_button", "example_app/custom_jobresult_modal.html"
+        )
+        url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
+        with self.assertTemplateUsed("example_app/custom_jobresult_modal.html"):
+            response = self.client.post(
+                url,
+                data={"job_modal_button": button.button_id},
+                HTTP_HX_REQUEST="true",
+            )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # Content from the overridden blocks.
+        self.assertIn("Example App custom job result modal.", content)
+        self.assertIn("Job Name:", content)
+        # `{{ block.super }}` in the overridden `jobresult_rows` block retains the default rows.
+        self.assertIn("Job Status:", content)
+        self.assertIn("Duration:", content)
+        # The polling container is not overridable, so it is rendered regardless of the custom template.
+        self.assertIn('id="job-polling-container"', content)
+
+    def test_jobresult_modal_custom_template_not_honored_from_post_data(self):
+        """The custom template is resolved from the registry only; request data must not be able to select one."""
+        self.add_permissions("extras.view_jobresult")
+        # A registered button that does not opt in to a custom template.
+        button = self._register_job_modal_button("test_jobresult_modal_default_template_button")
+        url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
+        with self.assertTemplateUsed("extras/jobresult_modal.html"):
+            response = self.client.post(
+                url,
+                data={
+                    "job_modal_button": button.button_id,
+                    "modal_template_name": "example_app/custom_jobresult_modal.html",
+                },
+                HTTP_HX_REQUEST="true",
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn("Example App custom job result modal.", response.content.decode(response.charset))
+
+    def test_jobresult_modal_custom_template_falls_back_when_not_loadable(self):
+        """An unloadable `modal_template_name` logs a warning and falls back to the default template."""
+        self.add_permissions("extras.view_jobresult")
+        button = self._register_job_modal_button(
+            "test_jobresult_modal_bad_template_button", "example_app/no_such_jobresult_modal.html"
+        )
+        url = reverse("extras:jobresult_modal", kwargs={"pk": self.job_result_completed.pk})
+        with self.assertLogs("nautobot.extras.views", level="WARNING") as logs:
+            with self.assertTemplateUsed("extras/jobresult_modal.html"):
+                response = self.client.post(
+                    url,
+                    data={"job_modal_button": button.button_id},
+                    HTTP_HX_REQUEST="true",
+                )
+        self.assertHttpStatus(response, 200)
+        self.assertIn("example_app/no_such_jobresult_modal.html", "\n".join(logs.output))
+
     def test_cancel_job_get_anonymous_redirects_to_login(self):
         cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
         self.client.logout()
@@ -5929,6 +6000,35 @@ class JobTestCase(
             content = response.content.decode(response.charset)
             result = JobResult.objects.latest()
             self.assertIn(str(result.pk), content)
+
+    @tag("example_app")
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_modal_custom_jobresult_template(self, _):
+        """The job result page rendered right after enqueuing honors the registered button's `modal_template_name`."""
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        button = _JobModalButton(
+            weight=100,
+            label="Run Job",
+            class_path=self.test_pass.class_path,
+            button_id="test_run_now_modal_custom_template_button",
+            modal_template_name="example_app/custom_jobresult_modal.html",
+        )
+        self.addCleanup(lambda: registry["job_modal_buttons"].pop(button.button_id, None))
+
+        for run_url in self.run_urls:
+            data = {**self.data_run_immediately, "job_modal_button": button.button_id}
+            with self.assertTemplateUsed("example_app/custom_jobresult_modal.html"):
+                response = self.client.post(
+                    run_url, data, headers={"HX-Request": "true", "HX-Trigger": "job-form-modal"}
+                )
+            self.assertHttpStatus(response, 200, msg=run_url)
+            content = response.content.decode(response.charset)
+            self.assertIn("Example App custom job result modal.", content)
+            # The job has just been enqueued, so the polling container and the pending state are rendered.
+            self.assertIn('id="job-polling-container"', content)
+            self.assertIn("Job is running, please wait...", content)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_job_form_modal_scheduling_resolved_from_registered_button(self):
