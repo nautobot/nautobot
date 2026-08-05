@@ -811,6 +811,17 @@ button {
 }
 
 /*
+ * Focus Not Obscured (WCAG 2.4.11, AA).
+ *
+ * `.nb-form-sticky-footer` pins the form's action buttons to the bottom of the viewport, where it can cover a field the
+ * user has just tabbed to. Reserving scroll padding equal to its height means the browser's scroll-into-view on focus
+ * stops short of the bar rather than leaving the focused field underneath it.
+ */
+:root {
+  scroll-padding-block-end: 5rem;
+}
+
+/*
  * Skip link (bypass block, WCAG 2.4.1)
  *
  * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document
