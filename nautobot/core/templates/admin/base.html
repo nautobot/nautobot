@@ -52,9 +52,8 @@
         </style>
     </head>
     <body{% if is_popup %} class="ps-0"{% endif %}>
-        {% include 'inc/skip_link.html' %}
-
         {% if not is_popup %}
+            {% include 'inc/skip_link.html' %}
             {% include 'inc/nav_menu.html' %}
         {% endif %}
 
