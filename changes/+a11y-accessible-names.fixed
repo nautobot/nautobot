@@ -1,2 +1,0 @@
-Fixed icon-only footer links, panel collapse toggles, the actions dropdown, the per-page selector, object list row checkboxes and unlabelled textareas having no accessible name.
-Fixed the remaining icon-only controls with no accessible name, including job approval actions, help and documentation buttons, dropdown toggles, cable trace links, image attachment and service actions, and the App Marketplace docs links.

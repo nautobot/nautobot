@@ -1,1 +1,5 @@
 Increased the stroke width of the checkbox check mark and indeterminate mark for better visibility.
+Underlined links inside form help text so that they are distinguishable from the surrounding text by more than color alone (WCAG 1.4.1).
+Changed status, role and tag badge text colors to be chosen by actual WCAG contrast ratio instead of a perceived-brightness heuristic that could fall below the AA 4.5:1 minimum.
+Raised the contrast of disabled rows on the Jobs list so that the run link meets the WCAG AA minimum.
+Reserved scroll padding at the bottom of the viewport so that the sticky form footer cannot obscure a field the browser scrolls into view on focus.

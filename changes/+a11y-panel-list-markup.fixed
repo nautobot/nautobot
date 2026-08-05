@@ -1,1 +1,0 @@
-Fixed home page panels emitting `<div>` children directly inside a `<ul>`, which stopped them being reported as lists, and fixed job history entries rendering an empty link when the underlying Job record no longer exists.

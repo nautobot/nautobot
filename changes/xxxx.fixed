@@ -1,0 +1,12 @@
+Fixed the viewport meta tag disabling pinch-zoom and text scaling, which prevented users from magnifying any page (WCAG 1.4.4).
+Fixed icon-only footer links, panel collapse toggles, the actions dropdown, the per-page selector, object list row checkboxes and unlabelled textareas having no accessible name.
+Fixed job approval actions, help and documentation buttons, dropdown toggles, cable trace links, image attachment and service actions, and the App Marketplace docs links having no accessible name.
+Fixed the "toggle all rows" table checkbox lacking an accessible name and not reflecting partial selection, contradictory attributes on the decorative page title chevron, and a missing `lang` attribute on the GraphiQL page.
+Fixed the "Items per page" control on the theme preview page having no accessible name.
+Fixed form field help text and validation errors not being announced by screen readers, by giving them the element IDs that Django's generated `aria-describedby` attribute already pointed at.
+Fixed heading levels being skipped, and added a heading to the home page, so that heading-based navigation reflects page structure.
+Fixed home page panels emitting `<div>` children directly inside a `<ul>`, which stopped them being reported as lists, and fixed job history entries rendering an empty link when the underlying Job record no longer exists.
+Fixed modal dialogs having no accessible name by adding `aria-labelledby`, `aria-modal` and `role="dialog"` to all modals.
+Fixed data table accessibility by adding `scope="col"` to table headers, exposing sort state via `aria-sort`, giving each table a visually hidden `<caption>`, and correcting invalid self-closing `<td />` markup.
+Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.
+Fixed images missing `alt` attributes.

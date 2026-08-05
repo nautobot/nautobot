@@ -1,0 +1,1 @@
+Re-enabled the djlint `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag") accessibility rules so that regressions are caught in CI.
