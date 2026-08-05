@@ -1282,7 +1282,13 @@ class Interface(ModularComponentModel, CableTermination, PathEndpoint, BaseInter
 
             # A virtual interface cannot have a parent LAG
             if self.type == InterfaceTypeChoices.TYPE_VIRTUAL:
-                raise ValidationError({"lag": "Virtual interfaces cannot have a parent LAG interface."})
+                # Unless interface is a Breakout Sub-Interface
+                if self.parent_interface is None or self.breakout_position is None:
+                    raise ValidationError(
+                        {
+                            "lag": "Virtual interfaces other than breakout child interfaces cannot have a parent LAG interface."
+                        }
+                    )
 
         # Virtual interfaces cannot be connected
         if self.type in NONCONNECTABLE_IFACE_TYPES and (self.cable or getattr(self, "circuit_termination", False)):
