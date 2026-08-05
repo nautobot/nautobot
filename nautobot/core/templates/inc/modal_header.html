@@ -1,9 +1,4 @@
-{% comment %}
-`title_id` is the `id` that the enclosing `.modal` points its `aria-labelledby` at, so that the dialog takes its
-accessible name from this heading. It has to stay stable across HTMX swaps of the modal content, which is why it is
-passed in by the modal rather than derived from the title text. It defaults to the id used by `inc/generic_modal.html`.
-{% endcomment %}
 <div class="modal-header">
-    <h2 class="modal-title" id="{{ title_id|default:'nb-modal-title' }}">{{ title }}</h2>
+    <h2 class="modal-title" id="nautobot-generic-modal-title">{{ title }}</h2>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
