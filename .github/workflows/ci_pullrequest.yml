@@ -35,7 +35,7 @@ jobs:
           poetry add
           'git+https://github.com/nautobot/nautobot-app-bgp-models.git@ltm-2.4'
           'git+https://github.com/nautobot/nautobot-app-capacity-metrics.git@ltm-2.4'
-          'git+https://github.com/nautobot/nautobot-app-chatops.git@ltm-2.4[aci,aristacv,ansible,meraki,panorama,slurpit]'
+          'git+https://github.com/nautobot/nautobot-app-chatops.git@ltm-2.4[aci,aristacv,ansible,grafana,meraki,panorama,slurpit]'
           'git+https://github.com/nautobot/nautobot-app-circuit-maintenance.git@ltm-2.4'
           'git+https://github.com/nautobot/nautobot-app-data-validation-engine.git@ltm-2.4'
           'git+https://github.com/nautobot/nautobot-app-design-builder.git@ltm-2.4'
