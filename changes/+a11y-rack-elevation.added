@@ -1,1 +1,1 @@
-Added an accessible name, fallback content and a "View as device list" link to rack elevations, which previously offered no text alternative to the embedded SVG.
+Added an accessible name and fallback content to rack elevations, which previously offered no text alternative to the embedded SVG.
