@@ -136,6 +136,7 @@ When a Job is submitted for execution or scheduling, Nautobot checks for any rel
 | Assign Job Queues          | `extras.change_job` + permissions on specific Job Queues |
 | Delete Job                 | `extras.delete_job`                                      |
 | Run Job                    | `extras.run_job`                                         |
+| Schedule Job               | `extras.run_job` + `extras.add_scheduledjob`             |
 | Cancel Job                 | `extras.cancel_job` (not required when canceling your own job) + `extras.view_jobresult` |
 | Approve scheduled Job      | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + `extras.change_scheduledjob`|
 | View Job Log Entries       | `extras.view_joblogentry`                                |

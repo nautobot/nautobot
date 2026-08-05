@@ -1,0 +1,1 @@
+Scheduling a Job to run in the future or on a recurring interval now requires the `extras.add_scheduledjob` permission in addition to `extras.run_job`; running a Job immediately is unaffected.
