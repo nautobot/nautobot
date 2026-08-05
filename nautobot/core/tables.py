@@ -428,7 +428,12 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         visible = kwargs.pop("visible", False)
         if "attrs" not in kwargs:
             kwargs["attrs"] = {
-                "input": {"class": "form-check-input nb-form-check-input-sm mt-2"},
+                "input": {
+                    "class": "form-check-input nb-form-check-input-sm mt-2",
+                    # Accessible name identifying which row this checkbox selects; without one a screen reader
+                    # announces an unlabelled checkbox on every row. Resolved per record by `CheckBoxColumn.render`.
+                    "aria-label": lambda record: f"Select {record}",
+                },
                 "td": {"class": "nb-w-0"},
             }
         super().__init__(*args, default=default, visible=visible, **kwargs)
@@ -440,19 +445,6 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
             '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2"'
             ' aria-label="Toggle all rows" title="Toggle all" />'
         )
-
-    def render(self, value, bound_column, record):
-        """
-        Render the row checkbox with an accessible name identifying which row it selects.
-
-        `django_tables2.CheckBoxColumn` emits a bare `<input type="checkbox">` with no label of any kind, which is a
-        critical accessibility failure: a screen reader user hears an unlabelled checkbox on every row and has no way to
-        tell which object it belongs to. `CheckBoxColumn.render` does not resolve callables in `attrs`, so the per-record
-        name has to be applied here rather than declared in `attrs["input"]`.
-        """
-        checkbox = super().render(value, bound_column, record)
-        label = format_html('aria-label="Select {}"', str(record))
-        return mark_safe(checkbox.replace("<input ", f"<input {label} ", 1))
 
 
 class BooleanColumn(django_tables2.Column):
