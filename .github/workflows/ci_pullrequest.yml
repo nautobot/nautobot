@@ -18,7 +18,7 @@ jobs:
       - name: "Security checks"
         uses: "./.github/actions/security-checks"
   dependencies-check:
-    runs-on: "ubuntu-24.0.4"
+    runs-on: "ubuntu-24.04"
     steps:
       - name: "Check out repository code"
         uses: "actions/checkout@v4"
