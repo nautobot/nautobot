@@ -51,7 +51,8 @@
                                         <a class="btn btn-primary js-tooltip" href="{{ request.get_full_path }}" rel="nofollow" title="Make a GET request on the {{ name }} resource">GET</a>
 
                                         <button class="btn btn-primary dropdown-toggle js-tooltip" data-bs-toggle="dropdown" title="Specify a format for the GET request">
-                                            <span class="mdi mdi-chevron-down"></span>
+                                            <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
+                                            <span class="visually-hidden">Specify a format for the GET request</span>
                                         </button>
                                         <ul class="dropdown-menu">
                                             {% for format in available_formats %}

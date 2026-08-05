@@ -133,7 +133,8 @@ add "&raw" to the end of the URL within a browser.
                     queries_tab = `
                         <div>
                             <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
-                                <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
+                                <img alt="" class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
+                                <span class="visually-hidden">Saved queries</span>
                             </button>
                             <ul class="dropdown-menu" id="graphql-queries-menu">
                                 <li class="dropdown-header">Saved Queries</li>

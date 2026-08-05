@@ -112,7 +112,8 @@
                                 value="{{ nav_menu_version_control.active_time_travel_date|default:"" }}"
                             >
                             <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
-                                <span class="mdi mdi-close"></span>
+                                <span aria-hidden="true" class="mdi mdi-close"></span>
+                                <span class="visually-hidden">Clear time travel date</span>
                             </button>
                         </form>
                     </li>

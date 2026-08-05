@@ -107,6 +107,7 @@ but for now many CSV import views still exist which use this template.
                                         {% if field.choices %}
                                             <button type="button" class="btn btn-link btn-sm float-end" data-bs-toggle="modal" data-bs-target="#{{ field.name }}_choices">
                                                 <span aria-hidden="true" class="mdi mdi-help-circle"></span>
+                                                <span class="visually-hidden">{{ field.name }} choices</span>
                                             </button>
                                             <div class="modal fade"
                                                  id="{{ field.name }}_choices"

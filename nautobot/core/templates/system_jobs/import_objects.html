@@ -158,7 +158,8 @@
                     td.innerHTML += `
                         <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal"
                                 data-bs-target="#${ field.name }_choices">
-                            <i class="mdi mdi-help-circle"></i>
+                            <i aria-hidden="true" class="mdi mdi-help-circle"></i>
+                            <span class="visually-hidden">${ field.name } choices</span>
                         </button>
                         <div class="modal fade"
                              id="${field.name}_choices"

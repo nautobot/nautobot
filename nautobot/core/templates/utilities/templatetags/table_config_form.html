@@ -12,7 +12,8 @@
                 <div class="alert alert-warning">
                     Column choices may negatively affect loading times.
                     <a href="{% static 'docs/user-guide/platform-functionality/user-interface/configurablecolumns.html' %}" class="btn btn-link btn-sm" target="_blank" rel="noopener">
-                        <span class="mdi mdi-information"></span>
+                        <span aria-hidden="true" class="mdi mdi-information"></span>
+                        <span class="visually-hidden">Configurable columns documentation</span>
                     </a>
                 </div>
                 {% with field=table_config_form.visible_fields.0 %}
