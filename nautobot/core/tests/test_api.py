@@ -998,6 +998,27 @@ class DepthPermissionEnforcementTest(testing.APITestCase):
         self.assertEqual(hidden["display"], self.hidden_location.display)
 
 
+class InvalidDepthParameterTest(testing.APITestCase):
+    """Test that an out-of-range `?depth=` query parameter results in an HTTP 400, not an HTTP 500."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("ipam.view_vlangroup")
+        self.vlan_group_list_url = reverse(get_route_for_model(ipam_models.VLANGroup, "list", api=True))
+
+    def test_depth_greater_than_max_returns_400(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=11", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_depth_returns_400(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=-1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_depth_within_range_returns_200(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=10", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+
 @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
 class WriteRelatedObjectPermissionTest(testing.APITestCase):
     """
