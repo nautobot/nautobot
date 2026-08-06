@@ -67,7 +67,8 @@ export const initializeCollapseToggleAll = () => {
   const updateToggleAllButtonDisplay = (toggleAllButton) => {
     const tableGroupState = readStoredCollapseState()[getNautobotTargetQuerySelector(toggleAllButton)] || {};
     const currentlyExpandedGroups = Object.values(tableGroupState).some((state) => state === 'expanded');
-    const areAnyExpanded = currentlyExpandedGroups || areAllElementsCollapsed(getAllCollapseElements(toggleAllButton)) === false;
+    const areAnyExpanded =
+      currentlyExpandedGroups || areAllElementsCollapsed(getAllCollapseElements(toggleAllButton)) === false;
     toggleAllButton.setAttribute('aria-expanded', String(areAnyExpanded));
     toggleAllButton.textContent = areAnyExpanded ? 'Collapse All Groups' : 'Expand All Groups';
   };
