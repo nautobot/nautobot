@@ -64,6 +64,14 @@ export const initializeCollapseToggleAll = () => {
     });
   };
 
+  const readStoredCollapseState = () => {
+    try {
+      return JSON.parse(window.localStorage.getItem(LOCAL_STORAGE_COLLAPSE_STATE_KEY)) || {};
+    } catch {
+      return {};
+    }
+  };
+
   const updateToggleAllButtonDisplay = (toggleAllButton) => {
     const tableGroupState = readStoredCollapseState()[getNautobotTargetQuerySelector(toggleAllButton)] || {};
     const currentlyExpandedGroups = Object.values(tableGroupState).some((state) => state === 'expanded');
@@ -71,14 +79,6 @@ export const initializeCollapseToggleAll = () => {
       currentlyExpandedGroups || areAllElementsCollapsed(getAllCollapseElements(toggleAllButton)) === false;
     toggleAllButton.setAttribute('aria-expanded', String(areAnyExpanded));
     toggleAllButton.textContent = areAnyExpanded ? 'Collapse All Groups' : 'Expand All Groups';
-  };
-
-  const readStoredCollapseState = () => {
-    try {
-      return JSON.parse(window.localStorage.getItem(LOCAL_STORAGE_COLLAPSE_STATE_KEY)) || {};
-    } catch {
-      return {};
-    }
   };
 
   const writeStoredCollapseState = (container) => {
