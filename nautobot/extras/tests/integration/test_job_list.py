@@ -174,3 +174,37 @@ class JobListCollapseAndExpandButton(SeleniumTestCase):
 
         self._click_collapse_all_button()
         self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
+
+    def test_collapse_all_on_a_later_page_collapses_earlier_pages(self):
+        """Collapsing all groups while on page two must also collapse page one when navigating back"""
+        self._visit_job_list()
+        self.browser.driver.execute_script("window.localStorage.clear();")
+        self.browser.reload()
+
+        self.assertGreater(self._get_job_list_page_count(), 1)
+
+        self._visit_job_list_page(2)
+        self._click_collapse_all_button()
+        self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
+
+        self._visit_job_list_page(1)
+        self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
+
+    def test_collapse_all_on_page_two_keeps_untouched_page_one_groups_collapsed(self):
+        """Collapse-All on page two, then reopening that page's group, must leave page one's other groups collapsed"""
+        self._visit_job_list()
+        self.browser.driver.execute_script("window.localStorage.clear();")
+        self.browser.reload()
+
+        self.assertGreater(self._get_job_list_page_count(), 1)
+
+        self._visit_job_list_page(2)
+        self._click_collapse_all_button()
+        self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")
+
+        self._expand_first_group()
+        self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")
+
+        self._visit_job_list_page(1)
+        self.assertGreater(self._get_collapsed_row_count(), 0)
+        self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")

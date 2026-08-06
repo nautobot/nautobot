@@ -16,6 +16,7 @@
 const LOCAL_STORAGE_COLLAPSE_STATE_KEY = 'nautobot.collapseState';
 const TABLE_PANEL_KEY_PREFIX = 'collapseme-';
 const DEFAULT_STATE = 'expanded';
+const GROUP_DEFAULT_STATE_KEY = '__default';
 
 export const initializeCollapseToggleAll = () => {
   // --------------------
@@ -27,7 +28,6 @@ export const initializeCollapseToggleAll = () => {
       return collapsedOrExpanded === 'collapsed' ? isCollapsed : !isCollapsed;
     });
   const areAllElementsCollapsed = (collapsableElements) => areAll(collapsableElements, 'collapsed');
-  const areAllElementsExpanded = (collapsableElements) => areAll(collapsableElements, 'expanded');
 
   const getNautobotTargetQuerySelector = (toggleAllButton) => toggleAllButton.dataset.nbTarget || '.collapse';
   const getAllToggleAllButtons = () => [...document.querySelectorAll('[data-nb-toggle="collapse-all"]')];
@@ -65,9 +65,11 @@ export const initializeCollapseToggleAll = () => {
   };
 
   const updateToggleAllButtonDisplay = (toggleAllButton) => {
-    const anyExpanded = !areAllElementsCollapsed(getAllCollapseElements(toggleAllButton));
-    toggleAllButton.setAttribute('aria-expanded', String(anyExpanded));
-    toggleAllButton.textContent = anyExpanded ? 'Collapse All Groups' : 'Expand All Groups';
+    const tableGroupState = readStoredCollapseState()[getNautobotTargetQuerySelector(toggleAllButton)] || {};
+    const currentlyExpandedGroups = Object.values(tableGroupState).some((state) => state === 'expanded');
+    const areAnyExpanded = currentlyExpandedGroups || areAllElementsCollapsed(getAllCollapseElements(toggleAllButton)) === false;
+    toggleAllButton.setAttribute('aria-expanded', String(areAnyExpanded));
+    toggleAllButton.textContent = areAnyExpanded ? 'Collapse All Groups' : 'Expand All Groups';
   };
 
   const readStoredCollapseState = () => {
@@ -84,6 +86,12 @@ export const initializeCollapseToggleAll = () => {
     } catch {
       /* Storage unavailable - skip persistence */
     }
+  };
+
+  const saveGroupDefaultState = (toggleAllButton, panelState) => {
+    const updatedCollapsedState = readStoredCollapseState();
+    updatedCollapsedState[getNautobotTargetQuerySelector(toggleAllButton)] = { [GROUP_DEFAULT_STATE_KEY]: panelState };
+    writeStoredCollapseState(updatedCollapsedState);
   };
 
   const saveCollapsedState = () => {
@@ -103,12 +111,15 @@ export const initializeCollapseToggleAll = () => {
     writeStoredCollapseState(updatedCollapsedState);
   };
 
+  const getGroupDefaultState = (tableGroupState) => tableGroupState[GROUP_DEFAULT_STATE_KEY] || DEFAULT_STATE;
+
   const restoreCollapsedState = () => {
     const currentCollapsedState = readStoredCollapseState();
 
     getAllToggleAllButtons().forEach((toggleAllButton) => {
       const nautobotTargetQuerySelector = getNautobotTargetQuerySelector(toggleAllButton);
       const tableGroupState = currentCollapsedState[nautobotTargetQuerySelector] || {};
+      const groupDefaultState = getGroupDefaultState(tableGroupState);
 
       const collapseElements = getAllCollapseElements(toggleAllButton);
       collapseElements.forEach((collapseElement) => {
@@ -117,7 +128,7 @@ export const initializeCollapseToggleAll = () => {
           return;
         }
 
-        const panelState = tableGroupState[tablePanelKey] || DEFAULT_STATE;
+        const panelState = tableGroupState[tablePanelKey] || groupDefaultState;
         collapseElement.classList.toggle('show', panelState === 'expanded');
       });
 
@@ -133,9 +144,12 @@ export const initializeCollapseToggleAll = () => {
     const collapseToggleAll = event.target.closest('[data-nb-toggle="collapse-all"]');
 
     if (collapseToggleAll) {
+      const shouldCollapse = collapseToggleAll.getAttribute('aria-expanded') === 'true';
+
+      saveGroupDefaultState(collapseToggleAll, shouldCollapse ? 'collapsed' : 'expanded');
+
       getAllCollapseElements(collapseToggleAll).forEach((collapse) => {
         const collapseInstance = window.bootstrap.Collapse.getOrCreateInstance(collapse, { toggle: false });
-        const shouldCollapse = collapseToggleAll.getAttribute('aria-expanded') === 'true';
 
         if (shouldCollapse) {
           collapseInstance.hide();
@@ -143,47 +157,21 @@ export const initializeCollapseToggleAll = () => {
           collapseInstance.show();
         }
       });
+
+      getAllToggleAllButtons().forEach(updateToggleAllButtonDisplay);
     }
   };
 
   // Bootstrap - on collapse completed
   const onHiddenBsCollapse = () => {
-    // Select every "collapse all" button on the page.
-    const allCollapseAllButtons = getAllToggleAllButtons();
-
-    // Keep only the buttons that have EVERY element collapsed.
-    const collapseAllButtonsWithAllElementsCollapsed = allCollapseAllButtons.filter((toggleAllButton) => {
-      const collapseElements = getAllCollapseElements(toggleAllButton);
-      return areAllElementsCollapsed(collapseElements);
-    });
-
-    // Flip each of those buttons into its "everything is closed" state.
-    collapseAllButtonsWithAllElementsCollapsed.forEach((toggleAllButton) => {
-      toggleAllButton.setAttribute('aria-expanded', 'false');
-      toggleAllButton.textContent = 'Expand All Groups';
-    });
-
     saveCollapsedState();
+    getAllToggleAllButtons().forEach(updateToggleAllButtonDisplay);
   };
 
   // Bootstrap - on expand completed
   const onShownBsCollapse = () => {
-    // Select every "collapse all" button on the page.
-    const allExpandAllButtons = getAllToggleAllButtons();
-
-    // Keep only the buttons that have EVERY element expanded.
-    const expandAllButtonsWithAllElementsExpanded = allExpandAllButtons.filter((toggleAllButton) => {
-      const collapseElements = getAllCollapseElements(toggleAllButton);
-      return areAllElementsExpanded(collapseElements);
-    });
-
-    // Flip each of those buttons into its "everything is open" state.
-    expandAllButtonsWithAllElementsExpanded.forEach((toggleAllButton) => {
-      toggleAllButton.setAttribute('aria-expanded', 'true');
-      toggleAllButton.textContent = 'Collapse All Groups';
-    });
-
     saveCollapsedState();
+    getAllToggleAllButtons().forEach(updateToggleAllButtonDisplay);
   };
 
   // Initial page load state restoration
