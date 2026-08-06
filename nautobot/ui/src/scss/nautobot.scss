@@ -1069,7 +1069,16 @@ table.attr-table td:nth-child(1) {
     /* Reset `<button>` default user agent styles. */
     background: none;
     border: 0;
-    padding: 0;
+    /*
+     * Pad the hit target up to the WCAG 2.5.8 minimum size; negative margins net the layout shift to zero. The extra
+     * width comes from the leading side only, because a negative trailing margin would pull the record link over the
+     * button and axe would discount the obscured strip.
+     */
+    margin-block: map.get($spacers, 2) * -1;
+    margin-inline-start: map.get($spacers, 4) * -1;
+    padding-block: map.get($spacers, 2);
+    padding-inline-end: map.get($spacers, 0);
+    padding-inline-start: map.get($spacers, 4);
 
     &::before {
       @include subtree-icon-color-filter;

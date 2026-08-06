@@ -11,3 +11,4 @@ Fixed data table accessibility by adding `scope="col"` to table headers, exposin
 Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.
 Fixed images missing `alt` attributes.
 Fixed the header search input and the search popup input having no accessible name, which was lost when the typeahead placeholder replaced it.
+Fixed touch targets below the WCAG 2.5.8 minimum size: the header search-help link and the tree expand carets are padded up to 24px without shifting the layout, and the actions column on embedded detail-page tables no longer renders a sort link, which was also a broken URL.
