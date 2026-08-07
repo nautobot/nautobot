@@ -671,6 +671,19 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
         form = InterfaceCreateForm(data)
         self.assertTrue(form.is_valid(), form.errors)
 
+    def test_interface_create_form_without_device_or_module_reports_error(self):
+        """Assert that an interface belonging to neither a device nor a module is rejected."""
+        data = {
+            "name_pattern": "test module interface 1.0",
+            "status": self.status.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [self.vlan.pk],
+        }
+        form = InterfaceCreateForm(data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.errors["__all__"], ["Either device or module must be set"])
+
     def test_interface_create_form_module_in_bay_rejects_vlan_in_other_location(self):
         """Assert that a tagged VLAN outside the Module's parent Device location is rejected when device is blank."""
         location_ids = self.device.location.ancestors(include_self=True).values_list("id", flat=True)

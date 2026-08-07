@@ -252,7 +252,7 @@ class InterfaceCommonForm(forms.Form):
         # layers scope tagged VLANs by the parent device only.
         module = self.cleaned_data.get("module")
         if module is None:
-            return None
+            raise forms.ValidationError("Either device or module must be set")
         return getattr(module, "device", None)
 
     def clean(self):
