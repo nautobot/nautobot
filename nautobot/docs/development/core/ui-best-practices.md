@@ -232,6 +232,10 @@ on -- they need a human -- but they are where a real defect hides when it produc
 container reports only as "background color could not be determined", because contrast is indeterminate for whatever
 part of an element falls outside the ancestor painting its background.
 
+The assertion above does not report them; it fails on violations alone. Read them from a scan by hand, below. There is
+no `axe` in the browser console to call directly -- axe-core is a build-time dependency and is not bundled into the app,
+which is why the test helper injects it into the page itself.
+
 Neither linter is a substitute for keyboard-testing a new component: tab through it, operate it with Enter, Space,
 the arrow keys and Escape, and confirm focus is always visible and never trapped.
 

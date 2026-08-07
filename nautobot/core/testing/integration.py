@@ -26,25 +26,18 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "nautobot")
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
 
-# axe-core is installed as an npm devDependency of the UI build; see `nautobot/ui/package.json`.
 AXE_CORE_PATH = Path(settings.BASE_DIR) / "ui" / "node_modules" / "axe-core" / "axe.min.js"
 
-# WCAG 2.2 Level A and AA, which is the conformance target Nautobot aims at. The 2.0 and 2.1 tags are included because
-# WCAG is cumulative: 2.2 carries forward every earlier criterion, and axe-core tags each rule with the version that
-# introduced it rather than restating them under `wcag22*`.
+# WCAG 2.2 A and AA. The earlier tags are needed too: axe tags each rule with the version that introduced it, so
+# `wcag22*` alone matches only `target-size` -- which selecting by tag also runs despite axe disabling it by default.
 AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa")
 
-# Gate on every impact level. Impact reflects how severely a violation affects a user, not how important the underlying
-# success criterion is, so a low-impact finding can still be a WCAG AA failure.
+# Impact is how badly a violation affects a user, not how important the criterion is: `meta-viewport` is a WCAG AA
+# failure reported at `moderate`. Narrowing this hides conformance failures.
 AXE_DEFAULT_IMPACTS = ("critical", "serious", "moderate", "minor")
 
-# Third-party developer tooling that injects itself into the page. It is not part of the shipped UI -- nothing here can
-# reach a Nautobot user -- so its markup is not ours to conform and only obscures findings that are. Keep this list to
-# tools that are dev-only dependencies; anything a user can actually see belongs in the scan.
-#
-# `#djDebugRoot` is the django-debug-toolbar container. The toolbar is a `[tool.poetry.group.dev.dependencies]` entry,
-# and only `development/nautobot_config.py` adds it to `INSTALLED_APPS`, gated on `DEBUG`. Integration tests run with it
-# absent, so this exclusion matters for scans a developer runs by hand against a `DEBUG` dev server.
+# django-debug-toolbar's container. Dev-only dependency, added to `INSTALLED_APPS` under `if DEBUG` by the development
+# configs, so no user can reach it. Tests run with `DEBUG` off; this is for scans run by hand.
 AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
 
 
@@ -509,43 +502,16 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self, impacts=AXE_DEFAULT_IMPACTS, tags=AXE_DEFAULT_TAGS, context=None, exclude=AXE_EXCLUDE_SELECTORS
     ):
         """
-        Assert that the page currently loaded in the browser has no axe-core accessibility violations.
+        Assert that the page currently loaded in the browser has no axe-core violations.
 
-        Args:
-            impacts (tuple): axe-core impact levels to treat as failures. Defaults to all four. An earlier version gated
-                only on `critical` and `serious`, on the assumption that lower-impact findings would be too numerous to
-                gate on; that turned out to be wrong, and it hid a real WCAG AA failure (`meta-viewport`, impact
-                `moderate`, present on every page) for as long as it was in place. Narrow this only with a comment saying
-                what is being deferred and why.
-            tags (tuple): axe-core rule tags to run. Defaults to WCAG 2.2 A and AA.
-            context (str, optional): CSS selector limiting the scan to part of the page. Scans the whole page by default.
-            exclude (tuple): CSS selectors to leave out of the scan. Defaults to `AXE_EXCLUDE_SELECTORS`, which covers
-                third-party developer tooling injected into the page rather than anything Nautobot ships. Excluding our
-                own markup to get a scan to pass is not what this is for.
+        `context` limits the scan to a CSS selector, `exclude` drops selectors from it. Skips if axe-core is not
+        installed. Failures name the rule, impact, help text and the first five offending selectors per rule.
 
-        Raises:
-            AssertionError: If any violation at one of the given impact levels is found. The message lists the rule id,
-                impact, help text and the offending element for each, so failures are actionable without rerunning.
-
-        Note:
-            axe-core's `incomplete` results -- checks it could not decide, typically `color-contrast` against a
-            background it cannot compute -- are not gated on, because they need human review and would make this flaky.
-            They are not a substitute for manual testing of new components.
-
-            Do read them, though, rather than treating "no violations" as the whole answer. As of this change the pages
-            scanned here produce exactly one, reviewed and passing:
-
-            - `#per_page` (`.form-select` in `inc/paginator.html`): "background color could not be determined due to a
-              background image". The background image is Bootstrap's own dropdown chevron, an inline SVG data URI
-              positioned clear of the text; axe stops at the presence of any background image and does not work out
-              whether it is actually behind the glyphs. Measured 17.4:1 in both light and dark themes, against a
-              `--bs-body-bg` that is opaque in both, so it passes 1.4.3 AA (4.5:1) with a wide margin.
-
-            An `incomplete` here has twice pointed at a real defect that produced no violation. `#header_search_trigger`
-            reported "partially obscured by another element" because its label was overflowing the search box -- axe
-            cannot determine contrast for a part of an element lying outside the ancestor painting its background, and
-            what looked like a checker limitation was a layout bug (see `test_header_search_stays_the_size_of_the_field`).
-            Treat a new entry in this bucket as unexplained until it has been measured, not as noise.
+        Only violations are reported. axe's `incomplete` bucket -- checks it could not decide -- needs a human, so read
+        it separately (see "Scanning by hand" in `docs/development/core/ui-best-practices.md`). Do not assume an entry
+        there is a checker limitation: contrast is indeterminate for any part of an element falling outside the ancestor
+        that paints its background, so a label overflowing its container reports as undecidable when it is really a
+        layout bug.
         """
         if not AXE_CORE_PATH.is_file():
             self.skipTest(
@@ -553,22 +519,18 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
                 "accessibility assertions."
             )
 
-        # Define `window.axe` in the page. axe-core is self-contained, so injecting its source is all that is needed.
         self.browser.execute_script(AXE_CORE_PATH.read_text(encoding="utf-8"))
 
-        # `axe.run` is promise-based, so hand the result back through a callback via Selenium's async script support.
+        # `axe.run` returns a promise, so this needs `execute_async_script`: the driver appends a resolve callback as the
+        # final argument.
         results = self.browser.driver.execute_async_script(
             """
             const [context, exclude, tags, done] = [
                 arguments[0], arguments[1], arguments[2], arguments[arguments.length - 1],
             ];
-            /*
-             * An axe context takes `include`/`exclude` lists of selector arrays. Omit `include` entirely rather than
-             * defaulting it to `document`, which is not a selector and makes axe reject the context.
-             */
+            /* `include`/`exclude` take arrays of selector arrays, so pass bare `document` rather than including it. */
             const axeContext = {};
             if (context) { axeContext.include = [[context]]; }
-            /* Excluding a selector that matches nothing is harmless, so no need to check whether the tooling is present. */
             if (exclude && exclude.length) { axeContext.exclude = exclude.map((selector) => [selector]); }
             axe.run(Object.keys(axeContext).length ? axeContext : document, { runOnly: { type: 'tag', values: tags } })
                 .then((results) => done({ violations: results.violations }))
@@ -590,7 +552,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         for violation in violations:
             lines.append(f"  [{violation['impact']}] {violation['id']}: {violation['help']}")
             lines.append(f"    {violation['helpUrl']}")
-            for node in violation.get("nodes", [])[:5]:  # Cap per-rule output; the first few are enough to act on.
+            for node in violation.get("nodes", [])[:5]:  # The first few offenders are enough to act on.
                 target = ", ".join(node.get("target", []))
                 lines.append(f"    at {target}")
         details = "\n".join(lines)

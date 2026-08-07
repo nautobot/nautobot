@@ -1,15 +1,10 @@
 """
-Accessibility regression tests.
+Accessibility regression tests: axe-core against representative pages rather than every view.
 
-These run axe-core against a handful of representative pages rather than trying to cover every view: the templates
-exercised here (`base_django.html`, `generic/object_list.html`, `generic/object_retrieve.html`,
-`generic/object_edit.html`) back the overwhelming majority of Nautobot's UI, so a regression in shared markup shows up
-here regardless of which model it was introduced against.
-
-All four axe-core impact levels are gated on. An earlier version gated only `critical` and `serious`, assuming
-lower-impact findings would be too numerous; an audit across these pages found exactly one, and it was a genuine WCAG AA
-failure (`meta-viewport`) that the threshold had been hiding on every page. Impact describes how badly a violation
-affects a user, not how important the criterion is, so it is a poor thing to filter conformance by.
+`base_django.html`, `generic/object_list.html`, `generic/object_retrieve.html` and `generic/object_create_base.html`
+back most of the UI, so a regression in shared markup surfaces here whichever model introduced it. That holds for page
+furniture only -- overridden blocks, self-rendering columns and per-app `extra_styles` are invisible to a single-model
+scan, which is what `test_list_views_across_apps` covers.
 """
 
 from nautobot.core.testing.integration import SeleniumTestCase
@@ -18,7 +13,7 @@ from nautobot.extras.models import Status
 
 
 class AccessibilityTestCase(SeleniumTestCase):
-    """Assert that shared page templates have no critical or serious accessibility violations."""
+    """Assert that Nautobot's shared pages have no axe-core violations."""
 
     def setUp(self):
         super().setUp()
@@ -26,9 +21,8 @@ class AccessibilityTestCase(SeleniumTestCase):
 
         self.status = Status.objects.get_for_model(Location).first()
 
-        # A parent/child pair, not a single object: the tree expand caret and the "filter to descendants" link only
-        # render for rows that have children, and scanning a flat list silently skips that markup entirely. Two real
-        # violations in it went unnoticed because the original fixture had no hierarchy.
+        # A parent/child pair, not a single object: the tree caret and "filter to descendants" link render only for rows
+        # with children (`{% if children_exists %}` in `dcim/tables/template_code.py`), so a flat list skips them.
         self.location_type = LocationType.objects.create(name="A11y Test Site")
         self.child_location_type = LocationType.objects.create(name="A11y Test Building", parent=self.location_type)
         self.location = Location.objects.create(
@@ -49,18 +43,7 @@ class AccessibilityTestCase(SeleniumTestCase):
         self.assertNoAccessibilityViolations()
 
     def test_list_views_across_apps(self):
-        """
-        Scan a list view from each app, not just the one that backs the shared template.
-
-        The premise of the rest of this file -- that shared templates mean one list view stands in for all of them -- is
-        true of the page furniture and false of everything a view contributes itself. Templates that override blocks,
-        columns that render their own markup, and per-app inline `extra_styles` are all invisible to a single-model scan.
-        A sweep across these pages found a WCAG 1.4.3 failure on `/extras/jobs/` affecting 46 links, from styling in that
-        template alone, which every scan up to then had passed.
-
-        These are still list views of the same template, so this is cheap. It is not a substitute for an App scanning its
-        own views.
-        """
+        """Cover markup each view adds to the shared template. Not a substitute for an App scanning its own views."""
         for path in (
             "/circuits/circuits/",
             "/cloud/cloud-accounts/",
@@ -99,15 +82,11 @@ class AccessibilityTestCase(SeleniumTestCase):
 
     def test_object_edit_view_with_validation_errors(self):
         """
-        A form re-rendered with validation errors is where `aria-invalid` and the `aria-describedby` wiring for error
-        lists have to hold up, so it needs its own scan.
+        Scan the error state, where `aria-invalid` and the `aria-describedby` wiring for error lists have to hold up.
 
-        Required fields carry the HTML5 `required` attribute, so the browser refuses to submit and the server never gets
-        the chance to produce errors; `required` is stripped first to force server-side validation.
-
-        This uses Location Type rather than Location deliberately. Submitting an empty Location form currently raises
-        `RelatedObjectDoesNotExist` from `Location.clean()`, which reads `self.location_type.parent` without checking
-        that `location_type` was supplied -- a pre-existing bug unrelated to accessibility.
+        `required` is stripped so the browser will submit and the server can reject. Location Type rather than Location
+        because an empty Location form raises `RelatedObjectDoesNotExist` from `Location.clean()`, which reads
+        `self.location_type.parent` unguarded -- a pre-existing bug unrelated to accessibility.
         """
         self.browser.visit(f"{self.live_server_url}/dcim/location-types/add/")
         self.assertTrue(self.browser.is_element_present_by_css("form", wait_time=10))
@@ -131,16 +110,12 @@ class AccessibilityTestCase(SeleniumTestCase):
 
     def test_accessibility_assertion_context_is_honoured(self):
         """
-        Exercise the `context` and `exclude` plumbing in `assertNoAccessibilityViolations` itself.
+        Self-test the `context`/`exclude` plumbing. A malformed axe context makes axe reject and fails loudly, but a
+        well-formed selector aimed at the wrong subtree scans the wrong thing and reports nothing. Every call in this
+        file passes the default `exclude`, but django-debug-toolbar is absent under the test settings, so nothing else
+        checks that it suppresses anything.
 
-        These build an axe context object rather than passing `document`, and axe rejects a malformed one, so a mistake
-        here would not fail loudly -- it would quietly scan the wrong part of the page and report nothing. The default
-        `exclude` covers django-debug-toolbar, which is absent under the test settings, so nothing in the suite as it
-        stands would exercise the argument at all.
-
-        Inject a deliberate contrast failure to check against, rather than relying on a real one: real violations are
-        what the rest of this file exists to remove, so any test depending on one is a test that breaks when the code
-        gets better.
+        The violation is injected rather than borrowed from the page, so this does not break as the UI improves.
         """
         self.browser.visit(f"{self.live_server_url}/dcim/locations/")
         self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
@@ -148,7 +123,7 @@ class AccessibilityTestCase(SeleniumTestCase):
             """
             const offender = document.createElement('div');
             offender.id = 'a11y-self-test';
-            /* #777 on #888: 1.2:1, far below the 4.5:1 of 1.4.3 AA, and large enough not to be skipped as decorative. */
+            /* 16px normal weight, so 1.4.3 AA wants 4.5:1; #777 on #888 is about 1.3:1. */
             offender.style.cssText = 'background:#888;color:#777;font-size:16px;padding:8px';
             offender.textContent = 'Deliberately low contrast text for the harness self-test';
             document.querySelector('main').append(offender);
@@ -159,17 +134,14 @@ class AccessibilityTestCase(SeleniumTestCase):
             self.assertNoAccessibilityViolations()
         self.assertIn("color-contrast", str(failure.exception))
 
-        # Excluded, the same page passes -- so `exclude` reaches axe and narrows what it reports.
         self.assertNoAccessibilityViolations(exclude=("#a11y-self-test",))
 
-        # And `context` still limits the scan, rather than being ignored now that it is wrapped in a context object.
         self.assertNoAccessibilityViolations(context="header")
         with self.assertRaises(AssertionError):
             self.assertNoAccessibilityViolations(context="main")
 
-        # The default exclusion has to cover a subtree, not just the element named: django-debug-toolbar reports against
-        # elements nested inside `#djDebugRoot`, such as the `#djShowToolBarJ` span in its collapsed handle. Stand the
-        # shape of it up here, since the toolbar itself is not installed under the test settings.
+        # `AXE_EXCLUDE_SELECTORS` has to exclude the whole subtree, since django-debug-toolbar reports against elements
+        # nested inside `#djDebugRoot`. Rebuild that shape here, as the toolbar itself is absent under test settings.
         self.browser.execute_script(
             """
             const offender = document.getElementById('a11y-self-test');
