@@ -3916,6 +3916,54 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertEqual(instance.type, InterfaceTypeChoices.TYPE_VIRTUAL)
         self.assertEqual(instance.parent_interface, self.lag_interface)
 
+    def test_edit_interface_on_module_without_parent_device(self):
+        """https://github.com/nautobot/nautobot/issues/9282."""
+        self.add_permissions("dcim.change_interface", "dcim.view_module", "extras.view_status", "ipam.view_vlan")
+        module_location = Location.objects.get_for_model(Module).first()
+        module = Module.objects.create(
+            module_type=ModuleType.objects.create(
+                manufacturer=Manufacturer.objects.first(), model="Issue 9282 Module Type"
+            ),
+            location=module_location,
+            status=Status.objects.get_for_model(Module).first(),
+        )
+        interface = Interface.objects.create(
+            module=module,
+            name="Module Interface 1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            status=Status.objects.get_for_model(Interface).first(),
+        )
+        # A Module installed at a Location has no parent Device, so neither does its interface
+        self.assertIsNone(interface.device)
+        vlan = VLAN.objects.create(
+            vid=920,
+            name="Issue 9282 VLAN",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        # Assign the VLAN while it is still global and locate it afterwards, which is how such data comes to exist
+        interface.tagged_vlans.set([vlan])
+        vlan.locations.set([module_location])
+
+        request = {
+            "path": self._get_url("edit", interface),
+            "data": post_data(
+                {
+                    "name": interface.name,
+                    "status": interface.status.pk,
+                    "type": interface.type,
+                    "mode": InterfaceModeChoices.MODE_TAGGED,
+                    "tagged_vlans": [vlan.pk],
+                    "description": "Edited via the UI",
+                }
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        interface.refresh_from_db()
+        self.assertEqual(interface.description, "Edited via the UI")
+        self.assertEqual(list(interface.tagged_vlans.all()), [vlan])
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_valid_ipaddress_link_of_ipaddress_table_in_interface_detail(self):
         """Assert bug https://github.com/nautobot/nautobot/issues/4685 Invalid link in IPAddress Table in an

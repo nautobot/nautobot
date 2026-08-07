@@ -239,12 +239,27 @@ class ModularDeviceComponentTemplateFilterForm(DeviceComponentTemplateFilterForm
 
 
 class InterfaceCommonForm(forms.Form):
+    def _get_tagged_vlan_scope(self):
+        """Return the object whose Location constrains this interface's tagged VLANs, or None if there is none."""
+        if "device" not in self.cleaned_data:
+            # VMInterface forms scope tagged VLANs by the parent virtual machine instead of a device
+            return self.cleaned_data.get("virtual_machine")
+        if self.cleaned_data["device"] is not None:
+            return self.cleaned_data["device"]
+        # A Module interface has no device of its own in cleaned_data.
+        # A Module installed directly at a Location also has no parent device.
+        # Its own Location is deliberately not used here, because the model and REST API
+        # layers scope tagged VLANs by the parent device only.
+        module = self.cleaned_data.get("module")
+        if module is None:
+            return None
+        return getattr(module, "device", None)
+
     def clean(self):
         super().clean()
 
-        parent_field = "device" if "device" in self.cleaned_data else "virtual_machine"
-        tagged_vlans = self.cleaned_data["tagged_vlans"]
-        mode = self.cleaned_data["mode"]
+        tagged_vlans = self.cleaned_data.get("tagged_vlans") or []
+        mode = self.cleaned_data.get("mode")
 
         # Untagged interfaces cannot be assigned tagged VLANs
         if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
@@ -257,26 +272,28 @@ class InterfaceCommonForm(forms.Form):
         # Validate tagged VLANs; must be a global VLAN or in the same location as the
         # parent device/VM or any of that location's parent locations
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            location = self.cleaned_data[parent_field].location
-            if location:
-                location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
-            else:
-                location_ids = []
-            invalid_vlans = [
-                str(v)
-                for v in tagged_vlans
-                if v.locations.without_tree_fields().exists()
-                and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
-            ]
+            scope = self._get_tagged_vlan_scope()
+            if scope is not None:
+                location = scope.location
+                if location:
+                    location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+                else:
+                    location_ids = []
+                invalid_vlans = [
+                    str(v)
+                    for v in tagged_vlans
+                    if v.locations.without_tree_fields().exists()
+                    and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
+                ]
 
-            if invalid_vlans:
-                raise forms.ValidationError(
-                    {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
-                        "interface's parent device, or is in one of the parents of the interface's parent device's location, "
-                        "or it must be global."
-                    }
-                )
+                if invalid_vlans:
+                    raise forms.ValidationError(
+                        {
+                            "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
+                            "interface's parent device, or is in one of the parents of the interface's parent device's location, "
+                            "or it must be global."
+                        }
+                    )
 
 
 class ComponentForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
@@ -3812,14 +3829,15 @@ class InterfaceBulkEditForm(
     def clean(self):
         super().clean()
 
-        tagged_vlans = bool(self.cleaned_data["add_tagged_vlans"] or self.cleaned_data["remove_tagged_vlans"])
+        mode = self.cleaned_data.get("mode")
+        tagged_vlans = bool(self.cleaned_data.get("add_tagged_vlans") or self.cleaned_data.get("remove_tagged_vlans"))
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
+        if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
         # In theory UI blocks this from happening, but to ensure on backend we enforce.
         # An interface must be in tagged mode to have an untagged VLAN assigned
-        elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
+        elif tagged_vlans and mode != InterfaceModeChoices.MODE_TAGGED:
             non_tagged = (
                 Interface.objects.filter(pk__in=self.cleaned_data["pk"])
                 .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
@@ -3834,7 +3852,7 @@ class InterfaceBulkEditForm(
                 )
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
+        elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
 
