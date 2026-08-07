@@ -131,17 +131,20 @@ For this example I created a simple Python file called `customer_storage.py` in 
 
 ```python
 """Example of a custom extension to support flexible s3 storage."""
+
 from storages.backends.s3 import S3Storage
 
+
 class MediaStorage(S3Storage):
-    bucket_name = 'nautobot-sw-media'
-    location = "software_images" # store files under directory `software_images/` in bucket `nautobot-sw-media`
+    bucket_name = "nautobot-sw-media"
+    location = "software_images"  # store files under directory `software_images/` in bucket `nautobot-sw-media`
 ```
 
 In the model you just need to pass in the `storage=` argument.
 
 ```python
 from custom_config_app.custom_storage import MediaStorage
+
 
 class SoftwareFileAttachment(BaseModel):
     """An uploaded software bin file for OS upgrades."""
