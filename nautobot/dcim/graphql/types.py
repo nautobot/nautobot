@@ -2,7 +2,7 @@ import graphene
 
 from nautobot.circuits.graphql.types import CircuitTerminationType
 from nautobot.core.graphql.types import OptimizedNautobotObjectType
-from nautobot.core.graphql.utils import construct_resolver
+from nautobot.core.graphql.utils import construct_resolver, permission_safe_attribute_resolver
 from nautobot.dcim.filters import (
     CableFilterSet,
     ConsolePortFilterSet,
@@ -39,7 +39,6 @@ from nautobot.dcim.models import (
     Rack,
     RearPort,
 )
-from nautobot.extras.models import DynamicGroup
 
 
 class LocationType(OptimizedNautobotObjectType):
@@ -70,12 +69,26 @@ class DeviceType(OptimizedNautobotObjectType):
     all_rear_ports = graphene.List("nautobot.dcim.graphql.types.RearPortType")
     cluster = graphene.Field("nautobot.virtualization.graphql.types.ClusterType")
     common_vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
     primary_ip = graphene.Field("nautobot.ipam.graphql.types.IPAddressType")
     vc_interfaces = graphene.List("nautobot.dcim.graphql.types.InterfaceType")
 
-    def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
+    # These fields are backed by model properties (not filtersets/FKs -- e.g. `Device.cluster` is a legacy
+    # property, not a concrete FK), so they bypass the auto-generated permission-enforcing resolvers; wrap
+    # each so it only returns related objects the user may view. (`dynamic_groups` is added and made
+    # permission-safe generically by `extend_schema_type_global_features`.)
+    resolve_all_console_ports = permission_safe_attribute_resolver("all_console_ports")
+    resolve_all_console_server_ports = permission_safe_attribute_resolver("all_console_server_ports")
+    resolve_all_front_ports = permission_safe_attribute_resolver("all_front_ports")
+    resolve_all_interfaces = permission_safe_attribute_resolver("all_interfaces")
+    resolve_all_module_bays = permission_safe_attribute_resolver("all_module_bays")
+    resolve_all_modules = permission_safe_attribute_resolver("all_modules")
+    resolve_all_power_ports = permission_safe_attribute_resolver("all_power_ports")
+    resolve_all_power_outlets = permission_safe_attribute_resolver("all_power_outlets")
+    resolve_all_rear_ports = permission_safe_attribute_resolver("all_rear_ports")
+    resolve_cluster = permission_safe_attribute_resolver("cluster")
+    resolve_common_vc_interfaces = permission_safe_attribute_resolver("common_vc_interfaces")
+    resolve_primary_ip = permission_safe_attribute_resolver("primary_ip")
+    resolve_vc_interfaces = permission_safe_attribute_resolver("vc_interfaces")
 
 
 class ModuleBayType(OptimizedNautobotObjectType):
@@ -86,6 +99,10 @@ class ModuleBayType(OptimizedNautobotObjectType):
 
 class ModuleType(OptimizedNautobotObjectType):
     device = graphene.Field("nautobot.dcim.graphql.types.DeviceType")
+
+    # `Module.device` is a model property (resolved up the module-bay chain), not a concrete FK, so wrap it
+    # to enforce view permissions on the related device.
+    resolve_device = permission_safe_attribute_resolver("device")
 
     class Meta:
         model = Module
@@ -109,11 +126,6 @@ class RackType(OptimizedNautobotObjectType):
         model = Rack
         filterset_class = RackFilterSet
         exclude = ["images"]
-
-    dynamic_groups = graphene.List("nautobot.extras.graphql.types.DynamicGroupType")
-
-    def resolve_dynamic_groups(self, args):
-        return DynamicGroup.objects.get_for_object(self)
 
 
 class CableType(OptimizedNautobotObjectType):

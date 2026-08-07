@@ -1,11 +1,12 @@
 import datetime
 import json
 import tempfile
-from unittest import skip
+from unittest import mock, skip
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import connection
 from django.test import override_settings
@@ -2270,6 +2271,32 @@ class DeviceTest(APIViewTestCases.APIViewTestCase):
         child_device.refresh_from_db()
         self.assertEqual(child_device.parent_bay.pk, device_bay_1.pk)
 
+    def test_list_query_count_with_device_bays(self):
+        """
+        Listing devices must not run an extra query per device to resolve the reverse one-to-one `parent_bay`.
+        """
+        self.add_permissions("dcim.view_device")
+        list_url = reverse("dcim-api:device-list")
+
+        parent_device, device_bay_1, device_bay_2, device_type_child = self._parent_device_test_data()
+        device_status = Status.objects.get_for_model(Device).first()
+        device_role = Role.objects.get_for_model(Device).first()
+
+        for name, device_bay in (("Child device in bay 1", device_bay_1), ("Child device in bay 2", device_bay_2)):
+            child_device = Device.objects.create(
+                device_type=device_type_child,
+                role=device_role,
+                status=device_status,
+                name=name,
+                location=parent_device.location,
+            )
+            device_bay.installed_device = child_device
+            device_bay.save()
+
+        with AssertNoRepeatedQueries(self):
+            response = self.client.get(list_url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
 
 class ModuleTestCase(APIViewTestCases.APIViewTestCase):
     model = Module
@@ -3006,6 +3033,37 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertIsNone(response.data["duplex"])
 
+    def test_list_with_depth_reduces_redis_lookups(self):
+        """
+        Regression test: a `depth`-expanded list request should not perform one Redis round-trip per related
+        object per model-metadata lookup (CustomField/Relationship/ComputedField definitions), since the
+        RequestCacheMiddleware now memoizes such lookups for the duration of the request.
+        """
+        self.add_permissions("dcim.view_interface")
+        url = reverse("dcim-api:interface-list") + f"?depth=2&device_id={self.devices[0].pk}"
+
+        # Baseline: with request-scoped memoization disabled (simulating pre-fix behavior), every repeated
+        # CustomField/Relationship/ComputedField lookup for the same model round-trips to Redis.
+        with (
+            mock.patch("nautobot.core.utils.cache.get_request_cache", return_value=None),
+            mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get_without,
+        ):
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertGreater(response.data["count"], 0)
+
+        # With request-scoped memoization enabled (the fix, wired up via RequestCacheMiddleware), repeated lookups
+        # for the same model within this one request should be served locally instead of hitting Redis again.
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get_with:
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        self.assertLess(
+            mock_cache_get_with.call_count,
+            mock_cache_get_without.call_count,
+            "Request-scoped memoization should reduce the number of Redis cache.get calls",
+        )
+
 
 class FrontPortTest(Mixins.BasePortTestMixin):
     model = FrontPort
@@ -3557,10 +3615,22 @@ class CableTest(Mixins.BaseComponentTestMixin):
         self.assertHttpStatus(response, status.HTTP_200_OK)
         terminations = response.json()["terminations"]
         self.assertEqual(set(terminations), {"a1", "b1"})
-        # Depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
+        # Without view_interface permission, we get the constrained representation even at depth=1:
+        a_slot = terminations["a1"]
+        self.assertIsInstance(a_slot, dict)
+        self.assertIn("display", a_slot)
+        self.assertNotIn("name", a_slot)
+
+        self.add_permissions("dcim.view_interface")
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        terminations = response.json()["terminations"]
+        self.assertEqual(set(terminations), {"a1", "b1"})
+        # With view_interface, depth=1 expands the slot value from `{id, object_type, url}` into the full Interface
         # serializer payload (which carries fields like `name`).
         a_slot = terminations["a1"]
         self.assertIsInstance(a_slot, dict)
+        self.assertIn("display", a_slot)
         self.assertIn("name", a_slot)
 
     def test_list_query_count_does_not_grow_with_cable_count(self):

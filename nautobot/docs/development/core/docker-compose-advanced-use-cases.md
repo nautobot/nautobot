@@ -179,7 +179,7 @@ Starting the stack only stands up the observability backends; Nautobot must also
 
 #### Viewing Traces, Metrics, and Logs
 
-Open Grafana at `http://localhost:3000` (anonymous access is enabled for local development, so no login is required). Tempo, Mimir, and Loki are pre-provisioned as data sources, and dashboards - including a GraphQL tracing dashboard - are provisioned from `development/configs/grafana/dashboards/`. The individual backends are also exposed on the host for direct access or debugging: Grafana on `3000`, the collector's OTLP receivers on `4317` (gRPC) and `4318` (HTTP), Mimir on `9009`, and Loki on `3100`.
+Open Grafana at `http://localhost:3000` (anonymous access is enabled for local development, so no login is required). Tempo, Mimir, and Loki are pre-provisioned as data sources, and dashboards - including a GraphQL tracing dashboard - are provisioned from `development/configs/grafana/dashboards/`. The individual backends are also exposed on the host for direct access or debugging: Grafana on `3000`, Tempo's OTLP receivers on `4317` (gRPC) and `4318` (HTTP), Mimir on `9009`, and Loki on `3100`. Note that in this stack it is Tempo - not the OpenTelemetry Collector - that publishes host ports `4317`/`4318`; the collector is reachable only on the internal Docker network as `otel:4317` (which is where Nautobot sends its telemetry, per `development/dev.env`).
 
 To stop the stack, use `invoke stop`. The `grafana_data` and `mimir_data` volumes persist across restarts; use `invoke destroy` to remove them along with the rest of the environment.
 

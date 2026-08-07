@@ -28,7 +28,9 @@ from nautobot.core import constants
 from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
 from nautobot.core.api.utils import (
     dict_to_filter_params,
+    get_brief_representation,
     nested_serializer_factory,
+    user_can_view_object,
 )
 from nautobot.core.models.fields import LaxURLField as LaxURLModelField
 from nautobot.core.models.managers import TagsManager
@@ -501,6 +503,17 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         return data
 
     def to_representation(self, instance):
+        # For nested (depth > 0) serializers, downgrade related objects that the requesting user is not
+        # permitted to view to their brief {id, object_type, url, display} representation rather than leaking
+        # full detail. The `display` value is included (unlike a depth-0 leaf brief) since this object would
+        # otherwise have been fully serialized due to `?depth`; this gives parity with the UI, where a related
+        # object's display value is visible without full view permission. Root serializers are already
+        # permission-filtered by restrict() and are never nested.
+        if self.is_nested:
+            request = self.context.get("request")
+            if not user_can_view_object(request, instance):
+                return get_brief_representation(instance, request, include_display=True)
+
         data = super().to_representation(instance)
         altered_data = {}
 

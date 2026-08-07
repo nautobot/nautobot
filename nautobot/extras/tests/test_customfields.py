@@ -8,6 +8,7 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import ProtectedError, QuerySet
 from django.db.models.signals import m2m_changed
@@ -24,6 +25,7 @@ from nautobot.core.tables import CustomFieldColumn
 from nautobot.core.testing import APITestCase, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.core.testing.utils import extract_page_body, post_data
+from nautobot.core.utils.cache import construct_cache_key, request_cache
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.filters import LocationFilterSet
 from nautobot.dcim.forms import RackFilterForm
@@ -755,6 +757,67 @@ class CustomFieldManagerTest(TestCase):
         self.assertIsInstance(listing, list)
         self.assertEqual(2, len(listing))
         self.assertQuerySetEqualAndNotEmpty(qs, listing)
+
+    def test_populate_list_caches(self):
+        """
+        `populate_list_caches()` should correctly pre-warm the `get_for_model(..., get_queryset=False)` cache for
+        both `exclude_filter_disabled=False` (the default) and `exclude_filter_disabled=True`, so that a
+        subsequent call for either variant is served entirely from cache with no additional queries.
+        """
+        CustomField.objects.populate_list_caches()
+
+        with self.assertNumQueries(0):
+            listing = CustomField.objects.get_for_model(Location, get_queryset=False)
+        self.assertIsInstance(listing, list)
+        self.assertEqual(2, len(listing))
+
+        with self.assertNumQueries(0):
+            filtered_listing = CustomField.objects.get_for_model(
+                Location, exclude_filter_disabled=True, get_queryset=False
+            )
+        self.assertIsInstance(filtered_listing, list)
+        self.assertEqual(1, len(filtered_listing))
+
+        with self.assertNumQueries(0):
+            keys = CustomField.objects.keys_for_model(Location)
+        self.assertEqual(2, len(keys))
+
+    def test_get_for_model_and_keys_for_model_reduce_redis_lookups_within_request_cache(self):
+        """
+        Repeated calls to get_for_model()/keys_for_model() for the same model should not each round-trip to Redis
+        when performed within a single `request_cache()` scope (e.g. a single API request), since the underlying
+        data cannot change mid-request. This mirrors the real-world N+1 pattern seen when the REST API's `depth`
+        parameter causes the same CustomField definitions to be looked up once per serialized related object.
+        """
+        # Warm the shared (Redis) cache outside of any request_cache() scope.
+        CustomField.objects.get_for_model(Location)
+        CustomField.objects.keys_for_model(Location)
+
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+            with request_cache():
+                for _ in range(10):
+                    CustomField.objects.get_for_model(Location)
+                    CustomField.objects.get_for_model(Location, get_queryset=False)
+                    CustomField.objects.keys_for_model(Location)
+
+        # Only the first lookup of each distinct cache key should need to hit Redis; the rest should be served
+        # from the request-scoped local cache.
+        self.assertLessEqual(mock_cache_get.call_count, 3)
+
+    def test_request_cache_does_not_leak_between_requests(self):
+        """A request_cache() scope should not serve stale data left over from a previous, now-closed scope."""
+        with request_cache():
+            CustomField.objects.get_for_model(Location)
+
+        # Simulate a schema change performed by another request/process without going through this process's
+        # own `request_cache()` scope (which would normally invalidate the shared cache, not the local one).
+        custom_field = CustomField(type=CustomFieldTypeChoices.TYPE_TEXT, label="Test CF Leak Check", default="foo")
+        custom_field.save()
+        custom_field.content_types.set([self.content_type])
+
+        with request_cache():
+            listing = list(CustomField.objects.get_for_model(Location, get_queryset=False))
+        self.assertIn(custom_field.key, [cf.key for cf in listing])
 
 
 class ComputedFieldManagerTestCase(TestCase):
@@ -1986,6 +2049,19 @@ class CustomFieldFilterTest(TestCase):
             _custom_field_data={},
         )
 
+    def test_filterset_construction_does_not_repeatedly_look_up_choices_per_custom_field(self):
+        """FilterSet construction should read a CustomField's cached `choices` at most once, not once per filter."""
+        cf8 = CustomField.objects.get(label="CF8")  # TYPE_SELECT, has choices
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+            self.filterset({}, self.queryset)
+        choices_cache_key = construct_cache_key(cf8, method_name="choices", branch_aware=True)
+        choices_lookups = [call for call in mock_cache_get.call_args_list if call.args[0] == choices_cache_key]
+        self.assertLessEqual(
+            len(choices_lookups),
+            1,
+            f"Expected at most 1 Redis lookup for {choices_cache_key}, got {len(choices_lookups)}",
+        )
+
     def test_filter_integer(self):
         self.assertQuerySetEqual(
             self.filterset({"cf_cf1": 100}, self.queryset).qs,
@@ -2369,6 +2445,23 @@ class CustomFieldFilterTest(TestCase):
         self.assertQuerySetEqualAndNotEmpty(  # https://github.com/nautobot/nautobot/issues/5009
             self.filterset({"cf_cf9": str(self.multiselect_choices[0].pk)}, self.queryset).qs,
             self.queryset.filter(_custom_field_data__cf9__contains=self.multiselect_choices[0].value),
+        )
+        # Negation excludes records containing the value (https://github.com/nautobot/nautobot/issues/9120)
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9__n": ["Foo"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf9__contains="Foo")
+            | self.queryset.filter(_custom_field_data__cf9__isnull=True),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9__n": ["Bar"]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf9__contains="Bar")
+            | self.queryset.filter(_custom_field_data__cf9__isnull=True),
+        )
+        # Negation by choice PK, mirroring the positive-filter case above
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cf_cf9__n": [str(self.multiselect_choices[0].pk)]}, self.queryset).qs,
+            self.queryset.exclude(_custom_field_data__cf9__contains=self.multiselect_choices[0].value)
+            | self.queryset.filter(_custom_field_data__cf9__isnull=True),
         )
 
 

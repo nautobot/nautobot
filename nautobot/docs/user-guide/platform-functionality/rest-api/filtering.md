@@ -82,7 +82,7 @@ Custom fields can be mixed with built-in fields to further narrow results. When 
 
 ## Lookup Expressions
 
-Certain model fields (including, in Nautobot 1.4.0 and later, custom fields of type `text`, `url`, `select`, `integer`, and `date`) also support filtering using additional lookup expressions. This allows for negation and other context-specific filtering.
+Certain model fields (including custom fields of type `text`, `url`, `select`, `multiselect`, `integer`, `date`, and `datetime`) also support filtering using additional lookup expressions. This allows for negation and other context-specific filtering.
 
 These lookup expressions can be applied by adding a suffix to the desired field's name, e.g. `mac_address__n`. In this case, the filter expression is for negation and it is separated by two underscores. Below are the lookup expressions that are supported across different field types.
 

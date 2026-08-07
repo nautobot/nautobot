@@ -1,6 +1,0 @@
-# Ensure mimir data directories exist but don't track them in git
-compactor/*
-data/tsdb/*
-rules/*
-tsdb/*
-tsdb-sync/*

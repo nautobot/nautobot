@@ -1104,6 +1104,7 @@ class InterfaceFilterSet(
     kind = django_filters.ChoiceFilter(
         choices=[("physical", "Physical"), ("virtual", "Virtual"), ("wireless", "Wireless")],
         method="filter_kind",
+        field_name="type",  # prevents unnecessary queryset logic in REST API schema generation
         label="Kind of interface",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
@@ -1613,11 +1614,10 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     termination_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
-        distinct=True,
-        lookup_expr="in",
         method="_termination_type",
         label="Termination (either end) type",
     )
+    termination_id = MultiValueUUIDFilter(method="_termination_id", label="Termination (either end) (ID)")
 
     class Meta:
         model = Cable
@@ -1728,7 +1728,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
 
     @extend_schema_field({"type": "string"})
     def _termination_type(self, queryset, name, value):
-        return queryset.filter(self.generate_query__termination_type(value)).distinct()
+        return queryset.filter(self.generate_query__termination_type(value))
 
     @extend_schema_field({"type": "string"})
     def _termination_a_type(self, queryset, name, value):
@@ -1736,7 +1736,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value, "A")).values_list(
             "cable_id", flat=True
         )
-        return queryset.filter(pk__in=cable_ids).distinct()
+        return queryset.filter(pk__in=cable_ids)
 
     @extend_schema_field({"type": "string"})
     def _termination_b_type(self, queryset, name, value):
@@ -1744,15 +1744,17 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value, "B")).values_list(
             "cable_id", flat=True
         )
-        return queryset.filter(pk__in=cable_ids).distinct()
+        return queryset.filter(pk__in=cable_ids)
 
     @staticmethod
-    def _build_termination_id_q(value, cable_end):
+    def _build_termination_id_q(value, cable_end=None):
         """Build a Q matching CableToCableTermination rows whose populated termination FK has its PK in `value`."""
         q = Q()
         for fk in TERMINATION_FK_FIELDS:
             q |= Q(**{f"{fk}_id__in": value})
-        return q & Q(cable_end=cable_end)
+        if cable_end:
+            q &= Q(cable_end=cable_end)
+        return q
 
     def _termination_a_id(self, queryset, name, value):
         """Filter cables by A-side termination ID (backward compatible)."""
@@ -1764,6 +1766,13 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     def _termination_b_id(self, queryset, name, value):
         """Filter cables by B-side termination ID (backward compatible)."""
         cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value, "B")).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
+
+    def _termination_id(self, queryset, name, value):
+        """Filter cables by either termination ID."""
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value)).values_list(
             "cable_id", flat=True
         )
         return queryset.filter(pk__in=cable_ids)

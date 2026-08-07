@@ -375,7 +375,7 @@ class Job(PrimaryModel):
     @property
     def task_queues(self) -> list[str]:
         """Deprecated backward-compatibility property for the list of queue names for this Job."""
-        return self.job_queues.values_list("name", flat=True)
+        return list(self.job_queues.values_list("name", flat=True))
 
     @task_queues.setter
     def task_queues(self, value: Union[str, list[str]]):
@@ -1320,6 +1320,9 @@ class JobConsoleEntry(BaseModel):
     text = models.TextField(help_text="Actual line of output data")
 
     documentation_static_path = "docs/user-guide/platform-functionality/jobs/models.html"
+    is_metadata_associable_model = False
+    is_data_compliance_model = False
+    is_version_controlled = False
 
     class Meta:
         ordering = ["timestamp"]

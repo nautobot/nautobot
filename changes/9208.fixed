@@ -1,1 +1,0 @@
-Fixed the Worker and Traceback sections on the Job Result "Advanced" tab not updating without a manual page refresh while a job runs or after it completes.

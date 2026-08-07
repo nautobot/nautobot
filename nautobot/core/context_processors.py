@@ -6,6 +6,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.templatetags.helpers import has_one_or_more_perms
 from nautobot.core.utils import lookup
+from nautobot.core.utils.config import ExposedSettings
 from nautobot.extras.registry import registry
 
 
@@ -37,11 +38,13 @@ def get_saml_idp():
 
 def settings(request):
     """
-    Expose Django settings in the template context. Example: {{ settings.DEBUG }}
+    Expose an allowlisted, non-sensitive subset of Django settings in the template context.
+
+    Access is limited by `ExposedSettings`. Example: {{ settings.VERSION }}
     """
     root_template = "base_django.html"
     return {
-        "settings": django_settings,
+        "settings": ExposedSettings(),
         "root_template": root_template,
     }
 

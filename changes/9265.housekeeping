@@ -1,1 +1,0 @@
-Refactored NamespaceUIViewSet - changed DistinctViewTab to use UI framework instead of as a separate HTML template.

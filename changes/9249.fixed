@@ -1,1 +1,0 @@
-Extended the `Cable.objects` backward-compatibility shims to also accept `termination_[a|b]_type_id` (integer `ContentType` PK) in lookups such as `filter()`, `get()`, and `get_or_create()`, as well as in `Cable(...)` construction, matching the existing `termination_[a|b]_type`/`termination_[a|b]_id` support.

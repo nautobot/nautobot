@@ -1,12 +1,15 @@
 """Tests for OpenTelemetry instrumentation in Nautobot."""
 
+from copy import deepcopy
 import json
+import logging
 import os
 from types import SimpleNamespace
 import unittest
 from unittest.mock import MagicMock, patch
 
 from django.conf import settings
+from django.http.request import RawPostDataException
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
 from opentelemetry import trace as otel_trace
@@ -22,8 +25,9 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 import requests
 
-from nautobot.core import testing
+from nautobot.core import settings as core_settings, testing
 from nautobot.core.cli.opentelemetry import instrument
+from nautobot.core.logging import OtelTraceContextFilter
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
 
 try:
@@ -35,14 +39,14 @@ except ImportError:
 
 
 def _db_instrumentor_for_engine(engine):
-    """Return the DB instrumentor class matching ``engine``, mirroring ``instrument()`` in opentelemetry.py.
+    """Return the DB instrumentor class matching `engine`, mirroring `instrument()` in opentelemetry.py.
 
-    Production selects the instrumentor with the same ``"mysql" in engine`` test, so tests read the live
-    ``settings.DATABASES`` engine to instrument/uninstrument the backend the suite is actually running against
+    Production selects the instrumentor with the same `"mysql" in engine` test, so tests read the live
+    `settings.DATABASES` engine to instrument/uninstrument the backend the suite is actually running against
     (e.g. CI's dedicated MySQL job), rather than hardcoding Psycopg2.
 
     The mysqlclient instrumentor is imported lazily (only in the MySQL branch) because its package runs
-    ``import MySQLdb`` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
+    `import MySQLdb` at import time, which fails on Postgres CI jobs where mysqlclient is not installed.
     """
     if "mysql" in engine:
         from opentelemetry.instrumentation.mysqlclient import MySQLClientInstrumentor
@@ -52,16 +56,15 @@ def _db_instrumentor_for_engine(engine):
 
 
 def _fake_otel_config(**overrides):
-    """Build a stand-in for the loaded ``nautobot_config`` module that ``instrument()`` reads.
+    """Build a stand-in for the loaded `nautobot_config` module that `instrument()` reads.
 
-    ``instrument()`` reads its config from ``sys.modules["nautobot_config"]`` (registered by
-    ``load_settings()``), not from ``nautobot.core.settings``. Tests inject this fake via
-    ``patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})``. It must carry every
-    attribute ``instrument()`` reads, with real types: ``DATABASES`` is a real dict so the
-    ``"mysql" in ...["ENGINE"]`` check works, and ``OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT`` is an int
-    (or ``None`` for unlimited, mirroring an empty env var)
-    (or ``None`` for unlimited, mirroring an empty env var).
-    Defaults disable all noisy exporters/layers; pass ``overrides`` to drive a specific branch.
+    `instrument()` reads its config from `sys.modules["nautobot_config"]` (registered by
+    `load_settings()`), not from `nautobot.core.settings`. Tests inject this fake via
+    `patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(...)})`, or pass it directly to
+    `install_exporters(config=...)`. It carries every attribute both functions read, with real types:
+    `DATABASES` is a real dict so the `"mysql" in ...["ENGINE"]` check works, and
+    `OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT` is an int (or `None` for unlimited, mirroring an empty
+    env var). Defaults disable all noisy exporters/layers; pass `overrides` to drive a specific branch.
     """
     defaults = {
         "OTEL_TRACES_EXPORTER": ["none"],
@@ -184,39 +187,187 @@ class InstrumentFunctionTest(testing.TestCase):
         mock_mysql.return_value.instrument.assert_called_once()
         mock_psycopg2.return_value.instrument.assert_not_called()
 
+    def test_log_correlation_injects_context_without_clobbering_logging(self):
+        """OTEL_PYTHON_LOG_CORRELATION=True must inject trace context, not override the logging format.
+
+        set_logging_format=True would call logging.basicConfig() and attach a StreamHandler to the root
+        logger; Nautobot's own loggers propagate to root, so that handler re-emits every record in a
+        different format, producing duplicate, oddly-formatted log lines. instrument() must instead pass
+        inject_trace_context=True, which adds the otel* attributes without touching handlers/format.
+        """
+        with patch("nautobot.core.cli.opentelemetry.LoggingInstrumentor") as mock_logging:
+            with patch.dict(
+                "sys.modules",
+                {"nautobot_config": _fake_otel_config(OTEL_PYTHON_LOG_CORRELATION=True)},
+            ):
+                instrument()
+
+        mock_logging.return_value.instrument.assert_called_once()
+        _, kwargs = mock_logging.return_value.instrument.call_args
+        self.assertTrue(kwargs.get("inject_trace_context"))
+        # Guard against a regression back to the root-handler-clobbering behavior.
+        self.assertNotIn("set_logging_format", kwargs)
+
+    def test_log_correlation_disabled_skips_logging_instrumentor(self):
+        """OTEL_PYTHON_LOG_CORRELATION=False must not instrument stdlib logging at all."""
+        with patch("nautobot.core.cli.opentelemetry.LoggingInstrumentor") as mock_logging:
+            with patch.dict(
+                "sys.modules",
+                {"nautobot_config": _fake_otel_config(OTEL_PYTHON_LOG_CORRELATION=False)},
+            ):
+                instrument()
+
+        mock_logging.return_value.instrument.assert_not_called()
+
+
+class OtelTraceContextFilterTest(testing.TestCase):
+    """Verify OtelTraceContextFilter guarantees the otel* attributes so formatters never raise."""
+
+    def _record(self):
+        return logging.LogRecord("nautobot", logging.INFO, "f.py", 1, "hello", None, None)
+
+    def test_missing_attributes_filled_with_sentinels(self):
+        """A record lacking the otel* attributes gets the standard 'no active span' sentinels."""
+        record = self._record()
+        self.assertFalse(hasattr(record, "otelTraceID"))
+
+        self.assertTrue(OtelTraceContextFilter().filter(record))
+
+        # The filter sets these dynamically; pylint can't infer them on a bare LogRecord.
+        self.assertEqual(record.otelTraceID, "0")
+        self.assertEqual(record.otelSpanID, "0")
+        self.assertFalse(record.otelTraceSampled)  # pylint: disable=no-member
+        self.assertEqual(record.otelServiceName, "")  # pylint: disable=no-member
+
+    def test_existing_attributes_preserved(self):
+        """Real injected trace IDs must not be overwritten by the filter's defaults."""
+        record = self._record()
+        record.otelTraceID = "abc123"
+        record.otelSpanID = "def456"
+
+        OtelTraceContextFilter().filter(record)
+
+        self.assertEqual(record.otelTraceID, "abc123")
+        self.assertEqual(record.otelSpanID, "def456")
+
+    def test_formatter_referencing_ids_survives_attr_less_record(self):
+        """A formatter with %(otelTraceID)s must not raise on a record processed through the filter.
+
+        Without the filter, logging.Formatter raises ValueError: 'Formatting field not found in record'
+        for a record that predates instrumentation. The filter is what makes the default correlation
+        formatters safe for such records.
+        """
+        formatter = logging.Formatter("[trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] %(message)s")
+        record = self._record()
+
+        # Sanity: the unfiltered record would blow up the formatter.
+        with self.assertRaises(ValueError):
+            formatter.format(record)
+
+        OtelTraceContextFilter().filter(record)
+        self.assertEqual(formatter.format(record), "[trace_id=0 span_id=0] hello")
+
+
+class DefaultLoggingCorrelationTest(testing.TestCase):
+    """Verify the default LOGGING built in settings.py never bakes in the correlation suffix itself.
+
+    The correlation suffix/filter used to be interpolated into LOGGING from env vars at settings-import
+    time; that missed operators who set OTEL_PYTHON_* in nautobot_config.py (a Python assignment, not an
+    env var). The decision now happens post-load in _preprocess_settings via enable_otel_log_correlation
+    (covered by EnableOtelLogCorrelationTest). These tests reload nautobot.core.settings under patched
+    env vars and confirm the *default* dict stays suffix-free regardless -- so the env var no longer
+    short-circuits the post-load reconciliation.
+    """
+
+    def _reload_settings_logging(self, env):
+        import importlib
+        import sys
+
+        settings_module = core_settings
+
+        try:
+            # settings.py takes a NullHandler LOGGING branch when TESTING (`"test" in sys.argv`), which
+            # is always true under the test runner. Patch sys.argv so the reload builds the real
+            # (non-TESTING) console LOGGING branch this test targets.
+            with patch.dict(os.environ, env, clear=False), patch.object(sys, "argv", ["nautobot-server"]):
+                logging_dict = importlib.reload(settings_module).LOGGING
+        finally:
+            # Always restore the module to the ambient test environment so later imports/tests see
+            # normal settings, even if the reload under the patched env raised.
+            importlib.reload(settings_module)
+        return logging_dict
+
+    def test_default_logging_never_bakes_in_suffix_even_with_env_on(self):
+        """Even with tracing + correlation env vars on, settings.py must not pre-bake the suffix/filter.
+
+        Regression guard for the env-var-driven bake-in being removed: surfacing the IDs is now the
+        post-load helper's job, so the raw settings default stays plain regardless of the env vars.
+        """
+        logging_dict = self._reload_settings_logging(
+            {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True", "OTEL_PYTHON_LOG_CORRELATION": "True", "NAUTOBOT_DEBUG": "False"}
+        )
+        self.assertNotIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
+        self.assertNotIn("otelTraceID", logging_dict["formatters"]["verbose"]["format"])
+        # The filter is still defined (available for custom configs / the helper) but wired to nothing.
+        self.assertIn("otel_trace_context", logging_dict["filters"])
+        self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], [])
+        self.assertEqual(logging_dict["handlers"]["verbose_console"]["filters"], [])
+
+    def test_default_logging_plain_with_env_off(self):
+        """With correlation off, the default LOGGING is likewise plain (unchanged behavior)."""
+        logging_dict = self._reload_settings_logging(
+            {"OTEL_PYTHON_DJANGO_INSTRUMENT": "False", "OTEL_PYTHON_LOG_CORRELATION": "True", "NAUTOBOT_DEBUG": "False"}
+        )
+        self.assertNotIn("otelTraceID", logging_dict["formatters"]["normal"]["format"])
+        self.assertEqual(logging_dict["handlers"]["normal_console"]["filters"], [])
+
 
 class InstrumentExporterBranchTest(testing.TestCase):
-    """Verify instrument() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard."""
+    """Verify install_exporters() wires up the correct exporters per OTEL_*_EXPORTER setting, including the empty-endpoint guard.
+
+    Exporter creation lives in install_exporters(), NOT instrument(): the OTLP gRPC channel is
+    fork-unsafe, so instrument() (which runs pre-fork) only sets up the provider + auto-instrumentors,
+    and each worker builds its exporters post-fork via install_exporters(). These tests therefore drive
+    install_exporters() directly with a fake config.
+    """
 
     def setUp(self):
         super().setUp()
         self._original_provider = otel_trace.get_tracer_provider()
-        # Include the DB instrumentor matching the live engine (psycopg2 vs mysqlclient), mirroring instrument().
-        self._db_instrumentor_cls = _db_instrumentor_for_engine(settings.DATABASES["default"]["ENGINE"])
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
-            instrumentor().uninstrument()
+        # A real TracerProvider so add_span_processor() (called by install_exporters) has somewhere to go.
+        otel_trace.set_tracer_provider(TracerProvider())
+        # install_exporters() may call metrics.set_meter_provider(), which is set-once per process
+        # (like set_tracer_provider) and so can't be captured/restored. Patch it out instead so a test
+        # exercising the metrics branch can't leak a global meter provider into later tests.
+        self._meter_provider_patcher = patch("nautobot.core.cli.opentelemetry.metrics.set_meter_provider")
+        self._meter_provider_patcher.start()
+        self._reset_exporters_guard()
 
     def tearDown(self):
-        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor, self._db_instrumentor_cls):
-            instrumentor().uninstrument()
+        self._meter_provider_patcher.stop()
         otel_trace.set_tracer_provider(self._original_provider)
+        self._reset_exporters_guard()
         super().tearDown()
 
-    def _patch_settings(self, **overrides):
-        """Patch instrument()'s view of config with sensible defaults that disable noisy layers.
+    @staticmethod
+    def _reset_exporters_guard():
+        """Reset install_exporters()'s idempotency guard so each test starts clean."""
+        import nautobot.core.cli.opentelemetry as otel_module
 
-        instrument() reads the loaded `nautobot_config` from sys.modules (registered by load_settings())
-        because it runs before django.setup(), so override_settings() does not reach it. We replace the
-        whole sys.modules["nautobot_config"] entry with a fake carrying the requested overrides.
-        """
-        return patch.dict("sys.modules", {"nautobot_config": _fake_otel_config(**overrides)})
+        otel_module._exporters_installed = False
+
+    def _install(self, **overrides):
+        """Call install_exporters() with a fake config carrying the requested OTEL_* overrides."""
+        from nautobot.core.cli.opentelemetry import install_exporters
+
+        self._reset_exporters_guard()
+        install_exporters(config=_fake_otel_config(**overrides))
 
     def test_otlp_trace_exporter_skipped_when_endpoint_unset(self):
         """The OTLP trace exporter must be skipped (with a warning) when the endpoint is empty."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
-            with self._patch_settings(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
-                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                    instrument()
+            with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                self._install(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="")
 
         mock_exporter.assert_not_called()
         self.assertTrue(any("OTEL_EXPORTER_OTLP_ENDPOINT is not set" in message for message in logs.output))
@@ -224,9 +375,8 @@ class InstrumentExporterBranchTest(testing.TestCase):
     def test_otlp_metric_exporter_skipped_when_endpoint_unset(self):
         """The OTLP metric exporter must be skipped (with a warning) when the endpoint is empty."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_exporter:
-            with self._patch_settings(OTEL_METRICS_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
-                with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
-                    instrument()
+            with self.assertLogs("nautobot.core.cli.opentelemetry", level="WARNING") as logs:
+                self._install(OTEL_METRICS_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="")
 
         mock_exporter.assert_not_called()
         self.assertTrue(any("OTEL_EXPORTER_OTLP_ENDPOINT is not set" in message for message in logs.output))
@@ -234,38 +384,28 @@ class InstrumentExporterBranchTest(testing.TestCase):
     def test_otlp_trace_exporter_created_when_endpoint_set(self):
         """The OTLP trace exporter must be constructed with the configured endpoint when it is set."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
-            with self._patch_settings(
+            self._install(
                 OTEL_TRACES_EXPORTER=["otlp"],
                 OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
                 OTEL_EXPORTER_OTLP_INSECURE=True,
-            ):
-                instrument()
+            )
 
         mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=True)
 
-    def test_otlp_endpoint_override_from_nautobot_config_is_honored(self):
-        """Regression: an OTEL_EXPORTER_OTLP_ENDPOINT set in nautobot_config.py must be honored.
-
-        The base nautobot.core.settings module defaults OTEL_EXPORTER_OTLP_ENDPOINT to "" (no env var).
-        Here the endpoint is set ONLY on the loaded nautobot_config (as a user override would be), not on
-        nautobot.core.settings. Before the fix, instrument() read the base module's empty endpoint, logged
-        "endpoint is not set", and skipped the exporter; after the fix it reads the loaded nautobot_config
-        and builds the exporter. This is the exact scenario from the PR review comment.
-        """
+    def test_otlp_endpoint_override_from_config_is_honored(self):
+        """An OTEL_EXPORTER_OTLP_ENDPOINT set only on the passed config must be honored (endpoint built)."""
         with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
-            with self._patch_settings(
+            self._install(
                 OTEL_TRACES_EXPORTER=["otlp"],
                 OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
-            ):
-                instrument()
+            )
 
         mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=False)
 
     def test_console_trace_exporter_used_without_endpoint(self):
         """The console trace exporter does not require an endpoint and must be attached regardless."""
         with patch("nautobot.core.cli.opentelemetry.ConsoleSpanExporter") as mock_exporter:
-            with self._patch_settings(OTEL_TRACES_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT=""):
-                instrument()
+            self._install(OTEL_TRACES_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT="")
 
         mock_exporter.assert_called_once()
 
@@ -273,11 +413,195 @@ class InstrumentExporterBranchTest(testing.TestCase):
         """When OTEL_TRACES_EXPORTER is 'none', neither OTLP nor console exporters are constructed."""
         with patch("nautobot.core.cli.opentelemetry.ConsoleSpanExporter") as mock_console:
             with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_otlp:
-                with self._patch_settings(OTEL_TRACES_EXPORTER=["none"]):
-                    instrument()
+                self._install(OTEL_TRACES_EXPORTER=["none"])
 
         mock_console.assert_not_called()
         mock_otlp.assert_not_called()
+
+    def test_instrument_does_not_create_exporters_pre_fork(self):
+        """Regression: instrument() must NOT construct any OTLP exporter (fork-unsafe pre-fork gRPC channel).
+
+        The segfault root cause was building the OTLP gRPC channel in the uWSGI master before fork.
+        instrument() now only installs the provider + auto-instrumentors; exporters come from
+        install_exporters() post-fork. This asserts no exporter is created by instrument() even when
+        an endpoint is configured.
+        """
+        for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor):
+            instrumentor().uninstrument()
+        try:
+            with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_span:
+                with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_metric:
+                    with patch(
+                        "nautobot.core.cli.opentelemetry.trace.set_tracer_provider"
+                    ):  # don't clobber the global provider (set-once)
+                        with patch.dict(
+                            "sys.modules",
+                            {
+                                "nautobot_config": _fake_otel_config(
+                                    OTEL_TRACES_EXPORTER=["otlp"],
+                                    OTEL_METRICS_EXPORTER=["otlp"],
+                                    OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
+                                )
+                            },
+                        ):
+                            instrument()
+            mock_span.assert_not_called()
+            mock_metric.assert_not_called()
+        finally:
+            for instrumentor in (DjangoInstrumentor, RedisInstrumentor, CeleryInstrumentor):
+                instrumentor().uninstrument()
+
+    def test_install_exporters_is_idempotent(self):
+        """install_exporters() must be a no-op after the first call (post-fork hooks may call it repeatedly)."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            self._reset_exporters_guard()
+            from nautobot.core.cli.opentelemetry import install_exporters
+
+            config = _fake_otel_config(
+                OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317"
+            )
+            install_exporters(config=config)
+            install_exporters(config=config)
+            install_exporters(config=config)
+
+        mock_exporter.assert_called_once()
+
+    def test_http_trace_exporter_used_for_http_protocol(self):
+        """OTEL_EXPORTER_OTLP_PROTOCOL='http' selects the HTTP OTLPSpanExporter (not the gRPC one)."""
+        with patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            self._install(
+                OTEL_TRACES_EXPORTER=["otlp"],
+                OTEL_EXPORTER_OTLP_PROTOCOL="http",
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4318",
+            )
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4318")
+
+    def test_otlp_metric_exporter_created_when_endpoint_set(self):
+        """The OTLP metric exporter is constructed and a MeterProvider is installed when metrics are enabled."""
+        with patch("opentelemetry.exporter.otlp.proto.grpc.metric_exporter.OTLPMetricExporter") as mock_exporter:
+            with patch("nautobot.core.cli.opentelemetry.MeterProvider") as mock_meter_provider:
+                self._install(
+                    OTEL_METRICS_EXPORTER=["otlp"],
+                    OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317",
+                    OTEL_EXPORTER_OTLP_INSECURE=True,
+                )
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4317", insecure=True)
+        mock_meter_provider.assert_called_once()
+
+    def test_http_metric_exporter_used_for_http_protocol(self):
+        """OTEL_EXPORTER_OTLP_PROTOCOL='http' selects the HTTP OTLPMetricExporter (not the gRPC one)."""
+        with patch("opentelemetry.exporter.otlp.proto.http.metric_exporter.OTLPMetricExporter") as mock_exporter:
+            self._install(
+                OTEL_METRICS_EXPORTER=["otlp"],
+                OTEL_EXPORTER_OTLP_PROTOCOL="http",
+                OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4318",
+            )
+
+        mock_exporter.assert_called_once_with(endpoint="http://collector:4318")
+
+    def test_console_metric_exporter_used_without_endpoint(self):
+        """The console metric exporter needs no endpoint and installs a MeterProvider."""
+        with patch("nautobot.core.cli.opentelemetry.ConsoleMetricExporter") as mock_exporter:
+            with patch("nautobot.core.cli.opentelemetry.MeterProvider") as mock_meter_provider:
+                self._install(OTEL_METRICS_EXPORTER=["console"], OTEL_EXPORTER_OTLP_ENDPOINT="")
+
+        mock_exporter.assert_called_once()
+        mock_meter_provider.assert_called_once()
+
+    def test_install_exporters_uses_otel_config_when_config_arg_omitted(self):
+        """install_exporters() with no config= falls back to _otel_config() (the post-fork/CLI resolver)."""
+        from nautobot.core.cli import opentelemetry as otel_module
+
+        fake = _fake_otel_config(OTEL_TRACES_EXPORTER=["otlp"], OTEL_EXPORTER_OTLP_ENDPOINT="http://collector:4317")
+        with patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            with patch.object(otel_module, "_otel_config", return_value=fake) as mock_otel_config:
+                self._reset_exporters_guard()
+                otel_module.install_exporters()
+
+        mock_otel_config.assert_called_once()
+        mock_exporter.assert_called_once()
+
+    def test_otel_config_prefers_configured_django_settings(self):
+        """_otel_config() returns django settings when configured, else the loaded nautobot_config module."""
+        from nautobot.core.cli import opentelemetry as otel_module
+
+        # django.conf.settings is imported inside _otel_config(); it is already configured in the test
+        # process, so the happy path returns it directly.
+        self.assertIs(otel_module._otel_config(), settings)
+
+        # Force the not-configured fallback: _otel_config() then imports the loaded nautobot_config module.
+        fake_config = _fake_otel_config()
+        with patch.object(type(settings), "configured", property(lambda self: False)):
+            with patch.dict("sys.modules", {"nautobot_config": fake_config}):
+                self.assertIs(otel_module._otel_config(), fake_config)
+
+
+class CeleryExporterHookTest(testing.TestCase):
+    """Verify the Celery signal handlers that install OTLP exporters per process.
+
+    `instrument()` runs pre-fork and deliberately defers exporter creation because the OTLP gRPC
+    channel is fork-unsafe. The Celery worker builds its exporters post-fork via the
+    `worker_process_init` handler; the (non-forking) beat scheduler builds them in-process via the
+    `beat_init` handler, because the CLI entrypoint cannot distinguish `celery beat` from
+    `celery worker` and so skips in-process install for every `celery` subcommand. Both handlers must
+    delegate to `install_exporters()` when OTel is enabled and be no-ops when it is disabled.
+    """
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
+    def test_worker_process_init_installs_exporters_when_enabled(self):
+        """The worker_process_init handler must install exporters when OTel is enabled."""
+        from nautobot.core.celery import install_otel_exporters
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters()
+
+        mock_install.assert_called_once_with()
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
+    def test_beat_init_installs_exporters_when_enabled(self):
+        """The beat_init handler must install exporters when OTel is enabled.
+
+        Regression: beat is launched as `celery beat`, which the CLI entrypoint sees only as `celery`
+        and excludes from in-process exporter creation. Without this handler beat would run instrumented
+        but export nothing.
+        """
+        from nautobot.core.celery import install_otel_exporters_beat
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters_beat()
+
+        mock_install.assert_called_once_with()
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=False)
+    def test_beat_init_is_noop_when_disabled(self):
+        """The beat_init handler must not create exporters when OTel is disabled (the default)."""
+        from nautobot.core.celery import install_otel_exporters_beat
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters_beat()
+
+        mock_install.assert_not_called()
+
+    @override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=False)
+    def test_worker_process_init_is_noop_when_disabled(self):
+        """The worker_process_init handler must not create exporters when OTel is disabled (the default)."""
+        from nautobot.core.celery import install_otel_exporters
+
+        with patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install:
+            install_otel_exporters()
+
+        mock_install.assert_not_called()
+
+    def test_beat_init_handler_is_connected_to_signal(self):
+        """The beat_init handler must actually be wired to Celery's beat_init signal."""
+        from celery import signals
+
+        from nautobot.core.celery import install_otel_exporters_beat
+
+        receivers = [ref() for _, ref in signals.beat_init.receivers]
+        self.assertIn(install_otel_exporters_beat, receivers)
 
 
 class APITraceGenerationTest(testing.APITestCase):
@@ -327,6 +651,119 @@ class APITraceGenerationTest(testing.APITestCase):
             or http_span.attributes.get("http.url", "")
         )
         self.assertIn(url, path, "Expected span to contain the request path")
+
+
+# SILKY_INTERCEPT_FUNC that always profiles, so the test exercises SilkyMiddleware's
+# request/response wrapping regardless of the per-session `silk_record_requests` flag
+# (token-authenticated API requests don't carry that session flag).
+def _always_profile(request):  # pragma: no cover - trivial test hook
+    return True
+
+
+@override_settings(ALLOW_REQUEST_PROFILING=True)
+class OtelWithSilkProfilingTest(testing.APITestCase):
+    """Guard against 5xx (e.g. 502) when OpenTelemetry and django-silk profiling are both active.
+
+    `SilkyMiddleware` (outer) wraps the request/response streams while it profiles, the OTEL
+    `DjangoInstrumentor` wraps the WSGI/view layer, and `GraphQLOpenTelemetryMiddleware` (inner)
+    reads `request.body` on GraphQL POSTs. This combination is where a stream re-read or
+    double-wrapping could surface as a gateway 502 at the middleware layer.
+
+    SCOPE / LIMITATION: this runs through the Django test client, which is single-process and in-memory
+    -- there is NO os.fork() and NO OTLP gRPC channel. It therefore CANNOT reproduce the separate,
+    more severe production crash where OTLP-gRPC + uWSGI pre-fork + silk profiling segfaults workers
+    (SIGSEGV) because the fork-unsafe gRPC channel is built in the master pre-fork. A green result here
+    must NOT be read as "OTEL + Silk is safe under uWSGI." That fork/gRPC path is fixed by building the
+    OTLP exporters post-fork (see `nautobot.core.cli.opentelemetry.install_exporters` +
+    `InstrumentExporterBranchTest`) and is exercised end-to-end by the reproduction harness under
+    `development/` (see the observability/segfault repro docs), not by this unit test.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self._exporter = InMemorySpanExporter()
+        self._provider = TracerProvider()
+        self._provider.add_span_processor(SimpleSpanProcessor(self._exporter))
+        # DjangoInstrumentor.instrument() is a no-op while OTEL_PYTHON_DJANGO_INSTRUMENT == "False"
+        # (the dev/test default). Force it on and attach our in-memory provider, mirroring
+        # APITraceGenerationTest, then rebuild the middleware stack so instrumentation attaches.
+        self._env_patcher = patch.dict(os.environ, {"OTEL_PYTHON_DJANGO_INSTRUMENT": "True"})
+        self._env_patcher.start()
+        self._settings_override = override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
+        self._settings_override.enable()
+        # Force Silk to profile every request (token-authenticated API requests don't carry the
+        # per-session silk_record_requests flag). SilkyConfig is a process-wide Singleton that
+        # snapshots SILKY_* settings on _setup(), so overriding SILKY_INTERCEPT_FUNC in settings has
+        # no effect until we re-run _setup(). Manage this at the instance level (rather than via a
+        # class-level @override_settings) so the enable/disable pairing is deterministic and Silk is
+        # restored in tearDown -- the class decorator's revert runs too late (after tearDownClass) and
+        # would leak the always-profile hook into every subsequent test in the process.
+        from silk.config import SilkyConfig
+
+        self._silk_override = override_settings(SILKY_INTERCEPT_FUNC=_always_profile)
+        self._silk_override.enable()
+        SilkyConfig()._setup()
+        DjangoInstrumentor().uninstrument()
+        DjangoInstrumentor().instrument(tracer_provider=self._provider)
+        self.client.handler.load_middleware()
+        # GraphQLOpenTelemetryMiddleware reads the process-global tracer provider (set once at
+        # startup), which our in-memory exporter is not attached to. Patch the middleware's `trace`
+        # so its GraphQL span is routed to our exporter, letting us assert it stays active (and that
+        # enduser.id resolves to the token user) alongside Silk. Mirrors GraphQLOpenTelemetryMiddlewareTest.
+        self._trace_patcher = patch("nautobot.core.middleware.trace")
+        mock_trace = self._trace_patcher.start()
+        mock_trace.get_tracer.return_value = self._provider.get_tracer("nautobot.graphql")
+
+    def tearDown(self):
+        self._trace_patcher.stop()
+        DjangoInstrumentor().uninstrument()
+        self.client.handler.load_middleware()
+        # Revert the SILKY_INTERCEPT_FUNC override first, then re-read SilkyConfig from the restored
+        # settings so the always-profile hook does not leak into subsequent tests in this process.
+        self._silk_override.disable()
+        from silk.config import SilkyConfig
+
+        SilkyConfig()._setup()
+        # Regression guard: the process-wide SilkyConfig singleton must no longer carry our
+        # always-profile hook, or every subsequent test in this process would be profiled by Silk.
+        self.assertIsNot(SilkyConfig().SILKY_INTERCEPT_FUNC, _always_profile)
+        self._settings_override.disable()
+        self._env_patcher.stop()
+        super().tearDown()
+
+    def test_graphql_post_with_otel_and_silk_returns_200(self):
+        """A token-authenticated GraphQL POST must succeed (not 5xx) with OTEL + Silk both active."""
+        self.add_permissions("dcim.view_location")
+        url = reverse("graphql-api")
+        response = self.client.post(
+            url,
+            data=json.dumps({"query": "query GetLocations { locations { id name } }"}),
+            content_type="application/json",
+            **self.header,
+        )
+        self.assertLess(
+            response.status_code,
+            500,
+            f"OTEL + Silk profiling produced a server error ({response.status_code}) on a GraphQL POST: "
+            f"{getattr(response, 'content', b'')!r}",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # OTEL must genuinely still be active alongside Silk (otherwise a 200 would prove nothing).
+        spans = self._exporter.get_finished_spans()
+        self.assertGreater(len(spans), 0, "Expected at least one span; OTEL should stay active with Silk on.")
+
+        # The GraphQL middleware span must attribute the request to the token user, not "anonymous"
+        # (DRF resolves the user during view dispatch, after middleware; the span reads it post-response).
+        graphql_spans = [s for s in spans if s.attributes.get("graphql.document")]
+        self.assertTrue(graphql_spans, "Expected a GraphQL span carrying graphql.document.")
+        self.assertEqual(graphql_spans[0].attributes.get("enduser.id"), self.user.username)
+
+    def test_non_graphql_request_with_otel_and_silk_returns_200(self):
+        """A non-GraphQL API request must also succeed with OTEL + Silk both active (control case)."""
+        response = self.client.get(reverse("api-status"), **self.header)
+        self.assertLess(response.status_code, 500, "OTEL + Silk profiling produced a server error on /api/status/.")
+        self.assertEqual(response.status_code, 200)
 
 
 class RequestsInstrumentationTraceparentTest(testing.TestCase):
@@ -469,12 +906,31 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         self.assertEqual(attrs.get("graphql.operation.type"), "query")
         self.assertEqual(attrs.get("http.status_code"), 200)
 
+    def test_operation_type_detected_past_leading_comment(self):
+        """A leading GraphQL # comment (and blank lines) must not defeat operation-type detection.
+
+        Regression: the detector previously matched the operation keyword only after leading
+        whitespace, so a document beginning with a `# ...` comment line produced operation_type=None,
+        degrading the span name to bare "graphql" and dropping the operation.type attribute.
+        """
+        commented_query = "# fetch all locations\n\nquery GetLocations { locations { id name } }"
+        middleware = self._make_middleware(status_code=200)
+        request = self._build_request(query=commented_query)
+
+        middleware(request)
+
+        spans = self._exporter.get_finished_spans()
+        self.assertEqual(len(spans), 1)
+        span = spans[0]
+        self.assertEqual(span.name, "graphql query", "Span name should reflect the detected operation type.")
+        self.assertEqual(span.attributes.get("graphql.operation.type"), "query")
+
     def test_long_document_truncated_by_span_limits(self):
-        """A large graphql.document is truncated by the SDK's OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
+        """A large graphql.document is truncated by OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT.
 
         The middleware itself does not truncate; it relies on the standard OTel span attribute value
         length limit, which the production TracerProvider picks up from the environment. Here we build a
-        provider with an explicit limit to confirm our graphql.document attribute is subject to it.
+        provider with an explicit limit to confirm our graphql document attribute is subject to it.
         """
         limit = 64
         limited_provider = TracerProvider(span_limits=SpanLimits(max_span_attribute_length=limit))
@@ -490,7 +946,7 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
         spans = self._exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
         document = spans[0].attributes.get("graphql.document")
-        self.assertEqual(len(document), limit, "graphql.document should be truncated to the span attribute limit.")
+        self.assertEqual(len(document), limit, "graphql document should be truncated to the span attribute limit.")
         self.assertEqual(document, long_query[:limit])
 
     def test_log_emitted_with_correct_fields(self):
@@ -538,6 +994,58 @@ class GraphQLOpenTelemetryMiddlewareTest(testing.TestCase):
             len(self._exporter.get_finished_spans()), 0, "No span should be emitted when OTel is disabled."
         )
 
+    # --- _parse_graphql_body edge cases (called directly; no span needed) ---
+
+    def test_parse_body_non_post_returns_none(self):
+        """A non-POST request yields no query/variables (GraphQL bodies only ride on POST)."""
+        request = RequestFactory().get("/api/graphql")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_malformed_json_returns_none(self):
+        """A POST with `application/json` content type but invalid JSON yields no query/variables."""
+        request = RequestFactory().post("/api/graphql", data="{not valid json", content_type="application/json")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_application_graphql_content_type(self):
+        """A POST with `application/graphql` returns the raw body as the document and no variables."""
+        query = "query Ping { __typename }"
+        request = RequestFactory().post("/api/graphql", data=query, content_type="application/graphql")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (query, None))
+
+    def test_parse_body_application_graphql_invalid_utf8_returns_none(self):
+        """An `application/graphql` body that is not valid UTF-8 yields no query/variables."""
+        request = RequestFactory().post("/api/graphql", data=b"\xff\xfe", content_type="application/graphql")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_unknown_content_type_returns_none(self):
+        """A POST with a content type that is neither json nor graphql yields no query/variables."""
+        request = RequestFactory().post("/api/graphql", data="anything", content_type="text/plain")
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(request), (None, None))
+
+    def test_parse_body_unreadable_body_returns_none(self):
+        """If reading `request.body` raises (e.g. the stream was already consumed), yield no query/variables."""
+
+        class _BodyRaisesRequest:
+            method = "POST"
+            content_type = "application/json"
+
+            @property
+            def body(self):
+                raise RawPostDataException("You cannot access body after reading from request's data stream")
+
+        self.assertEqual(GraphQLOpenTelemetryMiddleware._parse_graphql_body(_BodyRaisesRequest()), (None, None))
+
+    # --- _get_operation_type edge cases ---
+
+    def test_operation_type_empty_query_returns_none(self):
+        """An empty or None query has no detectable operation type."""
+        self.assertIsNone(GraphQLOpenTelemetryMiddleware._get_operation_type(""))
+        self.assertIsNone(GraphQLOpenTelemetryMiddleware._get_operation_type(None))
+
+    def test_operation_type_comment_only_document_returns_none(self):
+        """A document with only comment/blank lines (no operation keyword) has no operation type."""
+        self.assertIsNone(GraphQLOpenTelemetryMiddleware._get_operation_type("# just a comment\n\n"))
+
 
 class MainInstrumentGatingTest(testing.TestCase):
     """Verify main() decides whether to call instrument() from the loaded nautobot_config, not nautobot.core.settings.
@@ -583,6 +1091,68 @@ class MainInstrumentGatingTest(testing.TestCase):
         """instrument() is skipped when the loaded nautobot_config sets OTEL_PYTHON_DJANGO_INSTRUMENT False."""
         mock_instrument = self._run_main(config_instrument=False)
         mock_instrument.assert_not_called()
+
+
+class MainForkingCommandGatingTest(testing.TestCase):
+    """Verify main() only installs OTLP exporters in-process for non-forking commands.
+
+    instrument() defers exporter creation because the OTLP gRPC channel is fork-unsafe; the forking
+    servers (`start` uWSGI, `celery` worker/beat) build their exporters per process AFTER fork via
+    their own hooks. main() installs them in-process only for single-process commands.
+
+    Regression: the command used to be identified as the first non-option token, so a value-bearing
+    option preceding it (e.g. `--verbosity 2 start`) was misread as the command, wrongly installing the
+    fork-unsafe exporter in the pre-fork parent. The check now skips whenever a forking command appears
+    anywhere in the args, which is robust against argument ordering.
+    """
+
+    def _install_exporters_called_for_argv(self, argv):
+        """Drive main() with the given argv and return whether install_exporters() was called."""
+        fake_settings = MagicMock()
+        fake_settings.OTEL_PYTHON_DJANGO_INSTRUMENT = True
+
+        with (
+            patch("nautobot.core.cli.load_settings"),
+            patch.dict("sys.modules", {"nautobot_config": fake_settings}),
+            patch("nautobot.core.cli.opentelemetry.instrument"),
+            patch("nautobot.core.cli.opentelemetry.install_exporters") as mock_install_exporters,
+            patch("nautobot.core.cli.execute_from_command_line"),
+            patch("sys.argv", argv),
+        ):
+            from nautobot.core.cli import main
+
+            main()
+
+        return mock_install_exporters.called
+
+    def test_single_process_command_installs_in_process(self):
+        """A single-process command (migrate) installs the exporters in-process."""
+        self.assertTrue(self._install_exporters_called_for_argv(["nautobot-server", "migrate"]))
+
+    def test_runserver_installs_in_process(self):
+        """runserver is single-process and installs the exporters in-process."""
+        self.assertTrue(self._install_exporters_called_for_argv(["nautobot-server", "runserver"]))
+
+    def test_start_skips_in_process_install(self):
+        """`start` (uWSGI, forking) must not install exporters pre-fork."""
+        self.assertFalse(self._install_exporters_called_for_argv(["nautobot-server", "start", "--ini", "x"]))
+
+    def test_celery_worker_skips_in_process_install(self):
+        """`celery worker` (forking) must not install exporters pre-fork."""
+        self.assertFalse(self._install_exporters_called_for_argv(["nautobot-server", "celery", "worker"]))
+
+    def test_start_with_preceding_value_option_still_skips(self):
+        """Regression: a value-bearing option before `start` must not defeat the forking-command skip."""
+        self.assertFalse(
+            self._install_exporters_called_for_argv(["nautobot-server", "--verbosity", "2", "start"]),
+            "A leading `--verbosity 2` must not cause install_exporters() to run pre-fork for `start`.",
+        )
+
+    def test_celery_with_preceding_value_option_still_skips(self):
+        """Regression: a value-bearing option before `celery` must not defeat the forking-command skip."""
+        self.assertFalse(
+            self._install_exporters_called_for_argv(["nautobot-server", "--pythonpath", "/opt", "celery", "beat"]),
+        )
 
 
 class ExtraInstrumentorsTest(testing.TestCase):
@@ -735,3 +1305,185 @@ class ExtraInstrumentorsTest(testing.TestCase):
 
         good_cls.assert_called_once()
         good_instance.instrument.assert_called_once()
+
+
+def _default_logging_config():
+    """A copy of Nautobot's default (correlation-off) LOGGING shape, for exercising the helper.
+
+    Mirrors the `normal`/`verbose` formatters and `normal_console`/`verbose_console` handlers built in
+    nautobot.core.settings, without booting Django (whose LOGGING is the NullHandler TESTING variant
+    while the suite runs). test_default_settings_logging_has_no_suffix guards this copy against drift.
+    """
+    return {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "filters": {
+            "otel_trace_context": {"()": "nautobot.core.logging.OtelTraceContextFilter"},
+        },
+        "formatters": {
+            "normal": {
+                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
+                "datefmt": "%H:%M:%S",
+            },
+            "verbose": {
+                "format": (
+                    "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s "
+                    "%(funcName)30s() :\n  %(message)s"
+                ),
+                "datefmt": "%H:%M:%S",
+            },
+        },
+        "handlers": {
+            "normal_console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "formatter": "normal",
+                "filters": [],
+            },
+            "verbose_console": {
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "formatter": "verbose",
+                "filters": [],
+            },
+        },
+        "loggers": {
+            "django": {"handlers": ["normal_console"], "level": "INFO"},
+            "nautobot": {"handlers": ["normal_console"], "level": "INFO"},
+        },
+    }
+
+
+class EnableOtelLogCorrelationTest(testing.TestCase):
+    """Verify enable_otel_log_correlation() augments the default LOGGING dict correctly and safely.
+
+    Regression: the correlation decision used to be baked into the LOGGING dict from env vars at
+    settings-import time, so `OTEL_PYTHON_DJANGO_INSTRUMENT`/`OTEL_PYTHON_LOG_CORRELATION` set as Python
+    assignments in nautobot_config.py were silently ignored for the default console output. The decision
+    now happens post-load in _preprocess_settings() against the resolved settings, via this helper.
+    """
+
+    def _shipped_default_config(self):
+        """A default-shaped LOGGING dict installed as `nautobot.core.settings.LOGGING` for this test.
+
+        `enable_otel_log_correlation()` no-ops unless handed the exact dict Nautobot ships, so a test
+        exercising the augmentation path must make its fixture *be* that object. Patching is undone on
+        test exit, restoring the real (TESTING/NullHandler) settings value.
+        """
+        config = _default_logging_config()
+        patcher = patch.object(core_settings, "LOGGING", config)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        return config
+
+    def test_correlation_on_adds_suffix_and_filter(self):
+        """The helper appends the trace/span-id suffix to formatters and the filter to handlers."""
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        config = self._shipped_default_config()
+        enable_otel_log_correlation(config)
+
+        for formatter in ("normal", "verbose"):
+            fmt = config["formatters"][formatter]["format"]
+            self.assertIn("%(otelTraceID)s", fmt, f"{formatter} formatter should carry the trace-id suffix.")
+            self.assertIn("%(otelSpanID)s", fmt, f"{formatter} formatter should carry the span-id suffix.")
+            # The suffix must land on the header line, before the message body.
+            self.assertLess(fmt.index("%(otelTraceID)s"), fmt.index("%(message)s"))
+        for handler in ("normal_console", "verbose_console"):
+            self.assertIn("otel_trace_context", config["handlers"][handler]["filters"])
+
+    def test_helper_is_idempotent(self):
+        """Calling the helper twice must not double-append the suffix or duplicate the filter."""
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        config = self._shipped_default_config()
+        enable_otel_log_correlation(config)
+        once = deepcopy(config)
+        enable_otel_log_correlation(config)
+
+        self.assertEqual(config, once, "A second call must be a no-op.")
+        for formatter in ("normal", "verbose"):
+            self.assertEqual(config["formatters"][formatter]["format"].count("%(otelTraceID)s"), 1)
+        for handler in ("normal_console", "verbose_console"):
+            self.assertEqual(config["handlers"][handler]["filters"].count("otel_trace_context"), 1)
+
+    def test_operator_customized_default_shape_is_untouched(self):
+        """An operator LOGGING dict that still uses Nautobot's names must not be mutated.
+
+        The case the name-based guard alone missed: an operator who copies the default LOGGING and
+        tweaks it (here, a level change) keeps the `normal`/`verbose` formatter and handler names, so
+        matching by name would have augmented it. Reassigning LOGGING rebinds the name away from
+        `nautobot.core.settings.LOGGING`, and the identity gate declines to touch it.
+        """
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        # The shipped default is present and augmentable...
+        self._shipped_default_config()
+        # ...but the operator's own near-identical copy is a different object, so it is left alone.
+        operator_config = _default_logging_config()
+        operator_config["handlers"]["normal_console"]["level"] = "DEBUG"
+        before = deepcopy(operator_config)
+
+        enable_otel_log_correlation(operator_config)
+
+        self.assertEqual(operator_config, before, "A reassigned LOGGING dict must not be mutated.")
+        self.assertNotIn("%(otelTraceID)s", operator_config["formatters"]["normal"]["format"])
+        self.assertEqual(operator_config["handlers"]["normal_console"]["filters"], [])
+
+    def test_custom_operator_logging_is_untouched(self):
+        """A LOGGING dict with operator-named formatters/handlers must not be mutated by the helper."""
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        custom = {
+            "version": 1,
+            "formatters": {"my_fmt": {"format": "%(levelname)s %(message)s"}},
+            "handlers": {
+                "my_handler": {"class": "logging.StreamHandler", "formatter": "my_fmt"},
+            },
+            "loggers": {"nautobot": {"handlers": ["my_handler"], "level": "INFO"}},
+        }
+        before = deepcopy(custom)
+        enable_otel_log_correlation(custom)
+
+        self.assertEqual(custom["formatters"], before["formatters"], "Custom formatters must be untouched.")
+        self.assertEqual(custom["handlers"], before["handlers"], "Custom handlers must be untouched.")
+
+    def test_default_fixture_has_no_suffix_before_helper(self):
+        """The default LOGGING shape must be suffix-free until the helper runs.
+
+        Guards that the correlation suffix only ever comes from enable_otel_log_correlation() (the
+        env-var-driven bake-in was removed from settings.py), so an operator with correlation off gets
+        plain formatters. The fixture mirrors settings.py's default block; keep them in sync.
+        """
+        config = _default_logging_config()
+        self.assertNotIn("%(otelTraceID)s", config["formatters"]["normal"]["format"])
+        self.assertNotIn("%(otelTraceID)s", config["formatters"]["verbose"]["format"])
+        self.assertEqual(config["handlers"]["normal_console"]["filters"], [])
+        self.assertEqual(config["handlers"]["verbose_console"]["filters"], [])
+
+    def test_preprocess_settings_config_file_assignment_applies_suffix(self):
+        """The bug case: flags set as attributes (env vars unset) must still surface the IDs.
+
+        Simulates nautobot_config.py assigning OTEL_PYTHON_DJANGO_INSTRUMENT/OTEL_PYTHON_LOG_CORRELATION
+        as Python values, then drives the exact reconciliation branch _preprocess_settings runs.
+        """
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        # `nautobot_config.py` does `from nautobot.core.settings import *`, so an operator who does not
+        # override LOGGING holds the shipped dict itself -- which is what passes the helper's gate.
+        settings_module = SimpleNamespace(
+            TESTING=False,
+            OTEL_PYTHON_DJANGO_INSTRUMENT=True,
+            OTEL_PYTHON_LOG_CORRELATION=True,
+            LOGGING=self._shipped_default_config(),
+        )
+        # Mirror the guard + call in nautobot.core.cli._preprocess_settings.
+        if (
+            not getattr(settings_module, "TESTING", False)
+            and getattr(settings_module, "OTEL_PYTHON_DJANGO_INSTRUMENT", False)
+            and getattr(settings_module, "OTEL_PYTHON_LOG_CORRELATION", False)
+        ):
+            enable_otel_log_correlation(settings_module.LOGGING)
+
+        self.assertIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertIn("otel_trace_context", settings_module.LOGGING["handlers"]["normal_console"]["filters"])

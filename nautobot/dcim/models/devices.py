@@ -1058,8 +1058,8 @@ class Device(PrimaryModel, ConfigContextModel):
             FrontPort,
             RearPort,
         ]:
-            cable_pks += component_model.objects.filter(device=self, cable__isnull=False).values_list(
-                "cable", flat=True
+            cable_pks += component_model.objects.filter(device=self, cable_termination__isnull=False).values_list(
+                "cable_termination__cable", flat=True
             )
         if pk_list:
             return cable_pks
@@ -2239,8 +2239,8 @@ class Module(PrimaryModel):
             FrontPort,
             RearPort,
         ]:
-            cable_pks += component_model.objects.filter(module=self, cable__isnull=False).values_list(
-                "cable", flat=True
+            cable_pks += component_model.objects.filter(module=self, cable_termination__isnull=False).values_list(
+                "cable_termination__cable", flat=True
             )
         if pk_list:
             return cable_pks
@@ -2366,6 +2366,7 @@ class InterfaceVDCAssignment(BaseModel):
     interface = models.ForeignKey(
         Interface, on_delete=models.CASCADE, related_name="virtual_device_context_assignments"
     )
+    is_metadata_associable_model = False
 
     class Meta:
         unique_together = ["virtual_device_context", "interface"]

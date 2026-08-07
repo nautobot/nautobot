@@ -261,6 +261,20 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.get_item({}, "first"), None)
         self.assertEqual(helpers.get_item("", "first"), None)
 
+    @override_config(BANNER_TOP="Hello, world!")
+    def test_settings_or_config_returns_config_value(self):
+        self.assertEqual(helpers.settings_or_config("BANNER_TOP"), "Hello, world!")
+
+    def test_settings_or_config_blocks_non_allowlisted_settings(self):
+        """Regression test for GHSA-6jmc-h6f2-46j4: secrets are not readable through the filter.
+
+        A non-allowlisted key is treated as though the setting does not exist, raising `AttributeError`
+        instead of returning its value.
+        """
+        for name in ("SECRET_KEY", "DATABASES", "FAKE_SETTING"):
+            with self.subTest(name=name):
+                self.assertRaises(AttributeError, helpers.settings_or_config, name)
+
     def test_render_boolean(self):
         for value in [True, "arbitrary string", 1]:
             self.assertEqual(

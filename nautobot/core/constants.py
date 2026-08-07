@@ -36,6 +36,10 @@ FILTER_NUMERIC_BASED_LOOKUP_MAP = {
 
 FILTER_NEGATION_LOOKUP_MAP = {"n": "exact"}
 
+# For filters against JSON list values (multi-select custom fields), where negation must invert a `contains`
+# lookup rather than an `exact` comparison against the whole list.
+FILTER_CONTAINS_NEGATION_LOOKUP_MAP = {"n": "contains"}
+
 #
 # User input sanitization
 #
@@ -271,3 +275,63 @@ NAUTOBOT_EDITION_URLS = {
     "enterprise": "https://networktocode.com/nautobot/nautobot-enterprise/",
     "cloud": "https://networktocode.com/nautobot/nautobot-cloud/",
 }
+
+#
+# Settings allowed to be retrieved from templates
+#
+
+# Allowlist of Django settings and Constance configuration keys that are safe to read from a rendered
+# template. This gates what the `settings_or_config` template filter and the template `settings` context
+# may return (see `nautobot.core.utils.config.is_template_exposable_setting`).
+TEMPLATE_EXPOSED_SETTINGS = frozenset(
+    {
+        "ALLOW_REQUEST_PROFILING",
+        "BANNER_BOTTOM",
+        "BANNER_LOGIN",
+        "BANNER_TOP",
+        "BRANDING_FILEPATHS",
+        "BRANDING_POWERED_BY_URL",
+        "BRANDING_TITLE",
+        "BRANDING_URLS",
+        "CELERY_TASK_SOFT_TIME_LIMIT",
+        "CELERY_TASK_TIME_LIMIT",
+        "CHANGELOG_RETENTION",
+        "CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED",
+        "DATE_FORMAT",
+        "DATETIME_FORMAT",
+        "DEPLOYMENT_ID",
+        "DEVICE_UNIQUENESS",
+        "HOSTNAME",
+        "JOB_CREATE_FILE_MAX_SIZE",
+        "LOCATION_LIST_DEFAULT_MAX_DEPTH",
+        "LOCATION_NAME_AS_NATURAL_KEY",
+        "LOGIN_URL",
+        "MAINTENANCE_MODE",
+        "MAX_PAGE_SIZE",
+        "MEDIA_ROOT",
+        "NETWORK_DRIVERS",
+        "NTC_SUPPORT_CONTRACT_EXPIRATION_DATE",
+        "PAGINATE_COUNT",
+        "PER_PAGE_DEFAULTS",
+        "PREFER_IPV4",
+        "PREFIX_LIST_DEFAULT_CONTAINER_ONLY",
+        "PREFIX_LIST_DEFAULT_MAX_DEPTH",
+        "PUBLISH_ROBOTS_TXT",
+        "RACK_DEFAULT_U_HEIGHT",
+        "RACK_ELEVATION_DEFAULT_UNIT_HEIGHT",
+        "RACK_ELEVATION_DEFAULT_UNIT_WIDTH",
+        "RACK_ELEVATION_UNIT_TWO_DIGIT_FORMAT",
+        "REDIS_LOCK_TIMEOUT",
+        "RELEASE_CHECK_TIMEOUT",
+        "RELEASE_CHECK_URL",
+        "SETTINGS_PATH",
+        "SHORT_DATE_FORMAT",
+        "SHORT_DATETIME_FORMAT",
+        "STATIC_ROOT",
+        "STATIC_URL",
+        "SUPPORT_MESSAGE",
+        "TIME_FORMAT",
+        "URL_FORMAT_OVERRIDE",
+        "VERSION",
+    }
+)
