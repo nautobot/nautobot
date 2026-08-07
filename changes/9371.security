@@ -1,0 +1,2 @@
+Updated dependency `django` to `>=5.2.17,<5.3` to mitigate multiple vulnerabilities.
+Updated dependency `gitpython` to `>=3.1.58,<3.2` to mitigate multiple vulnerabilities.
