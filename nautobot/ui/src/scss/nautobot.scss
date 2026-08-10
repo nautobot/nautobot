@@ -830,14 +830,19 @@ button {
 }
 
 /*
- * Focus Not Obscured (WCAG 2.4.11, AA).
- *
- * `.nb-form-sticky-footer` pins the form's action buttons to the bottom of the viewport, where it can cover a field the
- * user has just tabbed to. Reserving scroll padding equal to its height means the browser's scroll-into-view on focus
- * stops short of the bar rather than leaving the focused field underneath it.
+ * Focus Not Obscured (WCAG 2.4.11, AA). Focusing a field makes the browser scroll it into view, which can leave it
+ * sitting behind the pinned button bar; reserving scroll padding as tall as the bar keeps the field clear of it. Scroll
+ * padding only applies to whichever element actually scrolls, so each scrollable ancestor a footer can sit in needs a
+ * rule of its own -- at page level that element is `body`, the one given `height: 100%` and `overflow-y: scroll`.
  */
-:root {
-  scroll-padding-block-end: 5rem;
+$nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-auto, .overflow-scroll";
+
+body:has( .nb-form-sticky-footer:not(:is(#{$nb-form-sticky-footer-scroll-containers}) *)) {
+  scroll-padding-block-end: 4rem;
+}
+
+:is(#{$nb-form-sticky-footer-scroll-containers}):has( .nb-form-sticky-footer) {
+  scroll-padding-block-end: 4rem;
 }
 
 /*
