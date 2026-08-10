@@ -3,11 +3,7 @@
 
 {% with last_column_name=table.visible_columns|last visible_column_count=table.visible_columns|length %}
     <table{% if table.attrs %} {{ table.attrs.as_html }}{% endif %}>
-        {% comment %}
-            Every table needs an accessible name so that screen reader users can tell one table apart from another when
-            listing the tables on a page. The name is only useful non-visually, so it is visually hidden.
-        {% endcomment %}
-        <caption class="visually-hidden">
+        <caption class="position-absolute visually-hidden">
             {% firstof table_caption table.data.verbose_name_plural "Table" %}
         </caption>
         {% if table.show_header %}
