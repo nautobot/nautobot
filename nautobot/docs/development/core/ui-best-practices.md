@@ -203,7 +203,7 @@ When `settings.DEBUG` is set to `True`, an authenticated Nautobot user can acces
 
 ## Accessibility
 
-Nautobot targets [WCAG 2.1 Level AA](https://www.w3.org/TR/WCAG21/). The conventions below are the ones core already
+Nautobot targets [WCAG 2.2 Level AA](https://www.w3.org/TR/WCAG22/). The conventions below are the ones core already
 follows; new UI code and Nautobot App code should follow them too.
 
 ### Automated checking
