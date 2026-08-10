@@ -21,16 +21,6 @@
             color: var(--bs-secondary-color);
         }
 
-        /*
-         * A row is marked `disabled` in `inc/job_table.html` when the job cannot be run. That used to be dimmed with
-         * `opacity: 0.65` over the whole link, which composited the link text down to 2.81:1 against the page and the
-         * play button to the same -- failing both 1.4.3 (4.5:1 for text) and 1.4.11 (3:1 for a user interface
-         * component) on every disabled row. There are usually far more disabled rows than enabled ones.
-         *
-         * Opacity cannot express this state conformantly: the link text only clears 4.5:1 above 0.92 opacity, which is
-         * not a perceptible change. Mute with the token the row's other cells already use instead, measured at 6.76:1
-         * in light mode and 8.49:1 in dark.
-         */
         tr.disabled a.job_run {
             color: var(--bs-secondary-color);
             cursor: not-allowed;
