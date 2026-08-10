@@ -87,10 +87,10 @@ PREFIX_COPY_LINK = """
             {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
                 <span class="float-end">
                     {% if children_exists %}
-                        <a class="mdi mdi-table-filter"
-                           href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}"
-                           title="Filter to this prefix and its descendants"
-                        ><span class="visually-hidden">Filter to {{ record }} and its descendants</span></a>
+                        <a href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}" title="Filter to this prefix and its descendants">
+                            <span aria-hidden="true" class="mdi mdi-table-filter nb-mdi-xs"></span>
+                            <span class="visually-hidden">Filter to {{ record }} and its descendants</span>
+                        </a>
                     {% endif %}
                 </span>
             {% endif %}

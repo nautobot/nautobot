@@ -1,1 +1,2 @@
 Re-enabled the djlint `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag") accessibility rules so that regressions are caught in CI.
+Moved the icon on the "filter to descendants" links in the Location and Prefix list views into its own `<span>`, matching how icons are rendered everywhere else in the UI rather than applying the `mdi` classes to the link itself.
