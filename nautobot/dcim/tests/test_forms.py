@@ -1,3 +1,5 @@
+import uuid
+
 from constance.test import override_config
 from django.test import TestCase
 
@@ -28,8 +30,10 @@ from nautobot.dcim.models import (
     Location,
     LocationType,
     Manufacturer,
+    Module,
     ModuleBay,
     ModuleFamily,
+    ModuleType,
     Platform,
     Rack,
     SoftwareImageFile,
@@ -393,6 +397,35 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
             "tagged_vlans": [cls.vlan.pk],
         }
 
+        cls.module_type = ModuleType.objects.create(
+            manufacturer=Manufacturer.objects.first(), model="Test Interface Form Module Type"
+        )
+        module_status = Status.objects.get_for_model(Module).first()
+        # A Module installed directly at a Location has no parent Device, and neither do its components
+        cls.module_location = Location.objects.get_for_model(Module).first()
+        cls.location_module = Module.objects.create(
+            module_type=cls.module_type,
+            location=cls.module_location,
+            status=module_status,
+            serial="interface-form-location",
+        )
+        cls.location_module_interface = Interface.objects.create(
+            module=cls.location_module,
+            name="test module interface 0.0",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            status=cls.status,
+        )
+        # A Module installed in a ModuleBay does have a parent Device, whose Location scopes its VLANs
+        cls.module_bay = ModuleBay.objects.create(
+            parent_device=cls.device, name="test interface form bay", position="1"
+        )
+        cls.bay_module = Module.objects.create(
+            module_type=cls.module_type,
+            parent_module_bay=cls.module_bay,
+            status=module_status,
+            serial="interface-form-bay",
+        )
+
     def test_interface_form_clean_vlan_location_success(self):
         """Assert that form validation succeeds when matching locations/parent locations are associated to tagged VLAN"""
         location = self.device.location
@@ -432,6 +465,112 @@ class InterfaceTestCase(NautobotTestCaseMixin, TestCase):
         self.vlan.locations.clear()
         form = InterfaceForm(data=self.data, instance=self.interface)
         self.assertTrue(form.is_valid())
+
+    def test_interface_form_invalid_tagged_vlan_reports_field_error(self):
+        """Assert that a tagged VLAN that fails field validation is reported instead of raising an exception."""
+        self.data["tagged_vlans"] = [uuid.uuid4()]
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertFalse(form.is_valid())
+        self.assertIn("tagged_vlans", form.errors)
+
+    def test_interface_form_invalid_mode_reports_field_error(self):
+        """Assert that a mode that fails field validation is reported instead of raising an exception."""
+        self.data["mode"] = "not-a-mode"
+        form = InterfaceForm(data=self.data, instance=self.interface)
+        self.assertFalse(form.is_valid())
+        self.assertIn("mode", form.errors)
+
+    def test_bulk_interface_form_invalid_tagged_vlan_reports_field_error(self):
+        """Assert that a tagged VLAN that fails field validation is reported instead of raising an exception."""
+        form = InterfaceBulkEditForm(
+            model=Interface,
+            data={
+                "pk": [self.interface.pk],
+                "tagged_vlans": [uuid.uuid4()],
+                "mode": InterfaceModeChoices.MODE_TAGGED,
+            },
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("tagged_vlans", form.errors)
+
+    def test_interface_form_module_interface_tagged_mode_saves_without_parent_device(self):
+        """Assert that an Interface on a Module with no parent Device can be saved in tagged mode (issue #9282)."""
+        self.assertIsNone(self.location_module_interface.device)
+        # Assign the VLAN while it is still global and locate it afterwards, which is how such data comes to exist
+        self.vlan.locations.clear()
+        self.location_module_interface.mode = InterfaceModeChoices.MODE_TAGGED
+        self.location_module_interface.validated_save()
+        self.location_module_interface.tagged_vlans.set([self.vlan])
+        self.vlan.locations.set([self.module_location])
+
+        data = {
+            "name": self.location_module_interface.name,
+            "type": self.location_module_interface.type,
+            "status": self.status.pk,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [self.vlan.pk],
+        }
+        form = InterfaceForm(data=data, instance=self.location_module_interface)
+        self.assertTrue(form.is_valid(), form.errors)
+        interface = form.save()
+        self.assertEqual(list(interface.tagged_vlans.all()), [self.vlan])
+
+    def test_interface_form_module_interface_access_mode_rejects_tagged_vlans(self):
+        """Assert that access mode still rejects tagged VLANs on an Interface with no parent Device."""
+        data = {
+            "name": self.location_module_interface.name,
+            "type": self.location_module_interface.type,
+            "status": self.status.pk,
+            "mode": InterfaceModeChoices.MODE_ACCESS,
+            "tagged_vlans": [self.vlan.pk],
+        }
+        form = InterfaceForm(data=data, instance=self.location_module_interface)
+        self.assertFalse(form.is_valid())
+        self.assertIn("mode", form.errors)
+        self.assertNotIn("tagged_vlans", form.errors)
+
+    def test_interface_create_form_module_in_bay_uses_parent_device_location(self):
+        """Assert that a Module's parent Device location is used to validate tagged VLANs when device is blank."""
+        self.vlan.locations.set([self.device.location])
+        data = {
+            "module": self.bay_module.pk,
+            "name_pattern": "test module interface 1.0",
+            "status": self.status.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [self.vlan.pk],
+        }
+        form = InterfaceCreateForm(data)
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_interface_create_form_without_device_or_module_reports_error(self):
+        """Assert that an interface belonging to neither a device nor a module is rejected."""
+        data = {
+            "name_pattern": "test module interface 1.0",
+            "status": self.status.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [self.vlan.pk],
+        }
+        form = InterfaceCreateForm(data)
+        self.assertFalse(form.is_valid())
+        self.assertEqual(form.errors["__all__"], ["Either device or module must be set"])
+
+    def test_interface_create_form_module_in_bay_rejects_vlan_in_other_location(self):
+        """Assert that a tagged VLAN outside the Module's parent Device location is rejected when device is blank."""
+        location_ids = self.device.location.ancestors(include_self=True).values_list("id", flat=True)
+        self.vlan.locations.set(list(Location.objects.exclude(pk__in=location_ids))[:1])
+        data = {
+            "module": self.bay_module.pk,
+            "name_pattern": "test module interface 1.0",
+            "status": self.status.pk,
+            "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+            "mode": InterfaceModeChoices.MODE_TAGGED,
+            "tagged_vlans": [self.vlan.pk],
+        }
+        form = InterfaceCreateForm(data)
+        self.assertFalse(form.is_valid())
+        self.assertIn("tagged_vlans", form.errors)
 
     def test_untagged_vlans_dropdown_options_align_in_interface_edit_form_and_bulk_edit_form(self):
         """
