@@ -66,9 +66,10 @@ Below is a template data compliance rule class that would be stored in `custom_v
 import re
 from nautobot.apps.models import DataComplianceRule, ComplianceError
 
+
 class DesiredClassName(DataComplianceRule):
-    model = "desired.model" # Ex: 'dcim.device'
-    enforce = False # True/False enforce flag
+    model = "desired.model"  # Ex: 'dcim.device'
+    enforce = False  # True/False enforce flag
 
     def audit_desired_name_one(self):
         # Your logic to determine if this function has succeeded or failed
@@ -82,7 +83,7 @@ class DesiredClassName(DataComplianceRule):
 
     def audit(self):
         messages = {}
-        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]: # Add audit functions here
+        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]:  # Add audit functions here
             try:
                 fn()
             except ComplianceError as ex:
@@ -102,9 +103,10 @@ Below is a template data compliance rule class in `custom_validators/custom_vali
 ```python
 ...
 
+
 class DesiredClassName(DataComplianceRule):
-    model = "desired.model" # Ex: 'dcim.device'
-    enforce = False # True/False enforce flag
+    model = "desired.model"  # Ex: 'dcim.device'
+    enforce = False  # True/False enforce flag
 
     def audit_desired_name_one(self):
         # Your logic to determine if this function has succeeded or failed
@@ -118,13 +120,14 @@ class DesiredClassName(DataComplianceRule):
 
     def audit(self):
         messages = {}
-        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]: # Add audit functions here
+        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]:  # Add audit functions here
             try:
                 fn()
             except ComplianceError as ex:
                 messages.update(ex.message_dict)
         if messages:
             raise ComplianceError(messages)
+
 
 custom_validators = list(CustomValidatorIterator()) + [DesiredClassName]
 ```
@@ -163,6 +166,7 @@ Two data compliance rules will be created using two separate `DataComplianceRule
 import re
 from nautobot.apps.models import DataComplianceRule, ComplianceError
 
+
 class DeviceDataComplianceRules(DataComplianceRule):
     model = "dcim.device"
     enforce = False
@@ -181,6 +185,7 @@ class DeviceDataComplianceRules(DataComplianceRule):
                 messages.update(ex.message_dict)
         if messages:
             raise ComplianceError(messages)
+
 
 class RackDeviceComplianceRules(DataComplianceRule):
     model = "dcim.device"

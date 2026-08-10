@@ -35,7 +35,7 @@ The following is an example of the data that is sent:
         # "example_plugin" hashed by sha256
         "3ffee4622af3aad6f78257e3ae12da99ca21d71d099f67f4a2e19e464453bee7": "1.0.0"
     },
-    "debug": true
+    "debug": true,
 }
 ```
 

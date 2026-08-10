@@ -24,9 +24,11 @@ def add_username(record):
         record.username = ""
     return True
 
+
 def mask_password(record):
     record.msg = re.sub(r"password=(.*?)($|&|\n)", r"password=*****\g<2>", record.msg)
     return True
+
 
 LOG_LEVEL = "DEBUG" if DEBUG else "INFO"
 LOGGING = {
@@ -63,7 +65,7 @@ LOGGING = {
         "mask_password": {
             "()": "django.utils.log.CallbackFilter",
             "callback": mask_password,
-        }
+        },
     },
     "loggers": {
         "django.request": {
@@ -73,7 +75,7 @@ LOGGING = {
         },
         "django": {
             "handlers": ["normal_console"],
-            "level": "INFO"
+            "level": "INFO",
         },
         "nautobot": {
             "handlers": ["normal_console"],

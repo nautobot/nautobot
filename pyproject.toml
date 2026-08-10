@@ -229,15 +229,15 @@ mkdocstrings-python = "~2.0.5"
 # Django template files indenter
 djhtml = "~3.0.11"
 # Django template files linter and formatter
-djlint = "~1.40.4"
+djlint = "~1.44.1"
 # Code static analysis
 pylint = "~4.0.6"
 # Pylint extensions for Django
-pylint-django = "~2.7.0"
+pylint-django = "~2.8.0"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.39"
 # Combination linter and code formatter
-ruff = "~0.15.21"
+ruff = "~0.16.2"
 # YAML linting
 yamllint = "~1.38.0"
 
@@ -245,7 +245,7 @@ yamllint = "~1.38.0"
 # Test code coverage measurement
 coverage = "~7.15.4"
 # Testing of data migrations
-django-test-migrations = "~1.5.0"
+django-test-migrations = "~1.6.0"
 # OpenAPI validator to test that our generated schema is valid
 openapi-spec-validator = "~0.9.0"
 # Integration Tests
@@ -280,9 +280,10 @@ omit = [
 relative_files = true
 
 [tool.djlint]
+custom_blocks="captureas"
+extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
 profile="django"
-extend_exclude = "docs/,example_app/static,nautobot/project-static/"
 
 [tool.pylint.main]
 ignore-paths = [

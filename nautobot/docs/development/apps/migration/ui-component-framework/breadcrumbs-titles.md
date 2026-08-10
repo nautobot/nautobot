@@ -17,9 +17,7 @@ There are new simple tags in `{% load ui_framework %}` that allows you to automa
 `breadcrumbs` and `view_titles` will be attached automatically to the context and instantiate if needed.
 
 ```python
-
 class ExampleView:
-
     breadcrumbs = Breadcrumbs(...)  # Update defaults if needed
     view_titles = Titles(...)
 ```
@@ -63,7 +61,6 @@ If you're not using the `NautobotUIViewSet` and the `NautobotHTMLRenderer` you n
 ### Generic view "before" example
 
 ```python
-
 class SomeGenericView(GenericView):
     """
     View for listing all installed Apps.
@@ -113,9 +110,7 @@ class SomeGenericView(GenericView):
     Custom example view.
     """
 
-    breadcrumbs = Breadcrumbs(
-        items={"generic": [ViewNameBreadcrumbItem(view_name="apps:custom_url", label="My Item")]}
-    )
+    breadcrumbs = Breadcrumbs(items={"generic": [ViewNameBreadcrumbItem(view_name="apps:custom_url", label="My Item")]})
     view_titles = Titles(titles={"generic": "My Title"})
 
     def get(self, request):
