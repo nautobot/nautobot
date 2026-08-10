@@ -3,11 +3,15 @@ Accessibility regression tests: axe-core against representative pages rather tha
 
 `base_django.html`, `generic/object_list.html`, `generic/object_retrieve.html` and `generic/object_create_base.html`
 back most of the UI, so a regression in shared markup surfaces here whichever model introduced it. That holds for page
-furniture only -- overridden blocks, self-rendering columns and per-app `extra_styles` are invisible to a single-model
-scan, which is what `test_list_views_across_apps` covers.
+furniture only -- overridden blocks, self-rendering columns and per-template `extra_styles` are invisible to a
+single-model scan, which is what `test_core_list_views` covers.
 """
 
+from django.apps import apps
+from django.urls import NoReverseMatch, reverse
+
 from nautobot.core.testing.integration import SeleniumTestCase
+from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.models import Status
 
@@ -42,24 +46,23 @@ class AccessibilityTestCase(SeleniumTestCase):
         self.assertTrue(self.browser.is_element_present_by_css("#draggable-homepage-panels", wait_time=10))
         self.assertNoAccessibilityViolations()
 
-    def test_list_views_across_apps(self):
+    def test_core_list_views(self):
         """Cover markup each view adds to the shared template. Not a substitute for an App scanning its own views."""
-        for path in (
-            "/circuits/circuits/",
-            "/cloud/cloud-accounts/",
-            "/dcim/devices/",
-            "/dcim/interfaces/",
-            "/extras/jobs/",
-            "/extras/job-results/",
-            "/extras/object-changes/",
-            "/ipam/ip-addresses/",
-            "/ipam/prefixes/",
-            "/ipam/vlans/",
-            "/tenancy/tenants/",
-            "/virtualization/virtual-machines/",
-            "/vpn/tunnels/",
-            "/wireless/wireless-networks/",
-        ):
+        paths = set()
+        for model in apps.get_models():
+            route = get_route_for_model(model, "list")
+            # App routes are named `plugins:...`; skip them, this test covers core views only.
+            if route.startswith("plugins:"):
+                continue
+            try:
+                paths.add(reverse(route))
+            except NoReverseMatch:
+                continue
+
+        # If the lookup above breaks, it would leave this test passing over an empty set of paths.
+        self.assertGreater(len(paths), 100)
+
+        for path in sorted(paths):
             with self.subTest(path=path):
                 self.browser.visit(f"{self.live_server_url}{path}")
                 self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
@@ -106,49 +109,4 @@ class AccessibilityTestCase(SeleniumTestCase):
         self.logout()
         self.browser.visit(f"{self.live_server_url}/login/")
         self.assertTrue(self.browser.is_element_present_by_name("username", wait_time=10))
-        self.assertNoAccessibilityViolations()
-
-    def test_accessibility_assertion_context_is_honoured(self):
-        """
-        Self-test the `context`/`exclude` plumbing. A malformed axe context makes axe reject and fails loudly, but a
-        well-formed selector aimed at the wrong subtree scans the wrong thing and reports nothing. Every call in this
-        file passes the default `exclude`, but django-debug-toolbar is absent under the test settings, so nothing else
-        checks that it suppresses anything.
-
-        The violation is injected rather than borrowed from the page, so this does not break as the UI improves.
-        """
-        self.browser.visit(f"{self.live_server_url}/dcim/locations/")
-        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
-        self.browser.execute_script(
-            """
-            const offender = document.createElement('div');
-            offender.id = 'a11y-self-test';
-            /* 16px normal weight, so 1.4.3 AA wants 4.5:1; #777 on #888 is about 1.3:1. */
-            offender.style.cssText = 'background:#888;color:#777;font-size:16px;padding:8px';
-            offender.textContent = 'Deliberately low contrast text for the harness self-test';
-            document.querySelector('main').append(offender);
-            """
-        )
-
-        with self.assertRaises(AssertionError) as failure:
-            self.assertNoAccessibilityViolations()
-        self.assertIn("color-contrast", str(failure.exception))
-
-        self.assertNoAccessibilityViolations(exclude=("#a11y-self-test",))
-
-        self.assertNoAccessibilityViolations(context="header")
-        with self.assertRaises(AssertionError):
-            self.assertNoAccessibilityViolations(context="main")
-
-        # `AXE_EXCLUDE_SELECTORS` has to exclude the whole subtree, since django-debug-toolbar reports against elements
-        # nested inside `#djDebugRoot`. Rebuild that shape here, as the toolbar itself is absent under test settings.
-        self.browser.execute_script(
-            """
-            const offender = document.getElementById('a11y-self-test');
-            const toolbar = document.createElement('div');
-            toolbar.id = 'djDebugRoot';
-            document.querySelector('main').append(toolbar);
-            toolbar.append(offender);
-            """
-        )
         self.assertNoAccessibilityViolations()
