@@ -21,9 +21,11 @@ then in your `AnimalSoundsConfig` you could refer to the view by name:
 # __init__.py
 from nautobot.apps import NautobotAppConfig
 
+
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
     config_view_name = "plugins:animal_sounds:config"
+
 
 config = AnimalSoundsConfig
 ```

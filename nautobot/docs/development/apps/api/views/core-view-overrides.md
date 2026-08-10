@@ -19,8 +19,7 @@ class DeviceViewOverride(ObjectPermissionRequiredMixin, generic.View):
         return "dcim.view_device"
 
     def get(self, request, *args, **kwargs):
-        return HttpResponse(("Hello world! I'm a view which "
-                             "overrides the device object detail view."))
+        return HttpResponse(("Hello world! I'm a view which overrides the device object detail view."))
 
 
 override_views = {

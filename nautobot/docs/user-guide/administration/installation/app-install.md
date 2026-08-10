@@ -21,7 +21,7 @@ In your `nautobot_config.py`, add the app's name to the `PLUGINS` list:
 
 ```python title="Update PLUGINS list in nautobot_config.py"
 PLUGINS = [
-    'app_name',
+    "app_name",
 ]
 ```
 
@@ -31,10 +31,10 @@ If the app requires any configuration, define it in `nautobot_config.py` under t
 
 ```python title="Update PLUGINS_CONFIG in nautobot_config.py"
 PLUGINS_CONFIG = {
-    'app_name': {
-        'setting_name': 'value',
-        'buzz': 'bazz'
-    }
+    "app_name": {
+        "setting_name": "value",
+        "buzz": "bazz",
+    },
 }
 ```
 

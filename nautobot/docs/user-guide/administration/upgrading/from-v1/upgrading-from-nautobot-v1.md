@@ -445,11 +445,13 @@ Below is a table documenting changes in logger names that could potentially affe
 
 The Job `name` field has been changed to a unique field and the `name` + `grouping` uniqueness constraint has been removed. The processes that refresh jobs (`nautobot-server post_upgrade` and `nautobot-server migrate`) have been updated to gracefully handle duplicate job names.
 
+<!-- pyml disable-num-lines 10 no-multiple-blanks -->
 !!! example
     ```py
     class NautobotJob1(Job):
         class Meta:
             name = "Sample job"
+
 
     class NautobotJob2(Job):
         class Meta:
@@ -497,8 +499,7 @@ Therefore all code that is calling `JobResult.set_status()` (which has been remo
         var3 = BooleanVar()
         var4 = ObjectVar(model=Role)
 
-        def run(self, *, var1, var2, var3, var4):
-            ...
+        def run(self, *, var1, var2, var3, var4): ...
     ```
 
 ### Database Transactions
@@ -508,15 +509,15 @@ Nautobot no longer wraps the job `run` method in an atomic database transaction.
 With the removal of the atomic transaction, the `commit` flag has been removed. The ability to bypass job approval on dryrun can be achieved by using an optional `dryrun` argument. Job authors who wish to allow users to bypass approval when the `dryrun` flag is set should set a `dryrun` attribute with a value of `DryRunVar()` on their job class. `DryRunVar` can be imported from `nautobot.extras.jobs`.
 
 !!! example
-<!-- pyml disable-num-lines 2 proper-names -->
+<!-- pyml disable-num-lines 8 no-multiple-blanks,proper-names -->
     ```py
     from nautobot.extras.jobs import DryRunVar, Job
+
 
     class ExampleJob(Job):
         dryrun = DryRunVar()
 
-        def run(self, dryrun):
-            ...
+        def run(self, dryrun): ...
     ```
 
 A new `supports_dryrun` field has been added to the `Job` model and `Job` class that returns true if the `Job` class implements the `dryrun = DryRunVar()` attribute. This is used to determine if jobs that require approval can be dry run without prior approval.

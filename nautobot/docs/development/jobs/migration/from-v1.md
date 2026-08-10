@@ -80,12 +80,13 @@ The `test_*` and `post_run` methods, previously provided for backwards compatibi
 
 Jobs no longer run in a single atomic [database transaction](https://docs.djangoproject.com/en/stable/topics/db/transactions/) by default. If a Job needs to run in a database transaction, you can use the `@transaction.atomic` decorator on the `run()` method or wrap parts of your Job code in the `with transaction.atomic()` context manager.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from django.db import transaction
     from nautobot.apps.jobs import Job, ObjectVar
     from nautobot.dcim import models
+
 
     class UpdateDeviceTypeHeightJob(Job):
         device_type = ObjectVar(model=models.DeviceType)
@@ -126,8 +127,9 @@ from . import my_job_module
 ```py title="$JOBS_ROOT/my_jobs/my_job_module.py"
 from nautobot.apps.jobs import Job, register_jobs
 
-class MyJob(Job):
-    ...
+
+class MyJob(Job): ...
+
 
 register_jobs(MyJob)
 ```
