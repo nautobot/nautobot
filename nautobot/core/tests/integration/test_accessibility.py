@@ -87,11 +87,9 @@ class AccessibilityTestCase(SeleniumTestCase):
         """
         Scan the error state, where `aria-invalid` and the `aria-describedby` wiring for error lists have to hold up.
 
-        `required` is stripped so the browser will submit and the server can reject. Location Type rather than Location
-        because an empty Location form raises `RelatedObjectDoesNotExist` from `Location.clean()`, which reads
-        `self.location_type.parent` unguarded -- a pre-existing bug unrelated to accessibility.
+        `required` is stripped so the browser will submit and the server can reject.
         """
-        self.browser.visit(f"{self.live_server_url}/dcim/location-types/add/")
+        self.browser.visit(f"{self.live_server_url}/dcim/locations/add/")
         self.assertTrue(self.browser.is_element_present_by_css("form", wait_time=10))
         self.browser.execute_script(
             "document.querySelectorAll('[required]').forEach((element) => element.removeAttribute('required'));"

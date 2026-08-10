@@ -1514,6 +1514,13 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
         with self.assertRaises(ValidationError):
             location_2.validated_save()
 
+    def test_missing_location_type_reports_validation_error(self):
+        """A Location with no location_type fails validation rather than raising RelatedObjectDoesNotExist."""
+        location = Location(name="No Type", status=self.status)
+        with self.assertRaises(ValidationError) as cm:
+            location.validated_save()
+        self.assertIn("location_type", cm.exception.message_dict)
+
     def test_changing_type_forbidden(self):
         """Once created, a location cannot change location_type."""
         location = Location(name="Campus 1", location_type=self.root_type, status=self.status)
