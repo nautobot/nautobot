@@ -436,7 +436,7 @@ def tzoffset(value):
 @register.filter()
 def fgcolor(value):
     """
-    Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
+    Return the ideal foreground color (black or white) given an arbitrary background color in RRGGBB format.
 
     Args:
         value (str): Color in RRGGBB format, with or without #
