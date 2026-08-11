@@ -133,9 +133,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_OKTA_OAUTH2_KEY = '<Client ID from Okta>'
-SOCIAL_AUTH_OKTA_OAUTH2_SECRET = '<Client Secret From Okta>'
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = 'https://<Okta URL>'
+SOCIAL_AUTH_OKTA_OAUTH2_KEY = "<Client ID from Okta>"
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = "<Client Secret From Okta>"
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = "https://<Okta URL>"
 ```
 
 #### Okta - OpenID
@@ -148,9 +148,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = '<Client ID from Okta>'
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = '<Client Secret From Okta>'
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authentication Server>'
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = "<Client ID from Okta>"
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = "<Client Secret From Okta>"
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = "https://<Okta URL>/oauth2/<Authentication Server>"
 ```
 
 The `/default` authentication server can be used for testing, however, it should not be used in production.
@@ -210,13 +210,13 @@ SOCIAL_AUTH_SAML_ORG_INFO = {
 # Technical point of contact
 SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
     "givenName": "Bob Jones",
-    "emailAddress": "bob@example.com"
+    "emailAddress": "bob@example.com",
 }
 
 # Support point of contact
 SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
     "givenName": "Alice Jenkins",
-    "emailAddress": "alice@example.com"
+    "emailAddress": "alice@example.com",
 }
 
 # The Issuer URL for Okta from step 9
@@ -255,7 +255,7 @@ SOCIAL_AUTH_SAML_SECURITY_CONFIG = {
 # Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
 
 !!! warning
@@ -277,13 +277,13 @@ Be sure to configure EXTERNAL_AUTH_DEFAULT_GROUPS and EXTERNAL_AUTH_DEFAULT_PERM
 It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list. For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
 
 ```python
-SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ['groups']
+SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["groups"]
 ```
 
 for OpenID:
 
 ```python
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ["groups"]
 ```
 
 In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [`python-social-auth` authentication pipeline documentation](https://python-social-auth.readthedocs.io/en/stable/pipeline.html).
@@ -327,9 +327,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<Client ID from Google>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "<Client ID from Google>"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "<Secret ID from Google>"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ["openid"]
 ```
 
 #### Google - SAML
@@ -406,13 +406,13 @@ SOCIAL_AUTH_SAML_ORG_INFO = {
 # Technical point of contact
 SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
     "givenName": "Bob Jones",
-    "emailAddress": "bob@example.com"
+    "emailAddress": "bob@example.com",
 }
 
 # Support point of contact
 SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
     "givenName": "Alice Jenkins",
-    "emailAddress": "alice@example.com"
+    "emailAddress": "alice@example.com",
 }
 
 # The Entity ID URL for Google from step 3
@@ -445,7 +445,7 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {
 # Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
 
 !!! warning
@@ -502,7 +502,7 @@ class MetadataView(View):
             config = saml_backend.generate_saml_config()
             return HttpResponse(
                 content=f"ERROR: {saml_error}, SAML backend config is {config}",
-                content_type="text/plain"
+                content_type="text/plain",
             )
 ```
 

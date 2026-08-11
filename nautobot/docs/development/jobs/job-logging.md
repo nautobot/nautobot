@@ -90,8 +90,8 @@ You can attach structured metadata to log messages using the `extra` parameter. 
         "Validated device",
         extra={
             "grouping": "inventory-check",
-            "object": device
-        }
+            "object": device,
+        },
     )
     ```
 
@@ -105,10 +105,11 @@ To skip writing a log entry to the database but still print it to the console of
 
 If `grouping` is not specified, Nautobot uses the current function name as a default. If `object` is omitted, the log is not associated with any model instance.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job
+
 
     class MyJob(Job):
         def run(self):

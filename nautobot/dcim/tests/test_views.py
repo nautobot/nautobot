@@ -5794,7 +5794,17 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:console_connections_{}"
 
     def _get_queryset(self):
-        return ConsolePort.objects.filter(cable__isnull=False)
+        # Reuse the view's own definition so the base tests operate on exactly what the table renders.
+        return ConsoleConnectionsListView.queryset
+
+    def get_instance_display_strings(self, instance):
+        # Assert the peer-side (B) columns actually render, not just that the view returns 200.
+        # Guards nautobot#9341, where they silently degraded to the em-dash placeholder.
+        strings = super().get_instance_display_strings(instance)
+        peer = instance.connected_endpoint
+        if peer is not None:  # a path dead-ending on a rear port has no destination
+            strings.append(peer.get_absolute_url())
+        return strings
 
     def get_list_url(self):
         return "/dcim/console-connections/"
@@ -5852,7 +5862,17 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:power_connections_{}"
 
     def _get_queryset(self):
-        return PowerPort.objects.filter(cable__isnull=False)
+        # Reuse the view's own definition so the base tests operate on exactly what the table renders.
+        return PowerConnectionsListView.queryset
+
+    def get_instance_display_strings(self, instance):
+        # Assert the peer-side (B) columns actually render, not just that the view returns 200.
+        # Guards nautobot#9341, where they silently degraded to the em-dash placeholder.
+        strings = super().get_instance_display_strings(instance)
+        peer = instance.connected_endpoint
+        if peer is not None:  # a path dead-ending on a rear port has no destination
+            strings.append(peer.get_absolute_url())
+        return strings
 
     def get_list_url(self):
         return "/dcim/power-connections/"
