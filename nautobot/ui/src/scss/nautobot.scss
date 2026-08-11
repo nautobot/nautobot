@@ -837,7 +837,7 @@ button {
  */
 $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-auto, .overflow-scroll";
 
-body:has( .nb-form-sticky-footer:not(:is(#{$nb-form-sticky-footer-scroll-containers}) *)) {
+:root:has( .nb-form-sticky-footer:not(:is(#{$nb-form-sticky-footer-scroll-containers}) *)) {
   scroll-padding-block-end: 4rem;
 }
 
