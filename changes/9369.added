@@ -1,0 +1,4 @@
+[a11y] Added a "Skip to main content" bypass link to all base templates so that keyboard and screen reader users can jump past the navigation sidebar (WCAG 2.4.1).
+[a11y] Added live regions so that messages appended via HTMX and pagination range changes are announced by screen readers.
+[a11y] Added an accessible name and fallback content to rack elevations, which previously offered no text alternative to the embedded SVG.
+[a11y] Added axe-core accessibility regression tests covering the home page, every core list view, detail, edit and error-state form, search and login pages, gating on the WCAG 2.2 Level A and AA rule tags apart from `color-contrast`, which is left off pending a decision on the theme palette.
