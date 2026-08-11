@@ -5,6 +5,7 @@
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
         <form action="{% url 'search' %}" class="col-4 text-center" data-nb-live-search-path="{% url 'live_search' %}" id="header_search" method="get" role="search">
             <label class="position-relative w-100">
+                <span aria-hidden="true" class="visually-hidden" tabindex="-1">{% comment %}Focus placeholder for keyboard navigation{% endcomment %}</span>
                 <input
                     aria-label="Search"
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
@@ -15,6 +16,7 @@
                     type="search"
                     value="{{ request.GET.q }}"
                 />
+                <span aria-hidden="true" class="visually-hidden" tabindex="-1">{% comment %}Focus placeholder for keyboard navigation{% endcomment %}</span>
                 <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
                     <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
                     {% spaceless %}

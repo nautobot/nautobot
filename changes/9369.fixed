@@ -12,6 +12,7 @@
 [a11y] Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.
 [a11y] Fixed images missing `alt` attributes.
 [a11y] Fixed the header search input and the search popup input having no accessible name, which was lost when the typeahead placeholder replaced it.
+[a11y] Fixed the header search dialog keeping keyboard users inside it -- Tab and Shift+Tab now close it and carry on through the page, rather than Escape being the only way out -- and gave the dialog an accessible name and modal semantics.
 [a11y] Fixed touch targets below the WCAG 2.5.8 minimum: the header search-help link, tree expand carets and "filter to descendants" links are padded up to 24px, stacked links in the VLAN "Prefixes", VRF route target and interface tagged VLANs columns are spaced 24px apart, and the actions column on embedded detail-page tables no longer renders an undersized sort link, which was also a broken URL.
 [a11y] Fixed Select2 fields having no accessible name by pointing the rendered widget's `aria-labelledby` at the field's form labels, which Select2 otherwise names after their own displayed value.
 Fixed submitting the Location create form without a Location Type raising `RelatedObjectDoesNotExist` from `Location.clean()` instead of reporting the field as required.
