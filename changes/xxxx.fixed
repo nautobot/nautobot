@@ -7,6 +7,7 @@ Fixed form field help text and validation errors not being announced by screen r
 Fixed heading levels being skipped, and added a heading to the home page, so that heading-based navigation reflects page structure.
 Fixed home page panels emitting `<div>` children directly inside a `<ul>`, which stopped them being reported as lists, and fixed job history entries rendering an empty link when the underlying Job record no longer exists.
 Fixed modal dialogs having no accessible name by adding `aria-labelledby`, `aria-modal` and `role="dialog"` to all modals.
+Fixed the user profile navigation declaring itself a tab list while containing no tabs, which left screen readers announcing an empty tab widget instead of a list of links, and marked its active link with `aria-current="page"`.
 Fixed data table accessibility by adding `scope="col"` to table headers, exposing sort state via `aria-sort`, giving each table a visually hidden `<caption>`, and correcting invalid self-closing `<td />` markup.
 Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.
 Fixed images missing `alt` attributes.
