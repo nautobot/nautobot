@@ -196,7 +196,8 @@ INTERFACE_REDUNDANCY_INTERFACE_PRIORITY = """
 INTERFACE_TAGGED_VLANS = """
 {% if record.mode == 'tagged' %}
     {% for vlan in record.tagged_vlans.all %}
-        <a href="{{ vlan.get_absolute_url }}">{{ vlan }}</a><br />
+        <a class="d-inline-block{% if not forloop.last %} mb-4{% endif %}"
+           href="{{ vlan.get_absolute_url }}">{{ vlan }}</a><br />
     {% endfor %}
 {% elif record.mode == 'tagged-all' %}
   All
@@ -246,7 +247,7 @@ LOCATION_TREE_LINK = """
             {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
                 <span class="float-end">
                     {% if children_exists %}
-                        <a href="{% url 'dcim:location_list' %}?subtree={{ record.pk }}" title="Filter to this location and its descendants">
+                        <a class="px-5 py-4" href="{% url 'dcim:location_list' %}?subtree={{ record.pk }}" title="Filter to this location and its descendants">
                             <span aria-hidden="true" class="mdi mdi-table-filter nb-mdi-xs"></span>
                             <span class="visually-hidden">Filter to {{ record.name }} and its descendants</span>
                         </a>

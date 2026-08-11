@@ -87,7 +87,7 @@ PREFIX_COPY_LINK = """
             {% if table_expandable|default:False and not table.hide_hierarchy_ui and record.present_in_database %}
                 <span class="float-end">
                     {% if children_exists %}
-                        <a href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}" title="Filter to this prefix and its descendants">
+                        <a class="px-5 py-4" href="{% url 'ipam:prefix_list' %}?prefix_and_descendants={{ record.pk }}" title="Filter to this prefix and its descendants">
                             <span aria-hidden="true" class="mdi mdi-table-filter nb-mdi-xs"></span>
                             <span class="visually-hidden">Filter to {{ record }} and its descendants</span>
                         </a>
@@ -273,7 +273,8 @@ VRF_LINK = """
 
 VRF_TARGETS = """
 {% for rt in value.all %}
-    <a href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
+    <a class="d-inline-block{% if not forloop.last %} mb-4{% endif %}"
+       href="{{ rt.get_absolute_url }}">{{ rt }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
     <span class="text-secondary">&mdash;</span>
 {% endfor %}
@@ -295,7 +296,8 @@ VLAN_LINK = """
 
 VLAN_PREFIXES = """
 {% for prefix in record.prefixes.all %}
-    <a href="{% url 'ipam:prefix' pk=prefix.pk %}">{{ prefix }}</a>{% if not forloop.last %}<br />{% endif %}
+    <a class="d-inline-block{% if not forloop.last %} mb-4{% endif %}"
+       href="{% url 'ipam:prefix' pk=prefix.pk %}">{{ prefix }}</a>{% if not forloop.last %}<br />{% endif %}
 {% empty %}
     <span class="text-secondary">&mdash;</span>
 {% endfor %}

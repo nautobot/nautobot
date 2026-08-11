@@ -11,6 +11,6 @@ Fixed data table accessibility by adding `scope="col"` to table headers, exposin
 Fixed the bulk-action controls on object list views remaining reachable by keyboard and announced by screen readers while visually hidden.
 Fixed images missing `alt` attributes.
 Fixed the header search input and the search popup input having no accessible name, which was lost when the typeahead placeholder replaced it.
-Fixed touch targets below the WCAG 2.5.8 minimum size: the header search-help link and the tree expand carets are padded up to 24px without shifting the layout, and the actions column on embedded detail-page tables no longer renders a sort link, which was also a broken URL.
+Fixed touch targets below the WCAG 2.5.8 minimum: the header search-help link, tree expand carets and "filter to descendants" links are padded up to 24px, stacked links in the VLAN "Prefixes", VRF route target and interface tagged VLANs columns are spaced 24px apart, and the actions column on embedded detail-page tables no longer renders an undersized sort link, which was also a broken URL.
 Fixed Select2 fields having no accessible name by pointing the rendered widget's `aria-labelledby` at the field's form labels, which Select2 otherwise names after their own displayed value.
 Fixed submitting the Location create form without a Location Type raising `RelatedObjectDoesNotExist` from `Location.clean()` instead of reporting the field as required.
