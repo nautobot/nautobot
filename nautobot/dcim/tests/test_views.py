@@ -3916,6 +3916,140 @@ class InterfaceTestCase(ViewTestCases.DeviceComponentViewTestCase):
         self.assertEqual(instance.type, InterfaceTypeChoices.TYPE_VIRTUAL)
         self.assertEqual(instance.parent_interface, self.lag_interface)
 
+    def _create_location_module(self, module_type_model):
+        """Create a Module installed directly at a Location, which therefore has no parent Device."""
+        return Module.objects.create(
+            module_type=ModuleType.objects.create(manufacturer=Manufacturer.objects.first(), model=module_type_model),
+            location=Location.objects.get_for_model(Module).first(),
+            status=Status.objects.get_for_model(Module).first(),
+        )
+
+    def _create_vlan(self, vid, name):
+        return VLAN.objects.create(
+            vid=vid,
+            name=name,
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+
+    def test_edit_interface_on_module_without_parent_device(self):
+        """https://github.com/nautobot/nautobot/issues/9282."""
+        self.add_permissions("dcim.change_interface", "dcim.view_module", "extras.view_status", "ipam.view_vlan")
+        module = self._create_location_module("Issue 9282 Module Type")
+        module_location = module.location
+        interface = Interface.objects.create(
+            module=module,
+            name="Module Interface 1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            mode=InterfaceModeChoices.MODE_TAGGED,
+            status=Status.objects.get_for_model(Interface).first(),
+        )
+        # A Module installed at a Location has no parent Device, so neither does its interface
+        self.assertIsNone(interface.device)
+        vlan = self._create_vlan(920, "Issue 9282 VLAN")
+        # Assign the VLAN while it is still global and locate it afterwards, which is how such data comes to exist
+        interface.tagged_vlans.set([vlan])
+        vlan.locations.set([module_location])
+
+        request = {
+            "path": self._get_url("edit", interface),
+            "data": post_data(
+                {
+                    "name": interface.name,
+                    "status": interface.status.pk,
+                    "type": interface.type,
+                    "mode": InterfaceModeChoices.MODE_TAGGED,
+                    "tagged_vlans": [vlan.pk],
+                    "description": "Edited via the UI",
+                }
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        interface.refresh_from_db()
+        self.assertEqual(interface.description, "Edited via the UI")
+        self.assertEqual(list(interface.tagged_vlans.all()), [vlan])
+
+    def test_create_interface_on_module_without_parent_device(self):
+        """A tagged interface can be created on a Module that has no parent Device."""
+        self.add_permissions("dcim.add_interface", "dcim.view_module", "extras.view_status", "ipam.view_vlan")
+        module = self._create_location_module("Module Interface Create Module Type")
+        # Only global VLANs can be tagged when there is no parent device to scope them by
+        vlan = self._create_vlan(921, "Module Interface Create VLAN")
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(
+                {
+                    "module": module.pk,
+                    "name_pattern": "Module Interface Create 1",
+                    "status": Status.objects.get_for_model(Interface).first().pk,
+                    "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    "mode": InterfaceModeChoices.MODE_TAGGED,
+                    "tagged_vlans": [vlan.pk],
+                }
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        interface = Interface.objects.get(module=module, name="Module Interface Create 1")
+        self.assertIsNone(interface.device)
+        self.assertEqual(list(interface.tagged_vlans.all()), [vlan])
+
+    def test_create_interface_on_module_in_module_bay(self):
+        """A tagged interface created on a Module in a ModuleBay is scoped by that bay's parent Device."""
+        self.add_permissions("dcim.add_interface", "dcim.view_module", "extras.view_status", "ipam.view_vlan")
+        device = Device.objects.first()
+        module_bay = ModuleBay.objects.create(parent_device=device, name="Module Interface Create Bay", position="1")
+        module = Module.objects.create(
+            module_type=ModuleType.objects.create(
+                manufacturer=Manufacturer.objects.first(), model="Module Interface Create Bay Module Type"
+            ),
+            parent_module_bay=module_bay,
+            status=Status.objects.get_for_model(Module).first(),
+        )
+        vlan = self._create_vlan(922, "Module Bay Interface Create VLAN")
+        vlan.locations.set([device.location])
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(
+                {
+                    "module": module.pk,
+                    "name_pattern": "Module Bay Interface Create 1",
+                    "status": Status.objects.get_for_model(Interface).first().pk,
+                    "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    "mode": InterfaceModeChoices.MODE_TAGGED,
+                    "tagged_vlans": [vlan.pk],
+                }
+            ),
+        }
+        self.assertHttpStatus(self.client.post(**request), 302)
+        interface = Interface.objects.get(module=module, name="Module Bay Interface Create 1")
+        # `ModularComponentModel.save()` backfills the device from the module's parent module bay
+        self.assertEqual(interface.device, device)
+        self.assertEqual(list(interface.tagged_vlans.all()), [vlan])
+
+    def test_create_interface_without_device_or_module_reports_error(self):
+        """An interface belonging to neither a device nor a module is rejected rather than raising an exception."""
+        self.add_permissions("dcim.add_interface", "dcim.view_module", "extras.view_status", "ipam.view_vlan")
+        vlan = self._create_vlan(923, "Ownerless Interface Create VLAN")
+
+        request = {
+            "path": self._get_url("add"),
+            "data": post_data(
+                {
+                    "name_pattern": "Ownerless Interface Create 1",
+                    "status": Status.objects.get_for_model(Interface).first().pk,
+                    "type": InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    "mode": InterfaceModeChoices.MODE_TAGGED,
+                    "tagged_vlans": [vlan.pk],
+                }
+            ),
+        }
+        response = self.client.post(**request)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Either device or module must be set")
+        self.assertFalse(Interface.objects.filter(name="Ownerless Interface Create 1").exists())
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_valid_ipaddress_link_of_ipaddress_table_in_interface_detail(self):
         """Assert bug https://github.com/nautobot/nautobot/issues/4685 Invalid link in IPAddress Table in an
@@ -5794,7 +5928,17 @@ class ConsoleConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:console_connections_{}"
 
     def _get_queryset(self):
-        return ConsolePort.objects.filter(cable__isnull=False)
+        # Reuse the view's own definition so the base tests operate on exactly what the table renders.
+        return ConsoleConnectionsListView.queryset
+
+    def get_instance_display_strings(self, instance):
+        # Assert the peer-side (B) columns actually render, not just that the view returns 200.
+        # Guards nautobot#9341, where they silently degraded to the em-dash placeholder.
+        strings = super().get_instance_display_strings(instance)
+        peer = instance.connected_endpoint
+        if peer is not None:  # a path dead-ending on a rear port has no destination
+            strings.append(peer.get_absolute_url())
+        return strings
 
     def get_list_url(self):
         return "/dcim/console-connections/"
@@ -5852,7 +5996,17 @@ class PowerConnectionsTestCase(ViewTestCases.ListObjectsViewTestCase):
         return "dcim:power_connections_{}"
 
     def _get_queryset(self):
-        return PowerPort.objects.filter(cable__isnull=False)
+        # Reuse the view's own definition so the base tests operate on exactly what the table renders.
+        return PowerConnectionsListView.queryset
+
+    def get_instance_display_strings(self, instance):
+        # Assert the peer-side (B) columns actually render, not just that the view returns 200.
+        # Guards nautobot#9341, where they silently degraded to the em-dash placeholder.
+        strings = super().get_instance_display_strings(instance)
+        peer = instance.connected_endpoint
+        if peer is not None:  # a path dead-ending on a rear port has no destination
+            strings.append(peer.get_absolute_url())
+        return strings
 
     def get_list_url(self):
         return "/dcim/power-connections/"

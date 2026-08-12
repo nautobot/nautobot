@@ -5,18 +5,18 @@ The `NautobotAppConfig` class is a Nautobot-specific wrapper around Django's bui
 ```python
 from nautobot.apps import NautobotAppConfig
 
+
 class AnimalSoundsConfig(NautobotAppConfig):
-    name = 'nautobot_animal_sounds'
-    verbose_name = 'Animal Sounds'
-    description = 'An example app for development purposes'
-    version = '0.1'
-    author = 'Bob Jones'
-    author_email = 'bob@example.com'
-    base_url = 'animal-sounds'
+    name = "nautobot_animal_sounds"
+    verbose_name = "Animal Sounds"
+    description = "An example app for development purposes"
+    version = "0.1"
+    author = "Bob Jones"
+    author_email = "bob@example.com"
+    base_url = "animal-sounds"
     required_settings = []
-    default_settings = {
-        'loud': False
-    }
+    default_settings = {"loud": False}
+
 
 config = AnimalSoundsConfig
 ```

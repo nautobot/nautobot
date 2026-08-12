@@ -8,6 +8,7 @@ For custom content that doesn't fit existing panels:
 from nautobot.apps import views
 from nautobot.apps.ui import TextPanel
 
+
 class DeviceDetailView(views.NautobotUIViewSet):
     panels = [
         TextPanel(weight=100, context_field="custom_content"),
@@ -31,14 +32,18 @@ from nautobot.core.templatetags.helpers import (
     split,
 )
 
+
 class DeviceUIViewSet(views.NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=[
-            KeyValueTablePanel(weight=100, value_transforms={
-                "name": [slugify, placeholder],
-                "list_of_names": split,
-                "number_value": lambda v: divide(v, 3),
-            }),
+            KeyValueTablePanel(
+                weight=100,
+                value_transforms={
+                    "name": [slugify, placeholder],
+                    "list_of_names": split,
+                    "number_value": lambda v: divide(v, 3),
+                },
+            ),
         ]
     )
 
@@ -60,8 +65,8 @@ More built-in filters can be found in [`Nautobot Built-In Filters`](../../../../
 from django.template.loader import get_template
 from nautobot.apps.ui import Panel
 
-class CustomPanel(Panel):
 
+class CustomPanel(Panel):
     # You can override default body panel
     def __init__(self, *, body_content_template_path="my_app/custom_panel/body_content.html", **kwargs):
         super().__init__(body_content_template_path=body_content_template_path, **kwargs)
@@ -76,6 +81,7 @@ class CustomPanel(Panel):
 from nautobot.apps import views
 from nautobot.apps.ui import ObjectDetailContent
 from device_app.custom_panel import CustomPanel
+
 
 class DeviceUIViewSet(views.NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(

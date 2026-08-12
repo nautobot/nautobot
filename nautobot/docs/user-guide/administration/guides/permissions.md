@@ -314,7 +314,7 @@ Grant the following only to administrators — each is a potential escalation pa
 | `extras.change_job` | Enable disabled jobs (including those provided by a Git repository, above), override job settings (e.g. approval and sensitive-variable overrides) |
 | `extras.add_jobhook`, `extras.change_jobhook` | Cause other users' actions (create/edit/delete of records) to run job code |
 | `extras.run_job` | Run jobs — recall that [jobs execute with unrestricted database access](#jobs) |
-| `extras.*_secret` / `extras.*_secretsgroup` | Re-point secrets and potentially exfiltrate credentials |
+| `extras.*_secret` / `extras.*_secretsgroup` | Re-point secrets and potentially exfiltrate credentials; see [Secrets and Security](../../platform-functionality/secret.md#secrets-and-security) |
 | `extras.*_approvalworkflowdefinition` | Weaken or remove approval requirements |
 | `extras.add_webhook`, `extras.change_webhook` | Automatically export Nautobot data to other systems |
 | `is_staff` flag | Django admin access; combined with the model permissions above, full takeover |
