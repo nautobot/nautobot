@@ -1,5 +1,6 @@
 """Tests for OpenTelemetry instrumentation in Nautobot."""
 
+from contextlib import contextmanager
 from copy import deepcopy
 import json
 import logging
@@ -24,11 +25,14 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 import requests
+from silk.collector import DataCollector
+from silk.middleware import SilkyMiddleware
 
 from nautobot.core import settings as core_settings, testing
 from nautobot.core.cli.opentelemetry import instrument
 from nautobot.core.logging import OtelTraceContextFilter
 from nautobot.core.middleware import GraphQLOpenTelemetryMiddleware
+from nautobot.dcim.models import Location
 
 try:
     import MySQLdb  # noqa: F401  # mysqlclient C-extension; only present on the MySQL CI job
@@ -673,6 +677,9 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
 
     def setUp(self):
         super().setUp()
+        # SilkyMiddleware.process_request stashes a request model in the thread-local DataCollector,
+        # and only the *next* request through the middleware clears it. Reset it after each test.
+        self.addCleanup(DataCollector().clear)
         self._exporter = InMemorySpanExporter()
         self._provider = TracerProvider()
         self._provider.add_span_processor(SimpleSpanProcessor(self._exporter))
@@ -702,19 +709,36 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
         self._env_patcher.stop()
         super().tearDown()
 
+    @contextmanager
+    def _silk_profiling_enabled(self):
+        """Profile requests made in this block with Silk, and assert that Silk did intercept exactly one.
+
+        Nautobot's `SILKY_INTERCEPT_FUNC` profiles a request only when `silk_record_requests` is set on the
+        session, so enable it there rather than tampering with the process-wide `SilkyConfig` singleton.
+        """
+        session = self.client.session
+        session["silk_record_requests"] = True
+        session.save()
+        original_process_response = SilkyMiddleware.process_response
+        intercepted = []
+
+        def spy(middleware, request, response):
+            intercepted.append(getattr(request, "silk_is_intercepted", False))
+            # Delegate to the real implementation: it is what reads the response stream
+            # (ResponseModelFactory) and finalizes the profiler, i.e. the response half of the
+            # OTEL + Silk interaction that this test class exists to guard.
+            return original_process_response(middleware, request, response)
+
+        # autospec so the mock receives the middleware instance and can pass it on to the original method.
+        with patch.object(SilkyMiddleware, "process_response", autospec=True, side_effect=spy):
+            yield
+        self.assertEqual(intercepted, [True], "Expected Silk to intercept exactly one request.")
+
     def test_graphql_post_with_otel_and_silk_returns_200(self):
         """A token-authenticated GraphQL POST must succeed (not 5xx) with OTEL + Silk both active."""
         self.add_permissions("dcim.view_location")
         url = reverse("graphql-api")
-        session = self.client.session
-        session["silk_record_requests"] = True
-        session.save()
-
-        def mock_process_response(request, response):
-            self.assertTrue(getattr(request, "silk_is_intercepted", False))
-            return response
-
-        with patch("silk.middleware.SilkyMiddleware.process_response", wraps=mock_process_response) as mock_pr:
+        with self._silk_profiling_enabled():
             response = self.client.post(
                 url,
                 data=json.dumps({"query": "query GetLocations { locations { id name } }"}),
@@ -728,7 +752,6 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
             f"{getattr(response, 'content', b'')!r}",
         )
         self.assertEqual(response.status_code, 200)
-        mock_pr.assert_called_once()
 
         # OTEL must genuinely still be active alongside Silk (otherwise a 200 would prove nothing).
         spans = self._exporter.get_finished_spans()
@@ -742,19 +765,31 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
 
     def test_non_graphql_request_with_otel_and_silk_returns_200(self):
         """A non-GraphQL API request must also succeed with OTEL + Silk both active (control case)."""
-        session = self.client.session
-        session["silk_record_requests"] = True
-        session.save()
-
-        def mock_process_response(request, response):
-            self.assertTrue(getattr(request, "silk_is_intercepted", False))
-            return response
-
-        with patch("silk.middleware.SilkyMiddleware.process_response", wraps=mock_process_response) as mock_pr:
+        with self._silk_profiling_enabled():
             response = self.client.get(reverse("api-status"), **self.header)
         self.assertLess(response.status_code, 500, "OTEL + Silk profiling produced a server error on /api/status/.")
         self.assertEqual(response.status_code, 200)
-        mock_pr.assert_called_once()
+
+    def test_silk_profiling_state_is_resettable(self):
+        """Regression guard: Silk's thread-local state must not leak out of this test class.
+
+        `SilkyMiddleware` leaves the recorded request (and a running cProfile profiler) in the `DataCollector`
+        until the *next* request it handles, and a leaked request makes silk's `execute_sql` wrapper add an
+        EXPLAIN to every subsequent query -- breaking `assertNumQueries` in unrelated tests. `setUp` registers
+        the reset performed here as a cleanup for every test in this class.
+        """
+        with self._silk_profiling_enabled():
+            response = self.client.get(reverse("api-status"), **self.header)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(DataCollector().request, "Expected Silk to have recorded this request.")
+
+        DataCollector().clear()
+
+        self.assertIsNone(DataCollector().request)
+        self.assertIsNone(getattr(DataCollector().local, "pythonprofiler", None))
+        # An ordinary query must no longer be intercepted by silk, which would add an EXPLAIN alongside it.
+        with self.assertNumQueries(1):
+            list(Location.objects.all()[:1])
 
 
 class RequestsInstrumentationTraceparentTest(testing.TestCase):
