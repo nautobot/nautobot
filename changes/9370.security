@@ -1,0 +1,1 @@
+Updated NPM development dependency `js-yaml` to `4.3.1` to mitigate GHSA-5p4m-2wfm-xmqj.
