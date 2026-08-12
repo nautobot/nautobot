@@ -186,8 +186,10 @@ Saved views intentionally relax the standard permission model so that any user w
 
 - Any authenticated user can **create** saved views and view/edit/delete **their own**, with no `extras.*_savedview` permissions required.
 - Any authenticated user can see saved views that are marked **shared**.
+- Any authenticated user can set any saved view they can reach as **their own** default view, with no `extras.*_savedview` or `extras.*_usersavedviewassociation` permissions required.
 - The dedicated saved views *list* page, and access to other users' non-shared views, require `extras.view_savedview`; editing views you don't own requires `extras.change_savedview`.
-- These relaxations apply to the UI only — the REST API endpoint for saved views enforces standard object permissions.
+- Setting or clearing the **global default** view for a list view (which every user without a default of their own is redirected to) requires `extras.change_savedview`, in both the UI and the REST API.
+- The REST API enforces standard object permissions, so a user holding `extras.change_savedview` / `extras.delete_savedview` can manage other users' saved views there just as in the UI. Use an ObjectPermission constraint such as `{"owner": "$user"}` to restrict a user to their own. Note that `owner` is always the requesting user and cannot be set to another user, and `view` cannot be changed after creation.
 
 ### Change Log
 
@@ -330,6 +332,10 @@ Some other permissions, while not posing the same inherent security risks as tho
 - [Computed Fields](../../platform-functionality/computedfield.md) - poorly defined (expensive to calculate/render) custom field Jinja2 templates can significantly reduce performance of list views and object detail views.
 - [Custom Fields](../../platform-functionality/customfield.md) - the background task (job) started when a new custom field is defined or an existing custom field is deleted can consume significant resources in updating a large number of records. Large numbers of custom fields can clutter the UI and reduce performance.
 - [Relationships](../../platform-functionality/relationship.md) - large numbers of relationships can clutter the UI and reduce performance.
+- [Saved Views](../../platform-functionality/user-interface/savedview.md) - no `extras.*_savedview` or `extras.*_usersavedviewassociation` permission is needed for a user to make use of the feature. Any authenticated user can already create saved views, use their own and any shared view, and pin their own default view. Grant these permissions only to users who should control saved views for **other** users:
+    - `extras.view_savedview` grants visibility into every user's saved views, including those that are not shared, and access to the dedicated saved views list page.
+    - `extras.change_savedview` grants the ability to edit saved views belonging to other users, and to set the global default view that every user without a default of their own is redirected to.
+    - `extras.add_savedview` / `extras.delete_savedview` are only required for managing saved views through the REST API; users do not need them to create or delete their own saved views in the UI.
 
 ### Permissions That Are Generally Safe to Delegate
 

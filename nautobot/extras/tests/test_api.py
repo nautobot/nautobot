@@ -110,7 +110,7 @@ from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMix
 from nautobot.extras.utils import TaggableClassesQuery
 from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 
 User = get_user_model()
 
@@ -4167,12 +4167,31 @@ class JobQueueAssignmentTestCase(APIViewTestCases.APIViewTestCase):
 
 class SavedViewTest(APIViewTestCases.APIViewTestCase):
     model = SavedView
+    update_data = {
+        "name": "Renamed Saved View",
+        "is_shared": True,
+    }
+    bulk_update_data = {"is_shared": False}
 
     def setUp(self):
         super().setUp()
+        # The factory-generated SavedViews belong to arbitrary other users, but the generic test cases pick their
+        # subject objects from an unscoped queryset while the API scopes writes to the requesting user's own views.
+        # Replace them with views owned by self.user; the cross-user test cases below build their own fixtures.
+        SavedView.objects.all().delete()
+        self.saved_views = [
+            SavedView.objects.create(
+                owner=self.user,
+                name=f"My Saved View {i}",
+                view=view,
+                is_shared=bool(i % 2),
+            )
+            for i, view in enumerate(
+                ["circuits:circuit_list", "dcim:device_list", "dcim:location_list", "ipam:prefix_list"]
+            )
+        ]
         self.create_data = [
             {
-                "owner": self.user.pk,
                 "name": "Saved View 1",
                 "view": "circuits:circuit_list",
                 "config": {
@@ -4182,7 +4201,6 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 "is_shared": True,
             },
             {
-                "owner": self.user.pk,
                 "name": "Saved View 2",
                 "view": "dcim:device_list",
                 "config": {
@@ -4196,7 +4214,6 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 "is_shared": False,
             },
             {
-                "owner": self.user.pk,
                 "name": "Saved View 3",
                 "view": "dcim:location_list",
                 "config": {
@@ -4218,47 +4235,381 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def _other_user_saved_view(self, **kwargs):
+        """
+        Create a SavedView owned by some other user.
+
+        Deliberately called per-test rather than from setUp(), so as not to perturb the object counts and
+        ordering that the generic test cases depend on.
+        """
+        other_user = User.objects.create_user(username=f"other-savedview-user-{uuid.uuid4()}")
+        kwargs.setdefault("name", "Other User Saved View")
+        kwargs.setdefault("view", "dcim:rack_list")
+        return SavedView.objects.create(owner=other_user, **kwargs)
+
+    #
+    # Writable fields should match those the UI exposes: `owner` is never writable and `view` is create-only.
+    #
+
+    def test_create_object_owner_is_always_requesting_user(self):
+        self.add_permissions("extras.add_savedview")
+        response = self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(SavedView.objects.get(pk=response.data["id"]).owner, self.user)
+
+    def test_create_object_owner_is_ignored(self):
+        other_user = User.objects.create_user(username="savedview-owner-spoof-target")
+        self.add_permissions("extras.add_savedview")
+        data = {**self.create_data[0], "owner": str(other_user.pk)}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(SavedView.objects.get(pk=response.data["id"]).owner, self.user)
+        self.assertFalse(SavedView.objects.filter(owner=other_user).exists())
+
+    def test_update_owner_is_ignored(self):
+        other_user = User.objects.create_user(username="savedview-owner-transfer-target")
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"owner": str(other_user.pk)}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.owner, self.user)
+
+    def test_update_view_is_rejected(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"view": "dcim:rack_list"}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("view", response.data)
+        instance.refresh_from_db()
+        self.assertEqual(instance.view, "circuits:circuit_list")
+
+    def test_update_view_to_same_value_is_permitted(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"view": instance.view}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_create_duplicate_name_returns_400(self):
+        """Making `owner` read-only drops DRF's UniqueTogetherValidator; model validation must still catch this."""
+        self.add_permissions("extras.add_savedview")
+        instance = self.saved_views[0]
+        data = {"name": instance.name, "view": instance.view}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(SavedView.objects.filter(name=instance.name, view=instance.view).count(), 1)
+
+    def test_options_owner_is_read_only(self):
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.options(self._get_list_url(), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertTrue(response.data["actions"]["POST"]["owner"]["read_only"])
+        self.assertFalse(response.data["actions"]["POST"]["owner"]["required"])
+
+    #
+    # Changing the global default view affects every user, so it requires extras.change_savedview.
+    #
+
+    def test_create_global_default_without_change_permission_is_rejected(self):
+        self.add_permissions("extras.add_savedview")
+        data = {**self.create_data[0], "is_global_default": True}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("global default", str(response.data["is_global_default"]).lower())
+        self.assertFalse(SavedView.objects.filter(is_global_default=True).exists())
+
+    def test_create_global_default_with_change_permission(self):
+        self.add_permissions("extras.add_savedview", "extras.change_savedview")
+        data = {**self.create_data[0], "is_global_default": True, "is_shared": False}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        instance = SavedView.objects.get(pk=response.data["id"])
+        self.assertTrue(instance.is_global_default)
+        # A global default view is implicitly shared with all users.
+        self.assertTrue(instance.is_shared)
+
+    def test_set_global_default_with_change_permission(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"is_global_default": True}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        self.assertTrue(instance.is_shared)
+
+    def test_unset_global_default_requires_change_permission(self):
+        """Unsetting the global default is a system-wide behavior change too, so it is gated in both directions."""
+        instance = self.saved_views[0]
+        instance.is_global_default = True
+        instance.save()
+        # Without extras.change_savedview the request is rejected by the permission class before the serializer.
+        self.add_permissions("extras.view_savedview")
+        response = self.client.patch(
+            self._get_detail_url(instance), {"is_global_default": False}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+
+    def test_unset_global_default_with_change_permission(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        instance.is_global_default = True
+        instance.save()
+        response = self.client.patch(
+            self._get_detail_url(instance), {"is_global_default": False}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_global_default)
+
+    def test_patch_unrelated_field_on_own_global_default_view(self):
+        """Re-submitting an unchanged is_global_default must not trip the permission gate."""
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        instance.is_global_default = True
+        instance.save()
+        response = self.client.patch(
+            self._get_detail_url(instance),
+            {"name": "Renamed Global Default", "is_global_default": True},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Renamed Global Default")
+        self.assertTrue(instance.is_global_default)
+
+    #
+    # Managing other users' saved views is permitted by the standard object permissions, as in the UI.
+    #
+
+    def test_update_other_user_saved_view_with_change_permission(self):
+        self.add_permissions("extras.change_savedview", "extras.view_savedview")
+        for is_shared in (False, True):
+            with self.subTest(is_shared=is_shared):
+                instance = self._other_user_saved_view(name=f"Other User View {is_shared}", is_shared=is_shared)
+                response = self.client.patch(
+                    self._get_detail_url(instance), {"name": f"Moderated {is_shared}"}, format="json", **self.header
+                )
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                instance.refresh_from_db()
+                self.assertEqual(instance.name, f"Moderated {is_shared}")
+                # The moderated view still belongs to its original owner.
+                self.assertNotEqual(instance.owner, self.user)
+
+    def test_update_other_user_is_shared_with_change_permission(self):
+        self.add_permissions("extras.change_savedview", "extras.view_savedview")
+        instance = self._other_user_saved_view(is_shared=False)
+        response = self.client.patch(self._get_detail_url(instance), {"is_shared": True}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_shared)
+
+    def test_delete_other_user_saved_view_with_delete_permission(self):
+        self.add_permissions("extras.delete_savedview", "extras.view_savedview")
+        instance = self._other_user_saved_view()
+        response = self.client.delete(self._get_detail_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SavedView.objects.filter(pk=instance.pk).exists())
+
+    def test_update_other_user_saved_view_with_owner_constrained_permission(self):
+        """An administrator can restrict a user to their own saved views with an ObjectPermission constraint."""
+        self.add_permissions("extras.change_savedview", constraints={"owner": "$user"})
+        instance = self._other_user_saved_view(name="Constrained Target")
+        response = self.client.patch(self._get_detail_url(instance), {"name": "hacked"}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Constrained Target")
+        # The same user can still modify their own saved views.
+        own = self.saved_views[0]
+        response = self.client.patch(self._get_detail_url(own), {"name": "Renamed Own"}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_bulk_update_objects_across_owners(self):
+        self.add_permissions("extras.change_savedview")
+        other = self._other_user_saved_view(is_shared=True)
+        own = self.saved_views[:2]
+        data = [{"id": str(sv.pk), "is_shared": False} for sv in [*own, other]]
+        response = self.client.patch(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), len(own) + 1)
+        for saved_view in [*own, other]:
+            saved_view.refresh_from_db()
+            self.assertFalse(saved_view.is_shared)
+
+    def test_bulk_delete_objects_across_owners(self):
+        self.add_permissions("extras.delete_savedview")
+        other = self._other_user_saved_view()
+        own = self.saved_views[:2]
+        data = [{"id": str(sv.pk)} for sv in [*own, other]]
+        response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SavedView.objects.filter(pk__in=[other.pk, *[sv.pk for sv in own]]).exists())
+
+    def test_bulk_update_cannot_change_owner_or_view(self):
+        other_user = User.objects.create_user(username="savedview-bulk-owner-target")
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        # `owner` is read-only, so it is ignored rather than rejected.
+        response = self.client.patch(
+            self._get_list_url(),
+            [{"id": str(instance.pk), "owner": str(other_user.pk)}],
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.owner, self.user)
+        # `view` is create-only, so changing it is rejected.
+        response = self.client.patch(
+            self._get_list_url(),
+            [{"id": str(instance.pk), "view": "dcim:rack_list"}],
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        instance.refresh_from_db()
+        self.assertEqual(instance.view, "circuits:circuit_list")
+
+    def test_superuser_can_manage_other_users_saved_views(self):
+        self.user.is_superuser = True
+        self.user.save()
+        instance = self._other_user_saved_view(is_shared=False)
+        self.assertHttpStatus(self.client.get(self._get_detail_url(instance), **self.header), status.HTTP_200_OK)
+        response = self.client.patch(
+            self._get_detail_url(instance),
+            {"is_shared": True, "is_global_default": True},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        # Not even a superuser can reassign ownership through the REST API.
+        response = self.client.patch(
+            self._get_detail_url(instance), {"owner": str(self.user.pk)}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertNotEqual(instance.owner, self.user)
+
+    #
+    # set-default action
+    #
+
+    def _get_set_default_url(self, instance):
+        return reverse("extras-api:savedview-set-default", kwargs={"pk": instance.pk})
+
+    def test_set_default_requires_no_savedview_permission(self):
+        instance = self.saved_views[0]
+        response = self.client.post(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertTrue(
+            UserSavedViewAssociation.objects.filter(
+                user=self.user, saved_view=instance, view_name=instance.view
+            ).exists()
+        )
+
+    def test_set_default_other_users_shared_view(self):
+        instance = self._other_user_saved_view(is_shared=True)
+        response = self.client.post(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertTrue(UserSavedViewAssociation.objects.filter(user=self.user, saved_view=instance).exists())
+
+    def test_set_default_other_users_private_view(self):
+        """A Saved View URL can be handed directly to another user; matches the UI's set-default behavior."""
+        instance = self._other_user_saved_view(is_shared=False)
+        response = self.client.post(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertTrue(UserSavedViewAssociation.objects.filter(user=self.user, saved_view=instance).exists())
+
+    def test_set_default_replaces_existing_pin(self):
+        first = self.saved_views[0]
+        second = SavedView.objects.create(owner=self.user, name="Another Circuits View", view=first.view)
+        self.assertHttpStatus(self.client.post(self._get_set_default_url(first), **self.header), status.HTTP_200_OK)
+        self.assertHttpStatus(self.client.post(self._get_set_default_url(second), **self.header), status.HTTP_200_OK)
+        associations = UserSavedViewAssociation.objects.filter(user=self.user, view_name=first.view)
+        self.assertEqual(associations.count(), 1)
+        self.assertEqual(associations.first().saved_view, second)
+
+    def test_clear_default(self):
+        instance = self.saved_views[0]
+        self.assertHttpStatus(self.client.post(self._get_set_default_url(instance), **self.header), status.HTTP_200_OK)
+        response = self.client.delete(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(UserSavedViewAssociation.objects.filter(user=self.user, view_name=instance.view).exists())
+
+    def test_set_default_anonymous(self):
+        self.client.logout()
+        response = self.client.post(self._get_set_default_url(self.saved_views[0]))
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    def test_set_default_read_only_token(self):
+        read_only_token = Token.objects.create(user=self.user, write_enabled=False)
+        response = self.client.post(
+            self._get_set_default_url(self.saved_views[0]),
+            HTTP_AUTHORIZATION=f"Token {read_only_token.key}",
+        )
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
 
 class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
     model = UserSavedViewAssociation
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.saved_view_views_distinct = SavedView.objects.values("view").distinct()
-        cls.users = User.objects.all()
+    def setUp(self):
+        super().setUp()
+        # The factory-generated pins belong to arbitrary users and consume the (user, view_name) unique pairs
+        # this test class needs, so replace them with a deterministic set.
+        UserSavedViewAssociation.objects.all().delete()
+        # SavedView is in EXEMPT_EXCLUDE_MODELS, so resolving the `saved_view` foreign key requires a real
+        # `extras.view_savedview` permission even under EXEMPT_VIEW_PERMISSIONS=["*"].
+        self.add_permissions("extras.view_savedview")
+        # unique_together = [["user", "view_name"]], so each pin needs a SavedView with a distinct `view`.
+        self.saved_views = [
+            SavedView.objects.create(owner=self.user, name="Association Test View", view=view)
+            for view in [
+                "circuits:circuit_list",
+                "dcim:device_list",
+                "dcim:location_list",
+                "dcim:rack_list",
+                "ipam:prefix_list",
+                "ipam:vlan_list",
+            ]
+        ]
+        for saved_view in self.saved_views[:3]:
+            UserSavedViewAssociation.objects.create(user=self.user, saved_view=saved_view, view_name=saved_view.view)
+        self.create_data = [
+            {"user": self.user.pk, "saved_view": saved_view.pk, "view_name": saved_view.view}
+            for saved_view in self.saved_views[3:]
+        ]
 
-        cls.create_data = []
-        for i, saved_view in enumerate(cls.saved_view_views_distinct[:3]):
-            sv = SavedView.objects.filter(view=saved_view["view"]).first()
-            cls.create_data.append(
-                {
-                    "user": cls.users[i].pk,
-                    "saved_view": sv.pk,
-                    "view_name": sv.view,
-                }
-            )
-        for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
-            sv = SavedView.objects.filter(view=saved_view["view"]).first()
-            UserSavedViewAssociation.objects.create(
-                user=cls.users[i],
-                saved_view=sv,
-                view_name=sv.view,
-            )
+    def test_get_object_depth_1_constrained_permission(self):
+        # This test asserts that a nested object the user cannot view is downgraded to brief form, so the
+        # class-wide extras.view_savedview grant from setUp() has to be dropped for it to be meaningful.
+        self.remove_permissions("extras.view_savedview")
+        super().test_get_object_depth_1_constrained_permission()
+
+    def test_list_objects_depth_1_constrained_permission(self):
+        self.remove_permissions("extras.view_savedview")
+        super().test_list_objects_depth_1_constrained_permission()
 
     def test_creating_invalid_user_to_saved_view(self):
         # Add object-level permission
-        duplicate_view_name = self.saved_view_views_distinct[0]["view"]
-        saved_view = SavedView.objects.filter(view=duplicate_view_name).first()
-        user = self.users[0]
-        UserSavedViewAssociation.objects.create(
-            saved_view=saved_view,
-            user=user,
-            view_name=saved_view.view,
-        )
+        saved_view = self.saved_views[0]
         duplicate_user_to_savedview_create_data = {
-            "user": user.pk,
+            "user": self.user.pk,
             "saved_view": saved_view.pk,
-            "view_name": duplicate_view_name,
+            "view_name": saved_view.view,
         }
         self.add_permissions("extras.add_usersavedviewassociation", "users.view_user", "extras.view_savedview")
         response = self.client.post(
@@ -4266,6 +4617,21 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("User saved view association with this User and View name already exists.", str(response.content))
+
+    def test_endpoints_are_deprecated(self):
+        """These endpoints are superseded by the saved-views/<uuid>/set-default/ action; see TODO for 4.0."""
+        response = self.client.get(reverse("schema"), {"format": "json"}, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        paths = response.json()["paths"]
+        for path, methods in [
+            ("/extras/user-saved-view-associations/", ["get", "post", "put", "patch", "delete"]),
+            ("/extras/user-saved-view-associations/{id}/", ["get", "put", "patch", "delete"]),
+        ]:
+            for method in methods:
+                with self.subTest(path=path, method=method):
+                    self.assertTrue(paths[path][method]["deprecated"])
+        # The replacement endpoint is of course not deprecated.
+        self.assertNotIn("deprecated", paths["/extras/saved-views/{id}/set-default/"]["post"])
 
 
 class ScheduledJobTest(

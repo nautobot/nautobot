@@ -475,6 +475,38 @@ class SavedViewSerializer(ValidatedModelSerializer):
     class Meta:
         model = SavedView
         fields = "__all__"
+        extra_kwargs = {"owner": {"read_only": True}}
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        request = self.context.get("request", None)
+        user = getattr(request, "user", None)
+        # `owner` is read-only, so DRF drops it; supply it here on creation.
+        if self.instance is None and user is not None and user.is_authenticated:
+            ret["owner"] = user
+        return ret
+
+    def validate_view(self, value):
+        if self.instance is not None and value != self.instance.view:
+            raise serializers.ValidationError(
+                "The `view` of an existing saved view cannot be changed; create a new saved view instead."
+            )
+        return value
+
+    def validate_is_global_default(self, value):
+        """Require extras.change_savedview to change the global default, which affects every user."""
+        request = self.context.get("request", None)
+        user = getattr(request, "user", None)
+        if user is None or not user.is_authenticated:
+            return value
+        current = self.instance.is_global_default if self.instance is not None else False
+        # Compare against the current value so that re-submitting an unchanged flag (as a PUT or the UI edit
+        # form always does) does not require the permission.
+        if value != current and not user.has_perms(["extras.change_savedview"]):
+            raise serializers.ValidationError(
+                "You do not have the required permission to change the global default Saved View."
+            )
+        return value
 
 
 class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
