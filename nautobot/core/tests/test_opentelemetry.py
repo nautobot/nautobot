@@ -653,13 +653,6 @@ class APITraceGenerationTest(testing.APITestCase):
         self.assertIn(url, path, "Expected span to contain the request path")
 
 
-# SILKY_INTERCEPT_FUNC that always profiles, so the test exercises SilkyMiddleware's
-# request/response wrapping regardless of the per-session `silk_record_requests` flag
-# (token-authenticated API requests don't carry that session flag).
-def _always_profile(request):  # pragma: no cover - trivial test hook
-    return True
-
-
 @override_settings(ALLOW_REQUEST_PROFILING=True)
 class OtelWithSilkProfilingTest(testing.APITestCase):
     """Guard against 5xx (e.g. 502) when OpenTelemetry and django-silk profiling are both active.
@@ -674,9 +667,8 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
     more severe production crash where OTLP-gRPC + uWSGI pre-fork + silk profiling segfaults workers
     (SIGSEGV) because the fork-unsafe gRPC channel is built in the master pre-fork. A green result here
     must NOT be read as "OTEL + Silk is safe under uWSGI." That fork/gRPC path is fixed by building the
-    OTLP exporters post-fork (see `nautobot.core.cli.opentelemetry.install_exporters` +
-    `InstrumentExporterBranchTest`) and is exercised end-to-end by the reproduction harness under
-    `development/` (see the observability/segfault repro docs), not by this unit test.
+    OTLP exporters post-fork (see `nautobot.core.cli.opentelemetry.install_exporters` + `InstrumentExporterBranchTest`),
+    not by this unit test.
     """
 
     def setUp(self):
@@ -691,18 +683,6 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
         self._env_patcher.start()
         self._settings_override = override_settings(OTEL_PYTHON_DJANGO_INSTRUMENT=True)
         self._settings_override.enable()
-        # Force Silk to profile every request (token-authenticated API requests don't carry the
-        # per-session silk_record_requests flag). SilkyConfig is a process-wide Singleton that
-        # snapshots SILKY_* settings on _setup(), so overriding SILKY_INTERCEPT_FUNC in settings has
-        # no effect until we re-run _setup(). Manage this at the instance level (rather than via a
-        # class-level @override_settings) so the enable/disable pairing is deterministic and Silk is
-        # restored in tearDown -- the class decorator's revert runs too late (after tearDownClass) and
-        # would leak the always-profile hook into every subsequent test in the process.
-        from silk.config import SilkyConfig
-
-        self._silk_override = override_settings(SILKY_INTERCEPT_FUNC=_always_profile)
-        self._silk_override.enable()
-        SilkyConfig()._setup()
         DjangoInstrumentor().uninstrument()
         DjangoInstrumentor().instrument(tracer_provider=self._provider)
         self.client.handler.load_middleware()
@@ -718,15 +698,6 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
         self._trace_patcher.stop()
         DjangoInstrumentor().uninstrument()
         self.client.handler.load_middleware()
-        # Revert the SILKY_INTERCEPT_FUNC override first, then re-read SilkyConfig from the restored
-        # settings so the always-profile hook does not leak into subsequent tests in this process.
-        self._silk_override.disable()
-        from silk.config import SilkyConfig
-
-        SilkyConfig()._setup()
-        # Regression guard: the process-wide SilkyConfig singleton must no longer carry our
-        # always-profile hook, or every subsequent test in this process would be profiled by Silk.
-        self.assertIsNot(SilkyConfig().SILKY_INTERCEPT_FUNC, _always_profile)
         self._settings_override.disable()
         self._env_patcher.stop()
         super().tearDown()
@@ -735,12 +706,21 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
         """A token-authenticated GraphQL POST must succeed (not 5xx) with OTEL + Silk both active."""
         self.add_permissions("dcim.view_location")
         url = reverse("graphql-api")
-        response = self.client.post(
-            url,
-            data=json.dumps({"query": "query GetLocations { locations { id name } }"}),
-            content_type="application/json",
-            **self.header,
-        )
+        session = self.client.session
+        session["silk_record_requests"] = True
+        session.save()
+
+        def mock_process_response(request, response):
+            self.assertTrue(getattr(request, "silk_is_intercepted", False))
+            return response
+
+        with patch("silk.middleware.SilkyMiddleware.process_response", wraps=mock_process_response) as mock_pr:
+            response = self.client.post(
+                url,
+                data=json.dumps({"query": "query GetLocations { locations { id name } }"}),
+                content_type="application/json",
+                **self.header,
+            )
         self.assertLess(
             response.status_code,
             500,
@@ -748,6 +728,7 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
             f"{getattr(response, 'content', b'')!r}",
         )
         self.assertEqual(response.status_code, 200)
+        mock_pr.assert_called_once()
 
         # OTEL must genuinely still be active alongside Silk (otherwise a 200 would prove nothing).
         spans = self._exporter.get_finished_spans()
@@ -761,9 +742,19 @@ class OtelWithSilkProfilingTest(testing.APITestCase):
 
     def test_non_graphql_request_with_otel_and_silk_returns_200(self):
         """A non-GraphQL API request must also succeed with OTEL + Silk both active (control case)."""
-        response = self.client.get(reverse("api-status"), **self.header)
+        session = self.client.session
+        session["silk_record_requests"] = True
+        session.save()
+
+        def mock_process_response(request, response):
+            self.assertTrue(getattr(request, "silk_is_intercepted", False))
+            return response
+
+        with patch("silk.middleware.SilkyMiddleware.process_response", wraps=mock_process_response) as mock_pr:
+            response = self.client.get(reverse("api-status"), **self.header)
         self.assertLess(response.status_code, 500, "OTEL + Silk profiling produced a server error on /api/status/.")
         self.assertEqual(response.status_code, 200)
+        mock_pr.assert_called_once()
 
 
 class RequestsInstrumentationTraceparentTest(testing.TestCase):
