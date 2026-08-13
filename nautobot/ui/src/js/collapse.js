@@ -44,7 +44,6 @@
  *       "collapseme-computed_fields_False-2": "expanded"
  *     }
  *   }
- *   "djdt.show": "false"
  * }
  * ---
  * @returns {function(): void} Destructor function - remove all event listeners added during initialization.
