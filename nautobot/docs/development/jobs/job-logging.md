@@ -110,7 +110,6 @@ If `grouping` is not specified, Nautobot uses the current function name as a def
     ```py
     from nautobot.apps.jobs import Job
 
-
     class MyJob(Job):
         def run(self):
             self.logger.info("This job is running!", extra={"grouping": "myjobisrunning", "object": self.job_result})

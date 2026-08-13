@@ -423,20 +423,24 @@ class DeviceDetailComputedFieldsAndCustomFieldsCollapseAndExpandButton(CollapseA
         )
 
         # Expand
-        self._click_collapse_all_button(self.CUSTOM_FIELDS_TOGGLE_ALL_BUTTON_SELECTOR)
-        self.assertEqual(
-            self._get_collapsed_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
-            self._get_total_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
-        )
-
-        # Collapse
         self._click_collapse_all_button(self.COMPUTED_FIELDS_TOGGLE_ALL_BUTTON_SELECTOR)
         self.assertEqual(
             self._get_expanded_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
             self._get_total_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
         )
         self.assertEqual(
-            self._get_collapsed_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
+            self._get_expanded_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
+            self._get_total_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
+        )
+
+        # Collapse
+        self._click_collapse_all_button(self.COMPUTED_FIELDS_TOGGLE_ALL_BUTTON_SELECTOR)
+        self.assertEqual(
+            self._get_collapsed_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
+            self._get_total_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
+        )
+        self.assertEqual(
+            self._get_expanded_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
             self._get_total_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
         )
 
@@ -458,19 +462,23 @@ class DeviceDetailComputedFieldsAndCustomFieldsCollapseAndExpandButton(CollapseA
         )
 
         # Expand
-        self._click_collapse_all_button(self.COMPUTED_FIELDS_TOGGLE_ALL_BUTTON_SELECTOR)
-        self.assertEqual(
-            self._get_collapsed_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
-            self._get_total_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
-        )
-
-        # Collapse
         self._click_collapse_all_button(self.CUSTOM_FIELDS_TOGGLE_ALL_BUTTON_SELECTOR)
         self.assertEqual(
             self._get_expanded_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
             self._get_total_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
         )
         self.assertEqual(
-            self._get_collapsed_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
+            self._get_expanded_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
+            self._get_total_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
+        )
+
+        # Collapse
+        self._click_collapse_all_button(self.CUSTOM_FIELDS_TOGGLE_ALL_BUTTON_SELECTOR)
+        self.assertEqual(
+            self._get_collapsed_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
+            self._get_total_row_count(self.CUSTOM_FIELDS_GROUP_ROW_SELECTOR),
+        )
+        self.assertEqual(
+            self._get_expanded_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
             self._get_total_row_count(self.COMPUTED_FIELDS_GROUP_ROW_SELECTOR),
         )
