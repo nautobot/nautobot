@@ -1,0 +1,7 @@
+[a11y] Fixed the viewport meta tag disabling pinch-zoom and text scaling, which prevented users from magnifying any page.
+[a11y] Added missing accessible names to various HTML UI elements.
+[a11y] Fixed various screen-reader compatibility issues related to page structure and semantics.
+[a11y] Fixed images missing `alt` attributes.
+[a11y] Fixed keyboard navigation issues, including the header search dialog trapping users inside it and hidden bulk-action controls remaining reachable.
+[a11y] Fixed various touch targets that were smaller than the WCAG 2.5.8 minimum.
+Fixed submitting the Location create form without a Location Type raising `RelatedObjectDoesNotExist` from `Location.clean()` instead of reporting the field as required.

@@ -12,6 +12,8 @@ const collapseSubtree = (event) => {
     tr.nextElementSibling.remove();
   }
   event.target.classList.toggle('nb-subtree-expanded', false);
+  // Keep the announced state in sync with the visual one; the class alone conveys nothing non-visually.
+  event.target.setAttribute('aria-expanded', 'false');
   event.target.setAttribute('hx-get', event.target.getAttribute('_hx-get'));
   htmx.process(event.target);
   url.searchParams.delete('expanded_subtree', event.target.closest('td').getAttribute('data-pk'));
@@ -20,6 +22,7 @@ const collapseSubtree = (event) => {
 
 const afterSubtreeExpansion = (span, addExpandedPrefix) => {
   span.classList.toggle('nb-subtree-expanded', true);
+  span.setAttribute('aria-expanded', 'true');
   span.setAttribute('_hx-get', span.getAttribute('hx-get'));
   span.removeAttribute('hx-get');
   htmx.process(span);
