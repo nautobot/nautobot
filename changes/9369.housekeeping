@@ -1,2 +1,3 @@
 [a11y] Re-enabled the djlint `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag") accessibility rules so that regressions are caught in CI.
 [a11y] Moved the icon on the "filter to descendants" links in the Location and Prefix list views into its own `<span>`, matching how icons are rendered everywhere else in the UI rather than applying the `mdi` classes to the link itself.
+[a11y] Added axe-core accessibility regression tests covering the home page, every core list view, detail, edit and error-state form, search and login pages, gating on the WCAG 2.2 Level A and AA rule tags apart from `color-contrast`, which is left off pending a decision on the theme palette.
