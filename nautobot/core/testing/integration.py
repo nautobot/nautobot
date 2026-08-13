@@ -904,3 +904,51 @@ class BulkOperationsTestCases:
 
     class BulkOperationsTestCase(BulkEditTestCase, BulkDeleteTestCase):
         pass
+
+
+class CollapseAllButtonTestCase(SeleniumTestCase):
+    """
+    Base class for integration tests of a "Collapse All / Expand All Groups" button (see `nautobot/ui/src/js/collapse.js`).
+
+    Child classes MUST set TOGGLE_ALL_BUTTON_SELECTOR, GROUP_ROW_SELECTOR, and GROUP_TOGGLE_SELECTOR in their own `setUp
+    """
+
+    # CSS selector for the "collapse all" toggle button.
+    TOGGLE_ALL_BUTTON_SELECTOR = None
+    # CSS selector matching every collapsible group row controlled by the button.
+    GROUP_ROW_SELECTOR = None
+    # CSS selector for the individual per-group collapse toggles.
+    GROUP_TOGGLE_SELECTOR = None
+
+    def _get_group_count(self, group_toggle_selector=None):
+        return len(self.browser.find_by_css(group_toggle_selector or self.GROUP_TOGGLE_SELECTOR))
+
+    def _get_total_row_count(self, group_row_selector=None):
+        return len(self.browser.find_by_css(group_row_selector or self.GROUP_ROW_SELECTOR))
+
+    def _get_collapsed_row_count(self, group_row_selector=None):
+        return len(self.browser.find_by_css(f"{group_row_selector or self.GROUP_ROW_SELECTOR}:not(.show)"))
+
+    def _get_expanded_row_count(self, group_row_selector=None):
+        return len(self.browser.find_by_css(f"{group_row_selector or self.GROUP_ROW_SELECTOR}.show"))
+
+    def _get_collapse_all_button_text(self, toggle_all_button_selector=None):
+        return self.browser.find_by_css(toggle_all_button_selector or self.TOGGLE_ALL_BUTTON_SELECTOR).first.text
+
+    def _click_collapse_all_button(self, toggle_all_button_selector=None):
+        button = self.browser.find_by_css(
+            toggle_all_button_selector or self.TOGGLE_ALL_BUTTON_SELECTOR, wait_time=2
+        ).first
+        self.scroll_element_into_view(element=button)
+        button.click()
+
+    def _click_expand_all_button(self, toggle_all_button_selector=None):
+        self.browser.is_element_present_by_text("Expand All Groups", wait_time=2)
+        self._click_collapse_all_button(toggle_all_button_selector)
+
+    def _expand_first_group(self, group_toggle_selector=None):
+        expansion_indicator = self.browser.find_by_css(
+            group_toggle_selector or self.GROUP_TOGGLE_SELECTOR, wait_time=2
+        ).first
+        self.scroll_element_into_view(element=expansion_indicator)
+        expansion_indicator.click()
