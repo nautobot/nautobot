@@ -1,8 +1,23 @@
+{% comment %}
+The elevation is a standalone SVG document pulled in through `<object data="...">`, which assistive technology cannot
+reach into (WCAG 1.1.1). The `aria-label` names the embedded object, and the markup inside it is fallback content,
+rendered only when the SVG cannot be loaded.
+{% endcomment %}
 <div style="margin-left: -30px">
-    <object data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation invert-in-dark-mode"></object>
+    <object aria-label="{{ face|capfirst }} elevation of rack {{ object }}"
+            class="rack_elevation invert-in-dark-mode"
+            data="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{ face }}&render=svg">
+        <p>
+            The {{ face }} elevation of rack {{ object }} could not be displayed.
+            <a href="{% url 'dcim:device_list' %}?rack={{ object.pk }}">View the devices in this rack as a list</a>
+            instead.
+        </p>
+    </object>
 </div>
 <div class="text-center text-small">
-    <a href="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{face}}&render=svg" class="rack_elevation_save_svg_link" download="rack_{{ face }}_{{ object }}.svg">
-        <span class="mdi mdi-content-save-outline"></span> Save SVG
+    <a href="{% url 'dcim-api:rack-elevation' pk=object.pk %}?face={{ face }}&render=svg"
+       class="rack_elevation_save_svg_link"
+       download="rack_{{ face }}_{{ object }}.svg">
+        <span aria-hidden="true" class="mdi mdi-content-save-outline"></span> Save SVG
     </a>
 </div>

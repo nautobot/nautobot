@@ -282,7 +282,8 @@ relative_files = true
 [tool.djlint]
 custom_blocks="captureas"
 extend_exclude = "docs/,example_app/static,nautobot/project-static/"
-ignore = "H005,H006,H008,H011,H012,H013,H014,H015,H016,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
+# H013 ("img missing alt") and H016 ("missing title tag") are accessibility rules and are deliberately kept enabled.
+ignore = "H005,H006,H008,H011,H012,H014,H015,H019,H020,H021,H022,H023,H025,H026,H030,H031,H037,T001,T002,T003"
 profile="django"
 
 [tool.pylint.main]

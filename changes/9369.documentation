@@ -1,0 +1,2 @@
+[a11y] Added an Accessibility section to the UI Best Practices developer documentation, covering accessible names, hiding mechanisms, forms, tables, dialogs, color and live regions.
+[a11y] Added guidance on scanning pages by hand with a browser extension, including why such a scan should be run with `DEBUG` off.

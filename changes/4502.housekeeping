@@ -1,0 +1,1 @@
+Removed the unused `PasswordInputWithPlaceholder` form widget, which had been orphaned since support for storing Git repository credentials in the database was removed.

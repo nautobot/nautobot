@@ -284,13 +284,13 @@ class HomeViewTestCase(TestCase):
         def assertBodyContains(html):
             return self.assertBodyContains(response, html, html=True)
 
-        assertBodyContains("""<strong class="nb-text-none text-body">Organization</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/locations/">Locations</a></h4>""")
-        assertBodyContains("""<strong class="nb-text-none text-body">DCIM</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/devices/">Devices</a></h4>""")
-        assertBodyContains("""<strong class="nb-text-none text-body">IPAM</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/prefixes/">Prefixes</a></h4>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h4>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
 
 
 class AppDocsViewTestCase(TestCase):
@@ -499,7 +499,9 @@ class SearchContentTypeView(TestCase):
         response = self.client.get(
             reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
         )
-        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        self.assertBodyContains(
+            response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True
+        )
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
@@ -609,6 +611,28 @@ class LiveSearchViewTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class ViewportMetaTestCase(TestCase):
+    """
+    The viewport meta tag must not disable zooming (WCAG 1.4.4 Resize Text).
+
+    This is asserted here, rather than left to the axe-core integration tests, because it is a single-line regression
+    that is easy to reintroduce -- `user-scalable=no` is a common workaround for iOS Safari auto-zooming focused inputs --
+    and because a unit test runs on every suite rather than only when Selenium is available.
+    """
+
+    def test_viewport_permits_zoom(self):
+        response = self.client.get(reverse("home"))
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+
+        match = re.search(r'<meta name="viewport" content="([^"]*)"', body)
+        self.assertIsNotNone(match, "No viewport meta tag found")
+        content = match.group(1)
+
+        self.assertNotIn("user-scalable=no", content.replace(" ", ""))
+        self.assertNotIn("maximum-scale", content, "maximum-scale caps zoom and fails WCAG 1.4.4")
+
+
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
         """Unauthenticated access redirects to the login page."""
@@ -620,7 +644,9 @@ class MessagesViewTestCase(TestCase):
     def test_empty(self):
         """When there are no messages queued, response contains an empty header_messages container."""
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
 
     def test_messages(self):
         """When there are messages queued, response contains them in the header_messages container."""
@@ -634,7 +660,7 @@ class MessagesViewTestCase(TestCase):
         self.assertBodyContains(
             response,
             """
-                <div id="header_messages">
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
                     <div class="alert alert-info alert-dismissable" role="alert">
                         <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
                         Test info message
@@ -670,7 +696,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -689,7 +715,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
