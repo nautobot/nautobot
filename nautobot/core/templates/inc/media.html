@@ -35,12 +35,6 @@
 <link rel="shortcut icon" href="{% custom_branding_or_static 'favicon' %}">
 <meta name="msapplication-TileColor" content="#2d89ef">
 <meta name="theme-color" content="#ffffff">
-{% comment %}
-Do not add `maximum-scale` or `user-scalable=no` here. Either one prevents pinch-zoom, which fails WCAG 1.4.4 Resize
-Text: users who need to magnify the page cannot. They were originally present to stop iOS Safari auto-zooming when an
-input is focused, which it does whenever the control's font size is below 16px; that is handled properly in
-`nautobot.scss` by raising form control font size on touch devices instead.
-{% endcomment %}
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {% if settings.PUBLISH_ROBOTS_TXT %}
     <meta name="robots" content="noindex, nofollow">
