@@ -70,6 +70,7 @@ export const initializeCollapseToggleAll = () => {
       return collapsedOrExpanded === 'collapsed' ? isCollapsed : !isCollapsed;
     });
   const areAllElementsCollapsed = (collapsableElements) => areAll(collapsableElements, 'collapsed');
+  const areAllElementsExpanded = (collapsableElements) => areAll(collapsableElements, 'expanded');
 
   const getToggleAllButtonTargetQuerySelector = (toggleAllButton) => toggleAllButton.dataset.nbTarget || '.collapse';
   const getAllToggleAllButtonElements = () => [...document.querySelectorAll('[data-nb-toggle="collapse-all"]')];
@@ -132,35 +133,23 @@ export const initializeCollapseToggleAll = () => {
     writeLocalStorageCollapsedState(localStorageCollapsedState);
   };
 
-  // A namespace only counts as fully collapsed when its stored default is collapsed, every stored group is collapsed, and every rendered group is collapsed. Reading the stored state keeps the button label correct on paginated pages whose collapsed groups are not in the DOM.
-  const isEveryGroupCollapsed = (toggleAllButtonElement) => {
-    const collapsedStateNamespaceKey = getToggleAllButtonTargetQuerySelector(toggleAllButtonElement);
-    const namespaceCollapsedState = readLocalStorageCollapsedState()[collapsedStateNamespaceKey] || {};
-
-    if (namespaceCollapsedState[TABLE_PANEL_DEFAULT_STATE_KEY] !== 'collapsed') {
-      return false;
-    }
-
-    const isEveryStoredGroupCollapsed = Object.entries(namespaceCollapsedState).every(
-      ([tablePanelKey, tablePanelState]) =>
-        tablePanelKey === TABLE_PANEL_DEFAULT_STATE_KEY || tablePanelState === 'collapsed',
-    );
-    if (!isEveryStoredGroupCollapsed) {
-      return false;
-    }
-
-    return areAllElementsCollapsed(getAllCollapsableElementsFromToggleAllButton(toggleAllButtonElement));
-  };
-
   // --------------------
   // View
   // --------------------
+  // The button label flips only at the extremes: "Expand All Groups" once every group is collapsed, "Collapse All Groups" once every group is expanded. In a mixed state the label is left unchanged so it keeps whichever action it was last offering.
   const syncView = () => {
     getAllToggleAllButtonElements().forEach((toggleAllButtonElement) => {
-      if (isEveryGroupCollapsed(toggleAllButtonElement)) {
+      const allCollapsableElements = getAllCollapsableElementsFromToggleAllButton(toggleAllButtonElement);
+
+      // Nothing to reflect until the collapse elements exist (they can be swapped in later by htmx); an empty set would otherwise read as "all collapsed" and wrongly flip the label.
+      if (allCollapsableElements.length === 0) {
+        return;
+      }
+
+      if (areAllElementsCollapsed(allCollapsableElements)) {
         toggleAllButtonElement.setAttribute('aria-expanded', 'false');
         toggleAllButtonElement.textContent = 'Expand All Groups';
-      } else {
+      } else if (areAllElementsExpanded(allCollapsableElements)) {
         toggleAllButtonElement.setAttribute('aria-expanded', 'true');
         toggleAllButtonElement.textContent = 'Collapse All Groups';
       }
@@ -224,7 +213,8 @@ export const initializeCollapseToggleAll = () => {
 
     const collapsedStateNamespace = getToggleAllButtonTargetQuerySelector(toggleAllButtonElement);
     const allCollapsableElements = getAllCollapsableElementsFromToggleAllButton(toggleAllButtonElement);
-    const shouldExpandEveryGroup = isEveryGroupCollapsed(toggleAllButtonElement);
+    // Act on whichever action the button is currently offering, so the click always matches the visible label.
+    const shouldExpandEveryGroup = toggleAllButtonElement.getAttribute('aria-expanded') !== 'true';
 
     const namespaceDefaultState = shouldExpandEveryGroup === true ? 'expanded' : 'collapsed';
     resetLocalStorageCollapsedStateNamespaceToDefault(collapsedStateNamespace, namespaceDefaultState);

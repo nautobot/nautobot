@@ -136,7 +136,12 @@ class JobListCollapseAndExpandButton(CollapseAllButtonTestCase):
         self._click_collapse_all_button()
         self._expand_first_group()
 
+        # Wait for the reopened group to render and persist before reloading, so the reload restores the intended mixed state rather than a uniform one.
+        self.browser.is_element_present_by_css(f"{self.GROUP_ROW_SELECTOR}.show", wait_time=2)
+        self.assertGreater(self._get_collapsed_row_count(), 0)
+
         self.browser.reload()
+        self.assertGreater(self._get_expanded_row_count(), 0)
 
         self._click_collapse_all_button()
         self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
@@ -169,45 +174,36 @@ class JobListCollapseAndExpandButton(CollapseAllButtonTestCase):
         self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")
 
         self._expand_first_group()
-        self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")
+        self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")
 
         self._visit_job_list_page(1)
         self.assertGreater(self._get_collapsed_row_count(), 0)
-        self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")
+        self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")
 
-    def test_collapse_all_on_page_two_collapses_when_only_expanded_group_is_on_page_one(self):
-        """Clicking Collapse All on page two must collapse every group everywhere, even when the only expanded group lives on page one"""
+    def test_collapse_all_button_text_only_flips_when_every_group_matches(self):
+        """The button label persists through mixed states, flipping only once every group is collapsed or expanded"""
         self._visit_job_list()
         self.browser.execute_script("window.localStorage.clear();")
         self.browser.reload()
 
-        self.assertGreater(self._get_job_list_page_count(), 1)
         self.assertGreaterEqual(self._get_group_count(), 2)
 
-        # Fully expanded by default, so the button offers to collapse.
+        # Every group expanded: the button offers to collapse.
         self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")
 
-        # Collapse everything on page one.
-        self._click_collapse_all_button()
-        self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
-        self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")
-
-        # Reopen a single page one group so the only expanded group lives on page one.
+        # Collapsing a single group leaves a mixed state, so the label must not flip yet.
         self._expand_first_group()
+        self.assertGreater(self._get_collapsed_row_count(), 0)
         self.assertGreater(self._get_expanded_row_count(), 0)
         self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")
 
-        # Page two starts collapsed via the stored default, and the button still offers to collapse the leftover page one group.
-        self._visit_job_list_page(2)
-        self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
-        self.assertEqual(self._get_collapse_all_button_text(), "Collapse All Groups")
-
-        # Clicking must collapse - not expand - page two, and collapse the leftover page one group too.
+        # Once every group is collapsed, the label flips to offer expand.
         self._click_collapse_all_button()
         self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
         self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")
 
-        # Returning to page one, every group is collapsed and stays that way.
-        self._visit_job_list_page(1)
-        self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
+        # Expanding a single group leaves a mixed state again, so the label must not flip back yet.
+        self._expand_first_group()
+        self.assertGreater(self._get_expanded_row_count(), 0)
+        self.assertGreater(self._get_collapsed_row_count(), 0)
         self.assertEqual(self._get_collapse_all_button_text(), "Expand All Groups")

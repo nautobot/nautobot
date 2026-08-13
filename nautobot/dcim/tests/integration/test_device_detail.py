@@ -200,7 +200,12 @@ class DeviceDetailCustomFieldsCollapseAndExpandButton(CollapseAllButtonTestCase)
         self._click_collapse_all_button()
         self._expand_first_group()
 
+        # Wait for the reopened group to render and persist before reloading, so the reload restores the intended mixed state rather than a uniform one.
+        self.browser.is_element_present_by_css(f"{self.GROUP_ROW_SELECTOR}.show", wait_time=2)
+        self.assertGreater(self._get_collapsed_row_count(), 0)
+
         self.browser.reload()
+        self.assertGreater(self._get_expanded_row_count(), 0)
 
         self._click_collapse_all_button()
         self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
@@ -331,7 +336,12 @@ class DeviceDetailComputedFieldsCollapseAndExpandButton(CollapseAllButtonTestCas
         self._click_collapse_all_button()
         self._expand_first_group()
 
+        # Wait for the reopened group to render and persist before reloading, so the reload restores the intended mixed state rather than a uniform one.
+        self.browser.is_element_present_by_css(f"{self.GROUP_ROW_SELECTOR}.show", wait_time=2)
+        self.assertGreater(self._get_collapsed_row_count(), 0)
+
         self.browser.reload()
+        self.assertGreater(self._get_expanded_row_count(), 0)
 
         self._click_collapse_all_button()
         self.assertEqual(self._get_collapsed_row_count(), self._get_total_row_count())
