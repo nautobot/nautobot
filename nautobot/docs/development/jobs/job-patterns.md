@@ -99,6 +99,7 @@ This pattern lets you validate inputs, selectively fail under certain conditions
     ```py
     from nautobot.apps.jobs import Job, StringVar, IntegerVar, register_jobs
 
+
     class LunchOrder(Job):
         name = StringVar(description="What are you ordering?")
         quantity = IntegerVar(description="How many?", default=1)
@@ -147,6 +148,7 @@ Use the `Job.create_file(filename, content)` method:
     ```py
     from nautobot.apps.jobs import Job, register_jobs
 
+
     class MyJob(Job):
         class Meta:
             name = "File Output Example"
@@ -175,6 +177,7 @@ To accept user-provided files at runtime, use [`FileVar`](./job-structure.md#fil
     ```py
     import csv
     from nautobot.apps.jobs import Job, FileVar, register_jobs
+
 
     class ProcessCSV(Job):
         class Meta:
@@ -212,6 +215,7 @@ These paths are relative to the Job's file location.
 !!! example
     ```py
     from nautobot.apps.jobs import Job, register_jobs
+
 
     class LoadConfig(Job):
         class Meta:
@@ -251,6 +255,7 @@ This Job is useful when enforcing operational standards in environments where mi
     from nautobot.apps.jobs import Job, register_jobs
     from nautobot.dcim.models import ConsolePort, Device, PowerPort
     from nautobot.extras.models import Status
+
 
     class DeviceConnectionsReport(Job):
         description = "Validate the minimum physical connections for each device"
@@ -412,6 +417,7 @@ The snippet below demonstrates a mix of common patterns: variable types (`String
 !!! example "Everything Demo Job Snippet"
     ```py
     from nautobot.apps.jobs import Job, StringVar, IntegerVar, BooleanVar, ChoiceVar, FileVar, register_jobs
+
 
     class ExampleEverythingJob(Job):
         class Meta:

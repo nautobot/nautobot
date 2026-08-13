@@ -87,6 +87,7 @@ Jobs no longer run in a single atomic [database transaction](https://docs.django
     from nautobot.apps.jobs import Job, ObjectVar
     from nautobot.dcim import models
 
+
     class UpdateDeviceTypeHeightJob(Job):
         device_type = ObjectVar(model=models.DeviceType)
         u_height = IntegerVar(label="New Height (U)")
