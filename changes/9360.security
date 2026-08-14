@@ -1,2 +1,0 @@
-Updated dependency `cryptography` to `^50.0.0` to mitigate CVE-2026-69247.
-Updated dependency `GitPython` to `~3.1.58` to mitigate multiple security vulnerabilities.
