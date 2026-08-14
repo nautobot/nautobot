@@ -1,3 +1,0 @@
-Updated development NPM dependency `postcss` to `^8.5.23` to mitigate CVE-2026-69153.
-Updated development NPM dependency `fast-uri` to `3.1.5` to mitigate CVE-2026-18446.
-Updated development NPM dependency `brace-expansion` to `1.1.18` to mitigate CVE-2026-14257 and CVE-2026-69152.

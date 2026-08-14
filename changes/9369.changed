@@ -1,6 +1,0 @@
-[a11y] Increased the stroke width of the checkbox check mark and indeterminate mark for better visibility.
-[a11y] Underlined links inside form help text so that they are distinguishable from the surrounding text by more than color alone (WCAG 1.4.1).
-[a11y] Changed status, role and tag badge text colors to be chosen by actual WCAG contrast ratio instead of a perceived-brightness heuristic that could fall below the AA 4.5:1 minimum.
-[a11y] Raised the contrast of disabled rows on the Jobs list so that the run link meets the WCAG AA minimum.
-[a11y] Reserved scroll padding in each scrolling container that can hold a sticky form footer -- the page, drawers and modals -- so that the footer cannot obscure a field the browser scrolls into view on focus.
-[a11y] Increased form control and Select2 font size to 16px on touch devices so that iOS Safari no longer auto-zooms on focused fields, with vertical padding reduced correspondingly to keep control heights unchanged.

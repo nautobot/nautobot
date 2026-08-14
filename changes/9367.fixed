@@ -1,1 +1,0 @@
-Fixed Jobs List Page to correctly persist Collapse/Expand Data for job groups on reload and across page navigation.

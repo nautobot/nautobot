@@ -268,6 +268,85 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.3 (2026-08-17)
+
+### Security in v3.2.3
+
+- [#9354](https://github.com/nautobot/nautobot/issues/9354) - Updated development NPM dependency `postcss` to `^8.5.23` to mitigate CVE-2026-69153.
+- [#9354](https://github.com/nautobot/nautobot/issues/9354) - Updated development NPM dependency `fast-uri` to `3.1.5` to mitigate CVE-2026-18446.
+- [#9354](https://github.com/nautobot/nautobot/issues/9354) - Updated development NPM dependency `brace-expansion` to `1.1.18` to mitigate CVE-2026-14257 and CVE-2026-69152.
+- [#9358](https://github.com/nautobot/nautobot/issues/9358) - Updated dependency `cryptography` to `>=50.0.0,<51` to mitigate CVE-2026-69247.
+- [#9358](https://github.com/nautobot/nautobot/issues/9358) - Updated dependency `gitpython` to `>=3.1.57,<3.2` to mitigate multiple security vulnerabilities.
+- [#9370](https://github.com/nautobot/nautobot/issues/9370) - Updated NPM development dependency `js-yaml` to `4.3.1` to mitigate GHSA-5p4m-2wfm-xmqj.
+- [#9371](https://github.com/nautobot/nautobot/issues/9371) - Updated dependency `django` to `>=5.2.17,<5.3` to mitigate multiple vulnerabilities.
+- [#9371](https://github.com/nautobot/nautobot/issues/9371) - Updated dependency `gitpython` to `>=3.1.58,<3.2` to mitigate multiple vulnerabilities.
+
+### Added in v3.2.3
+
+- [#9366](https://github.com/nautobot/nautobot/issues/9366) - Added a note on the Device creation form about the necessary steps to assign a management IP.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added a "Skip to main content" bypass link to all base templates so that keyboard and screen reader users can jump past the navigation sidebar (WCAG 2.4.1).
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added live regions so that messages appended via HTMX and pagination range changes are announced by screen readers.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added an accessible name and fallback content to rack elevations, which previously offered no text alternative to the embedded SVG.
+
+### Changed in v3.2.3
+
+- [#9346](https://github.com/nautobot/nautobot/issues/9346) - Changed validation of interfaces to allow putting a breakout sub-interface into a LAG.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Increased the stroke width of the checkbox check mark and indeterminate mark for better visibility.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Underlined links inside form help text so that they are distinguishable from the surrounding text by more than color alone (WCAG 1.4.1).
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Changed status, role and tag badge text colors to be chosen by actual WCAG contrast ratio instead of a perceived-brightness heuristic that could fall below the AA 4.5:1 minimum.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Raised the contrast of disabled rows on the Jobs list so that the run link meets the WCAG AA minimum.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Reserved scroll padding in each scrolling container that can hold a sticky form footer -- the page, drawers and modals -- so that the footer cannot obscure a field the browser scrolls into view on focus.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Increased form control and Select2 font size to 16px on touch devices so that iOS Safari no longer auto-zooms on focused fields, with vertical padding reduced correspondingly to keep control heights unchanged.
+
+### Fixed in v3.2.3
+
+- [#8449](https://github.com/nautobot/nautobot/issues/8449) - Fixed REST API returning an HTTP 500 error instead of an HTTP 400 when an invalid `depth` query parameter (outside the range 0-10) was provided.
+- [#9282](https://github.com/nautobot/nautobot/issues/9282) - Fixed an `AttributeError` raised when editing an Interface belonging to a Module that has no parent Device while its 802.1Q mode was set to "Tagged".
+- [#9341](https://github.com/nautobot/nautobot/issues/9341) - Fixed the peer-side columns rendering as empty placeholders on the Console Connections and Power Connections list views.
+- [#9343](https://github.com/nautobot/nautobot/issues/9343) - Fixed incorrect HTML template being used for Power Feed, Rack Reservation, VRF, and Cluster create/edit forms.
+- [#9362](https://github.com/nautobot/nautobot/issues/9362) - Fixed a N+1 issue in the Interface Connections list view and REST API endpoint.
+- [#9367](https://github.com/nautobot/nautobot/issues/9367) - Fixed Jobs List Page to correctly persist Collapse/Expand Data for job groups on reload and across page navigation.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Fixed the viewport meta tag disabling pinch-zoom and text scaling, which prevented users from magnifying any page.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added missing accessible names to various HTML UI elements.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Fixed various screen-reader compatibility issues related to page structure and semantics.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Fixed images missing `alt` attributes.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Fixed keyboard navigation issues, including the header search dialog trapping users inside it and hidden bulk-action controls remaining reachable.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Fixed various touch targets that were smaller than the WCAG 2.5.8 minimum.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - Fixed submitting the Location create form without a Location Type raising `RelatedObjectDoesNotExist` from `Location.clean()` instead of reporting the field as required.
+
+### Dependencies in v3.2.3
+
+- [#9370](https://github.com/nautobot/nautobot/issues/9370) - Updated NPM development dependency `postcss` to `^8.5.26`.
+- [#9371](https://github.com/nautobot/nautobot/issues/9371) - Updated dependency `markdown` to `>=3.10.3,<3.11`.
+
+### Documentation in v3.2.3
+
+- [#9346](https://github.com/nautobot/nautobot/issues/9346) - Changed documentation of interfaces to say that a breakout sub-interface can be member of a LAG.
+- [#9359](https://github.com/nautobot/nautobot/issues/9359) - Corrected the documented Celery worker queue flag from `--queue` to `--queues` in the Celery Queues administration guide.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added an Accessibility section to the UI Best Practices developer documentation, covering accessible names, hiding mechanisms, forms, tables, dialogs, color and live regions.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added guidance on scanning pages by hand with a browser extension, including why such a scan should be run with `DEBUG` off.
+- [#9374](https://github.com/nautobot/nautobot/issues/9374) - Updated various Python code snippets in the documentation to follow formatting standards.
+- [#9378](https://github.com/nautobot/nautobot/issues/9378) - Updated documentation for Secrets and Security to clarify the potential for privilege escalation when granting users permission to create or edit Secrets.
+- [#9388](https://github.com/nautobot/nautobot/issues/9388) - Added a section to the permissions guide clarifying how Object Metadata permissions are evaluated.
+
+### Housekeeping in v3.2.3
+
+- [#4502](https://github.com/nautobot/nautobot/issues/4502) - Removed the unused `PasswordInputWithPlaceholder` form widget, which had been orphaned since support for storing Git repository credentials in the database was removed.
+- [#9343](https://github.com/nautobot/nautobot/issues/9343) - Removed leftover references to unused `slugify_prefer_underscores` JavaScript variable.
+- [#9343](https://github.com/nautobot/nautobot/issues/9343) - Removed leftover `ServiceEditView`, unused since 3.0.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Re-enabled the djlint `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag") accessibility rules so that regressions are caught in CI.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Moved the icon on the "filter to descendants" links in the Location and Prefix list views into its own `<span>`, matching how icons are rendered everywhere else in the UI rather than applying the `mdi` classes to the link itself.
+- [#9369](https://github.com/nautobot/nautobot/issues/9369) - [a11y] Added axe-core accessibility regression tests covering the home page, every core list view, detail, edit and error-state form, search and login pages, gating on the WCAG 2.2 Level A and AA rule tags apart from `color-contrast`, which is left off pending a decision on the theme palette.
+- [#9371](https://github.com/nautobot/nautobot/issues/9371) - Updated development dependency `coverage` to `~7.15.4`.
+- [#9371](https://github.com/nautobot/nautobot/issues/9371) - Updated development dependency `faker` to `^40.36.0`.
+- [#9374](https://github.com/nautobot/nautobot/issues/9374) - Updated development dependency `djlint` to `~1.44.1`.
+- [#9374](https://github.com/nautobot/nautobot/issues/9374) - Updated development dependency `pylint-django` to `~2.8.0`.
+- [#9374](https://github.com/nautobot/nautobot/issues/9374) - Updated development dependency `ruff` to `~0.16.2`.
+- [#9374](https://github.com/nautobot/nautobot/issues/9374) - Updated development dependency `django-test-migrations` to `~1.6.0`.
+- [#9380](https://github.com/nautobot/nautobot/issues/9380) - Fixed state leakage from `OtelWithSilkProfilingTest` that could cause failures in other tests due to Silk profiling being unexpectedly enabled.
+- [#9384](https://github.com/nautobot/nautobot/issues/9384) - Fixed the `hadolint` download in the development Docker image to use `curl --fail`, so that an HTTP error during the download fails the build instead of installing the error response as the `hadolint` binary.
+- [#9387](https://github.com/nautobot/nautobot/issues/9387) - [a11y] Removed redundant sort state information from sortable table column headers.
+
 ## v3.2.2 (2026-08-03)
 
 ### Added in v3.2.2
