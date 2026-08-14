@@ -6,7 +6,7 @@ If you're planning to run multiple jobs, leverage job hooks or are finding that 
 
 The default Celery behavior is:
 
-- [`--queue celery`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-Q)
+- [`--queues celery`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-Q)
 - [`--concurrency`](https://docs.celeryq.dev/en/stable/reference/cli.html#cmdoption-celery-worker-c) set to the number of CPUs detected on the system
 - [`worker_prefetch_multiplier=4`](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier)
 
