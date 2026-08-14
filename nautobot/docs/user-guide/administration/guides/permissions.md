@@ -201,6 +201,28 @@ If a user can view change log entries, they can read the serialized contents (in
 
 Note that the per-object "Change Log" tab additionally requires `view` permission on the parent object, but the global change log list and change detail pages do not at this time.
 
+### Object Metadata
+
+[Object Metadata](../../platform-functionality/objectmetadata.md) records are attached to another object, but their permissions are evaluated against the `ObjectMetadata` record itself, not against the object they are assigned to.
+
+!!! warning
+    The `extras.view_objectmetadata` permission grants visibility into metadata records for **all** objects — including the metadata `value`, `scoped_fields`, and assigned contact or team for objects the user has no `view` permission on, along with the assigned object's type and ID. Likewise, `extras.change_objectmetadata` and `extras.delete_objectmetadata` allow editing and deleting metadata regardless of the user's permission on the assigned object.
+
+The assigned object itself is never disclosed in full to a user who cannot view it: it is reduced to a brief representation, as described in [REST API Object Permissions](../../platform-functionality/rest-api/object-permissions.md#related-objects-on-read). What *is* visible is the metadata record's own fields, on the same basis as any other record the user may view.
+
+Creating metadata is the exception, and requires `view` permission on every object the new record references:
+
+- The object it is being assigned to, which must be viewable, or the request is rejected with `"Object not found"` on `assigned_object_id`.
+- The metadata type, and the contact or team if one is supplied, since these are ordinary related fields subject to the same rule described in [Related Objects on Write](../../platform-functionality/rest-api/object-permissions.md#related-objects-on-write). In practice this means `extras.view_metadatatype` is required to create metadata at all.
+
+To limit which metadata a user may read, edit, or delete, add constraints to the relevant permission, for example:
+
+- `{"assigned_object_type__app_label": "dcim"}` — only metadata assigned to DCIM objects.
+- `{"assigned_object_type__model": "device"}` — only metadata assigned to Devices.
+- `{"metadata_type__name": "Data Owner"}` — only metadata of a particular type.
+
+Constraints are enforced on every action. A user whose `change` or `delete` permission is constrained receives a `404 Not Found` for metadata outside the constraint, and cannot reassign a record to a content type outside it. Note that a constrained *bulk* delete silently skips the records the user is not permitted to delete rather than failing the request, so a `204 No Content` response does not guarantee that every requested record was removed.
+
 ### Jobs
 
 [Jobs](../../platform-functionality/jobs/index.md) deserve special attention because they execute code:
