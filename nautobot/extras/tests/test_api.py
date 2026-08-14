@@ -4496,8 +4496,7 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_create_enforces_view_permission_on_assigned_object(self):
-        """
-        Creating metadata requires view permission on the assigned object, unlike updating or deleting it."""
+        """Creating metadata requires view permission on the assigned object, unlike updating or deleting it."""
         metadata_type = MetadataType.objects.get(name="Location Metadata Type")
         location = Location.objects.filter(associated_object_metadata__isnull=True).first()
         data = {
