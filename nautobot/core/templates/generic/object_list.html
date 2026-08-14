@@ -14,6 +14,11 @@
     {% include "inc/header_messages.html" with messages=None %}
 {% endblock header_messages %}
 
+{% block toast_messages %}
+    {# Toast messages follow the same mechanism as the header messages above #}
+    {% include "inc/toast_messages.html" with messages=None %}
+{% endblock toast_messages %}
+
 {% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}
@@ -156,9 +161,9 @@
                              hx-params="*"
                              hx-select="#object_table"
                              {% if permissions.change or permissions.delete %}
-                                 hx-select-oob="#header_messages,#paginator,#select_all_box"
+                                 hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator,#select_all_box"
                              {% else %}
-                                 hx-select-oob="#header_messages,#paginator"
+                                 hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator"
                              {% endif %}
                              hx-trigger="load"
                         >
@@ -176,9 +181,9 @@
                          hx-params="*"
                          hx-select="#object_table"
                          {% if permissions.change or permissions.delete %}
-                             hx-select-oob="#header_messages,#paginator,#select_all_box"
+                             hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator,#select_all_box"
                          {% else %}
-                             hx-select-oob="#header_messages,#paginator"
+                             hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator"
                          {% endif %}
                          hx-trigger="load"
                     >

@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Literal
 from urllib.parse import parse_qs, quote_plus
+import uuid
 
 from django import template
 from django.apps import apps
@@ -1327,6 +1328,91 @@ def advanced_filter_indicator(basic_filter_form, filter_params):
                 is_visible = True
                 break
     return {"is_visible": is_visible}
+
+
+@register.inclusion_tag("utilities/templatetags/toast.html")
+def toast(
+    content,
+    autohide=None,
+    buttons=None,
+    delay=10000,
+    dismissible=True,
+    icon=None,
+    id=None,
+    status=None,
+    title="",
+):
+    """Render a toast notification.
+
+    It is recommended to append toasts to the `#toast-messages` container, which is how the notifications created
+    using the Django messages framework behave. This toast container is out-of-the-box marked as the page's live
+    region, and automatically shows and dismisses toasts via `messages.js` frontend scripting.
+
+    All markup-bearing arguments (`buttons`, `content`, `icon`, `title`) are rendered with Django autoescaping, so
+    plain strings are escaped and only `SafeString` values are treated as HTML. Preferably, build them with
+    `format_html` in Python.
+
+    Args:
+        content (str): Toast body. Escaped unless it is a `SafeString`.
+        autohide (Optional[bool]): Whether the toast dismisses itself after `delay`. Defaults to `True`, except
+            when `buttons` are given, so toasts requiring a response are not dismissed before they can be acted on.
+        buttons (Optional[str]): Markup for the toast footer, typically call-to-action buttons. Escaped unless it
+            is a `SafeString`.
+        delay (int): Milliseconds before an autohiding toast dismisses itself. Defaults to `10000`.
+        dismissible (bool): Whether to render a close button. Defaults to `True`.
+        icon (Optional[str]): Markup for the toast header icon. Escaped unless it is a `SafeString`.
+            Defaults to an icon derived from `status`.
+        id (Optional[str]): HTML `id` of the toast. Generated if not given.
+        status (Optional[str]): Contextual status: one of `danger`, `info`, `primary`, `secondary`, `success`,
+            or `warning`. Selects both the toast styling and the default `icon`.
+        title (str): Toast header text. Escaped unless it is a `SafeString`.
+
+    Returns:
+        (dict): Template context for `utilities/templatetags/toast.html`.
+
+    Example:
+        {% toast content="Device created." status="success" title="Success" %}
+    """
+    if autohide is None:
+        autohide = not buttons
+
+    if not icon:
+        if status == "primary":
+            icon = format_html(
+                """
+                    <img
+                        aria-hidden="true"
+                        alt=""
+                        class="flex-grow-0 flex-shrink-0 my-n2"
+                        src="{}"
+                        style="width: 1.25rem;"
+                    >
+                """,
+                static("img/nautobot_chevron.svg"),
+            )
+        else:
+            mdi = {
+                "danger": "mdi-alert-circle-outline",
+                "info": "mdi-information-outline",
+                "success": "mdi-check-circle-outline",
+                "warning": "mdi-alert-outline",
+            }.get(status, "mdi-lightbulb-on-outline")
+            icon = format_html('<span aria-hidden="true" class="mdi {}"></span>', mdi)
+
+    if not id:
+        id = f"toast_{uuid.uuid4()}"
+
+    return {
+        "autohide": autohide,
+        "buttons": buttons,
+        "content": content,
+        "delay": delay,
+        "dismissible": dismissible,
+        "icon": icon,
+        "id": id,
+        "status": status,
+        "title": title,
+    }
 
 
 @register.simple_tag

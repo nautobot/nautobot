@@ -806,6 +806,85 @@ This:
     </div>
     <hr class="border-top">
 
+    <h1>Toasts</h1>
+    <div class="row">
+        <div aria-atomic="false" aria-label="Toast examples" aria-live="polite" class="col-12 align-items-start d-flex flex-wrap gap-20" role="region">
+            <div aria-atomic="true" class="toast fade show nb-toast-secondary" data-bs-autohide="false">
+                <div class="toast-header">
+                    <span aria-hidden="true" class="mdi mdi-lightbulb-on-outline"></span>
+                    Secondary
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-timeout-indicator w-75"></div>
+            </div>
+            <div aria-atomic="true" class="toast fade show nb-toast-primary" data-bs-autohide="false">
+                <div class="toast-header">
+                    <img aria-hidden="true" class="flex-grow-0 flex-shrink-0 my-n2" alt="" src="{% static 'img/nautobot_chevron.svg' %}" style="width: 1.25rem;">
+                    Primary
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-timeout-indicator w-75"></div>
+            </div>
+            <div aria-atomic="true" class="toast fade show nb-toast-success" data-bs-autohide="false">
+                <div class="toast-header">
+                    <span aria-hidden="true" class="mdi mdi-check-circle-outline"></span>
+                    Success
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-timeout-indicator w-75"></div>
+            </div>
+            <div aria-atomic="true" class="toast fade show nb-toast-info" data-bs-autohide="false">
+                <div class="toast-header">
+                    <span aria-hidden="true" class="mdi mdi-information-outline"></span>
+                    Info
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-timeout-indicator w-75"></div>
+            </div>
+            <div aria-atomic="true" class="toast fade show nb-toast-warning" data-bs-autohide="false">
+                <div class="toast-header">
+                    <span aria-hidden="true" class="mdi mdi-alert-outline"></span>
+                    Warning
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-timeout-indicator w-75"></div>
+            </div>
+            <div aria-atomic="true" class="toast fade show nb-toast-danger" data-bs-autohide="false">
+                <div class="toast-header">
+                    <span aria-hidden="true" class="mdi mdi-alert-circle-outline"></span>
+                    Danger
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-timeout-indicator w-75"></div>
+            </div>
+            <div aria-atomic="true" class="toast fade show" data-bs-autohide="false">
+                <div class="toast-header">
+                    <span aria-hidden="true" class="mdi mdi-lightbulb-on-outline"></span>
+                    CTA
+                    <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+                </div>
+                <div class="toast-body">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna.</div>
+                <div class="nb-toast-footer">
+                    <button class="btn btn-primary" type="button">
+                        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+                        -->Confirm
+                    </button>
+                    <button class="btn btn-secondary" type="button">
+                        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+                        -->Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <hr class="border-top">
+
     <h1>Cards (former Panels)</h1>
     <div class="row">
         <div class="col-sm-4">
