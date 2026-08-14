@@ -1,7 +1,7 @@
 <div
     aria-atomic="true"
     class="toast fade{% if status %} nb-toast-{{ status }}{% endif %}"
-    id="{{ id }}"
+    id="{{ html_id }}"
     {% if not autohide %}data-bs-autohide="false"{% endif %}
     {% if autohide and delay %}data-bs-delay="{{ delay }}"{% endif %}
 >

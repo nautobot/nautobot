@@ -1337,8 +1337,8 @@ def toast(
     buttons=None,
     delay=10000,
     dismissible=True,
+    html_id=None,
     icon=None,
-    id=None,
     status=None,
     title="",
 ):
@@ -1360,9 +1360,9 @@ def toast(
             is a `SafeString`.
         delay (int): Milliseconds before an autohiding toast dismisses itself. Defaults to `10000`.
         dismissible (bool): Whether to render a close button. Defaults to `True`.
+        html_id (Optional[str]): HTML `id` of the toast. Generated if not given.
         icon (Optional[str]): Markup for the toast header icon. Escaped unless it is a `SafeString`.
             Defaults to an icon derived from `status`.
-        id (Optional[str]): HTML `id` of the toast. Generated if not given.
         status (Optional[str]): Contextual status: one of `danger`, `info`, `primary`, `secondary`, `success`,
             or `warning`. Selects both the toast styling and the default `icon`.
         title (str): Toast header text. Escaped unless it is a `SafeString`.
@@ -1375,6 +1375,9 @@ def toast(
     """
     if autohide is None:
         autohide = not buttons
+
+    if not html_id:
+        html_id = f"toast_{uuid.uuid4()}"
 
     if not icon:
         if status == "primary":
@@ -1399,17 +1402,14 @@ def toast(
             }.get(status, "mdi-lightbulb-on-outline")
             icon = format_html('<span aria-hidden="true" class="mdi {}"></span>', mdi)
 
-    if not id:
-        id = f"toast_{uuid.uuid4()}"
-
     return {
         "autohide": autohide,
         "buttons": buttons,
         "content": content,
         "delay": delay,
         "dismissible": dismissible,
+        "html_id": html_id,
         "icon": icon,
-        "id": id,
         "status": status,
         "title": title,
     }

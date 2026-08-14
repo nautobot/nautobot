@@ -101,8 +101,8 @@ class NautobotTemplatetagsHelperTest(TestCase):
 
         self.assertEqual(helpers.toast("Message")["delay"], 10000)
 
-        self.assertTrue(helpers.toast("Message")["id"].startswith("toast_"))
-        self.assertEqual(helpers.toast("Message", id="my-toast")["id"], "my-toast")
+        self.assertTrue(helpers.toast("Message")["html_id"].startswith("toast_"))
+        self.assertEqual(helpers.toast("Message", html_id="my-toast")["html_id"], "my-toast")
 
     def test_toast_escapes_unsafe_content(self):
         template = Template("{% load helpers %}{% toast buttons=buttons content=content icon=icon title=title %}")
