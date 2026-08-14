@@ -6407,7 +6407,7 @@ class VirtualChassisTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Sanity check:
         self.assertBodyContains(
             response,
-            '<th aria-sort="ascending" scope="col" class="asc orderable"><a href="?sort=-name">Name<span aria-hidden="true" class="mdi mdi-arrow-up-thin"></span><span class="visually-hidden">sorted ascending, activate to sort descending</span></a></th>',
+            '<th aria-sort="ascending" scope="col" class="asc orderable"><a href="?sort=-name">Name<span aria-hidden="true" class="mdi mdi-arrow-up-thin"></span><span class="visually-hidden">activate to sort descending</span></a></th>',
             html=True,
         )
 
