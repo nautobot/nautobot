@@ -431,7 +431,8 @@ def consolidate_detail_view_action_buttons(context):
             detail_view_action_buttons[0] += format_html(
                 """
                 <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}">
-                    <span class="mdi mdi-chevron-down"></span>
+                    <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
+                    <span class="visually-hidden">More actions</span>
                  </button>
                 """,
                 button_class=dropdown_button_classes,
@@ -443,7 +444,7 @@ def consolidate_detail_view_action_buttons(context):
             format_html(
                 """
                 <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}">
-                    Actions <span class="mdi mdi-chevron-down"></span>
+                    Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
                  </button>
                 """,
                 button_class=dropdown_button_classes,

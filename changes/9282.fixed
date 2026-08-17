@@ -1,1 +1,0 @@
-Fixed an `AttributeError` raised when editing an Interface belonging to a Module that has no parent Device while its 802.1Q mode was set to "Tagged".
