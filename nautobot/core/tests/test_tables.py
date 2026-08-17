@@ -1,15 +1,23 @@
+import contextlib
+import importlib
+import pkgutil
 from types import SimpleNamespace
+import warnings
 
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
 from django.db import connection
 from django.db.models import IntegerField, Value
-from django.test import tag, TestCase
+from django.test import SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
+from django_tables2.utils import Accessor
 
+import nautobot
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
-from nautobot.core.tables import ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
+from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
 from nautobot.core.templatetags import helpers
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
@@ -350,3 +358,73 @@ class ComputedFieldColumnRenderTestCase(TestCase):
         column = ComputedFieldColumn(self.markdown_field)
         record = Location(name="Bold")
         self.assertEqual(column.render(record=record), helpers.render_markdown("**Bold**"))
+
+
+def _all_subclasses(cls):
+    """Every subclass of `cls`, recursively."""
+    subclasses = set()
+    for subclass in cls.__subclasses__():
+        subclasses.add(subclass)
+        subclasses |= _all_subclasses(subclass)
+    return subclasses
+
+
+def _import_all_table_modules():
+    """Import every `tables` module under `nautobot` so all `BaseTable` subclasses are registered."""
+    for module_info in pkgutil.walk_packages(nautobot.__path__, f"{nautobot.__name__}."):
+        if ".tables" not in module_info.name and not module_info.name.endswith("tables"):
+            continue
+        with contextlib.suppress(Exception):
+            # Some optional/app modules aren't importable in every configuration; skipping them
+            # only narrows coverage, and the assertion below is about what *is* importable.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                importlib.import_module(module_info.name)
+
+
+class TableAccessorAuditTestCase(SimpleTestCase):
+    """Static audit of every table column accessor, whether declared or derived from the column name.
+
+    Pure introspection, no database access.
+    Regression test for nautobot#9341.
+    """
+
+    def test_no_accessor_traverses_a_to_many_relation(self):
+        """No column accessor may traverse a to-many relation and then keep going.
+
+        `Accessor.resolve()` walks Python attributes, so a to-many relation yields a related manager,
+        which has none of the target model's attributes. Any further path segment therefore raises,
+        and `BoundRow._get_and_render_with` swallows the exception and renders the column default.
+        The column silently degrades to a placeholder at HTTP 200, which is exactly how nautobot#9341
+        shipped undetected past the list-view test suite.
+        """
+        _import_all_table_modules()
+        violations = []
+        for table in _all_subclasses(BaseTable):
+            model = getattr(table._meta, "model", None)
+            if model is None:
+                continue
+            for name, column in table.base_columns.items():
+                accessor = column.accessor if column.accessor is not None else name
+                bits = str(accessor).split(Accessor.SEPARATOR)
+                current = model
+                for index, bit in enumerate(bits):
+                    if current is None:
+                        break
+                    try:
+                        field = current._meta.get_field(bit)
+                    except (FieldDoesNotExist, AttributeError):
+                        break  # a property or method: not statically decidable, so leave it alone
+                    if field.one_to_many or field.many_to_many:
+                        if index < len(bits) - 1:
+                            violations.append(f"{table.__module__}.{table.__name__}.{name} -> {accessor}")
+                        break
+                    if isinstance(field, GenericForeignKey):
+                        break  # resolves to a single object, but its model isn't knowable statically
+                    current = getattr(getattr(field, "remote_field", None), "model", None)
+        self.assertEqual(
+            sorted(violations),
+            [],
+            "These accessors traverse a to-many relation (a manager) and will render as placeholders. "
+            "Route them through a property that returns a single object instead.",
+        )

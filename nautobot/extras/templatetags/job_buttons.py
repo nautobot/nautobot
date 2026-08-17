@@ -53,7 +53,7 @@ CONFIRM_MODAL = """
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
-        <h4 class="modal-title" id="confirm_modal_label_{button_id}">Confirmation</h4>
+        <h2 class="modal-title" id="confirm_modal_label_{button_id}">Confirmation</h2>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="form_id_{button_id}" action="{button_url}" method="post" class="form">
