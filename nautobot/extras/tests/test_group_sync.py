@@ -112,20 +112,13 @@ class GroupSyncTestCase(TestCase):
         self.assertRevoked()
 
     def test_response_without_groups(self):
-        """An absent group claim says nothing about the user's entitlements, so it leaves the user unchanged."""
-        self._make_privileged_user()
-
-        group_sync("ssouser", user=self.user, response={"attributes": {"other": "value"}})
-
-        self.assertRetained()
-
-    def test_response_without_groups_warns(self):
-        """Retaining previously granted privileges is surfaced as a warning, not silently."""
+        """An absent group claim leaves the user unchanged, and says so with a warning rather than silently."""
         self._make_privileged_user()
 
         with self.assertLogs("nautobot.extras.group_sync", level="WARNING") as logs:
             group_sync("ssouser", user=self.user, response={"attributes": {"other": "value"}})
 
+        self.assertRetained()
         self.assertIn("Did not receive a 'groups' claim from SSO for user ssouser", "\n".join(logs.output))
 
     def test_no_response(self):
