@@ -141,17 +141,23 @@ class OptInFieldsMixin:
 
 
 class CSVRepresentationMixin:
-    """Serializer mixin holding the CSV-export natural-key machinery.
+    """Serializer mixin holding the natural-key export machinery.
 
-    All of CSV export's special-case representation logic lives here so it stays out of the day-to-day
-    JSON/REST code path: detecting a CSV request (`_is_csv_request`), prefetching related objects'
-    natural-key values in bulk (`_collect_natural_key_values` and its query-`Case` builders), flattening a
-    single FK's natural key into `a__b__name` columns (`_get_natural_key_lookups_value_for_field`), and
-    rendering M2M members by natural key (`_get_m2m_natural_key_values`).
+    All of export's special-case representation logic lives here so it stays out of the day-to-day
+    JSON/REST code path: prefetching related objects' natural-key values in bulk
+    (`_collect_natural_key_values` and its query-`Case` builders), flattening a single FK's natural key
+    into `a__b__name` columns (`_get_natural_key_lookups_value_for_field`), and rendering M2M members by
+    natural key (`_get_m2m_natural_key_values`).
+
+    Two modes share that machinery, distinguished because CSV cannot express anything but strings:
+
+    - `_use_natural_keys()` — represent relations by flattened natural keys. True for both modes.
+    - `_is_csv_request()` — additionally coerce values to strings: `None` becomes `CSV_NULL_TYPE` and
+      scalar-keyed M2M members are comma-joined. JSON/YAML skips this so it keeps real nulls and lists.
 
     `BaseModelSerializer` mixes this in and calls these helpers from its DRF override points
     (`__init__` priming, `get_field_names` field filtering, `to_representation`); the methods here assume
-    the host serializer provides `Meta`, `context`, `instance`, and `self._force_csv`.
+    the host serializer provides `Meta`, `context`, `instance`, `self._force_csv` and `self._natural_keys`.
     """
 
     natural_keys_values = None
@@ -162,6 +168,10 @@ class CSVRepresentationMixin:
             return True
         request = self.context.get("request")
         return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
+
+    def _use_natural_keys(self):
+        """Return True if relations should be represented by flattened natural keys (CSV or JSON/YAML)."""
+        return self._natural_keys or self._is_csv_request()
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
         """Get lookup field name and its corresponding output_field.
@@ -339,7 +349,8 @@ class CSVRepresentationMixin:
                 elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
                     data[key] = constants.CSV_NO_OBJECT
                 elif value is None:
-                    data[key] = constants.CSV_NULL_TYPE
+                    # CSV has no null; JSON/YAML does, so only CSV needs the sentinel here.
+                    data[key] = constants.CSV_NULL_TYPE if self._is_csv_request() else None
                 else:
                     data[key] = value
         return data
@@ -348,11 +359,12 @@ class CSVRepresentationMixin:
         """
         Represent a many-to-many field's members by their natural keys, for CSV export.
 
-        Members identified by a single scalar (e.g. tags by name) render as a comma-separated string,
-        matching historical tag behavior. Members with composite natural keys render as a list of
-        natural-key dicts, which the CSV renderer emits as a JSON-encoded cell; the dicts use the same
-        flattened lookups (e.g. `{"manufacturer__name": ..., "model": ...}`) that the import path
-        already resolves.
+        Members identified by a single scalar (e.g. tags by name) render as a comma-separated string for
+        CSV, matching historical tag behavior; JSON/YAML keep them as a list, which is both lossless for
+        values containing commas and what the document format wants anyway. Members with composite natural
+        keys render as a list of natural-key dicts, which the CSV renderer emits as a JSON-encoded cell;
+        the dicts use the same flattened lookups (e.g. `{"manufacturer__name": ..., "model": ...}`) that
+        the import path already resolves.
         """
         members = getattr(instance, field.source or field.field_name).all()
         member_keys = []
@@ -364,7 +376,8 @@ class CSVRepresentationMixin:
                 # No well-defined natural key for this model; fall back to the primary key
                 member_keys.append({"id": str(member.pk)})
         if member_keys and all(len(member_key) == 1 for member_key in member_keys):
-            return ",".join(str(next(iter(member_key.values()))) for member_key in member_keys)
+            scalars = [str(next(iter(member_key.values()))) for member_key in member_keys]
+            return ",".join(scalars) if self._is_csv_request() else scalars
         return member_keys
 
 
@@ -398,22 +411,26 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
     # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
     natural_slug = serializers.SerializerMethodField()
 
-    def __init__(self, *args, force_csv=False, **kwargs):
+    def __init__(self, *args, force_csv=False, natural_keys=False, **kwargs):
         """
         Instantiate a BaseModelSerializer.
 
         The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
         which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
+
+        The natural_keys kwarg selects the same natural-key flattening without CSV's string coercions, for the
+        JSON/YAML export documents, which can represent real nulls and lists.
         """
         self._force_csv = force_csv
+        self._natural_keys = natural_keys
 
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
         if not self.is_nested:
             self.Meta.depth = self.context.get("depth", 0)
 
-        # Check if the request is related to CSV export;
-        if self._is_csv_request() and self.instance:
+        # Check if this is a natural-key export (CSV or JSON/YAML);
+        if self._use_natural_keys() and self.instance:
             # Retrieve the natural key values of related fields in an optimized way.
             all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
             if isinstance(self.instance, models.QuerySet):
@@ -533,7 +550,7 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
             # composite-keyed members → JSON-encoded cell, see _get_m2m_natural_key_values), but only
             # when M2M export is opted into; otherwise they are omitted for backwards compatibility.
             with contextlib.suppress(FieldDoesNotExist):
-                if self._is_csv_request():
+                if self._use_natural_keys():
                     field = self.Meta.model._meta.get_field(field)
                     if field.one_to_many:
                         return False
@@ -587,7 +604,13 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
         data = super().to_representation(instance)
         altered_data = {}
 
-        if self._is_csv_request():
+        if self._use_natural_keys():
+            # CSV can only carry strings, so it represents a null as the CSV_NULL_TYPE sentinel; JSON/YAML
+            # keep the real None. Sentinels are in-band (indistinguishable from a value that happens to
+            # equal them), so they are only emitted where the format leaves no alternative.
+            def scalar(value):
+                return constants.CSV_NULL_TYPE if (value is None and self._is_csv_request()) else value
+
             for key, value in data.items():
                 field = self.fields.get(key)
                 if isinstance(field, serializers.ManyRelatedField) and isinstance(
@@ -606,9 +629,9 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
                         # Not FK field
-                        altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                        altered_data[key] = scalar(value)
                 else:
-                    altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                    altered_data[key] = scalar(value)
         else:
             altered_data = data
 

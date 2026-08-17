@@ -1264,14 +1264,20 @@ class SettingsJSONSchemaViewTestCase(testing.APITestCase):
 
 @tag("unit")
 class NaturalKeyLookupValuesTest(SimpleTestCase):
-    """`_get_natural_key_lookups_value_for_field` maps raw lookup values to their CSV representations."""
+    """`_get_natural_key_lookups_value_for_field` maps raw lookup values to their export representations."""
 
-    def _values(self, natural_key_field_instance, field_name="location"):
-        serializer = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0})
+    def _values(self, natural_key_field_instance, field_name="location", for_csv=True):
+        mode = {"force_csv": True} if for_csv else {"natural_keys": True}
+        serializer = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}, **mode)
         return serializer._get_natural_key_lookups_value_for_field(field_name, natural_key_field_instance)
 
-    def test_only_none_becomes_the_null_sentinel(self):
+    def test_none_becomes_the_null_sentinel_for_csv(self):
+        """CSV has no null type, so a null must be spelled with the in-band sentinel."""
         self.assertEqual(self._values({"location__name": None}), {"location__name": CSV_NULL_TYPE})
+
+    def test_none_stays_none_for_documents(self):
+        """JSON/YAML can express null directly, so no sentinel is emitted."""
+        self.assertEqual(self._values({"location__name": None}, for_csv=False), {"location__name": None})
 
     def test_falsey_values_are_preserved(self):
         """0/False/"" are real values, not missing ones; only None means "no value here"."""
@@ -1297,8 +1303,11 @@ class NaturalKeyLookupValuesTest(SimpleTestCase):
 class M2MNaturalKeyValuesTest(TestCase):
     """`_get_m2m_natural_key_values` renders an M2M field's members by natural key, for CSV export."""
 
-    def _values(self, instance, field_name):
-        serializer = get_serializer_for_model(type(instance))(context={"request": None, "depth": 0})
+    def _values(self, instance, field_name, for_csv=True):
+        mode = {"force_csv": True} if for_csv else {"natural_keys": True}
+        # exclude_m2m=False opts in to the non-default M2M fields; without it an export omits them.
+        context = {"request": None, "depth": 0, "exclude_m2m": False}
+        serializer = get_serializer_for_model(type(instance))(context=context, **mode)
         return serializer._get_m2m_natural_key_values(instance, serializer.fields[field_name])
 
     def test_scalar_keyed_members_join_with_commas(self):
@@ -1307,6 +1316,12 @@ class M2MNaturalKeyValuesTest(TestCase):
         for name in ("65000:101", "65000:102"):
             vrf.import_targets.add(ipam_models.RouteTarget.objects.create(name=name))
         self.assertEqual(sorted(self._values(vrf, "import_targets").split(",")), ["65000:101", "65000:102"])
+
+    def test_scalar_keyed_members_stay_a_list_for_documents(self):
+        """JSON/YAML keep the list, which is lossless for values containing a comma."""
+        vrf = ipam_models.VRF.objects.create(name="M2M NK List VRF", namespace=ipam_models.Namespace.objects.first())
+        vrf.import_targets.add(ipam_models.RouteTarget.objects.create(name="has,comma"))
+        self.assertEqual(self._values(vrf, "import_targets", for_csv=False), ["has,comma"])
 
     def test_composite_keyed_members_are_natural_key_dicts(self):
         """SoftwareImageFile has a 3-part natural key, so members become the flattened dicts import resolves."""

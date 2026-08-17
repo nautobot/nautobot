@@ -32,7 +32,7 @@ import yaml
 from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import build_import_document, build_import_metadata, nest_flat_dict
-from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS, CSV_NULL_TYPE
+from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 
 # ===========================================================================
@@ -74,7 +74,7 @@ class PruneMissingReferencesTests(SimpleTestCase):
     def _reshape(self, flat_record):
         """The `_build_document_records` nest-then-prune step, in isolation."""
         null_prefixes = ExportObjectList._null_reference_prefixes(flat_record)
-        nested = nest_flat_dict(flat_record, CSV_NULL_SENTINELS)
+        nested = nest_flat_dict(flat_record, (CSV_NO_OBJECT,))
         for head in {key.split("__", 1)[0] for key in flat_record if "__" in key}:
             nested[head] = ExportObjectList._prune_missing_references(null_prefixes, head, nested.get(head))
         return nested
@@ -101,10 +101,17 @@ class PruneMissingReferencesTests(SimpleTestCase):
         )
 
     def test_core_prune__all_null_field_values_kept(self):
-        """CSV_NULL_TYPE for every selected field does not mean the related object is absent."""
+        """A null for every selected field does not mean the related object is absent."""
+        self.assertEqual(
+            self._reshape({"location__description": None}),
+            {"location": {"description": None}},
+        )
+
+    def test_core_prune__literal_null_string_survives(self):
+        """`CSV_NULL_TYPE` is a CSV-only spelling; in a document it is just an ordinary string value."""
         self.assertEqual(
             self._reshape({"location__description": CSV_NULL_TYPE}),
-            {"location": {"description": None}},
+            {"location": {"description": CSV_NULL_TYPE}},
         )
 
     def test_core_prune__empty_string_not_a_null_reference(self):

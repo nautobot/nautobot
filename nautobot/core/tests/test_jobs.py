@@ -16,6 +16,7 @@ import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
+from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
@@ -154,6 +155,27 @@ class ExportObjectListTest(TransactionTestCase):
         self.assertEqual(len(text_data.split("\n")), Status.objects.count() + 1)
         for status in Status.objects.iterator():
             self.assertIn(status.name, text_data)
+
+    def test_export_json_keeps_real_nulls_and_literal_sentinel_strings(self):
+        """The JSON document carries real nulls, so a value that is literally "NULL" is not mistaken for one.
+
+        CSV must spell a null with the in-band CSV_NULL_TYPE sentinel; routing JSON/YAML through that
+        representation used to make the two indistinguishable and silently null out the string.
+        """
+        status = Status.objects.create(name="Export Null Probe", description=CSV_NULL_TYPE)
+        status.content_types.add(ContentType.objects.get_for_model(Status))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            export_format="json",
+            query_string="name=Export+Null+Probe",
+        )
+        self.assertJobResultStatus(job_result)
+        record = json.loads(job_result.files.first().file.read().decode("utf-8"))["records"][0]
+        self.assertEqual(record["description"], CSV_NULL_TYPE)
+        # ...and no relation is reported with the CSV "no object" sentinel; absent ones are real nulls
+        self.assertNotIn(CSV_NO_OBJECT, json.dumps(record))
 
     def test_export_devicetype_to_yaml(self):
         """Export device-type to YAML."""

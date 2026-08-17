@@ -207,11 +207,16 @@ class ExportObjectList(Job):
                     return None
         return match_fields
 
-    def _get_serializer_data(self, model, serializer_class, queryset, export_field_paths=None):
-        """Serialize the queryset with flat natural-key lookups for related fields."""
+    def _get_serializer_data(self, model, serializer_class, queryset, export_field_paths=None, for_csv=True):
+        """Serialize the queryset with flat natural-key lookups for related fields.
+
+        Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
+        JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
+        """
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
-        serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
+        mode = {"force_csv": True} if for_csv else {"natural_keys": True}
+        serializer = serializer_class(queryset, many=True, context={"request": None}, **mode)
         return serializer.data
 
     @staticmethod
@@ -268,7 +273,10 @@ class ExportObjectList(Job):
                     flattened_heads.add(head)
                 reshaped[key] = value
             null_prefixes = self._null_reference_prefixes(reshaped)
-            nested = nest_flat_dict(reshaped, constants.CSV_NULL_SENTINELS)
+            # Only CSV_NO_OBJECT needs mapping: it is produced by the natural-key annotation itself (for an
+            # absent relation), whereas nulls already arrive as real None in this mode. CSV_NULL_TYPE is
+            # deliberately not listed, so a value that is literally the string "NULL" survives intact.
+            nested = nest_flat_dict(reshaped, (constants.CSV_NO_OBJECT,))
             for head in flattened_heads:
                 # Collapse each null relation to a single None, at the depth the sentinel actually reports
                 nested[head] = self._prune_missing_references(null_prefixes, head, nested.get(head))
@@ -319,8 +327,11 @@ class ExportObjectList(Job):
         self.logger.info(
             "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
         )
-        records = self._get_serializer_data(model, serializer_class, queryset, export_field_paths)
-        if export_format in ("json", "yaml"):
+        is_document = export_format in ("json", "yaml")
+        records = self._get_serializer_data(
+            model, serializer_class, queryset, export_field_paths, for_csv=not is_document
+        )
+        if is_document:
             self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
         else:
             self._render_csv(content_type, records, export_field_paths, match_fields, filename)
