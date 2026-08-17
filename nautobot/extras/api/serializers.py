@@ -497,7 +497,8 @@ class SavedViewSerializer(ValidatedModelSerializer):
         """Require extras.change_savedview to change the global default, which affects every user."""
         request = self.context.get("request", None)
         user = getattr(request, "user", None)
-        if user is None or not user.is_authenticated:
+        if user is None:
+            # No request to check permissions against, as when a Job or data migration uses this serializer directly.
             return value
         current = self.instance.is_global_default if self.instance is not None else False
         # Compare against the current value so that re-submitting an unchanged flag (as a PUT or the UI edit

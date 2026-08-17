@@ -625,7 +625,7 @@ class SavedViewViewSet(ModelViewSet):
     @extend_schema(
         methods=["post"],
         request=None,
-        responses={200: serializers.UserSavedViewAssociationSerializer},
+        responses={201: serializers.UserSavedViewAssociationSerializer},
     )
     @extend_schema(methods=["delete"], request=None, responses={204: None})
     @action(
@@ -647,7 +647,7 @@ class SavedViewViewSet(ModelViewSet):
         serializer = serializers.UserSavedViewAssociationSerializer(
             association, context={"request": request, "depth": 0}
         )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 # TODO: 4.0 remove these endpoints in favor of the /api/extras/saved-views/<uuid>/set-default/ action.

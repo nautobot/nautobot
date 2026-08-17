@@ -4129,6 +4129,20 @@ class SavedViewTest(ModelViewTestCase):
                 )
                 self.assertHttpStatus(response, 200)
 
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_unknown_saved_view_returns_404(self):
+        """Every Saved View action that looks up its object by pk should 404 rather than error on an unknown pk."""
+        unknown_pk = uuid.uuid4()
+        for url_name in [
+            "extras:savedview_edit",
+            "extras:savedview_delete",
+            "extras:savedview_set_default",
+            "extras:savedview_update_config",
+        ]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name, kwargs={"pk": unknown_pk}))
+                self.assertHttpStatus(response, 404)
+
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
 class SecretTestCase(

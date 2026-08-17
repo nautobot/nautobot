@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, tag
@@ -39,6 +39,7 @@ from nautobot.extras.api.serializers import (
     ConfigContextSerializer,
     JobResultSerializer,
     RelationshipAssociationSerializer,
+    SavedViewSerializer,
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
@@ -4372,6 +4373,23 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
         instance.refresh_from_db()
         self.assertFalse(instance.is_global_default)
 
+    def test_serializer_global_default_denied_for_anonymous_user(self):
+        """An unauthenticated request holds no permissions, so it must not be able to set the global default."""
+        request = APIRequestFactory().patch("/")
+        request.user = AnonymousUser()
+        serializer = SavedViewSerializer(
+            self.saved_views[0], data={"is_global_default": True}, partial=True, context={"request": request}
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("is_global_default", serializer.errors)
+
+    def test_serializer_global_default_permitted_without_a_request(self):
+        """Programmatic use (a Job or data migration) has no request to check permissions against."""
+        serializer = SavedViewSerializer(
+            self.saved_views[0], data={"is_global_default": True}, partial=True, context={"request": None}
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_patch_unrelated_field_on_own_global_default_view(self):
         """Re-submitting an unchanged is_global_default must not trip the permission gate."""
         self.add_permissions("extras.change_savedview")
@@ -4513,7 +4531,7 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
     def test_set_default_requires_no_savedview_permission(self):
         instance = self.saved_views[0]
         response = self.client.post(self._get_set_default_url(instance), **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertTrue(
             UserSavedViewAssociation.objects.filter(
                 user=self.user, saved_view=instance, view_name=instance.view
@@ -4523,28 +4541,34 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
     def test_set_default_other_users_shared_view(self):
         instance = self._other_user_saved_view(is_shared=True)
         response = self.client.post(self._get_set_default_url(instance), **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertTrue(UserSavedViewAssociation.objects.filter(user=self.user, saved_view=instance).exists())
 
     def test_set_default_other_users_private_view(self):
         """A Saved View URL can be handed directly to another user; matches the UI's set-default behavior."""
         instance = self._other_user_saved_view(is_shared=False)
         response = self.client.post(self._get_set_default_url(instance), **self.header)
-        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
         self.assertTrue(UserSavedViewAssociation.objects.filter(user=self.user, saved_view=instance).exists())
 
     def test_set_default_replaces_existing_pin(self):
         first = self.saved_views[0]
         second = SavedView.objects.create(owner=self.user, name="Another Circuits View", view=first.view)
-        self.assertHttpStatus(self.client.post(self._get_set_default_url(first), **self.header), status.HTTP_200_OK)
-        self.assertHttpStatus(self.client.post(self._get_set_default_url(second), **self.header), status.HTTP_200_OK)
+        self.assertHttpStatus(
+            self.client.post(self._get_set_default_url(first), **self.header), status.HTTP_201_CREATED
+        )
+        self.assertHttpStatus(
+            self.client.post(self._get_set_default_url(second), **self.header), status.HTTP_201_CREATED
+        )
         associations = UserSavedViewAssociation.objects.filter(user=self.user, view_name=first.view)
         self.assertEqual(associations.count(), 1)
         self.assertEqual(associations.first().saved_view, second)
 
     def test_clear_default(self):
         instance = self.saved_views[0]
-        self.assertHttpStatus(self.client.post(self._get_set_default_url(instance), **self.header), status.HTTP_200_OK)
+        self.assertHttpStatus(
+            self.client.post(self._get_set_default_url(instance), **self.header), status.HTTP_201_CREATED
+        )
         response = self.client.delete(self._get_set_default_url(instance), **self.header)
         self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
         self.assertFalse(UserSavedViewAssociation.objects.filter(user=self.user, view_name=instance.view).exists())
