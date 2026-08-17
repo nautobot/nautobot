@@ -22,9 +22,16 @@ Lower-level serializer/parser unit tests for CSV live in `test_csv.py` / `test_a
 management-command round-trip lives in `test_commands.py`.
 """
 
-from django.test import SimpleTestCase
+import csv
+from io import StringIO
+import json
 
-from nautobot.core.api.utils import nest_flat_dict
+from django.test import SimpleTestCase, tag
+import yaml
+
+from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
+from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.utils import build_import_document, build_import_metadata, nest_flat_dict
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 
@@ -33,6 +40,7 @@ from nautobot.core.jobs import ExportObjectList
 # ===========================================================================
 
 
+@tag("unit")
 class NestFlatDictTests(SimpleTestCase):
     """`nest_flat_dict` converts flat `a__b` keys to nested dicts (used by both export and import)."""
 
@@ -55,6 +63,7 @@ class NestFlatDictTests(SimpleTestCase):
         self.assertEqual(nest_flat_dict({"tags": ["a", "b"]}), {"tags": ["a", "b"]})
 
 
+@tag("unit")
 class PruneMissingReferencesTests(SimpleTestCase):
     """`_prune_missing_references` must collapse only genuinely-null relations.
 
@@ -131,3 +140,90 @@ class PruneMissingReferencesTests(SimpleTestCase):
             self._reshape({"device_type__model": "C9300", "device_type__manufacturer__name": "Cisco"}),
             {"device_type": {"model": "C9300", "manufacturer": {"name": "Cisco"}}},
         )
+
+
+@tag("unit")
+class ImportMetadataTests(SimpleTestCase):
+    """`build_import_metadata` is the single source of the self-describing metadata both formats stamp."""
+
+    def test_core_metadata__version_is_an_integer(self):
+        """The version is the integer 3, not a string; readers compare numerically."""
+        self.assertIsInstance(IMPORT_DOCUMENT_VERSION, int)
+        self.assertEqual(IMPORT_DOCUMENT_VERSION, 3)
+
+    def test_core_metadata__keys_and_order(self):
+        metadata = build_import_metadata("dcim.manufacturer", match_fields=["name"])
+        self.assertEqual(list(metadata.keys()), ["nautobot_import_version", "model", "match_fields"])
+        self.assertEqual(metadata["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(metadata["model"], "dcim.manufacturer")
+        self.assertEqual(metadata["match_fields"], ["name"])
+
+    def test_core_metadata__omits_empty_match_fields(self):
+        self.assertEqual(
+            build_import_metadata("dcim.manufacturer"),
+            {"nautobot_import_version": IMPORT_DOCUMENT_VERSION, "model": "dcim.manufacturer"},
+        )
+
+    def test_core_document__is_metadata_plus_records(self):
+        """The JSON/YAML document is the shared metadata with `records` appended last."""
+        records = [{"name": "Cisco"}]
+        document = build_import_document("dcim.manufacturer", records, match_fields=["name"])
+        self.assertEqual(list(document.keys()), ["nautobot_import_version", "model", "match_fields", "records"])
+        self.assertEqual(document["records"], records)
+        metadata = build_import_metadata("dcim.manufacturer", match_fields=["name"])
+        self.assertEqual({key: document[key] for key in metadata}, metadata)
+
+    def test_core_document__json_renders_version_unquoted(self):
+        document = build_import_document("dcim.manufacturer", [{"name": "Cisco"}])
+        self.assertIn('"nautobot_import_version": 3', json.dumps(document, indent=2, default=str))
+
+    def test_core_document__yaml_renders_version_unquoted(self):
+        document = build_import_document("dcim.manufacturer", [{"name": "Cisco"}])
+        self.assertIn("nautobot_import_version: 3\n", yaml.safe_dump(document, sort_keys=False))
+
+
+@tag("unit")
+class DirectiveRowTests(SimpleTestCase):
+    """The CSV counterpart of the document metadata: a leading `# key=value; ...` comment row."""
+
+    def _first_line(self, match_fields=None):
+        rendered = NautobotCSVRenderer().render(
+            [{"name": "Cisco", "description": "x"}],
+            renderer_context={"import_directives": build_import_metadata("dcim.manufacturer", match_fields)},
+        )
+        return rendered.splitlines()[0]
+
+    def test_core_directive__row_contents(self):
+        self.assertEqual(
+            self._first_line(match_fields=["name"]),
+            "# nautobot_import_version=3; model=dcim.manufacturer; match_fields=name",
+        )
+
+    def test_core_directive__written_even_without_match_fields(self):
+        """Version and model are always present, so the row is never suppressed."""
+        self.assertEqual(self._first_line(), "# nautobot_import_version=3; model=dcim.manufacturer")
+
+    def test_core_directive__list_values_are_space_joined(self):
+        line = self._first_line(match_fields=["name", "serial"])
+        self.assertEqual(line, "# nautobot_import_version=3; model=dcim.manufacturer; match_fields=name serial")
+
+    def test_core_directive__occupies_a_single_cell(self):
+        """A one-cell directive survives a spreadsheet open-edit-save cycle; see render_directive_row."""
+        rendered = NautobotCSVRenderer().render(
+            [{"name": "Cisco"}],
+            renderer_context={"import_directives": build_import_metadata("dcim.manufacturer", ["name", "serial"])},
+        )
+        self.assertEqual(len(next(csv.reader(StringIO(rendered)))), 1)
+
+    def test_core_directive__no_legacy_marker(self):
+        """The version directive is the marker; the old `nautobot-import:` prefix is gone."""
+        self.assertNotIn("nautobot-import", self._first_line(match_fields=["name"]))
+
+    def test_core_directive__precedes_the_header_row(self):
+        rendered = NautobotCSVRenderer().render(
+            [{"name": "Cisco", "description": "x"}],
+            renderer_context={"import_directives": build_import_metadata("dcim.manufacturer", ["name"])},
+        )
+        lines = rendered.splitlines()
+        self.assertTrue(lines[0].startswith("#"), lines[0])
+        self.assertEqual(lines[1], "name,description")

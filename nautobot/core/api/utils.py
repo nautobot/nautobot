@@ -80,6 +80,26 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
         raise ValueError(f"Invalid field selection: {'; '.join(errors)}")
 
 
+def build_import_metadata(model_label, match_fields=None):
+    """The self-describing metadata every export stamps onto its output.
+
+    Shared by both output shapes so a version bump or key rename reaches both: JSON/YAML nests it alongside
+    `records` (`build_import_document`), CSV renders it as the leading directive row
+    (`NautobotCSVRenderer.render_directive_row`). Insertion order is preserved for readable output.
+
+    Args:
+        model_label (str): The `app_label.model` the records belong to.
+        match_fields (list, optional): Fields an importer should match on; omitted when falsy.
+    """
+    metadata = {
+        constants.IMPORT_DOCUMENT_VERSION_KEY: constants.IMPORT_DOCUMENT_VERSION,
+        constants.IMPORT_DOCUMENT_MODEL_KEY: model_label,
+    }
+    if match_fields:
+        metadata[constants.IMPORT_DOCUMENT_MATCH_FIELDS_KEY] = list(match_fields)
+    return metadata
+
+
 def build_import_document(model_label, records, match_fields=None):
     """Wrap records in the metadata document understood by the JSON/YAML import parsers.
 
@@ -96,12 +116,7 @@ def build_import_document(model_label, records, match_fields=None):
     Returns:
         dict: The metadata document.
     """
-    document = {
-        constants.IMPORT_DOCUMENT_VERSION_KEY: constants.IMPORT_DOCUMENT_VERSION,
-        constants.IMPORT_DOCUMENT_MODEL_KEY: model_label,
-    }
-    if match_fields:
-        document[constants.IMPORT_DOCUMENT_MATCH_FIELDS_KEY] = list(match_fields)
+    document = build_import_metadata(model_label, match_fields=match_fields)
     document[constants.IMPORT_DOCUMENT_RECORDS_KEY] = records
     return document
 
