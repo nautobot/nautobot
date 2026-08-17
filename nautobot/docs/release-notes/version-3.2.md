@@ -272,6 +272,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Security in v3.2.3
 
+- [GHSA-x69f-q4wj-vx72](https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72) - Fixed missing object-level permission enforcement on the legacy `/api/dcim/console-connections/` and `/api/dcim/power-connections/` REST API endpoints.
 - [#9354](https://github.com/nautobot/nautobot/issues/9354) - Updated development NPM dependency `postcss` to `^8.5.23` to mitigate CVE-2026-69153.
 - [#9354](https://github.com/nautobot/nautobot/issues/9354) - Updated development NPM dependency `fast-uri` to `3.1.5` to mitigate CVE-2026-18446.
 - [#9354](https://github.com/nautobot/nautobot/issues/9354) - Updated development NPM dependency `brace-expansion` to `1.1.18` to mitigate CVE-2026-14257 and CVE-2026-69152.
