@@ -1,1 +1,0 @@
-Enhanced the ["Permissions" administrator guide](../user-guide/administration/guides/permissions.md) with guidance about which permissions should be restricted to highly-trusted users, which permissions are generally safe to grant to all users, etc.
