@@ -16,10 +16,12 @@ from nautobot.core.api import (
 )
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
+    get_brief_representation,
     get_nested_serializer_depth,
     get_serializer_for_model,
     nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
+    user_can_view_object,
 )
 from nautobot.core.models.utils import get_all_concrete_models
 from nautobot.core.utils.config import get_settings_or_config
@@ -938,7 +940,7 @@ class CablePathSerializer(serializers.ModelSerializer):
 
 class InterfaceConnectionSerializer(ValidatedModelSerializer):
     interface_a = serializers.SerializerMethodField()
-    interface_b = InterfaceSerializer(source="connected_endpoint")
+    interface_b = serializers.SerializerMethodField()
     connected_endpoint_reachable = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
@@ -947,8 +949,25 @@ class InterfaceConnectionSerializer(ValidatedModelSerializer):
 
     @extend_schema_field(InterfaceSerializer)
     def get_interface_a(self, obj):
+        # Always fully serialized: the view's queryset is restricted, so the near end is one the user may view.
         context = {"request": self.context["request"]}
         return InterfaceSerializer(instance=obj, context=context).data
+
+    @extend_schema_field(InterfaceSerializer)
+    def get_interface_b(self, obj):
+        request = self.context["request"]
+        peer = obj.connected_endpoint
+        if peer is None:
+            return None
+        # Fall back to the brief representation in two cases:
+        # - The far end is not an Interface, so `InterfaceSerializer` cannot render it. The view's queryset
+        #   already excludes these, so this is a belt-and-suspenders guard against reintroducing the crash in #9368.
+        # - A connection is listed as long as its near end is visible, so the far end may be an Interface the
+        #   user has no permission to view. Downgrading rather than disclosing full detail matches how the
+        #   REST API renders unviewable related objects at `?depth` (GHSA-h8rv-c7c8-cvmx).
+        if not isinstance(peer, Interface) or not user_can_view_object(request, peer):
+            return get_brief_representation(peer, request, include_display=True)
+        return InterfaceSerializer(instance=peer, context={"request": request}).data
 
     @extend_schema_field(serializers.BooleanField(allow_null=True))
     def get_connected_endpoint_reachable(self, obj):
