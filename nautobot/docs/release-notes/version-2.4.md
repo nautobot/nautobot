@@ -282,6 +282,24 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.40 (2026-08-17)
+
+### Security in v2.4.40
+
+- [GHSA-x69f-q4wj-vx72](https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72) - Fixed missing object-level permission enforcement on the legacy `/api/dcim/console-connections/`, `/api/dcim/power-connections/`, and `/api/dcim/interface-connections/` REST API endpoints.
+- [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `cryptography` to `^50.0.0` to mitigate CVE-2026-69247.
+- [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `GitPython` to `~3.1.58` to mitigate multiple security vulnerabilities.
+
+### Fixed in v2.4.40
+
+- [#9282](https://github.com/nautobot/nautobot/issues/9282) - Fixed an `AttributeError` raised when editing an Interface belonging to a Module that has no parent Device while its 802.1Q mode was set to "Tagged".
+- [#9368](https://github.com/nautobot/nautobot/issues/9368) - Fixed an `AttributeError` from the legacy `/api/dcim/interface-connections/` REST API endpoint when an Interface was cabled to a non-Interface endpoint such as a CircuitTermination.
+
+### Documentation in v2.4.40
+
+- [#9324](https://github.com/nautobot/nautobot/issues/9324) - Enhanced the ["Permissions" administrator guide](../user-guide/administration/guides/permissions.md) with guidance about which permissions should be restricted to highly-trusted users, which permissions are generally safe to grant to all users, etc.
+- [#9378](https://github.com/nautobot/nautobot/issues/9378) - Updated documentation for Secrets and Security to clarify the potential for privilege escalation when granting users permission to create or edit Secrets.
+
 ## v2.4.39 (2026-08-03)
 
 ### Added in v2.4.39
