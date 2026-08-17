@@ -660,21 +660,47 @@ class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
+    def get_queryset(self):
+        return super().get_queryset().restrict(self.request.user, "view")
+
 
 class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = PowerPort.objects.select_related("device", "_path").filter(_path__destination_id__isnull=False)
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
 
+    def get_queryset(self):
+        return super().get_queryset().restrict(self.request.user, "view")
+
 
 class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = Interface.objects.select_related("device", "_path").filter(
-        # Avoid duplicate connections by only selecting the lower PK in a connected pair
         _path__destination_id__isnull=False,
-        pk__lt=F("_path__destination_id"),
+        # The serializer renders `interface_b` with `InterfaceSerializer`, so a connection whose far end is
+        # some other kind of PathEndpoint (e.g. a CircuitTermination) cannot be represented here.
+        _path__destination_type__app_label="dcim",
+        _path__destination_type__model="interface",
     )
     serializer_class = serializers.InterfaceConnectionSerializer
     filterset_class = filters.InterfaceConnectionFilterSet
+
+    def get_queryset(self):
+        # Restrict on the Interface at the near end of each connection, which is what the serializer renders
+        # as `interface_a`. Matches `InterfaceConnectionsListView`.
+        visible_interfaces = Interface.objects.restrict(self.request.user, "view")
+        return (
+            super()
+            .get_queryset()
+            .restrict(self.request.user, "view")
+            .exclude(
+                # An interface-to-interface connection appears in the queryset from both ends; keep only the
+                # lower-PK end so it is listed once. Deduplicate only when the far end is visible as well:
+                # when it isn't, the near end is the sole candidate row for that connection and dropping it
+                # would make the connection's visibility depend on the two random UUIDs' relative ordering.
+                _path__destination_id__in=visible_interfaces.values("pk"),
+                pk__gt=F("_path__destination_id"),
+            )
+        )
 
 
 #

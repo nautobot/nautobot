@@ -1,0 +1,1 @@
+Fixed missing object-level permission enforcement on the legacy `/api/dcim/console-connections/`, `/api/dcim/power-connections/`, and `/api/dcim/interface-connections/` REST API endpoints.

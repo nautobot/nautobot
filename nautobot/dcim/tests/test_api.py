@@ -1,6 +1,7 @@
 import datetime
 import json
 from unittest import skip
+import uuid
 
 from constance.test import override_config
 from django.contrib.auth import get_user_model
@@ -9,8 +10,10 @@ from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries
+from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, Provider
+from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries, disable_warnings
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
+from nautobot.dcim.api.serializers import InterfaceConnectionSerializer
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceDuplexChoices,
@@ -76,6 +79,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.models import ConfigContextSchema, ExternalIntegration, Role, SecretsGroup, Status
 from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
+from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import Cluster, ClusterType
 
 # Use the proper swappable User model
@@ -3159,6 +3163,384 @@ class ConnectedDeviceTest(APITestCase):
         response = self.client.get(url + "?peer_device=TestDevice2&peer_interface=eth0", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual(response.data["name"], self.device1.name)
+
+
+def create_connection_test_device(name):
+    """Shared helper to create a Device for the connection tests."""
+    return Device.objects.create(
+        name=name,
+        location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+        device_type=DeviceType.objects.first(),
+        role=Role.objects.get_for_model(Device).first(),
+        status=Status.objects.get_for_model(Device).first(),
+    )
+
+
+class ConnectionTestMixin:
+    """Shared setup for the read-only console/power/interface connection list endpoints."""
+
+    def constrain_to_visible_device(self):
+        """Grant constrained `view` on this endpoint's model, limited to `visible_device`'s components.
+
+        Creating an ObjectPermission is sufficient on its own: it grants the model-level `dcim.view_*`
+        permission that the endpoint's 403 gate checks, as well as the object-level constraint. Callers of
+        this helper therefore do not also need to call `add_permissions()`.
+        """
+        obj_perm = ObjectPermission(
+            name="Visible components",
+            constraints={"device__name": self.visible_device.name},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+    def test_list_requires_model_view_permission(self):
+        with disable_warnings("django.request"):
+            self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        self.add_permissions(self.view_permission)
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+
+
+class ComponentConnectionTestMixin(ConnectionTestMixin):
+    """Shared assertions for the console/power connection list endpoints, which serialize the component itself."""
+
+    def _get_ids(self, response):
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assert_no_verboten_content(response)
+        return {str(entry["id"]) for entry in response.data["results"]}
+
+    def test_list_returns_only_connected_components(self):
+        self.add_permissions(self.view_permission)
+        returned = self._get_ids(self.client.get(f"{self.url}?limit=0", **self.header))
+        self.assertIn(str(self.visible_port.pk), returned)
+        self.assertIn(str(self.hidden_port.pk), returned)
+        self.assertNotIn(str(self.unconnected_port.pk), returned)
+
+    def test_object_permission_constrains_list(self):
+        self.constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        returned = self._get_ids(response)
+        self.assertEqual(returned, {str(self.visible_port.pk)})
+        self.assertNotIn(str(self.hidden_port.pk), returned)
+        # `count` reflects the restricted queryset, not merely the current page.
+        self.assertEqual(response.data["count"], 1)
+
+    def test_object_permission_matching_nothing_returns_empty_list(self):
+        obj_perm = ObjectPermission(
+            name="No components",
+            constraints={"name": "Nonexistent Component"},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_related_objects_rendered_brief(self):
+        self.constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        row = response.data["results"][0]
+        for field_name in ("device", "cable", "cable_peer", "connected_endpoint"):
+            with self.subTest(field=field_name):
+                self.assertEqual(set(row[field_name].keys()), {"id", "object_type", "url"})
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class ConsoleConnectionTest(ComponentConnectionTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/console-connections/` REST endpoint."""
+
+    model = ConsolePort
+    view_permission = "dcim.view_consoleport"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.visible_device = create_connection_test_device("Console Conn Visible")
+        cls.hidden_device = create_connection_test_device("Console Conn Hidden")
+        peer_device = create_connection_test_device("Console Conn Peer")
+
+        cls.visible_port = ConsolePort.objects.create(device=cls.visible_device, name="Visible Console Port")
+        cls.hidden_port = ConsolePort.objects.create(device=cls.hidden_device, name="Hidden Console Port")
+        # Cabled to a pass-through RearPort, so it gets a CablePath but with no destination endpoint. It is
+        # not a completed connection and must never be listed here, even though its device is granted below.
+        cls.unconnected_port = ConsolePort.objects.create(device=cls.visible_device, name="Dangling Console Port")
+
+        server_ports = [
+            ConsoleServerPort.objects.create(device=peer_device, name=f"Conn Console Server Port {i}") for i in (1, 2)
+        ]
+        rear_port = RearPort.objects.create(
+            device=peer_device, name="Conn Console Rear Port", type=PortTypeChoices.TYPE_8P8C
+        )
+
+        # Saving a Cable builds its CablePath rows via post_save signal; no explicit CablePath creation needed.
+        Cable.objects.create(termination_a=cls.visible_port, termination_b=server_ports[0], status=connected)
+        Cable.objects.create(termination_a=cls.hidden_port, termination_b=server_ports[1], status=connected)
+        Cable.objects.create(termination_a=cls.unconnected_port, termination_b=rear_port, status=connected)
+
+        cls.url = reverse("dcim-api:consoleconnections-list")
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class PowerConnectionTest(ComponentConnectionTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/power-connections/` REST endpoint."""
+
+    model = PowerPort
+    view_permission = "dcim.view_powerport"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+        cls.visible_device = create_connection_test_device("Power Conn Visible")
+        cls.hidden_device = create_connection_test_device("Power Conn Hidden")
+        peer_device = create_connection_test_device("Power Conn Peer")
+
+        cls.visible_port = PowerPort.objects.create(device=cls.visible_device, name="Visible Power Port")
+        cls.hidden_port = PowerPort.objects.create(device=cls.hidden_device, name="Hidden Power Port")
+        # A PowerPort can only terminate on a PowerOutlet or PowerFeed, so an uncabled port stands in for the
+        # "has no completed connection" case. Its device is granted below, so it also proves that the
+        # connection filter still applies on top of the object-permission restriction.
+        cls.unconnected_port = PowerPort.objects.create(device=cls.visible_device, name="Uncabled Power Port")
+
+        outlets = [PowerOutlet.objects.create(device=peer_device, name=f"Conn Power Outlet {i}") for i in (1, 2)]
+
+        Cable.objects.create(termination_a=cls.visible_port, termination_b=outlets[0], status=connected)
+        Cable.objects.create(termination_a=cls.hidden_port, termination_b=outlets[1], status=connected)
+
+        cls.url = reverse("dcim-api:powerconnections-list")
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class InterfaceConnectionTest(ConnectionTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/interface-connections/` REST endpoint."""
+
+    model = Interface
+    view_permission = "dcim.view_interface"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+        interface_status = Status.objects.get_for_model(Interface).first()
+        cls.visible_device = create_connection_test_device("Iface Conn Visible")
+        cls.hidden_device = create_connection_test_device("Iface Conn Hidden")
+
+        def make_interface(device, name, pk_suffix):
+            # The endpoint lists one row per interface-to-interface connection, choosing between the two ends
+            # by PK, so a test that only creates interfaces with random UUID PKs would exercise one branch or
+            # the other at random. Pin each PK instead: `0x…01` sorts below every `0xf…` PK.
+            return Interface.objects.create(
+                pk=uuid.UUID(f"{pk_suffix}-0000-4000-8000-000000000000"),
+                device=device,
+                name=name,
+                status=interface_status,
+            )
+
+        # Both ends on the granted device: the connection is deduplicated down to its lower-PK end.
+        cls.visible_pair = (
+            make_interface(cls.visible_device, "Visible Interface 1", "00000001"),
+            make_interface(cls.visible_device, "Visible Interface 2", "00000002"),
+        )
+        # Both ends on the denied device: the connection must not appear at all.
+        cls.hidden_pair = (
+            make_interface(cls.hidden_device, "Hidden Interface 1", "00000011"),
+            make_interface(cls.hidden_device, "Hidden Interface 2", "00000012"),
+        )
+        # One end on each device, once with the granted end sorting below its peer and once above. Both must
+        # be listed from their granted end: deduplicating a connection down to an end the user cannot see
+        # would hide the connection outright.
+        cls.cross_pair_granted_end_low = (
+            make_interface(cls.visible_device, "Cross Visible Low", "00000021"),
+            make_interface(cls.hidden_device, "Cross Hidden High", "fffffff1"),
+        )
+        cls.cross_pair_granted_end_high = (
+            make_interface(cls.visible_device, "Cross Visible High", "fffffff2"),
+            make_interface(cls.hidden_device, "Cross Hidden Low", "00000022"),
+        )
+        # Cabled to a pass-through RearPort, so it gets a CablePath with no destination endpoint: not a
+        # completed connection, and so never listed here even though its device is granted below.
+        cls.dangling_interface = make_interface(cls.visible_device, "Dangling Interface", "00000031")
+        rear_port = RearPort.objects.create(
+            device=cls.visible_device, name="Iface Conn Rear Port", type=PortTypeChoices.TYPE_8P8C
+        )
+        # An Interface may also be cabled to a CircuitTermination, which is a PathEndpoint but not an
+        # Interface, so the connection cannot be rendered by this endpoint's Interface-shaped serializer.
+        cls.circuit_interface = make_interface(cls.visible_device, "Circuit Interface", "00000032")
+        circuit = Circuit.objects.create(
+            cid="Iface Conn Circuit",
+            provider=Provider.objects.create(name="Iface Conn Provider"),
+            circuit_type=CircuitType.objects.create(name="Iface Conn Circuit Type"),
+            status=Status.objects.get_for_model(Circuit).first(),
+        )
+        circuit_termination = CircuitTermination.objects.create(
+            circuit=circuit, term_side="A", location=cls.visible_device.location
+        )
+
+        # Saving a Cable builds its CablePath rows via post_save signal; no explicit CablePath creation needed.
+        for pair in (
+            cls.visible_pair,
+            cls.hidden_pair,
+            cls.cross_pair_granted_end_low,
+            cls.cross_pair_granted_end_high,
+        ):
+            Cable.objects.create(termination_a=pair[0], termination_b=pair[1], status=connected)
+        Cable.objects.create(termination_a=cls.dangling_interface, termination_b=rear_port, status=connected)
+        Cable.objects.create(termination_a=cls.circuit_interface, termination_b=circuit_termination, status=connected)
+
+        # Cable creation populates each Interface's `_path` via signals, which does not update copies already
+        # held in memory. Refresh them so `_path` and friends match what is stored.
+        for interface in (
+            *cls.visible_pair,
+            *cls.hidden_pair,
+            *cls.cross_pair_granted_end_low,
+            *cls.cross_pair_granted_end_high,
+            cls.dangling_interface,
+            cls.circuit_interface,
+        ):
+            interface.refresh_from_db()
+
+        cls.url = reverse("dcim-api:interfaceconnections-list")
+
+    def _get_near_end_ids(self, response):
+        """Collect the `interface_a` (near end) IDs from a connections response."""
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assert_no_verboten_content(response)
+        return {str(entry["interface_a"]["id"]) for entry in response.data["results"]}
+
+    def test_list_returns_one_row_per_connected_pair(self):
+        self.add_permissions(self.view_permission)
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        returned = self._get_near_end_ids(response)
+        self.assertEqual(
+            returned,
+            {
+                str(self.visible_pair[0].pk),
+                str(self.hidden_pair[0].pk),
+                str(self.cross_pair_granted_end_low[0].pk),
+                str(self.cross_pair_granted_end_high[1].pk),
+            },
+        )
+
+    def test_non_interface_far_end_excluded(self):
+        """A connection to a non-Interface endpoint is skipped rather than crashing the serializer."""
+        self.add_permissions(self.view_permission)
+        returned = self._get_near_end_ids(self.client.get(f"{self.url}?limit=0", **self.header))
+        self.assertNotIn(str(self.circuit_interface.pk), returned)
+        self.assertNotIn(str(self.dangling_interface.pk), returned)
+
+    def test_serializer_renders_non_interface_far_end_brief(self):
+        """The serializer degrades a non-Interface far end instead of raising."""
+        self.add_permissions(self.view_permission, "circuits.view_circuittermination")
+        request = self.client.get(f"{self.url}?limit=0", **self.header).wsgi_request
+        data = InterfaceConnectionSerializer(instance=self.circuit_interface, context={"request": request}).data
+        self.assertEqual(str(data["interface_a"]["id"]), str(self.circuit_interface.pk))
+        self.assertEqual(set(data["interface_b"].keys()), {"id", "object_type", "url", "display"})
+        self.assertEqual(data["interface_b"]["object_type"], "circuits.circuittermination")
+
+    def test_object_permission_constrains_list(self):
+        self.constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        returned = self._get_near_end_ids(response)
+        self.assertEqual(
+            returned,
+            {
+                str(self.visible_pair[0].pk),
+                str(self.cross_pair_granted_end_low[0].pk),
+                str(self.cross_pair_granted_end_high[0].pk),
+            },
+        )
+        # `count` reflects the restricted queryset, not merely the current page.
+        self.assertEqual(response.data["count"], 3)
+
+    def test_single_granted_interface_lists_its_connection(self):
+        """A constraint matching one end of a connection lists that connection, oriented from that end.
+
+        Each of the four ends below is granted in turn, so this covers both PK orderings and both sides of
+        a connection. `interface_a` is always the granted end, whichever end that is, and the far end is
+        rendered brief. Deduplicating a connection down to a fixed end before applying permissions would
+        instead hide it outright for half of these cases, depending only on random UUID ordering.
+        """
+        for pair_label, pair in (
+            ("granted end sorts below peer", self.cross_pair_granted_end_low),
+            ("granted end sorts above peer", self.cross_pair_granted_end_high),
+        ):
+            for side, granted_interface in (("near side granted", pair[0]), ("far side granted", pair[1])):
+                unviewable_peer = pair[1] if granted_interface is pair[0] else pair[0]
+                with self.subTest(f"{pair_label}, {side}"):
+                    obj_perm = ObjectPermission(
+                        name="One interface",
+                        constraints={"name": granted_interface.name},
+                        actions=["view"],
+                    )
+                    obj_perm.save()
+                    obj_perm.users.add(self.user)
+                    obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+                    try:
+                        response = self.client.get(f"{self.url}?limit=0", **self.header)
+                        self.assertEqual(self._get_near_end_ids(response), {str(granted_interface.pk)})
+                        self.assertEqual(response.data["count"], 1)
+                        far_end = response.data["results"][0]["interface_b"]
+                        self.assertEqual(set(far_end.keys()), {"id", "object_type", "url", "display"})
+                        self.assertEqual(str(far_end["id"]), str(unviewable_peer.pk))
+                    finally:
+                        obj_perm.delete()
+
+    def test_object_permission_matching_nothing_returns_empty_list(self):
+        obj_perm = ObjectPermission(
+            name="No interfaces",
+            constraints={"name": "Nonexistent Interface"},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_unviewable_far_end_rendered_brief(self):
+        """`interface_b` is downgraded to a brief representation when the user cannot view it.
+
+        Same treatment the REST API gives an unviewable related object at `?depth` (GHSA-h8rv-c7c8-cvmx):
+        listing the connection must not disclose the far end's full detail.
+        """
+        self.constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        rows = {str(row["interface_a"]["id"]): row for row in response.data["results"]}
+
+        for label, pair in (
+            ("granted end sorts below peer", self.cross_pair_granted_end_low),
+            ("granted end sorts above peer", self.cross_pair_granted_end_high),
+        ):
+            granted_interface, unviewable_peer = pair
+            with self.subTest(label):
+                far_end = rows[str(granted_interface.pk)]["interface_b"]
+                self.assertEqual(set(far_end.keys()), {"id", "object_type", "url", "display"})
+                self.assertEqual(str(far_end["id"]), str(unviewable_peer.pk))
+                self.assertEqual(far_end["object_type"], "dcim.interface")
+                # `display` is included for parity with the UI, which shows a related object's display value
+                # without requiring full view permission on it.
+                self.assertEqual(far_end["display"], str(unviewable_peer))
+
+        # A far end the user *can* view is still serialized in full.
+        near, far = self.visible_pair
+        self.assertNotEqual(set(rows[str(near.pk)]["interface_b"].keys()), {"id", "object_type", "url", "display"})
+        self.assertEqual(str(rows[str(near.pk)]["interface_b"]["id"]), str(far.pk))
+
+    def test_both_ends_and_reachability_serialized(self):
+        self.add_permissions(self.view_permission)
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        rows = {str(row["interface_a"]["id"]): row for row in response.data["results"]}
+        row = rows[str(self.visible_pair[0].pk)]
+        self.assertLessEqual({"interface_a", "interface_b", "connected_endpoint_reachable"}, set(row.keys()))
+        self.assertEqual(str(row["interface_b"]["id"]), str(self.visible_pair[1].pk))
+        self.assertTrue(row["connected_endpoint_reachable"])
 
 
 class VirtualChassisTest(APIViewTestCases.APIViewTestCase):
