@@ -286,12 +286,14 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Security in v2.4.40
 
+- [GHSA-x69f-q4wj-vx72](https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72) - Fixed missing object-level permission enforcement on the legacy `/api/dcim/console-connections/`, `/api/dcim/power-connections/`, and `/api/dcim/interface-connections/` REST API endpoints.
 - [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `cryptography` to `^50.0.0` to mitigate CVE-2026-69247.
 - [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `GitPython` to `~3.1.58` to mitigate multiple security vulnerabilities.
 
 ### Fixed in v2.4.40
 
 - [#9282](https://github.com/nautobot/nautobot/issues/9282) - Fixed an `AttributeError` raised when editing an Interface belonging to a Module that has no parent Device while its 802.1Q mode was set to "Tagged".
+- [#9368](https://github.com/nautobot/nautobot/issues/9368) - Fixed an `AttributeError` from the legacy `/api/dcim/interface-connections/` REST API endpoint when an Interface was cabled to a non-Interface endpoint such as a CircuitTermination.
 
 ### Documentation in v2.4.40
 

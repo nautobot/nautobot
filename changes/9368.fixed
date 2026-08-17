@@ -1,1 +1,0 @@
-Fixed an `AttributeError` from the legacy `/api/dcim/interface-connections/` REST API endpoint when an Interface was cabled to a non-Interface endpoint such as a CircuitTermination.
