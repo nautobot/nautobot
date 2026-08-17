@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections, DEFAULT_DB_ALIAS
-from django.test import override_settings, RequestFactory, TestCase
+from django.test import override_settings, RequestFactory, SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
@@ -27,7 +27,12 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.api.views import ModelViewSet
-from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.constants import (
+    COMPOSITE_KEY_SEPARATOR,
+    CSV_NO_OBJECT,
+    CSV_NULL_TYPE,
+    VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT,
+)
 from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
@@ -1255,6 +1260,38 @@ class SettingsJSONSchemaViewTestCase(testing.APITestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_schema_data)
+
+
+@tag("unit")
+class NaturalKeyLookupValuesTest(SimpleTestCase):
+    """`_get_natural_key_lookups_value_for_field` maps raw lookup values to their CSV representations."""
+
+    def _values(self, natural_key_field_instance, field_name="location"):
+        serializer = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0})
+        return serializer._get_natural_key_lookups_value_for_field(field_name, natural_key_field_instance)
+
+    def test_only_none_becomes_the_null_sentinel(self):
+        self.assertEqual(self._values({"location__name": None}), {"location__name": CSV_NULL_TYPE})
+
+    def test_falsey_values_are_preserved(self):
+        """0/False/"" are real values, not missing ones; only None means "no value here"."""
+        self.assertEqual(
+            self._values({"location__a": 0, "location__b": False, "location__c": "", "location__d": "0"}),
+            {"location__a": 0, "location__b": False, "location__c": "", "location__d": "0"},
+        )
+
+    def test_no_object_sentinel_passes_through(self):
+        self.assertEqual(
+            self._values({"location__name": VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT}),
+            {"location__name": CSV_NO_OBJECT},
+        )
+
+    def test_uuid_is_stringified(self):
+        value = uuid.uuid4()
+        self.assertEqual(self._values({"location__id": value}), {"location__id": str(value)})
+
+    def test_other_fields_are_ignored(self):
+        self.assertEqual(self._values({"tenant__name": None, "location__name": "Campus"}), {"location__name": "Campus"})
 
 
 class NautobotGetViewNameTest(TestCase):
