@@ -1,1 +1,0 @@
-Corrected the documented Celery worker queue flag from `--queue` to `--queues` in the Celery Queues administration guide.

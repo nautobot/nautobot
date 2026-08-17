@@ -1,1 +1,0 @@
-Fixed state leakage from `OtelWithSilkProfilingTest` that could cause failures in other tests due to Silk profiling being unexpectedly enabled.
