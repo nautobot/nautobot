@@ -10,7 +10,8 @@ add "&raw" to the end of the URL within a browser.
 {% load helpers %}
 {% load ui_framework %}
 <!DOCTYPE html>
-<html>
+{# `lang` is required so assistive technology knows which language to pronounce the page in (WCAG 3.1.1). #}
+<html lang="en">
     <head>
         <meta charset="UTF-8">
         {% include 'inc/media.html' %}
@@ -88,6 +89,7 @@ add "&raw" to the end of the URL within a browser.
     </head>
     <body>
         <!-- Nautobot page contents -->
+        {% include 'inc/skip_link.html' %}
         {% include 'inc/nav_menu.html' %}
         <header id="header">
             <div class="banner-alert-area">
@@ -131,7 +133,8 @@ add "&raw" to the end of the URL within a browser.
                     queries_tab = `
                         <div>
                             <button class="graphiql-un-styled graphiql-toolbar-button dropdown-toggle" aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
-                                <img class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
+                                <img alt="" class="graphiql-toolbar-icon" src="{% static 'img/nautobot_icon.svg' %}" style="height: 1.5rem;">
+                                <span class="visually-hidden">Saved queries</span>
                             </button>
                             <ul class="dropdown-menu" id="graphql-queries-menu">
                                 <li class="dropdown-header">Saved Queries</li>

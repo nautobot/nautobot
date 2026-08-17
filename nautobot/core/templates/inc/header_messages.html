@@ -1,4 +1,17 @@
-<div id="header_messages">
+{% comment %}
+This container is rendered on every page and is the target that HTMX appends new messages into (see `messages.js`, which
+swaps with `beforeend`, and the `hx-select-oob` declarations on the paginator and list views). Marking the persistent
+container as a live region is the reliable way to get those appended messages announced -- assistive technology is far
+more consistent about reporting mutations inside a live region that already existed than about noticing a brand new node
+that happens to carry `role="alert"`.
+
+`aria-atomic="false"` so that only the newly added message is announced rather than every message currently on screen.
+
+The individual messages keep their `role="alert"`, which is what covers the other delivery path: a normal full page load
+after a redirect, where the message is already in the markup when the page is parsed and a live region would
+(correctly) stay silent.
+{% endcomment %}
+<div aria-atomic="false" aria-live="polite" id="header_messages">
     {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissable" role="alert">
             <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>

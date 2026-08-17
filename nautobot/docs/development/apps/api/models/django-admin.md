@@ -12,7 +12,7 @@ from .models import Animal
 
 @admin.register(Animal)
 class AnimalAdmin(NautobotModelAdmin):
-    list_display = ('name', 'sound')
+    list_display = ("name", "sound")
 ```
 
 This will display the app and its model in the admin UI. Staff users can create, change, and delete model instances via the admin UI without needing to create a custom view.

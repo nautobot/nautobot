@@ -1,10 +1,15 @@
 {% load form_helpers %}
 
-<div class="modal fade" tabindex="-1" role="dialog" id="dynamic_group_assignment_modal">
+<div class="modal fade"
+     tabindex="-1"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="dynamic_group_assignment_modal_title"
+     id="dynamic_group_assignment_modal">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header justify-content-between">
-                <h4 class="modal-title">Static Assignment to Dynamic Groups</h4>
+                <h2 class="modal-title" id="dynamic_group_assignment_modal_title">Static Assignment to Dynamic Groups</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                 </button>
             </div>

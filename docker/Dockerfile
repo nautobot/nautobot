@@ -89,13 +89,13 @@ RUN apt-get update && \
 FROM system-dev-dependencies AS system-dev-dependencies-amd64
 
 # Install hadolint for linting Dockerfiles
-RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
+RUN curl -fLo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
 FROM system-dev-dependencies AS system-dev-dependencies-arm64
 
 # Install hadolint for linting Dockerfiles
-RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
+RUN curl -fLo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
     chmod +x /usr/bin/hadolint
 
 ################################ Stage: poetry (stub for poetry only)

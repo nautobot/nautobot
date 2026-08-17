@@ -45,7 +45,7 @@ class HomeTestCase(SeleniumTestCase):
 
         columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
-            columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
+            columns_html.first.find_by_xpath(f".//h2[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
                 columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
 
@@ -61,7 +61,7 @@ class HomeTestCase(SeleniumTestCase):
 
         columns_html = self.browser.find_by_xpath("//div[@id='draggable-homepage-panels']")
         for panel_name, panel_details in self.layout.items():
-            columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
+            columns_html.first.find_by_xpath(f".//h2[text()='{panel_name}']")
             for item_name, item_details in panel_details.items():
                 item_html = columns_html.first.find_by_xpath(f".//a[contains(text(), '{item_name}')]")
                 if item_details.get("model"):
@@ -89,7 +89,7 @@ class HomeTestCase(SeleniumTestCase):
                         f"/div[@class='col-xxl-3 col-xl-4 col-md-6 ms-auto nb-panel-group order-xl-0 order-md-{panel_index // 2}']"
                         f"/div[@class='card nb-draggable']"
                         f"/div[@class='card-header nb-draggable-handle']"
-                        f"/strong[contains(text(), '{panel_name}')]"
+                        f"/h2[contains(text(), '{panel_name}')]"
                         f"/../.."
                         f"/ul[@class='list-group collapse overflow-y-auto show']"
                     )
@@ -100,7 +100,7 @@ class HomeTestCase(SeleniumTestCase):
                         self.assertEqual(len(links), 0)
             else:
                 panel = self.browser.find_by_xpath(
-                    f"//div[@class='card-header nb-draggable-handle']/strong[text()='{panel_name}']"
+                    f"//div[@class='card-header nb-draggable-handle']/h2[text()='{panel_name}']"
                 )
                 self.assertEqual(len(panel), 0)
 
