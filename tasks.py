@@ -12,24 +12,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import concurrent.futures
 from functools import partial
-import json
 import os
-import platform
 import re
 import shlex
-import time
 
 from invoke import Collection, task as invoke_task
-from invoke.exceptions import Exit, Failure
-
-try:
-    import yaml
-
-    HAS_PYYAML = True
-except ImportError:
-    HAS_PYYAML = False
+from invoke.exceptions import Exit
 
 try:
     # Override built-in print function with rich's pretty-printer function, if available
@@ -91,7 +80,6 @@ namespace.configure(
             # https://code.djangoproject.com/ticket/36531
             "python_ver": "3.13",
             "local": False,
-            "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
             "compose_files": ORIGINAL_COMPOSE_FILES.copy(),
             # Image names to use when building from "main" branch
@@ -194,12 +182,6 @@ def docker_compose(context, command, **kwargs):
         compose_file_path = os.path.join(context.nautobot.compose_dir, compose_file)
         compose_command_tokens.append(f'-f "{compose_file_path}"')
 
-    # Determine which ports mapping strategy to use
-    if context.nautobot.ephemeral_ports and context.nautobot.compose_files == ORIGINAL_COMPOSE_FILES:
-        compose_command_tokens.append(
-            f'-f "{os.path.join(context.nautobot.compose_dir, "docker-compose.ephemeral-ports.yml")}"'
-        )
-
     compose_command_tokens.append(command)
 
     # If `service` was passed as a kwarg, add it to the end.
@@ -207,8 +189,7 @@ def docker_compose(context, command, **kwargs):
     if service is not None:
         compose_command_tokens.append(service)
 
-    if "hide" not in kwargs:
-        print(f'Running docker compose command "{command}"')
+    print(f'Running docker compose command "{command}"')
     compose_command = " ".join(compose_command_tokens)
     env = kwargs.pop("env", {})
     env.update({"PYTHON_VER": context.nautobot.python_ver, "NAUTOBOT_VER": NAUTOBOT_VER})
@@ -408,45 +389,6 @@ def get_dependency_version(dependency_name):
     return version_match.group(1)
 
 
-@task
-def dump_service_ports_to_disk(context):
-    """Useful for downstream utilities without direct docker access to determine ports.
-
-    This function will sometimes be called asynchronously while containers are still
-    firing up, hence the `attempt` loop.
-    """
-    service_ports = {}
-
-    for attempt in range(4):  # pylint: disable=unused-variable
-        result = docker_compose(context, "ps --format json", hide=True)
-
-        for line in result.stdout.splitlines():
-            try:
-                service_def = json.loads(line)
-                service_name = re.search(
-                    r"com\.docker\.compose\.service=(?P<service>\w+)", service_def["Labels"]
-                ).group("service")
-
-                ports_found = {}
-                for port in service_def["Publishers"]:
-                    if port.get("PublishedPort", 0):
-                        ports_found[port["TargetPort"]] = port["PublishedPort"]
-
-                if ports_found:
-                    service_ports[service_name] = ports_found
-            except (json.decoder.JSONDecodeError, AttributeError, IndexError, KeyError):
-                continue
-
-        # Confirm required services are started
-        if set(["nautobot", "celery_worker"]).issubset(service_ports.keys()):
-            break
-
-        time.sleep(15)
-
-    with open(".service_ports.json", "w") as f:
-        json.dump(service_ports, f, indent=4)
-
-
 @task(
     help={
         "branch": "Source branch used to push.",
@@ -501,6 +443,20 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
+@task(help={"service": "If specified, only affect this service."})
+def debug(context, service=None):
+    """Start Nautobot and its dependencies in debug mode."""
+    print("Starting Nautobot in debug mode...")
+    docker_compose(context, "up", service=service)
+
+
+@task(help={"service": "If specified, only affect this service."})
+def start(context, service=None):
+    """Start Nautobot and its dependencies in detached mode."""
+    print(f"Starting {service or 'Nautobot'} in detached mode...")
+    docker_compose(context, "up --detach", service=service)
+
+
 def _parse_env_kwargs(env) -> dict:
     """Parse a list of 'KEY=VALUE' strings into a dict.
 
@@ -520,39 +476,6 @@ def _parse_env_kwargs(env) -> dict:
         key, value = item.split("=", 1)
         result[key] = value
     return result
-
-
-@task(
-    help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
-        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
-    },
-    iterable=["service", "env"],
-)
-def debug(context, service=None, env=None):
-    """Start all services, or specified service(s) and their dependencies, in debug mode."""
-    service = " ".join(service) if service else ""
-    dict_env = _parse_env_kwargs(env)
-    print(f"Starting {service or 'all services'} in debug mode...")
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        executor.submit(dump_service_ports_to_disk, context)
-        docker_compose(context, "up", service=service, env=dict_env)
-
-
-@task(
-    help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
-        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
-    },
-    iterable=["service", "env"],
-)
-def start(context, service=None, env=None):
-    """Start all services, or specified service(s) and their dependencies, in detached mode."""
-    service = " ".join(service) if service else ""
-    dict_env = _parse_env_kwargs(env)
-    print(f"Starting {service or 'all services'} in detached mode...")
-    docker_compose(context, "up --detach", service=service, env=dict_env)
-    dump_service_ports_to_disk(context)
 
 
 @task(
@@ -591,52 +514,6 @@ def destroy(context):
     """Destroy all containers and volumes."""
     print("Destroying Nautobot...")
     docker_compose(context, "down --volumes --remove-orphans")
-
-
-@task(help={"workspace_launch": "Relaunch vscode using workspace file? Defaults to True."})
-def vscode(context, workspace_launch=True):
-    """Visual Studio Code specific environment helpers.
-
-    workspace_launch: This will re-launch VSCode using the workspace file/settings. Has no
-    affect if user is already in the workspace.
-    """
-    if not HAS_PYYAML:
-        raise Exit("You must install pyyaml ('pip install --user pyyaml') to use this command.")
-
-    # Setup PYTHON version if using docker dev containers
-    env_file_path = os.path.join(BASE_DIR, "development/.env")
-    try:
-        with open(env_file_path, "r") as env_file_obj:
-            lines = env_file_obj.readlines()
-    except FileNotFoundError:
-        lines = []
-    finally:
-        cleaned_lines = [og_line for og_line in lines if not re.match(r"^(NAUTOBOT_VER|PYTHON_VER)=", og_line)]
-        cleaned_lines.append(f"PYTHON_VER={context.nautobot.python_ver}")
-        cleaned_lines.append(f"NAUTOBOT_VER={get_nautobot_major_minor_version(context)}")
-        with open(env_file_path, "w") as env_file_obj:
-            env_file_obj.write("\n".join(cleaned_lines))
-
-    # Start nautobot services with debugpy enabled
-    try:
-        with open("invoke.yml", "r") as f:
-            invoke_settings = yaml.safe_load(f)
-    except FileNotFoundError:
-        invoke_settings = {"nautobot": {}}
-
-    # Dont clobber someones existing compose_files settings arrangement
-    # But otherwise, make sure docker compose has the debugpy settings
-    if not invoke_settings.get("nautobot", {}).get("compose_files", None):
-        invoke_settings["nautobot"]["compose_files"] = [
-            f"docker-compose.{pattern}yml" for pattern in ["", "postgres.", "dev.", "vscode-rdb."]
-        ]
-
-        with open("invoke.yml", "w") as f:
-            yaml.dump(invoke_settings, f)
-
-    if workspace_launch:
-        command = "code nautobot.code-workspace"
-        context.run(command, env={"PYTHON_VER": context.nautobot.python_ver})
 
 
 @task(
