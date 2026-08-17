@@ -1294,6 +1294,82 @@ class NaturalKeyLookupValuesTest(SimpleTestCase):
         self.assertEqual(self._values({"tenant__name": None, "location__name": "Campus"}), {"location__name": "Campus"})
 
 
+class M2MNaturalKeyValuesTest(TestCase):
+    """`_get_m2m_natural_key_values` renders an M2M field's members by natural key, for CSV export."""
+
+    def _values(self, instance, field_name):
+        serializer = get_serializer_for_model(type(instance))(context={"request": None, "depth": 0})
+        return serializer._get_m2m_natural_key_values(instance, serializer.fields[field_name])
+
+    def test_scalar_keyed_members_join_with_commas(self):
+        """RouteTarget's natural key is a single value, so members render as a comma-separated string."""
+        vrf = ipam_models.VRF.objects.create(name="M2M NK Test VRF", namespace=ipam_models.Namespace.objects.first())
+        for name in ("65000:101", "65000:102"):
+            vrf.import_targets.add(ipam_models.RouteTarget.objects.create(name=name))
+        self.assertEqual(sorted(self._values(vrf, "import_targets").split(",")), ["65000:101", "65000:102"])
+
+    def test_composite_keyed_members_are_natural_key_dicts(self):
+        """SoftwareImageFile has a 3-part natural key, so members become the flattened dicts import resolves."""
+        device = dcim_models.Device.objects.create(
+            name="M2M NK Test Device",
+            location=dcim_models.Location.objects.filter(location_type__name="Campus").first(),
+            device_type=dcim_models.DeviceType.objects.first(),
+            role=extras_models.Role.objects.get_for_model(dcim_models.Device).first(),
+            status=extras_models.Status.objects.get_for_model(dcim_models.Device).first(),
+        )
+        software_version = dcim_models.SoftwareVersion.objects.first()
+        device.software_image_files.add(
+            dcim_models.SoftwareImageFile.objects.create(
+                image_file_name="m2m-nk-test.bin",
+                software_version=software_version,
+                status=extras_models.Status.objects.get_for_model(dcim_models.SoftwareImageFile).first(),
+            )
+        )
+        self.assertEqual(
+            self._values(device, "software_image_files"),
+            [
+                {
+                    "image_file_name": "m2m-nk-test.bin",
+                    "software_version__platform__name": software_version.platform.name,
+                    "software_version__version": software_version.version,
+                }
+            ],
+        )
+
+    def test_no_members_is_an_empty_list(self):
+        """An empty M2M yields [], which the renderer flattens to an empty cell."""
+        vrf = ipam_models.VRF.objects.create(name="M2M NK Empty VRF", namespace=ipam_models.Namespace.objects.first())
+        self.assertEqual(self._values(vrf, "import_targets"), [])
+        self.assertEqual(
+            NautobotCSVRenderer().render([{"name": "vrf1", "import_targets": []}]).splitlines()[1], "vrf1,"
+        )
+
+    def test_tags_are_the_taggit_special_case(self):
+        """`tags` is a TagsManager rather than a concrete M2M, but still resolves to the comma form."""
+        vrf = ipam_models.VRF.objects.create(name="M2M NK Tagged VRF", namespace=ipam_models.Namespace.objects.first())
+        content_type = ContentType.objects.get_for_model(ipam_models.VRF)
+        for name in ("m2m-nk-tag-a", "m2m-nk-tag-b"):
+            tag = extras_models.Tag.objects.create(name=name)
+            tag.content_types.add(content_type)
+            vrf.tags.add(tag)
+        self.assertEqual(sorted(self._values(vrf, "tags").split(",")), ["m2m-nk-tag-a", "m2m-nk-tag-b"])
+
+    def test_composite_members_render_as_a_json_cell(self):
+        """The dict form reaches CSV as a JSON-encoded cell, which the import parser can read back."""
+        rendered = NautobotCSVRenderer().render(
+            [
+                {
+                    "name": "dev1",
+                    "software_image_files": [{"image_file_name": "a.bin", "software_version__version": "1.0"}],
+                }
+            ]
+        )
+        self.assertEqual(
+            rendered.splitlines()[1],
+            'dev1,"[{""image_file_name"": ""a.bin"", ""software_version__version"": ""1.0""}]"',
+        )
+
+
 class NautobotGetViewNameTest(TestCase):
     """
     Some unit tests for the get_view_name() functionality.
