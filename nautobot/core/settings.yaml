@@ -982,6 +982,7 @@ properties:
   EXTERNAL_AUTH_DEFAULT_GROUPS:
     default: []
     description: "The list of group names to assign a new user account when created using 3rd-party authentication."
+    environment_variable: "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"
     items:
       type: "string"
     type: "array"
@@ -2081,6 +2082,21 @@ properties:
     items:
       type: "string"
     type: "array"
+  SSO_SYNC_GROUPS:
+    default: []
+    description: >-
+      List of groups to sync into Nautobot from the SSO group claim. If empty, all groups in the claim are synced.
+    details: |-
+      This restricts group membership only. Staff and superuser status is always evaluated against every group in
+      the claim, so a group listed in `SSO_STAFF_GROUPS` or `SSO_SUPERUSER_GROUPS` still grants that status even if
+      it is omitted here and therefore never created in Nautobot.
+    environment_variable: "NAUTOBOT_SSO_SYNC_GROUPS"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+    items:
+      type: "string"
+    type: "array"
+    version_added: "3.2.4"
   STATIC_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/static"

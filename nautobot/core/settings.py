@@ -256,6 +256,10 @@ if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_C
 
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
+if "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS" in os.environ and os.environ["NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"] != "":
+    EXTERNAL_AUTH_DEFAULT_GROUPS = os.getenv("NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS", "").split(
+        _CONFIG_SETTING_SEPARATOR
+    )
 EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 
 # Remote auth backend settings
@@ -291,6 +295,10 @@ SSO_STAFF_GROUPS = [
 # list of groups that an authenticating user can be a part of to be a Django super user
 SSO_SUPERUSER_GROUPS = [
     group for group in os.getenv("NAUTOBOT_SSO_SUPERUSER_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
+# list of groups to sync into Nautobot; if empty, every group in the claim is synced
+SSO_SYNC_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_SYNC_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
 ]
 
 # Job log entry sanitization and similar

@@ -1,0 +1,1 @@
+Added `SSO_SYNC_GROUPS` setting to restrict which groups are synced into Nautobot from the SSO group claim.
