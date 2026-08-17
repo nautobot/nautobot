@@ -1304,7 +1304,22 @@ class ObjectsTablePanel(Panel):
         This method processes the table data, configures pagination, and generates URLs
         for listing and adding objects. It also handles field inclusion/exclusion and
         displays the appropriate table title if provided.
+
+        There are two callers in a single web request -- the `render_table_config_forms` templatetag and
+        the detail-view template itself -- so we cache the result on the request: build and store it on the
+        first call, then return the cached value on the second instead of rebuilding the table.
         """
+        request = context["request"]
+        context_cache = getattr(request, "_objects_table_panel_extra_context", None)
+        if context_cache is None:
+            context_cache = {}
+            request._objects_table_panel_extra_context = context_cache
+        if self.component_id not in context_cache:
+            context_cache[self.component_id] = self._build_extra_context(context)
+        return context_cache[self.component_id]
+
+    def _build_extra_context(self, context: Context):
+        """Build the render context for this table panel. See `get_extra_context()` for caching details."""
         request = context["request"]
         if self.context_table_key:
             body_content_table = context.get(self.context_table_key)
