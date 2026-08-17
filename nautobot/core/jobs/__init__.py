@@ -10,7 +10,7 @@ from django.core.exceptions import (
     PermissionDenied,
 )
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
@@ -20,6 +20,7 @@ from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import (
     build_import_document,
     build_import_metadata,
@@ -208,15 +209,41 @@ class ExportObjectList(Job):
         return match_fields
 
     def _get_serializer_data(self, model, serializer_class, queryset, export_field_paths=None, for_csv=True):
-        """Serialize the queryset with flat natural-key lookups for related fields.
+        """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
 
         Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
         JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
         """
+        # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
+        # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
+        # the same reason CSV_NATURAL_KEY_QUERY_CHUNK exists -- MySQL rejects a statement joining more than
+        # 61 tables (#8454). Dropping the excess only costs a lazy load, since this is purely an optimization.
+        fk_field_names = [field.name for field in model._meta.fields if field.is_relation]
+        if fk_field_names:
+            queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
+
+        # Include M2M fields (represented by member natural keys) and prefetch them so serialization
+        # doesn't query per instance; select_related the members' own relations so composite-keyed
+        # members (whose natural key spans an FK) don't trigger a nested per-member lookup. Each prefetch
+        # is its own statement, so its joins are bounded separately -- but bounded all the same.
+        m2m_prefetches = []
+        for m2m_field in model._meta.many_to_many:
+            member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
+            if member_fks:
+                member_queryset = m2m_field.related_model.objects.select_related(
+                    *member_fks[:CSV_NATURAL_KEY_QUERY_CHUNK]
+                )
+                m2m_prefetches.append(Prefetch(m2m_field.name, queryset=member_queryset))
+            else:
+                m2m_prefetches.append(m2m_field.name)
+        if m2m_prefetches:
+            queryset = queryset.prefetch_related(*m2m_prefetches)
+
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
         mode = {"force_csv": True} if for_csv else {"natural_keys": True}
-        serializer = serializer_class(queryset, many=True, context={"request": None}, **mode)
+        context = {"request": None, "exclude_m2m": False}
+        serializer = serializer_class(queryset, many=True, context=context, **mode)
         return serializer.data
 
     @staticmethod

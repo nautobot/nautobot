@@ -11,7 +11,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connections, DEFAULT_DB_ALIAS
-from django.test import override_settings, RequestFactory, SimpleTestCase, tag, TestCase
+from django.test import override_settings, RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
@@ -29,9 +29,6 @@ from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.api.views import ModelViewSet
 from nautobot.core.constants import (
     COMPOSITE_KEY_SEPARATOR,
-    CSV_NO_OBJECT,
-    CSV_NULL_TYPE,
-    VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT,
 )
 from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
@@ -1260,129 +1257,6 @@ class SettingsJSONSchemaViewTestCase(testing.APITestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_schema_data)
-
-
-@tag("unit")
-class NaturalKeyLookupValuesTest(SimpleTestCase):
-    """`_get_natural_key_lookups_value_for_field` maps raw lookup values to their export representations."""
-
-    def _values(self, natural_key_field_instance, field_name="location", for_csv=True):
-        mode = {"force_csv": True} if for_csv else {"natural_keys": True}
-        serializer = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}, **mode)
-        return serializer._get_natural_key_lookups_value_for_field(field_name, natural_key_field_instance)
-
-    def test_none_becomes_the_null_sentinel_for_csv(self):
-        """CSV has no null type, so a null must be spelled with the in-band sentinel."""
-        self.assertEqual(self._values({"location__name": None}), {"location__name": CSV_NULL_TYPE})
-
-    def test_none_stays_none_for_documents(self):
-        """JSON/YAML can express null directly, so no sentinel is emitted."""
-        self.assertEqual(self._values({"location__name": None}, for_csv=False), {"location__name": None})
-
-    def test_falsey_values_are_preserved(self):
-        """0/False/"" are real values, not missing ones; only None means "no value here"."""
-        self.assertEqual(
-            self._values({"location__a": 0, "location__b": False, "location__c": "", "location__d": "0"}),
-            {"location__a": 0, "location__b": False, "location__c": "", "location__d": "0"},
-        )
-
-    def test_no_object_sentinel_passes_through(self):
-        self.assertEqual(
-            self._values({"location__name": VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT}),
-            {"location__name": CSV_NO_OBJECT},
-        )
-
-    def test_uuid_is_stringified(self):
-        value = uuid.uuid4()
-        self.assertEqual(self._values({"location__id": value}), {"location__id": str(value)})
-
-    def test_other_fields_are_ignored(self):
-        self.assertEqual(self._values({"tenant__name": None, "location__name": "Campus"}), {"location__name": "Campus"})
-
-
-class M2MNaturalKeyValuesTest(TestCase):
-    """`_get_m2m_natural_key_values` renders an M2M field's members by natural key, for CSV export."""
-
-    def _values(self, instance, field_name, for_csv=True):
-        mode = {"force_csv": True} if for_csv else {"natural_keys": True}
-        # exclude_m2m=False opts in to the non-default M2M fields; without it an export omits them.
-        context = {"request": None, "depth": 0, "exclude_m2m": False}
-        serializer = get_serializer_for_model(type(instance))(context=context, **mode)
-        return serializer._get_m2m_natural_key_values(instance, serializer.fields[field_name])
-
-    def test_scalar_keyed_members_join_with_commas(self):
-        """RouteTarget's natural key is a single value, so members render as a comma-separated string."""
-        vrf = ipam_models.VRF.objects.create(name="M2M NK Test VRF", namespace=ipam_models.Namespace.objects.first())
-        for name in ("65000:101", "65000:102"):
-            vrf.import_targets.add(ipam_models.RouteTarget.objects.create(name=name))
-        self.assertEqual(sorted(self._values(vrf, "import_targets").split(",")), ["65000:101", "65000:102"])
-
-    def test_scalar_keyed_members_stay_a_list_for_documents(self):
-        """JSON/YAML keep the list, which is lossless for values containing a comma."""
-        vrf = ipam_models.VRF.objects.create(name="M2M NK List VRF", namespace=ipam_models.Namespace.objects.first())
-        vrf.import_targets.add(ipam_models.RouteTarget.objects.create(name="has,comma"))
-        self.assertEqual(self._values(vrf, "import_targets", for_csv=False), ["has,comma"])
-
-    def test_composite_keyed_members_are_natural_key_dicts(self):
-        """SoftwareImageFile has a 3-part natural key, so members become the flattened dicts import resolves."""
-        device = dcim_models.Device.objects.create(
-            name="M2M NK Test Device",
-            location=dcim_models.Location.objects.filter(location_type__name="Campus").first(),
-            device_type=dcim_models.DeviceType.objects.first(),
-            role=extras_models.Role.objects.get_for_model(dcim_models.Device).first(),
-            status=extras_models.Status.objects.get_for_model(dcim_models.Device).first(),
-        )
-        software_version = dcim_models.SoftwareVersion.objects.first()
-        device.software_image_files.add(
-            dcim_models.SoftwareImageFile.objects.create(
-                image_file_name="m2m-nk-test.bin",
-                software_version=software_version,
-                status=extras_models.Status.objects.get_for_model(dcim_models.SoftwareImageFile).first(),
-            )
-        )
-        self.assertEqual(
-            self._values(device, "software_image_files"),
-            [
-                {
-                    "image_file_name": "m2m-nk-test.bin",
-                    "software_version__platform__name": software_version.platform.name,
-                    "software_version__version": software_version.version,
-                }
-            ],
-        )
-
-    def test_no_members_is_an_empty_list(self):
-        """An empty M2M yields [], which the renderer flattens to an empty cell."""
-        vrf = ipam_models.VRF.objects.create(name="M2M NK Empty VRF", namespace=ipam_models.Namespace.objects.first())
-        self.assertEqual(self._values(vrf, "import_targets"), [])
-        self.assertEqual(
-            NautobotCSVRenderer().render([{"name": "vrf1", "import_targets": []}]).splitlines()[1], "vrf1,"
-        )
-
-    def test_tags_are_the_taggit_special_case(self):
-        """`tags` is a TagsManager rather than a concrete M2M, but still resolves to the comma form."""
-        vrf = ipam_models.VRF.objects.create(name="M2M NK Tagged VRF", namespace=ipam_models.Namespace.objects.first())
-        content_type = ContentType.objects.get_for_model(ipam_models.VRF)
-        for name in ("m2m-nk-tag-a", "m2m-nk-tag-b"):
-            tag = extras_models.Tag.objects.create(name=name)
-            tag.content_types.add(content_type)
-            vrf.tags.add(tag)
-        self.assertEqual(sorted(self._values(vrf, "tags").split(",")), ["m2m-nk-tag-a", "m2m-nk-tag-b"])
-
-    def test_composite_members_render_as_a_json_cell(self):
-        """The dict form reaches CSV as a JSON-encoded cell, which the import parser can read back."""
-        rendered = NautobotCSVRenderer().render(
-            [
-                {
-                    "name": "dev1",
-                    "software_image_files": [{"image_file_name": "a.bin", "software_version__version": "1.0"}],
-                }
-            ]
-        )
-        self.assertEqual(
-            rendered.splitlines()[1],
-            'dev1,"[{""image_file_name"": ""a.bin"", ""software_version__version"": ""1.0""}]"',
-        )
 
 
 class NautobotGetViewNameTest(TestCase):
