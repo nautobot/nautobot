@@ -112,6 +112,7 @@ export const initializeSearch = () => {
     });
 
     const input = createElement('input', {
+      'aria-label': 'Search',
       autocomplete: 'off',
       className: 'form-control w-100',
       'hx-indicator': '#search_popup .htmx-indicator',
@@ -212,6 +213,8 @@ export const initializeSearch = () => {
     const overlay = createElement(
       'div',
       {
+        'aria-label': 'Search',
+        'aria-modal': 'true',
         className: 'overflow-auto pb-20 position-fixed top-0 end-0 bottom-0 start-0 nb-z-modal-backdrop',
         id: 'search_popup',
         role: 'dialog',
@@ -224,6 +227,15 @@ export const initializeSearch = () => {
     overlay.addEventListener('click', (event) => {
       if (event.target === overlay) {
         closeSearchPopup();
+      }
+    });
+
+    // Prevent users from being trapped in search popup if they are navigating the page with keyboard or screen reader.
+    overlay.addEventListener('keydown', (event) => {
+      const isPressedShift = event.shiftKey;
+      if (event.key === 'Tab') {
+        closeSearchPopup();
+        (isPressedShift ? headerSearchInput.previousElementSibling : headerSearchInput.nextElementSibling)?.focus();
       }
     });
 

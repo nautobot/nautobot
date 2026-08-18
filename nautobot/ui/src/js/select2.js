@@ -83,16 +83,27 @@ const parseURL = (url) => {
  * @returns {void} Do not return any value, just initialize given Select2 components.
  */
 const initializeSelect2 = (context, selector, options) =>
-  [...getElement(context).querySelectorAll(selector)].forEach((element) =>
-    $(element).select2({
-      allowClear: true,
-      placeholder: '---------',
-      selectionCssClass: 'select2--small',
-      theme: 'bootstrap-5',
-      width: 'off',
-      ...options,
-    }),
-  );
+  [...getElement(context).querySelectorAll(selector)].forEach((element) => {
+    const {
+      $selection: [selection],
+    } = $(element)
+      .select2({
+        allowClear: true,
+        placeholder: '---------',
+        selectionCssClass: 'select2--small',
+        theme: 'bootstrap-5',
+        width: 'off',
+        ...options,
+      })
+      .data('select2');
+
+    /* Select2 names its combobox after its own displayed value; point it at the field's label(s) instead. */
+    const labelIds = [...element.labels].map((label, index) => (label.id ||= `${element.id}_label_${index}`));
+    if (labelIds.length) {
+      selection.setAttribute('aria-labelledby', labelIds.join(' '));
+      selection.querySelector('.select2-selection__rendered')?.setAttribute('aria-labelledby', labelIds.join(' '));
+    }
+  });
 
 const initializeColorPicker = (context, dropdownParent = null) => {
   // Assign color picker selection classes.

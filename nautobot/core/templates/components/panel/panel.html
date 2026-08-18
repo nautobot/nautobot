@@ -6,7 +6,8 @@
                     <strong>{{ label }}</strong>
                 {% endif %}
                 <a class="btn stretched-link nb-collapse-toggle" data-bs-toggle="collapse" panel-id="{{body_id}}" href="#{{body_id}}" role="button" aria-expanded="true" aria-controls="{{body_id}}">
-                    <span class="mdi mdi-chevron-down"></span>
+                    <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
+                    <span class="visually-hidden">Toggle {% firstof label "panel" %}</span>
                 </a>
                 {{ header_extra_content }}
             </div>

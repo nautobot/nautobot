@@ -377,7 +377,7 @@ Alternatively, host Nautobot behind Nginx as instructed in [HTTP server setup](h
 
     connection = parse_redis_connection(0)
     client = redis.from_url(connection)
-    client.ping() # test basic connectivity
-    client.keys() # retrieve a list of keys in the redis database
-    client.auth(password=os.getenv("NAUTOBOT_REDIS_PASSWORD")) # test password authentication
+    client.ping()  # test basic connectivity
+    client.keys()  # retrieve a list of keys in the redis database
+    client.auth(password=os.getenv("NAUTOBOT_REDIS_PASSWORD"))  # test password authentication
     ```

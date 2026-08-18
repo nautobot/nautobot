@@ -233,6 +233,9 @@ class ModelViewSetMixin:
             except ValueError:
                 self.logger.warning("The depth parameter must be an integer between 0 and 10")
 
+            if depth < 0 or depth > 10:
+                raise ParseError("The depth parameter must be an integer between 0 and 10")
+
             context["depth"] = depth
         else:
             # Use depth=0 in all write type requests.
