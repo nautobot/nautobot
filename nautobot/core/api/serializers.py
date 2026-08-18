@@ -140,14 +140,16 @@ class OptInFieldsMixin:
         return self.__pruned_fields
 
 
-class CSVRepresentationMixin:
-    """Serializer mixin holding the natural-key export machinery.
+class NaturalKeyRepresentationMixin:
+    """Serializer mixin holding the natural-key representation machinery.
 
-    All of export's special-case representation logic lives here so it stays out of the day-to-day
-    JSON/REST code path: prefetching related objects' natural-key values in bulk
-    (`_collect_natural_key_values` and its query-`Case` builders), flattening a single FK's natural key
-    into `a__b__name` columns (`_get_natural_key_lookups_value_for_field`), and rendering M2M members by
-    natural key (`_get_m2m_natural_key_values`).
+    Relations are represented by their natural keys (rather than by URL or pk) whenever a caller needs a
+    self-describing, re-importable rendering: the CSV/JSON/YAML export job, and any REST request that asks
+    for `text/csv`. All of that special-case logic lives here so it stays out of the day-to-day JSON/REST
+    code path: prefetching related objects' natural-key values in bulk (`_collect_natural_key_values` and
+    its query-`Case` builders), flattening a single FK's natural key into `a__b__name` columns
+    (`_get_natural_key_lookups_value_for_field`), and rendering M2M members by natural key
+    (`_get_m2m_natural_key_values`).
 
     Two modes share that machinery, distinguished because CSV cannot express anything but strings:
 
@@ -381,7 +383,7 @@ class CSVRepresentationMixin:
         return member_keys
 
 
-class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.HyperlinkedModelSerializer):
+class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, serializers.HyperlinkedModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
 
