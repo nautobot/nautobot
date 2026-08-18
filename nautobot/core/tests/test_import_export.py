@@ -1,25 +1,10 @@
-"""Consolidated test suite for the Configurable Import / Export with Upsert feature.
+"""Tests for the CSV/JSON/YAML export format and the `ExportObjectList` job that writes it.
 
-Organized to match `test-matrix-import-export.md`. The pattern (mirroring
-`extras.tests.test_customfields.CustomFieldBackgroundTasks`) is:
+Job-backed tests subclass `ImportExportJobTestCase`, which supplies `run_export()` plus helpers to read
+the produced file back (`export_text` / `export_lines` / `export_rows` / `export_document`).
 
-    setup a scenario  →  run the job via a helper  →  assert the outcome via helpers
-
-`ImportExportJobTestCase` provides the cadence:
-
-    run_export(**opts) / run_import(csv_data, **opts)   — run the system job, assert its status, return it
-    export_text / export_lines / export_rows / export_document / export_filename(jr)  — read the produced file
-    assertImport(jr, created=, updated=, unchanged=, match_fields=, source=)  — assert the upsert summary
-    assertLog(jr, substr, level=) / assertNoLog(...) / assertNoIssues(jr)     — assert the job log
-
-so each test reads as a few declarative lines.
-
-Naming convention (see the doc):
-    test_<layer>_<direction>__<field_type|format>[__<operation>]   # core / adapter / e2e layers
-    test_<area>__<case>                                            # match / scope / select / error / perm / rest
-
-Lower-level serializer/parser unit tests for CSV live in `test_csv.py` / `test_api.py`; the
-management-command round-trip lives in `test_commands.py`.
+The serializer-level natural-key machinery this builds on is tested in `test_csv.py`; the job's
+permission, saved-view and export-template behavior is in `test_jobs.ExportObjectListTest`.
 """
 
 import csv
@@ -41,10 +26,6 @@ from nautobot.dcim.models import Device, DeviceType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobLogEntry, Status
 from nautobot.ipam.models import Namespace, RouteTarget, VRF
-
-# ===========================================================================
-# Layer 1c — shared pure functions (format-agnostic core, no DB)
-# ===========================================================================
 
 
 @tag("unit")
@@ -243,9 +224,6 @@ class DirectiveRowTests(SimpleTestCase):
         self.assertEqual(lines[1], "name,description")
 
 
-# ===========================================================================
-# Shared base — the run/read cadence for job-backed tests
-# ===========================================================================
 class ImportExportJobTestCase(TransactionTestCase):
     """Shared fixtures + the setup→run→assert cadence for the ExportObjectList job."""
 
@@ -258,7 +236,19 @@ class ImportExportJobTestCase(TransactionTestCase):
         return status
 
     # -- run the job -----------------------------------------------------------
-    def run_export(self, *, model=Status, expected_status=JobResultStatusChoices.STATUS_SUCCESS, **kwargs):
+    def run_export(
+        self,
+        *,
+        model=Status,
+        expected_status=JobResultStatusChoices.STATUS_SUCCESS,
+        allow_issues=False,
+        **kwargs,
+    ):
+        """Run ExportObjectList and assert its status.
+
+        A successful export is also expected to log nothing at WARNING or above, so a test that
+        deliberately provokes a warning must pass `allow_issues=True`.
+        """
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs",
             "ExportObjectList",
@@ -266,6 +256,8 @@ class ImportExportJobTestCase(TransactionTestCase):
             **kwargs,
         )
         self.assertJobResultStatus(job_result, expected_status)
+        if expected_status == JobResultStatusChoices.STATUS_SUCCESS and not allow_issues:
+            self.assertNoIssues(job_result)
         return job_result
 
     # -- read the produced export file ----------------------------------------
@@ -301,9 +293,6 @@ class ImportExportJobTestCase(TransactionTestCase):
         )
 
 
-# ===========================================================================
-# Layer 2 — export format adapters
-# ===========================================================================
 class ExportAdapterTests(ImportExportJobTestCase):
     """Per-format export behavior. The CSV/export-template/device-type-YAML basics live in
     `test_jobs.ExportObjectListTest`; these cover what the document format adds."""
@@ -330,8 +319,25 @@ class ExportAdapterTests(ImportExportJobTestCase):
             f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status; match_fields=name",
         )
 
+    def test_adapter_export__generic_yaml(self):
+        """A model without to_yaml() exports as the same document as JSON, dumped in declaration order."""
+        self.create_status(name="test_yaml_export_status", color="112233")
+        job_result = self.run_export(query_string="name=test_yaml_export_status", export_format="yaml")
+        self.assertEqual(self.export_filename(job_result), "nautobot_statuses.yaml")
+
+        doc = self.export_document(job_result)
+        self.assertEqual(doc["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(doc["model"], "extras.status")
+        self.assertEqual(doc["match_fields"], ["name"])
+        self.assertEqual(len(doc["records"]), 1)
+        self.assertEqual(doc["records"][0]["name"], "test_yaml_export_status")
+        self.assertEqual(doc["records"][0]["color"], "112233")
+
+        # Dumped with sort_keys=False, so the version leads rather than the keys going alphabetical
+        self.assertTrue(self.export_text(job_result).startswith("nautobot_import_version:"))
+
     def test_adapter_export__m2m_scalar_members(self):
-        """A scalar-keyed M2M is comma-joined for CSV but stays a list in the document."""
+        """A scalar-keyed M2M is comma-joined for CSV but stays a list in either document format."""
         namespace, _ = Namespace.objects.get_or_create(name="M2M Export Namespace")
         vrf = VRF.objects.create(name="M2M Export VRF", namespace=namespace)
         for name in ("65000:1", "65000:2"):
@@ -340,18 +346,22 @@ class ExportAdapterTests(ImportExportJobTestCase):
         row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Export VRF")
         self.assertEqual(sorted(row["import_targets"].split(",")), ["65000:1", "65000:2"])
 
-        doc = self.export_document(self.run_export(model=VRF, export_format="json"))
-        record = next(r for r in doc["records"] if r["name"] == "M2M Export VRF")
-        self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2"])
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Export VRF")
+                self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2"])
 
     def test_adapter_export__m2m_empty(self):
-        """An M2M with no members is an empty cell in CSV and an empty list in the document."""
+        """An M2M with no members is an empty cell in CSV and an empty list in either document format."""
         namespace, _ = Namespace.objects.get_or_create(name="M2M Empty Namespace")
         VRF.objects.create(name="M2M Empty VRF", namespace=namespace)
 
         row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Empty VRF")
         self.assertEqual(row["import_targets"], "")
 
-        doc = self.export_document(self.run_export(model=VRF, export_format="json"))
-        record = next(r for r in doc["records"] if r["name"] == "M2M Empty VRF")
-        self.assertEqual(record["import_targets"], [])
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Empty VRF")
+                self.assertEqual(record["import_targets"], [])
