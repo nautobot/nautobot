@@ -1,0 +1,3 @@
+Added guidance to the permissions documentation explaining that no Saved View permissions are needed for users to make use of Saved Views, and that they should only be granted to users who manage Saved Views for other users.
+Added documentation of the REST API behavior for Saved Views.
+Clarified in the Saved Views documentation that a non-shared Saved View is still visible to users holding the `extras.view_savedview` permission.

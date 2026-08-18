@@ -12,6 +12,7 @@ from nautobot.core.utils.lookup import get_model_for_view_name
 # List of view names that are excluded for various error responses
 EXCLUDED_VIEW_NAMES = [
     "graphql-api",  # "Method \\"GET\\" not allowed."
+    "extras-api:savedview-set-default",  # "Method \\"GET\\" not allowed."
     "graphql",  # "Must provide query string."
     "dcim-api:device-napalm",  # "No platform is configured for this device."
     "dcim-api:connected-device-list",  # "Request must include \\"peer_device\\" and \\"peer_interface\\" filters."

@@ -119,7 +119,7 @@ Additionally, if you have the `extras:view_savedview` object permission (or are 
 
 ### How to set a Saved View as global default for all users
 
-Users with the `extras:view_savedview` and `extras:change_savedview` object permissions can set a Saved View as the default for all users for any given object list view. There can only be one global default for each object list view.
+Setting or clearing the global default for an object list view requires the `extras:change_savedview` object permission, as it changes behavior for every user; the `extras:view_savedview` permission is what grants access to the Saved Views list page and its edit buttons. There can only be one global default for each object list view.
 
 ![Saved View Table Edit Button](../feature-guides/images/saved-views/saved-view-admin-edit-buttons.png)
 
@@ -135,7 +135,7 @@ You should be redirected to the Saved View list view with a success message. Now
 
 ### How to hide a Saved View from all other users but yourself
 
-In order to create a Saved View only for yourself to see, you should make sure that you uncheck the box for `is_shared` when you are creating a new Saved View. This will make sure that you are the only who is able to see this Saved View.
+In order to create a Saved View only for yourself to see, you should make sure that you uncheck the box for `is_shared` when you are creating a new Saved View. This keeps the Saved View out of every other user's Saved Views drawer, so you are the only one who can select it. Note that users with the `extras:view_savedview` object permission (and superusers) can still see it on the Saved Views list page, as described in [How to navigate Saved Views](#how-to-navigate-saved-views).
 
 ![Saved View Modal Unchecked](../feature-guides/images/saved-views/saved-view-modal-unchecked.png)
 
@@ -164,3 +164,13 @@ The current Saved View will have a checkmark next to its name in the dropdown me
 ![Clear View Button](../feature-guides/images/saved-views/clear-view-button.png)
 
 ![Cleared Saved View](../feature-guides/images/saved-views/cleared-view.png)
+
+## Saved Views and the REST API
+
+Saved Views can also be managed through the `/api/extras/saved-views/` REST API endpoint, subject to the standard `extras.view_savedview` / `add` / `change` / `delete` object permissions. The writable fields match those the UI exposes:
+
+- `owner` is read-only and is always set to the requesting user. A Saved View cannot be created on behalf of, or reassigned to, another user.
+- `view` can only be set when the Saved View is created; it cannot be changed afterwards, as the stored `config` is specific to a single list view.
+- `name`, `config`, `is_shared` and `is_global_default` are writable, and changing `is_global_default` requires the `extras.change_savedview` permission as described [above](#how-to-set-a-saved-view-as-global-default-for-all-users).
+
+To set a Saved View as your own default view, send a `POST` to `/api/extras/saved-views/<uuid>/set-default/`, which requires no `extras.*_savedview` permissions. A `DELETE` to the same URL clears your default for that list view.

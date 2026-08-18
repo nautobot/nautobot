@@ -31,6 +31,7 @@ from nautobot.core.utils.requests import normalize_querydict
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+from nautobot.extras.utils import get_saved_view_or_none
 
 logger = logging.getLogger(__name__)
 
@@ -647,9 +648,9 @@ def get_bulk_queryset_from_view(
 
     saved_view_filter_params = {}
     if saved_view_id:
-        try:
-            saved_view_obj = SavedView.objects.get(id=saved_view_id)
-        except SavedView.DoesNotExist:
+        saved_view_obj = get_saved_view_or_none(saved_view_id)
+        if saved_view_obj is None:
+            # Fail closed: a bulk action scoped to a Saved View we cannot resolve should not act on anything.
             return queryset.none()
         saved_view_filter_params = saved_view_obj.config.get("filter_params", {})
 

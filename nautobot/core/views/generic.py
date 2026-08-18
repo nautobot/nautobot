@@ -68,6 +68,7 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.utils import get_saved_view_filter_params, get_saved_view_or_none
 
 
 class GenericView(UIComponentsMixin, LoginRequiredMixin, View):
@@ -182,7 +183,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
         )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+            return get_saved_view_filter_params(params.get("saved_view"))
         return filter_params
 
     def get_required_permission(self):
@@ -334,11 +335,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         saved_views = get_saved_views_for_user(user, list_url)
 
         if current_saved_view_pk:
-            try:
-                # We are not using .restrict(request.user, "view") here
-                # User should be able to see any saved view that he has the list view access to.
-                current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
-            except ObjectDoesNotExist:
+            current_saved_view = get_saved_view_or_none(current_saved_view_pk, view=list_url)
+            if current_saved_view is None:
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table

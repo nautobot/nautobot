@@ -1037,3 +1037,47 @@ def fixup_filterset_query_params(param_dict, view_name, non_filter_params):
         except FilterSetFieldNotFound:
             pass
     return param_dict
+
+
+def get_saved_view_or_none(pk, *, view=None):
+    """
+    Return the SavedView with the given primary key, or None if there is no such SavedView.
+
+    Saved Views are looked up by UUID alone, ignoring owner, sharing, and view restrictions. A user should be
+    able to use any Saved View that they have the list view access to. This makes Saved View links privately
+    shareable, which is an undocumented but allowed side effect that may change in the future. Every part of a
+    Saved View's configuration is resolved this way, so that a user following such a link gets the whole view.
+
+    Returns None instead of raising, as `pk` generally comes straight from a user-supplied `?saved_view=` query
+    parameter and may be stale or malformed. Callers are responsible for deciding what to do in that case.
+
+    Args:
+        pk (Union[uuid.UUID, str]): Primary key of the desired SavedView.
+        view (Optional[str]): If given, additionally require this SavedView to be for the named list view,
+            "dcim:location_list" for example.
+    """
+    from nautobot.extras.models import SavedView
+
+    queryset = SavedView.objects.all()
+    if view is not None:
+        queryset = queryset.filter(view=view)
+    try:
+        return queryset.get(pk=pk)
+    except (SavedView.DoesNotExist, ValidationError):
+        # ValidationError covers a malformed (non-UUID) `pk`.
+        return None
+
+
+def get_saved_view_filter_params(pk):
+    """
+    Return the `filter_params` from the config of the given SavedView, or an empty dict if unavailable.
+
+    See `get_saved_view_or_none()` for the lookup semantics.
+
+    Args:
+        pk (Union[uuid.UUID, str]): Primary key of the desired SavedView.
+    """
+    saved_view = get_saved_view_or_none(pk)
+    if saved_view is None:
+        return {}
+    return saved_view.config.get("filter_params", {})

@@ -111,6 +111,10 @@ EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
     ("users", "user"),
     ("users", "objectpermission"),
+    # Saved Views excluded only to bring the REST API in line with how the UI already behaves in the case of "*".
+    # The UI list view always requires `extras.view_savedview` regardless of this setting.
+    ("extras", "savedview"),
+    ("extras", "usersavedviewassociation"),
 )
 
 # Models to exempt from the enforcement of view permissions

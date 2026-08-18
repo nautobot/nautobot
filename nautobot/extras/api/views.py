@@ -338,7 +338,64 @@ class SavedViewViewSet(ModelViewSet):
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
 
+    class SetDefaultPermissions(TokenPermissions):
+        """
+        Require no SavedView permissions at all, as setting your own default view does not modify the view.
 
+        Matches the UI, where any user can pin any saved view they have a link to as their own default.
+        """
+
+        perms_map = {
+            **TokenPermissions.perms_map,
+            "POST": [],
+            "DELETE": [],
+        }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """Apply no permissions on the /set-default/ endpoint, otherwise as ModelViewSetMixin."""
+        if self.action == "set_default":
+            return
+        super().restrict_queryset(request, *args, **kwargs)
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={201: serializers.UserSavedViewAssociationSerializer},
+    )
+    @extend_schema(methods=["delete"], request=None, responses={204: None})
+    @action(
+        detail=True,
+        name="Set Default",
+        methods=["post", "delete"],
+        url_path="set-default",
+        permission_classes=[SetDefaultPermissions],
+        filterset_class=None,
+    )
+    def set_default(self, request, *args, **kwargs):
+        """Set (POST) or clear (DELETE) this saved view as the requesting user's default for its list view."""
+        saved_view = self.get_object()
+        UserSavedViewAssociation.objects.filter(user=request.user, view_name=saved_view.view).delete()
+        if request.method == "DELETE":
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        association = UserSavedViewAssociation(user=request.user, saved_view=saved_view, view_name=saved_view.view)
+        association.validated_save()
+        serializer = serializers.UserSavedViewAssociationSerializer(
+            association, context={"request": request, "depth": 0}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema_view(
+    list=extend_schema(deprecated=True),
+    retrieve=extend_schema(deprecated=True),
+    create=extend_schema(deprecated=True),
+    update=extend_schema(deprecated=True),
+    partial_update=extend_schema(deprecated=True),
+    destroy=extend_schema(deprecated=True),
+    bulk_update=extend_schema(deprecated=True),
+    bulk_partial_update=extend_schema(deprecated=True),
+    bulk_destroy=extend_schema(deprecated=True),
+)
 class UserSavedViewAssociationViewSet(ModelViewSet):
     queryset = UserSavedViewAssociation.objects.all()
     serializer_class = serializers.UserSavedViewAssociationSerializer
