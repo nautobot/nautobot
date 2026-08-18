@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.templatetags.helpers import HTML_NONE
 from nautobot.core.ui import object_detail
+from nautobot.core.ui.bulk_buttons import BulkDeleteButton, BulkEditButton, BulkRenameButton
 from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.views import generic
 from nautobot.core.views.utils import common_detail_view_context
@@ -237,6 +238,13 @@ class VirtualMachineUIViewSet(NautobotUIViewSet):
                 table_title="Interfaces",
                 table_class=tables.VirtualMachineVMInterfaceTable,
                 table_filter="virtual_machine",
+                enable_bulk_actions=True,
+                form_id="vminterfaces-form",
+                footer_buttons=[
+                    BulkRenameButton(form_id="vminterfaces-form", model=VMInterface),
+                    BulkEditButton(form_id="vminterfaces-form", model=VMInterface),
+                    BulkDeleteButton(form_id="vminterfaces-form", model=VMInterface),
+                ],
                 header_extra_content_template_path="virtualization/inc/virtualmachine_vminterface_filter.html",
             ),
         ),
