@@ -3263,6 +3263,134 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
             self.fail("Couldn't find a single deletable object with non-empty scoped_fields")
         return instance
 
+    def _constrain_permission_to_ipaddress_metadata(self, *actions):
+        """Grant `actions` on ObjectMetadata, constrained to metadata assigned to IPAddresses."""
+        obj_perm = ObjectPermission(
+            name="ObjectMetadata for IPAddresses only",
+            actions=list(actions),
+            constraints={"assigned_object_type__model": "ipaddress"},
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectMetadata))
+
+    def _ipaddress_and_prefix_metadata(self):
+        ipaddress_metadata = self._get_queryset().get(assigned_object_type=ContentType.objects.get_for_model(IPAddress))
+        prefix_metadata = (
+            self._get_queryset()
+            .filter(assigned_object_type=ContentType.objects.get_for_model(Prefix))
+            .exclude(scoped_fields=[])
+            .first()
+        )
+        self.assertIsNotNone(prefix_metadata, "Fixture requires ObjectMetadata assigned to a Prefix")
+        return ipaddress_metadata, prefix_metadata
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_create_enforces_view_permission_on_assigned_object(self):
+        """Creating metadata requires view permission on the assigned object, unlike updating or deleting it."""
+        metadata_type = MetadataType.objects.get(name="Location Metadata Type")
+        location = Location.objects.filter(associated_object_metadata__isnull=True).first()
+        data = {
+            "metadata_type": metadata_type.pk,
+            "scoped_fields": ["comments"],
+            "value": "created without parent view permission",
+            "assigned_object_type": "dcim.location",
+            "assigned_object_id": str(location.pk),
+        }
+        self.add_permissions("extras.add_objectmetadata", "extras.view_metadatatype")
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("assigned_object_id", response.data)
+
+        self.add_permissions("dcim.view_location")
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_update_and_delete_do_not_require_view_permission_on_assigned_object(self):
+        """Testing that update and delete do not require view permission on the assigned object."""
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self.add_permissions("extras.change_objectmetadata", "extras.delete_objectmetadata")
+
+        response = self.client.patch(
+            self._get_detail_url(ipaddress_metadata), {"scoped_fields": ["pk"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        response = self.client.delete(self._get_detail_url(prefix_metadata), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_update_object_with_content_type_constrained_permission(self):
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("change")
+
+        # In scope: permitted.
+        response = self.client.patch(
+            self._get_detail_url(ipaddress_metadata), {"scoped_fields": ["pk"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        ipaddress_metadata.refresh_from_db()
+        self.assertEqual(ipaddress_metadata.scoped_fields, ["pk"])
+
+        # Out of scope: indistinguishable from a nonexistent record, and left untouched.
+        original_scoped_fields = prefix_metadata.scoped_fields
+        response = self.client.patch(
+            self._get_detail_url(prefix_metadata), {"scoped_fields": ["pk"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        prefix_metadata.refresh_from_db()
+        self.assertEqual(prefix_metadata.scoped_fields, original_scoped_fields)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_delete_object_with_content_type_constrained_permission(self):
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("delete")
+
+        response = self.client.delete(self._get_detail_url(prefix_metadata), **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(self._get_queryset().filter(pk=prefix_metadata.pk).exists())
+
+        response = self.client.delete(self._get_detail_url(ipaddress_metadata), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(self._get_queryset().filter(pk=ipaddress_metadata.pk).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_update_cannot_move_object_outside_constrained_permission(self):
+        """A constrained user may not reassign metadata to a content type outside their constraint."""
+        ipaddress_metadata, _ = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("change")
+        # Grant view on the new target so the GenericForeignKey validation itself passes; the constraint on
+        # the `change` permission is what must reject this.
+        self.add_permissions("ipam.view_prefix")
+        prefix = Prefix.objects.filter(associated_object_metadata__isnull=True).first()
+
+        response = self.client.patch(
+            self._get_detail_url(ipaddress_metadata),
+            {"assigned_object_type": "ipam.prefix", "assigned_object_id": str(prefix.pk)},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        ipaddress_metadata.refresh_from_db()
+        self.assertEqual(ipaddress_metadata.assigned_object_type, ContentType.objects.get_for_model(IPAddress))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_bulk_delete_with_constrained_permission_skips_out_of_scope(self):
+        """Bulk delete silently skips records outside the constraint rather than failing the request."""
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("delete")
+
+        response = self.client.delete(
+            self._get_list_url(),
+            [{"id": str(ipaddress_metadata.pk)}, {"id": str(prefix_metadata.pk)}],
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(self._get_queryset().filter(pk=ipaddress_metadata.pk).exists())
+        self.assertTrue(self._get_queryset().filter(pk=prefix_metadata.pk).exists())
+
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
     model = Note
