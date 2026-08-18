@@ -542,9 +542,9 @@ class M2MNaturalKeyValuesTest(TestCase):
         vrf = VRF.objects.create(name="M2M NK Tagged VRF", namespace=Namespace.objects.first())
         content_type = ContentType.objects.get_for_model(VRF)
         for name in ("m2m-nk-tag-a", "m2m-nk-tag-b"):
-            tag = Tag.objects.create(name=name)
-            tag.content_types.add(content_type)
-            vrf.tags.add(tag)
+            tag_ = Tag.objects.create(name=name)
+            tag_.content_types.add(content_type)
+            vrf.tags.add(tag_)
         self.assertEqual(sorted(self._values(vrf, "tags").split(",")), ["m2m-nk-tag-a", "m2m-nk-tag-b"])
 
     def test_composite_members_render_as_a_json_cell(self):
