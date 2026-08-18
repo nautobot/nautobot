@@ -242,8 +242,7 @@ class ExportObjectList(Job):
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
         mode = {"force_csv": True} if for_csv else {"natural_keys": True}
-        context = {"request": None, "exclude_m2m": False}
-        serializer = serializer_class(queryset, many=True, context=context, **mode)
+        serializer = serializer_class(queryset, many=True, context={"request": None}, **mode)
         return serializer.data
 
     @staticmethod

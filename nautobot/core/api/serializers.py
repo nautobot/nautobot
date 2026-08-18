@@ -3,7 +3,6 @@ import logging
 import uuid
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
     ObjectDoesNotExist,
@@ -122,16 +121,26 @@ class OptInFieldsMixin:
                     selected_heads.add("custom_fields")
                 fields = {name: field for name, field in fields.items() if name in selected_heads}
 
-            # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
-            # don't get included in the response.
-            # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
+            # Which many-to-many fields are readable. Marking them write-only is what actually keeps them
+            # out of the response, so this is the single decision point:
+            # - `exclude_m2m` given (query param or context) is the caller's explicit request and wins:
+            #   truthy hides every M2M field, falsy exposes them all.
+            # - Else, the serializer's mode decides. A natural-key export (the `ExportObjectList` job)
+            #   wants them all, since a file that omits them isn't re-importable. Anything else keeps only the
+            #   default subset (`tags`, `content_types`, `object_types` per DEFAULT_M2M_FIELDS) for
+            #   performance and backwards compatibility.
             exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
-            if exclude_m2m is None or is_truthy(exclude_m2m):
+            exporting = getattr(self, "_force_csv", False) or getattr(self, "_natural_keys", False)
+            if exclude_m2m is not None:
+                hide_m2m, keep_default_subset = is_truthy(exclude_m2m), False
+            else:
+                hide_m2m, keep_default_subset = not exporting, True
+            if hide_m2m:
                 default_m2m_fields = set(constants.DEFAULT_M2M_FIELDS)
                 default_m2m_fields.update(getattr(self.Meta, "default_m2m_fields", ()))
                 for field_instance in fields.values():
                     if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
-                        if exclude_m2m is None and field_instance.source in default_m2m_fields:
+                        if keep_default_subset and field_instance.source in default_m2m_fields:
                             continue
                         field_instance.write_only = True
 
@@ -523,16 +532,8 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
             if hasattr(self.Meta.model, field):
                 self.extend_field_names(fields, field)
 
-        # M2M on CSV is opt-in via exclude_m2m=False (the ExportObjectList job sets it in context). With
-        # exclude_m2m unset, the generic REST API CSV export keeps only the historical default subset
-        # (`tags`, `content_types`, `object_types` per DEFAULT_M2M_FIELDS) and omits every *other* M2M
-        # field, matching historical behavior and avoiding a per-row members query on that path. Note
-        # `tags` (a taggit manager, not a concrete _meta field) is not caught by the filter below and so
-        # always remains; `content_types` is kept explicitly via the ContentType check.
-        request = self.context.get("request")
-        params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None))) if request else {}
-        exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
-        m2m_allowed_on_csv = exclude_m2m is not None and not is_truthy(exclude_m2m)
+        # Note: which M2M fields are *readable* is decided once, in `OptInFieldsMixin.fields`, by marking
+        # them write-only. This method only drops field names, so it deliberately says nothing about M2M.
 
         def filter_field(field):
             # Eliminate all field names that start with "_" as those fields are not user-facing
@@ -547,17 +548,13 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
             ):
                 return False
 
-            # On CSV requests, skip reverse-FK (one-to-many) fields — they can't be flattened into a
-            # single cell. M2M fields are exportable (single-scalar members → comma-separated list,
-            # composite-keyed members → JSON-encoded cell, see _get_m2m_natural_key_values), but only
-            # when M2M export is opted into; otherwise they are omitted for backwards compatibility.
+            # In a natural-key rendering, skip reverse-FK (one-to-many) fields. They *could* be rendered
+            # like M2M members, but the relation is owned by the child's FK, so an importer has no way to
+            # set them from this side: they would be export-only, and unbounded in size (a Device has
+            # arbitrarily many Interfaces). Export those child models as their own content-type instead.
             with contextlib.suppress(FieldDoesNotExist):
-                if self._use_natural_keys():
-                    field = self.Meta.model._meta.get_field(field)
-                    if field.one_to_many:
-                        return False
-                    if field.many_to_many and field.related_model is not ContentType and not m2m_allowed_on_csv:
-                        return False
+                if self._use_natural_keys() and self.Meta.model._meta.get_field(field).one_to_many:
+                    return False
             return True
 
         fields = [field for field in fields if filter_field(field)]
