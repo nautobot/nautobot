@@ -1,0 +1,1 @@
+Changed the format of CSV exports produced by `ExportObjectList` system Job to include a header comment containing metadata.
