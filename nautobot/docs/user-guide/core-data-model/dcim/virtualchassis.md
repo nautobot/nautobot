@@ -311,7 +311,6 @@ graph TB
             status=connected.id,
         )
         log(True, "Cable", f"{a_device} {a_name} <-> {b_device} {b_name}")
-
     ```
 
 ## Sample Design Builder
@@ -879,8 +878,8 @@ The script below renders the templates against GraphQL query. Paste the GraphQL 
 ??? example "Config Generation Script"
 
     ```python
-    GRAPHQL_QUERY = """."""              # Replace with the GraphQL query from above
-    CLI_CONFIG_TEMPLATE = """."""         # Replace with one of the three config templates above
+    GRAPHQL_QUERY = """."""  # Replace with the GraphQL query from above
+    CLI_CONFIG_TEMPLATE = """."""  # Replace with one of the three config templates above
 
     import ipaddress
 

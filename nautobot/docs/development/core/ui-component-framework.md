@@ -41,6 +41,7 @@ The Nautobot UI Framework revolutionizes how you create object detail views in y
 from nautobot.apps import views
 from nautobot.apps.ui import ObjectDetailContent, SectionChoices, ObjectFieldsPanel
 
+
 class ExampleUIViewSet(views.NautobotUIViewSet):
     queryset = Example.objects.all()
     ...
@@ -48,10 +49,10 @@ class ExampleUIViewSet(views.NautobotUIViewSet):
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
-               weight=100,
-               section=SectionChoices.LEFT_HALF,
-                fields="__all__"
-            )
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
+            ),
         ]
     )
 ```
@@ -125,17 +126,17 @@ A `Tab` is one of the major building blocks of your UI. The user can toggle betw
 from nautobot.apps.ui import ObjectDetailContent, Button
 
 object_detail_content = ObjectDetailContent(
-        panels=[...],
-        extra_buttons=[
-            Button(
-                weight=100,
-                label="Check Secret",
-                icon="mdi-test-tube",
-                javascript_template_path="extras/secret_check.js",
-                attributes={"onClick": "checkSecret()"},
-            ),
-        ],
-    )
+    panels=[...],
+    extra_buttons=[
+        Button(
+            weight=100,
+            label="Check Secret",
+            icon="mdi-test-tube",
+            javascript_template_path="extras/secret_check.js",
+            attributes={"onClick": "checkSecret()"},
+        ),
+    ],
+)
 ```
 
 <!-- pyml disable-num-lines 5 no-inline-html -->
@@ -171,11 +172,13 @@ from nautobot.apps.ui import Titles
 titles = Titles(titles={"list": "{{obj_type_plural}}"})
 
 # Render title for a list view
-context = Context({
-    'view_action': 'list',
-    'obj_type_plural': 'devices',
-    'view_titles': titles,
-})
+context = Context(
+    {
+        "view_action": "list",
+        "obj_type_plural": "devices",
+        "view_titles": titles,
+    }
+)
 
 title = titles.render(context)  # Returns: "Devices"
 ```
@@ -216,11 +219,13 @@ from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrum
 breadcrumbs = Breadcrumbs()
 
 # Render for a device detail view
-context = Context({
-    'view_action': 'retrieve',
-    'detail': True,  # Indicates this is a detail view
-    'object': device,
-})
+context = Context(
+    {
+        "view_action": "retrieve",
+        "detail": True,  # Indicates this is a detail view
+        "object": device,
+    }
+)
 html = breadcrumbs.render(context)
 ```
 
@@ -236,18 +241,24 @@ It will generate:
 from nautobot.apps.ui import Breadcrumbs, ViewNameBreadcrumbItem, ModelBreadcrumbItem, InstanceBreadcrumbItem
 
 # Use default breadcrumbs
-breadcrumbs = Breadcrumbs(items={"detail": [
-    ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
-    ModelBreadcrumbItem(model_key="location"),
-]})
+breadcrumbs = Breadcrumbs(
+    items={
+        "detail": [
+            ViewNameBreadcrumbItem(viewname_str="home", label="Home"),
+            ModelBreadcrumbItem(model_key="location"),
+        ]
+    }
+)
 
 # Render for a device detail view
-context = Context({
-    'view_action': 'retrieve',
-    'detail': True,  # Indicates this is a detail view
-    'object': device,
-    'location': device.location,
-})
+context = Context(
+    {
+        "view_action": "retrieve",
+        "detail": True,  # Indicates this is a detail view
+        "object": device,
+        "location": device.location,
+    }
+)
 html = breadcrumbs.render(context)
 ```
 
@@ -274,9 +285,9 @@ The Panel component serves as a base class for creating individual display panel
 from nautobot.apps.ui import Panel, SectionChoices
 
 Panel(
-   weight=100,
-   section=SectionChoices.FULL_WIDTH,
-   label="Panel Header",
+    weight=100,
+    section=SectionChoices.FULL_WIDTH,
+    label="Panel Header",
 )
 ```
 
@@ -315,10 +326,10 @@ NOTE:
 from nautobot.apps.ui import ObjectFieldsPanel, SectionChoices
 
 ObjectFieldsPanel(
-   weight=100,
-   section=SectionChoices.LEFT_HALF,
-   label="Object Fields Panel",
-   context_object_key="obj",
+    weight=100,
+    section=SectionChoices.LEFT_HALF,
+    label="Object Fields Panel",
+    context_object_key="obj",
 )
 ```
 
@@ -327,18 +338,20 @@ from nautobot.apps import ui
 from nautobot.core.templatetags import helpers
 
 
-panels = ui.ObjectFieldsPanel(
-    weight=200,
-    section=ui.SectionChoices.LEFT_HALF,
-    label="Object Fields Panel",
-    fields=["name", "number", "notes", "notexists"],
-    context_object_key="obj",
-    ignore_nonexistent_fields=True,
-    value_transforms={
-        "name": [helpers.bettertitle],
-        "number": [lambda v: helpers.hyperlinked_field(v, "https://nautobot.com")]
-    },
-),
+panels = [
+    ui.ObjectFieldsPanel(
+        weight=200,
+        section=ui.SectionChoices.LEFT_HALF,
+        label="Object Fields Panel",
+        fields=["name", "number", "notes", "notexists"],
+        context_object_key="obj",
+        ignore_nonexistent_fields=True,
+        value_transforms={
+            "name": [helpers.bettertitle],
+            "number": [lambda v: helpers.hyperlinked_field(v, "https://nautobot.com")],
+        },
+    ),
+]
 ```
 
 <!-- pyml disable-num-lines 5 no-inline-html -->
@@ -367,10 +380,7 @@ from nautobot.apps.ui import KeyValueTablePanel
 
 KeyValueTablePanel(
     weight=100,
-    data={
-        "speed": "1000000",
-        "notes": "**Important**"
-    },
+    data={"speed": "1000000", "notes": "**Important**"},
 )
 ```
 
@@ -385,14 +395,14 @@ KeyValueTablePanel(
     },
     hide_if_unset=(),
     value_transforms={
-        "speed": [             # List of functions to apply in order
-            humanize_speed,    # Convert 1000000 to "1 Gbps"
-            placeholder        # Show placeholder if empty
+        "speed": [  # List of functions to apply in order
+            humanize_speed,  # Convert 1000000 to "1 Gbps"
+            placeholder,  # Show placeholder if empty
         ],
         "notes": [
-            render_markdown,   # Convert markdown to HTML
-            placeholder       # Show placeholder if empty
-        ]
+            render_markdown,  # Convert markdown to HTML
+            placeholder,  # Show placeholder if empty
+        ],
     },
 )
 ```
@@ -415,17 +425,17 @@ GroupedKeyValueTablePanel(
     body_id="network-details",
     # Data Structure
     data={
-        "Network": {            # Group name (shown as accordion header)
-            "VLAN": "100",      # Key-value pairs in this group
-            "IP Range": "192.168.1.0/24"
+        "Network": {  # Group name (shown as accordion header)
+            "VLAN": "100",  # Key-value pairs in this group
+            "IP Range": "192.168.1.0/24",
         },
-        "Physical": {           # Another group
+        "Physical": {  # Another group
             "Location": "Rack A1",
-            "Height": "2U"
+            "Height": "2U",
         },
-        "": {                   # Empty string for ungrouped items
+        "": {  # Empty string for ungrouped items
             "Notes": "Important info"
-        }
+        },
     },
 )
 ```
@@ -458,13 +468,9 @@ StatsPanel(
     label="Statistics",
     filter_name="location",
     related_models=[  # Models to show statistics for
-        Device,  # Direct model reference
-                 # Will count all devices related to this object by their `location` key
-        (Circuit, "circuit_terminations__location__in"),
-                 # Tuple of (Model, query_string)
-                 # For complex relationships
-        (VirtualMachine, "cluster__location__in")
-                 # Another complex relationship example
+        Device,  # Direct model reference - will count all devices related to this object by their `location` key
+        (Circuit, "circuit_terminations__location__in"),  # Tuple of (Model, query_string) - for complex relationships
+        (VirtualMachine, "cluster__location__in"),  # Another complex relationship example
     ],
 )
 ```
@@ -505,12 +511,12 @@ StatsPanel(
 from nautobot.apps.ui import ObjectTextPanel, SectionChoices
 
 ObjectTextPanel(
-   weight=500,
-   section=SectionChoices.FULL_WIDTH,
-   label="Description",
-   object_field="description",
-   render_as=ObjectTextPanel.RenderOptions.MARKDOWN,
-   render_placeholder=True,
+    weight=500,
+    section=SectionChoices.FULL_WIDTH,
+    label="Description",
+    object_field="description",
+    render_as=ObjectTextPanel.RenderOptions.MARKDOWN,
+    render_placeholder=True,
 )
 ```
 
@@ -528,12 +534,12 @@ If the field is a single related object, you can use `render_as=ObjectTextPanel.
 from nautobot.apps.ui import TextPanel, SectionChoices
 
 TextPanel(
-   weight=600,
-   section=SectionChoices.FULL_WIDTH,
-   label="Custom Content",
-   context_field="text",
-   render_as=TextPanel.RenderOptions.CODE,
-   render_placeholder=True,
+    weight=600,
+    section=SectionChoices.FULL_WIDTH,
+    label="Custom Content",
+    context_field="text",
+    render_as=TextPanel.RenderOptions.CODE,
+    render_placeholder=True,
 )
 ```
 
@@ -560,10 +566,10 @@ Note:
 from nautobot.apps.ui import DataTablePanel
 
 DataTablePanel(
-   weight=100,
-   context_data_key="data",
-   columns=["one", "two", "three"],
-   column_headers=["One", "Two", "Three"]
+    weight=100,
+    context_data_key="data",
+    columns=["one", "two", "three"],
+    column_headers=["One", "Two", "Three"],
 )
 ```
 
@@ -626,7 +632,6 @@ ObjectsTablePanel(
     table_class=ExampleTable,
     table_filter="example_name",
     table_title="Example Table",
-
 )
 ```
 
@@ -762,7 +767,7 @@ class DeviceView(generic.ObjectView):
                         icon="mdi-console-network-outline",
                         required_permissions=["dcim.add_consoleserverport"],
                     ),
-                    ...
+                    ...,
                 ),
             ),
         ],
@@ -887,15 +892,10 @@ item = InstanceBreadcrumbItem()
 item = InstanceBreadcrumbItem(instance_key="device")
 
 # Custom label
-item = InstanceBreadcrumbItem(
-    instance_key="object",
-    label="Current Item"
-)
+item = InstanceBreadcrumbItem(instance_key="object", label="Current Item")
 
 # Dynamic label from context
-item = InstanceBreadcrumbItem(
-    label=lambda ctx: f"Editing {ctx['object'].name}"
-)
+item = InstanceBreadcrumbItem(label=lambda ctx: f"Editing {ctx['object'].name}")
 ```
 
 [Code reference](../../code-reference/nautobot/apps/ui.md#nautobot.apps.ui.InstanceBreadcrumbItem)
@@ -917,10 +917,10 @@ If there is no `detail` in the context it will assume `detail=False` by default.
 # Replace default breadcrumbs for create action
 custom_breadcrumbs = Breadcrumbs(
     items={
-        'create': [
+        "create": [
             ViewNameBreadcrumbItem(view_name="home", label="Home"),
             ModelBreadcrumbItem(model_key="model"),
-            ModelBreadcrumbItem(model_key="model", action="add", label="Add New")
+            ModelBreadcrumbItem(model_key="model", action="add", label="Add New"),
         ]
     }
 )
@@ -932,11 +932,11 @@ custom_breadcrumbs = Breadcrumbs(
 # Multi-level hierarchy for nested objects
 nested_breadcrumbs = Breadcrumbs(
     items={
-        'retrieve': [
+        "retrieve": [
             ModelBreadcrumbItem(model="dcim.location", model_label_type="plural"),
             InstanceBreadcrumbItem(
                 instance_key="object.location",
-                label=lambda ctx: f"Site: {ctx['object'].location.name}"
+                label=lambda ctx: f"Site: {ctx['object'].location.name}",
             ),
             ModelBreadcrumbItem(model="dcim.device", model_label_type="plural"),
             InstanceBreadcrumbItem(),
@@ -957,15 +957,16 @@ from nautobot.apps.ui import (
 from nautobot.apps import views
 from your_app.models import Location, Device, Circuit
 
+
 class LocationUIViewSet(views.NautobotUIViewSet):
     queryset = Location.objects.all()
 
     object_detail_content = ObjectDetailContent(
         panels=[
             ObjectFieldsPanel(
-               weight=100,
-               section=SectionChoices.LEFT_HALF,
-               fields="__all__",
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields="__all__",
             ),
             StatsPanel(
                 weight=100,
@@ -973,7 +974,7 @@ class LocationUIViewSet(views.NautobotUIViewSet):
                 filter_name="location",
                 related_models=[
                     Device,
-                    (Circuit, "circuit_terminations__location__in")
+                    (Circuit, "circuit_terminations__location__in"),
                 ],
             ),
             GroupedKeyValueTablePanel(
@@ -983,7 +984,7 @@ class LocationUIViewSet(views.NautobotUIViewSet):
                 data={
                     "Network": {
                         "VLAN": "100",
-                        "IP Range": "192.168.1.0/24"
+                        "IP Range": "192.168.1.0/24",
                     }
                 },
             ),

@@ -14,7 +14,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries
+from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries, disable_warnings
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -4059,6 +4059,152 @@ class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
+def create_connection_test_device(name):
+    """Shared helper to create a Device for the connection tests."""
+    return Device.objects.create(
+        name=name,
+        location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+        device_type=DeviceType.objects.first(),
+        role=Role.objects.get_for_model(Device).first(),
+        status=Status.objects.get_for_model(Device).first(),
+    )
+
+
+class ConnectionEndpointTestMixin:
+    """Shared assertions for the read-only console/power connection list endpoints."""
+
+    def _get_ids(self, response):
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assert_no_verboten_content(response)
+        return {str(entry["id"]) for entry in response.data["results"]}
+
+    def _constrain_to_visible_device(self):
+        """Grant `view` on this endpoint's model for the visible device's components only.
+
+        An ObjectPermission also satisfies the model-level view gate, so no separate add_permissions() call
+        is needed.
+        """
+        obj_perm = ObjectPermission(
+            name="Visible components",
+            constraints={"device__name": self.visible_device.name},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+    def test_list_requires_model_view_permission(self):
+        with disable_warnings("django.request"):
+            self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        self.add_permissions(self.view_permission)
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+
+    def test_list_returns_only_connected_components(self):
+        self.add_permissions(self.view_permission)
+        returned = self._get_ids(self.client.get(f"{self.url}?limit=0", **self.header))
+        self.assertIn(str(self.visible_port.pk), returned)
+        self.assertIn(str(self.hidden_port.pk), returned)
+        self.assertNotIn(str(self.unconnected_port.pk), returned)
+
+    def test_object_permission_constrains_list(self):
+        self._constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        returned = self._get_ids(response)
+        self.assertEqual(returned, {str(self.visible_port.pk)})
+        self.assertNotIn(str(self.hidden_port.pk), returned)
+        # `count` reflects the restricted queryset, not merely the current page.
+        self.assertEqual(response.data["count"], 1)
+
+    def test_object_permission_matching_nothing_returns_empty_list(self):
+        obj_perm = ObjectPermission(
+            name="No components",
+            constraints={"name": "Nonexistent Component"},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_related_objects_rendered_brief(self):
+        self._constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        row = response.data["results"][0]
+        for field_name in ("device", "cable", "cable_peer", "connected_endpoint"):
+            with self.subTest(field=field_name):
+                self.assertEqual(set(row[field_name].keys()), {"id", "object_type", "url"})
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class ConsoleConnectionTest(ConnectionEndpointTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/console-connections/` REST endpoint."""
+
+    model = ConsolePort
+    view_permission = "dcim.view_consoleport"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        cls.visible_device = create_connection_test_device("Console Conn Visible")
+        cls.hidden_device = create_connection_test_device("Console Conn Hidden")
+        peer_device = create_connection_test_device("Console Conn Peer")
+
+        cls.visible_port = ConsolePort.objects.create(device=cls.visible_device, name="Visible Console Port")
+        cls.hidden_port = ConsolePort.objects.create(device=cls.hidden_device, name="Hidden Console Port")
+        # Cabled to a pass-through RearPort, so it gets a CablePath but with no destination endpoint. It is
+        # not a completed connection and must never be listed here, even though its device is granted below.
+        cls.unconnected_port = ConsolePort.objects.create(device=cls.visible_device, name="Dangling Console Port")
+
+        server_ports = [
+            ConsoleServerPort.objects.create(device=peer_device, name=f"Conn Console Server Port {i}") for i in (1, 2)
+        ]
+        rear_port = RearPort.objects.create(
+            device=peer_device, name="Conn Console Rear Port", type=PortTypeChoices.TYPE_8P8C
+        )
+
+        # Saving a Cable builds its CablePath rows via post_save signal; no explicit CablePath creation needed.
+        Cable.objects.create(termination_a=cls.visible_port, termination_b=server_ports[0], status=connected)
+        Cable.objects.create(termination_a=cls.hidden_port, termination_b=server_ports[1], status=connected)
+        Cable.objects.create(termination_a=cls.unconnected_port, termination_b=rear_port, status=connected)
+
+        cls.url = reverse("dcim-api:consoleconnections-list")
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class PowerConnectionTest(ConnectionEndpointTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/power-connections/` REST endpoint."""
+
+    model = PowerPort
+    view_permission = "dcim.view_powerport"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        cls.visible_device = create_connection_test_device("Power Conn Visible")
+        cls.hidden_device = create_connection_test_device("Power Conn Hidden")
+        peer_device = create_connection_test_device("Power Conn Peer")
+
+        cls.visible_port = PowerPort.objects.create(device=cls.visible_device, name="Visible Power Port")
+        cls.hidden_port = PowerPort.objects.create(device=cls.hidden_device, name="Hidden Power Port")
+        # A PowerPort can only terminate on a PowerOutlet or PowerFeed, so an uncabled port stands in for the
+        # "has no completed connection" case. Its device is granted below, so it also proves that the
+        # connection filter still applies on top of the object-permission restriction.
+        cls.unconnected_port = PowerPort.objects.create(device=cls.visible_device, name="Uncabled Power Port")
+
+        outlets = [PowerOutlet.objects.create(device=peer_device, name=f"Conn Power Outlet {i}") for i in (1, 2)]
+
+        Cable.objects.create(termination_a=cls.visible_port, termination_b=outlets[0], status=connected)
+        Cable.objects.create(termination_a=cls.hidden_port, termination_b=outlets[1], status=connected)
+
+        cls.url = reverse("dcim-api:powerconnections-list")
+
+
 class InterfaceConnectionTest(APITestCase):
     """Coverage for the read-only `/dcim/interface-connections/` REST endpoint.
 
@@ -4069,32 +4215,27 @@ class InterfaceConnectionTest(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
         iface_status = Status.objects.get_for_model(Interface).first()
         connected = Status.objects.get_for_model(Cable).get(name="Connected")
 
-        def make_device(name):
-            return Device.objects.create(
-                name=name, location=location, device_type=device_type, role=device_role, status=device_status
-            )
-
         # Point-to-point connection.
-        cls.p2p_a = Interface.objects.create(device=make_device("API Conn A"), name="p2p-a", status=iface_status)
-        cls.p2p_b = Interface.objects.create(device=make_device("API Conn B"), name="p2p-b", status=iface_status)
+        cls.p2p_a = Interface.objects.create(
+            device=create_connection_test_device("API Conn A"), name="p2p-a", status=iface_status
+        )
+        cls.p2p_b = Interface.objects.create(
+            device=create_connection_test_device("API Conn B"), name="p2p-b", status=iface_status
+        )
         Cable(termination_a=cls.p2p_a, termination_b=cls.p2p_b, status=connected).save()
 
         # 1x4 breakout: trunk fanning out to four leaf interfaces.
         breakout_type = CableType.objects.create(name="API 1x4 breakout", a_connectors=1, b_connectors=4, total_lanes=4)
         cls.trunk = Interface.objects.create(
-            device=make_device("API Conn Trunk"),
+            device=create_connection_test_device("API Conn Trunk"),
             name="Trunk",
             type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
             status=iface_status,
         )
-        leaf_device = make_device("API Conn Leaf")
+        leaf_device = create_connection_test_device("API Conn Leaf")
         cls.leaves = [
             Interface.objects.create(device=leaf_device, name=f"Leaf {i}", status=iface_status) for i in range(1, 5)
         ]

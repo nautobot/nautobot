@@ -685,6 +685,9 @@ class ConsoleConnectionViewSet(ListModelMixin, GenericViewSet):
     serializer_class = serializers.ConsolePortSerializer
     filterset_class = filters.ConsoleConnectionFilterSet
 
+    def get_queryset(self):
+        return super().get_queryset().restrict(self.request.user, "view")
+
 
 class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
     queryset = (
@@ -695,6 +698,9 @@ class PowerConnectionViewSet(ListModelMixin, GenericViewSet):
     )
     serializer_class = serializers.PowerPortSerializer
     filterset_class = filters.PowerConnectionFilterSet
+
+    def get_queryset(self):
+        return super().get_queryset().restrict(self.request.user, "view")
 
 
 class InterfaceConnectionPermissions(TokenPermissions):

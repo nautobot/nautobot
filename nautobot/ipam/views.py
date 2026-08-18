@@ -9,7 +9,7 @@ from django.db import models, transaction
 from django.db.models import Prefetch, ProtectedError
 from django.forms.models import model_to_dict
 from django.http.response import HttpResponseRedirect
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.http import urlencode
@@ -1735,22 +1735,6 @@ class VLANUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportVi
 #
 # Services
 #
-
-
-class ServiceEditView(generic.ObjectEditView):  # This view is used to assign services to devices and VMs
-    queryset = Service.objects.prefetch_related("ip_addresses")
-    model_form = forms.ServiceForm
-    template_name = "ipam/service_edit.html"
-
-    def alter_obj(self, obj, request, url_args, url_kwargs):
-        if "device" in url_kwargs:
-            obj.device = get_object_or_404(Device.objects.restrict(request.user), pk=url_kwargs["device"])
-        elif "virtualmachine" in url_kwargs:
-            obj.virtual_machine = get_object_or_404(
-                VirtualMachine.objects.restrict(request.user),
-                pk=url_kwargs["virtualmachine"],
-            )
-        return obj
 
 
 class ServiceUIViewSet(NautobotUIViewSet):  # 3.0 TODO: remove, unused BulkImportView
