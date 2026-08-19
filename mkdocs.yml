@@ -671,6 +671,7 @@ nav:
               - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
               - Navigation: "development/apps/api/ui-extensions/navigation.md"
               - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
+              - User Facing Messages: "development/apps/api/ui-extensions/user-facing-messages.md"
           - Testing: "development/apps/api/testing.md"
           - Code Reference:
               - nautobot.apps: "code-reference/nautobot/apps/__init__.md"

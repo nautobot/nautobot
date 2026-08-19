@@ -25,6 +25,9 @@
     htmx.config.disableInheritance = true;
     htmx.config.historyRestoreAsHxRequest = false;
     htmx.config.refreshOnHistoryMiss = true;
+    document.addEventListener('DOMContentLoaded', () => {
+        window.nb.messages.watchMessages('{% url "messages" %}');
+    });
 </script>
 {% if settings.BRANDING_FILEPATHS.javascript %}
     <script src="{% custom_branding_or_static 'javascript' %}"></script>

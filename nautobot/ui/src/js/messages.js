@@ -3,6 +3,8 @@
 import * as bootstrap from 'bootstrap';
 import htmx from 'htmx.org';
 
+const REFRESH_MESSAGES_INTERVAL = 15000;
+
 const TOAST_CLASS = 'toast';
 const TOAST_CONTAINER_CLASS = 'toast-container';
 const TOAST_MESSAGES_ID = 'toast-messages';
@@ -190,3 +192,31 @@ export const refreshMessages = (url) =>
     swap: 'beforeend',
     target: '#header_messages',
   });
+
+/**
+ * Watch for new Django messages, refreshing them periodically.
+ * @param {string} url - HTMX AJAX request URL, passed through to `refreshMessages`, see its documentation for why the
+ *   caller always has to provide it.
+ * @returns {(function(): void)} Destructor function that stops watching for new messages.
+ */
+export const watchMessages = (url) => {
+  const timeout = { current: undefined };
+
+  const watch = () => {
+    timeout.current = setTimeout(async () => {
+      // Refresh messages only if browser tab is active, otherwise just keep an idle loop alive.
+      if (!document.hidden) {
+        try {
+          await refreshMessages(url);
+        } catch {
+          // Refresh failures are transient, so they are ignored to keep a single one from stopping the loop.
+        }
+      }
+      watch();
+    }, REFRESH_MESSAGES_INTERVAL);
+  };
+
+  watch();
+
+  return () => clearTimeout(timeout.current);
+};
