@@ -9,6 +9,7 @@ import uuid
 
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -1108,6 +1109,26 @@ class TableConfigDrawerTestCase(TestCase):
         self.assertNotEqual(new_order, self.saved_order)
         self.assertEqual(new_order, custom_order)
         self.assertEqual(selected_columns, table.visible_columns)
+
+    def test_filter_column_saved_view_as_other_user(self):
+        """
+        Assert that a Saved View's column order applies to a user who does not own it and has no permissions.
+
+        A Saved View is resolved from `?saved_view=` by UUID alone everywhere else, including the columns and
+        column order of the rendered table, so the table config form must resolve it the same way.
+        """
+        other_user = get_user_model().objects.create_user(username="table-config-other-user")
+        table = ProviderTable(Provider.objects.all(), user=other_user, saved_view=self.saved_view)
+        request = RequestFactory().get("/circuits/providers/", data={"saved_view": self.saved_view.pk})
+        request.id = uuid.uuid4()
+        request.user = other_user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, self.saved_order)
+        self.assertEqual(self.custom_visible_columns, table.visible_columns)
 
 
 class NavAppsUITestCase(TestCase):
