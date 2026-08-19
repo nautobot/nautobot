@@ -52,8 +52,8 @@
         </style>
     </head>
     <body{% if is_popup %} class="ps-0"{% endif %}>
-
         {% if not is_popup %}
+            {% include 'inc/skip_link.html' %}
             {% include 'inc/nav_menu.html' %}
         {% endif %}
 
@@ -70,10 +70,10 @@
                     <div class="row">
                         <div class="col-4">
                             <h1 class="d-flex fs-2 gap-8 lh-sm py-6">
+                                {# Decorative separator; an empty `alt` hides it and makes `role="presentation"` redundant. #}
                                 <img
-                                    alt="Nautobot chevron"
+                                    alt=""
                                     class="align-self-start flex-grow-0 flex-shrink-0 my-n4"
-                                    role="presentation"
                                     src="{% static 'img/nautobot_chevron.svg' %}"
                                     style="width: 1.5rem;"
                                 />

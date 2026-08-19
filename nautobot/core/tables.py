@@ -428,15 +428,22 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         visible = kwargs.pop("visible", False)
         if "attrs" not in kwargs:
             kwargs["attrs"] = {
-                "input": {"class": "form-check-input nb-form-check-input-sm mt-2"},
+                "input": {
+                    "class": "form-check-input nb-form-check-input-sm mt-2",
+                    # Accessible name identifying which row this checkbox selects; without one a screen reader
+                    # announces an unlabelled checkbox on every row. Resolved per record by `CheckBoxColumn.render`.
+                    "aria-label": lambda record: f"Select {record}",
+                },
                 "td": {"class": "nb-w-0"},
             }
         super().__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
     def header(self):
+        # `title` alone is an unreliable accessible name, so pair it with an explicit `aria-label`.
         return mark_safe(
-            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2" title="Toggle all" />'
+            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2"'
+            ' aria-label="Toggle all rows" title="Toggle all" />'
         )
 
 

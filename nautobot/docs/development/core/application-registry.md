@@ -25,21 +25,21 @@ Definition of data types that can be provided by data source models (such as [Gi
 {
     "extras.gitrepository": [
         DatasourceContent(
-            name='config contexts',
-            content_identifier='extras.configcontext',
-            icon='mdi-code-json',
+            name="config contexts",
+            content_identifier="extras.configcontext",
+            icon="mdi-code-json",
             callback=extras.datasources.git.refresh_git_config_contexts,
         ),
         DatasourceContent(
-            name='jobs',
-            content_identifier='extras.job',
-            icon='mdi-script-text',
+            name="jobs",
+            content_identifier="extras.job",
+            icon="mdi-script-text",
             callback=extras.datasources.git.refresh_git_jobs,
         ),
         DatasourceContent(
-            name='export templates',
-            content_identifier='extras.exporttemplate',
-            icon='mdi-database-export',
+            name="export templates",
+            content_identifier="extras.exporttemplate",
+            icon="mdi-database-export",
             callback=extras.datasources.git.refresh_git_export_templates,
         ),
     ]
@@ -160,7 +160,7 @@ Example:
             "weight": 100,
             "permissions": [],
             "groups": {
-                "group_1":{
+                "group_1": {
                     "weight": 100,
                     "permissions": [],
                     "items": {
@@ -182,8 +182,8 @@ Example:
                                     "link": "button_link_2",
                                     "weight": 200,
                                     "permissions": [],
-                                }
-                            }
+                                },
+                            },
                         },
                         "item_link_2": {
                             "link_text": "Item 2",
@@ -203,12 +203,12 @@ Example:
                                     "link": "button_link_2",
                                     "weight": 200,
                                     "permissions": [],
-                                }
-                            }
+                                },
+                            },
                         },
-                    }
+                    },
                 }
-            }
+            },
         }
     }
 }
@@ -220,8 +220,8 @@ App [custom validator classes](../apps/api/platform-features/custom-validators.m
 
 ```python
 {
-    'circuits.circuit': [CircuitMustHaveDescriptionValidator],
-    'dcim.location': [LocationMustHaveTenantValidator, LocationNameMustIncludeCountryCodeValidator],
+    "circuits.circuit": [CircuitMustHaveDescriptionValidator],
+    "dcim.location": [LocationMustHaveTenantValidator, LocationNameMustIncludeCountryCodeValidator],
 }
 ```
 

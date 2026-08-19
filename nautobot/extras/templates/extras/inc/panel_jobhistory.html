@@ -1,8 +1,17 @@
+{% comment %}
+Every direct child here is an `<li>`, including the empty-state and no-permission branches, because this panel renders
+straight into the home page's `<ul class="list-group">`. A `<ul>` may only contain `<li>` (plus `<script>`/`<template>`),
+and browsers and assistive technology stop reporting it as a list otherwise.
+{% endcomment %}
 {% if job_results and perms.extras.view_jobresult %}
     {% for result in job_results %}
-        <div class="list-group-item">
+        <li class="list-group-item">
+            {% comment %}
+            `job_model` is nullable -- a JobResult outlives the Job record it came from -- and without a fallback the link
+            renders with no text at all, leaving a link with no accessible name.
+            {% endcomment %}
             <a href="{% url 'extras:jobresult' pk=result.pk %}">
-                {{ result.job_model.name }}
+                {% firstof result.job_model.name result.name "Unknown job" %}
             </a>
             <span class="float-end" data-bs-toggle="tooltip" data-bs-title="{{ result.date_created }}" data-bs-fallback-placements="[&quot;top&quot;]">
                 {% include 'extras/inc/job_label.html' %}
@@ -11,19 +20,19 @@
             <small>
                 <span class="text-secondary">{{ result.user }} - {{ result.date_done|date:"SHORT_DATETIME_FORMAT" }}</span>
             </small>
-        </div>
+        </li>
         {% if forloop.last %}
-            <div class="list-group-item text-end">
+            <li class="list-group-item text-end">
                 <a href="{% url 'extras:jobresult_list' %}">View All History</a>
-            </div>
+            </li>
         {% endif %}
     {% endfor %}
 {% elif perms.extras.view_jobresult %}
-    <div class="card-body text-secondary">
+    <li class="card-body text-secondary">
         None found
-    </div>
+    </li>
 {% else %}
-    <div class="card-body text-secondary">
+    <li class="card-body text-secondary">
         <span class="mdi mdi-lock" aria-hidden="true"></span> No permission
-    </div>
+    </li>
 {% endif %}

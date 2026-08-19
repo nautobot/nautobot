@@ -114,6 +114,7 @@ Download the `.pstats` file from the Job Result detail view and analyze it local
 
 ```python
 import pstats
+
 stats = pstats.Stats("/path/to/downloaded/nautobot-jobresult-<uuid>.pstats")
 stats.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(10)
 ```

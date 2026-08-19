@@ -749,7 +749,7 @@ The following is an example of the data that is sent:
     "installed_apps": {
         # "example_app" hashed by sha256
         "ded1fb19a53a47aa4fe26b72b4ab9297b631e4d4f852b03b3788d5dbc292ae8d": "1.0.0"
-    }
+    },
 }
 ```
 

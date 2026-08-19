@@ -615,7 +615,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -634,7 +634,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -655,7 +655,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -676,7 +676,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -6575,7 +6575,7 @@ class JobTestCase(
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
         self.assertBodyContains(response, f"{instance}")
-        changelog_table = "<thead><tr><th>Time</th><th>User name</th><th>Action</th><th>Type</th><th>Object</th><th>Request ID</th></tr></thead>"
+        changelog_table = '<thead><tr><th scope="col">Time</th><th scope="col">User name</th><th scope="col">Action</th><th scope="col">Type</th><th scope="col">Object</th><th scope="col">Request ID</th></tr></thead>'
         self.assertBodyContains(response, changelog_table, html=True)
 
 
