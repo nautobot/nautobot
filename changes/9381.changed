@@ -1,0 +1,3 @@
+Changed the REST API `owner` field on Saved Views to be read-only; it is now always set to the requesting user, matching the UI.
+Changed the REST API `view` field on Saved Views to be settable only when creating a Saved View.
+Changed Saved Views and Saved View Associations to be excluded when setting `EXEMPT_VIEW_PERMISSIONS` to the implicit all (`"*"`) value.

@@ -2045,6 +2045,159 @@ class SavedViewTest(ModelViewTestCase):
             response_body = extract_page_body(response.content.decode(response.charset))
             self.assertBodyContains(response, f"<strong>{sv_name}</strong>", html=True)
 
+    #
+    # Saved View edit form (extras:savedview_edit), as distinct from the update-config action tested above.
+    #
+
+    def get_edit_form_url(self, saved_view):
+        return reverse("extras:savedview_edit", kwargs={"pk": saved_view.pk})
+
+    def _other_user_saved_view(self, **kwargs):
+        other_user = User.objects.create(username=f"savedview-owner-{uuid.uuid4()}", is_active=True)
+        kwargs.setdefault("name", "Other User Saved View")
+        kwargs.setdefault("view", "dcim:location_list")
+        return SavedView.objects.create(owner=other_user, **kwargs)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_other_users_saved_view_as_different_user(self):
+        instance = self._other_user_saved_view(is_shared=False)
+        different_user = User.objects.create(username="Edit Form User 1", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "hacked", "is_shared": True, "is_global_default": True}),
+            follow=True,
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Other User Saved View")
+        self.assertFalse(instance.is_shared)
+        self.assertFalse(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_get_other_users_saved_view(self):
+        """The edit form should not even be rendered for a user who is not permitted to submit it."""
+        instance = self._other_user_saved_view(is_shared=False)
+        different_user = User.objects.create(username="Edit Form User 2", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.get(self.get_edit_form_url(instance), follow=True, headers={"HX-Request": "true"})
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_other_users_saved_view_with_change_permission(self):
+        """extras.change_savedview still permits moderating other users' saved views in the UI."""
+        instance = self._other_user_saved_view(is_shared=True)
+        self.add_permissions("extras.change_savedview")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "Moderated Name", "is_shared": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Moderated Name")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_set_global_default_as_owner_without_change_permission(self):
+        instance = SavedView.objects.create(owner=self.user, name="My Own View", view="dcim:location_list")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": instance.name, "is_shared": True, "is_global_default": True}),
+            follow=True,
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, "You do not have the required permission to change the global default Saved View."
+        )
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_set_global_default_as_owner_with_change_permission(self):
+        instance = SavedView.objects.create(owner=self.user, name="My Own View", view="dcim:location_list")
+        self.add_permissions("extras.change_savedview")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": instance.name, "is_global_default": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        self.assertTrue(instance.is_shared)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rename_own_global_default_view_without_change_permission(self):
+        """An unchanged is_global_default must not trip the permission gate."""
+        instance = SavedView.objects.create(
+            owner=self.user, name="My Global Default", view="dcim:location_list", is_global_default=True
+        )
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "My Renamed Global Default", "is_shared": True, "is_global_default": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "My Renamed Global Default")
+        self.assertTrue(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_with_other_users_private_saved_view_param(self):
+        """
+        A `?saved_view=<uuid>` link applies regardless of ownership or `is_shared`.
+
+        This is a known side effect of the parameter rather than a designed sharing mechanism; it is not a
+        documented feature. If it is ever closed, this test should be updated deliberately.
+        """
+        # Create our own Locations and filter down to one of them, rather than asserting against ambient test
+        # data whose volume and pagination make presence on the first page of results unpredictable.
+        location_status = Status.objects.get_for_model(Location).first()
+        if location_status is None:
+            location_status = Status.objects.create(name="Saved View Link Status")
+            location_status.content_types.add(ContentType.objects.get_for_model(Location))
+        location_type = LocationType.objects.create(name="Saved View Link Location Type")
+        included = Location.objects.create(
+            name="Saved View Link Location Included", location_type=location_type, status=location_status
+        )
+        excluded = Location.objects.create(
+            name="Saved View Link Location Excluded", location_type=location_type, status=location_status
+        )
+        instance = self._other_user_saved_view(is_shared=False, config={"filter_params": {"name": [included.name]}})
+        different_user = User.objects.create(username="Saved View Link User", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.get(reverse("dcim:location_list") + f"?saved_view={instance.pk}", follow=True)
+        # The saved view's filter params were applied, narrowing the list to the single matching Location.
+        self.assertBodyContains(response, included.name)
+        self.assertNotIn(excluded.name, extract_page_body(response.content.decode(response.charset)))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_with_invalid_saved_view_param(self):
+        for saved_view_param in [str(uuid.uuid4()), "not-a-uuid"]:
+            with self.subTest(saved_view=saved_view_param):
+                response = self.client.get(
+                    reverse("dcim:location_list") + f"?saved_view={saved_view_param}", follow=True
+                )
+                self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_unknown_saved_view_returns_404(self):
+        """Every Saved View action that looks up its object by pk should 404 rather than error on an unknown pk."""
+        unknown_pk = uuid.uuid4()
+        for url_name in [
+            "extras:savedview_edit",
+            "extras:savedview_delete",
+            "extras:savedview_set_default",
+            "extras:savedview_update_config",
+        ]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name, kwargs={"pk": unknown_pk}))
+                self.assertHttpStatus(response, 404)
+
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
 class SecretTestCase(

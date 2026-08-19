@@ -1,0 +1,1 @@
+Deprecated the `/api/extras/user-saved-view-associations/` REST API endpoints in favor of `/api/extras/saved-views/<uuid>/set-default/`.

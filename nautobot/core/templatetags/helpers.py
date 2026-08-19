@@ -11,7 +11,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
-from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.formats import date_format
@@ -1100,8 +1099,7 @@ def saved_view_modal(
     request,
 ):
     from nautobot.extras.forms import SavedViewModalForm
-    from nautobot.extras.models import SavedView
-    from nautobot.extras.utils import fixup_filterset_query_params
+    from nautobot.extras.utils import fixup_filterset_query_params, get_saved_view_or_none
 
     sort_order = []
     per_page = None
@@ -1133,11 +1131,8 @@ def saved_view_modal(
             current_saved_view_pk = filters_applied.pop(param, None)
             if current_saved_view_pk:
                 current_saved_view_pk = current_saved_view_pk[0]
-                try:
-                    # We are not using .restrict(request.user, "view") here
-                    # User should be able to see any saved view that he has the list view access to.
-                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
-                except ObjectDoesNotExist:
+                current_saved_view = get_saved_view_or_none(current_saved_view_pk)
+                if current_saved_view is None:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         elif param == "table_changes_pending":

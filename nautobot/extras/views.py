@@ -9,6 +9,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.forms import CheckboxInput
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -1905,6 +1906,34 @@ class SavedViewUIViewSet(
                     request, message=getattr(permission, "message", None), code=getattr(permission, "code", None)
                 )
 
+    def update(self, request, *args, **kwargs):
+        """
+        Enforce the same ownership rule as destroy() and update_saved_view_config().
+
+        Also require `extras.change_savedview` to change whether this is the global default view, since that
+        affects every user. Checked here rather than in perform_update() so that the edit form is not even
+        rendered for a user who is not permitted to submit it.
+        """
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk"))
+        can_modify_others = request.user.has_perms(["extras.change_savedview"])
+        if sv.owner != request.user and not can_modify_others:
+            messages.error(
+                request, f"You do not have the required permission to modify this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
+        # The edit form always submits the checkbox, so we parse the submitted value the same way
+        # the form's BooleanField will, to prevent misreading "false" as enable.
+        # This ensures the owner of the Saved View can change other fields despite lacking permission to set the global default.
+        requested_global_default = CheckboxInput().value_from_datadict(request.POST, {}, "is_global_default")
+        if (
+            request.method == "POST"
+            and bool(requested_global_default) != sv.is_global_default
+            and not can_modify_others
+        ):
+            messages.error(request, "You do not have the required permission to change the global default Saved View.")
+            return redirect(self.get_return_url(request, obj=sv))
+        return super().update(request, *args, **kwargs)
+
     def extra_message_context(self, obj):
         """
         Context variables for this extra message.
@@ -1943,7 +1972,7 @@ class SavedViewUIViewSet(
         Set current saved view as the the request.user default view. Overriding the global default view if there is one.
         """
         user = request.user
-        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk", None))
         UserSavedViewAssociation.objects.filter(user=user, view_name=sv.view).delete()
         UserSavedViewAssociation.objects.create(user=user, saved_view=sv, view_name=sv.view)
         list_view_url = sv.get_absolute_url()
@@ -1957,7 +1986,7 @@ class SavedViewUIViewSet(
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
-        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk", None))
         if sv.owner == request.user or request.user.has_perms(["extras.change_savedview"]):
             pass
         else:
@@ -2098,7 +2127,7 @@ class SavedViewUIViewSet(
         request.POST: call perform_destroy() which validates the form and perform the action of delete.
         Override to add more variables to Response
         """
-        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk", None))
         if sv.owner == request.user or request.user.has_perms(["extras.delete_savedview"]):
             pass
         else:
