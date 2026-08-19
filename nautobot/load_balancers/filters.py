@@ -10,7 +10,7 @@ from nautobot.core.filters import (
     NaturalKeyOrPKMultipleChoiceFilter,
     SearchFilter,
 )
-from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis
+from nautobot.dcim.models import Device, DeviceRedundancyGroup, VirtualChassis, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, StatusModelFilterSetMixin
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.load_balancers import models
@@ -58,6 +58,10 @@ class VirtualServerFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # 
     )
     virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=VirtualChassis.objects.all(),
+        label="Virtual Chassis (name or ID)",
+    )
+    virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
         label="Virtual Chassis (name or ID)",
     )
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
