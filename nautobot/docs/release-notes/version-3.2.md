@@ -68,6 +68,27 @@ The following are **not** translated — rewrite them against the `terminations`
 | transformed lookups, e.g. `.filter(termination_a_id__in=[...])` | `terminations__<fk>_id__in=[...]` with `terminations__cable_end="A"` |
 | `.exclude(termination_a_id=..., termination_b_id=...)` combining **both** ends | separate `.exclude()` calls, or an explicit `terminations__...` `Q`. The shim applies each end independently (`exclude(A) AND exclude(B)`), which is **not** equivalent to negating the combined condition, because the A-side and B-side match different `CableToCableTermination` rows. Single-end `exclude()` is exact. |
 
+!!! tip "Finding affected code with pylint-nautobot"
+    With [`pylint-nautobot`](https://github.com/nautobot/pylint-nautobot) 1.1.0 or later installed, you can scan your own code for the patterns described above.
+
+    Code that will **break** on Nautobot 3.2:
+
+    ```bash
+    pylint --rcfile=/dev/null --load-plugins=pylint_nautobot \
+        --disable=all \
+        --enable=nb-removed-cable-field,nb-removed-termination-a-b-field,nb-removed-cable-path-field,nb-removed-cable-peer-field,nb-readonly-cable-attribute,nb-termination-a-b-exclude-both-ends \
+        --score=n --reports=n --output-format=parseable --recursive=y .
+    ```
+
+    Code that still works but is **deprecated**:
+
+    ```bash
+    pylint --rcfile=/dev/null --load-plugins=pylint_nautobot \
+        --disable=all \
+        --enable=nb-deprecated-cable-lookup,nb-deprecated-termination-a-b-lookup \
+        --score=n --reports=n --output-format=parseable --recursive=y .
+    ```
+
 !!! warning
     Queries using `termination_[a|b]_[id|type]` **only match the first connector on each side of a Cable by design**. Code that needs to support any additional connectors on a breakout cable **must** use the new access patterns.
 
