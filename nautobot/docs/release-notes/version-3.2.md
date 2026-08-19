@@ -68,8 +68,9 @@ The following are **not** translated — rewrite them against the `terminations`
 | transformed lookups, e.g. `.filter(termination_a_id__in=[...])` | `terminations__<fk>_id__in=[...]` with `terminations__cable_end="A"` |
 | `.exclude(termination_a_id=..., termination_b_id=...)` combining **both** ends | separate `.exclude()` calls, or an explicit `terminations__...` `Q`. The shim applies each end independently (`exclude(A) AND exclude(B)`), which is **not** equivalent to negating the combined condition, because the A-side and B-side match different `CableToCableTermination` rows. Single-end `exclude()` is exact. |
 
-!!! tip "Finding affected code with pylint-nautobot"
+!!! tip "Finding affected code with `pylint-nautobot`"
     With [`pylint-nautobot`](https://github.com/nautobot/pylint-nautobot) 1.1.0 or later installed, you can scan your own code for the patterns described above.
+    These checks are static and do not require Nautobot 3.2 to be installed, so run them while you are still on Nautobot 3.1 or earlier to determine the work before you upgrade.
 
     Code that will **break** on Nautobot 3.2:
 
