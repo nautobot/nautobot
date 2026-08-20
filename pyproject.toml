@@ -260,6 +260,18 @@ tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~3.4.0"
 
+[tool.poetry.group.e2e.dependencies]
+pytest = "~9.1.1"
+pytest-playwright = "~0.9.0"
+
+# pytest is used ONLY for the Playwright E2E suites; unit and integration tests run
+# under `nautobot-server test` (unittest) and are never collected by pytest.
+[tool.pytest.ini_options]
+testpaths = ["nautobot/*/tests/e2e"]
+markers = [
+    "behavioral: verifies application output correctness, not just page structure",
+]
+
 [tool.poetry.scripts]
 
 [build-system]
@@ -437,6 +449,12 @@ ignore = [
     "RUF003",  # ambiguous-unicode-character-comment - see https://github.com/astral-sh/ruff/issues/23886
     "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Playwright E2E tests and fixtures run under pytest, where bare `assert` is the
+# assertion idiom (there is no self.assertEqual outside unittest test cases).
+"nautobot/e2e/**" = ["S101"]
+"nautobot/*/tests/e2e/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
