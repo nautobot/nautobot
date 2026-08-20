@@ -1137,14 +1137,18 @@ def check_schema(context, api_version=None):
         "url": "Base URL of the running Nautobot instance under test (default: NAUTOBOT_E2E_URL, or http://localhost:8080).",
         "headed": "Run the browser headed (visible) instead of headless.",
         "pattern": "Only run tests whose names match the given substring (pytest -k).",
+        # (e2e runs on the HOST by design; see the docstring.)
     }
 )
 def e2e(context, app=None, url=None, headed=False, pattern=None):
     """Run the Playwright end-to-end test suite against a running Nautobot instance.
 
-    Runs pytest on the host with plugin auto-loading disabled; only the explicitly
-    named plugins load. Requires the e2e dependency group and a browser:
-    `poetry install --with e2e && playwright install chromium`.
+    Unlike the other test tasks, this always runs on the HOST (it deliberately does
+    not honor the nautobot.local docker routing): the browsers are installed on the
+    host and the suite only needs HTTP reachability to the instance under test.
+    Runs pytest with plugin auto-loading disabled; only the explicitly named plugins
+    load. Requires the e2e dependency group and a browser:
+    `poetry install --with e2e && poetry run playwright install chromium`.
     """
     command = "pytest -p playwright -p base_url"
     if app:
@@ -1152,7 +1156,7 @@ def e2e(context, app=None, url=None, headed=False, pattern=None):
     if headed:
         command += " --headed"
     if pattern:
-        command += f" -k '{pattern}'"
+        command += f" -k {shlex.quote(pattern)}"
     env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     if url:
         env["NAUTOBOT_E2E_URL"] = url
