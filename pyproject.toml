@@ -260,17 +260,15 @@ tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~3.4.0"
 
-[tool.poetry.group.e2e.dependencies]
-pytest = "~9.1.1"
-pytest-playwright = "~0.9.0"
+# Playwright E2E testing only; opt in with `poetry install --with e2e`
+[tool.poetry.group.e2e]
+optional = true
 
-# pytest is used ONLY for the Playwright E2E suites; unit and integration tests run
-# under `nautobot-server test` (unittest) and are never collected by pytest.
-[tool.pytest.ini_options]
-testpaths = ["nautobot/*/tests/e2e"]
-markers = [
-    "behavioral: verifies application output correctness, not just page structure",
-]
+[tool.poetry.group.e2e.dependencies]
+# Test runner for the Playwright E2E suite (not used for unit or integration tests)
+pytest = "~9.1.1"
+# Playwright browser automation and its pytest plugin (fixtures, --headed, --tracing)
+pytest-playwright = "~0.9.0"
 
 [tool.poetry.scripts]
 
@@ -288,9 +286,20 @@ omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
     "nautobot/core/testing/*.py",
+    "nautobot/e2e/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
+
+# pytest runs ONLY the Playwright E2E suites; unit and integration tests run under
+# `nautobot-server test` (unittest) and are never collected by the default pytest
+# invocation (testpaths scopes collection to the e2e trees).
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = ["nautobot/*/tests/e2e"]
+markers = [
+    "behavioral: verifies application output correctness, not just page structure",
+]
 
 [tool.djlint]
 custom_blocks="captureas"
