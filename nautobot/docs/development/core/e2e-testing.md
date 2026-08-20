@@ -26,6 +26,17 @@ drawer), and `fixtures.py` (the login chain, the REST client, and the data facto
 It deliberately lives outside `nautobot.core` so it imports without Django settings:
 the E2E suite is black-box and needs a URL and a token, not a database connection.
 
+!!! warning "Do not move this package under `nautobot.core`"
+    Importing anything under `nautobot.core` executes `nautobot/core/__init__.py`,
+    which initializes the Celery app from Django settings, and
+    `nautobot/core/testing/__init__.py`, which imports Django models; either one makes
+    the import require a full Nautobot configuration. The Selenium integration tests
+    can live in `nautobot/core/testing/` because they run inside `nautobot-server
+    test`, where Django is already booted, and they use it (ORM data setup, an
+    in-process live server). The E2E suite runs in a plain pytest process pointed at
+    a URL. Moving this package would silently make every E2E run require a local
+    `nautobot_config.py`, even when the instance under test is remote.
+
 ## Why page objects
 
 If you are coming from Django, a page object is to a page what a model is to a
