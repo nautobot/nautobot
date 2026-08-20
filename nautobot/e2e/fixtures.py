@@ -34,7 +34,7 @@ def base_url(pytestconfig):
     otherwise ``NAUTOBOT_E2E_URL``, defaulting to the local hermetic instance.
     """
     from_cli = pytestconfig.getoption("base_url", default=None)
-    return (from_cli or os.getenv("NAUTOBOT_E2E_URL", E2E_DEFAULT_URL)).rstrip("/")
+    return (from_cli or os.getenv("NAUTOBOT_E2E_URL") or E2E_DEFAULT_URL).rstrip("/")
 
 
 @pytest.fixture(scope="session")

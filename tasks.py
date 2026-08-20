@@ -1133,6 +1133,35 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
+        "app": "Run only one app's E2E tests, by app label (e.g. 'dcim' runs nautobot/dcim/tests/e2e).",
+        "url": "Base URL of the running Nautobot instance under test (default: NAUTOBOT_E2E_URL, or http://localhost:8080).",
+        "headed": "Run the browser headed (visible) instead of headless.",
+        "pattern": "Only run tests whose names match the given substring (pytest -k).",
+    }
+)
+def e2e(context, app=None, url=None, headed=False, pattern=None):
+    """Run the Playwright end-to-end test suite against a running Nautobot instance.
+
+    Runs pytest on the host with plugin auto-loading disabled; only the explicitly
+    named plugins load. Requires the e2e dependency group and a browser:
+    `poetry install --with e2e && playwright install chromium`.
+    """
+    command = "pytest -p playwright -p base_url"
+    if app:
+        command += f" nautobot/{app}/tests/e2e"
+    if headed:
+        command += " --headed"
+    if pattern:
+        command += f" -k '{pattern}'"
+    env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    if url:
+        env["NAUTOBOT_E2E_URL"] = url
+    print_command(command, env=env)
+    context.run(command, env=env, pty=True)
+
+
+@task(
+    help={
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
         "pdb": "Drop into the Python debugger on test failure. Should be used with `--no-buffer` to see output.",
