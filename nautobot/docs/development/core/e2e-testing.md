@@ -4,7 +4,7 @@ Playwright end-to-end (E2E) tests drive a real browser against a running Nautobo
 instance. They are the forward standard for browser-based test coverage, replacing the
 Selenium integration tests over time. This page dissects one real test end to end,
 maps the fixture chain that makes it work, and states where each kind of new code
-belongs, so you can write the next test without asking anyone anything.
+belongs.
 
 E2E tests run under pytest, in an isolated job, and never touch the unittest suites:
 `nautobot-server test` and the unit/integration workflow described in
@@ -47,10 +47,9 @@ exists to prevent.
 - It is what Playwright is, not a styling choice. The official Playwright
   documentation and the pytest plugin assume the page-object model; tutorials, new
   contributors, and code-generation tools all speak it.
-- The maintenance math favors it. When UI markup changes, a selector defined once in a
-  page object is a one-method fix. The same selector inlined across tests breaks every
-  test that touches the page, which is a large part of why the Selenium suite is being
-  replaced.
+- When UI markup changes, a selector defined once in a page object is a one-method
+  fix. The same selector inlined across tests breaks every test that touches the
+  page.
 - The file jump is one directory deep. `pages/` sits inside the same app directory as
   the test, and methods are named after user actions (`filter_by_parent`,
   `open_filter_drawer`), so a test body reads as intent and is reviewable by someone
@@ -72,7 +71,9 @@ def test_location_filter_drawer_opens(auth_page, base_url):
 
 - **`auth_page`** and **`base_url`** are pytest fixtures, injected by parameter name
   from `nautobot/e2e/fixtures.py`. Run `pytest --fixtures nautobot/dcim/tests/e2e` to
-  list every available fixture with its location and docstring.
+  list every available fixture with its location and docstring (a local discovery
+  convenience that relies on plugin auto-loading; `invoke e2e` disables auto-loading
+  for actual runs).
 - **`LocationsPage`** subclasses `ListPage` and sets `_LIST_PATH`; `navigate()`,
   row counts, column reads, and all filter-drawer methods are inherited.
 - There are no selectors here, and there must never be: selectors belong in page
@@ -126,7 +127,8 @@ three things:
 1. Narrowing: the filtered row count is smaller than the unfiltered one.
 2. Ground truth: the visible row count equals the REST API count for the same filter
    (`api_count("dcim/locations", parent=...)`). Row-level checks alone miss records
-   leaking onto later pages.
+   leaking onto later pages. The equality only holds while the filtered results fit
+   on one page, so target owned data small enough to guarantee that.
 3. Row values: the expected records are present and the decoys are absent.
 
 Mark behavioral tests with `@pytest.mark.behavioral`. App scoping needs no marker:
@@ -144,11 +146,18 @@ the directory is the selector (`invoke e2e --app dcim`).
 | A method specific to one model's page | That app's page object, e.g. `nautobot/dcim/tests/e2e/pages/locations_page.py` |
 | A new shared fixture | `nautobot/e2e/fixtures.py` (keep this surface small) |
 
+When creating a new `nautobot/<app>/tests/e2e/` package, its `__init__.py` MUST call
+`block_unittest_discovery()` (copy the two lines from an existing app's). Nothing
+enforces this yet; without it, `nautobot-server test` discovery imports pytest-only
+modules and fails in environments without the e2e dependency group.
+
 ## Running the suite
 
 The suite targets any running Nautobot instance, configured by environment variables
 (`NAUTOBOT_E2E_URL`, `NAUTOBOT_E2E_USERNAME`, `NAUTOBOT_E2E_PASSWORD`,
-`NAUTOBOT_E2E_API_TOKEN`). The defaults match a local development instance at
+`NAUTOBOT_E2E_API_TOKEN`). The test host itself needs the repo installed (collection
+imports the `nautobot` package), so black-box describes the instance under test, not
+the host's Python environment. The defaults match a local development instance at
 `http://localhost:8080` with the `admin`/`admin` superuser and the development API
 token.
 
