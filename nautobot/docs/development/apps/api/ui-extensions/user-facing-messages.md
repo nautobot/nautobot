@@ -19,22 +19,30 @@ The message level — `info`, `success`, `warning`, or `error` — corresponds t
 
 By default, a message is shown as a toast: a small notification in the top-right corner, overlaying the page, that dismisses itself after ten seconds. This default behavior is overridable via `extra_tags`, a space-separated keyword list, of which Nautobot recognizes the following:
 
-| Tag | Effect                                                                               |
-| --- |--------------------------------------------------------------------------------------|
-| _(none)_ | Toast dismissed after ten seconds.                                                   |
-| `indefinite` | Toast displayed until manually closed by a user.                            |
+| Tag              | Effect                                                                                     |
+|------------------|--------------------------------------------------------------------------------------------|
+| _(none)_         | Toast dismissed after ten seconds.                                                         |
+| `indefinite`     | Toast displayed until manually closed by a user.                                           |
 | `header_message` | Full-width alert at the top of the page, above the title, default behavior prior to 3.3.0. |
 
 We recommend using `indefinite` when a user who steps away from their screen must not miss the message:
 
 ```python
-messages.warning(request, "This job is already running; your changes will not take effect until it finishes.", extra_tags="indefinite")
+messages.warning(
+    request,
+    "This job is already running; your changes will not take effect until it finishes.",
+    extra_tags="indefinite",
+)
 ```
 
 Using `header_message` is recommended when the message has to be read before the rest of the page content:
 
 ```python
-messages.error(request, "This device has no primary IP address, so it cannot be reached.", extra_tags="header_message")
+messages.error(
+    request,
+    "This device has no primary IP address, so it cannot be reached.",
+    extra_tags="header_message",
+)
 ```
 
 An alert is displayed until manually closed by a user or until the page is reloaded, so `indefinite` has no meaning for it and is ignored if you combine the two.
