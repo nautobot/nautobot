@@ -392,6 +392,8 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # Global 3rd-party authentication settings
 #
 # EXTERNAL_AUTH_DEFAULT_GROUPS = []
+# if "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS" in os.environ and os.environ["NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"] != "":
+#    EXTERNAL_AUTH_DEFAULT_GROUPS = os.getenv("NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR)
 # EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 
 # Directory where cloned Git repositories will be stored.
