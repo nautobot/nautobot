@@ -32,6 +32,8 @@ class ListPage(BasePage):
     _FILTER_BADGE = ".nb-dynamic-filter-items span.nb-multi-badge"
     _FILTER_BADGE_REMOVE_ALL = f"{_FILTER_BADGE} > button.nb-dynamic-filter-remove"
     _FILTER_BADGE_REMOVE_VALUE = f"{_FILTER_BADGE} .nb-multi-badge-items span.badge button.nb-dynamic-filter-remove"
+    # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
+    # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
 
     def __init__(self, page, base_url):
@@ -72,6 +74,9 @@ class ListPage(BasePage):
         headers = self.get_table_column_headers()
         if header_name not in headers:
             raise ValueError(f"No column headed {header_name!r} on this list view; got {headers}.")
+        # The +2 assumes exactly one unheaded column (the pk checkbox) precedes the
+        # headed ones; if a list view ever breaks that assumption, fix it here and in
+        # get_table_column_headers/_DATA_ROWS together.
         column_position = headers.index(header_name) + 2
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
@@ -104,9 +109,7 @@ class ListPage(BasePage):
 
     def apply_filters(self):
         """Submit the drawer's basic-tab filter form and wait for the filtered reload."""
-        with self.page.expect_navigation(wait_until="load", timeout=30_000):
-            self.page.locator(self._FILTER_APPLY_BASIC).first.click()
-        self.wait_for_load()
+        self._click_and_wait_for_navigation(self._FILTER_APPLY_BASIC)
 
     def open_advanced_filter_tab(self):
         """Switch the filter drawer to its Advanced tab, opening the drawer if needed."""
@@ -133,8 +136,18 @@ class ListPage(BasePage):
 
     def apply_advanced_filters(self):
         """Submit the drawer's advanced-tab filter form and wait for the reload."""
-        with self.page.expect_navigation(wait_until="load", timeout=30_000):
-            self.page.locator(self._FILTER_APPLY_ADVANCED).first.click()
+        self._click_and_wait_for_navigation(self._FILTER_APPLY_ADVANCED)
+
+    def _click_and_wait_for_navigation(self, selector, timeout=30_000):
+        """Click *selector* (a form submit) and wait for the resulting navigation.
+
+        The framenavigated listener is registered before the click, so the navigation
+        cannot be missed however fast it commits; a plain wait_for_load_state after the
+        click can resolve against the OLD document's already-complete load state.
+        (Playwright's expect_navigation is deprecated; this is the event it wrapped.)
+        """
+        with self.page.expect_event("framenavigated", timeout=timeout):
+            self.page.locator(selector).first.click()
         self.wait_for_load()
 
     def has_active_filter_indicator(self) -> bool:

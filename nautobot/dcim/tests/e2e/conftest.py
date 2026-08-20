@@ -19,6 +19,8 @@ def created_location_tree(create_object, status_id_for):
     the instance holds. All records use a unique ``ZZZ-e2e-`` prefixed name and are
     deleted on teardown.
     """
+    # ZZZ prefix: owned records sort last, so they never perturb first-page
+    # row counts taken before the fixture's records are filtered for.
     unique = f"ZZZ-e2e-{uuid4().hex[:8]}"
     status = status_id_for("dcim.location")
     location_type = create_object("dcim/location-types", name=f"{unique}-type", nestable=True)

@@ -12,7 +12,10 @@ class LocationsPage(ListPage):
         """Open the filter drawer and apply a parent filter for *parent_name*.
 
         Location options in the parent picker render their full ancestry path
-        (e.g. "Region → Site"), so the option text is matched as a substring.
+        (e.g. "Region → Site"), so the option text is matched as a substring. The
+        substring cannot hit a child of the target instead: Select2 search is
+        server-side on the location name, and a child's name does not contain its
+        parent's, so only the parent comes back for a full-name search.
         """
         self.open_filter_drawer()
         self.pick_filter_value("parent", parent_name, exact=False)

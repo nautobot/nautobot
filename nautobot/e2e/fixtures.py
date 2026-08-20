@@ -6,15 +6,23 @@ Registered once, via ``pytest_plugins`` in the repository-root ``conftest.py``. 
 available fixture with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
-runs against the hermetic CI instance or any deployed Nautobot:
+runs against any Nautobot it can reach over HTTP. The defaults match the
+development-style bootstrap that both local runs and the CI job use: an instance at
+``http://localhost:8080`` with the ``admin``/``admin`` superuser and the well-known
+development API token.
 
-- ``NAUTOBOT_E2E_URL`` (default ``http://localhost:8080``)
-- ``NAUTOBOT_E2E_USERNAME`` / ``NAUTOBOT_E2E_PASSWORD`` (default ``admin`` / ``admin``)
-- ``NAUTOBOT_E2E_API_TOKEN`` (default: the development-instance token)
+- ``NAUTOBOT_E2E_URL``
+- ``NAUTOBOT_E2E_USERNAME`` / ``NAUTOBOT_E2E_PASSWORD``
+- ``NAUTOBOT_E2E_API_TOKEN``
+
+Black-box refers to the instance under test, not the test host: collection imports the
+``nautobot`` package (this module registers as a pytest plugin), so the host still
+needs the repo installed (``poetry install --with e2e``).
 """
 
 import os
 
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
 
 E2E_DEFAULT_URL = "http://localhost:8080"
@@ -30,8 +38,10 @@ E2E_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
 def base_url(pytestconfig):
     """Root URL of the Nautobot instance under test.
 
-    ``--base-url`` (pytest-base-url, bundled with pytest-playwright) wins if given;
-    otherwise ``NAUTOBOT_E2E_URL``, defaulting to the local hermetic instance.
+    Deliberately shadows pytest-base-url's fixture of the same name so pytest-playwright
+    picks up our resolution order: ``--base-url`` (pytest-base-url, bundled with
+    pytest-playwright) wins if given; otherwise ``NAUTOBOT_E2E_URL``, defaulting to the
+    local development-style instance.
     """
     from_cli = pytestconfig.getoption("base_url", default=None)
     return (from_cli or os.getenv("NAUTOBOT_E2E_URL") or E2E_DEFAULT_URL).rstrip("/")
@@ -53,7 +63,17 @@ def auth_state_path(browser, base_url, tmp_path_factory):
     page.fill("input[name='username']", username)
     page.fill("input[name='password']", password)
     page.click("button[type='submit']")
-    page.wait_for_selector("nav", timeout=15_000)
+    try:
+        # The logout link is the auth-positive signal: it is always in the DOM once a
+        # session exists, but hidden inside a collapsed dropdown (hence "attached").
+        # Generic chrome like <nav> also renders on the login page, so it can't be
+        # trusted to mean "logged in".
+        page.wait_for_selector("a[href='/logout/']", state="attached", timeout=15_000)
+    except PlaywrightTimeoutError:
+        pytest.fail(
+            f"E2E login failed as {username!r} against {base_url} (still on {page.url}). "
+            "Check NAUTOBOT_E2E_USERNAME/NAUTOBOT_E2E_PASSWORD and that the instance is up."
+        )
     context.storage_state(path=str(state_file))
     context.close()
     return state_file
@@ -72,7 +92,12 @@ def browser_context_args(browser_context_args, base_url, auth_state_path):
 
 @pytest.fixture
 def auth_page(page):
-    """An authenticated Playwright page (the standard ``page`` fixture, logged in)."""
+    """An authenticated Playwright page.
+
+    This is pytest-playwright's standard ``page`` fixture (every context starts from
+    the session login state); the alias exists so a test signature states that it
+    operates on an authenticated session without the reader visiting conftest.
+    """
     return page
 
 
@@ -105,9 +130,11 @@ def status_id_for(api):
     def _lookup(content_type):
         if content_type not in cache:
             response = api.get("/api/extras/statuses/", params={"content_types": content_type, "limit": 1})
-            assert response.ok, f"Status lookup for {content_type} returned {response.status}: {response.text()}"
+            if not response.ok:
+                pytest.fail(f"Status lookup for {content_type} returned {response.status}: {response.text()}")
             results = response.json()["results"]
-            assert results, f"No status exists for content type {content_type}"
+            if not results:
+                pytest.fail(f"No status exists for content type {content_type}")
             cache[content_type] = results[0]["id"]
         return cache[content_type]
 
@@ -129,7 +156,8 @@ def create_object(api):
 
     def _create(endpoint, **fields):
         response = api.post(f"/api/{endpoint}/", data=fields)
-        assert response.ok, f"POST /api/{endpoint}/ returned {response.status}: {response.text()}"
+        if not response.ok:
+            pytest.fail(f"POST /api/{endpoint}/ returned {response.status}: {response.text()}")
         record = response.json()
         created.append((endpoint, record["id"]))
         return record
@@ -146,12 +174,15 @@ def api_count(api):
 
     The ground truth for list-view assertions: page-level row checks alone would miss
     records leaking onto later pages, so filter tests compare the visible row count
-    against ``api_count("dcim/locations", parent=parent_id)``.
+    against ``api_count("dcim/locations", parent=parent_id)``. The equality only holds
+    while the filtered results fit on one page; target owned data small enough to
+    guarantee that.
     """
 
     def _count(endpoint, **params):
         response = api.get(f"/api/{endpoint}/", params={**params, "limit": 1})
-        assert response.ok, f"GET /api/{endpoint}/ returned {response.status}: {response.text()}"
+        if not response.ok:
+            pytest.fail(f"GET /api/{endpoint}/ returned {response.status}: {response.text()}")
         return response.json()["count"]
 
     return _count

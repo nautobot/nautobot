@@ -5,11 +5,7 @@ test files, so a markup change is a one-file fix; test bodies read as user inten
 (``locations.filter_by_parent(name)``) rather than selector plumbing.
 """
 
-import logging
-
 from playwright.sync_api import Page
-
-logger = logging.getLogger(__name__)
 
 
 def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
@@ -51,7 +47,10 @@ def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True)
 class BasePage:
     """Shared low-level behavior for all page objects."""
 
-    _LOADING_INDICATOR = "div.loading-overlay, .htmx-request"
+    # htmx adds the htmx-request class to the requesting element (or its
+    # hx-indicator target) while a fragment request is in flight; it is the only
+    # in-page loading indicator core renders.
+    _LOADING_INDICATOR = ".htmx-request"
 
     def __init__(self, page: Page, base_url: str):
         """Bind the page object to a Playwright *page* and the instance *base_url*."""
@@ -71,13 +70,14 @@ class BasePage:
         never reach networkidle at all.
         """
         self.page.wait_for_load_state("load", timeout=timeout)
-        overlay = self.page.locator(self._LOADING_INDICATOR)
-        try:
-            if overlay.count() > 0:
-                overlay.first.wait_for(state="hidden", timeout=timeout)
-        except Exception:
-            # The overlay may never appear, or may detach mid-wait; neither is an error.
-            logger.debug("Loading overlay never appeared or detached during wait on %s", self.page.url)
+        # state="hidden" is satisfied by an indicator that finishes and detaches (or
+        # never existed), so no exception handling is needed for the happy paths. An
+        # indicator still visible at the timeout is a genuinely stuck page and the
+        # TimeoutError should propagate rather than surface later as a confusing
+        # assertion failure.
+        indicator = self.page.locator(self._LOADING_INDICATOR)
+        if indicator.count() > 0:
+            indicator.first.wait_for(state="hidden", timeout=timeout)
 
     def current_url(self) -> str:
         """Return the browser's current URL."""
