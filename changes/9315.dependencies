@@ -1,0 +1,4 @@
+Updated dependency `djangorestframework` to `>=3.18.0,<3.19`.
+Updated dependency `opentelemetry-exporter-otlp` to `>=1.44.0,<1.45`, and updated all associated `opentelemetry-instrumentation-*` dependencies to `>=0.65b0,<0.66`.
+Updated dependency `opentelemetry-sdk` to `>=1.44.0,<1.45`.
+Updated dependency `prometheus-client` to `>=0.26.0,<0.27`.
