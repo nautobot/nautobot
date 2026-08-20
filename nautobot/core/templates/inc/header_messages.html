@@ -1,7 +1,7 @@
 {% comment %}
-This container is rendered on every page and is the target that HTMX appends new messages into (see `messages.js`, which
-swaps with `beforeend`, and the `hx-select-oob` declarations on the paginator and list views). Marking the persistent
-container as a live region is the reliable way to get those appended messages announced -- assistive technology is far
+These containers are rendered on every page and are targets that HTMX appends new messages into (see `messages.js`,
+which swaps with `beforeend`, and the `hx-select-oob` declarations on the paginator and list views). Marking persistent
+containers as live regions is the reliable way to get those appended messages announced -- assistive technology is far
 more consistent about reporting mutations inside a live region that already existed than about noticing a brand new node
 that happens to carry `role="alert"`.
 
@@ -18,4 +18,15 @@ after a redirect, where the message is already in the markup when the page is pa
             {{ message }}
         </div>
     {% endfor %}
+</div>
+
+<div
+    aria-atomic="false"
+    aria-label="Messages"
+    aria-live="polite"
+    class="toast-container d-print-none end-0 position-fixed px-20 py-16 top-0"
+    id="toast-messages"
+    role="region"
+>
+    {% comment %}TODO(norbert-mieczkowski-codilime): render Django messages as toasts here in scope of NAUTOBOT-1318.{% endcomment %}
 </div>

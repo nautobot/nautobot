@@ -812,6 +812,22 @@ This:
     </div>
     <hr class="border-top">
 
+    <h1>Toasts</h1>
+    <div class="row">
+        <div aria-atomic="false" aria-label="Toast examples" aria-live="polite" class="col-12 align-items-start d-flex flex-wrap gap-20" role="region">
+            {% with content="Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris nec blandit magna." %}
+                {% toast autohide=False content=content status="secondary" title="Secondary" %}
+                {% toast autohide=False content=content status="primary" title="Primary" %}
+                {% toast autohide=False content=content status="success" title="Success" %}
+                {% toast autohide=False content=content status="info" title="Info" %}
+                {% toast autohide=False content=content status="warning" title="Warning" %}
+                {% toast autohide=False content=content status="danger" title="Danger" %}
+                {% toast buttons='<button class="btn btn-primary" type="button"><span aria-hidden="true" class="mdi mdi-check me-4"></span>Confirm</button><button class="btn btn-secondary" type="button"><span aria-hidden="true" class="mdi mdi-close me-4"></span>Reject</button>' content=content title="Call to Action" %}
+            {% endwith %}
+        </div>
+    </div>
+    <hr class="border-top">
+
     <h1>Cards (former Panels)</h1>
     <div class="row">
         <div class="col-sm-4">

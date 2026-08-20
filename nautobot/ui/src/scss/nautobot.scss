@@ -388,6 +388,20 @@ $card-cap-bg:         var(--#{$prefix}tertiary-bg);
 $card-cap-color:      $card-title-color;
 $card-bg:             var(--#{$prefix}body-bg);
 
+/* Toasts */
+$toast-max-width:        22.5rem; /* 360px */
+$toast-padding-x:        map.get($spacers, 20);
+$toast-padding-y:        map.get($spacers, 16);
+$toast-font-size:        $font-size-base;
+$toast-color:            var(--#{$prefix}body-color);
+$toast-background-color: var(--#{$prefix}body-bg);
+$toast-border-color:     var(--#{$prefix}border-color);
+$toast-spacing:          $grid-gutter-width;
+
+$toast-header-color:            var(--#{$prefix}toast-color);
+$toast-header-background-color: var(--#{$prefix}toast-bg);
+$toast-header-border-color:     var(--#{$prefix}toast-border-color);
+
 /* Badges */
 $badge-font-size:   $font-size-base;
 $badge-font-weight: 400;
@@ -1504,6 +1518,87 @@ textarea {
     position: relative;
     z-index: 1;
   }
+}
+
+/* Toasts */
+$nb-toast-header-icon-color:  var(--#{$prefix}secondary-text-emphasis);
+
+.toast {
+  --nb-toast-header-icon-color: #{$nb-toast-header-icon-color};
+
+  padding-block: var(--#{$prefix}toast-padding-y);
+  position: relative;
+}
+
+.toast-header,
+.toast-body {
+  padding-block: map.get($spacers, 0);
+
+  &:not(:last-child) {
+    margin-block-end: calc(var(--#{$prefix}toast-padding-y) / 2);
+  }
+}
+
+.toast-header {
+  align-items: flex-start;
+  border-block-end: none;
+  font-weight: $font-weight-medium;
+  gap: map.get($spacers, 8);
+
+  /*
+   * To better wrap multiline headers, `align-items` is reverted back from `center` to `flex-start`, but that requires
+   * adjusting icon and close button margins.
+   */
+  .btn-close {
+    flex: none;
+    margin-block: -#{map.get($spacers, 2)};
+    margin-inline-end: map.get($spacers, 0);
+    margin-inline-start: auto;
+  }
+
+  :is(i, span).mdi:first-child {
+    color: var(--nb-toast-header-icon-color);
+    flex: none;
+    margin-block: -0.09375rem; /* -1.5px has been picked empirically, because icons have quite unorthodox spacings. */
+  }
+}
+
+/* Toast variants match the general Bootstrap theme color variants pattern. */
+$nb-toast-variants: (
+  "primary":   ("bg": var(--#{$prefix}primary-bg-subtle), "border": var(--#{$prefix}primary-text-emphasis), "icon": var(--#{$prefix}primary-text-emphasis)),
+  "secondary": ("bg": $toast-background-color,            "border": $toast-border-color,                    "icon": $nb-toast-header-icon-color),
+  "success":   ("bg": var(--#{$prefix}success-bg-subtle), "border": var(--#{$prefix}success-text-emphasis), "icon": var(--#{$prefix}success-text-emphasis)),
+  "danger":    ("bg": var(--#{$prefix}danger-bg-subtle),  "border": var(--#{$prefix}danger-text-emphasis),  "icon": var(--#{$prefix}danger-text-emphasis)),
+  "warning":   ("bg": var(--#{$prefix}warning-bg-subtle), "border": var(--#{$prefix}warning-text-emphasis), "icon": var(--#{$prefix}warning-text-emphasis)),
+  "info":      ("bg": var(--#{$prefix}info-bg-subtle),    "border": var(--#{$prefix}info-text-emphasis),    "icon": var(--#{$prefix}info-text-emphasis)),
+  "light":     ("bg": $toast-background-color,            "border": $toast-border-color,                    "icon": $nb-toast-header-icon-color),
+  "dark":      ("bg": $toast-background-color,            "border": $toast-border-color,                    "icon": $nb-toast-header-icon-color)
+);
+
+@each $variant, $variant-colors in $nb-toast-variants  {
+  .nb-toast-#{$variant} {
+    --#{$prefix}toast-bg:           #{map.get($variant-colors, "bg")};
+    --#{$prefix}toast-border-color: #{map.get($variant-colors, "border")};
+    --nb-toast-header-icon-color:   #{map.get($variant-colors, "icon")};
+  }
+}
+
+.nb-toast-footer {
+  border-block-start: $border-width solid var(--#{$prefix}toast-border-color);
+  display: flex;
+  gap: map.get($spacers, 8);
+  justify-content: center;
+  margin-block-end: -#{map.get($spacers, 4)};
+  padding-block-start: map.get($spacers, 12);
+  padding-inline: $toast-padding-x;
+}
+
+.nb-toast-timeout-indicator {
+  border-block-start: 0.25rem solid var(--#{$prefix}toast-border-color);
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  width: 100%;
 }
 
 /* Badges */
