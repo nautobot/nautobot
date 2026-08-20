@@ -59,7 +59,12 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
+from nautobot.extras.utils import (
+    bulk_delete_with_bulk_change_logging,
+    get_base_template,
+    get_saved_view_filter_params,
+    remove_prefix_from_cf_key,
+)
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -651,7 +656,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
         )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+            return get_saved_view_filter_params(params.get("saved_view"))
         return filter_params
 
     def get_queryset(self):

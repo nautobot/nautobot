@@ -38,7 +38,8 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
+from nautobot.extras.models import ExportTemplate, GitRepository
+from nautobot.extras.utils import get_saved_view_or_none
 
 name = "System Jobs"
 
@@ -153,7 +154,14 @@ class ExportObjectList(Job):
     def _get_saved_view_filter_params(self, query_params):
         """Extract filter params from saved view if applicable."""
         if "saved_view" in query_params and "all_filters_removed" not in query_params:
-            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            # Not using get_saved_view_filter_params(), as that cannot distinguish a missing Saved View from one with no filter params.
+            saved_view = get_saved_view_or_none(query_params["saved_view"])
+            if saved_view is None:
+                self.logger.warning(
+                    "Saved view %s not found; exporting without its filter parameters.", query_params["saved_view"]
+                )
+                return {}
+            saved_view_filters = saved_view.config.get("filter_params", {})
             if len(query_params) > 1:
                 # Retain only filters also present in query_params
                 saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}

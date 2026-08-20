@@ -1,0 +1,2 @@
+Added documentation on writing a custom SSO group sync function and using it in place of the built-in one.
+Clarified that enabling SSO group syncing replaces a user's entire set of group memberships on each login, including groups that were assigned manually.

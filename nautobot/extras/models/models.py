@@ -900,6 +900,14 @@ class SavedView(BaseModel, ChangeLoggedModel):
     def __str__(self):
         return f"{self.owner.username} - {self.view} - {self.name}"
 
+    def clean(self):
+        super().clean()
+        # Mirror save() so that form and serializer validation see the value that will actually be persisted.
+        if self.is_global_default:
+            self.is_shared = True
+
+    clean.alters_data = True
+
     def save(self, *args, **kwargs):
         # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
         if self.is_global_default:

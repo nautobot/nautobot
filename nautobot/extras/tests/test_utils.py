@@ -4,6 +4,7 @@ import tempfile
 from unittest import mock
 import uuid
 
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 
@@ -12,7 +13,7 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Device, LocationType
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.exceptions import KubernetesJobManifestError
-from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, TaggedItem
+from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, SavedView, TaggedItem
 from nautobot.extras.models.models import UserSavedViewAssociation
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
@@ -21,6 +22,8 @@ from nautobot.extras.utils import (
     get_change_logged_m2m_through_side_field_names,
     get_explicit_m2m_through_side_field_names,
     get_kubernetes_job_manifest,
+    get_saved_view_filter_params,
+    get_saved_view_or_none,
     get_worker_count,
     populate_model_features_registry,
     run_kubernetes_job_and_return_job_result,
@@ -408,3 +411,65 @@ class UtilsTestCase(TestCase):
         test_uuid = uuid.uuid4()
         encoded = NautobotKombuJSONEncoder().encode({"object_id": test_uuid})
         self.assertIn(str(test_uuid), encoded)
+
+
+class SavedViewLookupTestCase(TestCase):
+    """Tests for get_saved_view_or_none() and get_saved_view_filter_params()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.filter_params = {"status": ["active"], "name": ["test-location"]}
+        # Deliberately owned by someone other than the requesting user, and not shared.
+        cls.other_user = get_user_model().objects.create_user(username="saved-view-lookup-other-user")
+        cls.saved_view = SavedView.objects.create(
+            owner=cls.other_user,
+            name="Saved View Lookup Test View",
+            view="dcim:location_list",
+            is_shared=False,
+            config={"filter_params": cls.filter_params, "pagination_count": 50},
+        )
+        # A Saved View pk always comes from a user-supplied query parameter, so it may be absent or malformed.
+        cls.unresolvable_pks = [None, "", "not-a-uuid", uuid.uuid4(), str(uuid.uuid4())]
+
+    def test_get_saved_view_or_none_returns_saved_view(self):
+        for pk in (self.saved_view.pk, str(self.saved_view.pk)):
+            with self.subTest(pk=pk):
+                self.assertEqual(get_saved_view_or_none(pk), self.saved_view)
+
+    def test_get_saved_view_or_none_ignores_owner_and_sharing(self):
+        """A Saved View is resolved by UUID alone, making its link privately shareable."""
+        self.assertNotEqual(self.saved_view.owner, self.user)
+        self.assertFalse(self.saved_view.is_shared)
+        self.assertFalse(self.user.has_perms(["extras.view_savedview"]))
+        self.assertEqual(get_saved_view_or_none(self.saved_view.pk), self.saved_view)
+
+    def test_get_saved_view_or_none_unresolvable_pk(self):
+        for pk in self.unresolvable_pks:
+            with self.subTest(pk=pk):
+                self.assertIsNone(get_saved_view_or_none(pk))
+
+    def test_get_saved_view_or_none_view_argument(self):
+        self.assertEqual(
+            get_saved_view_or_none(self.saved_view.pk, view=self.saved_view.view),
+            self.saved_view,
+        )
+        self.assertIsNone(get_saved_view_or_none(self.saved_view.pk, view="dcim:device_list"))
+
+    def test_get_saved_view_filter_params_returns_filter_params(self):
+        self.assertEqual(get_saved_view_filter_params(self.saved_view.pk), self.filter_params)
+
+    def test_get_saved_view_filter_params_without_filter_params(self):
+        for index, config in enumerate([{}, {"pagination_count": 50}]):
+            with self.subTest(config=config):
+                saved_view = SavedView.objects.create(
+                    owner=self.other_user,
+                    name=f"Saved View Without Filter Params {index}",
+                    view="dcim:device_list",
+                    config=config,
+                )
+                self.assertEqual(get_saved_view_filter_params(saved_view.pk), {})
+
+    def test_get_saved_view_filter_params_unresolvable_pk(self):
+        for pk in self.unresolvable_pks:
+            with self.subTest(pk=pk):
+                self.assertEqual(get_saved_view_filter_params(pk), {})
