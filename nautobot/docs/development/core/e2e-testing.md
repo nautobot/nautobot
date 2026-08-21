@@ -74,7 +74,7 @@ def test_location_filter_drawer_opens(auth_page, base_url):
   list every available fixture with its location and docstring (a local discovery
   convenience that relies on plugin auto-loading; `invoke e2e` disables auto-loading
   for actual runs).
-- **`LocationsPage`** subclasses `ListPage` and sets `_LIST_PATH`; `navigate()`,
+- **`LocationsPage`** subclasses `ListPage` and sets `LIST_PATH`; `navigate()`,
   row counts, column reads, and all filter-drawer methods are inherited.
 - There are no selectors here, and there must never be: selectors belong in page
   objects, and a page-object method lands in the same pull request as its first

@@ -6,7 +6,7 @@ from nautobot.e2e.list_page import ListPage
 class LocationsPage(ListPage):
     """The Locations list view. List and filter-drawer behavior comes from ListPage."""
 
-    _LIST_PATH = "/dcim/locations/"
+    LIST_PATH = "/dcim/locations/"
 
     def filter_by_parent(self, parent_name):
         """Open the filter drawer and apply a parent filter for *parent_name*.

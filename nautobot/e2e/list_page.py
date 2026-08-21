@@ -2,11 +2,11 @@
 
 Every list view (locations, devices, prefixes, ...) renders the same table structure
 and the same filter drawer, so their shared behavior lives here and a markup change is
-a single edit. Subclasses set `_LIST_PATH` and add only what is specific to their
+a single edit. Subclasses set `LIST_PATH` and add only what is specific to their
 model:
 
     class LocationsPage(ListPage):
-        _LIST_PATH = "/dcim/locations/"
+        LIST_PATH = "/dcim/locations/"
 """
 
 from nautobot.e2e.base_page import BasePage, select2_filter_pick
@@ -15,7 +15,7 @@ from nautobot.e2e.base_page import BasePage, select2_filter_pick
 class ListPage(BasePage):
     """Shared list-view behavior: navigation, table reads, and the filter drawer."""
 
-    _LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
+    LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
 
     # A data row is a body row with a pk checkbox, which excludes the empty-state row
     # rendered when a list has no results. Reference this constant, never inline it.
@@ -38,9 +38,9 @@ class ListPage(BasePage):
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
 
     def __init__(self, page, base_url):
-        """Fail fast on a subclass that forgot to set `_LIST_PATH`."""
-        if not self._LIST_PATH:
-            raise ValueError(f"{type(self).__name__} must set _LIST_PATH (e.g. '/dcim/locations/').")
+        """Fail fast on a subclass that forgot to set `LIST_PATH`."""
+        if not self.LIST_PATH:
+            raise ValueError(f"{type(self).__name__} must set LIST_PATH (e.g. '/dcim/locations/').")
         super().__init__(page, base_url)
 
     # -------------------------------------------------------------------------
@@ -49,7 +49,7 @@ class ListPage(BasePage):
 
     def navigate(self):
         """Go to the list view."""
-        self._goto(self._LIST_PATH)
+        self._goto(self.LIST_PATH)
 
     def get_data_row_count(self) -> int:
         """Return the number of data rows (rows with a pk checkbox) in the table."""
