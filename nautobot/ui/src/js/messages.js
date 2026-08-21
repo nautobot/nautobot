@@ -3,8 +3,11 @@
 import * as bootstrap from 'bootstrap';
 import htmx from 'htmx.org';
 
+<<<<<<< HEAD
 const REFRESH_MESSAGES_INTERVAL = 15000;
 
+=======
+>>>>>>> f5a886fa5f88b67c37aefd8d367012f591934986
 const TOAST_CLASS = 'toast';
 const TOAST_CONTAINER_CLASS = 'toast-container';
 const TOAST_MESSAGES_ID = 'toast-messages';
@@ -192,6 +195,7 @@ export const refreshMessages = (url) =>
     swap: 'beforeend',
     target: '#header_messages',
   });
+<<<<<<< HEAD
 
 /**
  * Watch for new Django messages, refreshing them periodically.
@@ -220,3 +224,5 @@ export const watchMessages = (url) => {
 
   return () => clearTimeout(timeout.current);
 };
+=======
+>>>>>>> f5a886fa5f88b67c37aefd8d367012f591934986
