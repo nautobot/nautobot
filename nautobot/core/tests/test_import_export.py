@@ -16,11 +16,11 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import SimpleTestCase, tag
 import yaml
 
-from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
 from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
 )
 from nautobot.core.api.renderers import NautobotCSVRenderer

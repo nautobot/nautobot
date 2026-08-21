@@ -10,14 +10,18 @@ format is not (yet) negotiable over HTTP, so it is plain functions rather than a
 `?format=...` support for it be added later, the renderer would be a thin wrapper over these.
 """
 
-from nautobot.core.api.constants import (
-    IMPORT_DOCUMENT_MATCH_FIELDS_KEY,
-    IMPORT_DOCUMENT_MODEL_KEY,
-    IMPORT_DOCUMENT_RECORDS_KEY,
-    IMPORT_DOCUMENT_VERSION,
-    IMPORT_DOCUMENT_VERSION_KEY,
-)
 from nautobot.core.constants import CSV_NO_OBJECT
+
+# Keys/values for the metadata format shared by CSV/JSON/YAML import and export. In JSON/YAML these are
+# document keys; in CSV the version appears as the leading `# key=value` directive, which is also what
+# identifies the row as Nautobot's (there is no separate marker).
+# The version continues Nautobot's existing lineage: 1 was Nautobot 1.x and 2 was 2.x through 3.2, neither of
+# which declared a version, so a file with no version key is either version 1 or 2.
+IMPORT_DOCUMENT_VERSION = 3
+IMPORT_DOCUMENT_VERSION_KEY = "nautobot_import_version"
+IMPORT_DOCUMENT_MODEL_KEY = "model"
+IMPORT_DOCUMENT_MATCH_FIELDS_KEY = "match_fields"
+IMPORT_DOCUMENT_RECORDS_KEY = "records"
 
 #: Serializer fields that describe the API representation rather than the object, and so are omitted.
 EXCLUDED_DOCUMENT_FIELDS = ("url", "notes_url")
