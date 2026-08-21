@@ -641,6 +641,13 @@ class MessagesViewTestCase(TestCase):
         expected_params = urllib.parse.urlencode({"next": reverse("messages")})
         self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
 
+    def build_request(self):
+        request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
+        # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
+        request._messages = messages.storage.cookie.CookieStorage(request)
+        request.user = self.user
+        return request
+
     def test_empty(self):
         """When there are no messages queued, response contains an empty header_messages container."""
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
@@ -649,30 +656,69 @@ class MessagesViewTestCase(TestCase):
         )
 
     def test_messages(self):
-        """When there are messages queued, response contains them in the header_messages container."""
-        request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
-        # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
-        request._messages = messages.storage.cookie.CookieStorage(request)
-        request.user = self.user
+        """When there are messages queued, response contains them as ephemeral toasts."""
+        request = self.build_request()
         messages.info(request, "Test info message")
         messages.success(request, "Test success message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+        self.assertBodyContains(response, "nb-toast-info")
+        self.assertBodyContains(response, "Test info message")
+        self.assertBodyContains(response, "nb-toast-success")
+        self.assertBodyContains(response, "Test success message")
+        self.assertNotContains(response, 'data-bs-autohide="false"')
+
+    def test_header_messages(self):
+        """Messages tagged `header_message` are rendered in the header_messages container instead of as toasts."""
+        request = self.build_request()
+        messages.warning(request, "Test header message", extra_tags="header_message")
         response = MessagesView.as_view()(request)
         self.assertBodyContains(
             response,
             """
                 <div aria-atomic="false" aria-live="polite" id="header_messages">
-                    <div class="alert alert-info alert-dismissable" role="alert">
+                    <div class="alert alert-warning alert-dismissable" role="alert">
                         <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
-                        Test info message
-                    </div>
-                    <div class="alert alert-success alert-dismissable" role="alert">
-                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
-                        Test success message
+                        Test header message
                     </div>
                 </div>
             """,
             html=True,
         )
+        self.assertNotContains(response, "nb-toast")
+
+    def test_indefinite_messages(self):
+        """Messages tagged `indefinite` are rendered as toasts that do not dismiss themselves."""
+        request = self.build_request()
+        messages.error(request, "Test indefinite message", extra_tags="indefinite")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+        self.assertBodyContains(response, "nb-toast-danger")
+        self.assertBodyContains(response, "Test indefinite message")
+        self.assertBodyContains(response, 'data-bs-autohide="false"')
+
+    def test_header_message_indefinite_messages(self):
+        """Messages tagged both `header_message` and `indefinite` are rendered as alerts, ignoring the `indefinite` tag."""
+        request = self.build_request()
+        messages.warning(request, "Test indefinite header message", extra_tags="header_message indefinite")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
+                    <div class="alert alert-warning alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test indefinite header message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+        self.assertNotContains(response, "nb-toast")
 
     def test_search_content_type_bad_request_when_no_htmx(self):
         """Request made from a client other than HTMX results in HTTP 400 response."""
