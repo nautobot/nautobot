@@ -45,14 +45,3 @@ after a redirect, where the message is already in the markup when the page is pa
         {% endwith %}
     {% endfor %}
 </div>
-
-<div
-    aria-atomic="false"
-    aria-label="Messages"
-    aria-live="polite"
-    class="toast-container d-print-none end-0 position-fixed px-20 py-16 top-0"
-    id="toast-messages"
-    role="region"
->
-    {% comment %}TODO(norbert-mieczkowski-codilime): render Django messages as toasts here in scope of NAUTOBOT-1318.{% endcomment %}
-</div>
