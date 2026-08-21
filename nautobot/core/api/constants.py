@@ -2,7 +2,7 @@
 # document keys; in CSV the version appears as the leading `# key=value` directive, which is also what
 # identifies the row as Nautobot's (there is no separate marker).
 # The version continues Nautobot's existing lineage: 1 was Nautobot 1.x and 2 was 2.x through 3.2, neither of
-# which declared a version, so a file with no version key predates 3.
+# which declared a version, so a file with no version key is either version 1 or 2.
 IMPORT_DOCUMENT_VERSION = 3
 IMPORT_DOCUMENT_VERSION_KEY = "nautobot_import_version"
 IMPORT_DOCUMENT_MODEL_KEY = "model"
