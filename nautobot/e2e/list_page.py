@@ -27,11 +27,12 @@ class ListPage(BasePage):
     _FILTER_APPLY_BASIC = "#FilterForm_drawer #default-filter button[type='submit']"
     _ADVANCED_FILTER_TAB = "#FilterForm_drawer a[href='#advanced-filter']"
     _FILTER_APPLY_ADVANCED = "#FilterForm_drawer #advanced-filter button[type='submit']"
-    # Each active filter field renders one outer badge; its direct remove button clears
-    # the whole field, while each value inside carries its own nested remove button.
+    # Each active filter field renders one outer badge (data-nb-field names the field);
+    # its direct remove button clears the whole field, while each value inside carries
+    # its own nested remove button.
     _FILTER_BADGE = ".nb-dynamic-filter-items span.nb-multi-badge"
-    _FILTER_BADGE_REMOVE_ALL = f"{_FILTER_BADGE} > button.nb-dynamic-filter-remove"
-    _FILTER_BADGE_REMOVE_VALUE = f"{_FILTER_BADGE} .nb-multi-badge-items span.badge button.nb-dynamic-filter-remove"
+    _FILTER_BADGE_REMOVE = "button.nb-dynamic-filter-remove"
+    _FILTER_BADGE_VALUE_ITEM = ".nb-multi-badge-items span.badge"
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
@@ -118,21 +119,34 @@ class ListPage(BasePage):
         self.page.locator(self._ADVANCED_FILTER_TAB).first.click()
         self.page.locator(self._FILTER_APPLY_ADVANCED).first.wait_for(state="visible", timeout=8_000)
 
-    def remove_all_filters(self):
-        """Click the first active-filter badge's remove-all button (Advanced tab).
+    def _filter_badge(self, field_name=None):
+        """Selector for an active-filter badge, scoped to *field_name* when given.
 
-        Removes every value of that filter field at once. Does not apply; call
-        :meth:`apply_advanced_filters` afterwards.
+        Scope whenever the field is known: an instance-level default (e.g.
+        LOCATION_LIST_DEFAULT_MAX_DEPTH) can add badges the test did not create, and
+        an unscoped .first would then act on the wrong one.
         """
-        self.page.locator(self._FILTER_BADGE_REMOVE_ALL).first.click()
+        if field_name:
+            return f"{self._FILTER_BADGE}[data-nb-field='{field_name}']"
+        return self._FILTER_BADGE
 
-    def remove_filter_value(self):
-        """Click the first single-value remove button inside a filter badge (Advanced tab).
+    def remove_all_filters(self, field_name=None):
+        """Click a filter badge's remove-all button (Advanced tab).
 
-        Removes one value of a filter field. Does not apply; call
-        :meth:`apply_advanced_filters` afterwards.
+        Removes every value of that filter field from the *pending* filter set; the
+        list does not change until :meth:`apply_advanced_filters` commits it.
         """
-        self.page.locator(self._FILTER_BADGE_REMOVE_VALUE).first.click()
+        self.page.locator(f"{self._filter_badge(field_name)} > {self._FILTER_BADGE_REMOVE}").first.click()
+
+    def remove_filter_value(self, field_name=None):
+        """Click a single-value remove button inside a filter badge (Advanced tab).
+
+        Removes one value from the *pending* filter set; the list does not change
+        until :meth:`apply_advanced_filters` commits it.
+        """
+        self.page.locator(
+            f"{self._filter_badge(field_name)} {self._FILTER_BADGE_VALUE_ITEM} {self._FILTER_BADGE_REMOVE}"
+        ).first.click()
 
     def apply_advanced_filters(self):
         """Submit the drawer's advanced-tab filter form and wait for the reload."""

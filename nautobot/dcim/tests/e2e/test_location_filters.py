@@ -53,28 +53,37 @@ def test_location_remove_filters_restores_list(auth_page, base_url, created_loca
 
     Exercises both removal gestures, mirroring the Selenium flow: the badge's
     remove-all button, then (after browser Back re-applies the filter) the badge's
-    single-value button, and finally checks the Filter button's indicator dot is gone.
+    single-value button. The filter indicator is asserted symmetrically: present
+    while the filter is applied, gone after each removal path commits.
+
+    Indicator assertions assume no instance-level default filter: an instance with
+    LOCATION_LIST_DEFAULT_MAX_DEPTH configured redirects the bare list URL to
+    ?max_depth=<n>, which legitimately keeps the indicator lit. The hermetic CI
+    instance leaves that setting unset.
     """
     parent = created_location_tree["parent"]
     locations = LocationsPage(auth_page, base_url)
     locations.navigate()
     unfiltered_rows = locations.get_data_row_count()
+    assert not locations.has_active_filter_indicator()
 
     locations.filter_by_parent(parent["name"])
     assert "parent=" in locations.current_url()
+    assert locations.has_active_filter_indicator()
     assert locations.get_data_row_count() < unfiltered_rows, "Filter must narrow the list before removal is tested"
 
     # Remove the whole parent filter with the badge's remove-all button.
     locations.open_advanced_filter_tab()
-    locations.remove_all_filters()
+    locations.remove_all_filters("parent")
     locations.apply_advanced_filters()
     assert "parent=" not in locations.current_url()
     assert locations.get_data_row_count() == unfiltered_rows
+    assert not locations.has_active_filter_indicator()
 
     # Back to the filtered view; remove the single filter value instead.
     locations.go_back()
     locations.open_advanced_filter_tab()
-    locations.remove_filter_value()
+    locations.remove_filter_value("parent")
     locations.apply_advanced_filters()
     assert "parent=" not in locations.current_url()
     assert locations.get_data_row_count() == unfiltered_rows
