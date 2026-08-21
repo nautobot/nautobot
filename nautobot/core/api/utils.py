@@ -14,80 +14,11 @@ from rest_framework.utils import formatting
 from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
-from nautobot.core.api import constants, exceptions
+from nautobot.core.api import exceptions
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import permission_is_exempt, qs_filter_from_constraints
 
 logger = logging.getLogger(__name__)
-
-
-def build_import_metadata(model_label, match_fields=None):
-    """The self-describing metadata every export stamps onto its output.
-
-    Shared by both output shapes so a version bump or key rename reaches both: JSON/YAML nests it alongside
-    `records` (`build_import_document`), CSV renders it as the leading directive row
-    (`NautobotCSVRenderer.render_directive_row`). Insertion order is preserved for readable output.
-
-    Args:
-        model_label (str): The `app_label.model` the records belong to.
-        match_fields (list, optional): Fields an importer should match on; omitted when falsy.
-    """
-    metadata = {
-        constants.IMPORT_DOCUMENT_VERSION_KEY: constants.IMPORT_DOCUMENT_VERSION,
-        constants.IMPORT_DOCUMENT_MODEL_KEY: model_label,
-    }
-    if match_fields:
-        metadata[constants.IMPORT_DOCUMENT_MATCH_FIELDS_KEY] = list(match_fields)
-    return metadata
-
-
-def build_import_document(model_label, records, match_fields=None):
-    """Wrap records in the metadata document understood by the JSON/YAML import parsers.
-
-    Shared by the `ExportObjectList` job (writer) and `ImportDocumentParserMixin` (reader); the document
-    keys and version live in `nautobot.core.api.constants` so both ends stay in lock-step. Key insertion
-    order (version, model, match_fields, records) is preserved for readable YAML output.
-
-    Args:
-        model_label (str): The `app_label.model` the records belong to.
-        records (list): The reshaped record dicts.
-        match_fields (list, optional): The fields an importer should match existing records on. Omitted
-            from the document when falsy.
-
-    Returns:
-        dict: The metadata document.
-    """
-    document = build_import_metadata(model_label, match_fields=match_fields)
-    document[constants.IMPORT_DOCUMENT_RECORDS_KEY] = records
-    return document
-
-
-def nest_flat_dict(data, null_sentinels=()):
-    """
-    Convert a dictionary with flat keys separated by '__' into a nested dictionary structure.
-
-    Args:
-        data (dict): e.g. `{"name": "Interface 4", "device__name": "Device 1", "device__tenant__name": ""}`
-        null_sentinels (iterable): leaf values to replace with None (e.g. the CSV "NoObject"/"NULL" markers).
-
-    Returns:
-        (dict): The nested equivalent, e.g. `{"name": "Interface 4", "device": {"name": "Device 1", "tenant": {"name": ""}}}`
-    """
-
-    def insert_nested_dict(keys, value, current_dict):
-        key = keys[0]
-        if len(keys) == 1:
-            current_dict[key] = None if value in null_sentinels else value
-        else:
-            current_dict[key] = current_dict.get(key, {})
-            insert_nested_dict(keys[1:], value, current_dict[key])
-
-    result_dict = {}
-    for original_key, original_value in data.items():
-        split_keys = original_key.split("__")
-        insert_nested_dict(split_keys, original_value, result_dict)
-
-    return result_dict
 
 
 def dict_to_filter_params(d, prefix=""):

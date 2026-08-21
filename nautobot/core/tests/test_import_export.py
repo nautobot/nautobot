@@ -17,10 +17,14 @@ from django.test import SimpleTestCase, tag
 import yaml
 
 from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
+from nautobot.core.api.import_export import (
+    build_document_records,
+    build_import_document,
+    build_import_metadata,
+    nest_flat_dict,
+)
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import build_import_document, build_import_metadata, nest_flat_dict
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
-from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.dcim.models import Device, DeviceType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
@@ -52,29 +56,21 @@ class NestFlatDictTests(SimpleTestCase):
 
 
 @tag("unit")
-class PruneMissingReferencesTests(SimpleTestCase):
-    """`_prune_missing_references` must collapse only genuinely-null relations.
+class BuildDocumentRecordsTests(SimpleTestCase):
+    """`build_document_records` must collapse only genuinely-null relations.
 
     `CSV_NO_OBJECT` means "there is no related object at this hop"; `CSV_NULL_TYPE` means "the object
     exists, this one field of it is null". Only the former is a null reference.
     """
 
-    def _reshape(self, flat_record):
-        """The `_build_document_records` nest-then-prune step, in isolation."""
-        null_prefixes = ExportObjectList._null_reference_prefixes(flat_record)
-        nested = nest_flat_dict(flat_record, (CSV_NO_OBJECT,))
-        for head in {key.split("__", 1)[0] for key in flat_record if "__" in key}:
-            nested[head] = ExportObjectList._prune_missing_references(null_prefixes, head, nested.get(head))
-        return nested
-
     def test_core_prune__null_relation(self):
-        self.assertEqual(self._reshape({"tenant__name": CSV_NO_OBJECT}), {"tenant": None})
+        self.assertEqual(build_document_records([{"tenant__name": CSV_NO_OBJECT}]), [{"tenant": None}])
 
     def test_core_prune__null_nested_reference_kept(self):
         """A location that exists but has no parent keeps the location and nulls only the parent."""
         self.assertEqual(
-            self._reshape({"location__name": "Campus", "location__parent__name": CSV_NO_OBJECT}),
-            {"location": {"name": "Campus", "parent": None}},
+            build_document_records([{"location__name": "Campus", "location__parent__name": CSV_NO_OBJECT}]),
+            [{"location": {"name": "Campus", "parent": None}}],
         )
 
     def test_core_prune__nested_sentinel_does_not_null_its_parent(self):
@@ -84,56 +80,60 @@ class PruneMissingReferencesTests(SimpleTestCase):
         which today drops the relation's own natural-key lookups.
         """
         self.assertEqual(
-            self._reshape({"location__parent__name": CSV_NO_OBJECT}),
-            {"location": {"parent": None}},
+            build_document_records([{"location__parent__name": CSV_NO_OBJECT}]),
+            [{"location": {"parent": None}}],
         )
 
     def test_core_prune__all_null_field_values_kept(self):
         """A null for every selected field does not mean the related object is absent."""
         self.assertEqual(
-            self._reshape({"location__description": None}),
-            {"location": {"description": None}},
+            build_document_records([{"location__description": None}]),
+            [{"location": {"description": None}}],
         )
 
     def test_core_prune__literal_null_string_survives(self):
         """`CSV_NULL_TYPE` is a CSV-only spelling; in a document it is just an ordinary string value."""
         self.assertEqual(
-            self._reshape({"location__description": CSV_NULL_TYPE}),
-            {"location": {"description": CSV_NULL_TYPE}},
+            build_document_records([{"location__description": CSV_NULL_TYPE}]),
+            [{"location": {"description": CSV_NULL_TYPE}}],
         )
 
     def test_core_prune__empty_string_not_a_null_reference(self):
-        self.assertEqual(self._reshape({"location__name": ""}), {"location": {"name": ""}})
+        self.assertEqual(build_document_records([{"location__name": ""}]), [{"location": {"name": ""}}])
 
     def test_core_prune__deeply_nested_reference(self):
         self.assertEqual(
-            self._reshape(
-                {
-                    "location__name": "Campus",
-                    "location__parent__name": "Region",
-                    "location__parent__parent__name": CSV_NO_OBJECT,
-                }
+            build_document_records(
+                [
+                    {
+                        "location__name": "Campus",
+                        "location__parent__name": "Region",
+                        "location__parent__parent__name": CSV_NO_OBJECT,
+                    }
+                ]
             ),
-            {"location": {"name": "Campus", "parent": {"name": "Region", "parent": None}}},
+            [{"location": {"name": "Campus", "parent": {"name": "Region", "parent": None}}}],
         )
 
     def test_core_prune__relation_itself_null_collapses_at_head(self):
         """A null relation sentinels its own natural key too, which is what nulls the head."""
         self.assertEqual(
-            self._reshape({"location__name": CSV_NO_OBJECT, "location__parent__name": CSV_NO_OBJECT}),
-            {"location": None},
+            build_document_records([{"location__name": CSV_NO_OBJECT, "location__parent__name": CSV_NO_OBJECT}]),
+            [{"location": None}],
         )
 
     def test_core_prune__composite_natural_key_relation_null(self):
         self.assertEqual(
-            self._reshape({"device_type__model": CSV_NO_OBJECT, "device_type__manufacturer__name": CSV_NO_OBJECT}),
-            {"device_type": None},
+            build_document_records(
+                [{"device_type__model": CSV_NO_OBJECT, "device_type__manufacturer__name": CSV_NO_OBJECT}]
+            ),
+            [{"device_type": None}],
         )
 
     def test_core_prune__composite_natural_key_relation_present(self):
         self.assertEqual(
-            self._reshape({"device_type__model": "C9300", "device_type__manufacturer__name": "Cisco"}),
-            {"device_type": {"model": "C9300", "manufacturer": {"name": "Cisco"}}},
+            build_document_records([{"device_type__model": "C9300", "device_type__manufacturer__name": "Cisco"}]),
+            [{"device_type": {"model": "C9300", "manufacturer": {"name": "Cisco"}}}],
         )
 
 

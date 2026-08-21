@@ -16,17 +16,12 @@ from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
 import yaml
 
-from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.import_export import build_document_records, build_import_document, build_import_metadata
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
-from nautobot.core.api.utils import (
-    build_import_document,
-    build_import_metadata,
-    get_serializer_for_model,
-    nest_flat_dict,
-)
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
@@ -246,70 +241,6 @@ class ExportObjectList(Job):
         return serializer.data
 
     @staticmethod
-    def _null_reference_prefixes(flat_record):
-        """The relation paths that a `CSV_NO_OBJECT` in `flat_record` reports as null.
-
-        The annotation that emits the sentinel tests `<relation>__isnull` on the lookup's *parent* relation
-        (`BaseModelSerializer._get_lookup_field_name_and_output_field`, which drops the lookup's final
-        segment), so `location__parent__name: NoObject` means `location__parent` is null and says nothing
-        about `location` itself. When the relation itself is null, its own natural-key lookup
-        (`location__name`) is a sentinel too, which is what marks the head as null.
-
-        Read from the pre-nesting record because `nest_flat_dict` maps `CSV_NO_OBJECT` ("no related object
-        at this hop") and `CSV_NULL_TYPE` ("the object exists; this one field of it is null") both to None,
-        erasing the distinction this relies on.
-        """
-        return {
-            key.rsplit("__", 1)[0]
-            for key, value in flat_record.items()
-            if "__" in key and value == constants.CSV_NO_OBJECT
-        }
-
-    @staticmethod
-    def _prune_missing_references(null_prefixes, prefix, value):
-        """Replace each subtree named by `null_prefixes` with a bare None, recursing through the rest."""
-        if prefix in null_prefixes:
-            return None
-        if isinstance(value, dict):
-            return {
-                key: ExportObjectList._prune_missing_references(null_prefixes, f"{prefix}__{key}", val)
-                for key, val in value.items()
-            }
-        return value
-
-    def _build_document_records(self, serializer_class, serializer_data):
-        """
-        Reshape flat serializer records into the nested representation used by JSON/YAML exports.
-
-        Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts
-        collapse to their value; url fields are dropped.
-        """
-        records = []
-        for record in serializer_data:
-            reshaped = {}
-            flattened_heads = set()
-            for key, value in record.items():
-                if key in ("url", "notes_url"):
-                    continue
-                if isinstance(value, dict) and "value" in value and "label" in value:
-                    # An enum type
-                    value = value["value"]
-                head = key.split("__", 1)[0]
-                if "__" in key:
-                    flattened_heads.add(head)
-                reshaped[key] = value
-            null_prefixes = self._null_reference_prefixes(reshaped)
-            # Only CSV_NO_OBJECT needs mapping: it is produced by the natural-key annotation itself (for an
-            # absent relation), whereas nulls already arrive as real None in this mode. CSV_NULL_TYPE is
-            # deliberately not listed, so a value that is literally the string "NULL" survives intact.
-            nested = nest_flat_dict(reshaped, (constants.CSV_NO_OBJECT,))
-            for head in flattened_heads:
-                # Collapse each null relation to a single None, at the depth the sentinel actually reports
-                nested[head] = self._prune_missing_references(null_prefixes, head, nested.get(head))
-            records.append(nested)
-        return records
-
-    @staticmethod
     def _export_filename(model):
         """The branded, extension-less base filename for the export."""
         return f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
@@ -356,17 +287,16 @@ class ExportObjectList(Job):
         is_document = export_format in ("json", "yaml")
         records = self._get_serializer_data(model, serializer_class, queryset, for_csv=not is_document)
         if is_document:
-            self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
+            self._render_document(export_format, content_type, records, match_fields, filename)
         else:
             self._render_csv(content_type, records, match_fields, filename)
 
-    def _render_document(self, export_format, serializer_class, content_type, records, match_fields, filename):
-        # Generic JSON/YAML export: reshape the flat records into nested records wrapped in the metadata
-        # document. `build_import_document` is shared with the JSON/YAML import parsers, so the document
-        # written here stays in lock-step with the wire format they read.
+    def _render_document(self, export_format, content_type, records, match_fields, filename):
+        # Generic JSON/YAML export. The document format itself lives in nautobot.core.api.import_export,
+        # shared with the parsers that read it back, so writer and reader stay in lock-step.
         document = build_import_document(
             f"{content_type.app_label}.{content_type.model}",
-            self._build_document_records(serializer_class, records),
+            build_document_records(records),
             match_fields=match_fields,
         )
         if export_format == "json":
