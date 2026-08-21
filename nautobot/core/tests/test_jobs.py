@@ -1,6 +1,10 @@
+import codecs
+import csv
 from datetime import datetime, timedelta, timezone as dt_timezone
+from io import StringIO
 import json
 import logging
+from pathlib import Path
 from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
@@ -8,10 +12,12 @@ from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.utils import timezone
 import time_machine
+import yaml
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
-from nautobot.core.jobs import DeleteCustomFieldData, UpdateCustomFieldChoiceData
+from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
+from nautobot.core.jobs import DeleteCustomFieldData, ExportObjectList, UpdateCustomFieldChoiceData
 from nautobot.core.jobs.cleanup import CleanupTypes
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -23,6 +29,7 @@ from nautobot.extras.models import (
     Contact,
     ContactAssociation,
     DynamicGroup,
+    ExportTemplate,
     FileProxy,
     JobLogEntry,
     JobResult,
@@ -35,6 +42,244 @@ from nautobot.extras.models import (
 from nautobot.extras.models.metadata import ObjectMetadata
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 from nautobot.users.models import ObjectPermission, User
+
+
+class ExportObjectListTest(TransactionTestCase):
+    """
+    Test the ExportObjectList system job.
+    """
+
+    databases = ("default", "job_logs")
+
+    def _create_saved_view(self, model_class=Status, config=None):
+        """Helper to create a SavedView with optional filter config."""
+        return SavedView.objects.create(
+            name="Global default View",
+            owner=self.user,
+            view=f"{model_class._meta.app_label}:{model_class._meta.model_name}_list",
+            is_global_default=True,
+            config=config or {},
+        )
+
+    def _run_export_job(self, query_string, model_class=Status):
+        """Helper to run export job and return parsed CSV rows."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(model_class).pk,
+            query_string=query_string,
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(
+            Path(job_result.files.first().file.name).name, f"nautobot_{model_class._meta.verbose_name_plural}.csv"
+        )
+        csv_data = job_result.files.first().file.read().decode("utf-8").lstrip("\ufeff")
+        lines = csv_data.splitlines(keepends=True)
+        if lines and lines[0].startswith("#"):
+            # Skip the leading import-directive row so DictReader takes the field names as the header
+            lines = lines[1:]
+        return list(csv.DictReader(StringIO("".join(lines))))
+
+    def test_export_without_permission(self):
+        """Job should enforce user permissions on the content-type being asked for export."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to view status objects')
+        self.assertFalse(job_result.files.exists())
+
+    def test_export_with_constrained_permission(self):
+        """Job should only allow the user to export objects they have permission to view."""
+        instance1, instance2 = Status.objects.all()[:2]
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance1.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            username=self.user.username,  # otherwise run_job_for_testing defaults to a superuser account
+            content_type=ContentType.objects.get_for_model(Status).pk,
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
+        csv_bytes = job_result.files.first().file.read()
+        self.assertTrue(csv_bytes.startswith(codecs.BOM_UTF8), csv_bytes)
+        csv_data = csv_bytes.decode("utf-8")
+        self.assertIn(str(instance1.pk), csv_data)
+        self.assertNotIn(str(instance2.pk), csv_data)
+
+    def test_export_all_to_csv(self):
+        """By default, job should export all instances to CSV."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.csv")
+        csv_data = job_result.files.first().file.read().decode("utf-8")
+        # May be more than one line per Status if they have newlines in their description strings
+        self.assertGreaterEqual(len(csv_data.split("\n")), Status.objects.count() + 1, csv_data)  # +1 for CSV header
+
+    def test_export_all_via_export_template(self):
+        """When an export-template is specified, it should be used."""
+        et = ExportTemplate.objects.create(
+            content_type=ContentType.objects.get_for_model(Status),
+            name="Simple Export Template",
+            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
+            file_extension="txt",
+        )
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            export_template=et.pk,
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_statuses.txt")
+        text_data = job_result.files.first().file.read().decode("utf-8")
+        self.assertEqual(len(text_data.split("\n")), Status.objects.count() + 1)
+        for status in Status.objects.iterator():
+            self.assertIn(status.name, text_data)
+
+    def test_export_json_keeps_real_nulls_and_literal_sentinel_strings(self):
+        """The JSON document carries real nulls, so a value that is literally "NULL" is not mistaken for one.
+
+        CSV must spell a null with the in-band CSV_NULL_TYPE sentinel; routing JSON/YAML through that
+        representation used to make the two indistinguishable and silently null out the string.
+        """
+        status = Status.objects.create(name="Export Null Probe", description=CSV_NULL_TYPE)
+        status.content_types.add(ContentType.objects.get_for_model(Status))
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(Status).pk,
+            export_format="json",
+            query_string="name=Export+Null+Probe",
+        )
+        self.assertJobResultStatus(job_result)
+        record = json.loads(job_result.files.first().file.read().decode("utf-8"))["records"][0]
+        self.assertEqual(record["description"], CSV_NULL_TYPE)
+        # ...and no relation is reported with the CSV "no object" sentinel; absent ones are real nulls
+        self.assertNotIn(CSV_NO_OBJECT, json.dumps(record))
+
+    def test_export_devicetype_to_yaml(self):
+        """Export device-type to YAML."""
+        mfr = Manufacturer.objects.create(name="Cisco")
+        DeviceType.objects.create(
+            manufacturer=mfr,
+            model="Cisco CSR1000v",
+            u_height=0,
+        )
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=ContentType.objects.get_for_model(DeviceType).pk,
+            export_format="yaml",
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(job_result.files.exists())
+        self.assertEqual(Path(job_result.files.first().file.name).name, "nautobot_device_types.yaml")
+        yaml_data = job_result.files.first().file.read().decode("utf-8")
+        data = yaml.safe_load(yaml_data)
+        self.assertEqual(data["manufacturer"], "Cisco")
+
+    def test_get_saved_view_filter_params(self):
+        """Test various cases for the saved view filter parameters."""
+        saved_view = self._create_saved_view(config={"filter_params": {"name": ["Active"]}})
+        test_cases = [
+            # (query_params, expected_output)
+            ({"saved_view": saved_view.pk}, {"name": ["Active"]}),
+            (
+                {
+                    "saved_view": saved_view.pk,
+                    "name": ["Active"],
+                    "content_types": ["dcim.devices"],
+                },  # new filter content_types
+                {"name": ["Active"]},
+            ),
+            (
+                {"saved_view": saved_view.pk, "content_types": ["dcim.devices"]},  # name filter was deleted
+                {},
+            ),
+            ({"saved_view": saved_view.pk, "all_filters_removed": "true"}, {}),
+            (
+                {"name": ["Active"]},  # No saved view provided
+                {},
+            ),
+        ]
+
+        for query_params, expected_output in test_cases:
+            with self.subTest(query_params=query_params, expected_output=expected_output):
+                job = ExportObjectList()
+                filter_params = job._get_saved_view_filter_params(query_params)
+                self.assertEqual(filter_params, expected_output)
+
+    def test_export_saved_view_to_csv_without_filters(self):
+        """Export a SavedView to CSV without any filters applied."""
+        # URL: /?saved_view=<id>
+        sv = self._create_saved_view()
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_export_saved_view_to_csv_with_filters_from_saved_view(self):
+        """Export a SavedView to CSV using filters defined in the SavedView config."""
+        # URL: /?saved_view=<id>
+        filter_name = Status.objects.first().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}")
+        self.assertGreaterEqual(Status.objects.count(), 1)  # Ensure multiple Statuses exist and filter works
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], filter_name)
+
+    def test_export_saved_view_to_csv_with_combined_filters(self):
+        """Export a SavedView to CSV using combined filters from SavedView config and query params."""
+        # URL: /?saved_view=<id>&name=<filter_name>&name=<filter_name2>
+        filter_name = Status.objects.first().name
+        filter_name2 = Status.objects.last().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&name={filter_name}&name={filter_name2}")
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0]["name"], filter_name)
+        self.assertEqual(rows[1]["name"], filter_name2)
+
+    def test_export_saved_view_manufacturer_to_csv_with_replaced_filters(self):
+        """Export a SavedView manufacturer to CSV after replacing filters."""
+        # URL: /?saved_view=<id>&description=<manufacturer2>
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        manufacturer2 = Manufacturer.objects.create(name="Test2 Manufacturer", description="test filter")
+        filter_name = manufacturer.name
+        filter_description = manufacturer2.description
+        sv = self._create_saved_view(model_class=Manufacturer, config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(
+            query_string=f"saved_view={sv.pk}&description={filter_description}", model_class=Manufacturer
+        )
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["name"], manufacturer2.name)
+        self.assertEqual(rows[0]["description"], filter_description)
+        self.assertTrue(all(row["name"] != filter_name for row in rows))
+
+    def test_export_saved_view_to_csv_after_removing_all_filters(self):
+        """Export a SavedView to CSV after removing all filters."""
+        # URL: /?saved_view=<id>&all_filters_removed=true
+        filter_name = Status.objects.first().name
+        sv = self._create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self._run_export_job(query_string=f"saved_view={sv.pk}&all_filters_removed=true")
+        self.assertEqual(len(rows), Status.objects.count())
 
 
 class ImportObjectsTestCase(TransactionTestCase):

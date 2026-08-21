@@ -1,51 +1,34 @@
-"""Consolidated test suite for the Configurable Import / Export with Upsert feature.
+"""Tests for the CSV/JSON/YAML export format and the `ExportObjectList` job that writes it.
 
-Organized to match `test-matrix-import-export.md`. The pattern (mirroring
-`extras.tests.test_customfields.CustomFieldBackgroundTasks`) is:
+Job-backed tests subclass `ImportExportJobTestCase`, which supplies `run_export()` plus helpers to read
+the produced file back (`export_text` / `export_lines` / `export_rows` / `export_document`).
 
-    setup a scenario  →  run the job via a helper  →  assert the outcome via helpers
-
-`ImportExportJobTestCase` provides the cadence:
-
-    run_export(**opts) / run_import(csv_data, **opts)   — run the system job, assert its status, return it
-    export_text / export_lines / export_rows / export_document / export_filename(jr)  — read the produced file
-    assertImport(jr, created=, updated=, unchanged=, match_fields=, source=)  — assert the upsert summary
-    assertLog(jr, substr, level=) / assertNoLog(...) / assertNoIssues(jr)     — assert the job log
-
-so each test reads as a few declarative lines.
-
-Naming convention (see the doc):
-    test_<layer>_<direction>__<field_type|format>[__<operation>]   # core / adapter / e2e layers
-    test_<area>__<case>                                            # match / scope / select / error / perm / rest
-
-Lower-level serializer/parser unit tests for CSV live in `test_csv.py` / `test_api.py`; the
-management-command round-trip lives in `test_commands.py`.
+The serializer-level natural-key machinery this builds on is tested in `test_csv.py`; the job's
+permission, saved-view and export-template behavior is in `test_jobs.ExportObjectListTest`.
 """
 
 import csv
 from io import StringIO
 import json
 from pathlib import Path
-from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, tag
 import yaml
 
 from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
-from nautobot.core.api.utils import nest_flat_dict
+from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.utils import build_import_document, build_import_metadata, nest_flat_dict
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
 from nautobot.dcim.models import Device, DeviceType, Manufacturer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import ExportTemplate, JobLogEntry, SavedView, Status
-
-# ===========================================================================
-# Layer 1c — shared pure functions (format-agnostic core, no DB)
-# ===========================================================================
+from nautobot.extras.models import JobLogEntry, Status
+from nautobot.ipam.models import Namespace, RouteTarget, VRF
 
 
+@tag("unit")
 class NestFlatDictTests(SimpleTestCase):
     """`nest_flat_dict` converts flat `a__b` keys to nested dicts (used by both export and import)."""
 
@@ -68,6 +51,7 @@ class NestFlatDictTests(SimpleTestCase):
         self.assertEqual(nest_flat_dict({"tags": ["a", "b"]}), {"tags": ["a", "b"]})
 
 
+@tag("unit")
 class PruneMissingReferencesTests(SimpleTestCase):
     """`_prune_missing_references` must collapse only genuinely-null relations.
 
@@ -111,6 +95,13 @@ class PruneMissingReferencesTests(SimpleTestCase):
             {"location": {"description": None}},
         )
 
+    def test_core_prune__literal_null_string_survives(self):
+        """`CSV_NULL_TYPE` is a CSV-only spelling; in a document it is just an ordinary string value."""
+        self.assertEqual(
+            self._reshape({"location__description": CSV_NULL_TYPE}),
+            {"location": {"description": CSV_NULL_TYPE}},
+        )
+
     def test_core_prune__empty_string_not_a_null_reference(self):
         self.assertEqual(self._reshape({"location__name": ""}), {"location": {"name": ""}})
 
@@ -146,20 +137,97 @@ class PruneMissingReferencesTests(SimpleTestCase):
         )
 
 
+@tag("unit")
+class ImportMetadataTests(SimpleTestCase):
+    """`build_import_metadata` is the single source of the self-describing metadata both formats stamp."""
+
+    def test_core_metadata__version_is_an_integer(self):
+        """The version is the integer 3, not a string; readers compare numerically."""
+        self.assertIsInstance(IMPORT_DOCUMENT_VERSION, int)
+        self.assertEqual(IMPORT_DOCUMENT_VERSION, 3)
+
+    def test_core_metadata__keys_and_order(self):
+        metadata = build_import_metadata("dcim.manufacturer", match_fields=["name"])
+        self.assertEqual(list(metadata.keys()), ["nautobot_import_version", "model", "match_fields"])
+        self.assertEqual(metadata["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(metadata["model"], "dcim.manufacturer")
+        self.assertEqual(metadata["match_fields"], ["name"])
+
+    def test_core_metadata__omits_empty_match_fields(self):
+        self.assertEqual(
+            build_import_metadata("dcim.manufacturer"),
+            {"nautobot_import_version": IMPORT_DOCUMENT_VERSION, "model": "dcim.manufacturer"},
+        )
+
+    def test_core_document__is_metadata_plus_records(self):
+        """The JSON/YAML document is the shared metadata with `records` appended last."""
+        records = [{"name": "Cisco"}]
+        document = build_import_document("dcim.manufacturer", records, match_fields=["name"])
+        self.assertEqual(list(document.keys()), ["nautobot_import_version", "model", "match_fields", "records"])
+        self.assertEqual(document["records"], records)
+        metadata = build_import_metadata("dcim.manufacturer", match_fields=["name"])
+        self.assertEqual({key: document[key] for key in metadata}, metadata)
+
+    def test_core_document__json_renders_version_unquoted(self):
+        document = build_import_document("dcim.manufacturer", [{"name": "Cisco"}])
+        self.assertIn('"nautobot_import_version": 3', json.dumps(document, indent=2, default=str))
+
+    def test_core_document__yaml_renders_version_unquoted(self):
+        document = build_import_document("dcim.manufacturer", [{"name": "Cisco"}])
+        self.assertIn("nautobot_import_version: 3\n", yaml.safe_dump(document, sort_keys=False))
+
+
+@tag("unit")
+class DirectiveRowTests(SimpleTestCase):
+    """The CSV counterpart of the document metadata: a leading `# key=value; ...` comment row."""
+
+    def _first_line(self, match_fields=None):
+        rendered = NautobotCSVRenderer().render(
+            [{"name": "Cisco", "description": "x"}],
+            renderer_context={"import_directives": build_import_metadata("dcim.manufacturer", match_fields)},
+        )
+        return rendered.splitlines()[0]
+
+    def test_core_directive__row_contents(self):
+        self.assertEqual(
+            self._first_line(match_fields=["name"]),
+            "# nautobot_import_version=3; model=dcim.manufacturer; match_fields=name",
+        )
+
+    def test_core_directive__written_even_without_match_fields(self):
+        """Version and model are always present, so the row is never suppressed."""
+        self.assertEqual(self._first_line(), "# nautobot_import_version=3; model=dcim.manufacturer")
+
+    def test_core_directive__list_values_are_space_joined(self):
+        line = self._first_line(match_fields=["name", "serial"])
+        self.assertEqual(line, "# nautobot_import_version=3; model=dcim.manufacturer; match_fields=name serial")
+
+    def test_core_directive__occupies_a_single_cell(self):
+        """A one-cell directive survives a spreadsheet open-edit-save cycle; see render_directive_row."""
+        rendered = NautobotCSVRenderer().render(
+            [{"name": "Cisco"}],
+            renderer_context={"import_directives": build_import_metadata("dcim.manufacturer", ["name", "serial"])},
+        )
+        self.assertEqual(len(next(csv.reader(StringIO(rendered)))), 1)
+
+    def test_core_directive__no_legacy_marker(self):
+        """The version directive is the marker; the old `nautobot-import:` prefix is gone."""
+        self.assertNotIn("nautobot-import", self._first_line(match_fields=["name"]))
+
+    def test_core_directive__precedes_the_header_row(self):
+        rendered = NautobotCSVRenderer().render(
+            [{"name": "Cisco", "description": "x"}],
+            renderer_context={"import_directives": build_import_metadata("dcim.manufacturer", ["name"])},
+        )
+        lines = rendered.splitlines()
+        self.assertTrue(lines[0].startswith("#"), lines[0])
+        self.assertEqual(lines[1], "name,description")
+
+
 class ImportExportJobTestCase(TransactionTestCase):
-    """Shared fixtures + the setup→run→assert cadence for the ExportObjectList / ImportObjects jobs."""
+    """Shared fixtures + the setup→run→assert cadence for the ExportObjectList job."""
 
     databases = ("default", "job_logs")
-
-    csv_data = "\n".join(
-        [
-            "name,color,content_types",
-            "test_status1,111111,dcim.device",
-            'test_status2,222222,"dcim.device,dcim.location"',
-            "test_status3,333333,dcim.device",
-            "test_status4,444444,dcim.device",
-        ]
-    )
 
     # -- scenario setup --------------------------------------------------------
     def create_status(self, name="test_update_status", color="111111"):
@@ -167,17 +235,20 @@ class ImportExportJobTestCase(TransactionTestCase):
         status.content_types.set([ContentType.objects.get_for_model(Device)])
         return status
 
-    def create_saved_view(self, model_class=Status, config=None):
-        return SavedView.objects.create(
-            name="Global default View",
-            owner=self.user,
-            view=f"{model_class._meta.app_label}:{model_class._meta.model_name}_list",
-            is_global_default=True,
-            config=config or {},
-        )
+    # -- run the job -----------------------------------------------------------
+    def run_export(
+        self,
+        *,
+        model=Status,
+        expected_status=JobResultStatusChoices.STATUS_SUCCESS,
+        allow_issues=False,
+        **kwargs,
+    ):
+        """Run ExportObjectList and assert its status.
 
-    # -- run the jobs ----------------------------------------------------------
-    def run_export(self, *, model=Status, expected_status=JobResultStatusChoices.STATUS_SUCCESS, **kwargs):
+        A successful export is also expected to log nothing at WARNING or above, so a test that
+        deliberately provokes a warning must pass `allow_issues=True`.
+        """
         job_result = create_job_result_and_run_job(
             "nautobot.core.jobs",
             "ExportObjectList",
@@ -185,20 +256,8 @@ class ImportExportJobTestCase(TransactionTestCase):
             **kwargs,
         )
         self.assertJobResultStatus(job_result, expected_status)
-        return job_result
-
-    def run_import(
-        self, csv_data=None, *, model=Status, expected_status=JobResultStatusChoices.STATUS_SUCCESS, **kwargs
-    ):
-        if csv_data is not None:
-            kwargs["csv_data"] = csv_data
-        job_result = create_job_result_and_run_job(
-            "nautobot.core.jobs",
-            "ImportObjects",
-            content_type=ContentType.objects.get_for_model(model).pk,
-            **kwargs,
-        )
-        self.assertJobResultStatus(job_result, expected_status)
+        if expected_status == JobResultStatusChoices.STATUS_SUCCESS and not allow_issues:
+            self.assertNoIssues(job_result)
         return job_result
 
     # -- read the produced export file ----------------------------------------
@@ -226,30 +285,6 @@ class ImportExportJobTestCase(TransactionTestCase):
         return json.loads(text) if self.export_filename(job_result).endswith(".json") else yaml.safe_load(text)
 
     # -- assert the outcome ----------------------------------------------------
-    def assertImport(self, job_result, *, created=None, updated=None, unchanged=None, match_fields=None, source=None):
-        """Assert the upsert summary counters/metadata on the JobResult.result."""
-        for key, expected in (
-            ("created", created),
-            ("updated", updated),
-            ("unchanged", unchanged),
-            ("effective_match_fields", match_fields),
-            ("match_fields_source", source),
-        ):
-            if expected is not None:
-                self.assertEqual(job_result.result[key], expected, key)
-
-    def assertLog(self, job_result, contains, *, level=None):
-        qs = JobLogEntry.objects.filter(job_result=job_result, message__icontains=contains)
-        if level is not None:
-            qs = qs.filter(log_level=level)
-        self.assertTrue(qs.exists(), f"Expected a {level or 'any'}-level log line containing {contains!r}")
-
-    def assertNoLog(self, job_result, contains, *, level=None):
-        qs = JobLogEntry.objects.filter(job_result=job_result, message__icontains=contains)
-        if level is not None:
-            qs = qs.filter(log_level=level)
-        self.assertFalse(qs.exists(), f"Unexpected {level or 'any'}-level log line containing {contains!r}")
-
     def assertNoIssues(self, job_result):
         self.assertFalse(
             JobLogEntry.objects.filter(
@@ -258,18 +293,12 @@ class ImportExportJobTestCase(TransactionTestCase):
         )
 
 
-# ===========================================================================
-# Layer 2 — export format adapters
-# ===========================================================================
 class ExportAdapterTests(ImportExportJobTestCase):
-    def test_adapter_export__all_csv(self):
-        """By default, the job exports all instances to CSV."""
-        job_result = self.run_export()
-        self.assertEqual(self.export_filename(job_result), "nautobot_statuses.csv")
-        self.assertGreaterEqual(len(self.export_lines(job_result)), Status.objects.count() + 1)
+    """Per-format export behavior. The CSV/export-template/device-type-YAML basics live in
+    `test_jobs.ExportObjectListTest`; these cover what the document format adds."""
 
     def test_adapter_export__json_nested(self):
-        """JSON export wraps records in the metadata document, with related fields nested under their parent key."""
+        """JSON wraps records in the metadata document, with related fields nested under their parent key."""
         mfr = Manufacturer.objects.create(name="Document Mfr")
         DeviceType.objects.create(manufacturer=mfr, model="Document DT", u_height=1)
         doc = self.export_document(
@@ -283,46 +312,56 @@ class ExportAdapterTests(ImportExportJobTestCase):
         self.assertEqual(doc["records"][0]["manufacturer"], {"name": "Document Mfr"})  # nested, not flattened
         self.assertNotIn("url", doc["records"][0])
 
-    @skip("Enable in X4: uses use_current_view (sort + saved-view export config)")
-    def test_adapter_export__generic_yaml(self):
-        """A model without to_yaml() exports to YAML as a document rather than erroring."""
-        status = Status.objects.create(name="test_yaml_export_status", color="112233")
-        status.content_types.set([ContentType.objects.get_for_model(Device)])
-        doc = self.export_document(
-            self.run_export(query_string="name=test_yaml_export_status", export_format="yaml", use_current_view=True)
+    def test_adapter_export__csv_stamps_directive(self):
+        """CSV exports carry their own import instructions as the leading directive row."""
+        self.assertEqual(
+            self.export_lines(self.run_export())[0],
+            f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status; match_fields=name",
         )
+
+    def test_adapter_export__generic_yaml(self):
+        """A model without to_yaml() exports as the same document as JSON, dumped in declaration order."""
+        self.create_status(name="test_yaml_export_status", color="112233")
+        job_result = self.run_export(query_string="name=test_yaml_export_status", export_format="yaml")
+        self.assertEqual(self.export_filename(job_result), "nautobot_statuses.yaml")
+
+        doc = self.export_document(job_result)
+        self.assertEqual(doc["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
         self.assertEqual(doc["model"], "extras.status")
         self.assertEqual(doc["match_fields"], ["name"])
         self.assertEqual(len(doc["records"]), 1)
         self.assertEqual(doc["records"][0]["name"], "test_yaml_export_status")
         self.assertEqual(doc["records"][0]["color"], "112233")
 
-    def test_adapter_export__csv_stamps_directive(self):
-        """CSV exports carry their own import instructions: the model's natural key as the match key."""
-        self.assertEqual(
-            self.export_lines(self.run_export())[0],
-            f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status; match_fields=name",
-        )
+        # Dumped with sort_keys=False, so the version leads rather than the keys going alphabetical
+        self.assertTrue(self.export_text(job_result).startswith("nautobot_import_version:"))
 
-    def test_adapter_export__via_export_template(self):
-        """When an export-template is specified, it is used."""
-        et = ExportTemplate.objects.create(
-            content_type=ContentType.objects.get_for_model(Status),
-            name="Simple Export Template",
-            template_code="{% for obj in queryset %}{{ obj.name }}\n{% endfor %}",
-            file_extension="txt",
-        )
-        job_result = self.run_export(export_template=et.pk)
-        self.assertEqual(self.export_filename(job_result), "nautobot_statuses.txt")
-        text = self.export_text(job_result)
-        self.assertEqual(len(text.split("\n")), Status.objects.count() + 1)
-        for status in Status.objects.iterator():
-            self.assertIn(status.name, text)
+    def test_adapter_export__m2m_scalar_members(self):
+        """A scalar-keyed M2M is comma-joined for CSV but stays a list in either document format."""
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Export Namespace")
+        vrf = VRF.objects.create(name="M2M Export VRF", namespace=namespace)
+        for name in ("65000:1", "65000:2"):
+            vrf.import_targets.add(RouteTarget.objects.create(name=name))
 
-    def test_adapter_export__devicetype_library_yaml(self):
-        """Device-type YAML uses the devicetype-library format, not the generic document."""
-        mfr = Manufacturer.objects.create(name="Cisco")
-        DeviceType.objects.create(manufacturer=mfr, model="Cisco CSR1000v", u_height=0)
-        job_result = self.run_export(model=DeviceType, export_format="yaml")
-        self.assertEqual(self.export_filename(job_result), "nautobot_device_types.yaml")
-        self.assertEqual(self.export_document(job_result)["manufacturer"], "Cisco")
+        row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Export VRF")
+        self.assertEqual(sorted(row["import_targets"].split(",")), ["65000:1", "65000:2"])
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Export VRF")
+                self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2"])
+
+    def test_adapter_export__m2m_empty(self):
+        """An M2M with no members is an empty cell in CSV and an empty list in either document format."""
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Empty Namespace")
+        VRF.objects.create(name="M2M Empty VRF", namespace=namespace)
+
+        row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Empty VRF")
+        self.assertEqual(row["import_targets"], "")
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Empty VRF")
+                self.assertEqual(record["import_targets"], [])
