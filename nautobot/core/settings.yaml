@@ -1594,6 +1594,58 @@ properties:
       `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
     environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
     version_added: "3.2.0"
+  NAUTOBOT_RATE_LIMITING_SETTINGS:
+    additionalProperties: true
+    default: {}
+    description: "Cost-based rate limiting of token-authenticated REST and GraphQL API requests."
+    details: |-
+      Omitted keys fall back to `nautobot.core.rate_limiting.config.RATE_LIMITING_DEFAULTS`.
+
+      | Key | Default | Description |
+      |---|---|---|
+      | `MODE` | `"off"` | `"off"`, `"report"`, or `"enforce"`. Also accepts a per-kind mapping such as `{"rest": "enforce"}`, which can be set here but not by environment variable. |
+      | `WINDOW_SECONDS` | `60` | Budget window length, anchored to the token's first request. |
+      | `LIMIT` | `1000` | Budget per token per window, in cost points. Not the REST `limit` parameter. |
+      | `HEURISTIC_WEIGHTS` | `{}` | Cost weight overrides. |
+      | `CALIBRATION_LOG` | `false` | Log each request's assigned cost against its measured time, for offline weight tuning. |
+      | `CALIBRATION_SAMPLE_RATE` | `1.0` | Sampling probability for the calibration log. |
+    environment_variables:
+    - "NAUTOBOT_RATE_LIMITING_MODE"
+    - "NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS"
+    - "NAUTOBOT_RATE_LIMITING_RECORDS_LIMIT"
+    - "NAUTOBOT_RATE_LIMITING_HEURISTIC_WEIGHTS"
+    - "NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG"
+    - "NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE"
+    type: "object"
+    version_added: "3.2.0"
+  NAUTOBOT_REST_RATE_LIMITING_DEFAULT_SETTINGS:
+    additionalProperties: true
+    default: {}
+    description: "Overrides for the heuristic weights used to estimate the cost of a REST API request."
+    details: |-
+      Omitted keys fall back to `nautobot.core.rate_limiting.rest_weights.REST_DEFAULT_WEIGHTS`.
+
+      | Key | Default | Description |
+      |---|---|---|
+      | `read_cost` | `1.0` | Base cost of a `GET`, `HEAD`, or `OPTIONS`. |
+      | `write_cost` | `3.0` | Base cost of any other method. |
+      | `records_per_page_divisor` | `50` | Divides `limit` to give a page-count multiplier. |
+      | `per_join_cost` | `1.0` | Added per relation traversal in a filter name. |
+      | `unindexable_lookup_cost` | `5.0` | Added per filter whose lookup can't use an index, such as `ic` or `re`. |
+      | `depth_multiplier_per_level` | `1.0` | Multiplier per level of `depth`. |
+      | `computed_fields_multiplier` | `3.0` | Multiplier when `include=computed_fields`. |
+      | `csv_multiplier` | `3.0` | Multiplier when `format=csv`. |
+    environment_variables:
+    - "NAUTOBOT_RATE_LIMITING_READ_COST"
+    - "NAUTOBOT_RATE_LIMITING_WRITE_COST"
+    - "NAUTOBOT_RATE_LIMITING_RECORDS_PER_PAGE_DIVISOR"
+    - "NAUTOBOT_RATE_LIMITING_PER_JOIN_COST"
+    - "NAUTOBOT_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST"
+    - "NAUTOBOT_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL"
+    - "NAUTOBOT_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER"
+    - "NAUTOBOT_RATE_LIMITING_CSV_MULTIPILER"
+    type: "object"
+    version_added: "3.3.0"
   NAUTOBOT_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/"
