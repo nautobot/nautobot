@@ -12,14 +12,14 @@ import sys
 
 
 def test_e2e_package_imports_without_django_settings():
-    """``nautobot.e2e`` must import in a process with no Nautobot configuration.
+    """`nautobot.e2e` must import in a process with no Nautobot configuration.
 
-    Guards against relocating the shared E2E infrastructure under ``nautobot.core``
+    Guards against relocating the shared E2E infrastructure under `nautobot.core`
     (whose package __init__ initializes the Celery app from Django settings) or adding
     imports to it that pull in the Django runtime. Either would make every
-    E2E run require a local ``nautobot_config.py``, even when the instance under test
-    is remote, which breaks the suite's black-box property. Checks ``sys.modules``
-    membership rather than import success alone, because ``nautobot.core`` imports
+    E2E run require a local `nautobot_config.py`, even when the instance under test
+    is remote, which breaks the suite's black-box property. Checks `sys.modules`
+    membership rather than import success alone, because `nautobot.core` imports
     cleanly without settings because Celery binds them lazily, while still pulling
     Django into the process. See the "End-to-End Testing" documentation.
     """

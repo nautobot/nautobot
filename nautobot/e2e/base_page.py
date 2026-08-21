@@ -1,8 +1,8 @@
 """Base page object for Playwright E2E tests.
 
-Every page object extends :class:`BasePage`. Selectors live in page objects, never in
+Every page object extends `BasePage`. Selectors live in page objects, never in
 test files, so a markup change is a one-file fix; test bodies read as user intent
-(``locations.filter_by_parent(name)``) rather than selector plumbing.
+(`locations.filter_by_parent(name)`) rather than selector plumbing.
 """
 
 from playwright.sync_api import Page
@@ -11,16 +11,16 @@ from playwright.sync_api import Page
 def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
     """Type-and-pick in an API-backed Select2 filter field, addressed by field *name*.
 
-    Filter fields use the ``nautobot-select2-api`` pattern: the widget renders an
-    anonymous ``<span class="select2-container">`` adjacent to the hidden ``<select>``
-    (there is no ``#select2-<id>-container`` element to click, unlike create/edit
-    forms). Options load via AJAX from the REST API, so ``select_option()`` cannot see
+    Filter fields use the `nautobot-select2-api` pattern: the widget renders an
+    anonymous `<span class="select2-container">` adjacent to the hidden `<select>`
+    (there is no `#select2-<id>-container` element to click, unlike create/edit
+    forms). Options load via AJAX from the REST API, so `select_option()` cannot see
     them; the reliable gesture is click the container, type into the open dropdown's
     search field, then click the matching result.
 
     Args:
         page (Page): The Playwright page.
-        field_name (str): The ``name`` attribute of the underlying ``<select>``.
+        field_name (str): The `name` attribute of the underlying `<select>`.
         search (str): Text typed into the dropdown's search box to narrow the options.
         pick_text (str): Visible text of the option to click; first option if None.
         exact (bool): Exact text match for *pick_text*. Pass False for fields whose
@@ -58,7 +58,7 @@ class BasePage:
         self.base_url = base_url.rstrip("/")
 
     def _goto(self, path):
-        """Navigate to ``base_url + path`` and wait for the page to settle."""
+        """Navigate to `base_url + path` and wait for the page to settle."""
         self.page.goto(f"{self.base_url}{path}")
         self.wait_for_load()
 

@@ -1,23 +1,23 @@
 """Shared pytest fixture surface for Playwright E2E tests.
 
-Registered once, via ``pytest_plugins`` in the repository-root ``conftest.py``. Per-app
-``tests/e2e/conftest.py`` files build thin named fixtures on top of
-:func:`create_object`; run ``pytest --fixtures nautobot/<app>/tests/e2e`` to list every
+Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
+`tests/e2e/conftest.py` files build thin named fixtures on top of
+`create_object`; run `pytest --fixtures nautobot/<app>/tests/e2e` to list every
 available fixture with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
 runs against any Nautobot it can reach over HTTP. The defaults match the
 development-style bootstrap that both local runs and the CI job use: an instance at
-``http://localhost:8080`` with the ``admin``/``admin`` superuser and the well-known
+`http://localhost:8080` with the `admin`/`admin` superuser and the well-known
 development API token.
 
-- ``NAUTOBOT_E2E_URL``
-- ``NAUTOBOT_E2E_USERNAME`` / ``NAUTOBOT_E2E_PASSWORD``
-- ``NAUTOBOT_E2E_API_TOKEN``
+- `NAUTOBOT_E2E_URL`
+- `NAUTOBOT_E2E_USERNAME` / `NAUTOBOT_E2E_PASSWORD`
+- `NAUTOBOT_E2E_API_TOKEN`
 
 Black-box refers to the instance under test, not the test host: collection imports the
-``nautobot`` package (this module registers as a pytest plugin), so the host still
-needs the repo installed (``poetry install --with e2e``).
+`nautobot` package (this module registers as a pytest plugin), so the host still
+needs the repo installed (`poetry install --with e2e`).
 """
 
 # pytest injects fixtures by parameter name, so a fixture that consumes another one
@@ -43,8 +43,8 @@ def base_url(pytestconfig):
     """Root URL of the Nautobot instance under test.
 
     Deliberately shadows pytest-base-url's fixture of the same name so pytest-playwright
-    picks up our resolution order: ``--base-url`` (pytest-base-url, bundled with
-    pytest-playwright) wins if given; otherwise ``NAUTOBOT_E2E_URL``, defaulting to the
+    picks up our resolution order: `--base-url` (pytest-base-url, bundled with
+    pytest-playwright) wins if given; otherwise `NAUTOBOT_E2E_URL`, defaulting to the
     local development-style instance.
     """
     from_cli = pytestconfig.getoption("base_url", default=None)
@@ -55,7 +55,7 @@ def base_url(pytestconfig):
 def auth_state_path(browser, base_url, tmp_path_factory):
     """Log in through the UI once per session and return the saved storage-state file.
 
-    Every browser context created afterwards (see :func:`browser_context_args`) starts
+    Every browser context created afterwards (see `browser_context_args`) starts
     from this state, so tests never repeat the login flow.
     """
     username = os.getenv("NAUTOBOT_E2E_USERNAME", E2E_DEFAULT_USERNAME)
@@ -87,8 +87,8 @@ def auth_state_path(browser, base_url, tmp_path_factory):
 def browser_context_args(browser_context_args, base_url, auth_state_path):
     """Inject the session login state and base URL into every browser context.
 
-    pytest-playwright's standard ``page`` fixture then starts authenticated, and CLI
-    flags such as ``--headed``, ``--slowmo``, ``--screenshot``, and ``--tracing`` keep
+    pytest-playwright's standard `page` fixture then starts authenticated, and CLI
+    flags such as `--headed`, `--slowmo`, `--screenshot`, and `--tracing` keep
     working with no extra wiring.
     """
     return {**browser_context_args, "base_url": base_url, "storage_state": str(auth_state_path)}
@@ -98,7 +98,7 @@ def browser_context_args(browser_context_args, base_url, auth_state_path):
 def auth_page(page):
     """An authenticated Playwright page.
 
-    This is pytest-playwright's standard ``page`` fixture (every context starts from
+    This is pytest-playwright's standard `page` fixture (every context starts from
     the session login state); the alias exists so a test signature states that it
     operates on an authenticated session without the reader visiting conftest.
     """
@@ -107,7 +107,7 @@ def auth_page(page):
 
 @pytest.fixture(scope="session")
 def api(playwright, base_url):
-    """Token-authenticated ``APIRequestContext`` against the instance under test.
+    """Token-authenticated `APIRequestContext` against the instance under test.
 
     The REST ground truth for behavioral assertions and the transport for test-data
     setup. Keeping data setup on the REST API (rather than the ORM) keeps the suite
@@ -124,9 +124,9 @@ def api(playwright, base_url):
 
 @pytest.fixture(scope="session")
 def status_id_for(api):
-    """Callable returning the id of a valid Status for a content type (e.g. ``dcim.location``).
+    """Callable returning the id of a valid Status for a content type (e.g. `dcim.location`).
 
-    Nearly every ``created_*`` fixture needs a status; results are cached per content
+    Nearly every `created_*` fixture needs a status; results are cached per content
     type for the session.
     """
     cache = {}
@@ -149,7 +149,7 @@ def status_id_for(api):
 def create_object(api):
     """Parameterized factory: create a REST object owned by this test, deleted on teardown.
 
-    The single factory behind every per-app ``created_*`` fixture::
+    The single factory behind every per-app `created_*` fixture:
 
         parent = create_object("dcim/locations", name=name, location_type=lt["id"], status=status_id)
 
@@ -178,7 +178,7 @@ def api_count(api):
 
     The ground truth for list-view assertions: page-level row checks alone would miss
     records leaking onto later pages, so filter tests compare the visible row count
-    against ``api_count("dcim/locations", parent=parent_id)``. The equality only holds
+    against `api_count("dcim/locations", parent=parent_id)`. The equality only holds
     while the filtered results fit on one page; target owned data small enough to
     guarantee that.
     """

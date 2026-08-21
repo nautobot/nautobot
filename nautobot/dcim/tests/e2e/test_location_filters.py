@@ -24,7 +24,7 @@ def test_location_filter_by_parent_narrows_list(auth_page, base_url, api_count, 
     """Filtering by parent shows exactly that parent's children.
 
     Narrowing, UI-count-equals-API-count, and per-row inclusion/exclusion are all
-    asserted against records the test owns (see ``created_location_tree``), so the
+    asserted against records the test owns (see `created_location_tree`), so the
     test is independent of whatever other data the instance holds.
     """
     parent = created_location_tree["parent"]
