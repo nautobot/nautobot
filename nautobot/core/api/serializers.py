@@ -3,7 +3,6 @@ import logging
 import uuid
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
     ObjectDoesNotExist,
@@ -67,6 +66,28 @@ class OptInFieldsMixin:
         super().__init__(*args, **kwargs)
         self.__pruned_fields = None
 
+    def _include_all_m2m_by_default(self):
+        """Whether an unspecified `exclude_m2m` should expose every M2M field, not just the default subset.
+
+        False keeps this mixin's own behavior: the default subset, for performance and backwards
+        compatibility. A subclass whose output has different needs overrides this to widen it.
+        """
+        return False
+
+    def _readable_m2m_sources(self, sources, params):
+        """Of the given M2M field `sources`, the ones that stay readable (visible) in this serializer's output.
+
+        If explicitly specified, `exclude_m2m` (query parameter or context) wins: truthy hides
+        every M2M field, falsy exposes them all. Otherwise, `self_include_all_m2m_by_default()` decides behavior.
+        """
+        exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
+        if exclude_m2m is not None:  # explicitly specified, do as instructed
+            return set() if is_truthy(exclude_m2m) else sources
+        if self._include_all_m2m_by_default():  # subclass says keep 'em all!
+            return sources
+        # Default behavior - only include fields in DEFAULT_M2M_FIELDS or Meta.default_m2m_fields, omit others
+        return sources & (set(constants.DEFAULT_M2M_FIELDS) | set(getattr(self.Meta, "default_m2m_fields", ())))
+
     @property
     def fields(self):
         """
@@ -74,8 +95,8 @@ class OptInFieldsMixin:
 
         - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
           `include` query parameter. (applies to GET requests only)
-        - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
-          If `exclude_m2m` is not provided, only `tags`, `content_types`, and `object_types` are included by default.
+        - Possibly also removes (or marks as write-only) some or all many-to-many serializer fields (in order to
+          improve performance and reduce verbosity) -- see `_readable_m2m_sources`
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -112,36 +133,48 @@ class OptInFieldsMixin:
                     if field not in user_opt_in_fields:
                         fields.pop(field, None)
 
-            # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
-            # don't get included in the response.
-            # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
-            exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
-            if exclude_m2m is None or is_truthy(exclude_m2m):
-                default_m2m_fields = set(constants.DEFAULT_M2M_FIELDS)
-                default_m2m_fields.update(getattr(self.Meta, "default_m2m_fields", ()))
-                for field_instance in fields.values():
-                    if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
-                        if exclude_m2m is None and field_instance.source in default_m2m_fields:
-                            continue
-                        field_instance.write_only = True
+            m2m_fields = {
+                name: instance
+                for name, instance in fields.items()
+                if isinstance(instance, (serializers.ManyRelatedField, serializers.ListSerializer))
+            }
+            readable = self._readable_m2m_sources({instance.source for instance in m2m_fields.values()}, params)
+            for name, instance in m2m_fields.items():
+                if instance.source in readable:
+                    continue
+                if instance.read_only:
+                    # A read-only M2M (the far side of a through table, e.g. `VRF.devices`) has no input to
+                    # preserve, so drop it (instead of invalidly marking it as both read-only and write-only).
+                    fields.pop(name)
+                else:
+                    # A writable M2M (e.g. `content_types`) must keep accepting input even when hidden from output.
+                    instance.write_only = True
 
             self.__pruned_fields = fields
 
         return self.__pruned_fields
 
 
-class CSVRepresentationMixin:
-    """Serializer mixin holding the CSV-export natural-key machinery.
+class NaturalKeyRepresentationMixin:
+    """Serializer mixin holding the natural-key representation machinery.
 
-    All of CSV export's special-case representation logic lives here so it stays out of the day-to-day
-    JSON/REST code path: detecting a CSV request (`_is_csv_request`), prefetching related objects'
-    natural-key values in bulk (`_collect_natural_key_values` and its query-`Case` builders), flattening a
-    single FK's natural key into `a__b__name` columns (`_get_natural_key_lookups_value_for_field`), and
-    rendering M2M members by natural key (`_get_m2m_natural_key_values`).
+    Relations are represented by their natural keys (rather than by URL or pk) whenever a caller needs a
+    self-describing, re-importable rendering: the CSV/JSON/YAML export job, and any REST request that asks
+    for `text/csv`. All of that special-case logic lives here so it stays out of the day-to-day JSON/REST
+    code path: prefetching related objects' natural-key values in bulk (`_collect_natural_key_values` and
+    its query-`Case` builders), flattening a single FK's natural key into `a__b__name` columns
+    (`_get_natural_key_lookups_value_for_field`), and rendering M2M members by natural key
+    (`_get_m2m_natural_key_values`).
+
+    Two modes share that machinery, distinguished because CSV cannot express anything but strings:
+
+    - `_use_natural_keys()` — represent relations by flattened natural keys. True for both modes.
+    - `_is_csv_request()` — additionally coerce values to strings: `None` becomes `CSV_NULL_TYPE` and
+      scalar-keyed M2M members are comma-joined. JSON/YAML skips this so it keeps real nulls and lists.
 
     `BaseModelSerializer` mixes this in and calls these helpers from its DRF override points
     (`__init__` priming, `get_field_names` field filtering, `to_representation`); the methods here assume
-    the host serializer provides `Meta`, `context`, `instance`, and `self._force_csv`.
+    the host serializer provides `Meta`, `context`, `instance`, `self._force_csv` and `self._exporting`.
     """
 
     natural_keys_values = None
@@ -152,6 +185,10 @@ class CSVRepresentationMixin:
             return True
         request = self.context.get("request")
         return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
+
+    def _use_natural_keys(self):
+        """Return True if relations should be represented by flattened natural keys (CSV or JSON/YAML)."""
+        return self._exporting or self._is_csv_request()
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
         """Get lookup field name and its corresponding output_field.
@@ -272,7 +309,7 @@ class CSVRepresentationMixin:
         """
         model = self.Meta.model
         field_lookups = []
-        # NOTE: M2M and One2M fields field are ignored in csv export
+        # NOTE: one-to-many fields field are ignored in csv export
         fields = [
             field
             for field in model._meta.get_fields()
@@ -317,10 +354,9 @@ class CSVRepresentationMixin:
                     data[key] = str(value)
                 elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
                     data[key] = constants.CSV_NO_OBJECT
-                elif value == "":
-                    data[key] = value
-                elif not value:
-                    data[key] = constants.CSV_NULL_TYPE
+                elif value is None:
+                    # CSV has no null; JSON/YAML does, so only CSV needs the sentinel here.
+                    data[key] = constants.CSV_NULL_TYPE if self._is_csv_request() else None
                 else:
                     data[key] = value
         return data
@@ -329,11 +365,12 @@ class CSVRepresentationMixin:
         """
         Represent a many-to-many field's members by their natural keys, for CSV export.
 
-        Members identified by a single scalar (e.g. tags by name) render as a comma-separated string,
-        matching historical tag behavior. Members with composite natural keys render as a list of
-        natural-key dicts, which the CSV renderer emits as a JSON-encoded cell; the dicts use the same
-        flattened lookups (e.g. `{"manufacturer__name": ..., "model": ...}`) that the import path
-        already resolves.
+        Members identified by a single scalar (e.g. tags by name) render as a comma-separated string for
+        CSV, matching historical tag behavior; JSON/YAML keep them as a list, which is both lossless for
+        values containing commas and what the document format wants anyway. Members with composite natural
+        keys render as a list of natural-key dicts, which the CSV renderer emits as a JSON-encoded cell;
+        the dicts use the same flattened lookups (e.g. `{"manufacturer__name": ..., "model": ...}`) that
+        the import path already resolves.
         """
         members = getattr(instance, field.source or field.field_name).all()
         member_keys = []
@@ -345,11 +382,12 @@ class CSVRepresentationMixin:
                 # No well-defined natural key for this model; fall back to the primary key
                 member_keys.append({"id": str(member.pk)})
         if member_keys and all(len(member_key) == 1 for member_key in member_keys):
-            return ",".join(str(next(iter(member_key.values()))) for member_key in member_keys)
+            scalars = [str(next(iter(member_key.values()))) for member_key in member_keys]
+            return ",".join(scalars) if self._is_csv_request() else scalars
         return member_keys
 
 
-class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.HyperlinkedModelSerializer):
+class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, serializers.HyperlinkedModelSerializer):
     """
     This base serializer implements common fields and logic for all ModelSerializers.
 
@@ -379,22 +417,31 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
     # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
     natural_slug = serializers.SerializerMethodField()
 
-    def __init__(self, *args, force_csv=False, **kwargs):
+    def __init__(self, *args, force_csv=False, exporting=False, **kwargs):
         """
         Instantiate a BaseModelSerializer.
 
+        The two kwargs below are independent; the `ExportObjectList` job sets both for CSV and only
+        `exporting` for the JSON/YAML documents.
+
         The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
         which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
+        Because CSV can only carry strings, it also selects the coercions the documents skip (`None` becomes
+        `CSV_NULL_TYPE`, scalar-keyed M2M members are comma-joined).
+
+        The exporting kwarg marks the output as a file rather than a REST response, which is what makes every
+        M2M field visible (see `_include_all_m2m_by_default()`) rather than just the default subset present in REST.
         """
         self._force_csv = force_csv
+        self._exporting = exporting
 
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
         if not self.is_nested:
             self.Meta.depth = self.context.get("depth", 0)
 
-        # Check if the request is related to CSV export;
-        if self._is_csv_request() and self.instance:
+        # Check if this is a natural-key export (CSV or JSON/YAML);
+        if self._use_natural_keys() and self.instance:
             # Retrieve the natural key values of related fields in an optimized way.
             all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
             if isinstance(self.instance, models.QuerySet):
@@ -406,6 +453,10 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
             self.natural_keys_values = self._collect_natural_key_values(
                 queryset, all_related_fields_natural_key_lookups
             )
+
+    def _include_all_m2m_by_default(self):
+        """Widen `OptInFieldsMixin`'s default: an export file must carry every M2M field to be re-importable."""
+        return self._exporting
 
     @property
     def is_nested(self):
@@ -485,17 +536,6 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
             if hasattr(self.Meta.model, field):
                 self.extend_field_names(fields, field)
 
-        # M2M on CSV is opt-in via exclude_m2m=False (the ExportObjectList job sets it in context). With
-        # exclude_m2m unset, the generic REST API CSV export keeps only the historical default subset
-        # (`tags`, `content_types`, `object_types` per DEFAULT_M2M_FIELDS) and omits every *other* M2M
-        # field, matching historical behavior and avoiding a per-row members query on that path. Note
-        # `tags` (a taggit manager, not a concrete _meta field) is not caught by the filter below and so
-        # always remains; `content_types` is kept explicitly via the ContentType check.
-        request = self.context.get("request")
-        params = normalize_querydict(getattr(request, "query_params", getattr(request, "GET", None))) if request else {}
-        exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
-        m2m_allowed_on_csv = exclude_m2m is not None and not is_truthy(exclude_m2m)
-
         def filter_field(field):
             # Eliminate all field names that start with "_" as those fields are not user-facing
             if field.startswith("_"):
@@ -509,17 +549,13 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
             ):
                 return False
 
-            # On CSV requests, skip reverse-FK (one-to-many) fields — they can't be flattened into a
-            # single cell. M2M fields are exportable (single-scalar members → comma-separated list,
-            # composite-keyed members → JSON-encoded cell, see _get_m2m_natural_key_values), but only
-            # when M2M export is opted into; otherwise they are omitted for backwards compatibility.
+            # In a natural-key rendering, skip reverse-FK (one-to-many) fields. They *could* be rendered
+            # like M2M members, but the relation is owned by the child's FK, so an importer has no way to
+            # set them from this side: they would be export-only, and unbounded in size (a Device has
+            # arbitrarily many Interfaces). Export those child models as their own content-type instead.
             with contextlib.suppress(FieldDoesNotExist):
-                if self._is_csv_request():
-                    field = self.Meta.model._meta.get_field(field)
-                    if field.one_to_many:
-                        return False
-                    if field.many_to_many and field.related_model is not ContentType and not m2m_allowed_on_csv:
-                        return False
+                if self._use_natural_keys() and self.Meta.model._meta.get_field(field).one_to_many:
+                    return False
             return True
 
         fields = [field for field in fields if filter_field(field)]
@@ -568,7 +604,13 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
         data = super().to_representation(instance)
         altered_data = {}
 
-        if self._is_csv_request():
+        if self._use_natural_keys():
+            # CSV can only carry strings, so it represents a null as the CSV_NULL_TYPE sentinel; JSON/YAML
+            # keep the real None. Sentinels are in-band (indistinguishable from a value that happens to
+            # equal them), so they are only emitted where the format leaves no alternative.
+            def scalar(value):
+                return constants.CSV_NULL_TYPE if (value is None and self._is_csv_request()) else value
+
             for key, value in data.items():
                 field = self.fields.get(key)
                 if isinstance(field, serializers.ManyRelatedField) and isinstance(
@@ -587,9 +629,9 @@ class BaseModelSerializer(OptInFieldsMixin, CSVRepresentationMixin, serializers.
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
                         # Not FK field
-                        altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                        altered_data[key] = scalar(value)
                 else:
-                    altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                    altered_data[key] = scalar(value)
         else:
             altered_data = data
 

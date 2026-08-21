@@ -13,13 +13,14 @@ from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.http import QueryDict
 from django.urls import reverse
-from rest_framework import exceptions as drf_exceptions, serializers as drf_serializers
+from rest_framework import exceptions as drf_exceptions
 import yaml
 
 from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import (
     build_import_document,
     build_import_metadata,
@@ -200,34 +201,41 @@ class ExportObjectList(Job):
             return None
         return match_fields
 
-    def _get_serializer_data(self, model, serializer_class, queryset):
-        """Serialize the queryset with flat natural-key lookups for related fields, M2M included."""
-        # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
-        # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
+    def _get_serializer_data(self, model, serializer_class, queryset, for_csv=True):
+        """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
 
-        # select_related the single-valued relations so each exported row's natural-key columns
-        # (e.g. device_type__manufacturer__name) resolve in the JOIN rather than a per-row FK lookup.
+        Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
+        JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
+        """
+        # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
+        # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
+        # the same reason CSV_NATURAL_KEY_QUERY_CHUNK exists -- MySQL rejects a statement joining more than
+        # 61 tables (#8454). Dropping the excess only costs a lazy load, since this is purely an optimization.
         fk_field_names = [field.name for field in model._meta.fields if field.is_relation]
         if fk_field_names:
-            queryset = queryset.select_related(*fk_field_names)
+            queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
 
         # Include M2M fields (represented by member natural keys) and prefetch them so serialization
         # doesn't query per instance; select_related the members' own relations so composite-keyed
-        # members (whose natural key spans an FK) don't trigger a nested per-member lookup.
+        # members (whose natural key spans an FK) don't trigger a nested per-member lookup. Each prefetch
+        # is its own statement, so its joins are bounded separately -- but bounded all the same.
         m2m_prefetches = []
         for m2m_field in model._meta.many_to_many:
             member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
             if member_fks:
-                m2m_prefetches.append(
-                    Prefetch(m2m_field.name, queryset=m2m_field.related_model.objects.select_related(*member_fks))
+                member_queryset = m2m_field.related_model.objects.select_related(
+                    *member_fks[:CSV_NATURAL_KEY_QUERY_CHUNK]
                 )
+                m2m_prefetches.append(Prefetch(m2m_field.name, queryset=member_queryset))
             else:
                 m2m_prefetches.append(m2m_field.name)
         if m2m_prefetches:
             queryset = queryset.prefetch_related(*m2m_prefetches)
 
-        context = {"request": None, "exclude_m2m": False}
-        serializer = serializer_class(queryset, many=True, context=context, force_csv=True)
+        # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
+        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
+        # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
+        serializer = serializer_class(queryset, many=True, context={"request": None}, exporting=True, force_csv=for_csv)
         return serializer.data
 
     @staticmethod
@@ -267,10 +275,8 @@ class ExportObjectList(Job):
         Reshape flat serializer records into the nested representation used by JSON/YAML exports.
 
         Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts
-        collapse to their value; comma-joined M2M strings become lists; url fields are dropped.
+        collapse to their value; url fields are dropped.
         """
-        serializer = serializer_class(context={"request": None, "depth": 0})
-        fields = serializer.fields
         records = []
         for record in serializer_data:
             reshaped = {}
@@ -284,12 +290,12 @@ class ExportObjectList(Job):
                 head = key.split("__", 1)[0]
                 if "__" in key:
                     flattened_heads.add(head)
-                if isinstance(fields.get(head), drf_serializers.ManyRelatedField) and isinstance(value, str):
-                    # Comma-joined scalar-keyed M2M members
-                    value = value.split(",") if value else []
                 reshaped[key] = value
             null_prefixes = self._null_reference_prefixes(reshaped)
-            nested = nest_flat_dict(reshaped, constants.CSV_NULL_SENTINELS)
+            # Only CSV_NO_OBJECT needs mapping: it is produced by the natural-key annotation itself (for an
+            # absent relation), whereas nulls already arrive as real None in this mode. CSV_NULL_TYPE is
+            # deliberately not listed, so a value that is literally the string "NULL" survives intact.
+            nested = nest_flat_dict(reshaped, (constants.CSV_NO_OBJECT,))
             for head in flattened_heads:
                 # Collapse each null relation to a single None, at the depth the sentinel actually reports
                 nested[head] = self._prune_missing_references(null_prefixes, head, nested.get(head))
@@ -338,8 +344,9 @@ class ExportObjectList(Job):
         self.logger.info(
             "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
         )
-        records = self._get_serializer_data(model, serializer_class, queryset)
-        if export_format in ("json", "yaml"):
+        is_document = export_format in ("json", "yaml")
+        records = self._get_serializer_data(model, serializer_class, queryset, for_csv=not is_document)
+        if is_document:
             self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
         else:
             self._render_csv(content_type, records, match_fields, filename)
