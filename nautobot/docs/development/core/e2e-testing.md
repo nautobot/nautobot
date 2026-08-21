@@ -146,10 +146,11 @@ the directory is the selector (`invoke e2e --app dcim`).
 | A method specific to one model's page | That app's page object, e.g. `nautobot/dcim/tests/e2e/pages/locations_page.py` |
 | A new shared fixture | `nautobot/e2e/fixtures.py` (keep this surface small) |
 
-When creating a new `nautobot/<app>/tests/e2e/` package, its `__init__.py` MUST call
-`block_unittest_discovery()` (copy the two lines from an existing app's). Nothing
-enforces this yet; without it, `nautobot-server test` discovery imports pytest-only
-modules and fails in environments without the e2e dependency group.
+When creating a new `nautobot/<app>/tests/e2e/` package, its `__init__.py` MUST
+re-export the discovery guard: `from nautobot.e2e import load_tests` (copy the line
+from an existing app's `__init__.py`). Nothing enforces this yet; without it,
+`nautobot-server test` discovery imports pytest-only modules and fails in
+environments without the e2e dependency group.
 
 ## Running the suite
 
