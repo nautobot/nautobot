@@ -48,7 +48,17 @@ There are two options for where to include these data compliance rule classes:
 
 #### Writing Data Compliance Rules in a Remote Git Repository
 
-A Git repository can be configured to add the `data compliance rules` context to store `DataComplianceRule` classes in source control. The app looks for a folder in your repo called `custom_validators`, and any Python files within that folder containing classes that implement `DataComplianceRule` will be imported. No code within the app itself needs to be added, changed, or modified.
+A Git repository can be configured to add the `data compliance rules` context to store `DataComplianceRule` classes in source control. During the Git Repository Sync job, Nautobot looks for a folder in your repo called `custom_validators`, and any Python files within that folder containing classes that implement `DataComplianceRule` will be imported, as long as `custom_validators` contains a `__init__.py`. Another `__init__.py` must be included in the Git root folder as well, otherwise the sync job will not be able to import the data validation classes.
+
+Hence the correct/discoverable repo structure looks like this:
+
+```shell
+.
+├── __init__.py
+├── custom_validators
+│   ├── __init__.py
+│   ├── my_data_compliance_rules.py
+```
 
 Below is a template data compliance rule class that would be stored in `custom_validators/my_data_compliance_rules.py` in a remote Git repository:
 
@@ -56,9 +66,10 @@ Below is a template data compliance rule class that would be stored in `custom_v
 import re
 from nautobot.apps.models import DataComplianceRule, ComplianceError
 
+
 class DesiredClassName(DataComplianceRule):
-    model = "desired.model" # Ex: 'dcim.device'
-    enforce = False # True/False enforce flag
+    model = "desired.model"  # Ex: 'dcim.device'
+    enforce = False  # True/False enforce flag
 
     def audit_desired_name_one(self):
         # Your logic to determine if this function has succeeded or failed
@@ -72,7 +83,7 @@ class DesiredClassName(DataComplianceRule):
 
     def audit(self):
         messages = {}
-        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]: # Add audit functions here
+        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]:  # Add audit functions here
             try:
                 fn()
             except ComplianceError as ex:
@@ -92,9 +103,10 @@ Below is a template data compliance rule class in `custom_validators/custom_vali
 ```python
 ...
 
+
 class DesiredClassName(DataComplianceRule):
-    model = "desired.model" # Ex: 'dcim.device'
-    enforce = False # True/False enforce flag
+    model = "desired.model"  # Ex: 'dcim.device'
+    enforce = False  # True/False enforce flag
 
     def audit_desired_name_one(self):
         # Your logic to determine if this function has succeeded or failed
@@ -108,13 +120,14 @@ class DesiredClassName(DataComplianceRule):
 
     def audit(self):
         messages = {}
-        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]: # Add audit functions here
+        for fn in [self.audit_desired_name_one, self.audit_desired_name_two]:  # Add audit functions here
             try:
                 fn()
             except ComplianceError as ex:
                 messages.update(ex.message_dict)
         if messages:
             raise ComplianceError(messages)
+
 
 custom_validators = list(CustomValidatorIterator()) + [DesiredClassName]
 ```
@@ -143,6 +156,7 @@ Additionally, the `data_validation` app automatically creates template extension
 ## Example
 
 Two data compliance rules will be created using two separate `DataComplianceRule` classes within a remote Git repository called `dve-datacompliance-demo` that check devices for the following:
+
 - `audit_device_name_chars` in `DeviceDataComplianceRules` - will mark a device invalid if the device name contains any special characters other than a dash (-), underscore (_), or period (.)
 - `audit_device_rack` in `RackDeviceComplianceRules` - will mark a device invalid if it is not assigned a rack
 
@@ -151,6 +165,7 @@ Two data compliance rules will be created using two separate `DataComplianceRule
 ```python
 import re
 from nautobot.apps.models import DataComplianceRule, ComplianceError
+
 
 class DeviceDataComplianceRules(DataComplianceRule):
     model = "dcim.device"
@@ -170,6 +185,7 @@ class DeviceDataComplianceRules(DataComplianceRule):
                 messages.update(ex.message_dict)
         if messages:
             raise ComplianceError(messages)
+
 
 class RackDeviceComplianceRules(DataComplianceRule):
     model = "dcim.device"

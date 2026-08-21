@@ -1,5 +1,6 @@
 import contextlib
 import logging
+from unittest import mock
 import uuid
 
 from django.contrib.contenttypes.models import ContentType
@@ -17,7 +18,7 @@ from nautobot.core.forms import (
 from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.cache import construct_cache_key, request_cache
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.forms import DeviceForm
 from nautobot.dcim.models import (
@@ -26,6 +27,7 @@ from nautobot.dcim.models import (
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
+    InventoryItem,
     Location,
     LocationType,
     Platform,
@@ -47,7 +49,8 @@ from nautobot.extras.models import (
     Status,
 )
 from nautobot.extras.models.jobs import JobLogEntry
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup
+from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
 
 
@@ -427,6 +430,27 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
         self.assertIsInstance(field, DynamicModelChoiceField)
         self.assertEqual(field.label, "rack")
 
+    def test_to_form_field_description_sanitized(self):
+        """A Relationship description is sanitized before being used as form field help_text.
+
+        Regression test for GHSA-56v6-2fhr-wxgq
+        """
+        relationship = Relationship(
+            label="XSS Relationship",
+            key="xss_relationship",
+            source_type=self.rack_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_MANY_TO_MANY,
+            description='<script>alert("XSS")</script>**bold**',
+        )
+        relationship.validated_save()
+
+        field = relationship.to_form_field("source")
+        # The script tag is stripped by the Markdown/nh3 sanitization...
+        self.assertNotIn("<script>", field.help_text)
+        # ...while legitimate Markdown is still rendered to HTML.
+        self.assertIn("<strong>bold</strong>", field.help_text)
+
     def test_check_if_key_is_graphql_safe(self):
         """
         Check the GraphQL validation method on CustomField Key Attribute.
@@ -525,6 +549,31 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                     manager_method(Location)
                 with self.assertNumQueries(0):
                     manager_method(Location, get_queryset=False)
+
+    def test_get_for_model_source_and_destination_reduce_redis_lookups_within_request_cache(self):
+        """
+        Repeated calls to get_for_model_source()/get_for_model_destination() for the same model should not each
+        round-trip to Redis when performed within a single `request_cache()` scope. This mirrors the real-world
+        N+1 pattern seen when the REST API's `depth` parameter causes the same Relationship definitions to be
+        looked up once per serialized related object.
+        """
+        manager = Relationship.objects
+
+        # Warm the shared (Redis) cache outside of any request_cache() scope.
+        manager.get_for_model_source(Location)
+        manager.get_for_model_destination(Location)
+
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+            with request_cache():
+                for _ in range(10):
+                    manager.get_for_model_source(Location)
+                    manager.get_for_model_source(Location, get_queryset=False)
+                    manager.get_for_model_destination(Location)
+                    manager.get_for_model_destination(Location, get_queryset=False)
+
+        # Only the first lookup of each distinct cache key should need to hit Redis; the rest should be served
+        # from the request-scoped local cache.
+        self.assertLessEqual(mock_cache_get.call_count, 4)
 
     def test_required_related_object_errors(self):
         """
@@ -1432,6 +1481,8 @@ class RequiredRelationshipTestMixin:
         DeviceTypeToSoftwareImageFile.objects.all().delete()
         # Protected FK to SoftwareVersion prevents deletion
         Device.objects.all().update(software_version=None)
+        InventoryItem.objects.all().update(software_version=None)
+        VirtualMachine.objects.all().update(software_version=None)
 
         ControllerManagedDeviceGroup.objects.all().delete()
         Controller.objects.all().delete()
@@ -1778,6 +1829,7 @@ class RelationshipJobTestCase(RequiredRelationshipTestMixin, TransactionTestCase
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         ControllerManagedDeviceGroupWirelessNetworkAssignment.objects.all().delete()

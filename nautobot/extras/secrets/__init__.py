@@ -1,10 +1,13 @@
 from abc import ABC, abstractmethod
+import logging
 
 from jinja2.sandbox import unsafe
 
 from nautobot.extras.registry import registry
 
 from .exceptions import SecretError, SecretParametersError, SecretProviderError, SecretValueNotFoundError
+
+logger = logging.getLogger(__name__)
 
 
 class SecretsProvider(ABC):
@@ -63,6 +66,10 @@ def register_secrets_provider(provider):
     if not issubclass(provider, SecretsProvider):
         raise TypeError(f"{provider} must be a subclass of extras.secrets.SecretsProvider")
     if provider.slug in registry["secrets_providers"]:
+        if registry["secrets_providers"][provider.slug] == provider:
+            # Repeat registration of the exact same provider is harmless
+            return
+        # else, this is a problem:
         raise KeyError(
             f'Cannot register {provider} as slug "{provider.slug}" is already registered '
             f"by {registry['secrets_providers'][provider.slug]}"

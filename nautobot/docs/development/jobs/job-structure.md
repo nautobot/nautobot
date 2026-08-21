@@ -38,8 +38,9 @@ This is done using the `register_jobs()` helper:
 ```python
 from nautobot.apps.jobs import Job, register_jobs
 
-class HelloWorldJob(Job):
-    ...
+
+class HelloWorldJob(Job): ...
+
 
 register_jobs(HelloWorldJob)
 ```
@@ -53,7 +54,7 @@ register_jobs(CleanupDevices, SyncInventory)
 ### Where to Register
 
 - For files in `JOBS_ROOT`, register Jobs directly in the file or from a top-level `__init__.py` that imports submodules.
-- For Git-based Jobs, use the `jobs/__init__.py` file in the repo to register all your Job classes.
+- For Git-based Jobs, registering all Job classes from `jobs/__init__.py` is the recommended pattern, since it gives the repository a single source of truth for which Jobs it exposes.
 - For App-based Jobs, register them in the module defined by your App's `NautobotAppConfig.jobs` property (default: `jobs`).
 
 If you don't call `register_jobs()`, Nautobot will skip your class during startup, even if it's defined correctly.
@@ -108,13 +109,44 @@ Default: `False`
 
 A boolean that will mark this Job as requiring approval from another user to be run. For more details on approvals, [please refer to the section on scheduling and approvals](../../user-guide/platform-functionality/jobs/job-scheduling-and-approvals.md).
 
-### `console_log`
+### `console_log_default`
 
 +++ 3.1.0
 
 Default: `False`
 
 A boolean controls how job stdout/stderr is handled and where the job is executed. Set to `True` enables live, line-by-line job output by executing the job in a subprocess.
+
+#### Configuration precedence
+
+The effective value of `console_log` is determined by the following roles,
+evaluated in order (lowest to highest priority):
+
+1. **Job Author**
+   Declares the default behavior in the job code.
+
+2. **Job Admin**
+   May override the author-defined default using Nautobot job settings.
+
+3. **Job Runner**
+   May override both the author and admin settings at execution time.
+
+The **Job Runner setting always takes precedence**, followed by the Job Admin,
+and finally the Job Author default.
+
+#### Examples
+
+| Job Author | Job Admin Override | Job Runner | Effective Value |
+|------------|--------------------|------------|-----------------|
+| ON         | -                  | -          | ON              |
+| ON         | OFF                | -          | OFF             |
+| ON         | OFF                | ON         | ON              |
+| OFF        | -                  | -          | OFF             |
+| OFF        | ON                 | -          | ON              |
+| OFF        | ON                 | OFF        | OFF             |
+
+This precedence model allows job authors to provide sensible defaults, administrators
+to enforce platform-wide behavior, and runners to make execution-specific decisions.
 
 ### `dryrun_default`
 
@@ -199,6 +231,7 @@ The `celery.exceptions.SoftTimeLimitExceeded` exception will be raised when this
 from celery.exceptions import SoftTimeLimitExceeded
 from nautobot.apps.jobs import Job
 
+
 class ExampleJobWithSoftTimeLimit(Job):
     class Meta:
         name = "Soft Time Limit"
@@ -270,6 +303,7 @@ Unlike the `soft_time_limit` above, no exceptions are raised when a `time_limit`
 ```python
 from nautobot.apps.jobs import Job
 
+
 class ExampleJobWithHardTimeLimit(Job):
     class Meta:
         name = "Hard Time Limit"
@@ -296,24 +330,26 @@ from nautobot.apps import jobs
 
 name = "Hello Jobs"
 
+
 class HelloJobs(jobs.Job):
     class Meta:
         name = "Say Hello"
 
     person_name = jobs.StringVar(
         description="Name of the person to greet",
-        default="world"
+        default="world",
     )
 
     greeting_count = jobs.IntegerVar(
         description="How many times to greet",
         default=1,
-        min_value=1
+        min_value=1,
     )
 
     def run(self, *, person_name, greeting_count):
         for i in range(greeting_count):
             self.logger.info("Hello, %s! (%d)", person_name, i + 1)
+
 
 jobs.register_jobs(HelloJobs)
 ```
@@ -352,6 +388,7 @@ Accepts JSON-formatted data of any length. Renders as a multi-line text input fi
 
 ```python
 from nautobot.apps.jobs import Job, JSONVar
+
 
 class ExampleJSONVarJob(Job):
     var1 = JSONVar(
@@ -399,14 +436,13 @@ DIRECTIONS = (
     ("w", "West"),
 )
 
+
 class CompassJob(Job):
-    direction = ChoiceVar(
-        choices=DIRECTIONS,
-        description="Choose a cardinal direction."
-    )
+    direction = ChoiceVar(choices=DIRECTIONS, description="Choose a cardinal direction.")
 
     def run(self, *, direction):
         self.logger.info("You chose to go: %s", dict(DIRECTIONS)[direction])
+
 
 register_jobs(CompassJob)
 ```
@@ -434,14 +470,13 @@ You can customize how objects appear in the selection dropdown and what subset o
 from nautobot.apps.jobs import Job, ObjectVar, register_jobs
 from nautobot.dcim.models import Device
 
+
 class ChooseDevice(Job):
-    device = ObjectVar(
-        model=Device,
-        description="Pick a device to validate."
-    )
+    device = ObjectVar(model=Device, description="Pick a device to validate.")
 
     def run(self, *, device):
         self.logger.info("You selected the device: %s", device)
+
 
 register_jobs(ChooseDevice)
 ```
@@ -465,7 +500,7 @@ You can also use dot notation to reference nested or related fields, such as a V
 vlan = ObjectVar(
     model=VLAN,
     display_field="vlan_group.name",
-    query_params={"depth": 1}  # Ensures nested objects are populated
+    query_params={"depth": 1},  # Ensures nested objects are populated
 )
 ```
 
@@ -479,7 +514,7 @@ Another example of using the nested reference would be to access [computed field
 interface = ObjectVar(
     model=Interface,
     display_field="computed_fields.mycustomfield",
-    query_params={"include": "computed_fields"}
+    query_params={"include": "computed_fields"},
 )
 ```
 
@@ -488,12 +523,7 @@ This allows users to see custom-calculated values - like interface capacity scor
 To limit the selections available within the list, additional query parameters can be passed as the `query_params` dictionary. For example, to show only devices with an "active" status:
 
 ```python
-device = ObjectVar(
-    model=Device,
-    query_params={
-        'status': 'active'
-    }
-)
+device = ObjectVar(model=Device, query_params={"status": "active"})
 ```
 
 #### Filtering Options with `query_params`
@@ -501,27 +531,20 @@ device = ObjectVar(
 Use `query_params` to filter which objects appear in the dropdown. For example, only show devices that are "active":
 
 ```python
-device = ObjectVar(
-    model=Device,
-    query_params={"status": "active"}
-)
+device = ObjectVar(model=Device, query_params={"status": "active"})
 ```
 
 Multiple values can be specified by assigning a list to the dictionary key. It is also possible to reference the value of other fields in the form by prepending a dollar sign (`$`) to the variable's name. The keys you can use in this dictionary are the same ones that are available in the REST API - as an example it is also possible to filter the `Location` `ObjectVar` for its `location_type` and `tenant_group`.
 
 ```python
-location_type = ObjectVar(
-    model=LocationType
-)
-tenant_group = ObjectVar(
-    model=TenantGroup
-)
+location_type = ObjectVar(model=LocationType)
+tenant_group = ObjectVar(model=TenantGroup)
 location = ObjectVar(
     model=Location,
     query_params={
         "location_type": "$location_type",
-        "tenant_group": "$tenant_group"
-    }
+        "tenant_group": "$tenant_group",
+    },
 )
 ```
 
@@ -541,6 +564,7 @@ If you want to retain output from a Job (e.g. processed data or error logs), you
 import csv
 from nautobot.apps.jobs import Job, FileVar, register_jobs
 
+
 class ReadCSVJob(Job):
     class Meta:
         name = "Read CSV Upload"
@@ -552,6 +576,7 @@ class ReadCSVJob(Job):
         reader = csv.DictReader(decoded_file)
         for row in reader:
             self.logger.info("Hostname: %s, IP Address: %s", row["hostname"], row["ip_address"])
+
 
 register_jobs(ReadCSVJob)
 ```
@@ -606,6 +631,7 @@ This is useful when you want to:
 ```python
 from nautobot.apps.jobs import Job, register_jobs
 
+
 class ExportText(Job):
     class Meta:
         name = "Export Text File"
@@ -613,6 +639,7 @@ class ExportText(Job):
     def run(self):
         self.create_file("output.txt", "Export completed successfully.")
         self.logger.info("File has been created for download.")
+
 
 register_jobs(ExportText)
 ```
@@ -631,11 +658,13 @@ Here's a basic structure:
 ```python
 from nautobot.apps.jobs import Job, StringVar
 
+
 class SimpleGreetingJob(Job):
     name_input = StringVar(description="Who should we greet?")
 
     def run(self, *, name_input):
         self.logger.info("Hello, %s!", name_input)
+
 
 register_jobs(SimpleGreetingJob)
 ```
@@ -662,6 +691,7 @@ Calling `self.fail()` is useful for validation or soft failures that don't requi
 ```python
 from nautobot.apps.jobs import Job, StringVar, register_jobs
 
+
 class CheckOccasion(Job):
     occasion = StringVar(description="Enter an occasion")
 
@@ -675,6 +705,7 @@ class CheckOccasion(Job):
 
         self.logger.info("Perfect! Today is %s", occasion)
         return occasion
+
 
 register_jobs(CheckOccasion)
 ```

@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Literal
 from urllib.parse import parse_qs, quote_plus
+import uuid
 
 from django import template
 from django.apps import apps
@@ -27,7 +28,8 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import NAUTOBOT_STATIC_ASSETS, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -219,6 +221,10 @@ def render_markdown(value):
     Example:
         {{ text | render_markdown }}
     """
+    # Gracefully handle null values
+    if value is None:
+        value = ""
+
     # Render Markdown
     html = markdown(value, extensions=["fenced_code", "tables"])
 
@@ -431,7 +437,7 @@ def tzoffset(value):
 @register.filter()
 def fgcolor(value):
     """
-    Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
+    Return the ideal foreground color (black or white) given an arbitrary background color in RRGGBB format.
 
     Args:
         value (str): Color in RRGGBB format, with or without #
@@ -441,7 +447,7 @@ def fgcolor(value):
 
     Example:
         >>> fgcolor("#999999")
-        "#ffffff"
+        "#000000"
     """
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
@@ -555,6 +561,13 @@ def get_docs_url(model):
 
 @library.filter()
 @register.filter()
+def has_perm(user, permission: str):
+    """Simple wrapper for `user.has_perm()` - True if the user has the specific permission, else False."""
+    return user.has_perm(permission)
+
+
+@library.filter()
+@register.filter()
 def has_perms(user, permissions_list):
     """
     Return True if the user has *all* permissions in the list.
@@ -652,13 +665,36 @@ def get_item(d, key):
     return d.get(key)
 
 
-@library.filter()
 @register.filter()
 def settings_or_config(key, app_name=None):
-    """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
+    """Get a value from Django settings/Constance, or from an app's `PLUGINS_CONFIG` (Django template filter).
+
+    Passing `app_name` returns a value from that app's `PLUGINS_CONFIG`. This is supported only in the
+    Django template filter, which is usable from trusted server-side HTML templates.
+    For core settings/config, only non-sensitive allowlisted values may be read;
+    requesting any other setting is treated as though it does not exist.
+    """
     if app_name:
         return get_app_settings_or_config(app_name, key)
+    if not config.is_template_exposable_setting(key):
+        # Treat a non-exposable setting as though it does not exist.
+        raise AttributeError(key)
     return config.get_settings_or_config(key)
+
+
+# Using name="settings_or_config" allows us to define the same filter as above in both places with different function names.
+# This is for backwards compatibility with existing Jinja2 templates that may legitimately use the "settings_or_config" filter.
+@library.filter(name="settings_or_config")
+def settings_or_config_jinja(key, app_name=None):
+    """Get a value from Django settings or Constance configuration (Jinja template filter).
+
+    Unlike the Django template filter, this Jinja variant does not support the `app_name` argument:
+    user-authored templates must not be able to read arbitrary app `PLUGINS_CONFIG` values, which may
+    contain secrets. Only non-sensitive allowlisted settings and Constance configuration may be read.
+    """
+    if app_name is not None:
+        raise ValueError("The 'settings_or_config' filter does not support the 'app_name' argument in Jinja templates.")
+    return settings_or_config(key)
 
 
 @library.filter()
@@ -999,6 +1035,21 @@ def table_config_button(table, table_name=None, extra_classes="", disabled=False
     return format_html(html_template, extra_classes, table_name, "disabled" if disabled else "", table_name)
 
 
+@register.simple_tag()
+def searchable_fields_for_content_type(content_type):
+    """Return the fields searchable via the list-view search bar for the given ContentType's model.
+
+    Returns `None` if `content_type` is falsy, its model can't be resolved, or the model's FilterSet does
+    not define a `q` `SearchFilter`. Used to render the search bar help tooltip.
+    """
+    if not content_type:
+        return None
+    model = content_type.model_class()
+    if model is None:
+        return None
+    return lookup.get_searchable_fields_for_model(model)
+
+
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
 def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=90):
     """Wrapper for a horizontal bar graph indicating a percentage of utilization from a tuple of data.
@@ -1279,15 +1330,117 @@ def advanced_filter_indicator(basic_filter_form, filter_params):
     return {"is_visible": is_visible}
 
 
-@register.simple_tag
-def custom_branding_or_static(branding_asset, static_asset):
+@register.inclusion_tag("utilities/templatetags/toast.html")
+def toast(
+    content,
+    autohide=None,
+    buttons=None,
+    delay=10000,
+    dismissible=True,
+    html_id=None,
+    icon=None,
+    status=None,
+    title="",
+):
+    """Render a toast notification.
+
+    It is recommended to append toasts to the `#toast-messages` container, which is how the notifications created
+    using the Django messages framework behave. This toast container is out-of-the-box marked as the page's live
+    region, and automatically shows and dismisses toasts via `messages.js` frontend scripting.
+
+    All markup-bearing arguments (`buttons`, `content`, `icon`, `title`) are rendered with Django autoescaping, so
+    plain strings are escaped and only `SafeString` values are treated as HTML. Preferably, build them with
+    `format_html` in Python.
+
+    Args:
+        content (str): Toast body. Escaped unless it is a `SafeString`.
+        autohide (Optional[bool]): Whether the toast dismisses itself after `delay`. Defaults to `True`, except
+            when `buttons` are given, so toasts requiring a response are not dismissed before they can be acted on.
+        buttons (Optional[str]): Markup for the toast footer, typically call-to-action buttons. Escaped unless it
+            is a `SafeString`.
+        delay (int): Milliseconds before an autohiding toast dismisses itself. Defaults to `10000`.
+        dismissible (bool): Whether to render a close button. Defaults to `True`.
+        html_id (Optional[str]): HTML `id` of the toast. Generated if not given.
+        icon (Optional[str]): Markup for the toast header icon. Escaped unless it is a `SafeString`.
+            Defaults to an icon derived from `status`.
+        status (Optional[str]): Contextual status: one of `danger`, `info`, `primary`, `secondary`, `success`,
+            or `warning`. Selects both the toast styling and the default `icon`.
+        title (str): Toast header text. Escaped unless it is a `SafeString`.
+
+    Returns:
+        (dict): Template context for `utilities/templatetags/toast.html`.
+
+    Example:
+        {% toast content="Device created." status="success" title="Success" %}
     """
-    This tag attempts to return custom branding assets relative to the MEDIA_ROOT and MEDIA_URL, if such
-    branding has been configured in settings, else it returns stock branding via static.
+    if autohide is None:
+        autohide = not buttons
+
+    if not html_id:
+        html_id = f"toast_{uuid.uuid4()}"
+
+    if not icon:
+        if status == "primary":
+            icon = format_html(
+                """
+                    <img
+                        aria-hidden="true"
+                        alt=""
+                        class="flex-grow-0 flex-shrink-0 my-n2"
+                        src="{}"
+                        style="width: 1.25rem;"
+                    >
+                """,
+                static("img/nautobot_chevron.svg"),
+            )
+        else:
+            mdi = {
+                "danger": "mdi-alert-circle-outline",
+                "info": "mdi-information-outline",
+                "success": "mdi-check-circle-outline",
+                "warning": "mdi-alert-outline",
+            }.get(status, "mdi-lightbulb-on-outline")
+            icon = format_html('<span aria-hidden="true" class="mdi {}"></span>', mdi)
+
+    return {
+        "autohide": autohide,
+        "buttons": buttons,
+        "content": content,
+        "delay": delay,
+        "dismissible": dismissible,
+        "html_id": html_id,
+        "icon": icon,
+        "status": status,
+        "title": title,
+    }
+
+
+@register.simple_tag
+def custom_branding_or_static(branding_asset, static_asset=None):
+    """
+    Return the URL of an asset, honoring the following precedence:
+
+    1. Custom branding configured via `settings.BRANDING_FILEPATHS` (relative to MEDIA_ROOT/MEDIA_URL).
+    2. The static asset for the active Nautobot edition, falling back to the "community" asset for any
+       branding key the edition does not override.
+    3. The caller-provided `static_asset`, used as a backup for branding keys not defined for any edition.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
+
+    # TODO(4.0): Remove. Honor a custom `icon_32` for the navbar (the pre-`navbar_icon` key) for back-compatibility.
+    elif branding_asset == "navbar_icon" and settings.BRANDING_FILEPATHS.get("icon_32"):
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get('icon_32')}"
     else:
+        nautobot_edition_for_asset = config.get_nautobot_edition()
+        assets_for_edition = NAUTOBOT_STATIC_ASSETS.get(
+            nautobot_edition_for_asset, NAUTOBOT_STATIC_ASSETS[NautobotEditionChoices.DEFAULT]
+        )
+        # TODO(4.0): Remove the `static_asset` parameter and this backup. It is retained only for
+        # backward compatibility with callers of the previous two-argument signature; the edition map is
+        # now the source of stock asset defaults.
+        # The edition asset wins for known keys; `static_asset` is the backup for anything else.
+        static_asset = assets_for_edition.get(branding_asset, static_asset)
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
 

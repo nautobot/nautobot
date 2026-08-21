@@ -133,9 +133,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_OKTA_OAUTH2_KEY = '<Client ID from Okta>'
-SOCIAL_AUTH_OKTA_OAUTH2_SECRET = '<Client Secret From Okta>'
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = 'https://<Okta URL>'
+SOCIAL_AUTH_OKTA_OAUTH2_KEY = "<Client ID from Okta>"
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = "<Client Secret From Okta>"
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = "https://<Okta URL>"
 ```
 
 #### Okta - OpenID
@@ -148,9 +148,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = '<Client ID from Okta>'
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = '<Client Secret From Okta>'
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authentication Server>'
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = "<Client ID from Okta>"
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = "<Client Secret From Okta>"
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = "https://<Okta URL>/oauth2/<Authentication Server>"
 ```
 
 The `/default` authentication server can be used for testing, however, it should not be used in production.
@@ -193,7 +193,7 @@ AUTHENTICATION_BACKENDS = [
 SOCIAL_AUTH_SAML_SP_ENTITY_ID = "https://nautobot.example.com/"
 
 # X.509 cert/key pair used for host verification are not used for this example because
-# Nautobot is directly authenticating itself to Google. Set them to empty strings.
+# Nautobot is directly authenticating itself to Okta. Set them to empty strings.
 SOCIAL_AUTH_SAML_SP_PUBLIC_CERT = ""
 SOCIAL_AUTH_SAML_SP_PRIVATE_KEY = ""
 
@@ -210,13 +210,13 @@ SOCIAL_AUTH_SAML_ORG_INFO = {
 # Technical point of contact
 SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
     "givenName": "Bob Jones",
-    "emailAddress": "bob@example.com"
+    "emailAddress": "bob@example.com",
 }
 
 # Support point of contact
 SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
     "givenName": "Alice Jenkins",
-    "emailAddress": "alice@example.com"
+    "emailAddress": "alice@example.com",
 }
 
 # The Issuer URL for Okta from step 9
@@ -232,14 +232,11 @@ OKTA_CERTIFICATE = "<Signing Certificate from Okta>"
 # for each provider that you app wants to support.
 SOCIAL_AUTH_SAML_ENABLED_IDPS = {
     "okta": {
-        'force_authn': "true",
-        'allow_unsolicited': "true",
-        'requested_authn_context': "false",
         "entity_id": OKTA_ENTITY_ID,
         "url": OKTA_SSO_URL,
         "x509cert": OKTA_CERTIFICATE,
-        # These are used to map to User object fields in Nautobot using Google
-        # attribute fields we configured in step 8 of "Setup SAML in Google".
+        # These are used to map to User object fields in Nautobot using the Okta
+        # attribute statements we configured in step 5 of "Setup SAML in Okta".
         "attr_user_permanent_id": "emailAddress",
         "attr_first_name": "firstName",
         "attr_last_name": "lastName",
@@ -248,17 +245,30 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {
     }
 }
 
+# Optional: SAML security settings, applied to all SAML requests. For example, setting
+# "requestedAuthnContext" to False lets the IdP decide how to authenticate the user,
+# so users with an active IdP session are not prompted for credentials again.
+SOCIAL_AUTH_SAML_SECURITY_CONFIG = {
+    "requestedAuthnContext": False,
+}
+
 # Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
+
+!!! warning
+    Nautobot currently supports only a single SAML identity provider at a time. Only the first key defined in `SOCIAL_AUTH_SAML_ENABLED_IDPS` is used when building the login URL.
+
+!!! note
+    SAML security options (such as `requestedAuthnContext`) are configured in `SOCIAL_AUTH_SAML_SECURITY_CONFIG` and apply to all configured identity providers. These settings are passed through to the underlying [`python3-saml`](https://github.com/SAML-Toolkits/python3-saml) library; the full list of available options is documented under the `security` key in the [python3-saml settings documentation](https://github.com/SAML-Toolkits/python3-saml#settings).
 
 #### Login with Okta SAML
 
 Note the provider entry we configured in SOCIAL_AUTH_SAML_ENABLED_IDPS as okta. This will be used to login and will be referenced in the query parameter using idp=okta. For example /login/saml/?idp=okta.
 
-This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account", log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
+This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Okta, log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
 
 Be sure to configure EXTERNAL_AUTH_DEFAULT_GROUPS and EXTERNAL_AUTH_DEFAULT_PERMISSIONS next.
 
@@ -267,13 +277,13 @@ Be sure to configure EXTERNAL_AUTH_DEFAULT_GROUPS and EXTERNAL_AUTH_DEFAULT_PERM
 It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list. For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
 
 ```python
-SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ['groups']
+SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["groups"]
 ```
 
 for OpenID:
 
 ```python
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ["groups"]
 ```
 
 In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [`python-social-auth` authentication pipeline documentation](https://python-social-auth.readthedocs.io/en/stable/pipeline.html).
@@ -317,9 +327,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<Client ID from Google>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "<Client ID from Google>"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "<Secret ID from Google>"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ["openid"]
 ```
 
 #### Google - SAML
@@ -396,13 +406,13 @@ SOCIAL_AUTH_SAML_ORG_INFO = {
 # Technical point of contact
 SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
     "givenName": "Bob Jones",
-    "emailAddress": "bob@example.com"
+    "emailAddress": "bob@example.com",
 }
 
 # Support point of contact
 SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
     "givenName": "Alice Jenkins",
-    "emailAddress": "alice@example.com"
+    "emailAddress": "alice@example.com",
 }
 
 # The Entity ID URL for Google from step 3
@@ -435,8 +445,11 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {
 # Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
+
+!!! warning
+    Nautobot currently supports only a single SAML identity provider at a time. Only the first key defined in `SOCIAL_AUTH_SAML_ENABLED_IDPS` is used when building the login URL.
 
 ##### Enable SAML in Google
 
@@ -489,7 +502,7 @@ class MetadataView(View):
             config = saml_backend.generate_saml_config()
             return HttpResponse(
                 content=f"ERROR: {saml_error}, SAML backend config is {config}",
-                content_type="text/plain"
+                content_type="text/plain",
             )
 ```
 
@@ -553,6 +566,10 @@ A group syncing function is provided and but needs to be configured. See [Group 
     You may need to set `UWSGI_BUFFER_SIZE` to something bigger than the default 4096 bytes in the UWSGI config if you are seeing errors like `invalid request block size` in your application logs (see [here](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size) for more information)
 
 ## Group Syncing
+
+Nautobot can synchronize a user's group memberships from the SSO response each time they log in, and optionally flag members of specific groups as staff or superusers. This works with OAuth2/OIDC providers, where the group claim appears at the top level of the response, as well as with SAML providers, where the group attribute is nested under the SAML assertion's attributes.
+
++++ 3.2.2 "SAML support"
 
 To do so `nautobot.extras.group_sync.group_sync` must be part of `SOCIAL_AUTH_PIPELINE` which can be achieved
 by setting the environment variable `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true`. Or by setting

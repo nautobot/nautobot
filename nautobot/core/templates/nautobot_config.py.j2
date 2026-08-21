@@ -115,6 +115,15 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 # if "NAUTOBOT_CSRF_TRUSTED_ORIGINS" in os.environ and os.environ["NAUTOBOT_CSRF_TRUSTED_ORIGINS"] != "":
 #    CSRF_TRUSTED_ORIGINS = os.getenv("NAUTOBOT_CSRF_TRUSTED_ORIGINS", "").split(_CONFIG_SETTING_SEPARATOR)
 
+# Date/time formatting. See the following link for supported formats:
+# https://docs.djangoproject.com/en/stable/ref/templates/builtins/#date
+#
+# DATE_FORMAT = os.getenv("NAUTOBOT_DATE_FORMAT", "N j, Y")
+# SHORT_DATE_FORMAT = os.getenv("NAUTOBOT_SHORT_DATE_FORMAT", "Y-m-d")
+# TIME_FORMAT = os.getenv("NAUTOBOT_TIME_FORMAT", "g:i a")
+# DATETIME_FORMAT = os.getenv("NAUTOBOT_DATETIME_FORMAT", "N j, Y g:i a")
+# SHORT_DATETIME_FORMAT = os.getenv("NAUTOBOT_SHORT_DATETIME_FORMAT", "Y-m-d H:i")
+
 # Set to True to enable server debugging. WARNING: Debugging introduces a substantial performance penalty and may reveal
 # sensitive information about your installation. Only enable debugging while performing testing. Never enable debugging
 # on a production system.
@@ -350,6 +359,9 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #     r'^(https?://)?(\w+\.)?example\.com$',
 # ]
 
+# Sender address for emails sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+# DEFAULT_FROM_EMAIL = os.getenv("NAUTOBOT_DEFAULT_FROM_EMAIL", "webmaster@localhost")
+
 # UUID uniquely but anonymously identifying this Nautobot deployment.
 #
 # if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID"] != "":
@@ -362,6 +374,19 @@ SECRET_KEY = os.getenv("NAUTOBOT_SECRET_KEY", "{{ secret_key }}")
 #   - 'none': No enforced uniqueness (rely on other validation rules or custom validators)
 # if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
 #     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
+
+# SMTP settings for outbound email sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+# EMAIL_HOST = os.getenv("NAUTOBOT_EMAIL_HOST", "localhost")
+# EMAIL_HOST_PASSWORD = os.getenv("NAUTOBOT_EMAIL_HOST_PASSWORD", "")
+# EMAIL_HOST_USER = os.getenv("NAUTOBOT_EMAIL_HOST_USER", "")
+# EMAIL_PORT = int(os.getenv("NAUTOBOT_EMAIL_PORT", "25"))
+# if "NAUTOBOT_EMAIL_SSL_CERTFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"] != "":
+#     EMAIL_SSL_CERTFILE = os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"]
+# if "NAUTOBOT_EMAIL_SSL_KEYFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"] != "":
+#     EMAIL_SSL_KEYFILE = os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"]
+# EMAIL_TIMEOUT = int(os.getenv("NAUTOBOT_EMAIL_TIMEOUT", "30"))
+# EMAIL_USE_SSL = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_SSL", "False"))
+# EMAIL_USE_TLS = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_TLS", "False"))
 
 # Event Brokers
 # EVENT_BROKERS = {}
@@ -408,6 +433,14 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 # Directory where Jobs can be discovered.
 #
 # JOBS_ROOT = os.getenv("NAUTOBOT_JOBS_ROOT", os.path.join(NAUTOBOT_ROOT, "jobs").rstrip("/"))
+
+# Default filters for Location list view
+#
+# if (
+#     "NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH" in os.environ
+#     and os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"] != ""
+# ):
+#     LOCATION_LIST_DEFAULT_MAX_DEPTH = int(os.environ["NAUTOBOT_LOCATION_LIST_DEFAULT_MAX_DEPTH"])
 
 # Location names are not guaranteed globally-unique by Nautobot but in practice they often are.
 # Set this to True to use the location name alone as the natural key for Location objects.
@@ -606,6 +639,23 @@ INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRIC
 #     :type: str
 #     """
 #     return str(device_display_name).split(".")[0]
+
+# Webhook URL schemes permitted for the `payload_url` field. Defaults to HTTP and HTTPS.
+#
+# WEBHOOK_ALLOWED_SCHEMES = ["http", "https"]
+
+# Hostnames that Webhooks may target even if they would otherwise resolve into a blocked network range. Django
+# `ALLOWED_HOSTS`-style: literal hostnames or `.example.com` to match a domain and all of its subdomains. Use `*`
+# to disable network filtering entirely (not recommended).
+#
+# WEBHOOK_ALLOWED_HOSTS = []
+
+# Network ranges (CIDR strings) added to the built-in Webhook block-list. The built-in block-list (loopback,
+# link-local including cloud metadata endpoints such as 169.254.169.254, unspecified, multicast, and reserved)
+# is enforced unconditionally and cannot be disabled. Use this setting to extend it -- e.g. add the RFC1918
+# private ranges below for stricter posture in deployments that don't legitimately webhook into private networks.
+#
+# WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"]
 
 # A list of strings designating all applications that are enabled in this Django installation.
 # Each string should be a dotted Python path to an application configuration class (preferred),

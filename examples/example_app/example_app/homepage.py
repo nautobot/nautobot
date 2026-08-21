@@ -10,6 +10,10 @@ def get_example_data(request):
             ExampleModel.objects.create(name="Example 1", number=100),
             ExampleModel.objects.create(name="Example 2", number=200),
             ExampleModel.objects.create(name="Example 3", number=300),
+            # "Archived" records (negative number) hidden from the default list view by
+            # ExampleModelUIViewSet.alter_queryset(), to demonstrate implicit view scoping.
+            ExampleModel.objects.create(name="Example 4 (Archived)", number=-100),
+            ExampleModel.objects.create(name="Example 5 (Archived)", number=-200),
         )
     return examples
 

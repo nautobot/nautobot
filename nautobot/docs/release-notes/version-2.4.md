@@ -2,6 +2,8 @@
 
 This document describes all new features and changes in Nautobot 2.4.
 
++**Security Note:** Several CVE fixes in the 2.4.38 release introduce [Breaking Changes](#breaking-changes). These changes most commonly surface as unexpected `TypeError`, `AttributeError`, or `KeyError` responses for REST API and GraphQL clients.
+
 ## Upgrade Actions
 
 ### Administrators
@@ -20,6 +22,117 @@ This document describes all new features and changes in Nautobot 2.4.
 - Job authors should be aware of the introduction of [Job Queues](#kubernetes-job-execution-and-job-queue-data-model-experimental) as a general-purpose replacement for the Celery-specific `Job.task_queues` attribute, and if a Job specifies its preferred `task_queues`, should verify that the queue selected as its `default_job_queue` after the Nautobot upgrade is correct.
 
 ## Release Overview
+
+### Breaking Changes
+
+#### REST API Permissions Enforcement on Related Objects
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx), the REST API now enforces object-level `view` permissions when traversing from a requested object to its related objects via the [`?depth` query parameter](../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter). At `?depth=1` and beyond, a related object that the requesting user does not have permission to view is no longer serialized in full, but is instead restricted to a brief representation containing only its `id`, `object_type`, `url`, and `display` values. See [REST API Object Permissions](../user-guide/platform-functionality/rest-api/object-permissions.md) for full details.
+
+REST API clients operating with limited permissions may now receive the brief representation where a fully serialized related object was previously returned, client code that assumes the presence of other nested fields will typically surface this as a `TypeError`, `AttributeError`, or `KeyError`.
+
+For example, consider a user with `view` permission on `Devices` but not on `Locations` requesting `GET /api/dcim/devices/<uuid>/?depth=1`. Previously, the device's location was serialized in full:
+
+```json
+{
+    "name": "device1",
+    "location": {
+        "id": "8badf00d-0000-0000-0000-000000000000",
+        "object_type": "dcim.location",
+        "url": "https://nautobot.example.com/api/dcim/locations/8badf00d-0000-0000-0000-000000000000/",
+        "name": "AMER",
+        "description": "North and South America",
+        "...": "..."
+    }
+}
+```
+
+Now, because the user lacks permission to view the Location, only the brief representation is returned:
+
+```json
+{
+    "name": "device1",
+    "location": {
+        "id": "8badf00d-0000-0000-0000-000000000000",
+        "object_type": "dcim.location",
+        "url": "https://nautobot.example.com/api/dcim/locations/8badf00d-0000-0000-0000-000000000000/",
+        "display": "AMER"
+    }
+}
+```
+
+Client code such as `response["location"]["name"]` that previously worked will now raise a `KeyError`. To restore the previous behavior, grant the requesting user `view` permission on the related model (in this example, `dcim.location`), with [constraints](../user-guide/platform-functionality/users/objectpermission.md) as appropriate. Alternatively, update the client code to tolerate the brief representation, for example by falling back to the `display` value or by retrieving the related object separately via its `url`.
+
+#### GraphQL Permissions Enforcement on Related Objects
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2), GraphQL queries now enforce object-level `view` permissions when traversing the object graph into related models, not just at the root of the query. A query field resolving to a single related object now returns `null` if the user lacks permission to view that object, and a field resolving to a list of objects now includes only the objects the user is permitted to view. See [GraphQL Permissions Enforcement](../user-guide/platform-functionality/graphql.md#permissions-enforcement) for full details.
+
+GraphQL clients operating with limited permissions may now receive `null` values or shorter lists where full data was previously returned. Client code that assumes a related object is present will typically surface as a `TypeError`, `AttributeError`, or `KeyError`.
+
+For example, consider a user with `view` permission on `Devices` but not on `Locations` or `Interfaces` running the following query:
+
+```graphql
+query {
+  devices {
+    name
+    location {
+      name
+    }
+    interfaces {
+      name
+    }
+  }
+}
+```
+
+Previously, the related objects were returned in full:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": {
+          "name": "AMER"
+        },
+        "interfaces": [
+          {"name": "Ethernet1"},
+          {"name": "Ethernet2"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+Now, the single related object resolves to `null` and the list contains only viewable objects:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": null,
+        "interfaces": []
+      }
+    ]
+  }
+}
+```
+
+Client code such as `devices[0]["location"]["name"]` that previously worked will now raise a `TypeError`. To restore the previous behavior, grant the requesting user `view` permission on the related models (in this example, `dcim.location` and `dcim.interface`), with [constraints](../user-guide/platform-functionality/users/objectpermission.md) as appropriate. Alternatively, update the client code to handle `null` related objects and filtered lists.
+
+#### Jinja2 Template Rendering Restrictions
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4), Nautobot's Jinja rendering of user-configurable Jinja2 templates (computed fields, custom links, webhooks, etc.) is now more restrictive. Jinja template snippets may no longer read arbitrary values from the Django `settings` object.
 
 ### Added
 
@@ -44,17 +157,20 @@ Nautobot now includes a general-purpose, extensible [event publication framework
 As of v2.4.0, Nautobot publishes events with the following topics:
 
 Data model manipulation:
+
 - `nautobot.create.<app>.<model>`
 - `nautobot.update.<app>.<model>`
 - `nautobot.delete.<app>.<model>`
 
 User interaction:
+
 - `nautobot.users.user.login`
 - `nautobot.users.user.logout`
 - `nautobot.users.user.change_password`
 - `nautobot.admin.user.change_password`
 
 Jobs:
+
 - `nautobot.jobs.job.started`
 - `nautobot.jobs.job.completed`
 - `nautobot.jobs.approval.approved`
@@ -165,6 +281,340 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v2.4.40 (2026-08-17)
+
+### Security in v2.4.40
+
+- [GHSA-x69f-q4wj-vx72](https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72) - Fixed missing object-level permission enforcement on the legacy `/api/dcim/console-connections/`, `/api/dcim/power-connections/`, and `/api/dcim/interface-connections/` REST API endpoints.
+- [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `cryptography` to `^50.0.0` to mitigate CVE-2026-69247.
+- [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `GitPython` to `~3.1.58` to mitigate multiple security vulnerabilities.
+
+### Fixed in v2.4.40
+
+- [#9282](https://github.com/nautobot/nautobot/issues/9282) - Fixed an `AttributeError` raised when editing an Interface belonging to a Module that has no parent Device while its 802.1Q mode was set to "Tagged".
+- [#9368](https://github.com/nautobot/nautobot/issues/9368) - Fixed an `AttributeError` from the legacy `/api/dcim/interface-connections/` REST API endpoint when an Interface was cabled to a non-Interface endpoint such as a CircuitTermination.
+
+### Documentation in v2.4.40
+
+- [#9324](https://github.com/nautobot/nautobot/issues/9324) - Enhanced the ["Permissions" administrator guide](../user-guide/administration/guides/permissions.md) with guidance about which permissions should be restricted to highly-trusted users, which permissions are generally safe to grant to all users, etc.
+- [#9378](https://github.com/nautobot/nautobot/issues/9378) - Updated documentation for Secrets and Security to clarify the potential for privilege escalation when granting users permission to create or edit Secrets.
+
+## v2.4.39 (2026-08-03)
+
+### Added in v2.4.39
+
+- [#9302](https://github.com/nautobot/nautobot/issues/9302) - Added `BOOLEAN_CHOICES` and `BOOLEAN_WITH_BLANK_CHOICES` to the `nautobot.apps.constants` public API.
+
+### Changed in v2.4.39
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204) - Changed change logging of many-to-many associations declared with an explicit `through` model so that both associated objects now receive a change log entry.
+
+### Fixed in v2.4.39
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204), [#9270](https://github.com/nautobot/nautobot/issues/9270) - Fixed missing change log entries, webhooks, job hooks, and events when creating or deleting many-to-many association records via the REST API.
+- [#9327](https://github.com/nautobot/nautobot/issues/9327) - Fixed GitRepository sync REST API endpoint not applying object-level permission restrictions (`restrict()`) when retrieving the repository.
+
+### Documentation in v2.4.39
+
+- [#9327](https://github.com/nautobot/nautobot/issues/9327) - Clarified that managing a Git repository (create, change, sync) grants arbitrary code execution on the worker and that syncing repository-provided Jobs does not require the Job run permission.
+
+## v2.4.38 (2026-07-27)
+
+### Breaking Changes in v2.4.38
+
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - It is no longer possible to pass an `app_name` argument to the `settings_or_config` **Jinja** template filter; this functionality is still supported in Django templates.
+
+### Security in v2.4.38
+
+- [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx) - Fixed a REST API information-disclosure issue where the `?depth=N` query parameter exposed the full detail of related objects that the requesting user did not have permission to view. Related objects that the user cannot view are now rendered in a brief `{id, object_type, url, display}` form instead of full detail. The `display` value is included for parity with the UI, where a related object's display value is visible without requiring full view permission on that object. Additionally, the Notes REST API now enforces `view` permission on the object a note is being assigned to on write (POST/PATCH), consistent with other object references.
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - Restricted the `settings_or_config` template filter and the template `settings` context to a non-sensitive allowlist of Django settings and Constance configuration values.
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - Removed the ability to pass an `app_name` argument to the `settings_or_config` filter to retrieve values from an app's `PLUGINS_CONFIG` in Jinja templates (this is still supported in Django templates).
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Fixed GraphQL not enforcing object-level permissions when traversing to related objects: filtering related objects (e.g. `locations { racks(...) }`), traversing Relationship associations (e.g. `rel_*` fields), forward foreign-key traversal (e.g. `racks { location }`), reverse relations (reverse foreign keys such as `*_set` fields and reverse one-to-one relations such as `module_bay { installed_module }`), and other custom/property-backed related-object accessors (e.g. a Device's `all_interfaces`, cable/connection peers, dynamic group memberships, assigned tags, and legacy `location` accessors on `Prefix`/`VLAN`) now respect the requesting user's view permissions on the related model ([GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2)).
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Changed GraphQL schema to represent all forward foreign-key fields as nullable (even if not actually nullable as database fields), since a related object the user is not permitted to view is now returned as `null`.
+- [GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach the database cursor via the Django ORM and execute arbitrary SQL.
+- [GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach arbitrary models via the Django application registry.
+- [GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q) - Added enforcement of the `run` permission on the Job Hook dispatch path, fixing a privilege escalation in which a user without the run permission could execute a Job by triggering a Job Hook.
+- [#9279](https://github.com/nautobot/nautobot/issues/9279) - Updated dependency `GitPython` to `~3.1.54` to mitigate multiple security vulnerabilities.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `gitpython` to `~3.1.55` to mitigate GHSA-94p4-4cq8-9g67.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated documentation dependency `mkdocs-material` to `~9.7.7` to mitigate GHSA-xvg9-69gf-fjrf.
+
+### Added in v2.4.38
+
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Added GraphQL type-definition helper methods `permission_safe_resolver` and `permission_safe_attribute_resolver`. Apps defining custom GraphQL type classes may need to use these methods in some cases to prevent object-permission enforcement gaps similar to GHSA-mfwj-pjgx-22v2.
+
+### Documentation in v2.4.38
+
+- [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx) - Added documentation describing the behavior of the REST API with respect to object permissions.
+- [GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q) - Added documentation clarifying that a Job Hook is only dispatched when the user responsible for the triggering change has permission to run the target Job.
+- [#9304](https://github.com/nautobot/nautobot/issues/9304) - Update `notices.md` release notes.
+
+### Housekeeping in v2.4.38
+
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--no-input` option to `invoke tests` task.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--command` option to `invoke nbshell` task.
+
+## v2.4.37 (2026-07-17)
+
+### Security in v2.4.37
+
+- [GHSA-56v6-2fhr-wxgq](https://github.com/nautobot/nautobot/security/advisories/GHSA-56v6-2fhr-wxgq) - Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated dependency `Pillow` to `>=12.3.0,<13` to mitigate multiple CVEs.
+
+### Changed in v2.4.37
+
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed removing a VRF from a Device or VirtualMachine to raise an error if that VRF is still attached to one of the interfaces.
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed attaching a VRF to a VM interface via API/ORM to raise an error if the parent Virtual Machine does not have that VRF assigned.
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Enhanced the REST API queryset optimizer to automatically pre-fetch the related objects traversed by a model's natural key to avoid N+1 queries.
+
+### Fixed in v2.4.37
+
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Fixed an N+1 query when listing Interfaces via the REST API.
+
+### Housekeeping in v2.4.37
+
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed the default `max_locks_per_transaction` for Postgres to 512 for test runs with many parallel workers.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Backported Django 6.0 fix for parallel test runs with --buffer.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
+
+## v2.4.36 (2026-06-22)
+
+### Security in v2.4.36
+
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `pyjwt` to `2.13.0` to mitigate multiple security vulnerabilities. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
+- [#9096](https://github.com/nautobot/nautobot/issues/9096) - Updated dependency `cryptography` to `^48.0.1` to mitigate GHSA-537c-gmf6-5ccf.
+
+### Added in v2.4.36
+
+- [#9026](https://github.com/nautobot/nautobot/issues/9026) - Added `nautobot.apps.dcim.SkipAutoComponentCreation` context manager that lets apps opt out of Nautobot's automatic Device/Module component instantiation on a new save.
+
+### Dependencies in v2.4.36
+
+- [#9094](https://github.com/nautobot/nautobot/issues/9094) - Updated dependency `social-auth-core` to `~4.9.1`.
+
+## v2.4.35 (2026-06-08)
+
+### Fixed in v2.4.35
+
+- [#7762](https://github.com/nautobot/nautobot/issues/7762) - Added a reentrant lock to the `import_modules_privately()` method to address a race condition in multithreaded code.
+- [#8965](https://github.com/nautobot/nautobot/issues/8965) - Fixed slow page loads on detail views at large scale.
+- [#8988](https://github.com/nautobot/nautobot/issues/8988) - Fixed Git Repository Job loading producing multiple class objects for the same source file, which caused `isinstance` checks against shared classes to return false negatives.
+- [#9015](https://github.com/nautobot/nautobot/issues/9015) - Fixed N+1 query patterns when resolving `tags` and `config_context` in GraphQL queries.
+
+### Dependencies in v2.4.35
+
+- [#8968](https://github.com/nautobot/nautobot/issues/8968) - Updated `cryptography` dependency to `(>=46.0.7,<49)`.
+
+## v2.4.34 (2026-05-26)
+
+### Security in v2.4.34
+
+- [#8990](https://github.com/nautobot/nautobot/issues/8990) - Updated dependency `idna` to `3.16` to mitigate CVE-2026-45409. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to update your local environment.
+- [#8990](https://github.com/nautobot/nautobot/issues/8990) - Updated indirect development dependency `pymdown-extensions` to `10.21.3` to mitigate CVE-2026-46338.
+
+### Fixed in v2.4.34
+
+- [#9000](https://github.com/nautobot/nautobot/issues/9000) - Fixed "Job Queue" in Re-Run form when queue type is kubernetes.
+
+### Dependencies in v2.4.34
+
+- [#8960](https://github.com/nautobot/nautobot/issues/8960) - Added `urllib3^2.7.0` as a direct dependency as Nautobot now directly uses it. (Previously it was an indirect dependency.)
+
+## v2.4.33 (2026-05-08)
+
+### Security in v2.4.33
+
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_SCHEMES` settings variable. By default new or updated `Webhook` records will be restricted to HTTP or HTTPS only, disallowing other schemes that may have been previously allowed. Administrators should audit existing `Webhook` records to identify any that are invalid, and either update/delete said records or customize `WEBHOOK_ALLOWED_SCHEMES` as appropriate.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` settings variable. This can be used to specify additional IP networks that should be denied to `Webhook` sending, for example some deployments may wish to disallow RFC1918 addresses.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added support for `WEBHOOK_ALLOWED_HOSTS` settings variable. This can be used to provide an allow-list of specific hosts that would otherwise be blocked by any `WEBHOOK_ADDITIONAL_BLOCKED_NETWORKS` configuration.
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added logic to deny loopback, link-local, multicast, unspecified, or reserved IP addresses when defining or executing a `Webhook`. Administrators should audit existing `Webhook` records to identify any that are invalid and delete said records (CVE-2026-44797).
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Added various logic to protect `Webhook` definitions against being used as a vector for server-side request forgery (SSRF) (CVE-2026-44797).
+- [GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr) - Fixed `GitRepository.current_head` being incorrectly user-editable through the REST API (CVE-2026-44798).
+- [GHSA-p3hx-pwf3-j8wr](https://github.com/nautobot/nautobot/security/advisories/GHSA-p3hx-pwf3-j8wr) - Added additional data validation to `GitRepository.clean()` and to various methods of the `GitRepo` helper class.
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Added a timeout to `bulk-rename` views when doing regular-expression-based bulk renames to protect against denial-of-service (REDoS) due to an overly-complex or maliciously crafted regular expression provided by the user (CVE-2026-44796).
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Added logic in the REST API to enforce user "view" permissions when assigning related objects via a GenericForeignKey (CVE-2026-44794).
+- [#8944](https://github.com/nautobot/nautobot/issues/8944) - Updated dependency `gitpython` to `~3.1.50` to mitigate CVE-2026-44243, CVE-2026-44244, and GHSA-mv93-w799-cj2w.
+
+### Added in v2.4.33
+
+- [#8413](https://github.com/nautobot/nautobot/issues/8413) - Added an "Assume Ownership" action button on the Scheduled Job detail view that allows users with the required permissions to take over ownership of a scheduled job.
+
+### Changed in v2.4.33
+
+- [#8894](https://github.com/nautobot/nautobot/issues/8894) - Changed the CSV export algorithm to speed up the export of a large number of objects.
+
+### Removed in v2.4.33
+
+- [GHSA-c35q-vxrp-ph26](https://github.com/nautobot/nautobot/security/advisories/GHSA-c35q-vxrp-ph26) - Removed support for `nautobot-server webhook_receiver` command.
+
+### Fixed in v2.4.33
+
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly marking the `image_height` and `image_width` as required fields.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ImageAttachment` REST API incorrectly allowing creation of attachments to an unsupported `content_type`.
+- [GHSA-wpxj-44w3-2j6x](https://github.com/nautobot/nautobot/security/advisories/GHSA-wpxj-44w3-2j6x) - Fixed `ContactAssociation` REST API incorrectly allowing creation of associations to an invalid `associated_object_type`.
+- [#8413](https://github.com/nautobot/nautobot/issues/8413) - Fixed silent failure of scheduled jobs whose originating user has been removed. The scheduler now records a failed JobResult as well as disables the schedule.
+- [#8560](https://github.com/nautobot/nautobot/issues/8560) - Fixed an issue where the `JobResult` status was not being set to `STARTED` when a job was run synchronously.
+- [#8937](https://github.com/nautobot/nautobot/issues/8937) - Fixed Job History home page panel sorting.
+
+### Dependencies in v2.4.33
+
+- [GHSA-qrpw-gjvh-x5gm](https://github.com/nautobot/nautobot/security/advisories/GHSA-qrpw-gjvh-x5gm) - Added `regex>=2026.4.4` as a dependency. (Previously it was a development-only dependency.)
+
+### Documentation in v2.4.33
+
+- [#8943](https://github.com/nautobot/nautobot/issues/8943) - Updated the security notices documentation.
+
+### Housekeeping in v2.4.33
+
+- [#8854](https://github.com/nautobot/nautobot/issues/8854) - Fixed an intermittent test failure in `nautobot.core.tests.test_jobs.LogsCleanupTestCase`.
+- [#8940](https://github.com/nautobot/nautobot/issues/8940) - Loosened timeout requirement in `test_bulk_rename_regex_redos_protection` to reduce spurious failures in CI.
+- [#8944](https://github.com/nautobot/nautobot/issues/8944) - Updated development dependency `pymarkdownlnt` to `~0.9.37`.
+
+## v2.4.32 (2026-04-27)
+
+### Security in v2.4.32
+
+- [#8842](https://github.com/nautobot/nautobot/issues/8842) - Updated dependency `Pillow` to `^12.2.0` to mitigate a number of security vulnerabilities.
+- [#8895](https://github.com/nautobot/nautobot/issues/8895) - Updated dependency `lxml` to `6.1.0` to mitigate CVE-2026-41066. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8904](https://github.com/nautobot/nautobot/issues/8904) - Updated dependency `GitPython` to `~3.1.47` to mitigate CVE-2026-42215 and CVE-2026-42284.
+
+### Fixed in v2.4.32
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Fixed an issue where filtering a nested relation (e.g. interfaces with role filter on devices) via GraphQL would produce N+1 queries.
+- [#8629](https://github.com/nautobot/nautobot/issues/8629) - Fixed a scenario where rendering a GitRepository-related Jobs "Scheduled Job View" would sometimes show the Job as not installed.
+- [#8690](https://github.com/nautobot/nautobot/issues/8690) - Fixed a 500 error when using tag-based permission constraints on objects with multiple matching tags.
+- [#8885](https://github.com/nautobot/nautobot/issues/8885) - Fixed Kubernetes job kwarg serialization.
+
+### Housekeeping in v2.4.32
+
+- [#7146](https://github.com/nautobot/nautobot/issues/7146) - Added the AssertNoRepeatedQueries context manager test helper to detect N+1 patterns in SQL queries.
+
+## v2.4.31 (2026-04-09)
+
+### Security in v2.4.31
+
+- [#8782](https://github.com/nautobot/nautobot/issues/8782) - Updated dependency `pygments` to `2.20.0` to mitigate CVE-2026-4539. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8782](https://github.com/nautobot/nautobot/issues/8782) - Updated dependency `pymdown-extensions` to `10.21.2` to address an incompatibility with `pygments` version `2.20`. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8790](https://github.com/nautobot/nautobot/issues/8790) - Updated dependency `Django` to `~4.2.30` to mitigate CVE-2026-33033 and others.
+- [#8790](https://github.com/nautobot/nautobot/issues/8790) - Updated dependency `cryptography` to `~46.0.7` to mitigate CVE-2026-39892.
+
+### Added in v2.4.31
+
+- [#8689](https://github.com/nautobot/nautobot/issues/8689) - Added ARM64 variants for all published Docker images.
+
+### Fixed in v2.4.31
+
+- [#8316](https://github.com/nautobot/nautobot/issues/8316) - Fixed scheduled jobs with custom crontab schedules running once immediately (ASAP) before following their crontab schedule.
+- [#8824](https://github.com/nautobot/nautobot/issues/8824) - Fixed k8s job with sensitive variables.
+
+### Housekeeping in v2.4.31
+
+- [#6267](https://github.com/nautobot/nautobot/issues/6267) - Replaced third-party GitHub action in release CI.
+- [#8502](https://github.com/nautobot/nautobot/issues/8502) - Improved the Docker build process and tagging in CI.
+- [#8689](https://github.com/nautobot/nautobot/issues/8689) - Refactored GitHub CI to use multi-architecture runners for Docker image build and publish.
+- [#8697](https://github.com/nautobot/nautobot/issues/8697) - Fixed Docker image publication for integration branches and releases.
+- [#8699](https://github.com/nautobot/nautobot/issues/8699) - Fixed isolation of docker image digests by cache scope when building multiple images in a single workflow.
+- [#8774](https://github.com/nautobot/nautobot/issues/8774) - Updated PyPI publication to use Trusted Publisher.
+- [#8799](https://github.com/nautobot/nautobot/issues/8799) - Fixed state leakage between consecutive calls to `merge-image-digests` GitHub action.
+
+## v2.4.30 (2026-03-30)
+
+### Security in v2.4.30
+
+- [#8710](https://github.com/nautobot/nautobot/issues/8710) - Updated dependency `pyasn1` to `0.6.3` to mitigate CVE-2026-30922. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `cryptography` to `~46.0.6` to mitigate CVE-2026-34073.
+- [#8722](https://github.com/nautobot/nautobot/issues/8722) - Updated dependency `requests` to `~2.33.0`. to mitigate CVE-2026-25645. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+- [#8779](https://github.com/nautobot/nautobot/issues/8779) - Added missing enforcement of any configured Django password validators when managing users via the REST API (CVE-2026-34203).
+
+### Added in v2.4.30
+
+- [#8463](https://github.com/nautobot/nautobot/issues/8463) - Added default values for additional Kubernetes settings variables.
+- [#8736](https://github.com/nautobot/nautobot/issues/8736) - Added `clear_cache` step to `nautobot-server post_upgrade` command.
+
+### Fixed in v2.4.30
+
+- [#6111](https://github.com/nautobot/nautobot/issues/6111) - Fixed an issue where Contact and Team objects could not be looked up by name alone when creating a ContactAssociation via the REST API.
+- [#8547](https://github.com/nautobot/nautobot/issues/8547) - Resolves issues with the job logs DB connection. It now correctly respects `CONN_MAX_AGE` and can recover from errored connections.
+- [#8614](https://github.com/nautobot/nautobot/issues/8614) - Fixed a race condition when running jobs concurrently that could cause multiple threads to modify the `jobs` registry at the same time.
+- [#8724](https://github.com/nautobot/nautobot/issues/8724) - Fixed permission name in `JobRunScheduleButton` in `JobView`.
+- [#8725](https://github.com/nautobot/nautobot/issues/8725) - Fixed an issue where nested job kwargs were not being serialized correctly which caused problems when using Kubernetes jobs.
+- [#8748](https://github.com/nautobot/nautobot/issues/8748) - Fixed a performance issue where the `validated_save()` method was being called unnecessarily on all `VRFDeviceAssignment` objects when adding a new assignment to a VRF.
+
+### Housekeeping in v2.4.30
+
+- [#8734](https://github.com/nautobot/nautobot/issues/8734) - Changed ObjectChangeFactory to use set start and end dates for deterministic timestamps for the `time` field for tests.
+
+## v2.4.29 (2026-03-17)
+
+### Security in v2.4.29
+
+- [#8663](https://github.com/nautobot/nautobot/issues/8663) - Updated dependency `Django` to `~4.2.29` to mitigate CVE-2026-25673 and CVE-2026-25674.
+- [#8691](https://github.com/nautobot/nautobot/issues/8691) - Updated dependency `pyjwt` to `2.12.1` to mitigate CVE-2026-32597. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Added in v2.4.29
+
+- [#8488](https://github.com/nautobot/nautobot/issues/8488) - Added the ability to configure multiple Kubernetes job manifests via file-based configuration.
+
+### Fixed in v2.4.29
+
+- [#8473](https://github.com/nautobot/nautobot/issues/8473) - Fixed issue of not using the setting `KUBERNETES_JOB_POD_NAME`.
+
+## v2.4.28 (2026-03-02)
+
+### Fixed in v2.4.28
+
+- [#8519](https://github.com/nautobot/nautobot/issues/8519) - Fixed cable color display in dark mode to ensure cable colors render closer to the configured value.
+- [#8537](https://github.com/nautobot/nautobot/issues/8537) - Fixed sorting on multiple tables.
+- [#8571](https://github.com/nautobot/nautobot/issues/8571) - Fixed filtering on multiple tables.
+
+### Housekeeping in v2.4.28
+
+- [#8591](https://github.com/nautobot/nautobot/issues/8591) - Updated `deploy-sandbox` action for release CI.
+
+## v2.4.27 (2026-02-17)
+
+### Security in v2.4.27
+
+- [#8504](https://github.com/nautobot/nautobot/issues/8504) - Updated dependency `django` to `~4.2.28` to mitigate several CVEs including CVE-2026-1287 and CVE-2026-1312.
+- [#8539](https://github.com/nautobot/nautobot/issues/8539) - Updated dependency `cryptography` to `46.0.5` to mitigate CVE-2026-26007.
+- [#8544](https://github.com/nautobot/nautobot/issues/8544) - Updated dependency `pillow` to `^12.1.1` to mitigate CVE-2026-25990.
+
+### Added in v2.4.27
+
+- [#8484](https://github.com/nautobot/nautobot/issues/8484) - Added polish type variants to CS connector in PortTypeChoices
+- [#8511](https://github.com/nautobot/nautobot/issues/8511) - Added missing bulk edit buttons to the IP Addresses and Child Prefix tabs on the Prefix detail view.
+- [#8525](https://github.com/nautobot/nautobot/issues/8525) - Added missing table action buttons to the Child Prefixes and IP Addresses tabs on the respective Prefix detail view tabs.
+
+### Fixed in v2.4.27
+
+- [#8267](https://github.com/nautobot/nautobot/issues/8267) - Fixed missing stack traces for HTTP 500 errors in the REST API when using structlog.
+- [#8319](https://github.com/nautobot/nautobot/issues/8319) - Fixed the creation of Interface Dynamic Groups by Duplex, 802.1Q Mode and Tagged/Untagged VLANs.
+- [#8453](https://github.com/nautobot/nautobot/issues/8453) - Fixed an issue where a link on a Prefix's Child Prefixes tab was not working as expected.
+- [#8478](https://github.com/nautobot/nautobot/issues/8478) - Fixed an issue where a link on a Prefix's IP Addresses tab was not working as expected.
+- [#8500](https://github.com/nautobot/nautobot/issues/8500) - Fixed `KeyError` when `CACHES` setting does not include an explicit `TIMEOUT` key.
+- [#8522](https://github.com/nautobot/nautobot/issues/8522) - Adjusted the foreground color contrast threshold used for color labels to improve readability.
+
+### Dependencies in v2.4.27
+
+- [#8462](https://github.com/nautobot/nautobot/issues/8462) - Updated dependency `celery` to ~5.6.2.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `mysqlclient` to `~2.2.8`.
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated dependency `social-auth-core` to `~4.8.5`.
+
+### Housekeeping in v2.4.27
+
+- [#8476](https://github.com/nautobot/nautobot/issues/8476) - Updated development dependency `coverage` to `~7.13.4`.
+- [#8508](https://github.com/nautobot/nautobot/issues/8508) - Changed many invoke commands to accept multiple services as arguments.
+
+## v2.4.26 (2026-02-02)
+
+### Security in v2.4.26
+
+- [#8428](https://github.com/nautobot/nautobot/issues/8428) - Updated dependency `pyasn1` to `0.6.2` to mitigate CVE-2026-23490. As this is not a direct dependency, it will not auto-update when upgrading; please be sure to upgrade your local environment.
+
+### Fixed in v2.4.26
+
+- [#7076](https://github.com/nautobot/nautobot/issues/7076) - Fixed various font sizes that are used by the admin interface.
+- [#8404](https://github.com/nautobot/nautobot/issues/8404) - Fixed the ability to re-run a Kubernetes Job.
 
 ## v2.4.25 (2026-01-09)
 

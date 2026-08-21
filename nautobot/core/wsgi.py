@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings
 from django.core import cache
 from django.core.wsgi import get_wsgi_application
 from django.db import connections
@@ -29,6 +30,16 @@ try:
         logger.info("Closing existing DB and cache connections on worker %s after uWSGI forked ...", uwsgi.worker_id())
         connections.close_all()
         cache.close_caches()
+
+        # Create the OpenTelemetry OTLP exporters here, in the forked worker, rather than in the
+        # pre-fork master. The OTLP gRPC exporter's channel spins up fork-unsafe C-core threads/fds
+        # at construction; if built in the master they are inherited broken by workers and segfault
+        # when a request is exported (aggravated by django-silk cProfile). instrument() deliberately
+        # skips exporter creation for this reason; install_exporters() is idempotent.
+        if settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
+            from nautobot.core.cli.opentelemetry import install_exporters
+
+            install_exporters()
 
 except ImportError:
     pass

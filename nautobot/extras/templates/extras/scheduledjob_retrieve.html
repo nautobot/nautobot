@@ -1,0 +1,35 @@
+{% extends 'generic/object_retrieve.html' %}
+{% load buttons %}
+{% load custom_links %}
+{% load helpers %}
+{% load perms %}
+{% load plugins %}
+{% load tz %}
+
+{% block content %}
+    {% if not job_class_found %}
+        <div class="alert alert-danger">
+            <span class="mdi mdi-alert"></span>
+            This job source for this scheduled job is no longer installed.
+            This scheduled job will fail to run unless reinstalled at the original location.
+        </div>
+    {% endif %}
+    {% if not object.user %}
+        <div class="alert alert-danger">
+            <span class="mdi mdi-alert"></span>
+            The user that scheduled this job has been removed.
+            The job will not run until ownership is reassigned.
+        </div>
+    {% endif %}
+    {{ block.super }}
+{% endblock content %}
+
+{% block extra_nav_tabs %}
+    {% if perms.extras.view_approvalworkflow and object.associated_approval_workflows.exists %}
+        {% if active_tab != 'approval_workflow' and object.get_approval_workflow_url or active_tab == 'approval_workflow' %}
+            <li class="nav-item" role="presentation">
+                <a href="{{ object.get_approval_workflow_url }}" class="nav-link{% if active_tab == 'approval_workflow' %} active{% endif %}">Approval Workflow</a>
+            </li>
+        {% endif %}
+    {% endif %}
+{% endblock extra_nav_tabs %}

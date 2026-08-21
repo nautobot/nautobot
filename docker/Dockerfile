@@ -89,13 +89,13 @@ RUN apt-get update && \
 FROM system-dev-dependencies AS system-dev-dependencies-amd64
 
 # Install hadolint for linting Dockerfiles
-RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
+RUN curl -fLo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-x86_64 && \
     chmod +x /usr/bin/hadolint
 
 FROM system-dev-dependencies AS system-dev-dependencies-arm64
 
 # Install hadolint for linting Dockerfiles
-RUN curl -Lo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
+RUN curl -fLo /usr/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.10.0/hadolint-Linux-arm64 && \
     chmod +x /usr/bin/hadolint
 
 ################################ Stage: poetry (stub for poetry only)
@@ -117,6 +117,7 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 
 RUN poetry config virtualenvs.create ${POETRY_VIRTUALENVS_CREATE} && \
     poetry config installer.parallel "${POETRY_INSTALLER_PARALLEL}" && \
+    poetry config keyring.enabled false && \
     poetry config installer.no-binary lxml,pyuwsgi,xmlsec
 
 ################################ Stage: python-dependencies (intermediate build target)
@@ -162,7 +163,7 @@ COPY --chown=nautobot:nautobot docs /source/docs
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 # Build the rendered docs, this ensures that the docs are in the final image.
-RUN mkdocs build --no-directory-urls && \
+RUN mkdocs build && \
     poetry build
 
 ################################ Stage: dev (development environment for Nautobot core)

@@ -23,6 +23,7 @@ from nautobot.core import choices as core_choices, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import validators
 from nautobot.core.utils import data as data_utils, lookup
+from nautobot.core.utils.permissions import get_permission_for_model
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +113,7 @@ class CSVFileField(django_forms.FileField):
         if data is None:
             return None
 
-        data = super().to_python(data)
+        data = super().to_python(data)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         return data.read().decode("utf-8-sig").strip()
 
 
@@ -269,6 +270,8 @@ class MultiValueCharField(django_forms.CharField):
         widget = bound_field.field.widget
         # Save the selected choices in the widget even after the filterform is submitted
         if value is not None:
+            if isinstance(value, str):
+                value = [value]
             widget.choices = [(v, v) for v in value]
 
         return bound_field
@@ -425,7 +428,10 @@ class NullableDateField(django_forms.DateField):
             return None
         elif value == "null":
             return value
-        return super().to_python(value)
+        # TODO: Once NullableDateField becomes MultiNullableDateField or MultiDateField is fixed, this can be removed.
+        elif isinstance(value, list):
+            return value[0]
+        return super().to_python(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class SlugField(django_forms.SlugField):
@@ -491,6 +497,10 @@ class DynamicModelChoiceMixin:
         disabled_indicator (Optional[str]): The name of the field which, if populated, will disable selection of the
             choice
         depth (int): Nested serialization depth when making API requests (default: `0` or a flat representation)
+        embedded_create (Optional[boolean]): Indicates "Embedded Create" availability for this field, its actual render
+            conditions are later evaluated on the template level
+        embedded_search (Optional[boolean]): Indicates "Embedded Search" availability for this field, its actual render
+            conditions are later evaluated on the template level
     """
 
     filter = django_filters.ModelChoiceFilter  # 2.0 TODO(Glenn): can we rename this? pylint: disable=redefined-builtin
@@ -505,6 +515,8 @@ class DynamicModelChoiceMixin:
         null_option=None,
         disabled_indicator=None,
         depth=0,
+        embedded_create=None,
+        embedded_search=None,
         *args,
         **kwargs,
     ):
@@ -516,6 +528,8 @@ class DynamicModelChoiceMixin:
         self.null_option = null_option
         self.disabled_indicator = disabled_indicator
         self.depth = depth
+        self.embedded_create = embedded_create
+        self.embedded_search = embedded_search
 
         # to_field_name is set by ModelChoiceField.__init__(), but we need to set it early for reference
         # by widget_attrs()
@@ -523,6 +537,10 @@ class DynamicModelChoiceMixin:
         self.data_queryset = kwargs.get("queryset")  # may be updated in get_bound_field()
 
         super().__init__(*args, **kwargs)
+
+    @property
+    def embedded_create_permissions(self):
+        return [get_permission_for_model(self.queryset.model, "add")]
 
     def widget_attrs(self, widget):
         attrs = {
@@ -667,7 +685,7 @@ class JSONField(_JSONField):
     def bound_data(self, data, initial):
         if data is None:
             return None
-        return super().bound_data(data, initial)
+        return super().bound_data(data, initial)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class JSONArrayFormField(django_forms.JSONField):
@@ -705,7 +723,7 @@ class JSONArrayFormField(django_forms.JSONField):
         Validate `value` and return its "cleaned" value as an appropriate
         Python object. Raise ValidationError for any errors.
         """
-        value = super().clean(value)
+        value = super().clean(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         return [self.base_field.clean(val) for val in value]
 
     def prepare_value(self, value):
@@ -725,7 +743,7 @@ class JSONArrayFormField(django_forms.JSONField):
             return None
         if isinstance(data, list):
             data = json.dumps(data)
-        return super().bound_data(data, initial)
+        return super().bound_data(data, initial)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
     def to_python(self, value):
         """
@@ -757,7 +775,7 @@ class JSONArrayFormField(django_forms.JSONField):
         """
         Validate `value` and raise ValidationError if necessary.
         """
-        super().validate(value)
+        super().validate(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         errors = []
         for item in value:
             try:
@@ -788,7 +806,7 @@ class JSONArrayFormField(django_forms.JSONField):
         Runs all validators against `value` and raise ValidationError if necessary.
         Some validators can't be created at field initialization time.
         """
-        super().run_validators(value)
+        super().run_validators(value)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
         errors = []
         for item in value:
             try:
@@ -805,7 +823,7 @@ class JSONArrayFormField(django_forms.JSONField):
         value = self.to_python(data)
         if initial in self.empty_values and value in self.empty_values:
             return False
-        return super().has_changed(initial, data)
+        return super().has_changed(initial, data)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
 
 class NumericArrayField(SimpleArrayField):

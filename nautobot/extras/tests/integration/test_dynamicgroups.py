@@ -44,6 +44,9 @@ class DynamicGroupTestCase(SeleniumTestCase, ObjectsListMixin):
         self.assertTrue(self.browser.is_text_present(f"Created dynamic group {name}"))
         self.assertTrue(self.browser.is_text_present("Edit"))
 
+        # Close any toasts potentially obscuring the "Edit" button
+        self.dismiss_toasts()
+
         # Edit the newly created DynamicGroup (Click that "Edit" button)
         self.click_button("#edit-button")
 

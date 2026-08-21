@@ -85,7 +85,6 @@ Whether you are getting started for the first time, looking to build a local lab
     * Enterprise grade dashboards to see trends of Nautobot data across all Nautobot instances
     * Click to install apps from Nautobot Cloud Marketplace
     * Cloud-based database snapshots
-    * One-click deployments of Ansible AWX too
 
     ### Nautobot Cloud Cons
 
@@ -124,6 +123,9 @@ Nautobot is written in the [Python programming language](https://www.python.org/
 
 +++ 3.0.0 "Python 3.13 support added"
     Python 3.13 support was added.
+
++++ 3.1.0 "Python 3.14 support added"
+    Python 3.14 support was added.
 
 #### Database
 

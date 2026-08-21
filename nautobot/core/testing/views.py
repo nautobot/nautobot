@@ -1,12 +1,14 @@
 import contextlib
-import inspect
 import re
+import signal
+import traceback
 from typing import Optional, Sequence
 from unittest import mock, skipIf
 import uuid
 
+from django import forms as django_forms
 from django.apps import apps
-from django.conf import global_settings, settings
+from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import URLValidator
@@ -20,9 +22,18 @@ from django.urls import NoReverseMatch, reverse
 from django.utils.html import escape, format_html
 from django.utils.http import urlencode
 from django.utils.text import slugify
+import regex
 from tree_queries.models import TreeNode
 
-from nautobot.core.jobs.bulk_actions import BulkEditObjects
+from nautobot.core.filters import MACAddressFilter, MultiValueMACAddressFilter
+from nautobot.core.forms import (
+    DynamicModelMultipleChoiceField,
+    MultiValueCharField,
+    NullableDateField,
+    NumericArrayField,
+    TagFilterField,
+)
+from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.models.generics import PrimaryModel
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.templatetags import buttons, helpers
@@ -31,13 +42,13 @@ from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
 from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
-from nautobot.dcim.models.device_components import ComponentModel, ModularComponentModel
+from nautobot.dcim.models.device_components import ModularComponentModel
+from nautobot.dcim.views import ComponentBulkDisconnectViewMixin
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
 from nautobot.extras.forms import CustomFieldModelFormMixin, RelationshipModelFormMixin
 from nautobot.extras.models import CustomFieldModel, RelationshipModel
 from nautobot.extras.models.jobs import JobResult
 from nautobot.extras.models.mixins import NotesMixin
-from nautobot.ipam.models import Prefix
 from nautobot.users import models as users_models
 
 __all__ = (
@@ -282,7 +293,7 @@ class ViewTestCases:
             response = self.client.get(instance.get_absolute_url())
 
             if hasattr(instance, "created") and hasattr(instance, "last_updated"):
-                self.assertBodyContains(response, date(instance.created, global_settings.DATETIME_FORMAT), html=True)
+                self.assertBodyContains(response, date(instance.created, settings.DATETIME_FORMAT), html=True)
                 # We don't assert the rendering of `last_updated` because it's relative time ("10 minutes ago") and
                 # therefore is subject to off-by-one timing failures.
 
@@ -290,7 +301,7 @@ class ViewTestCases:
             object_delete_url = buttons.delete_button(instance)["url"]
             object_clone_url = buttons.clone_button(instance)["url"]
             render_edit_button = bool(object_edit_url)
-            render_delete_button = bool(object_delete_url)
+            render_delete_button = bool(object_delete_url and getattr(instance, "_is_deletable", True))
             render_clone_button = bool(hasattr(instance, "clone_fields") and object_clone_url)
             action_buttons = []
             if render_edit_button:
@@ -377,8 +388,11 @@ class ViewTestCases:
                     continue
                 if "get" not in action_func.mapping:
                     continue
-                if action_func.url_name == "data-compliance" and not getattr(base_view, "object_detail_content", None):
-                    continue
+                if action_func.url_name == "data-compliance":
+                    if not getattr(self.model, "is_data_compliance_model", False):
+                        continue
+                    if not getattr(base_view, "object_detail_content", None):
+                        continue
                 with self.subTest(action=action_func.url_name):
                     if action_func.url_name in self.custom_action_required_permissions:
                         required_permissions = self.custom_action_required_permissions[action_func.url_name]
@@ -600,6 +614,13 @@ class ViewTestCases:
                 except (AttributeError, ValidationError):
                     # Instance does not have a valid detail view, do nothing here.
                     pass
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_create_object_as_superuser(self):
+            """Superuser loads the create view without crashing."""
+            self.user.is_superuser = True
+            self.user.save()
+            self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_create_object_with_constrained_permission(self):
@@ -951,6 +972,48 @@ class ViewTestCases:
         def get_list_view(self):
             return lookup.get_view_for_model(self.model, view_type="List")
 
+        def get_display_verbose_name_plural(self):
+            """
+            Verbose-plural name asserted in display strings rendered by the list view (the
+            example-app banner, the "No X found" empty state, etc.).
+
+            Defaults to `self.model._meta.verbose_name_plural`. Override on test cases where the
+            list view's underlying queryset is over a different model than `self.model` (e.g. a
+            view that adapts CablePath rows for an Interface-shaped surface).
+            """
+            return self.model._meta.verbose_name_plural
+
+        def get_instance_display_text_content(self, instance):
+            """
+            Strings expected to appear as HTML element text content for `instance`.
+
+            These are matched with `>\\s*STRING\\s*<` to ensure they appear *inside* a tag, not as
+            part of an attribute value or URL — useful for short / generic display names where a
+            plain substring match would risk false positives.
+
+            Defaults to `instance.name` if it has one. Override on test cases where the rendered
+            table shows display text from a related object (e.g. a CablePath-backed view that
+            displays origin / destination interface names).
+            """
+            return [instance.name] if hasattr(instance, "name") else []
+
+        def get_instance_display_strings(self, instance):
+            """
+            Strings expected to appear anywhere in the rendered list-view content for `instance`.
+
+            Matched with a plain substring check — appropriate for unambiguous values like absolute
+            URLs. For short / generic display text, use `get_instance_display_text_content` instead
+            so the strict-regex check avoids false positives.
+
+            Defaults to `instance.get_absolute_url()` if it has one. Override on test cases where
+            the rendered table links related objects (e.g. a CablePath-backed view that displays
+            origin / destination interface URLs).
+            """
+            strings = []
+            with contextlib.suppress(AttributeError):
+                strings.append(instance.get_absolute_url())
+            return strings
+
         def test_list_view_has_filter_form(self):
             view = self.get_list_view()
             if hasattr(view, "filterset_form"):  # ObjectListView
@@ -959,10 +1022,11 @@ class ViewTestCases:
                 self.assertIsNotNone(view.filterset_form_class, "List viewset lacks a FilterForm")
 
         def test_table_with_indentation_is_removed_on_filter_or_sort(self):
+            # TODO: see updated implementation in nautobot.ipam.tests.test_views.PrefixTestCase, generalize it here
             self.user.is_superuser = True
             self.user.save()
 
-            if not issubclass(self.model, (TreeModel)) and self.model is not Prefix:
+            if not issubclass(self.model, (TreeModel)):
                 self.skipTest("Skipping Non TreeModels")
 
             with self.subTest("Assert indentation is present"):
@@ -987,27 +1051,43 @@ class ViewTestCases:
 
         def test_model_properties_as_table_columns_are_not_orderable(self):
             """
-            Check for table columns that are property-based and not orderable.
+            Check for table columns that each sortable columns works.
             """
-            table_class = getattr(self.get_list_view(), "table_class", None)
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+            # Add model-level permission
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+
+            view = self.get_list_view()
+            table_class = getattr(view, "table_class", getattr(view, "table", None))
             if not table_class:
-                return
+                self.skipTest(
+                    f"Skipping test since {view.__class__.__name__} does not have a table or table_class defined."
+                )
 
             queryset = self._get_queryset()
             table = table_class(queryset)
-            model_cls = table._meta.model
-
-            property_fields = {name for name, _ in inspect.getmembers(model_cls, lambda o: isinstance(o, property))}
-
-            for name, column in table.base_columns.items():
-                if hasattr(column, "order_by") and column.order_by:
-                    continue
-                if name in property_fields and name != "pk":
-                    with self.subTest(column_name=name):
-                        self.assertFalse(
-                            column.orderable,
-                            f"On Table `{table_class.__name__}` the property-based column `{name}` should be orderable=False or use a custom order_by",
-                        )
+            column_names = list(table.base_columns.keys())
+            # We need to make sure all columns are shown, as some of the logic only works when the column is actually present
+            self.user.set_config(f"tables.{table_class.__name__}.columns", column_names, commit=True)
+            for name in column_names:
+                column = table.base_columns[name]
+                with self.subTest(column_name=name):
+                    if hasattr(column, "orderable") and column.orderable is False:
+                        continue
+                    if name in ["actions", "pk"]:
+                        continue
+                    try:
+                        response = self.client.get(self._get_url("list") + f"?sort={name}")
+                    except Exception as error:
+                        print(f"Exception while sorting column `{name}`: {error}")
+                        traceback.print_exc()
+                        raise  # re-raise so the test still fails
+                    self.assertHttpStatus(
+                        response, 200, msg=f"Column `{name}` on Table `{table_class.__name__}` does not sort properly."
+                    )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_anonymous(self):
@@ -1037,8 +1117,12 @@ class ViewTestCases:
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_list_objects_filtered(self):
-            instance1, instance2 = self._get_queryset().all()[:2]
-            if hasattr(self.model, "name") and instance1.name == instance2.name:
+            queryset = self._get_queryset()
+            has_name = any(f.name == "name" for f in queryset.model._meta.get_fields())
+            if has_name:
+                queryset = queryset.exclude(name="")
+            instance1, instance2 = queryset[:2]
+            if hasattr(instance1, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
 
@@ -1052,27 +1136,36 @@ class ViewTestCases:
             content = response.content.decode(response.charset)
             # There should be only one row in the table
             self.assertEqual(content.count("<tr "), 1)
-            if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
-                self.assertNotRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            with contextlib.suppress(AttributeError):
-                # Some models, such as ObjectMetadata, don't have a detail URL
-                if instance1.get_absolute_url() in content:
-                    self.assertNotIn(instance2.get_absolute_url(), content, msg=content)
+            for s in self.get_instance_display_text_content(instance1):
+                self.assertRegex(content, r">\s*" + re.escape(escape(s)) + r"\s*<", msg=content)
+            for s in self.get_instance_display_strings(instance1):
+                self.assertIn(s, content, msg=content)
+            for s in self.get_instance_display_text_content(instance2):
+                self.assertNotRegex(content, r">\s*" + re.escape(escape(s)) + r"\s*<", msg=content)
+            for s in self.get_instance_display_strings(instance2):
+                self.assertNotIn(s, content, msg=content)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=True)
         def test_list_objects_unknown_filter_strict_filtering(self):
             """Verify that with STRICT_FILTERING, an unknown filter results in an error message and no matches."""
-            response = self.client.get(f"{self._get_url('list')}?ice_cream_flavor=chocolate")
+            response = self.client.get(
+                f"{self._get_url('list')}?ice_cream_flavor=chocolate", headers={"HX-Request": "true"}
+            )
+            # Note: If this breaks, update `test_filter_form_fields_are_working` as well
+            self.assertHttpStatus(response, 200)
             self.assertBodyContains(response, "Unknown filter field")
             # There should be no table rows displayed except for the empty results row
-            self.assertBodyContains(response, "None")
+            self.assertBodyContains(response, f"No {self.get_display_verbose_name_plural()} found")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"], STRICT_FILTERING=False)
         def test_list_objects_unknown_filter_no_strict_filtering(self):
             """Verify that without STRICT_FILTERING, an unknown filter is ignored."""
-            instance1, instance2 = self._get_queryset().all()[:2]
-            if hasattr(self.model, "name") and instance1.name == instance2.name:
+            queryset = self._get_queryset()
+            has_name = any(f.name == "name" for f in queryset.model._meta.get_fields())
+            if has_name:
+                queryset = queryset.exclude(name="")
+            instance1, instance2 = queryset[:2]
+            if hasattr(instance1, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
 
@@ -1110,15 +1203,113 @@ class ViewTestCases:
             )
             self.assertHttpStatus(response, 200)
             content = response.content.decode(response.charset)
+            self.assertNotIn("Unknown filter field", content, msg=content)
             # There should be at least two rows in the table
             self.assertGreaterEqual(content.count("<tr "), 2)
-            if hasattr(self.model, "name"):
-                self.assertRegex(content, r">\s*" + re.escape(escape(instance1.name)) + r"\s*<", msg=content)
-                self.assertRegex(content, r">\s*" + re.escape(escape(instance2.name)) + r"\s*<", msg=content)
-            with contextlib.suppress(AttributeError):
-                # Some models, such as ObjectMetadata, don't have a detail URL
-                if instance1.get_absolute_url() in content:
-                    self.assertIn(instance2.get_absolute_url(), content, msg=content)
+            for instance in (instance1, instance2):
+                for s in self.get_instance_display_text_content(instance):
+                    self.assertRegex(content, r">\s*" + re.escape(escape(s)) + r"\s*<", msg=content)
+                for s in self.get_instance_display_strings(instance):
+                    self.assertIn(s, content, msg=content)
+
+        def test_filter_form_fields_are_working(self):
+            """
+            Check that each field in the NautobotFilterForm works with a valid value.
+            """
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+            self.add_permissions(f"{self.model._meta.app_label}.view_{self.model._meta.model_name}")
+
+            view = self.get_list_view()
+            filter_form_class = getattr(view, "filterset_form_class", getattr(view, "filterset_form", None))
+            if not filter_form_class:
+                self.skipTest(
+                    f"Skipping test since {view.__class__.__name__} does not have a filterset_form_class or filterset_form defined."
+                )
+
+            messages = []
+            messages.append(f"Testing {filter_form_class.__name__} on {self.model.__name__}")
+
+            # Get the filterset class so we can compare to the FilterForm fields for a match
+            filterset_class = self.get_filterset()
+
+            if not filterset_class:
+                messages.append(f"No filterset found for model {self.model}")
+                self.fail("\n".join(messages))
+
+            for field_name, form_field in filter_form_class().fields.items():
+                if field_name.startswith(("cr_", "cf_", "cpf_")):
+                    continue
+                value = None
+                filter_field = None
+                if not filterset_class.base_filters.get(field_name):
+                    messages.append(
+                        f"{filter_form_class.__name__} field `{field_name}` does not have a corresponding filter on {filterset_class.__name__}."
+                    )
+                    self.fail("\n".join(messages))
+                filter_field = filterset_class.base_filters[field_name]
+                messages.append(f"Testing FormFilter field `{field_name}` and type `{form_field.__class__.__name__}")
+
+                if hasattr(form_field, "choices") and form_field.choices:
+                    # This logic could result in a "flaky" test if the first value is valid, but subsequent values are not.
+                    # Flatten grouped choices and skip group labels
+                    def iter_choices(choices):
+                        for c in choices:
+                            if isinstance(c[1], (list, tuple)):
+                                # This is a group: c[1] is a list of (value, label)
+                                yield from c[1]
+                            else:
+                                yield c
+
+                    valid_choices = [c[0] for c in iter_choices(form_field.choices) if c[0] is not None]
+                    # Skip if no valid choices (only None or empty), this is a gap in the testing
+                    if not valid_choices:
+                        continue
+                    value = valid_choices[0]
+
+                elif type(form_field) in [django_forms.CharField, django_forms.TypedChoiceField]:
+                    value = "test-name"
+                    if type(filter_field) in [MACAddressFilter, MultiValueMACAddressFilter]:
+                        value = "aa:bb:cc:dd:ee:ff"
+                elif type(form_field) in [django_forms.IntegerField, django_forms.ModelChoiceField, NumericArrayField]:
+                    value = 1
+                elif type(form_field) in [django_forms.BooleanField]:
+                    value = True
+                elif type(form_field) in [django_forms.DateField, NullableDateField]:
+                    value = "2026-01-01"
+                elif type(form_field) in [django_forms.DateTimeField]:
+                    value = "2026-01-01T00:00:00"
+                elif type(form_field) in [django_forms.ModelMultipleChoiceField, DynamicModelMultipleChoiceField]:
+                    # Use the first valid choice from the queryset, if available
+                    queryset = getattr(form_field, "queryset", None)
+                    value = None
+                    if queryset is not None and queryset.exists():
+                        value = queryset.first().pk
+                    else:
+                        # We currently do not cover use cases where the queryset is empty, this is a gap in the testing
+                        continue
+                elif type(form_field) in [django_forms.NullBooleanField]:
+                    value = True
+                elif type(form_field) in [django_forms.URLField]:
+                    value = "https://example.com"
+                elif type(form_field) in [MultiValueCharField, TagFilterField]:
+                    value = "test-tag"
+                else:
+                    # Unsupported type, if missing a case above add it to the elif block with appropriate test value.
+                    messages.append(f"Field `{field_name}` has an unsupported type `{form_field.__class__.__name__}`.")
+                    self.fail("\n".join(messages))
+
+                url = f"{self._get_url('list')}?{field_name}={value!s}"
+
+                messages.append(f"Testing URL: {url}")
+                try:
+                    response = self.client.get(url)
+                except Exception:
+                    self.fail("\n".join(messages))
+                self.assertHttpStatus(response, 200, msg="\n".join(messages))
+                self.assertNotContains(response, "Invalid filters were specified", msg_prefix="\n".join(messages))
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_without_permission(self):
@@ -1143,7 +1334,7 @@ class ViewTestCases:
             title = self.get_title()
             expected_title = (
                 '<h1 class="d-flex fs-2 gap-8 lh-sm py-6">'
-                '<img alt="Nautobot chevron" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" role="presentation" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
+                '<img alt="" class="align-self-start flex-grow-0 flex-shrink-0 my-n4" src="/static/img/nautobot_chevron.svg" style="width: 1.5rem;" />'
                 f"{title}</h1>"
             )
             self.assertBodyContains(response, expected_title, html=True)
@@ -1157,14 +1348,19 @@ class ViewTestCases:
             if "example_app" in settings.PLUGINS:
                 with self.subTest("Assert example-app banner is present"):
                     self.assertIn(
-                        f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>", response_body
+                        f"<div>You are viewing a table of {self.get_display_verbose_name_plural()}</div>",
+                        response_body,
                     )
 
             return response
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_list_objects_with_constrained_permission(self):
-            instance1, instance2 = self._get_queryset().all()[:2]
+            queryset = self._get_queryset()
+            has_name = any(f.name == "name" for f in queryset.model._meta.get_fields())
+            if has_name:
+                queryset = queryset.exclude(name="")
+            instance1, instance2 = queryset[:2]
             if hasattr(self.model, "name") and instance1.name == instance2.name:
                 instance2.name += "X"
                 instance2.save()
@@ -1235,7 +1431,7 @@ class ViewTestCases:
             # Check app banner is rendered correctly
             self.assertBodyContains(
                 response,
-                f"<div>You are viewing a table of {self.model._meta.verbose_name_plural}</div>",
+                f"<div>You are viewing a table of {self.get_display_verbose_name_plural()}</div>",
                 html=True,
             )
 
@@ -1249,6 +1445,81 @@ class ViewTestCases:
 
         bulk_create_count = 3
         bulk_create_data = {}
+        # Field on the parent form where the invalid-create scenario is expected to surface.
+        # Override per test case if the model's create form does not have a `label_pattern` field.
+        expected_invalid_create_form_field = "label_pattern"
+        # Field on the parent form where the invalid-component scenario is expected to surface,
+        # and a substring expected within at least one error on that field.
+        expected_invalid_component_form_field = "label_pattern"
+        expected_invalid_component_form_error = "Ensure this value has at most 255 characters"
+
+        def get_invalid_bulk_create_data(self):
+            data = self.bulk_create_data.copy()
+            data[self.expected_invalid_create_form_field] = "Mismatch [1-2]"
+            return data
+
+        def get_invalid_component_bulk_create_data(self):
+            data = self.bulk_create_data.copy()
+            # Keep name_pattern unchanged so its expansion count still matches any related
+            # fields the parent form cross-validates (e.g. rear_port_set, position_pattern).
+            # Reuse the same range in label_pattern with a too-long prefix so each generated
+            # label fails the child form's max-length validation on the `label` field.
+            name_pattern = data.get("name_pattern", "")
+            range_match = re.search(r"\[[^\]]+\]", name_pattern)
+            too_long = "X" * 300
+            if range_match:
+                data[self.expected_invalid_component_form_field] = too_long + range_match.group(0)
+            else:
+                data[self.expected_invalid_component_form_field] = too_long
+            return data
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_multiple_objects_get_form(self):
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            url = self._get_url("add")
+            initial_params = {}
+            for field_name in ("device", "module", "virtual_machine", "device_type", "module_type"):
+                value = self.bulk_create_data.get(field_name)
+                if value not in (None, ""):
+                    initial_params[field_name] = value
+
+            if initial_params:
+                url = f"{url}?{urlencode(initial_params)}"
+
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_multiple_objects_with_invalid_create_form(self):
+            initial_count = self._get_queryset().count()
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            response = self.client.post(self._get_url("add"), utils.post_data(self.get_invalid_bulk_create_data()))
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(self._get_queryset().count(), initial_count)
+            self.assertIn(self.expected_invalid_create_form_field, response.context["form"].errors)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_create_multiple_objects_with_invalid_component_form(self):
+            initial_count = self._get_queryset().count()
+
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
+
+            response = self.client.post(
+                self._get_url("add"), utils.post_data(self.get_invalid_component_bulk_create_data())
+            )
+            self.assertHttpStatus(response, 200)
+            self.assertEqual(self._get_queryset().count(), initial_count)
+            form_errors = response.context["form"].errors
+            field = self.expected_invalid_component_form_field
+            self.assertIn(field, form_errors)
+            self.assertTrue(
+                any(self.expected_invalid_component_form_error in error for error in form_errors[field]),
+                f"Expected substring {self.expected_invalid_component_form_error!r} not found in "
+                f"{field} errors: {form_errors[field]!r}",
+            )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
         def test_create_multiple_objects_without_permission(self):
@@ -1382,7 +1653,9 @@ class ViewTestCases:
 
                 # Verify that the provided self.bulk_edit_data was passed through correctly to the job.
                 # The below is a bit gross because of multiple layers of data encoding and decoding involved. Sorry!
-                job_form = BulkEditObjects.as_form(BulkEditObjects.deserialize_data(mock_enqueue_job.call_args.kwargs))
+                job_form = BulkEditObjects.as_form(
+                    BulkEditObjects.deserialize_data(mock_enqueue_job.call_args.kwargs["job_kwargs"])
+                )
                 job_form.is_valid()
                 job_kwargs = job_form.cleaned_data
 
@@ -1440,7 +1713,9 @@ class ViewTestCases:
                 self.validate_redirect_to_job_result(response)
                 mock_enqueue_job.assert_called()
 
-                self.assertEqual(mock_enqueue_job.call_args.kwargs["form_data"].get("_nullify"), data["_nullify"])
+                self.assertEqual(
+                    mock_enqueue_job.call_args.kwargs["job_kwargs"]["form_data"].get("_nullify"), data["_nullify"]
+                )
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_edit_form_contains_all_pks(self):
@@ -1648,10 +1923,10 @@ class ViewTestCases:
             self.assertIn("<strong>Warning:</strong> The following operation will delete 2 ", response_body)
             self.assertInHTML('<input type="hidden" name="_all" value="true" />', response_body)
 
+        @mock.patch.object(JobResult, "enqueue_job")
         @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-        def test_bulk_delete_objects_with_constrained_permission(self):
-            pk_list = self.get_deletable_object_pks()
-            initial_count = self._get_queryset().count()
+        def test_bulk_delete_objects_with_constrained_permission(self, mock_enqueue_job):
+            pk_list = list(self.get_deletable_object_pks())
             data = {
                 "pk": pk_list,
                 "confirm": True,
@@ -1668,9 +1943,17 @@ class ViewTestCases:
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Attempt to bulk delete non-permitted objects
+            job_model = BulkDeleteObjects().job_model
+            job_result = JobResult.objects.create(
+                name=job_model.name,
+                job_model=job_model,
+                user=self.user,
+            )
+            mock_enqueue_job.return_value = job_result
+
+            # Attempt to bulk delete non-permitted objects; the constraint denies all, so nothing is deleted.
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
-            self.assertEqual(self._get_queryset().count(), initial_count)
+            mock_enqueue_job.assert_not_called()
 
             # Update permission constraints
             obj_perm.constraints = {"pk__isnull": False}  # Match a non-existent pk (i.e., allow all)
@@ -1679,8 +1962,10 @@ class ViewTestCases:
             # User would be redirected to Job Result therefore user needs to have permission to view Job Result
             self.add_permissions("extras.view_jobresult")
             response = self.client.post(self._get_url("bulk_delete"), data)
-            job_result = JobResult.objects.filter(name="Bulk Delete Objects").first()
-            self.assertIsNotNone(job_result)
+            mock_enqueue_job.assert_called_once()
+            job_kwargs = mock_enqueue_job.call_args.kwargs["job_kwargs"]
+            self.assertEqual(job_kwargs.get("pk_list", []), [str(pk) for pk in pk_list])
+
             self.assertRedirects(
                 response,
                 reverse("extras:jobresult", args=[job_result.pk]),
@@ -1691,6 +1976,8 @@ class ViewTestCases:
     class BulkRenameObjectsViewTestCase(ModelViewTestCase):
         """
         Rename multiple instances.
+
+        Works with both old-style BulkRenameView and new ObjectBulkRenameViewMixin (NautobotUIViewSet).
         """
 
         rename_data = {
@@ -1698,8 +1985,15 @@ class ViewTestCases:
             "replace": "\\1X",  # Append an X to the original value
             "use_regex": True,
         }
+        # Generally optional, used in legacy `test_bulk_rename` test for device-component models only.
+        selected_objects: Optional[list[Model]] = None
+        selected_objects_parent_name: Optional[str] = None
 
         def test_bulk_rename_objects_without_permission(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
             pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
             data = {
                 "pk": pk_list,
@@ -1715,9 +2009,75 @@ class ViewTestCases:
             with utils.disable_warnings("django.request"):
                 self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 403)
 
+        def get_invalid_bulk_rename_form_data(self, pk_list):
+            return {
+                "pk": pk_list,
+                "_preview": True,
+                "find": "(",
+                "replace": self.rename_data["replace"],
+                "use_regex": self.rename_data["use_regex"],
+            }
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_objects_with_no_valid_selection(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            verbose_name_plural = self.model._meta.verbose_name_plural
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            for values in ([], [str(uuid.uuid4())]):
+                response = self.client.post(
+                    self._get_url("bulk_rename"),
+                    {"pk": values, "_apply": True, **self.rename_data},
+                    follow=True,
+                    headers={"HX-Request": "true"},
+                )
+                self.assertBodyContains(response, f"No valid {verbose_name_plural} were selected.")
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_objects_with_invalid_form(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            pk_list = list(self._get_queryset().values_list("pk", flat=True)[:3])
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            response = self.client.post(self._get_url("bulk_rename"), self.get_invalid_bulk_rename_form_data(pk_list))
+            self.assertHttpStatus(response, 200)
+            self.assertIn("find", response.context["form"].errors)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_objects_with_invalid_regex_group_reference(self):
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            objects = list(self._get_queryset().all()[:3])
+            pk_list = [obj.pk for obj in objects]
+            data = {
+                "pk": pk_list,
+                "_preview": True,
+                "find": self.rename_data["find"],
+                "replace": "\\2",
+                "use_regex": True,
+            }
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            with self.assertRaisesRegex(regex.error, "invalid group reference"):
+                self.client.post(self._get_url("bulk_rename"), data)
+
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_permission(self):
-            objects = list(self._get_queryset().all()[:3])
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            objects = list(self._get_queryset().exclude(name="")[:3])
             pk_list = [obj.pk for obj in objects]
             data = {
                 "pk": pk_list,
@@ -1729,15 +2089,19 @@ class ViewTestCases:
             self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
 
             # Try POST with model-level permission
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                name = getattr(instance, "name")
-                expected_name = getattr(objects[i], "name") + "X"
-                self.assertEqual(name, expected_name)
+            original_names = {obj.pk: obj.name for obj in objects}
+            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data, follow=True), 200)
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                expected_name = original_names[instance.pk] + "X"
+                self.assertEqual(instance.name, expected_name)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_rename_objects_with_constrained_permission(self):
-            objects = list(self._get_queryset().all()[:3])
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            objects = list(self._get_queryset().exclude(name="")[:3])
             pk_list = [obj.pk for obj in objects]
             data = {
                 "pk": pk_list,
@@ -1745,30 +2109,427 @@ class ViewTestCases:
             }
             data.update(self.rename_data)
 
-            # Assign constrained permission
+            # Constraint: only allow changing objects whose name is in the original set.
+            # After renaming (appending "X"), the new names won't match, triggering a permissions violation.
+            original_names = [obj.name for obj in objects]
             obj_perm = users_models.ObjectPermission(
                 name="Test permission",
-                constraints={"name__regex": "[^X]$"},
+                constraints={"name__in": original_names},
                 actions=["change"],
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
             obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-            # Attempt to bulk edit permitted objects into a non-permitted state
-            response = self.client.post(self._get_url("bulk_rename"), data)
+            # Attempt to bulk rename permitted objects into a non-permitted state
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
             self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, "object-level permissions violation")
 
-            # Update permission constraints
+            # Update permission constraints to allow all objects
             obj_perm.constraints = {"pk__gt": 0}
             obj_perm.save()
 
+            # Capture names as they are now (may or may not have been renamed above depending on model)
+            names_before = {obj.pk: obj.name for obj in self._get_queryset().filter(pk__in=pk_list)}
+
             # Bulk rename permitted objects
-            self.assertHttpStatus(self.client.post(self._get_url("bulk_rename"), data), 302)
-            for i, instance in enumerate(self._get_queryset().filter(pk__in=pk_list)):
-                name = getattr(instance, "name")
-                expected_name = getattr(objects[i], "name") + "X"
-                self.assertEqual(name, expected_name)
+            response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
+            self.assertHttpStatus(response, 200)
+            for instance in self._get_queryset().filter(pk__in=pk_list):
+                expected_name = names_before[instance.pk] + "X"
+                self.assertEqual(instance.name, expected_name)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename(self):
+            """Legacy test, originally specific to DeviceComponentViewTestCase."""
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            objects = self.selected_objects or self._get_queryset()
+            pk_list = [obj.pk for obj in objects]
+            # Apply button not yet clicked
+            data = {"pk": pk_list}
+            data.update(self.rename_data)
+            verbose_name_plural = self.model._meta.verbose_name_plural
+
+            if self.selected_objects_parent_name:
+                with self.subTest("Assert parent name in HTML"):
+                    response = self.client.post(self._get_url("bulk_rename"), data)
+                    message = (
+                        f"Renaming {len(objects)} {helpers.bettertitle(verbose_name_plural)} "
+                        f"on {self.selected_objects_parent_name}"
+                    )
+                    self.assertBodyContains(response, message)
+
+            with self.subTest("Assert update successfully"):
+                data["_apply"] = True  # Form Apply button
+                response = self.client.post(self._get_url("bulk_rename"), data)
+                self.assertHttpStatus(response, 302)
+                queryset = self._get_queryset().filter(pk__in=pk_list)
+                for instance in objects:
+                    self.assertEqual(queryset.get(pk=instance.pk).name, f"{instance.name}X")
+
+            with self.subTest("Assert if no valid objects selected return with error"):
+                for values in ([], [str(uuid.uuid4())]):
+                    data["pk"] = values
+                    response = self.client.post(
+                        self._get_url("bulk_rename"), data, follow=True, headers={"HX-Request": "true"}
+                    )
+                    expected_message = f"No valid {verbose_name_plural} were selected."
+                    self.assertBodyContains(response, expected_message)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_regex_redos_protection(self):
+            """A pattern with nested quantifiers must not stall the worker in `re.sub`.
+
+            The view passes the user-supplied `find` regex to `re.sub()` against each
+            selected object's `.name`. With a name engineered to *almost* match the
+            pattern, classic ReDoS regexes like `(a+)+$` trigger catastrophic
+            backtracking and the request hangs indefinitely.
+
+            We bound the request with `signal.SIGALRM` — a protected view rejects the
+            pattern up front and returns promptly; an unprotected view stalls inside
+            `re.sub` and the alarm fires, failing the test loudly.
+            """
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+
+            obj = self._get_queryset().first()
+            if obj is None:
+                self.fail(f"No {self.model.__name__} instances available")
+            original_name = obj.name
+
+            # Engineer a name that triggers exponential backtracking on the alternation pattern below:
+            # the trailing `X` forces the engine to fail end-anchor matching, and the wide alternation
+            # of identical branches `(a|a|a|a|a)+` defeats common engine optimizations — the matcher
+            # must enumerate every partition of the leading `a`s before declaring no match. Without
+            # protection this stalls the worker; the timeout-based protection should reject promptly.
+            redos_payload = "a" * 20 + "X"  # RouteTarget in particular has `name = CharField(max_length=21)`
+            obj.name = redos_payload
+            try:
+                obj.save()
+            except Exception:
+                self.fail(f"{self.model.__name__} does not accept the ReDoS test payload as a name")
+
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+
+            data = {
+                "pk": [obj.pk],
+                "_apply": True,
+                "find": "(a|a|a|a|a)+$",  # Wide alternation — engine must enumerate every partition
+                "replace": "Y",
+                "use_regex": True,
+            }
+
+            timeout_seconds = 5  # be a bit generous here to avoid spurious failures in CI.
+
+            def _alarm(_signum, _frame):
+                self.fail(
+                    f"BulkRenameView for {self.model.__name__} did not respond within "
+                    f"{timeout_seconds}s; likely catastrophic backtracking on `(a+)+$` (ReDoS)."
+                )
+
+            previous_handler = signal.signal(signal.SIGALRM, _alarm)
+            try:
+                signal.alarm(timeout_seconds)
+                response = self.client.post(self._get_url("bulk_rename"), data)
+            finally:
+                signal.alarm(0)
+                signal.signal(signal.SIGALRM, previous_handler)
+
+            # Should return 200 (form re-rendered with error), not hang or 500.
+            self.assertHttpStatus(response, 200)
+
+            # Name must be unchanged — the malicious regex must never have been applied.
+            obj.refresh_from_db()
+            self.assertEqual(obj.name, redos_payload)
+
+            # The user-facing form error should explain the timeout.
+            self.assertBodyContains(response, "catastrophic backtracking")
+
+            # Restore the original name so subsequent tests using this fixture aren't disturbed.
+            obj.name = original_name
+            obj.save()
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_rename_plain_string_replace(self):
+            """POST with use_regex=False should do a plain string find/replace."""
+            try:
+                self._get_url("bulk_rename")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_rename route")
+            objects = list(self._get_queryset().exclude(name="")[:1])
+            pk_list = [obj.pk for obj in objects]
+            original_name = objects[0].name
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            # Use the same regex-based rename_data pattern but with use_regex=False and a literal find
+            # that matches part of the name. Use first char as find target for broad compatibility.
+            first_char = original_name[0]
+            data = {
+                "pk": pk_list,
+                "_preview": True,
+                "find": first_char,
+                "replace": first_char,
+                "use_regex": False,
+            }
+            response = self.client.post(self._get_url("bulk_rename"), data)
+            self.assertHttpStatus(response, 200)
+            # Preview should show the name unchanged (same find/replace)
+            objects[0].refresh_from_db()
+            self.assertEqual(objects[0].name, original_name)
+
+    class BulkDisconnectObjectsViewTestCase(ModelViewTestCase):
+        """
+        Bulk disconnect cables from selected cabled components.
+
+        Required class attributes on the consuming TestCase:
+            cabled_objects: list of >=2 instances of self.model whose `.cable` is set.
+            uncabled_object: optional instance with `.cable is None` for skip-path coverage.
+
+        The three behavior-only tests (form-error flash, constrained component/cable perm) skip
+        automatically for models still served by the legacy `BulkDisconnectView` CBV — detection
+        is done at runtime via `_bulk_disconnect_uses_new_mixin()` (see below). A model picks up
+        the strict-behavior coverage as soon as its `UIViewSet` inherits from
+        `ComponentBulkDisconnectViewMixin`; no per-test-class opt-in required.
+        """
+
+        cabled_objects: list = []
+        uncabled_object = None
+
+        def _bulk_disconnect_uses_new_mixin(self):
+            """True iff the model's UIViewSet inherits from `ComponentBulkDisconnectViewMixin`."""
+            view = lookup.get_view_for_model(self.model)
+            return view is not None and issubclass(view, ComponentBulkDisconnectViewMixin)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_bulk_disconnect_objects_without_permission(self):
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self.cabled_objects:
+                self.skipTest("This test requires self.cabled_objects")
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            data = {"pk": pk_list, "_confirm": True, "confirm": True}
+            with utils.disable_warnings("django.request"):
+                self.assertHttpStatus(self.client.post(self._get_url("bulk_disconnect"), data), 403)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_confirmation_page_renders(self):
+            """First POST (no _confirm) renders the confirmation page listing the selected components."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.assertTrue(
+                self.cabled_objects,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.cabled_objects",
+            )
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            response = self.client.post(self._get_url("bulk_disconnect"), {"pk": pk_list})
+            self.assertHttpStatus(response, 200)
+            body = utils.extract_page_body(response.content.decode(response.charset))
+            for obj in self.cabled_objects:
+                self.assertIn(str(obj.pk), body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_objects_with_permission(self):
+            """_confirm + valid form -> components detached, cables preserved, redirect to return_url."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.assertTrue(
+                self.cabled_objects,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.cabled_objects",
+            )
+            from nautobot.dcim.models import Cable
+
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            pk_list = [obj.pk for obj in self.cabled_objects]
+            cable_pks = [obj.cable_id for obj in self.cabled_objects]
+
+            data = {"pk": pk_list, "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            self.assertHttpStatus(response, 302)
+
+            # Components still exist but are no longer cabled
+            self.assertEqual(self._get_queryset().filter(pk__in=pk_list).count(), len(pk_list))
+            for obj in self._get_queryset().filter(pk__in=pk_list):
+                self.assertIsNone(obj.cable)
+            # The cables themselves are preserved (disconnect_termination removes the termination row only)
+            self.assertEqual(Cable.objects.filter(pk__in=cable_pks).count(), len(cable_pks))
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_skips_uncabled_selections(self):
+            """Selecting one cabled + one uncabled disconnects only the cabled one (silent skip)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            self.assertTrue(
+                self.cabled_objects,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.cabled_objects",
+            )
+            self.assertIsNotNone(
+                self.uncabled_object,
+                f"{type(self).__name__} supports bulk_disconnect but did not define self.uncabled_object",
+            )
+            from nautobot.dcim.models import Cable
+
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            cabled = self.cabled_objects[0]
+            cable_pk = cabled.cable_id
+
+            data = {
+                "pk": [cabled.pk, self.uncabled_object.pk],
+                "_confirm": True,
+                "confirm": True,
+            }
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            self.assertHttpStatus(response, 302)
+
+            # The cabled component is detached but the cable itself is preserved
+            cabled.refresh_from_db()
+            self.assertIsNone(cabled.cable)
+            self.assertTrue(Cable.objects.filter(pk=cable_pk).exists())
+            # Uncabled object is untouched and still uncabled
+            self.uncabled_object.refresh_from_db()
+            self.assertIsNone(self.uncabled_object.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_invalid_form_rerenders(self):
+            """_confirm with no pks -> form_invalid path."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "which does not flash form errors via messages."
+                )
+            self.add_permissions(
+                f"{self.model._meta.app_label}.change_{self.model._meta.model_name}",
+                "dcim.change_cable",
+            )
+            data = {"_confirm": True, "confirm": True}  # no pk
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # form_invalid returns a Response that NautobotHTMLRenderer turns into 200 with form errors
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+            # The empty `pk` field should surface a "required" error from the ConfirmationForm
+            self.assertIn("This field is required.", response_body)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_with_constrained_component_permission(self):
+            """Selecting a component outside the user's component change-perm constraint -> no objects disconnected (atomic)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView; "
+                    "the form-invalid 200 response on constrained PKs is only emitted by ComponentBulkDisconnectViewMixin."
+                )
+            self.assertTrue(
+                self.cabled_objects and len(self.cabled_objects) >= 2,
+                f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
+            )
+            from nautobot.dcim.models import Cable
+
+            allowed, forbidden = self.cabled_objects[0], self.cabled_objects[1]
+            allowed_cable_pk, forbidden_cable_pk = allowed.cable_id, forbidden.cable_id
+
+            # Constrained change perm on the component model: only `allowed` is accessible.
+            obj_perm = users_models.ObjectPermission(
+                name="constrained_component_change",
+                constraints={"pk": str(allowed.pk)},
+                actions=["change"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            # Unconstrained Cable change perm so the only barrier is the component constraint.
+            self.add_permissions("dcim.change_cable")
+
+            data = {"pk": [allowed.pk, forbidden.pk], "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # ModelMultipleChoiceField rejects `forbidden.pk` because it's outside the restricted queryset.
+            self.assertHttpStatus(response, 200)
+            response_body = utils.extract_page_body(response.content.decode(response.charset))
+            self.assertIn("Select a valid choice.", response_body)
+
+            # Atomic: neither component has been disconnected.
+            self.assertTrue(Cable.objects.filter(pk__in=[allowed_cable_pk, forbidden_cable_pk]).count() == 2)
+            allowed.refresh_from_db()
+            forbidden.refresh_from_db()
+            self.assertIsNotNone(allowed.cable)
+            self.assertIsNotNone(forbidden.cable)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_bulk_disconnect_with_constrained_cable_permission(self):
+            """Selecting a component whose cable is outside the user's Cable change-perm constraint -> no objects disconnected (atomic)."""
+            try:
+                self._get_url("bulk_disconnect")
+            except NoReverseMatch:
+                self.skipTest(f"{self.model.__name__} does not have a bulk_disconnect route")
+            if not self._bulk_disconnect_uses_new_mixin():
+                self.skipTest(
+                    f"{self.model.__name__} bulk_disconnect is served by the legacy BulkDisconnectView, "
+                    "which does not enforce per-cable change permission."
+                )
+            self.assertTrue(
+                self.cabled_objects and len(self.cabled_objects) >= 2,
+                f"{type(self).__name__} supports bulk_disconnect but did not define at least 2 self.cabled_objects",
+            )
+            from nautobot.dcim.models import Cable
+
+            allowed, forbidden = self.cabled_objects[0], self.cabled_objects[1]
+            allowed_cable_pk, forbidden_cable_pk = allowed.cable_id, forbidden.cable_id
+            self.assertNotEqual(allowed_cable_pk, forbidden_cable_pk, "Test fixture must use two distinct cables")
+
+            # Unconstrained component change perm; constrained Cable change perm.
+            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+            obj_perm = users_models.ObjectPermission(
+                name="constrained_cable_change",
+                constraints={"pk": str(allowed_cable_pk)},
+                actions=["change"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(Cable))
+
+            data = {"pk": [allowed.pk, forbidden.pk], "_confirm": True, "confirm": True}
+            response = self.client.post(self._get_url("bulk_disconnect"), data)
+            # The mixin's post-loop `Cable.objects.restrict(user, "change")` check raises
+            # `ObjectDoesNotExist` inside the transaction, rolling back both disconnects;
+            # the redirect happens regardless and an error message is flashed to the user.
+            self.assertHttpStatus(response, 302)
+
+            # Atomic: both cables still exist and both components are still cabled.
+            self.assertEqual(Cable.objects.filter(pk__in=[allowed_cable_pk, forbidden_cable_pk]).count(), 2)
+            allowed.refresh_from_db()
+            forbidden.refresh_from_db()
+            self.assertIsNotNone(allowed.cable)
+            self.assertIsNotNone(forbidden.cable)
 
     class PrimaryObjectViewTestCase(
         GetObjectViewTestCase,
@@ -1779,6 +2540,7 @@ class ViewTestCases:
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
         BulkEditObjectsViewTestCase,
+        BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """
@@ -1795,6 +2557,7 @@ class ViewTestCases:
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,
+        BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
     ):
         """
@@ -1828,6 +2591,7 @@ class ViewTestCases:
         BulkEditObjectsViewTestCase,
         BulkRenameObjectsViewTestCase,
         BulkDeleteObjectsViewTestCase,
+        BulkDisconnectObjectsViewTestCase,
     ):
         """
         TestCase suitable for testing device component models (ConsolePorts, Interfaces, etc.)
@@ -1836,8 +2600,6 @@ class ViewTestCases:
         maxDiff = None
         bulk_add_data = None
         """Used for bulk-add (distinct from bulk-create) view testing; self.bulk_create_data will be used if unset."""
-        selected_objects: list[ComponentModel]
-        selected_objects_parent_name: str
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_bulk_add_component(self):
@@ -1885,38 +2647,28 @@ class ViewTestCases:
             self.assertEqual(matching_count, self.bulk_create_count)
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
-        def test_bulk_rename(self):
-            self.add_permissions(f"{self.model._meta.app_label}.change_{self.model._meta.model_name}")
+        def test_create_components_with_required_custom_field(self):
+            """A required custom field must be carried through to each component created via the add form (#9047)."""
+            custom_field = extras_models.CustomField.objects.create(
+                type=extras_choices.CustomFieldTypeChoices.TYPE_TEXT,
+                label="Mandatory Component Field",
+                required=True,
+            )
+            custom_field.content_types.set([ContentType.objects.get_for_model(self.model)])
 
-            objects = self.selected_objects
-            pk_list = [obj.pk for obj in objects]
-            # Apply button not yet clicked
-            data = {"pk": pk_list}
-            data.update(self.rename_data)
-            verbose_name_plural = self.model._meta.verbose_name_plural
+            self.add_permissions(f"{self.model._meta.app_label}.add_{self.model._meta.model_name}")
 
-            with self.subTest("Assert device name in HTML"):
-                response = self.client.post(self._get_url("bulk_rename"), data)
-                message = (
-                    f"Renaming {len(objects)} {helpers.bettertitle(verbose_name_plural)} "
-                    f"on {self.selected_objects_parent_name}"
-                )
-                self.assertBodyContains(response, message)
+            data = self.bulk_create_data.copy()
+            data[custom_field.add_prefix_to_cf_key()] = "expected value"
+            initial_pks = set(self._get_queryset().values_list("pk", flat=True))
 
-            with self.subTest("Assert update successfully"):
-                data["_apply"] = True  # Form Apply button
-                response = self.client.post(self._get_url("bulk_rename"), data)
-                self.assertHttpStatus(response, 302)
-                queryset = self._get_queryset().filter(pk__in=pk_list)
-                for instance in objects:
-                    self.assertEqual(queryset.get(pk=instance.pk).name, f"{instance.name}X")
+            response = self.client.post(self._get_url("add"), data=utils.post_data(data))
+            self.assertHttpStatus(response, 302)
 
-            with self.subTest("Assert if no valid objects selected return with error"):
-                for values in ([], [str(uuid.uuid4())]):
-                    data["pk"] = values
-                    response = self.client.post(self._get_url("bulk_rename"), data, follow=True)
-                    expected_message = f"No valid {verbose_name_plural} were selected."
-                    self.assertBodyContains(response, expected_message)
+            new_objects = self._get_queryset().exclude(pk__in=initial_pks)
+            self.assertEqual(new_objects.count(), self.bulk_create_count)
+            for instance in new_objects:
+                self.assertEqual(instance.cf[custom_field.key], "expected value")
 
         @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
         def test_modular_component_create_form_fields(self):

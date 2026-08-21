@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Any, Optional
 
 from django.conf import settings
@@ -24,6 +25,24 @@ SELENIUM_HOST = os.getenv("NAUTOBOT_SELENIUM_HOST", "nautobot")
 
 # Default login URL
 LOGIN_URL = reverse(settings.LOGIN_URL)
+
+AXE_CORE_PATH = Path(settings.BASE_DIR) / "ui" / "node_modules" / "axe-core" / "axe.min.js"
+
+# WCAG 2.2 A and AA. The earlier tags are needed too: axe tags each rule with the version that introduced it, so
+# `wcag22*` alone matches only `target-size` -- which selecting by tag also runs despite axe disabling it by default.
+AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag22aa")
+
+# Impact is how badly a violation affects a user, not how important the criterion is: `meta-viewport` is a WCAG AA
+# failure reported at `moderate`. Narrowing this hides conformance failures.
+AXE_DEFAULT_IMPACTS = ("critical", "serious", "moderate", "minor")
+
+# django-debug-toolbar's container. Dev-only dependency, added to `INSTALLED_APPS` under `if DEBUG` by the development
+# configs, so no user can reach it. Tests run with `DEBUG` off; this is for scans run by hand.
+AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
+
+# `color-contrast` is a WCAG 1.4.3 AA rule and the theme currently fails it in several places. Fixing it means retuning
+# palette tokens, which is a product decision that has been deferred, so the rule is off rather than left failing.
+AXE_DISABLED_RULES = ("color-contrast",)
 
 
 class ObjectsListMixin:
@@ -346,7 +365,7 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         """Close down the browser after tests are ran."""
         cls.browser.quit()
 
-    def login(self, username, password, login_url=LOGIN_URL, button_text="Log In"):
+    def login(self, username, password, login_url=LOGIN_URL, button_text="Sign in"):
         """
         Navigate to `login_url` and perform a login w/ the provided `username` and `password`.
         """
@@ -404,7 +423,15 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         add_button.click()
 
         # Wait for body element to appear
-        self.assertTrue(self.browser.is_element_present_by_css(".alert-success", wait_time=5), "Page failed to load")
+        self.assertTrue(self.browser.is_element_present_by_css(".nb-toast-success", wait_time=5), "Page failed to load")
+
+    def dismiss_toasts(self):
+        """
+        Helper function to dismiss all currently displayed toasts.
+        """
+        for close_button in self.browser.find_by_css("#toast-messages .toast.show .btn-close"):
+            close_button.click()
+        self.browser.is_element_not_present_by_css("#toast-messages .toast.show", wait_time=5)
 
     def _fill_select2_field(self, field_name, value, search_box_class=None):
         """
@@ -482,6 +509,77 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         self.user.save()
         self.login(self.user.username, self.password)
         self.logged_in = True
+
+    def assertNoAccessibilityViolations(
+        self,
+        impacts=AXE_DEFAULT_IMPACTS,
+        tags=AXE_DEFAULT_TAGS,
+        context=None,
+        exclude=AXE_EXCLUDE_SELECTORS,
+        disabled_rules=AXE_DISABLED_RULES,
+    ):
+        """
+        Assert that the page currently loaded in the browser has no axe-core violations.
+
+        `context` limits the scan to a CSS selector, `exclude` drops selectors from it, and `disabled_rules` names rules
+        not to run at all -- pass `()` to scan with everything the tags select. Skips if axe-core is not installed.
+        Failures name the rule, impact, help text and the first five offending selectors per rule.
+
+        Only violations are reported. axe's `incomplete` bucket -- checks it could not decide -- needs a human, so read
+        it separately (see "Scanning by hand" in `docs/development/core/ui-best-practices.md`). Do not assume an entry
+        there is a checker limitation: contrast is indeterminate for any part of an element falling outside the ancestor
+        that paints its background, so a label overflowing its container reports as undecidable when it is really a
+        layout bug.
+        """
+        if not AXE_CORE_PATH.is_file():
+            self.skipTest(
+                f"axe-core not found at {AXE_CORE_PATH}. Run `npm install` in `nautobot/ui` to enable "
+                "accessibility assertions."
+            )
+
+        self.browser.execute_script(AXE_CORE_PATH.read_text(encoding="utf-8"))
+
+        # `axe.run` returns a promise, so this needs `execute_async_script`: the driver appends a resolve callback as the
+        # final argument.
+        results = self.browser.driver.execute_async_script(
+            """
+            const [context, exclude, tags, disabledRules, done] = [
+                arguments[0], arguments[1], arguments[2], arguments[3], arguments[arguments.length - 1],
+            ];
+            /* `include`/`exclude` take arrays of selector arrays, so pass bare `document` rather than including it. */
+            const axeContext = {};
+            if (context) { axeContext.include = [[context]]; }
+            if (exclude && exclude.length) { axeContext.exclude = exclude.map((selector) => [selector]); }
+            const axeOptions = { runOnly: { type: 'tag', values: tags } };
+            if (disabledRules.length) {
+                axeOptions.rules = Object.fromEntries(disabledRules.map((rule) => [rule, { enabled: false }]));
+            }
+            axe.run(Object.keys(axeContext).length ? axeContext : document, axeOptions)
+                .then((results) => done({ violations: results.violations }))
+                .catch((error) => done({ error: String(error) }));
+            """,
+            context,
+            list(exclude or ()),
+            list(tags),
+            list(disabled_rules or ()),
+        )
+
+        if results.get("error"):
+            self.fail(f"axe-core failed to run: {results['error']}")
+
+        violations = [violation for violation in results.get("violations", []) if violation.get("impact") in impacts]
+        if not violations:
+            return
+
+        lines = []
+        for violation in violations:
+            lines.append(f"  [{violation['impact']}] {violation['id']}: {violation['help']}")
+            lines.append(f"    {violation['helpUrl']}")
+            for node in violation.get("nodes", [])[:5]:  # The first few offenders are enough to act on.
+                target = ", ".join(node.get("target", []))
+                lines.append(f"    at {target}")
+        details = "\n".join(lines)
+        self.fail(f"{len(violations)} accessibility violation(s) at impact {impacts} on {self.browser.url}:\n{details}")
 
     def scroll_element_into_view(self, element=None, css=None, xpath=None, block="start"):
         """
@@ -814,3 +912,51 @@ class BulkOperationsTestCases:
 
     class BulkOperationsTestCase(BulkEditTestCase, BulkDeleteTestCase):
         pass
+
+
+class CollapseAllButtonTestCase(SeleniumTestCase):
+    """
+    Base class for integration tests of a "Collapse All / Expand All Groups" button (see `nautobot/ui/src/js/collapse.js`).
+
+    Child classes MUST set TOGGLE_ALL_BUTTON_SELECTOR, GROUP_ROW_SELECTOR, and GROUP_TOGGLE_SELECTOR in their own `setUp
+    """
+
+    # CSS selector for the "collapse all" toggle button.
+    TOGGLE_ALL_BUTTON_SELECTOR = None
+    # CSS selector matching every collapsible group row controlled by the button.
+    GROUP_ROW_SELECTOR = None
+    # CSS selector for the individual per-group collapse toggles.
+    GROUP_TOGGLE_SELECTOR = None
+
+    def _get_group_count(self, group_toggle_selector=None):
+        return len(self.browser.find_by_css(group_toggle_selector or self.GROUP_TOGGLE_SELECTOR))
+
+    def _get_total_row_count(self, group_row_selector=None):
+        return len(self.browser.find_by_css(group_row_selector or self.GROUP_ROW_SELECTOR))
+
+    def _get_collapsed_row_count(self, group_row_selector=None):
+        return len(self.browser.find_by_css(f"{group_row_selector or self.GROUP_ROW_SELECTOR}:not(.show)"))
+
+    def _get_expanded_row_count(self, group_row_selector=None):
+        return len(self.browser.find_by_css(f"{group_row_selector or self.GROUP_ROW_SELECTOR}.show"))
+
+    def _get_collapse_all_button_text(self, toggle_all_button_selector=None):
+        return self.browser.find_by_css(toggle_all_button_selector or self.TOGGLE_ALL_BUTTON_SELECTOR).first.text
+
+    def _click_collapse_all_button(self, toggle_all_button_selector=None):
+        button = self.browser.find_by_css(
+            toggle_all_button_selector or self.TOGGLE_ALL_BUTTON_SELECTOR, wait_time=2
+        ).first
+        self.scroll_element_into_view(element=button)
+        button.click()
+
+    def _click_expand_all_button(self, toggle_all_button_selector=None):
+        self.browser.is_element_present_by_text("Expand All Groups", wait_time=2)
+        self._click_collapse_all_button(toggle_all_button_selector)
+
+    def _expand_first_group(self, group_toggle_selector=None):
+        expansion_indicator = self.browser.find_by_css(
+            group_toggle_selector or self.GROUP_TOGGLE_SELECTOR, wait_time=2
+        ).first
+        self.scroll_element_into_view(element=expansion_indicator)
+        expansion_indicator.click()

@@ -34,9 +34,11 @@ class VirtualServerFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # 
         queryset=IPAddress.objects.all(),
         label="VIP (ID)",
     )
-    source_nat_pool = django_filters.ModelMultipleChoiceFilter(
+    source_nat_pool = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Prefix.objects.all(),
-        label="Source NAT Pool (ID)",
+        prefers_id=True,
+        to_field_name="network",
+        label="Source NAT Pool (ID or network string)",
     )
     load_balancer_pool = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=models.LoadBalancerPool.objects.all(),

@@ -169,3 +169,109 @@ class EncapsulationChoices(ChoiceSet):
         (openvpn, "OpenVPN"),
         (eoip, "EoIP"),
     )
+
+
+#
+# VPN service types
+#
+
+
+class VPNServiceTypeChoices(ChoiceSet):
+    """VPN service type choices for both tunnel and overlay use cases."""
+
+    TYPE_IPSEC = "ipsec"
+
+    # VPLS types
+    TYPE_VPWS = "vpws"
+    TYPE_VPLS = "vpls"
+
+    # VXLAN types
+    TYPE_VXLAN = "vxlan"
+    TYPE_VXLAN_EVPN = "vxlan-evpn"
+
+    # EVPN types
+    TYPE_MPLS_EVPN = "mpls-evpn"
+    TYPE_PBB_EVPN = "pbb-evpn"
+    TYPE_EVPN_VPWS = "evpn-vpws"
+
+    # E-Line types
+    TYPE_EPL = "epl"
+    TYPE_EVPL = "evpl"
+
+    # E-LAN types
+    TYPE_EPLAN = "ep-lan"
+    TYPE_EVPLAN = "evp-lan"
+
+    # E-Tree types
+    TYPE_EPTREE = "ep-tree"
+    TYPE_EVPTREE = "evp-tree"
+
+    # Other
+    TYPE_SPB = "spb"
+
+    CHOICES = (
+        ("Tunnel", ((TYPE_IPSEC, "IPSec"),)),
+        (
+            "VPLS",
+            (
+                (TYPE_VPWS, "VPWS"),
+                (TYPE_VPLS, "VPLS"),
+            ),
+        ),
+        (
+            "VXLAN",
+            (
+                (TYPE_VXLAN, "VXLAN"),
+                (TYPE_VXLAN_EVPN, "VXLAN-EVPN"),
+            ),
+        ),
+        (
+            "EVPN",
+            (
+                (TYPE_MPLS_EVPN, "MPLS EVPN"),
+                (TYPE_PBB_EVPN, "PBB EVPN"),
+                (TYPE_EVPN_VPWS, "EVPN VPWS"),
+            ),
+        ),
+        (
+            "E-Line",
+            (
+                (TYPE_EPL, "EPL"),
+                (TYPE_EVPL, "EVPL"),
+            ),
+        ),
+        (
+            "E-LAN",
+            (
+                (TYPE_EPLAN, "Ethernet Private LAN"),
+                (TYPE_EVPLAN, "Ethernet Virtual Private LAN"),
+            ),
+        ),
+        (
+            "E-Tree",
+            (
+                (TYPE_EPTREE, "Ethernet Private Tree"),
+                (TYPE_EVPTREE, "Ethernet Virtual Private Tree"),
+            ),
+        ),
+        ("Other", ((TYPE_SPB, "SPB"),)),
+    )
+
+    # Point-to-point service types (limited to 2 terminations)
+    P2P = (
+        TYPE_VPWS,
+        TYPE_EVPN_VPWS,
+        TYPE_EPL,
+        TYPE_EVPL,
+    )
+
+    # Types that use VNI (VXLAN Network Identifier) — range 1 to 16,777,214
+    # Only pure VXLAN types use the 24-bit VNI field (RFC 7348).
+    # MPLS EVPN, PBB EVPN, and EVPN VPWS use MPLS labels / route distinguishers, not VNIs.
+    VXLAN_TYPES = (
+        TYPE_VXLAN,
+        TYPE_VXLAN_EVPN,
+    )
+
+    VXLAN_VNI_MIN = 1
+    VXLAN_VNI_MAX = 16777214

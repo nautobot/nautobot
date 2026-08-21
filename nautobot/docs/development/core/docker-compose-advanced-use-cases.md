@@ -11,7 +11,7 @@ The Invoke tasks have some default [configuration](http://docs.pyinvoke.org/en/s
 - `local`: run the commands in the local environment vs the Docker container (default: `False`)
 - `compose_dir`: the full path to the directory containing the Docker Compose YAML files (default: `"<nautobot source directory>/development"`)
 - `compose_files`: the Docker Compose YAML file(s) to use (default: `["docker-compose.yml", "docker-compose.postgres.yml", "docker-compose.dev.yml"]`)
-- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-docker-images-manually-if-needed); you shouldn't generally need to change these.
+- `docker_image_names_main` and `docker_image_names_develop`: Used when [building Docker images for publication](release-checklist.md#publish-release-to-pypi-and-docker-registries); you shouldn't generally need to change these.
 - `ephemeral_ports`: Setting this value to `True` and not using any custom compose files will make all Nautobot containers with published ports expose themselves with dynamic ports. This is useful when running multiple Nautobot versions at the same time on the same machine so you won't experience system port conflicts. If setting `compose_files`, this will have no effect so please ensure to manually add the `docker-compose.ephemeral-ports.yml` to your list.
 
 These setting may be overridden several different ways (from highest to lowest precedence):
@@ -33,6 +33,7 @@ In this directory you'll find the following core files:
 - `docker-compose.final-dev.yml` - Docker compose override file used to start/build the `final-dev` (app development environment) Docker images for local testing.
 - `docker-compose.keycloak.yml` - Docker compose override file used to setup an SSO auth backend for Nautobot.
 - `docker-compose.mysql.yml` - Docker compose override file used to add a MySQL container as the database backend for Nautobot.
+- `docker-compose.observability.yml` - Docker compose override file that runs a local Grafana observability stack (OpenTelemetry Collector, Tempo, Mimir, Loki, Promtail, and Grafana) for viewing the traces, metrics, and logs emitted by Nautobot. See [Local Observability Stack](#local-observability-stack).
 - `docker-compose.postgres.yml` - Docker compose override file used to add a Postgres container as the database backend for Nautobot.
 - `dev.env` - Environment variables used to setup the container services
 - `nautobot_config.py` - Nautobot configuration file
@@ -147,6 +148,41 @@ Keycloak admin console is reachable via `http://localhost:8087/admin/` with user
 | `nautobot_admin`   | `admin123`  |
 | `nautobot_auditor` | `audit123`  |
 
+### Local Observability Stack
+
+Nautobot can emit OpenTelemetry traces, metrics, and logs. To exercise that instrumentation locally - for example when developing or debugging tracing behavior - the `docker-compose.observability.yml` override starts a self-contained [Grafana](https://grafana.com/) observability stack alongside Nautobot: an OpenTelemetry Collector (`otel`), [Tempo](https://grafana.com/oss/tempo/) (traces), [Mimir](https://grafana.com/oss/mimir/) (metrics), [Loki](https://grafana.com/oss/loki/) (logs), Promtail (ships container logs to Loki), and Grafana (the UI). It is opt-in and is not part of the default development environment. For production configuration and security considerations, see the [OpenTelemetry](../../user-guide/administration/guides/opentelemetry.md) administration guide.
+
+#### Enabling the Stack
+
+Add `docker-compose.observability.yml` to the `compose_files` setting in your `invoke.yml`:
+
+```yaml
+---
+nautobot:
+  compose_files:
+    - "docker-compose.yml"
+    - "docker-compose.postgres.yml"
+    - "docker-compose.dev.yml"
+    - "docker-compose.observability.yml"
+```
+
+Then rebuild and start the environment:
+
+```no-highlight
+invoke build
+invoke start
+```
+
+#### Instrumenting Nautobot
+
+Starting the stack only stands up the observability backends; Nautobot must also be instrumented to send data to them. The `development/dev.env` file already points Nautobot at the collector (`OTEL_EXPORTER_OTLP_ENDPOINT="http://otel:4317"`, `OTEL_EXPORTER_OTLP_PROTOCOL="grpc"`), so the only change required is enabling instrumentation, which is off by default. Set `OTEL_PYTHON_DJANGO_INSTRUMENT=True` - for example via a `docker-compose.override.yml` environment override - and run `invoke start` for the change to take effect.
+
+#### Viewing Traces, Metrics, and Logs
+
+Open Grafana at `http://localhost:3000` (anonymous access is enabled for local development, so no login is required). Tempo, Mimir, and Loki are pre-provisioned as data sources, and dashboards - including a GraphQL tracing dashboard - are provisioned from `development/configs/grafana/dashboards/`. The individual backends are also exposed on the host for direct access or debugging: Grafana on `3000`, Tempo's OTLP receivers on `4317` (gRPC) and `4318` (HTTP), Mimir on `9009`, and Loki on `3100`. Note that in this stack it is Tempo - not the OpenTelemetry Collector - that publishes host ports `4317`/`4318`; the collector is reachable only on the internal Docker network as `otel:4317` (which is where Nautobot sends its telemetry, per `development/dev.env`).
+
+To stop the stack, use `invoke stop`. The `grafana_data` and `mimir_data` volumes persist across restarts; use `invoke destroy` to remove them along with the rest of the environment.
+
 ## Microsoft Visual Studio Code Integration
 
 For users of Microsoft Visual Studio Code, several files are included to ease development and integrate with the [VS Code Remote - Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers). The following related files are found relative to the root of the project:
@@ -166,6 +202,7 @@ To open VS Code in the development container, first open VS Code in your local c
 ### Debugging inside a Dev Container
 
 You can use [VS Code to debug](https://code.visualstudio.com/docs/python/debugging) inside the Dev Container using two launch targets:
+
 - **Python: Nautobot** - Targets the Django server process
 - **Python: Nautobot-Celery** - Targets the Celery worker, useful for debugging jobs.
 
@@ -197,6 +234,7 @@ Follow either of the options below to configure VS Code to debug Nautobot and Ce
 #### Running inside the Nautobot workspace
 
 If you have opened the project via the workspace file `nautobot.code-workspace` then there are two debug configurations for remote debugging available. These can be run via one of the debug tasks:
+
 - `Python: Nautobot (Remote)` or
 - `Python: Nautobot-Celery (Remote)`
 

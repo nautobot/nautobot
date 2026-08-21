@@ -8,6 +8,7 @@ import urllib.parse
 import uuid
 
 from django.apps import apps
+from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -18,17 +19,19 @@ from prometheus_client.parser import text_string_to_metric_families
 
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.circuits.tables import ProviderTable
-from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST
+from nautobot.circuits.views import ProviderUIViewSet
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
-from nautobot.core.views import NautobotMetricsView
+from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
-from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
@@ -68,6 +71,70 @@ class GetReturnURLMixinTestCase(TestCase):
         request = self.factory.get("/")
         location = Location.objects.first()
         self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
+
+
+class ObjectListViewActionButtonsTestCase(TestCase):
+    """Tests for rendering of the add/import/export action buttons on object list views."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("circuits.view_provider", "circuits.add_provider")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_rendered_with_default_action_buttons(self):
+        """With the default `("add", "import", "export")` action buttons, the dropdown caret is rendered."""
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_not_rendered_when_add_only(self):
+        """With `action_buttons = ("add",)`, there are no dropdown menu entries, so no caret should render."""
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("add",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('id="add-button"', response_body)
+        self.assertNotIn('id="actions-dropdown"', response_body)
+
+
+class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
+    """Tests for the action buttons on object list views when the user lacks the `add` permission."""
+
+    def setUp(self):
+        super().setUp()
+        # Grant only the view permission; intentionally not covered in `ObjectListViewActionButtonsTestCase`.
+        self.add_permissions("circuits.view_provider")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_rendered_but_import_not_without_add_permission(self):
+        """
+        Without the `add` permission but with the default action buttons, `export` (which does not require `add`)
+        renders inside the dropdown, while `import` (which requires `add`) does not.
+        """
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+        self.assertIn("Export as CSV", response_body)
+        self.assertNotIn('id="import-button"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_not_rendered_when_import_only_without_add_permission(self):
+        """
+        With `action_buttons = ("import",)` and no `add` permission, `import` cannot render (it requires `add`) and
+        there is no `export`, so no dropdown caret should render.
+        """
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("import",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertNotIn('id="actions-dropdown"', response_body)
+        self.assertNotIn('id="import-button"', response_body)
 
 
 class HomeViewTestCase(TestCase):
@@ -113,7 +180,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in header
         header_search_bar_pattern = re.compile(
-            '<header.*<form action="/search/" class="col-4 text-center" id="header_search" method="get" role="search">.*</form>.*</header>'
+            '<header.*<form action="/search/" class="col-4 text-center" data-nb-live-search-path="/live-search/" id="header_search" method="get" role="search">.*</form>.*</header>'
         )
         header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -178,6 +245,52 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+    def test_homepage_layout_panels_empty(self):
+        """
+        Validate that homepage layout panels render empty when user has no required permissions.
+        """
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertBodyContains(
+            response,
+            """
+                <div
+                    id="draggable-homepage-panels"
+                    class="row nb-draggable-container"
+                    data-nb-draggable-flow="column"
+                    hx-ext="json-enc"
+                    hx-swap="none"
+                    hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
+                >
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-0 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-1 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-0 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-1 order-xl-0"></div>
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_homepage_layout_panels_filtered_by_user_permissions(self):
+        """
+        Validate that homepage layout panels render only those panels which user is permitted to view.
+        """
+        self.add_permissions("dcim.view_device", "dcim.view_location", "ipam.view_prefix", "ipam.view_ipaddress")
+
+        url = reverse("home")
+        response = self.client.get(url)
+
+        def assertBodyContains(html):
+            return self.assertBodyContains(response, html, html=True)
+
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
 
 
 class AppDocsViewTestCase(TestCase):
@@ -377,6 +490,242 @@ class MediaViewTestCase(TestCase):
                 self.assertIn("Hello, world!", b"".join(response).decode(response.charset))
 
 
+class SearchContentTypeView(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_search_content_type(self):
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
+        )
+        self.assertBodyContains(
+            response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True
+        )
+        # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
+        self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
+        self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
+
+    def test_search_content_type_with_initial_value(self):
+        location_type = LocationType.objects.create(name="Test Location Type")
+        response = self.client.get(
+            reverse("search_content_type", kwargs={"content_type": "dcim.location"})
+            + f"?location_type={location_type.name}",
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, f'<option selected value="{location_type.name}">{location_type.name}</option>', html=True
+        )
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
+class LiveSearchViewTestCase(TestCase):
+    """Unit tests for the LiveSearchView."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.first()
+        status = Status.objects.first()
+        cls.locations = [
+            Location.objects.create(name=f"Location #{i}", location_type=location_type, status=status)
+            for i in range(0, 20)
+        ]
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        url = reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "test"})
+        response = self.client.get(url)
+        expected_params = urllib.parse.urlencode({"next": url})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_live_search_results(self):
+        """GET with ?q renders table with no more than 10 matching search results, with "More..." button."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(response, '<table class="table nb-table-headings">')  # Confirm that table is rendered.
+        # Expect only the first 10 matching results to be displayed.
+        for location in self.locations[:10]:
+            self.assertContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # Even when there are more matches, there should no more than 10 results displayed at once.
+        for location in self.locations[10:]:
+            self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # In case when there are more results than just the 10 displayed, expect "More..." button to be rendered.
+        self.assertContains(
+            response,
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%23">More...</a>',
+            html=True,
+        )
+
+    def test_live_search_single_result(self):
+        """GET with a very specific ?q renders table with a single matching result, without "More..." button."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #0"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(response, '<table class="table nb-table-headings">')  # Confirm that table is rendered.
+        # Expect only the single matching result to be displayed.
+        for location in self.locations[:1]:
+            self.assertContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # Make sure all other non-matching results are not displayed.
+        for location in self.locations[1:]:
+            self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # In case when there are no more results than those displayed, expect "More..." button not to be rendered.
+        self.assertNotContains(
+            response,
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%230">More...</a>',
+            html=True,
+        )
+
+    def test_live_search_empty(self):
+        """GET with ?q with no matches response is empty."""
+        response = self.client.get(
+            reverse(
+                "live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "non existent location"}
+            ),
+            headers={"HX-Request": "true"},
+        )
+        self.assertContains(response, "No locations found")
+
+    def test_live_search_bad_request_when_no_htmx(self):
+        """Non-HTMX requests are not supported."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "test"})
+        )
+        self.assertEqual(response.text, "Endpoint in question supports only HTMX-made requests.")
+        self.assertEqual(response.status_code, 400)
+
+    def test_live_search_bad_request_when_no_path(self):
+        """List view `path` is required."""
+        response = self.client.get(reverse("live_search"))
+        self.assertEqual(response.text, "List view `path` is missing in the requested URL.")
+        self.assertEqual(response.status_code, 400)
+
+
+class ViewportMetaTestCase(TestCase):
+    """
+    The viewport meta tag must not disable zooming (WCAG 1.4.4 Resize Text).
+
+    This is asserted here, rather than left to the axe-core integration tests, because it is a single-line regression
+    that is easy to reintroduce -- `user-scalable=no` is a common workaround for iOS Safari auto-zooming focused inputs --
+    and because a unit test runs on every suite rather than only when Selenium is available.
+    """
+
+    def test_viewport_permits_zoom(self):
+        response = self.client.get(reverse("home"))
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+
+        match = re.search(r'<meta name="viewport" content="([^"]*)"', body)
+        self.assertIsNotNone(match, "No viewport meta tag found")
+        content = match.group(1)
+
+        self.assertNotIn("user-scalable=no", content.replace(" ", ""))
+        self.assertNotIn("maximum-scale", content, "maximum-scale caps zoom and fails WCAG 1.4.4")
+
+
+class MessagesViewTestCase(TestCase):
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def build_request(self):
+        request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
+        # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
+        request._messages = messages.storage.cookie.CookieStorage(request)
+        request.user = self.user
+        return request
+
+    def test_empty(self):
+        """When there are no messages queued, response contains an empty header_messages container."""
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+
+    def test_messages(self):
+        """When there are messages queued, response contains them as ephemeral toasts."""
+        request = self.build_request()
+        messages.info(request, "Test info message")
+        messages.success(request, "Test success message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+        self.assertBodyContains(response, "nb-toast-info")
+        self.assertBodyContains(response, "Test info message")
+        self.assertBodyContains(response, "nb-toast-success")
+        self.assertBodyContains(response, "Test success message")
+        self.assertNotContains(response, 'data-bs-autohide="false"')
+
+    def test_header_messages(self):
+        """Messages tagged `header_message` are rendered in the header_messages container instead of as toasts."""
+        request = self.build_request()
+        messages.warning(request, "Test header message", extra_tags="header_message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
+                    <div class="alert alert-warning alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test header message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+        self.assertNotContains(response, "nb-toast")
+
+    def test_indefinite_messages(self):
+        """Messages tagged `indefinite` are rendered as toasts that do not dismiss themselves."""
+        request = self.build_request()
+        messages.error(request, "Test indefinite message", extra_tags="indefinite")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+        self.assertBodyContains(response, "nb-toast-danger")
+        self.assertBodyContains(response, "Test indefinite message")
+        self.assertBodyContains(response, 'data-bs-autohide="false"')
+
+    def test_header_message_indefinite_messages(self):
+        """Messages tagged both `header_message` and `indefinite` are rendered as alerts, ignoring the `indefinite` tag."""
+        request = self.build_request()
+        messages.warning(request, "Test indefinite header message", extra_tags="header_message indefinite")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
+                    <div class="alert alert-warning alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test indefinite header message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+        self.assertNotContains(response, "nb-toast")
+
+    def test_search_content_type_bad_request_when_no_htmx(self):
+        """Request made from a client other than HTMX results in HTTP 400 response."""
+        response = self.client.get(reverse("search_content_type", kwargs={"content_type": "dcim.location"}))
+        self.assertEqual(response.status_code, 400)
+
+
 @override_settings(BRANDING_TITLE="Nautobot")
 class SearchFieldsTestCase(TestCase):
     def test_search_bar_redirect_to_login(self):
@@ -393,7 +742,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -412,7 +761,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -427,6 +776,169 @@ class SearchFieldsTestCase(TestCase):
             """,
             html=True,
         )
+
+
+class SearchViewTestCase(TestCase):
+    """Unit tests for the SearchView."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.get(name="Campus")
+        active_status = Status.objects.get(name="Active")
+        cls.location = Location.objects.create(
+            name="SearchViewTestUniqueLocation",
+            location_type=location_type,
+            status=active_status,
+        )
+
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("search"), {"q": "test"})
+        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_get_unauthenticated_redirects_htmx(self):
+        """Unauthenticated HTMX access redirects to the login page."""
+        self.client.logout()
+        response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
+        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_get_no_query_renders_search_form(self):
+        """GET without ?q renders the search page, not the results page."""
+        response = self.client.get(reverse("search"))
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "search.html")
+        # The search form should be present
+        self.assertBodyContains(response, "Please enter your desired search in the above search box.")
+        # The results container should NOT be present when there is no query
+        self.assertNotContains(response, "nb-search-results-tables")
+
+    def test_get_with_query_non_htmx(self):
+        """GET with ?q but without an HTMX header renders search.html with all searchable models."""
+        response = self.client.get(reverse("search"), {"q": "test"})
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "search.html")
+        # search.html renders the results container with an HTMX trigger for each model in parallel
+        self.assertIn("searchable_models", response.context)
+        self.assertContains(response, "nb-search-results-tables")
+        # Assert no duplicate entries in searchable_models context
+        self.assertEqual(len(response.context["searchable_models"]), len(set(response.context["searchable_models"])))
+        # Assert special-case ordering of searchable_models
+        self.assertEqual(
+            ["dcim.device", "dcim.location", "ipam.prefix", "ipam.ipaddress"],
+            response.context["searchable_models"][:4],
+        )
+        # Others are ordered alphabetically by app label then by model name - spot check a few
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.devicefamily"),
+            response.context["searchable_models"].index("dcim.devicetype"),
+        )
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.rack"),
+            response.context["searchable_models"].index("dcim.rackgroup"),
+        )
+        self.assertLess(
+            response.context["searchable_models"].index("dcim.virtualdevicecontext"),
+            response.context["searchable_models"].index("extras.contact"),
+        )
+        # Apps come after core models - spot check
+        self.assertLess(
+            response.context["searchable_models"].index("virtualization.virtualmachine"),
+            response.context["searchable_models"].index("example_app.examplemodel"),
+        )
+
+    def test_htmx_with_matching_results(self):
+        """HTMX request for dcim.location with a matching query returns a populated table."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(
+            reverse("search"),
+            {"q": "SearchViewTestUniqueLocation", "model": "dcim.location"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNotNone(response.context["table"])
+        self.assertContains(response, str(self.location.pk))
+
+    def test_htmx_with_no_matching_results(self):
+        """HTMX request for dcim.location with a non-matching query returns table=None."""
+        self.add_permissions("dcim.view_location")
+        response = self.client.get(
+            reverse("search"),
+            {"q": "zzz_no_match_xyzzy_abc123", "model": "dcim.location"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
+
+    def test_htmx_invalid_model_falls_back_gracefully(self):
+        """HTMX request with an unrecognised model parameter falls back without error."""
+        response = self.client.get(
+            reverse("search"),
+            {"q": "test", "model": "notanapp.notamodel"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+        self.assertIsNone(response.context["table"])
+        self.assertNotContains(response, str(self.location.pk))
+
+    def test_htmx_all_searchable_models_return_valid_responses(self):
+        """HTMX request for each model in the searchable_models list returns a valid response."""
+        searchable_models = []
+        for app_config in apps.get_app_configs():
+            if hasattr(app_config, "searchable_models"):
+                searchable_models += [
+                    f"{app_config.label.lower()}.{modelname}" for modelname in app_config.searchable_models
+                ]
+        for label in searchable_models:
+            with self.subTest(label=label):
+                self.add_permissions(f"{label.split('.')[0]}.view_{label.split('.')[1]}")
+                model = get_model_from_name(label)
+                filterset_class = get_filterset_for_model(model)
+                if filterset_class is not None:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "1"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "a", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    qs = filterset_class({"q": "a"}, model.objects.all()).qs
+                    if qs.exists():
+                        self.assertIsNotNone(response.context["table"])
+                        for pk in qs.values_list("pk", flat=True)[:SEARCH_MAX_RESULTS]:
+                            self.assertContains(response, str(pk))
+                    else:
+                        self.assertIsNone(response.context["table"])
+                else:
+                    response = self.client.get(
+                        reverse("search"),
+                        {"q": "1", "model": label},
+                        headers={"HX-Request": "true"},
+                    )
+                    self.assertHttpStatus(response, 200)
+                    self.assertTemplateUsed(response, "components/htmx/global_search_one_model.html")
+                    self.assertIsNone(response.context["table"])
 
 
 class FilterFormsTestCase(TestCase):
@@ -1038,17 +1550,15 @@ class ExampleViewWithCustomPermissionsTest(TestCase):
 
 
 class TestObjectDetailView(TestCase):
-    @override_settings(PAGINATE_COUNT=5)
-    def test_object_table_panel(self):
-        provider = Provider.objects.create(name="A Test Provider 1")
-        circuit_type = CircuitType.objects.create(
-            name="A Test Circuit Type",
-        )
+    def setUp(self):
+        super().setUp()
+        self.provider = Provider.objects.create(name="A Test Provider 1")
+        circuit_type = CircuitType.objects.create(name="A Test Circuit Type")
         circuit_status = Status.objects.get_for_model(Circuit).first()
 
         circuits = [
             Circuit(
-                provider=provider,
+                provider=self.provider,
                 cid=f"00121{x}",
                 circuit_type=circuit_type,
                 status=circuit_status,
@@ -1058,11 +1568,14 @@ class TestObjectDetailView(TestCase):
         Circuit.objects.bulk_create(circuits)
 
         self.add_permissions("circuits.view_provider", "circuits.view_circuit")
-        url = reverse("circuits:provider", args=(provider.pk,))
-        response = self.client.get(url)
+        self.url = reverse("circuits:provider", args=(self.provider.pk,))
+
+    @override_settings(PAGINATE_COUNT=5)
+    def test_object_table_panel(self):
+        response = self.client.get(self.url)
         self.assertHttpStatus(response, 200)
         response_data = extract_page_body(response.content.decode(response.charset))
-        view_move_url = reverse("circuits:circuit_list") + f"?provider={provider.id}"
+        view_move_url = reverse("circuits:circuit_list") + f"?provider={self.provider.id}"
 
         # Assert Badge Count in table panel header
         panel_header = f"""<strong>Circuits</strong> <a href="{view_move_url}" class="badge bg-primary">10</a>"""
@@ -1075,8 +1588,8 @@ class TestObjectDetailView(TestCase):
         # Validate Copy btn on all rows excluding empty rows
         name_copy = f"""
         <span>
-            <span id="_value_name">{provider.name}</span>
-            <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
+            <span id="_value_name">{self.provider.name}</span>
+            <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
             </button>
@@ -1084,6 +1597,22 @@ class TestObjectDetailView(TestCase):
         self.assertInHTML(name_copy, response_data)
         # ASN do not have a value, therefore no copy btn
         self.assertNotIn("#asn_copy", response_data)
+
+    def test_get_component_via_htmx(self):
+        panels = ProviderUIViewSet.object_detail_content.tabs[0].panels
+        for panel in panels:
+            if panel.__class__.__name__.startswith("_"):
+                # automagical panel like `_CustomFieldsPanel`, which may not always render unconditionally, skip it.
+                continue
+            with self.subTest(panel=panel):
+                response = self.client.get(
+                    self.url + f"?component_id={panel.component_id}", headers={"HX-Request": "true"}
+                )
+                self.assertHttpStatus(response, 200)
+                response_data = response.content.decode(response.charset)
+                self.assertIn(panel.component_id, response_data)
+                for other_panel in [other_panel for other_panel in panels if other_panel != panel]:
+                    self.assertNotIn(other_panel.component_id, response_data)
 
 
 class SearchRobotsTestCase(TestCase):

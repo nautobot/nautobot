@@ -9,7 +9,7 @@ from nautobot.core.tables import (
     ToggleColumn,
 )
 from nautobot.dcim.models import Location, LocationType
-from nautobot.dcim.tables.template_code import TREE_LINK
+from nautobot.dcim.tables.template_code import LOCATION_TREE_LINK, TREE_LINK
 from nautobot.extras.tables import StatusTableMixin
 from nautobot.tenancy.tables import TenantColumn
 
@@ -50,7 +50,10 @@ class LocationTypeTable(BaseTable):
 
 class LocationTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
-    name = tables.TemplateColumn(template_code=TREE_LINK, attrs={"td": {"class": "text-nowrap"}})
+    name = tables.TemplateColumn(
+        template_code=LOCATION_TREE_LINK,
+        attrs={"td": {"class": "nb-tree-element text-nowrap", "data-pk": lambda record: str(record.pk)}},
+    )
     location_type = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()

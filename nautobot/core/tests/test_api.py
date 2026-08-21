@@ -10,7 +10,9 @@ from constance.test import override_config
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.test import override_settings, RequestFactory, TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
@@ -34,6 +36,7 @@ from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import filters as ipam_filters, models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
+from nautobot.users.models import ObjectPermission
 
 User = get_user_model()
 
@@ -528,6 +531,7 @@ class ModelViewSetMixinTest(testing.APITestCase):
         serializer_class = ipam_serializers.IPAddressSerializer
         filterset_class = ipam_filters.IPAddressFilterSet
 
+    @override_settings(ALLOWED_HOSTS=["*"])  # serializing hyperlinked fields builds absolute URLs
     def test_get_queryset_optimizations(self):
         """Test that the queryset is appropriately optimized based on request parameters."""
         self.user.is_superuser = True
@@ -545,7 +549,8 @@ class ModelViewSetMixinTest(testing.APITestCase):
         view.initial(request)
 
         queryset = view.get_queryset()
-        with self.assertNumQueries(5):  # IPAddress plus four prefetches
+        # IPAddress plus one natural-key prefetch (parent__namespace), plus four prefetches.
+        with self.assertNumQueries(6):
             instance = queryset.first()
         # FK related objects should have been auto-selected
         with self.assertNumQueries(0):
@@ -563,6 +568,19 @@ class ModelViewSetMixinTest(testing.APITestCase):
             list(instance.vm_interfaces.all())
             list(instance.tags.all())
 
+        # The `natural_slug` field calls `natural_key()`, which walks related-object natural keys (e.g.
+        # parent__namespace). Those relations were prefetched above, so computing it for every object must
+        # not issue an additional query per object (this was previously an N+1).
+        instances = list(view.get_queryset())
+        self.assertGreater(len(instances), 1, "need multiple objects for a meaningful N+1 assertion")
+        with self.assertNumQueries(0):
+            natural_slugs = [instance.natural_slug for instance in instances]
+        # Exercise the real serializer too: natural_slug should render for every object, matching the
+        # query-free traversal above. (Full serialization also issues a couple of constant, per-model
+        # custom-field metadata lookups, which is why the query-count assertion targets the traversal.)
+        data = view.get_serializer(instances, many=True).data
+        self.assertEqual([row["natural_slug"] for row in data], natural_slugs)
+
         # With exclude_m2m query parameter set to True
         view = self.SimpleIPAddressViewSet()
         view.action_map = {"get": "list"}
@@ -575,7 +593,9 @@ class ModelViewSetMixinTest(testing.APITestCase):
         view.initial(request)
 
         queryset = view.get_queryset()
-        with self.assertNumQueries(1):  # IPAddress only, no prefetches
+        # IPAddress plus the natural-key prefetch (parent__namespace).
+        # exclude_m2m suppresses the additional M2M/reverse prefetches.
+        with self.assertNumQueries(2):
             instance = queryset.first()
         # FK related objects should still have been auto-selected
         with self.assertNumQueries(0):
@@ -788,6 +808,345 @@ class WritableNestedSerializerTest(testing.APITestCase):
         self.assertEqual(vlan.vlan_group, self.vlan_group1)
 
 
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class DepthPermissionEnforcementTest(testing.APITestCase):
+    """
+    Test that object-level `view` permissions are enforced on related objects traversed via `?depth=N`.
+
+    A user who lacks permission to view a related object should see it rendered as its brief
+    {id, object_type, url} representation (as at depth 0), NOT in full detail and NOT as null. This is
+    verified for both regular ForeignKey traversal (VLANGroup -> Location) and GenericForeignKey
+    traversal (Note -> assigned_object), including the object-level-constrained case which mirrors the
+    behavior of RestrictedQuerySet.restrict().
+    """
+
+    def setUp(self):
+        super().setUp()
+        location_type = dcim_models.LocationType.objects.get(name="Campus")
+        location_status = extras_models.Status.objects.get_for_model(dcim_models.Location).first()
+        self.viewable_location = dcim_models.Location.objects.create(
+            name="Depth Perm Viewable Location", location_type=location_type, status=location_status
+        )
+        self.hidden_location = dcim_models.Location.objects.create(
+            name="Depth Perm Hidden Location", location_type=location_type, status=location_status
+        )
+        self.viewable_group = ipam_models.VLANGroup.objects.create(
+            name="Depth Perm Viewable Group", location=self.viewable_location
+        )
+        self.hidden_group = ipam_models.VLANGroup.objects.create(
+            name="Depth Perm Hidden Group", location=self.hidden_location
+        )
+        self.vlan_group_list_url = reverse(get_route_for_model(ipam_models.VLANGroup, "list", api=True))
+
+    def _constrain_location_view_permission(self):
+        """Grant view permission for only the "viewable" Location (an object-level constraint)."""
+        obj_perm = ObjectPermission(
+            name="View viewable location only",
+            constraints={"pk": str(self.viewable_location.pk)},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(dcim_models.Location))
+
+    @staticmethod
+    def _results_by_pk(response):
+        return {str(entry["id"]): entry for entry in response.data["results"]}
+
+    def test_fk_related_object_downgraded_when_view_constrained(self):
+        """A related FK object the user cannot view is downgraded to brief; a viewable one stays full."""
+        self.add_permissions("ipam.view_vlangroup")
+        self._constrain_location_view_permission()
+
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = self._results_by_pk(response)
+
+        viewable = results[str(self.viewable_group.pk)]["location"]
+        hidden = results[str(self.hidden_group.pk)]["location"]
+
+        # Viewable location -> full detail.
+        self.assertGreater(len(viewable.keys()), 4)
+        self.assertEqual(viewable["name"], self.viewable_location.name)
+
+        # Hidden location -> brief plus display (not full, and not null). `display` is included because the
+        # location would otherwise have been fully serialized at depth=1, giving parity with the UI.
+        self.assertIsNotNone(hidden)
+        self.assertEqual(set(hidden.keys()), {"id", "object_type", "url", "display"})
+        self.assertEqual(str(hidden["id"]), str(self.hidden_location.pk))
+        self.assertEqual(hidden["object_type"], "dcim.location")
+        self.assertEqual(hidden["url"], self.absolute_api_url(self.hidden_location))
+        self.assertEqual(hidden["display"], self.hidden_location.display)
+
+    def test_fk_related_object_full_with_model_level_permission(self):
+        """With unconstrained view permission on the related model, both related objects are full."""
+        self.add_permissions("ipam.view_vlangroup", "dcim.view_location")
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = self._results_by_pk(response)
+        for group in (self.viewable_group, self.hidden_group):
+            location = results[str(group.pk)]["location"]
+            self.assertGreater(len(location.keys()), 3)
+            self.assertIn("name", location)
+
+    def test_fk_related_object_brief_without_related_permission(self):
+        """With no permission on the related model at all, related objects are brief+display (and not null)."""
+        self.add_permissions("ipam.view_vlangroup")
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = self._results_by_pk(response)
+        for group in (self.viewable_group, self.hidden_group):
+            location = results[str(group.pk)]["location"]
+            self.assertIsNotNone(location)
+            self.assertEqual(set(location.keys()), {"id", "object_type", "url", "display"})
+            self.assertEqual(location["display"], group.location.display)
+
+    def test_constrained_permission_check_is_memoized(self):
+        """Per-object permission checks are memoized, so shared related objects don't cause N+1 queries.
+
+        This isolates the cost of the permission check itself: the same request is issued before and
+        after adding many more primary objects that all reference the SAME two related locations. The
+        object-level view constraint means each location's visibility requires a database check, but
+        that result is memoized per (model, pk) on the request, so the query count must not grow with
+        the number of primary objects. Uses ?exclude_m2m=false so that any many-to-many related objects
+        are serialized (and checked) as well.
+        """
+        self.add_permissions("ipam.view_vlangroup")
+        self._constrain_location_view_permission()
+        url = f"{self.vlan_group_list_url}?depth=1&exclude_m2m=false"
+
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as baseline_cqc:
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        baseline_queries = len(baseline_cqc)
+
+        # Add several more groups that reference the SAME two locations.
+        for i in range(6):
+            ipam_models.VLANGroup.objects.create(name=f"Depth Perm Extra Viewable {i}", location=self.viewable_location)
+            ipam_models.VLANGroup.objects.create(name=f"Depth Perm Extra Hidden {i}", location=self.hidden_location)
+
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as scaled_cqc:
+            response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        # The permission check for each distinct location is cached per request, so adding more groups
+        # that reference the same locations must not add per-object permission queries.
+        self.assertLessEqual(
+            len(scaled_cqc),
+            baseline_queries + 2,
+            "Object-level permission checks were not memoized; depth serialization has an N+1 query.",
+        )
+
+    def test_m2m_related_objects_downgraded_when_view_constrained(self):
+        """Each member of a many-to-many related field is independently downgraded to brief if not viewable."""
+        config_context = extras_models.ConfigContext.objects.create(
+            name="Depth Perm Config Context", weight=100, data={"a": 1}
+        )
+        config_context.locations.set([self.viewable_location, self.hidden_location])
+        self.add_permissions("extras.view_configcontext")
+        self._constrain_location_view_permission()
+
+        config_context_list_url = reverse(get_route_for_model(extras_models.ConfigContext, "list", api=True))
+        # exclude_m2m=false so that the many-to-many `locations` field is serialized at all.
+        response = self.client.get(f"{config_context_list_url}?depth=1&exclude_m2m=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        locations = self._results_by_pk(response)[str(config_context.pk)]["locations"]
+        self.assertEqual(len(locations), 2)
+        locations_by_pk = {str(entry["id"]): entry for entry in locations}
+
+        # Viewable location -> full detail.
+        viewable = locations_by_pk[str(self.viewable_location.pk)]
+        self.assertGreater(len(viewable.keys()), 4)
+        self.assertEqual(viewable["name"], self.viewable_location.name)
+
+        # Hidden location -> brief plus display (not full, not null, and not omitted from the list).
+        hidden = locations_by_pk[str(self.hidden_location.pk)]
+        self.assertEqual(set(hidden.keys()), {"id", "object_type", "url", "display"})
+        self.assertEqual(hidden["object_type"], "dcim.location")
+        self.assertEqual(hidden["url"], self.absolute_api_url(self.hidden_location))
+        self.assertEqual(hidden["display"], self.hidden_location.display)
+
+    def test_gfk_related_object_downgraded_when_view_constrained(self):
+        """A GenericForeignKey target the user cannot view is downgraded to brief; a viewable one stays full."""
+        viewable_note = extras_models.Note.objects.create(
+            note="Viewable note", assigned_object=self.viewable_location, user=self.user
+        )
+        hidden_note = extras_models.Note.objects.create(
+            note="Hidden note", assigned_object=self.hidden_location, user=self.user
+        )
+        self.add_permissions("extras.view_note")
+        self._constrain_location_view_permission()
+
+        note_list_url = reverse(get_route_for_model(extras_models.Note, "list", api=True))
+        response = self.client.get(f"{note_list_url}?depth=1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = self._results_by_pk(response)
+
+        viewable = results[str(viewable_note.pk)]["assigned_object"]
+        hidden = results[str(hidden_note.pk)]["assigned_object"]
+
+        # Viewable assigned object -> full nested detail (retaining the generic_foreign_key flag).
+        self.assertGreater(len(viewable.keys()), 4)
+        self.assertEqual(viewable["name"], self.viewable_location.name)
+        self.assertTrue(viewable.get("generic_foreign_key"))
+
+        # Hidden assigned object -> brief plus display (no generic_foreign_key flag), not null.
+        self.assertIsNotNone(hidden)
+        self.assertEqual(set(hidden.keys()), {"id", "object_type", "url", "display"})
+        self.assertEqual(str(hidden["id"]), str(self.hidden_location.pk))
+        self.assertEqual(hidden["object_type"], "dcim.location")
+        self.assertEqual(hidden["display"], self.hidden_location.display)
+
+
+class InvalidDepthParameterTest(testing.APITestCase):
+    """Test that an out-of-range `?depth=` query parameter results in an HTTP 400, not an HTTP 500."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("ipam.view_vlangroup")
+        self.vlan_group_list_url = reverse(get_route_for_model(ipam_models.VLANGroup, "list", api=True))
+
+    def test_depth_greater_than_max_returns_400(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=11", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_depth_returns_400(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=-1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_depth_within_range_returns_200(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=10", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class WriteRelatedObjectPermissionTest(testing.APITestCase):
+    """
+    Test that REST API write operations (POST/PATCH) enforce `view` permission on referenced related objects.
+
+    A user may only reference (associate) a related object that they are permitted to view; referencing an
+    object they cannot view is rejected with a validation error rather than silently succeeding. Covers regular
+    ForeignKey references (VLAN -> VLANGroup) and GenericForeignKey references (Note -> assigned_object).
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.vlan_status = extras_models.Status.objects.get_for_model(ipam_models.VLAN).first()
+        self.vlan_group1 = ipam_models.VLANGroup.objects.create(name="Write Perm VLANGroup 1")
+        self.vlan_group2 = ipam_models.VLANGroup.objects.create(name="Write Perm VLANGroup 2")
+        self.vlan_list_url = reverse("ipam-api:vlan-list")
+        self.location = dcim_models.Location.objects.create(
+            name="Write Perm Location",
+            location_type=dcim_models.LocationType.objects.get(name="Campus"),
+            status=extras_models.Status.objects.get_for_model(dcim_models.Location).first(),
+        )
+        self.note_list_url = reverse("extras-api:note-list")
+
+    def _constrain_vlangroup_view_permission(self):
+        """Grant view permission for only vlan_group1 (an object-level constraint)."""
+        obj_perm = ObjectPermission(
+            name="View VLANGroup 1 only",
+            constraints={"pk": str(self.vlan_group1.pk)},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ipam_models.VLANGroup))
+
+    def test_post_fk_reference_requires_view_permission(self):
+        """POST referencing an existing FK related object the user cannot view is rejected."""
+        data = {
+            "vid": 100,
+            "name": "Write Perm VLAN 100",
+            "status": self.vlan_status.pk,
+            "vlan_group": self.vlan_group1.pk,
+        }
+        # Can add VLANs and view the referenced Status, but NOT the referenced VLANGroup.
+        self.add_permissions("ipam.add_vlan", "extras.view_status")
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(self.vlan_list_url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertFalse(ipam_models.VLAN.objects.filter(name="Write Perm VLAN 100").exists())
+
+        # Granting view permission on the VLANGroup allows the reference.
+        self.add_permissions("ipam.view_vlangroup")
+        response = self.client.post(self.vlan_list_url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(ipam_models.VLAN.objects.get(pk=response.data["id"]).vlan_group, self.vlan_group1)
+
+    def test_post_fk_reference_respects_object_level_constraint(self):
+        """POST referencing an FK related object outside the user's object-level view constraint is rejected."""
+        self.add_permissions("ipam.add_vlan", "extras.view_status")
+        self._constrain_vlangroup_view_permission()
+
+        # Referencing the viewable group succeeds.
+        response = self.client.post(
+            self.vlan_list_url,
+            {
+                "vid": 101,
+                "name": "Write Perm VLAN 101",
+                "status": self.vlan_status.pk,
+                "vlan_group": self.vlan_group1.pk,
+            },
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+        # Referencing the non-viewable group is rejected.
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(
+                self.vlan_list_url,
+                {
+                    "vid": 102,
+                    "name": "Write Perm VLAN 102",
+                    "status": self.vlan_status.pk,
+                    "vlan_group": self.vlan_group2.pk,
+                },
+                format="json",
+                **self.header,
+            )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+
+    def test_patch_fk_reference_requires_view_permission(self):
+        """PATCH updating an FK to a related object the user cannot view is rejected and leaves it unchanged."""
+        vlan = ipam_models.VLAN.objects.create(
+            vid=200, name="Write Perm VLAN 200", status=self.vlan_status, vlan_group=self.vlan_group1
+        )
+        url = reverse("ipam-api:vlan-detail", kwargs={"pk": vlan.pk})
+        # Can change the VLAN, but cannot view vlan_group2.
+        self.add_permissions("ipam.change_vlan")
+        with testing.disable_warnings("django.request"):
+            response = self.client.patch(url, {"vlan_group": self.vlan_group2.pk}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        vlan.refresh_from_db()
+        self.assertEqual(vlan.vlan_group, self.vlan_group1)
+
+    def test_post_gfk_reference_requires_view_permission(self):
+        """POST referencing a GenericForeignKey target the user cannot view is rejected."""
+        data = {
+            "note": "Write perm test note",
+            "assigned_object_type": "dcim.location",
+            "assigned_object_id": str(self.location.pk),
+        }
+        # Can add notes, but cannot view the target Location.
+        self.add_permissions("extras.add_note")
+        with testing.disable_warnings("django.request"):
+            response = self.client.post(self.note_list_url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        # The GenericForeignKey existence + permission check reports on the fk field.
+        self.assertIn("assigned_object_id", response.data)
+        self.assertFalse(extras_models.Note.objects.filter(note="Write perm test note").exists())
+
+        # Granting view permission on the Location allows the reference.
+        self.add_permissions("dcim.view_location")
+        response = self.client.post(self.note_list_url, data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+
 class APIOrderingTestCase(testing.APITestCase):
     """
     Testing integration with DRF's OrderingFilter.
@@ -989,6 +1348,21 @@ class RenderJinjaViewTest(testing.APITestCase):
         )
         self.assertEqual(response.data["rendered_template"], expected_response)
         self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
+
+    def test_render_jinja_template_does_not_expose_secrets(self):
+        """Regression test for GHSA-6jmc-h6f2-46j4: secrets must not be readable through the renderer.
+
+        A non-allowlisted setting fails to render as though it did not exist, rather than returning its
+        value.
+        """
+        response = self.client.post(
+            reverse("core-api:render_jinja_template"),
+            {"template_code": '{{ "SECRET_KEY" | settings_or_config }}', "context": {}},
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Failed to render Jinja template: SECRET_KEY")
 
     def test_render_jinja_template_failures(self):
         """

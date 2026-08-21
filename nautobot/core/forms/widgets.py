@@ -299,9 +299,6 @@ class MultiValueCharInput(StaticSelect2Multiple):
 class ClearableFileInput(forms.ClearableFileInput):
     template_name = "widgets/clearable_file.html"
 
-    class Media:
-        js = ["bootstrap-filestyle-1.2.3/bootstrap-filestyle.min.js"]
-
 
 class NumberWithSelect(forms.NumberInput):
     template_name = "widgets/number_input_with_choices.html"

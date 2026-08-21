@@ -17,7 +17,6 @@ from nautobot.dcim.choices import (
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
-    SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import (
     COPPER_TWISTED_PAIR_IFACE_TYPES,
@@ -212,6 +211,8 @@ class ModularComponentTemplateModel(ComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsolePortTemplate(ModularComponentTemplateModel):
     """
@@ -226,6 +227,8 @@ class ConsolePortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class ConsoleServerPortTemplate(ModularComponentTemplateModel):
     """
@@ -240,6 +243,8 @@ class ConsoleServerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerPortTemplate(ModularComponentTemplateModel):
     """
@@ -290,6 +295,8 @@ class PowerPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class PowerOutletTemplate(ModularComponentTemplateModel):
     """
@@ -342,6 +349,8 @@ class PowerOutletTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class InterfaceTemplate(ModularComponentTemplateModel):
     """
@@ -407,6 +416,8 @@ class InterfaceTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class FrontPortTemplate(ModularComponentTemplateModel):
     """
@@ -473,6 +484,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class RearPortTemplate(ModularComponentTemplateModel):
     """
@@ -500,6 +513,8 @@ class RearPortTemplate(ModularComponentTemplateModel):
 
 @extras_features(
     "custom_validators",
+    "graphql",
+    "webhooks",
 )
 class DeviceBayTemplate(ComponentTemplateModel):
     """
@@ -514,13 +529,13 @@ class DeviceBayTemplate(ComponentTemplateModel):
         return self.instantiate_model(model=DeviceBay, device=device)
 
     def clean(self):
-        if self.device_type and self.device_type.subdevice_role != SubdeviceRoleChoices.ROLE_PARENT:  # pylint: disable=no-member
+        if self.device_type and not self.device_type.is_parent_device:  # pylint: disable=no-member
             raise ValidationError(
-                f'Subdevice role of device type ({self.device_type}) must be set to "parent" to allow device bays.'
+                f'Subdevice role of device type ({self.device_type}) must be set to "parent" or "parent-child" to allow device bays.'
             )
 
 
-@extras_features("custom_validators")
+@extras_features("custom_validators", "graphql", "webhooks")
 class ModuleBayTemplate(ModularComponentTemplateModel):
     """Template for a slot in a Device or Module which can contain Modules."""
 

@@ -6,6 +6,9 @@ At the database level, a prefix stores its network information in the fields `ne
 
 Each prefix belongs to a specific [Namespace](namespace.md), and is unique within that namespace. Each prefix can also optionally be assigned to a particular [Location(s)](../dcim/location.md), as well as to zero or more [virtual routing and forwarding (VRF)](vrf.md) instances. All prefixes not assigned to a VRF are considered to be in the "global" VRF within their namespace.
 
+!!! note "Assigning VRFs and Locations via import"
+    A Prefix's relationships to VRFs and Locations are many-to-many associations, managed through dedicated assignment records rather than as direct fields on the Prefix. As a result, **these associations cannot be set when creating Prefixes through CSV/bulk import** — a `vrfs` or `locations` column is ignored and the Prefix is created without the association. To assign them, edit the Prefix (or the VRF/Location) in the UI after import, or use the REST API assignment endpoints (`/api/ipam/vrf-prefix-assignments/` and `/api/ipam/prefix-location-assignments/`).
+
 +/- 2.0.0 "Prefixes are unique per Namespace"
     In Nautobot 1.x, prior to the introduction of the namespace data model, a prefix might or might not be unique within its assigned VRF. In Nautobot 2.0, prefixes are always unique within their namespace. You may need to do some cleanup of your data after migrating from Nautobot 1.x to suit the new data requirements.
 
@@ -47,18 +50,18 @@ In most cases, you will not need to ever explicitly specify the `parent` value y
 
 ### Prefix List View and Hierarchy Display
 
-The default (unfiltered) Prefix list view (`/ipam/prefixes/`) includes indentation or nesting of child Prefixes under their parent Prefixes, similar to the example above, as this is useful information to be aware of. However, in most cases, applying sorting, filtering, or search to this list view will **remove** the indentation from display, as it would be misleading or outright confusing when not showing the full list of prefixes in their default network order.
+The default (unfiltered) Prefix list view (`/ipam/prefixes/`) includes display elements to indicate the hierarchy or nesting of child Prefixes under their parent Prefixes, similar to the example above, as this is useful information to be aware of. However, in most cases, applying sorting, filtering, or search to this list view will **remove** the hierarchy from the display, as it would be misleading or outright confusing when not showing the full list of prefixes in their default network order.
 
 +++ 3.1.0 "Added exemptions for specific filters"
 
-There are a small set of filters which, when applied individually or in combination, *do not* remove the indentation, because these filters preserve the hierarchy and ordering of the filtered set of Prefixes. Examples of such filters include `ip_version`, `namespace`, and `max_depth`. The "default filters" described in the next section, for much the same reasons, also do not remove indentation when in effect.
+There are a small set of filters which, when applied individually or in combination, *do not* remove the hierarchy display, because these filters preserve the hierarchy and ordering of the filtered set of Prefixes. Examples of such filters include `ip_version`, `namespace`, and `max_depth`. The "default filters" described in the next section, for much the same reasons, also do not remove indentation when in effect.
 
 !!! tip
-    The indentation-preserving filters only preserve indentation if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still remove the indentation as normal. In other words:
+    The hierarchy-preserving filters only preserve the hierarchy display if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still hide the hierarchy as normal. In other words:
 
-    * `/ipam/prefixes/?ip_version=4&namespace=Global` -- indentation preserved
-    * `/ipam/prefixes/?ip_version=4&sort=status` -- indentation removed due to sorting
-    * `/ipam/prefixes/?ip_version=4&status=Active` -- indentation removed due to additional filtering
+    * `/ipam/prefixes/?ip_version=4&namespace=Global` -- hierarchy shown
+    * `/ipam/prefixes/?ip_version=4&sort=status` -- hierarchy hidden due to sorting
+    * `/ipam/prefixes/?ip_version=4&status=Active` -- hierarchy hidden due to additional filtering
 
 ### Prefix List View Configuration
 
@@ -66,15 +69,15 @@ There are a small set of filters which, when applied individually or in combinat
 
 To improve performance of the initial rendering of the Prefix list view when a large number of records and/or a deep hierarchy of records are present, an administrator can configure the settings [`PREFIX_LIST_DEFAULT_CONTAINER_ONLY`](../../administration/configuration/settings.md#prefix_list_default_container_only) and/or [`PREFIX_LIST_DEFAULT_MAX_DEPTH`](../../administration/configuration/settings.md#prefix_list_default_max_depth). When enabled, these settings effectively apply a default filter (similar to a default [saved view](../../platform-functionality/user-interface/savedview.md)) for all users when initially accessing the Prefix list view, such as from the navigation menu.
 
-In both cases, these default filters will only apply when viewing the otherwise-unfiltered Prefix list view; applying any other filter to the view will bypass these default filters and display the full set of records as selected by the user-specified filter.
+In both cases, these default filters will only apply when initially accessing the Prefix list view with no explicit filters or sorting applied; adding sorting or specifying other filters to the view will bypass these default filters and display the full set of records as selected by the user-specified filter.
 
 #### `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`
 
-When this setting is enabled, the default Prefix list view will only display Prefixes of [type](#prefix-types) Container, omitting the more narrowly-scoped Network and Pool Prefixes. Users can then either apply an appropriate filter of their choice to narrow the scope of the list view further, or simply select the relevant Container Prefix and navigate to its "detail" view to see and interact with the Networks and Pools it contains.
+When this setting is enabled, the hierarchical Prefix tree view will only display Prefixes of [type](#prefix-types) Container, omitting the more narrowly-scoped Network and Pool Prefixes. Users can then either apply an appropriate filter of their choice to narrow the scope of the list view further, or simply select the relevant Container Prefix and navigate to its "detail" view to see and interact with the Networks and Pools it contains.
 
 #### `PREFIX_LIST_DEFAULT_MAX_DEPTH`
 
-When this setting is configured to a non-negative number, the default Prefix list view will only display Prefixes down to a certain nesting depth. For example, a value of `0` (zero) will only display root Prefixes (those with no higher-level parent), a value of `1` (one) will display root Prefixes and their immediate children, but not their grandchildren, and so forth. As with `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`, the intent here would be for users to use the Prefix list view to quickly find the general prefix of interest and then use filters, search, and/or the relevant "detail" view to "drill down" to a specific network or pool.
+When this setting is configured to a non-zero number, the default Prefix list view will only display Prefixes down to a certain nesting depth. For example, a value of `1` (one) will only display root Prefixes (those with no higher-level parent), a value of `2` (two) will display root Prefixes and their immediate children, but not their grandchildren, and so forth. As with `PREFIX_LIST_DEFAULT_CONTAINER_ONLY`, the intent here would be for users to use the Prefix list view to quickly find the general prefix of interest and then use filters, search, and/or the relevant "detail" view to "drill down" to a specific network or pool.
 
 ### Hierarchy Updates when Editing Prefixes
 
@@ -141,3 +144,11 @@ If a prefix's `type` is set to "Pool", Nautobot will treat this prefix as a rang
 * If the prefix `type` is "Network":
     * The utilization is calculated as the sum of the total address space of all child prefixes plus the total number of child IP addresses not covered by a child prefix.
     * For IPv4 networks larger than /31, if neither the first (network) or last (broadcast) address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
+
+### Pool Prefixes vs. IP Address Ranges
+
++++ 3.2.0
+    A "Pool" Prefix and an [IP Address Range](ipaddressrange.md) can both represent a span of addresses used as a unit, such as a DHCP scope or NAT pool, and their roles partially overlap. The key difference is alignment:
+
+    * A `Pool Prefix` is still a Prefix, so it must align to a CIDR boundary (for example `10.0.0.0/26`). Use a Pool when the span you want to represent happens to be a valid subnet and you want it tracked as part of the Prefix hierarchy.
+    * An `IP Address Range` is defined by an arbitrary start and end address (for example `10.0.0.50–10.0.0.200`) and does **not** need to align to a CIDR boundary. Use an IP Address Range when the span you want to represent is not a clean subnet.

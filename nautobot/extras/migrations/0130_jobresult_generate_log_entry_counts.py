@@ -13,7 +13,7 @@ def _populate_log_counts(apps, *_):
         | Q(warning_log_count=None)
         | Q(error_log_count=None)
     )
-    for job_result in job_results_missing_counts:
+    for job_result in job_results_missing_counts.iterator(chunk_size=1000):
         db_log_counts = job_result.job_log_entries.aggregate(
             debug_log_count=Count("pk", filter=Q(log_level="debug")),
             success_log_count=Count("pk", filter=Q(log_level="success")),

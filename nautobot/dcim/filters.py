@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Q
+from django.db.models import Exists, F, OuterRef, Q
 import django_filters
 from drf_spectacular.utils import extend_schema_field
 from timezone_field import TimeZoneField
@@ -33,8 +33,11 @@ from nautobot.dcim.choices import (
     RackWidthChoices,
 )
 from nautobot.dcim.constants import (
+    CONTENT_TYPE_TO_TERMINATION_FK,
     MODULE_RECURSION_DEPTH_LIMIT,
     NONCONNECTABLE_IFACE_TYPES,
+    TERMINATION_DEVICE_FK_FIELDS,
+    TERMINATION_FK_FIELDS,
     VIRTUAL_IFACE_TYPES,
     WIRELESS_IFACE_TYPES,
 )
@@ -51,6 +54,9 @@ from nautobot.dcim.filter_mixins import (
 )
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -101,6 +107,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
+    RelationshipModelFilterSetMixin,
     RoleModelFilterSetMixin,
     StatusModelFilterSetMixin,
 )
@@ -108,13 +115,14 @@ from nautobot.extras.models import ExternalIntegration, SecretsGroup
 from nautobot.extras.utils import FeatureQuery
 from nautobot.ipam.models import IPAddress, VLAN, VLANGroup, VRF
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
-from nautobot.tenancy.models import Tenant
+from nautobot.tenancy.models import Tenant, TenantGroup
 from nautobot.virtualization.models import Cluster, VirtualMachine
 from nautobot.wireless.models import RadioProfile, WirelessNetwork
 
 __all__ = (
     "CableFilterSet",
     "CableTerminationModelFilterSetMixin",
+    "CableTypeFilterSet",
     "ConsoleConnectionFilterSet",
     "ConsolePortFilterSet",
     "ConsolePortTemplateFilterSet",
@@ -204,6 +212,11 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         queryset=LocationType.objects.all(),
         to_field_name="name",
     )
+    max_depth = django_filters.NumberFilter(
+        method="filter_max_depth",
+        exclude=True,
+        label="Maximum nesting depth within parent Locations",
+    )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
         queryset=Location.objects.all(),
@@ -211,6 +224,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         label="Parent location (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location(s) and descendants thereof (name or ID)",
@@ -322,6 +336,19 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
             "shipping_address",
             "tags",
         ]
+
+    def generate_query_filter_max_depth(self, value):
+        if value < 1:
+            # exclude filter, so make it something that never matches
+            return Q(pk__isnull=True)
+        param = f"{'parent__' * int(value)}isnull"
+        return Q(**{param: False})
+
+    def filter_max_depth(self, queryset, name, value):
+        if value is None or value < 1:
+            return queryset
+        params = self.generate_query_filter_max_depth(value)
+        return queryset.exclude(params)
 
     def generate_query__child_location_type(self, value):
         """Helper method used by DynamicGroups and by _child_location_type() method."""
@@ -503,6 +530,12 @@ class RackReservationFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         field_name="rack__rack_group",
         to_field_name="name",
         label="Rack group (name or ID)",
+    )
+    location = TreeNodeMultipleChoiceFilter(
+        queryset=Location.objects.all(),
+        field_name="rack__location",
+        to_field_name="name",
+        prefers_id=True,
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=get_user_model().objects.all(),
@@ -1068,8 +1101,10 @@ class InterfaceFilterSet(
         field_name="pk",
         label="Virtual Chassis member Device (ID)",
     )
-    kind = django_filters.CharFilter(
+    kind = django_filters.ChoiceFilter(
+        choices=[("physical", "Physical"), ("virtual", "Virtual"), ("wireless", "Wireless")],
         method="filter_kind",
+        field_name="type",  # prevents unnecessary queryset logic in REST API schema generation
         label="Kind of interface",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
@@ -1178,6 +1213,7 @@ class InterfaceFilterSet(
             "speed",
             "enabled",
             "mtu",
+            "breakout_position",
             "mgmt_only",
             "mode",
             "description",
@@ -1291,7 +1327,7 @@ class DeviceBayFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
         fields = ["id", "name", "description", "label", "tags"]
 
 
-class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, BaseFilterSet):
+class InventoryItemFilterSet(DeviceComponentModelFilterSetMixin, RelationshipModelFilterSetMixin, BaseFilterSet):
     q = SearchFilter(
         filter_predicates={
             "name": "icontains",
@@ -1404,6 +1440,12 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         to_field_name="name",
         label="Tenant (name or ID)",
     )
+    tenant_group = TreeNodeMultipleChoiceFilter(
+        field_name="master__tenant__tenant_group",
+        queryset=TenantGroup.objects.all(),
+        to_field_name="name",
+        label="Tenant Group (name or ID)",
+    )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     members = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1421,41 +1463,161 @@ class VirtualChassisFilterSet(NautobotFilterSet):
         fields = ["id", "domain", "name", "tags"]
 
 
+class CableTypeFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "description": "icontains",
+            "manufacturer__name": "icontains",
+            "part_number": "icontains",
+        }
+    )
+    is_breakout = django_filters.BooleanFilter(method="filter_is_breakout")
+    manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Manufacturer.objects.all(),
+        to_field_name="name",
+    )
+
+    class Meta:
+        model = CableType
+        fields = [
+            "id",
+            "name",
+            "part_number",
+            "has_embedded_transceivers",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "tags",
+        ]
+
+    def filter_is_breakout(self, queryset, name, value):
+        if value:
+            return queryset.exclude(a_connectors=F("b_connectors"))
+        return queryset.filter(a_connectors=F("b_connectors"))
+
+
+class CableToCableTerminationFilterSet(NautobotFilterSet):
+    """FilterSet for the cable→termination join model."""
+
+    cable = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Cable.objects.all(),
+        to_field_name="pk",
+        label="Cable (ID)",
+    )
+
+    class Meta:
+        model = CableToCableTermination
+        fields = ["id", "cable", "cable_end", "connector"]
+
+
 class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     q = SearchFilter(filter_predicates={"label": "icontains"})
+    cable_type = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=CableType.objects.all(),
+        to_field_name="name",
+        label="Cable Type (name or ID)",
+    )
+    has_cable_type = RelatedMembershipBooleanFilter(
+        field_name="cable_type",
+        label="Has cable type",
+    )
+    is_disconnected = django_filters.BooleanFilter(
+        method="filter_is_disconnected",
+        label="Is disconnected (missing one or both side terminations)",
+    )
     type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
     device_id = django_filters.ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         method="filter_device_id",
-        field_name="_termination_a_device_id",
+        field_name="terminations",
         label="Device (ID)",
     )
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
-    rack_id = MultiValueUUIDFilter(method="filter_device", field_name="device__rack_id", label="Rack (ID)")
-    rack = MultiValueCharFilter(method="filter_device", field_name="device__rack__name", label="Rack (name)")
-    location_id = MultiValueUUIDFilter(method="filter_device", field_name="device__location_id", label="Location (ID)")
-    location = MultiValueCharFilter(
-        method="filter_device", field_name="device__location__name", label="Location (name)"
+    device = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Device.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device",
+            label="Device (name)",
+        )
     )
-    tenant_id = MultiValueUUIDFilter(method="filter_device", field_name="device__tenant_id", label="Tenant (ID)")
-    tenant = MultiValueCharFilter(method="filter_device", field_name="device__tenant__name", label="Tenant (name)")
+    rack_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (ID)",
+        )
+    )
+    rack = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Rack.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__rack",
+            label="Rack (name)",
+        )
+    )
+    location_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            method="filter_device",
+            field_name="device__location",
+            label="Location (ID)",
+        )
+    )
+    location = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Location.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__location",
+            label="Location (name)",
+        )
+    )
+    tenant_id = extend_schema_field({"type": "string", "format": "uuid"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (ID)",
+        )
+    )
+    tenant = extend_schema_field({"type": "string"})(
+        django_filters.ModelMultipleChoiceFilter(
+            queryset=Tenant.objects.all(),
+            to_field_name="name",
+            method="filter_device",
+            field_name="device__tenant",
+            label="Tenant (name)",
+        )
+    )
     termination_a_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
+        method="_termination_a_type",
+        label="Termination A type",
     )
     termination_b_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
+        method="_termination_b_type",
+        label="Termination B type",
     )
+    termination_a_id = MultiValueUUIDFilter(method="_termination_a_id", label="Termination A (ID)")
+    termination_b_id = MultiValueUUIDFilter(method="_termination_b_id", label="Termination B (ID)")
     termination_type = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("cable_terminations").get_choices,
         conjoined=False,
-        distinct=True,
-        lookup_expr="in",
         method="_termination_type",
         label="Termination (either end) type",
     )
+    termination_id = MultiValueUUIDFilter(method="_termination_id", label="Termination (either end) (ID)")
 
     class Meta:
         model = Cable
@@ -1464,21 +1626,78 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
             "label",
             "length",
             "length_unit",
-            "termination_a_id",
-            "termination_b_id",
             "tags",
         ]
 
+    def filter_is_disconnected(self, queryset, name, value):
+        """
+        Match cables that have at least one side (A or B) missing a termination.
+
+        Note: this is a coarse "has both sides connected" check; for breakout cables it does
+        *not* verify that every fan-out lane is populated. Per-lane completeness against the
+        cable's `cable_type` connector counts is a future refinement.
+        """
+        has_a = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="A"))
+        has_b = Exists(CableToCableTermination.objects.filter(cable=OuterRef("pk"), cable_end="B"))
+        annotated = queryset.annotate(_has_a_side=has_a, _has_b_side=has_b)
+        if value:
+            return annotated.filter(Q(_has_a_side=False) | Q(_has_b_side=False))
+        return annotated.filter(_has_a_side=True, _has_b_side=True)
+
+    @staticmethod
+    def _termination_device_cable_ids(suffix, values, include_null):
+        """Cable IDs having a termination whose `device<suffix>` matches `values` (and/or is null).
+
+        Reaches each termination's device directly through the per-type device-component FKs on the
+        join table (`interface__device`, `front_port__device`, ...). Circuit terminations and
+        power feeds have no device, so they only ever contribute to the `include_null` set.
+
+        `suffix` is "" (the device itself) or a related lookup such as "__rack" / "__location__name".
+        """
+        query = Q()
+        if values:
+            for fk in TERMINATION_DEVICE_FK_FIELDS:
+                query |= Q(**{f"{fk}__device{suffix}__in": values})
+        if include_null:
+            # A device-component row whose device (or its `suffix` relation) is null...
+            for fk in TERMINATION_DEVICE_FK_FIELDS:
+                query |= Q(**{f"{fk}__isnull": False, f"{fk}__device{suffix}__isnull": True})
+            # ...or a device-less termination (circuit termination / power feed) has no device at all.
+            for fk in TERMINATION_FK_FIELDS:
+                if fk not in TERMINATION_DEVICE_FK_FIELDS:
+                    query |= Q(**{f"{fk}__isnull": False})
+        if not query:
+            return CableToCableTermination.objects.none()
+        return CableToCableTermination.objects.filter(query).values_list("cable_id", flat=True)
+
     def filter_device(self, queryset, name, value):
-        queryset = queryset.filter(
-            Q(**{f"_termination_a_{name}__in": value}) | Q(**{f"_termination_b_{name}__in": value})
-        )
-        return queryset
+        """Filter cables by device-related fields, resolving each termination's device via its
+        per-type FK on the join table (`<termination_fk>__device...`).
+
+        The filter's `field_name` (e.g. "device", "device__rack", "device__location") is translated
+        into the lookup suffix applied after `device` on each termination FK.
+        """
+        filter_obj = self.filters.get(name)
+        field_name = filter_obj.field_name if filter_obj else name
+        if field_name == "device":
+            suffix = ""
+        elif field_name.startswith("device__"):
+            suffix = "__" + field_name[len("device__") :]
+        else:  # pragma: no cover  # should never happen
+            raise ValueError(f"filter_device() expects a field_name of 'device' or 'device__*'; got {field_name!r}")
+
+        has_null = any(v == "null" for v in value)
+        values = [v for v in value if v != "null"]
+        if not values and not has_null:
+            return queryset
+        cable_ids = self._termination_device_cable_ids(suffix, values, include_null=has_null)
+        return queryset.filter(pk__in=cable_ids)
 
     def generate_query_filter_device_id(self, value):
         if not hasattr(value, "__iter__") or isinstance(value, str):
             value = [value]
-        return Q(_termination_a_device_id__in=value) | Q(_termination_b_device_id__in=value)
+        cable_ids = self._termination_device_cable_ids("", value, include_null=False)
+        return Q(pk__in=cable_ids)
 
     def filter_device_id(self, queryset, name, value):
         if not value:
@@ -1486,18 +1705,77 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         params = self.generate_query_filter_device_id(value)
         return queryset.filter(params)
 
-    def generate_query__termination_type(self, value):
-        a_type_q = Q()
-        b_type_q = Q()
+    @staticmethod
+    def _build_termination_type_q(value, cable_end=None):
+        """Build a Q matching CableToCableTermination rows whose populated FK matches one of the given content-type labels."""
+        q = Q()
         for label in value:
             app_label, model = label.split(".")
-            a_type_q |= Q(termination_a_type__app_label=app_label, termination_a_type__model=model)
-            b_type_q |= Q(termination_b_type__app_label=app_label, termination_b_type__model=model)
-        return a_type_q | b_type_q
+            fk = CONTENT_TYPE_TO_TERMINATION_FK.get((app_label, model))
+            if fk is None:
+                continue
+            clause = Q(**{f"{fk}__isnull": False})
+            if cable_end:
+                clause &= Q(cable_end=cable_end)
+            q |= clause
+        return q
+
+    def generate_query__termination_type(self, value):
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value)).values_list(
+            "cable_id", flat=True
+        )
+        return Q(pk__in=cable_ids)
 
     @extend_schema_field({"type": "string"})
     def _termination_type(self, queryset, name, value):
-        return queryset.filter(self.generate_query__termination_type(value)).distinct()
+        return queryset.filter(self.generate_query__termination_type(value))
+
+    @extend_schema_field({"type": "string"})
+    def _termination_a_type(self, queryset, name, value):
+        """Filter cables by A-side termination type (backward compatible)."""
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value, "A")).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
+
+    @extend_schema_field({"type": "string"})
+    def _termination_b_type(self, queryset, name, value):
+        """Filter cables by B-side termination type (backward compatible)."""
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_type_q(value, "B")).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
+
+    @staticmethod
+    def _build_termination_id_q(value, cable_end=None):
+        """Build a Q matching CableToCableTermination rows whose populated termination FK has its PK in `value`."""
+        q = Q()
+        for fk in TERMINATION_FK_FIELDS:
+            q |= Q(**{f"{fk}_id__in": value})
+        if cable_end:
+            q &= Q(cable_end=cable_end)
+        return q
+
+    def _termination_a_id(self, queryset, name, value):
+        """Filter cables by A-side termination ID (backward compatible)."""
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value, "A")).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
+
+    def _termination_b_id(self, queryset, name, value):
+        """Filter cables by B-side termination ID (backward compatible)."""
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value, "B")).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
+
+    def _termination_id(self, queryset, name, value):
+        """Filter cables by either termination ID."""
+        cable_ids = CableToCableTermination.objects.filter(self._build_termination_id_q(value)).values_list(
+            "cable_id", flat=True
+        )
+        return queryset.filter(pk__in=cable_ids)
 
 
 class ConnectionFilterSetMixin:
@@ -1513,6 +1791,12 @@ class ConnectionFilterSetMixin:
 
 
 class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "device__name": "icontains",
+        },
+    )
     location = django_filters.CharFilter(
         method="filter_location",
         label="Location (name)",
@@ -1522,10 +1806,16 @@ class ConsoleConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 
     class Meta:
         model = ConsolePort
-        fields = ["name"]
+        fields = ["id", "name", "tags"]
 
 
 class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "name": "icontains",
+            "device__name": "icontains",
+        },
+    )
     location = django_filters.CharFilter(
         method="filter_location",
         label="Location (name)",
@@ -1535,20 +1825,49 @@ class PowerConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
 
     class Meta:
         model = PowerPort
-        fields = ["name"]
+        fields = ["id", "name", "tags"]
 
 
-class InterfaceConnectionFilterSet(ConnectionFilterSetMixin, BaseFilterSet):
-    location = django_filters.CharFilter(
-        method="filter_location",
-        label="Location (name)",
-    )
-    device_id = MultiValueUUIDFilter(method="filter_device", label="Device (ID)")
-    device = MultiValueCharFilter(method="filter_device", field_name="device__name", label="Device (name)")
+class InterfaceConnectionFilterSet(BaseFilterSet):
+    """
+    Filters CablePath rows representing interface-to-interface connections.
+
+    Each filter matches if EITHER endpoint of the connection (origin or destination Interface) matches
+    the supplied value, so a connection between Device A and Device B surfaces under either device's
+    filter.
+    """
+
+    q = django_filters.CharFilter(method="search", label="Search")
+    location = django_filters.CharFilter(method="filter_location", label="Location (name)")
+    device_id = MultiValueUUIDFilter(method="filter_device_id", label="Device (ID)")
+    device = MultiValueCharFilter(method="filter_device_name", label="Device (name)")
 
     class Meta:
-        model = Interface
-        fields = []
+        model = CablePath
+        fields = ["id"]
+
+    def _filter_either_endpoint(self, queryset, interface_filter):
+        """Return CablePaths whose origin OR destination is an Interface matching `interface_filter`."""
+        iface_pks = Interface.objects.filter(interface_filter).values("pk")
+        return queryset.filter(Q(origin_id__in=iface_pks) | Q(destination_id__in=iface_pks))
+
+    def search(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        # CablePath itself has no searchable fields; match against the interfaces at either
+        # endpoint by name or parent device name.
+        return self._filter_either_endpoint(queryset, Q(name__icontains=value) | Q(device__name__icontains=value))
+
+    def filter_location(self, queryset, name, value):
+        if not value.strip():
+            return queryset
+        return self._filter_either_endpoint(queryset, Q(device__location__name=value))
+
+    def filter_device_id(self, queryset, name, value):
+        return self._filter_either_endpoint(queryset, Q(device_id__in=value))
+
+    def filter_device_name(self, queryset, name, value):
+        return self._filter_either_endpoint(queryset, Q(device__name__in=value))
 
 
 class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
@@ -1576,7 +1895,7 @@ class PowerPanelFilterSet(LocatableModelFilterSetMixin, NautobotFilterSet):
 
     class Meta:
         model = PowerPanel
-        fields = ["id", "name", "panel_type", "power_path", "tags"]
+        fields = ["id", "name", "panel_type", "power_path", "breaker_position_count", "tags"]
 
 
 class PowerFeedFilterSet(
@@ -1645,10 +1964,9 @@ class DeviceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixi
         fields = ["id", "name", "failover_strategy", "tags"]
 
 
-class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
+class InterfaceRedundancyGroupFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, NameSearchFilterSet):
     """Filter for InterfaceRedundancyGroup."""
 
-    q = SearchFilter(filter_predicates={"name": "icontains"})
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
@@ -1657,6 +1975,12 @@ class InterfaceRedundancyGroupFilterSet(NameSearchFilterSet, BaseFilterSet):
     virtual_ip = MultiValueCharFilter(
         method="filter_virtual_ip",
         label="Virtual IP Address (address or ID)",
+    )
+    interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Interface.objects.all(),
+        to_field_name="name",
+        label="Interfaces (name or ID)",
+        prefers_id=True,
     )
 
     class Meta:
@@ -1713,6 +2037,12 @@ class SoftwareImageFileFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
     software_version = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
+    )
+    software_version__platform = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="software_version__platform",
+        queryset=Platform.objects.all(),
+        to_field_name="name",
+        label="Software version platform (name or ID)",
     )
     device_types = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=DeviceType.objects.all(),
@@ -1897,7 +2227,7 @@ class ControllerManagedDeviceGroupFilterSet(
         label="Parent group (name or ID)",
     )
     subtree = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=Controller.objects.all(),
+        queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
         label="Controlled device groups and descendants thereof (name or ID)",
         method="_subtree",
@@ -1915,6 +2245,24 @@ class ControllerManagedDeviceGroupFilterSet(
     has_wireless_networks = RelatedMembershipBooleanFilter(
         field_name="wireless_networks",
         label="Has wireless networks",
+    )
+    devices = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="Devices (name or ID)",
+    )
+    has_devices = RelatedMembershipBooleanFilter(
+        field_name="devices",
+        label="Has devices",
+    )
+    virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=VirtualDeviceContext.objects.all(),
+        to_field_name="name",
+        label="Virtual device contexts (name or ID)",
+    )
+    has_virtual_device_contexts = RelatedMembershipBooleanFilter(
+        field_name="virtual_device_contexts",
+        label="Has virtual device contexts",
     )
 
     class Meta:
@@ -2097,6 +2445,7 @@ class ModuleTypeFilterSet(DeviceTypeModuleTypeCommonFiltersMixin, NautobotFilter
     class Meta:
         model = ModuleType
         fields = "__all__"
+        exclude = ["front_image", "rear_image"]  # ImageField is not filterable by django-filter
 
     def filter_module_bay(self, queryset, name, value):
         """Filter module types based on a module bay's module family."""
@@ -2150,7 +2499,7 @@ class ModuleBayTemplateFilterSet(ModularDeviceComponentTemplateModelFilterSetMix
 class ModuleBayFilterSet(NautobotFilterSet):
     q = SearchFilter(
         filter_predicates={
-            "device__name": {
+            "parent_device__name": {
                 "lookup_expr": "icontains",
                 "preprocessor": str.strip,
             },
@@ -2250,6 +2599,15 @@ class VirtualDeviceContextFilterSet(
         field_name="interfaces",
         label="Has Interfaces",
     )
+    has_tenant = RelatedMembershipBooleanFilter(
+        field_name="tenant",
+        label="Has tenant",
+    )
+    controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        field_name="controller_managed_device_group",
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+    )
 
     class Meta:
         model = VirtualDeviceContext
@@ -2260,6 +2618,7 @@ class VirtualDeviceContextFilterSet(
             "tenant",
             "interfaces",
             "has_interfaces",
+            "has_tenant",
             "has_primary_ip",
             "primary_ip4",
             "primary_ip6",
@@ -2267,6 +2626,7 @@ class VirtualDeviceContextFilterSet(
             "status",
             "tags",
             "description",
+            "controller_managed_device_group",
         ]
 
     # TODO(timizuo): Make a mixin for ip filterset fields to reduce code duplication

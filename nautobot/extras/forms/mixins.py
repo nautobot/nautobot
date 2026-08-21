@@ -120,13 +120,16 @@ class CustomFieldModelFormMixin(forms.ModelForm):
         Append form fields for all CustomFields assigned to this model.
         """
         # Append form fields; assign initial values if modifying and existing object
+        is_edit = self.instance.present_in_database
         for cf in CustomField.objects.filter(content_types=self.obj_type):
+            # Skip field creation and adding to the self.custom_fields list if not applicable
+            if is_edit and not cf.should_render(self.instance):
+                continue
+
             field_name = cf.add_prefix_to_cf_key()
-            if self.instance.present_in_database:
-                self.fields[field_name] = cf.to_form_field(set_initial=False)
+            self.fields[field_name] = cf.to_form_field()
+            if is_edit:
                 self.fields[field_name].initial = self.instance.cf.get(cf.key)
-            else:
-                self.fields[field_name] = cf.to_form_field()
 
             # Annotate the field in the list of CustomField form fields
             self.custom_fields.append(field_name)

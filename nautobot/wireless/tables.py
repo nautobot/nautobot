@@ -119,7 +119,7 @@ class WirelessNetworkTable(BaseTable):
             "authentication",
             "enabled",
             "hidden",
-            "secret",
+            "secrets_group",
             "description",
             "tags",
             "actions",

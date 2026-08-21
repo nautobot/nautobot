@@ -36,7 +36,7 @@ export const setSelect2Value = (select2, value) => {
   });
 
   const nextValue = (() => {
-    if (value.length > 0) {
+    if (value?.length > 0) {
       const isMultiple = select2?.getAttribute('multiple') !== null;
       return isMultiple ? value.map((attributes) => attributes.value) : value?.[0]?.value;
     }
@@ -45,6 +45,11 @@ export const setSelect2Value = (select2, value) => {
   })();
 
   $(select2).val(nextValue).trigger('change');
+  if ((Array.isArray(value) && value.length === 0) || value === null) {
+    $(select2).trigger('select2:clear').trigger('select2:unselect');
+  } else {
+    $(select2).trigger('select2:select');
+  }
 };
 
 /**
@@ -78,16 +83,27 @@ const parseURL = (url) => {
  * @returns {void} Do not return any value, just initialize given Select2 components.
  */
 const initializeSelect2 = (context, selector, options) =>
-  [...getElement(context).querySelectorAll(selector)].forEach((element) =>
-    $(element).select2({
-      allowClear: true,
-      placeholder: '---------',
-      selectionCssClass: 'select2--small',
-      theme: 'bootstrap-5',
-      width: 'off',
-      ...options,
-    }),
-  );
+  [...getElement(context).querySelectorAll(selector)].forEach((element) => {
+    const {
+      $selection: [selection],
+    } = $(element)
+      .select2({
+        allowClear: true,
+        placeholder: '---------',
+        selectionCssClass: 'select2--small',
+        theme: 'bootstrap-5',
+        width: 'off',
+        ...options,
+      })
+      .data('select2');
+
+    /* Select2 names its combobox after its own displayed value; point it at the field's label(s) instead. */
+    const labelIds = [...element.labels].map((label, index) => (label.id ||= `${element.id}_label_${index}`));
+    if (labelIds.length) {
+      selection.setAttribute('aria-labelledby', labelIds.join(' '));
+      selection.querySelector('.select2-selection__rendered')?.setAttribute('aria-labelledby', labelIds.join(' '));
+    }
+  });
 
 const initializeColorPicker = (context, dropdownParent = null) => {
   // Assign color picker selection classes.
@@ -354,10 +370,17 @@ const initializeStaticChoiceSelection = (context, dropdownParent = null) =>
   initializeSelect2(context, '.nautobot-select2-static', { dropdownParent });
 
 export const initializeSelect2Fields = (context) => {
-  initializeColorPicker(context);
-  initializeDynamicChoiceSelection(context);
-  initializeMultiValueChar(context);
-  initializeStaticChoiceSelection(context);
+  /*
+   * Define a scoped `dropdownParent` if given `context` is a descendant of modal or a modal itself.
+   * https://select2.org/troubleshooting/common-problems#select2-does-not-function-properly-when-i-use-it-inside-a-bootst
+   */
+  const contextElement = getElement(context);
+  const dropdownParent = contextElement?.closest?.('.modal') ? contextElement : undefined;
+
+  initializeColorPicker(context, dropdownParent);
+  initializeDynamicChoiceSelection(context, dropdownParent);
+  initializeMultiValueChar(context, dropdownParent);
+  initializeStaticChoiceSelection(context, dropdownParent);
 
   [...getElement(context).querySelectorAll('.modal')].forEach((modal) => {
     initializeColorPicker(modal, modal);

@@ -1,13 +1,17 @@
+import json
 import logging
 import re
 
 from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.urls import reverse
+from django.utils.html import format_html
+from django.utils.http import urlencode
 from timezone_field import TimeZoneFormField
 
-from nautobot.circuits.models import Circuit, CircuitTermination, Provider
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.forms import (
     add_blank_choice,
@@ -23,6 +27,7 @@ from nautobot.core.forms import (
     DatePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    EmbeddedActionsFormMixin,
     ExpandableNameField,
     form_from_model,
     JSONArrayFormField,
@@ -40,12 +45,6 @@ from nautobot.core.forms import (
 from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
 from nautobot.core.forms.fields import LaxURLField
 from nautobot.core.utils.config import get_settings_or_config
-from nautobot.dcim.constants import RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
-from nautobot.dcim.form_mixins import (
-    LocatableModelBulkEditFormMixin,
-    LocatableModelFilterFormMixin,
-    LocatableModelFormMixin,
-)
 from nautobot.extras.forms import (
     CustomFieldModelBulkEditFormMixin,
     CustomFieldModelCSVForm,
@@ -83,6 +82,7 @@ from nautobot.wireless.models import RadioProfile
 from .choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
+    CableTypePolarityMethodChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
@@ -110,13 +110,26 @@ from .choices import (
     SubdeviceRoleChoices,
 )
 from .constants import (
+    BREAKOUT_COMPATIBLE_TERMINATION_TYPES,
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    COMPATIBLE_TERMINATION_TYPES,
     INTERFACE_MTU_MAX,
     INTERFACE_MTU_MIN,
+    RACK_U_HEIGHT_DEFAULT,
+    RACK_U_HEIGHT_MAXIMUM,
     REARPORT_POSITIONS_MAX,
     REARPORT_POSITIONS_MIN,
 )
+from .form_mixins import (
+    LocatableModelBulkEditFormMixin,
+    LocatableModelFilterFormMixin,
+    LocatableModelFormMixin,
+)
 from .models import (
     Cable,
+    CableToCableTermination,
+    CableType,
     ConsolePort,
     ConsolePortTemplate,
     ConsoleServerPort,
@@ -161,6 +174,9 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
 )
+from .signals import defer_cable_path_rebuilds
+from .termination_field_set import CableTerminationFieldSet
+from .utils import build_connector_row_layout
 
 logger = logging.getLogger(__name__)
 
@@ -185,13 +201,6 @@ def get_device_by_name_or_pk(name):
     return device
 
 
-class ConnectCableExcludeIDMixin:
-    def __init__(self, *args, exclude_id=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        if exclude_id is not None:
-            self.fields["termination_b_id"].widget.add_query_param("id__n", str(exclude_id))
-
-
 class DeviceComponentFilterForm(NautobotFilterForm):
     field_order = ["q", "location"]
     q = forms.CharField(required=False, label="Search")
@@ -212,13 +221,45 @@ class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
     )
 
 
+class DeviceComponentTemplateFilterForm(NautobotFilterForm):
+    q = forms.CharField(required=False, label="Search")
+    device_type = DynamicModelMultipleChoiceField(
+        queryset=DeviceType.objects.all(),
+        required=False,
+        label="Device Type",
+    )
+
+
+class ModularDeviceComponentTemplateFilterForm(DeviceComponentTemplateFilterForm):
+    module_type = DynamicModelMultipleChoiceField(
+        queryset=ModuleType.objects.all(),
+        required=False,
+        label="Module Type",
+    )
+
+
 class InterfaceCommonForm(forms.Form):
+    def _get_tagged_vlan_scope(self):
+        """Return the object whose Location constrains this interface's tagged VLANs, or None if there is none."""
+        if "device" not in self.cleaned_data:
+            # VMInterface forms scope tagged VLANs by the parent virtual machine instead of a device
+            return self.cleaned_data.get("virtual_machine")
+        if self.cleaned_data["device"] is not None:
+            return self.cleaned_data["device"]
+        # A Module interface has no device of its own in cleaned_data.
+        # A Module installed directly at a Location also has no parent device.
+        # Its own Location is deliberately not used here, because the model and REST API
+        # layers scope tagged VLANs by the parent device only.
+        module = self.cleaned_data.get("module")
+        if module is None:
+            raise forms.ValidationError("Either device or module must be set")
+        return getattr(module, "device", None)
+
     def clean(self):
         super().clean()
 
-        parent_field = "device" if "device" in self.cleaned_data else "virtual_machine"
-        tagged_vlans = self.cleaned_data["tagged_vlans"]
-        mode = self.cleaned_data["mode"]
+        tagged_vlans = self.cleaned_data.get("tagged_vlans") or []
+        mode = self.cleaned_data.get("mode")
 
         # Untagged interfaces cannot be assigned tagged VLANs
         if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
@@ -231,29 +272,31 @@ class InterfaceCommonForm(forms.Form):
         # Validate tagged VLANs; must be a global VLAN or in the same location as the
         # parent device/VM or any of that location's parent locations
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            location = self.cleaned_data[parent_field].location
-            if location:
-                location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
-            else:
-                location_ids = []
-            invalid_vlans = [
-                str(v)
-                for v in tagged_vlans
-                if v.locations.without_tree_fields().exists()
-                and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
-            ]
+            scope = self._get_tagged_vlan_scope()
+            if scope is not None:
+                location = scope.location
+                if location:
+                    location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+                else:
+                    location_ids = []
+                invalid_vlans = [
+                    str(v)
+                    for v in tagged_vlans
+                    if v.locations.without_tree_fields().exists()
+                    and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
+                ]
 
-            if invalid_vlans:
-                raise forms.ValidationError(
-                    {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
-                        "interface's parent device, or is in one of the parents of the interface's parent device's location, "
-                        "or it must be global."
-                    }
-                )
+                if invalid_vlans:
+                    raise forms.ValidationError(
+                        {
+                            "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
+                            "interface's parent device, or is in one of the parents of the interface's parent device's location, "
+                            "or it must be global."
+                        }
+                    )
 
 
-class ComponentForm(BootstrapMixin, forms.Form):
+class ComponentForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     """
     Subclass this form when facilitating the creation of one or more device component or component templates based on
     a name pattern.
@@ -416,7 +459,7 @@ class LocationBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, 
 
 class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, TenancyFilterForm):
     model = Location
-    field_order = ["q", "location_type", "parent", "subtree", "status", "tenant_group", "tenant", "tag"]
+    field_order = ["q", "location_type", "parent", "subtree", "max_depth", "status", "tenant_group", "tenant", "tag"]
 
     q = forms.CharField(required=False, label="Search")
     location_type = DynamicModelMultipleChoiceField(
@@ -424,6 +467,7 @@ class LocationFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Tenancy
     )
     parent = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
     subtree = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    max_depth = forms.IntegerField(required=False, help_text="Maximum nesting depth within parent locations")
     tags = TagFilterField(model)
 
 
@@ -778,7 +822,7 @@ class RackReservationFilterForm(NautobotFilterForm, TenancyFilterForm):
         "tenant",
     ]
     q = forms.CharField(required=False, label="Search")
-    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
+    location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), required=False)
     rack_group = DynamicModelMultipleChoiceField(
         queryset=RackGroup.objects.all(),
         required=False,
@@ -1060,9 +1104,16 @@ class ModuleTypeForm(NautobotModelForm):
             "model",
             "module_family",
             "part_number",
+            "front_image",
+            "rear_image",
             "comments",
             "tags",
         ]
+        widgets = {
+            # Exclude SVG images (unsupported by PIL)
+            "front_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+            "rear_image": ClearableFileInput(attrs={"accept": "image/bmp,image/gif,image/jpeg,image/png,image/tiff"}),
+        }
 
 
 class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
@@ -1106,27 +1157,27 @@ class ModuleTypeFilterForm(NautobotFilterForm):
     module_family = DynamicModelMultipleChoiceField(
         queryset=ModuleFamily.objects.all(), to_field_name="name", required=False
     )
-    has_console_ports = forms.NullBooleanField(
+    has_console_port_templates = forms.NullBooleanField(
         required=False,
         label="Has console ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_console_server_ports = forms.NullBooleanField(
+    has_console_server_port_templates = forms.NullBooleanField(
         required=False,
         label="Has console server ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_power_ports = forms.NullBooleanField(
+    has_power_port_templates = forms.NullBooleanField(
         required=False,
         label="Has power ports",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_power_outlets = forms.NullBooleanField(
+    has_power_outlet_templates = forms.NullBooleanField(
         required=False,
         label="Has power outlets",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_interfaces = forms.NullBooleanField(
+    has_interface_templates = forms.NullBooleanField(
         required=False,
         label="Has interfaces",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
@@ -1252,6 +1303,10 @@ class ConsolePortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["label", "type", "description"]
 
 
+class ConsolePortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ConsolePortTemplate
+
+
 class ConsoleServerPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ConsoleServerPortTemplate
@@ -1294,6 +1349,10 @@ class ConsoleServerPortTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["label", "type", "description"]
+
+
+class ConsoleServerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ConsoleServerPortTemplate
 
 
 class PowerPortTemplateForm(ModularComponentTemplateForm):
@@ -1369,6 +1428,10 @@ class PowerPortTemplateBulkEditForm(NautobotBulkEditForm):
             "allocated_draw",
             "description",
         ]
+
+
+class PowerPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = PowerPortTemplate
 
 
 class PowerOutletTemplateForm(ModularComponentTemplateForm):
@@ -1461,6 +1524,10 @@ class PowerOutletTemplateBulkEditForm(NautobotBulkEditForm):
             self.fields["power_port_template"].widget.attrs["disabled"] = True
 
 
+class PowerOutletTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = PowerOutletTemplate
+
+
 class InterfaceTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = InterfaceTemplate
@@ -1537,6 +1604,10 @@ class InterfaceTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ["label", "port_type", "speed", "duplex", "description"]
+
+
+class InterfaceTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = InterfaceTemplate
 
 
 class FrontPortTemplateForm(ModularComponentTemplateForm):
@@ -1662,6 +1733,10 @@ class FrontPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
+class FrontPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = FrontPortTemplate
+
+
 class RearPortTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = RearPortTemplate
@@ -1717,6 +1792,10 @@ class RearPortTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ["description"]
 
 
+class RearPortTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = RearPortTemplate
+
+
 class DeviceBayTemplateForm(ComponentTemplateForm):
     class Meta:
         model = DeviceBayTemplate
@@ -1746,6 +1825,10 @@ class DeviceBayTemplateBulkEditForm(NautobotBulkEditForm):
         nullable_fields = ("label", "description")
 
 
+class DeviceBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = DeviceBayTemplate
+
+
 class ModuleBayTemplateForm(ModularComponentTemplateForm):
     class Meta:
         model = ModuleBayTemplate
@@ -1766,7 +1849,7 @@ class ModuleBayTemplateForm(ModularComponentTemplateForm):
         ].help_text = "If assigned to a family, this module bay will only accept module types in the same family."
 
 
-class ModuleBayBaseCreateForm(BootstrapMixin, forms.Form):
+class ModuleBayBaseCreateForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
     module_family = DynamicModelChoiceField(
         queryset=ModuleFamily.objects.all(),
         required=False,
@@ -1857,6 +1940,10 @@ class ModuleBayTemplateBulkEditForm(NautobotBulkEditForm):
 
     class Meta:
         nullable_fields = ("label", "description", "module_family")
+
+
+class ModuleBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
+    model = ModuleBayTemplate
 
 
 #
@@ -2626,9 +2713,10 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
                 if parent_bay.module_family:
                     self.fields["module_family"].initial = parent_bay.module_family.id
                     self.fields["module_family"].disabled = True
-                    self.fields[
-                        "module_family"
-                    ].help_text = f"The selected parent module bay requires a module in the {parent_bay.module_family.name} family"
+                    self.fields["module_family"].help_text = format_html(
+                        "The selected parent module bay requires a module in the {} family",
+                        parent_bay.module_family.name,
+                    )
 
                 if parent_bay.requires_first_party_modules:
                     if parent_bay.parent_device:
@@ -2647,8 +2735,10 @@ class ModuleForm(LocatableModelFormMixin, NautobotModelForm, TenancyForm):
         super().clean()
 
         cleaned_data = self.cleaned_data
+
         if cleaned_data["parent_module_bay_device"] and cleaned_data["parent_module_bay_module"]:
-            raise forms.ValidationError("Multiple parent module bays selected.")
+            if cleaned_data["parent_module_bay_device"] != cleaned_data["parent_module_bay_module"].parent_device:
+                raise forms.ValidationError("Module and Module Bay are associated to different devices")
         elif cleaned_data["parent_module_bay_device"]:
             cleaned_data["parent_module_bay"] = cleaned_data.pop("parent_module_bay_device")
         elif cleaned_data["parent_module_bay_module"]:
@@ -2685,7 +2775,6 @@ class ModuleBulkEditForm(
 
 class ModuleFilterForm(
     NautobotFilterForm,
-    LocalContextFilterForm,
     LocatableModelFilterFormMixin,
     TenancyFilterForm,
     StatusModelFilterFormMixin,
@@ -2846,6 +2935,7 @@ class ModuleBulkAddComponentForm(DeviceBulkAddComponentForm):
 class ConsolePortFilterForm(ModularDeviceComponentFilterForm):
     model = ConsolePort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -2908,6 +2998,7 @@ class ConsolePortBulkEditForm(
 class ConsoleServerPortFilterForm(ModularDeviceComponentFilterForm):
     model = ConsoleServerPort
     type = forms.MultipleChoiceField(choices=ConsolePortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -2973,6 +3064,7 @@ class ConsoleServerPortBulkEditForm(
 class PowerPortFilterForm(ModularDeviceComponentFilterForm):
     model = PowerPort
     type = forms.MultipleChoiceField(choices=PowerPortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3077,6 +3169,7 @@ class PowerPortBulkEditForm(
 class PowerOutletFilterForm(ModularDeviceComponentFilterForm):
     model = PowerOutlet
     type = forms.MultipleChoiceField(choices=PowerOutletTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3188,11 +3281,28 @@ class PowerOutletBulkEditForm(
 class InterfaceFilterForm(ModularDeviceComponentFilterForm, RoleModelFilterFormMixin, StatusModelFilterFormMixin):
     model = Interface
     type = forms.MultipleChoiceField(choices=InterfaceTypeChoices, required=False, widget=StaticSelect2Multiple())
+    kind = forms.ChoiceField(
+        choices=add_blank_choice([("physical", "Physical"), ("virtual", "Virtual"), ("wireless", "Wireless")]),
+        required=False,
+        widget=StaticSelect2(),
+    )
     port_type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
     speed = forms.MultipleChoiceField(choices=InterfaceSpeedChoices, required=False, widget=MultiValueCharInput)
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     mgmt_only = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    duplex = forms.MultipleChoiceField(choices=InterfaceDuplexChoices, required=False, widget=StaticSelect2Multiple())
+    mode = forms.MultipleChoiceField(
+        choices=InterfaceModeChoices,
+        required=False,
+        label="802.1Q Mode",
+        help_text=INTERFACE_MODE_HELP_TEXT,
+        widget=StaticSelect2Multiple(),
+    )
+    tagged_vlans = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Tagged VLANs")
+    untagged_vlan = DynamicModelMultipleChoiceField(queryset=VLAN.objects.all(), required=False, label="Untagged VLAN")
     mac_address = forms.CharField(required=False, label="MAC address")
+    breakout_position = forms.IntegerField(required=False, min_value=1, label="Breakout position")
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3272,6 +3382,7 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
             "port_type",
             "enabled",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mac_address",
@@ -3303,6 +3414,8 @@ class InterfaceForm(InterfaceCommonForm, ModularComponentEditForm):
         help_texts = {
             "mode": INTERFACE_MODE_HELP_TEXT,
         }
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -3365,6 +3478,12 @@ class InterfaceCreateForm(
             "type": InterfaceTypeChoices.TYPE_LAG,
         },
         help_text="Assigned LAG interface",
+    )
+    breakout_position_pattern = ExpandableNameField(
+        label="Breakout position",
+        required=False,
+        help_text="Numeric ranges are supported, e.g. <code>[1-4]</code>. (Must match the number of names being "
+        "created.) Assigns each child interface's breakout position on the parent's trunk connector.",
     )
     mtu = forms.IntegerField(
         required=False,
@@ -3438,6 +3557,7 @@ class InterfaceCreateForm(
         "duplex",
         "enabled",
         "parent_interface",
+        "breakout_position_pattern",
         "bridge",
         "lag",
         "mtu",
@@ -3452,6 +3572,42 @@ class InterfaceCreateForm(
         "tagged_vlans",
         "tags",
     )
+
+    class Meta:
+        # Disable embedded object create for `parent_interface`, `bridge` and `lag` because their forms require initial values.
+        exclude_embedded_create = ["parent_interface", "bridge", "lag"]
+
+    def clean(self):
+        super().clean()
+
+        # Validate that the breakout positions expand to the same count as the names, and that each
+        # is a positive integer within the allowed range.
+        positions = self.cleaned_data.get("breakout_position_pattern")
+        if positions:
+            name_count = len(self.cleaned_data["name_pattern"])
+            if len(positions) != name_count:
+                raise forms.ValidationError(
+                    {
+                        "breakout_position_pattern": f"The provided name pattern will create {name_count} components, "
+                        f"however {len(positions)} breakout positions will be generated. These counts must match."
+                    },
+                    code="breakout_position_pattern_mismatch",
+                )
+            for position in positions:
+                if not position.isdigit() or not 1 <= int(position) <= CABLE_BREAKOUT_MAX_LANES:
+                    raise forms.ValidationError(
+                        {
+                            "breakout_position_pattern": f"Breakout positions must be integers between 1 and "
+                            f"{CABLE_BREAKOUT_MAX_LANES}."
+                        },
+                        code="breakout_position_pattern_invalid",
+                    )
+
+    def get_iterative_data(self, iteration):
+        positions = self.cleaned_data.get("breakout_position_pattern")
+        if positions:
+            return {"breakout_position": int(positions[iteration])}
+        return {}
 
 
 class InterfaceBulkCreateForm(
@@ -3540,6 +3696,7 @@ class InterfaceBulkEditForm(
             "type",
             "port_type",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mac_address",
@@ -3579,13 +3736,23 @@ class InterfaceBulkEditForm(
     untagged_vlan = DynamicModelChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
+        label="Untagged VLAN",
     )
-    tagged_vlans = DynamicModelMultipleChoiceField(
+    add_tagged_vlans = DynamicModelMultipleChoiceField(
         queryset=VLAN.objects.all(),
         required=False,
         query_params={
             "locations": "null",
         },
+        label="Add Tagged VLANs",
+    )
+    remove_tagged_vlans = DynamicModelMultipleChoiceField(
+        queryset=VLAN.objects.all(),
+        required=False,
+        query_params={
+            "locations": "null",
+        },
+        label="Remove Tagged VLANs",
     )
     vrf = DynamicModelChoiceField(
         queryset=VRF.objects.all(),
@@ -3603,6 +3770,7 @@ class InterfaceBulkEditForm(
         nullable_fields = [
             "label",
             "parent_interface",
+            "breakout_position",
             "bridge",
             "lag",
             "mac_address",
@@ -3612,7 +3780,6 @@ class InterfaceBulkEditForm(
             "speed",
             "duplex",
             "untagged_vlan",
-            "tagged_vlans",
             "vrf",
             "port_type",
         ]
@@ -3640,9 +3807,11 @@ class InterfaceBulkEditForm(
                 # In the case of a single location, use the available_on_device query param to limit untagged VLAN choices
                 # to those available on the devices in that location and in the ancestors of the location.
                 self.fields["untagged_vlan"].widget.add_query_param("available_on_device", device.pk)
-                self.fields["tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", location.pk)
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", location.pk)
             else:
-                self.fields["tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["add_tagged_vlans"].widget.add_query_param("locations", "null")
+                self.fields["remove_tagged_vlans"].widget.add_query_param("locations", "null")
 
         # Restrict parent/bridge/LAG interface assignment by device (or VC master)
         if device_count == 1:
@@ -3660,12 +3829,30 @@ class InterfaceBulkEditForm(
     def clean(self):
         super().clean()
 
+        mode = self.cleaned_data.get("mode")
+        tagged_vlans = bool(self.cleaned_data.get("add_tagged_vlans") or self.cleaned_data.get("remove_tagged_vlans"))
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and self.cleaned_data["tagged_vlans"]:
+        if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
+        # In theory UI blocks this from happening, but to ensure on backend we enforce.
+        # An interface must be in tagged mode to have an untagged VLAN assigned
+        elif tagged_vlans and mode != InterfaceModeChoices.MODE_TAGGED:
+            non_tagged = (
+                Interface.objects.filter(pk__in=self.cleaned_data["pk"])
+                .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
+                .values_list("name", flat=True)
+            )
+            if non_tagged.exists():
+                raise forms.ValidationError(
+                    {
+                        "mode": "Attempting to update VLAN when not all of the interfaces were in tagged mode including "
+                        + ", ".join(list(non_tagged))
+                    }
+                )
+
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
+        elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
 
@@ -3677,6 +3864,7 @@ class InterfaceBulkEditForm(
 class FrontPortFilterForm(ModularDeviceComponentFilterForm):
     model = FrontPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3811,6 +3999,7 @@ class FrontPortBulkEditForm(
 class RearPortFilterForm(ModularDeviceComponentFilterForm):
     model = RearPort
     type = forms.MultipleChoiceField(choices=PortTypeChoices, required=False, widget=StaticSelect2Multiple())
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -3934,7 +4123,10 @@ class PopulateDeviceBayForm(BootstrapMixin, forms.Form):
             rack=device_bay.device.rack,
             parent_bay__isnull=True,
             device_type__u_height=0,
-            device_type__subdevice_role=SubdeviceRoleChoices.ROLE_CHILD,
+            device_type__subdevice_role__in=[
+                SubdeviceRoleChoices.ROLE_CHILD,
+                SubdeviceRoleChoices.ROLE_PARENT_CHILD,
+            ],
         ).exclude(pk=device_bay.device.pk)
 
 
@@ -4251,231 +4443,16 @@ class InventoryItemFilterForm(DeviceComponentFilterForm):
 #
 
 
-class ConnectCableToDeviceForm(ConnectCableExcludeIDMixin, NautobotModelForm):
-    """
-    Base form for connecting a Cable to a Device component
-    """
-
-    termination_b_location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        label="Location",
-        required=False,
-    )
-    termination_b_rack = DynamicModelChoiceField(
-        queryset=Rack.objects.all(),
-        label="Rack",
-        required=False,
-        null_option="None",
-        query_params={"location": "$termination_b_location"},
-    )
-    termination_b_device = DynamicModelChoiceField(
-        queryset=Device.objects.all(),
-        label="Device",
-        required=False,
-        query_params={
-            "location": "$termination_b_location",
-            "rack": "$termination_b_rack",
-        },
-    )
-    termination_b_module = DynamicModelChoiceField(
-        queryset=Module.objects.all(),
-        label="Module",
-        required=False,
-        query_params={
-            "device": "$termination_b_device",
-        },
-    )
-
-    class Meta:
-        model = Cable
-        fields = [
-            "termination_b_location",
-            "termination_b_rack",
-            "termination_b_device",
-            "termination_b_id",
-            "type",
-            "status",
-            "label",
-            "color",
-            "length",
-            "length_unit",
-            "tags",
-        ]
-        widgets = {
-            "type": StaticSelect2,
-            "length_unit": StaticSelect2,
-        }
-        help_texts = {
-            "status": "Connection status",
-        }
-
-    def clean_termination_b_id(self):
-        # Return the PK rather than the object
-        return getattr(self.cleaned_data["termination_b_id"], "pk", None)
-
-
-class ConnectCableToConsolePortForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=ConsolePort.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
-    )
-
-
-class ConnectCableToConsoleServerPortForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=ConsoleServerPort.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
-    )
-
-
-class ConnectCableToPowerPortForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=PowerPort.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
-    )
-
-
-class ConnectCableToPowerOutletForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=PowerOutlet.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
-    )
-
-
-class ConnectCableToInterfaceForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=Interface.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={
-            "device_id": "$termination_b_device",
-            "module": "$termination_b_module",
-            "kind": "physical",
-        },
-    )
-
-
-class ConnectCableToFrontPortForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=FrontPort.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
-    )
-
-
-class ConnectCableToRearPortForm(ConnectCableToDeviceForm):
-    termination_b_id = DynamicModelChoiceField(
-        queryset=RearPort.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"device": "$termination_b_device", "module": "$termination_b_module"},
-    )
-
-
-class ConnectCableToCircuitTerminationForm(ConnectCableExcludeIDMixin, NautobotModelForm):
-    termination_b_provider = DynamicModelChoiceField(queryset=Provider.objects.all(), label="Provider", required=False)
-    termination_b_location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        label="Location",
-        required=False,
-    )
-    termination_b_circuit = DynamicModelChoiceField(
-        queryset=Circuit.objects.all(),
-        label="Circuit",
-        query_params={
-            "provider": "$termination_b_provider",
-            "location": "$termination_b_location",
-        },
-    )
-    termination_b_id = DynamicModelChoiceField(
-        queryset=CircuitTermination.objects.all(),
-        label="Side",
-        disabled_indicator="cable",
-        query_params={"circuit": "$termination_b_circuit"},
-    )
-
-    class Meta:
-        model = Cable
-        fields = [
-            "termination_b_provider",
-            "termination_b_location",
-            "termination_b_circuit",
-            "termination_b_id",
-            "type",
-            "status",
-            "label",
-            "color",
-            "length",
-            "length_unit",
-            "tags",
-        ]
-
-    def clean_termination_b_id(self):
-        # Return the PK rather than the object
-        return getattr(self.cleaned_data["termination_b_id"], "pk", None)
-
-
-class ConnectCableToPowerFeedForm(ConnectCableExcludeIDMixin, NautobotModelForm):
-    termination_b_location = DynamicModelChoiceField(
-        queryset=Location.objects.all(),
-        label="Location",
-        required=False,
-    )
-    termination_b_rackgroup = DynamicModelChoiceField(
-        queryset=RackGroup.objects.all(),
-        label="Rack Group",
-        required=False,
-        query_params={"location": "$termination_b_location"},
-    )
-    termination_b_powerpanel = DynamicModelChoiceField(
-        queryset=PowerPanel.objects.all(),
-        label="Power Panel",
-        required=False,
-        query_params={
-            "location": "$termination_b_location",
-            "rack_group": "$termination_b_rackgroup",
-        },
-    )
-    termination_b_id = DynamicModelChoiceField(
-        queryset=PowerFeed.objects.all(),
-        label="Name",
-        disabled_indicator="cable",
-        query_params={"power_panel": "$termination_b_powerpanel"},
-    )
-
-    class Meta:
-        model = Cable
-        fields = [
-            "termination_b_rackgroup",
-            "termination_b_powerpanel",
-            "termination_b_id",
-            "type",
-            "status",
-            "label",
-            "color",
-            "length",
-            "length_unit",
-            "tags",
-        ]
-
-    def clean_termination_b_id(self):
-        # Return the PK rather than the object
-        return getattr(self.cleaned_data["termination_b_id"], "pk", None)
-
-
 class CableForm(NautobotModelForm):
+    cable_type = DynamicModelChoiceField(
+        queryset=CableType.objects.all(),
+        required=False,
+    )
+
     class Meta:
         model = Cable
         fields = [
+            "cable_type",
             "type",
             "status",
             "label",
@@ -4489,6 +4466,439 @@ class CableForm(NautobotModelForm):
             "length_unit": StaticSelect2,
         }
         error_messages = {"length": {"max_value": "Maximum length is 32767 (any unit)"}}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Init-time problems encountered while resolving URL/HTMX-supplied initial values
+        # (cable_type PK, termination_[ab]_type, etc.). Each entry is `(field_name_or_None, msg)`
+        # and is drained into form errors during `clean()` so the user sees what went wrong on
+        # submission rather than the form silently falling back to a default layout.
+        self._init_warnings: list[tuple] = []
+
+        # When this cable's existing terminations don't support breakout lane modeling (e.g. console
+        # or power terminations), restrict the cable type choices to single-connector types. Multi-
+        # connector types require breakout-eligible terminations (enforced in
+        # `CableToCableTermination.clean`). Previously the whole field was disabled, which wrongly
+        # blocked valid single-connector cable types too.
+        if self.instance and self.instance.present_in_database and not self.instance.breakout_eligible:
+            self.fields["cable_type"].queryset = self.fields["cable_type"].queryset.filter(
+                a_connectors=1, b_connectors=1
+            )
+            self.fields["cable_type"].widget.add_query_param("a_connectors", 1)
+            self.fields["cable_type"].widget.add_query_param("b_connectors", 1)
+            self.fields["cable_type"].help_text = (
+                "Only single-connector cable types are available because this cable's terminations "
+                "do not support breakout. Interfaces, front ports, rear ports, and circuit terminations "
+                "support multi-connector breakout cable types."
+            )
+
+        # Resolve HTMX endpoint URLs. The lane-form endpoint differs by saved-ness (renders the
+        # current cable's lanes); lane-side-fields is independent of any cable.
+        if self.instance.present_in_database:
+            self._lane_form_url = reverse("dcim:cable_lane_form", kwargs={"pk": self.instance.pk})
+        else:
+            self._lane_form_url = reverse("dcim:cable_lane_form_new")
+            # Persist URL-prepopulated termination values into the HTMX endpoint URL so they survive
+            # when the user changes `cable_type` and the lane form is regenerated server-side.
+            preserved = {
+                key: self.initial[key]
+                for key in ("termination_a_type", "termination_a_id", "termination_b_type")
+                if self.initial.get(key)
+            }
+            if preserved:
+                self._lane_form_url += "?" + urlencode(preserved)
+        self._lane_side_fields_url = reverse("dcim:cable_lane_side_fields")
+
+        # Wire up HTMX on the cable_type select: changing it reloads the entire lane form panel.
+        # (Re-initializing form widgets on the swapped content is handled by a body-level
+        # htmx:afterSwap listener in the cable update template.)
+        self.fields["cable_type"].widget.attrs.update(
+            {
+                "hx-get": self._lane_form_url,
+                "hx-trigger": "change",
+                "hx-target": "#lane-terminations-container",
+                "hx-swap": "innerHTML",
+                "hx-include": "this",
+            }
+        )
+
+        self._init_lane_fields()
+
+    def _init_lane_fields(self):
+        """Add connection fields. One picker per connector per side."""
+        cable_type = None
+
+        # Determine the cable type. Sources, in priority order:
+        #   1. Submitted POST data (a freshly submitted form).
+        #   2. Explicit `self.initial` (URL prepopulation or an HTMX lane_form preview after the
+        #      user changed the cable_type dropdown on an existing cable).
+        #   3. The saved instance value (initial display of an existing cable's edit form).
+        # Explicit data/initial overrides the saved value so the live preview reflects the user's
+        # in-progress choice; a falsy override (user cleared the dropdown) is honored as "no
+        # cable_type" rather than silently falling back to the saved value.
+        cable_type_pk = None
+        cable_type_from_initial = False
+        if self.data and "cable_type" in self.data:
+            cable_type_pk = self.data.get("cable_type") or None
+        elif self.initial and "cable_type" in self.initial:
+            cable_type_pk = self.initial.get("cable_type") or None
+            cable_type_from_initial = True
+
+        if cable_type_pk:
+            try:
+                # TODO permissions restriction on cable_type lookup?
+                cable_type = CableType.objects.get(pk=cable_type_pk)
+            except (CableType.DoesNotExist, ValueError, ValidationError):
+                # When the bad value came from POST data, the `cable_type` DynamicModelChoiceField
+                # will surface its own validation error during `is_valid()`, so we don't need to
+                # duplicate. Initial-sourced values aren't field-validated, so we do report.
+                if cable_type_from_initial:
+                    self._init_warnings.append(
+                        (
+                            "cable_type",
+                            f"Could not load cable type {cable_type_pk!r}; falling back to a 1x1 layout.",
+                        )
+                    )
+
+        # Determine connector counts per side
+        if cable_type:
+            a_connectors = cable_type.a_connectors
+            b_connectors = cable_type.b_connectors
+            a_positions = cable_type.a_positions
+            b_positions = cable_type.b_positions
+        else:
+            a_connectors = b_connectors = 1
+            a_positions = b_positions = 1
+
+        # Build existing termination lookup from get_connections()
+        existing_a = {}  # connector_num → termination object
+        existing_b = {}
+        if self.instance and self.instance.present_in_database:
+            conns = self.instance.get_connections()
+            for row in conns["rows"]:
+                # Rows covered by an earlier cell's rowspan carry a None cell on that side — skip them.
+                a = row["a"]
+                b = row["b"]
+                if a is not None and a["connector"] not in existing_a:
+                    existing_a[a["connector"]] = a["termination"]
+                if b is not None and b["connector"] not in existing_b:
+                    existing_b[b["connector"]] = b["termination"]
+
+        # Pre-populate A-side from URL params (used by the connect flow). Each failure mode here
+        # records a warning and leaves the A side blank rather than crashing form construction —
+        # the URL params are upstream-supplied and the user can't fix them from the form.
+        initial_a_type = self.initial.get("termination_a_type")
+        initial_a_id = self.initial.get("termination_a_id")
+        if not existing_a and initial_a_type and initial_a_id:
+            self._load_initial_a_termination(initial_a_type, initial_a_id, existing_a)
+
+        # B-side type override from URL params (used by the connect flow when the user clicked a
+        # specific "Connect to X" link). No PK to pre-fill the termination from — the user picks
+        # the parent + termination next; we just preselect the type dropdown.
+        initial_b_type = self.initial.get("termination_b_type")
+        initial_b_type_name = None
+        if initial_b_type:
+            try:
+                _, initial_b_type_name = str(initial_b_type).split(".")
+            except ValueError:
+                self._init_warnings.append(
+                    ("b_conn_1_type", f"Invalid termination_b_type {initial_b_type!r}; B-side type defaulted.")
+                )
+
+        # Determine the A-side termination type (if known) to drive the B-side default selection
+        # when no explicit B-side type was supplied. This avoids defaulting the B-side dropdown
+        # to "Interface" (the global default in `detect_termination_type`) for cables whose
+        # A-side cannot connect to an interface — e.g. cabling a PowerPort, which should default
+        # the B side to PowerOutlet.
+        a_type_name = None
+        if existing_a.get(1) is not None:
+            a_type_name = existing_a[1]._meta.model_name
+        elif initial_a_type:
+            try:
+                _, a_type_name = str(initial_a_type).split(".")
+            except ValueError:
+                pass
+        default_b_type_name = (
+            COMPATIBLE_TERMINATION_TYPES[a_type_name][0] if a_type_name in COMPATIBLE_TERMINATION_TYPES else None
+        )
+
+        # Create form fields using CableTerminationFieldSet
+        fieldset = CableTerminationFieldSet()
+        # When editing a saved cable, its own endpoints must stay pickable (and swappable); when
+        # creating, only uncabled endpoints are offered. `cable_pk` drives the fieldset's
+        # `available_for_cable` / `has_cable` termination filtering.
+        cable_pk = self.instance.pk if self.instance.present_in_database else None
+        self.connection_info = {
+            "a_side": [],
+            "b_side": [],
+            "a_positions": a_positions,
+            "b_positions": b_positions,
+            "cable_type": cable_type,
+        }
+
+        for side, connector_count, existing, side_info_key in (
+            ("a", a_connectors, existing_a, "a_side"),
+            ("b", b_connectors, existing_b, "b_side"),
+        ):
+            for c in range(1, connector_count + 1):
+                prefix = f"{side}_conn_{c}"
+                term = existing.get(c)
+                submitted_type = self.data.get(f"{prefix}_type") if self.data else None
+                # When the user is creating a cable via the "Connect to X" flow, honor the
+                # URL-supplied b-side type for every B-side connector. Otherwise, fall back to a
+                # type compatible with the A-side. Submitted form data (`submitted_type`) and any
+                # existing termination still take precedence.
+                if submitted_type is None and term is None and side == "b":
+                    submitted_type = initial_b_type_name or default_b_type_name
+                result = fieldset.get_fields(prefix, existing_term=term, term_type=submitted_type, cable_pk=cable_pk)
+                self.fields.update(result["fields"])
+                self.initial.update(result["initial"])
+                # Wire HTMX onto the type selector: changing it fetches fresh parent + termination
+                # fields and swaps them into this lane's `<prefix>_termination_fields` container.
+                self.fields[result["meta"]["type_field"]].widget.attrs.update(
+                    {
+                        "hx-get": self._lane_side_fields_url,
+                        "hx-trigger": "change",
+                        "hx-target": f"#{prefix}_termination_fields",
+                        "hx-swap": "innerHTML",
+                        "hx-include": "this",
+                        # Forward the cable pk so the lane-side-fields HTMX partial re-applies the
+                        # same `available_for_cable` filtering when the user changes the type.
+                        "hx-vals": json.dumps(
+                            {"connector": str(c), "side": side, **({"cable": str(cable_pk)} if cable_pk else {})}
+                        ),
+                    }
+                )
+                self.connection_info[side_info_key].append(
+                    {
+                        "connector": c,
+                        "lanes": a_positions if side == "a" else b_positions,
+                        "meta": result["meta"],
+                    }
+                )
+
+        # Cross-lane exclusion: a termination already selected on any other lane (same side or
+        # opposite side) shouldn't be selectable here. Reference each other lane's termination
+        # field as a `$<name>` placeholder in this lane's `id__n` query param, so the value is
+        # resolved at API-call time — exclusion updates live as the user picks values across
+        # lanes (and across breakout connectors). IDs from a different model are harmless since
+        # they can't match anything in this lane's queryset.
+        all_term_fields = [
+            conn["meta"]["term_field"]
+            for side_info in (self.connection_info["a_side"], self.connection_info["b_side"])
+            for conn in side_info
+        ]
+        for side_info in (self.connection_info["a_side"], self.connection_info["b_side"]):
+            for conn in side_info:
+                term_field_name = conn["meta"]["term_field"]
+                other_refs = [f"${name}" for name in all_term_fields if name != term_field_name]
+                if other_refs:
+                    self.fields[term_field_name].widget.add_query_param("id__n", other_refs)
+
+    def _load_initial_a_termination(self, initial_a_type, initial_a_id, existing_a):
+        """Resolve `initial_a_type` + `initial_a_id` into a termination instance, recording a
+        warning rather than raising if any step fails."""
+        # Type resolution: malformed string, missing ContentType, or stale ContentType whose model
+        # has been removed from INSTALLED_APPS all collapse to a single "invalid type" warning.
+        model_cls = None
+        try:
+            app_label, model_name = str(initial_a_type).split(".")
+            model_cls = ContentType.objects.get_by_natural_key(app_label, model_name).model_class()
+        except (ValueError, ContentType.DoesNotExist):
+            pass
+        if model_cls is None:
+            self._init_warnings.append(
+                ("a_conn_1_type", f"Invalid termination_a_type {initial_a_type!r}; A side not pre-populated.")
+            )
+            return
+        try:
+            existing_a[1] = model_cls.objects.get(pk=initial_a_id)
+        except (model_cls.DoesNotExist, ValueError):
+            self._init_warnings.append(
+                (
+                    "a_conn_1_termination",
+                    f"Could not load {initial_a_type} with id {initial_a_id!r}; A side not pre-populated.",
+                )
+            )
+
+    def get_connection_fields(self):
+        """Return connection_info with BoundField objects, A-left B-right with rowspan."""
+        info = self.connection_info
+
+        def _enrich(conn):
+            meta = conn["meta"]
+            return {
+                "connector": conn["connector"],
+                "lanes": conn["lanes"],
+                "type_field": self[meta["type_field"]],
+                "parent_field": self[meta["parent_field"]],
+                "term_field": self[meta["term_field"]],
+            }
+
+        a_enriched = {conn["connector"]: _enrich(conn) for conn in info["a_side"]}
+        b_enriched = {conn["connector"]: _enrich(conn) for conn in info["b_side"]}
+
+        # `_init_lane_fields` already resolved the cable_type when shaping the lane layout; reuse
+        # it here rather than repeating the lookup.
+        cable_type = info["cable_type"]
+
+        if cable_type is None:
+            rows = [
+                {
+                    "a": a_enriched.get(1, {}),
+                    "b": b_enriched.get(1, {}),
+                    "a_rowspan": 1,
+                    "b_rowspan": 1,
+                }
+            ]
+        else:
+            # Reuse the same layout helper as `Cable.get_connections` so the edit form and the
+            # detail view render identically structured tables.
+            rows = [
+                {
+                    "a": a_enriched.get(layout["a_connector"], {}),
+                    "b": b_enriched.get(layout["b_connector"], {}),
+                    "a_rowspan": layout["a_rowspan"],
+                    "b_rowspan": layout["b_rowspan"],
+                }
+                for layout in build_connector_row_layout(cable_type.mapping)
+            ]
+
+        return {
+            "rows": rows,
+            "cable_type": cable_type,
+        }
+
+    def clean(self):
+        super().clean()
+        # `super().clean()` on some parent classes returns None and mutates `self.cleaned_data`
+        # in place; read from the attribute rather than the return value.
+        cleaned_data = self.cleaned_data
+
+        # Surface init-time problems (collected in `_init_lane_fields`) as form errors so the user
+        # sees what went wrong with URL/HTMX-supplied initial values instead of the form silently
+        # falling back to a default layout. Drain the list so re-validation doesn't double-report.
+        warnings, self._init_warnings = self._init_warnings, []
+        for field, message in warnings:
+            self.add_error(field, message)
+
+        info = self.connection_info
+
+        # Stash the cleaned first-A and first-B terminations onto the instance so that
+        # `Cable.clean()` (which runs in `_post_clean`) validates the *new* termination pair we're
+        # trying to save, rather than the saved-row-derived termination property (which is `None`
+        # on create and stale on edit). The `_form_cleaned_terminations` flag tells Cable.clean
+        # to use these values directly — including the case where the user has cleared one side
+        # (None), which must NOT fall back to the previously-saved (possibly invalid) value.
+        if info["a_side"]:
+            a_connector = info["a_side"][0]["connector"]
+            self.instance._initial_termination_a = cleaned_data.get(f"a_conn_{a_connector}_termination")
+        if info["b_side"]:
+            b_connector = info["b_side"][0]["connector"]
+            self.instance._initial_termination_b = cleaned_data.get(f"b_conn_{b_connector}_termination")
+        self.instance._form_cleaned_terminations = True
+
+        # Per-lane pair compatibility check. Iterate every unique (a_connector, b_connector) pair
+        # in the cable_type's mapping (or [(1,1)] for standard cables) so breakout incompatibilities
+        # surface as form errors at submit time rather than as a ValidationError raised from
+        # `CableToCableTermination.clean()` during `save()`.
+        cable_type = info["cable_type"]
+        mapping = cable_type.mapping if cable_type else [{"a_connector": 1, "b_connector": 1}]
+        seen_pairs = set()
+        for entry in mapping:
+            pair = (entry["a_connector"], entry["b_connector"])
+            if pair in seen_pairs:
+                continue
+            seen_pairs.add(pair)
+            term_a = cleaned_data.get(f"a_conn_{entry['a_connector']}_termination")
+            term_b = cleaned_data.get(f"b_conn_{entry['b_connector']}_termination")
+            try:
+                Cable.validate_termination_pair(term_a, term_b)
+            except ValidationError as exc:
+                self.add_error(f"b_conn_{entry['b_connector']}_termination", exc)
+
+        # Multi-connector (breakout) cable types only support breakout-eligible termination types.
+        # Surface this as a per-field error here rather than letting `CableToCableTermination.clean()`
+        # raise from `save()`.
+        if cable_type is not None and cable_type.is_multi_connector:
+            for side_info, side_label in ((info["a_side"], "a"), (info["b_side"], "b")):
+                for conn in side_info:
+                    field_name = f"{side_label}_conn_{conn['connector']}_termination"
+                    termination = cleaned_data.get(field_name)
+                    if (
+                        termination is not None
+                        and termination._meta.model_name not in BREAKOUT_COMPATIBLE_TERMINATION_TYPES
+                    ):
+                        self.add_error(
+                            field_name,
+                            f"A {termination._meta.verbose_name} cannot terminate a multi-connector cable type.",
+                        )
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        cable = super().save(commit=commit)
+
+        if commit:
+            self._save_connection_terminations(cable)
+
+        return cable
+
+    def _save_connection_terminations(self, cable):
+        """Process connector-based form fields — replace this cable's CableToCableTermination rows.
+
+        Old rows are deleted and fresh rows are created from the cleaned form data. The previous
+        update-in-place implementation tripped the `(cable, cable_end)` unique constraint when the
+        form swapped A and B termination assignments (e.g. via the "Swap A / B" button) — updating
+        side B's row to cable_end="A" while side A's existing row was still on cable_end="A" is a
+        constraint violation. Replacing rows wholesale sidesteps that ordering hazard.
+
+        Short-circuit: if the proposed termination set is identical to what's already stored
+        (matching cable_end + connector + termination object on every row), we leave the existing
+        rows untouched. This keeps row PKs, change-log entries, and CablePath rows stable across
+        edits that don't actually touch terminations (e.g. changing only length or status).
+        """
+        info = self.connection_info
+
+        def _row_key(cable_end, connector, termination):
+            return (
+                cable_end,
+                connector,
+                ContentType.objects.get_for_model(termination).pk,
+                termination.pk,
+            )
+
+        existing_keys = {
+            _row_key(row.cable_end, row.connector, row.termination)
+            for row in cable.terminations.all()
+            if row.termination is not None
+        }
+
+        proposed_keys = set()
+        proposed_rows = []  # (cable_end, connector, termination) tuples
+        seen_termination_pks = set()
+        for side_key, side_label in [("a_side", "A"), ("b_side", "B")]:
+            for conn in info[side_key]:
+                connector_number = conn["connector"]
+                field_name = f"{side_label.lower()}_conn_{connector_number}_termination"
+                termination = self.cleaned_data.get(field_name)
+                if not termination or termination.pk in seen_termination_pks:
+                    continue
+                seen_termination_pks.add(termination.pk)
+                proposed_keys.add(_row_key(side_label, connector_number, termination))
+                proposed_rows.append((side_label, connector_number, termination))
+
+        if existing_keys == proposed_keys:
+            return
+
+        # `defer_cable_path_rebuilds()` wraps the block in a transaction (so a creation failure
+        # mid-loop rolls back the delete) AND coalesces the per-row CableToCableTermination
+        # signals into one `rebuild_paths(cable)` at context exit.
+        with defer_cable_path_rebuilds():
+            CableToCableTermination.objects.filter(cable=cable).delete()
+            for side_label, connector, termination in proposed_rows:
+                cable.add_termination(termination, cable_end=side_label, connector=connector)
 
 
 class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, NautobotBulkEditForm):
@@ -4530,12 +4940,15 @@ class CableBulkEditForm(TagsBulkEditFormMixin, StatusModelBulkEditFormMixin, Nau
 class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
     model = Cable
     q = forms.CharField(required=False, label="Search")
+    cable_type = DynamicModelMultipleChoiceField(queryset=CableType.objects.all(), to_field_name="name", required=False)
     location = DynamicModelMultipleChoiceField(queryset=Location.objects.all(), to_field_name="name", required=False)
-    tenant = DynamicModelMultipleChoiceField(queryset=Tenant.objects.all(), to_field_name="name", required=False)
+    tenant = DynamicModelMultipleChoiceField(
+        queryset=Tenant.objects.all(), to_field_name="name", required=False, null_option="None"
+    )
     rack = DynamicModelMultipleChoiceField(
         queryset=Rack.objects.all(),
+        to_field_name="name",
         required=False,
-        label="Rack",
         null_option="None",
         query_params={"location": "$location"},
     )
@@ -4555,6 +4968,11 @@ class CableFilterForm(BootstrapMixin, StatusModelFilterFormMixin, forms.Form):
             "tenant": "$tenant",
             "rack": "$rack",
         },
+    )
+    is_disconnected = forms.NullBooleanField(
+        required=False,
+        label="Is disconnected",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
 
@@ -5020,6 +5438,7 @@ class PowerFeedFilterForm(NautobotFilterForm, StatusModelFilterFormMixin, Locata
         required=False,
         widget=StaticSelect2(),
     )
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     tags = TagFilterField(model)
 
 
@@ -5193,6 +5612,7 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
     interfaces = DynamicModelMultipleChoiceField(
         queryset=Interface.objects.all(),
         required=False,
+        query_params={"interface_redundancy_groups__isnull": "false"},
     )
     virtual_ip = DynamicModelMultipleChoiceField(
         queryset=IPAddress.objects.all(),
@@ -5202,9 +5622,10 @@ class InterfaceRedundancyGroupFilterForm(BootstrapMixin, StatusModelFilterFormMi
         queryset=SecretsGroup.objects.all(),
         required=False,
     )
-    protocol = forms.ChoiceField(
-        choices=InterfaceRedundancyGroupProtocolChoices,
+    protocol = forms.MultipleChoiceField(
+        choices=add_blank_choice(InterfaceRedundancyGroupProtocolChoices),
         required=False,
+        widget=StaticSelect2Multiple(),
     )
 
     class Meta:
@@ -5630,6 +6051,9 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
 
     controller = DynamicModelChoiceField(queryset=Controller.objects.all(), required=True)
     devices = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(), required=False
+    )
     parent = DynamicModelChoiceField(queryset=ControllerManagedDeviceGroup.objects.all(), required=False)
     radio_profiles = DynamicModelMultipleChoiceField(
         queryset=RadioProfile.objects.all(),
@@ -5644,6 +6068,7 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
             "name",
             "description",
             "devices",
+            "virtual_device_contexts",
             "parent",
             "capabilities",
             "weight",
@@ -5658,10 +6083,12 @@ class ControllerManagedDeviceGroupForm(NautobotModelForm, TenancyForm):
 
         if self.instance.present_in_database:
             self.initial["devices"] = self.instance.devices.values_list("pk", flat=True)
+            self.initial["virtual_device_contexts"] = self.instance.virtual_device_contexts.values_list("pk", flat=True)
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
         instance.devices.set(self.cleaned_data["devices"])
+        instance.virtual_device_contexts.set(self.cleaned_data["virtual_device_contexts"])
         return instance
 
 
@@ -5688,6 +6115,26 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterFo
         to_field_name="name",
         required=False,
     )
+    devices = DynamicModelMultipleChoiceField(
+        queryset=Device.objects.all(),
+        required=False,
+        label="Devices",
+    )
+    has_devices = forms.NullBooleanField(
+        required=False,
+        label="Has devices",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    virtual_device_contexts = DynamicModelMultipleChoiceField(
+        queryset=VirtualDeviceContext.objects.all(),
+        required=False,
+        label="Virtual Device Contexts",
+    )
+    has_virtual_device_contexts = forms.NullBooleanField(
+        required=False,
+        label="Has virtual device contexts",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
     tags = TagFilterField(model)
     field_order = (
         "q",
@@ -5697,6 +6144,10 @@ class ControllerManagedDeviceGroupFilterForm(NautobotFilterForm, TenancyFilterFo
         "parent",
         "weight",
         "subtree",
+        "devices",
+        "has_devices",
+        "virtual_device_contexts",
+        "has_virtual_device_contexts",
         "tags",
         "tenant",
         "tenant_group",
@@ -5789,12 +6240,16 @@ class VirtualDeviceContextForm(NautobotModelForm):
         required=False,
         label="VRFs",
     )
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
 
     class Meta:
         model = VirtualDeviceContext
         fields = [
             "name",
             "device",
+            "controller_managed_device_group",
             "role",
             "status",
             "identifier",
@@ -5843,11 +6298,15 @@ class VirtualDeviceContextBulkEditForm(
     )
     add_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
     remove_vrfs = DynamicModelMultipleChoiceField(queryset=VRF.objects.all(), required=False)
+    controller_managed_device_group = DynamicModelChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(), required=False
+    )
 
     class Meta:
         model = VirtualDeviceContext
         nullable_fields = [
             "tenant",
+            "controller_managed_device_group",
         ]
 
 
@@ -5861,9 +6320,9 @@ class VirtualDeviceContextFilterForm(
         "device",
         "status",
         "tenant",
-        "has_tenant",
         "has_primary_ip",
         "tags",
+        "controller_managed_device_group",
     ]
 
     q = forms.CharField(required=False, label="Search")
@@ -5871,6 +6330,12 @@ class VirtualDeviceContextFilterForm(
         queryset=Device.objects.all(),
         required=False,
         label="Device",
+    )
+    controller_managed_device_group = DynamicModelMultipleChoiceField(
+        queryset=ControllerManagedDeviceGroup.objects.all(),
+        to_field_name="name",
+        required=False,
+        null_option="None",
     )
     tenant = DynamicModelMultipleChoiceField(
         queryset=Tenant.objects.all(),
@@ -5882,9 +6347,79 @@ class VirtualDeviceContextFilterForm(
         label="Has a primary IP",
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
-    has_tenant = forms.NullBooleanField(
-        required=False,
-        label="Has Tenant",
-        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
-    )
     tags = TagFilterField(model)
+
+
+#
+# Cable Types
+#
+
+
+class CableTypeForm(NautobotModelForm):
+    mapping = forms.JSONField(
+        required=False,
+        help_text="Lane mapping JSON. A list of <code>total_lanes</code> objects, each with keys "
+        "<code>a_connector</code>, <code>a_position</code>, <code>b_connector</code>, <code>b_position</code>, "
+        "and optionally <code>label</code>.",
+    )
+    a_connectors = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="A connectors"
+    )
+    b_connectors = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_CONNECTORS, required=True, label="B connectors"
+    )
+    total_lanes = forms.IntegerField(
+        min_value=1, max_value=CABLE_BREAKOUT_MAX_LANES, required=True, label="Total lanes"
+    )
+
+    class Meta:
+        model = CableType
+        fields = [
+            "name",
+            "description",
+            "manufacturer",
+            "part_number",
+            "a_connectors",
+            "b_connectors",
+            "total_lanes",
+            "mapping",
+            "has_embedded_transceivers",
+            "is_shuffle",
+            "strands_per_lane",
+            "polarity_method",
+            "tags",
+        ]
+        widgets = {
+            "polarity_method": StaticSelect2,
+        }
+
+
+class CableTypeFilterForm(NautobotFilterForm):
+    model = CableType
+    q = forms.CharField(required=False, label="Search")
+    manufacturer = DynamicModelMultipleChoiceField(
+        queryset=Manufacturer.objects.all(), to_field_name="name", required=False
+    )
+    has_embedded_transceivers = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    is_breakout = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    tags = TagFilterField(model)
+
+
+class CableTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=CableType.objects.all(), widget=forms.MultipleHiddenInput())
+    description = forms.CharField(required=False)
+    manufacturer = DynamicModelChoiceField(queryset=Manufacturer.objects.all(), required=False)
+    has_embedded_transceivers = forms.NullBooleanField(
+        required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    is_shuffle = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
+    polarity_method = forms.ChoiceField(
+        choices=add_blank_choice(CableTypePolarityMethodChoices), required=False, widget=StaticSelect2()
+    )
+    strands_per_lane = forms.IntegerField(required=False, min_value=1)
+
+    class Meta:
+        nullable_fields = ["description", "manufacturer"]

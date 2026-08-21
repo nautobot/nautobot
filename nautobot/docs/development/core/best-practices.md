@@ -120,14 +120,91 @@ from django.db import models
 from nautobot.core.models.fields import AutoSlugField
 from nautobot.core.models.generics import PrimaryModel
 
+
 class ExampleModel(PrimaryModel):
     name = models.CharField(max_length=100, unique=True)
-    slug = AutoSlugField(populate_from='name')
+    slug = AutoSlugField(populate_from="name")
 ```
 
 ### CharField and SlugField Max Length
 
 When constructing a CharField or SlugField, always utilize the `CHARFIELD_MAX_LENGTH` constant unless your field requires a value greater than `CHARFIELD_MAX_LENGTH`, which is `255`.
+
+### Foreign Key Deletion Behavior (`on_delete`)
+
+Every `ForeignKey` and `OneToOneField` must declare an [`on_delete`](https://docs.djangoproject.com/en/stable/ref/models/fields/#django.db.models.ForeignKey.on_delete) behavior describing what happens to the referencing (child) row when the referenced (parent) object is deleted. The choice has real user-facing consequences: it determines whether users can delete a parent object at all, what happens to dependent data, and how easily related records can be cleaned up. Choose the option that matches the actual relationship between the two models.
+
+Nautobot primarily uses three of Django's `on_delete` options:
+
+| Option     | Effect on the child row                            | When to use                                                                                          |
+| ---------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `CASCADE`  | Delete the child row.                              | The child has no meaning without the parent (composition or "part of" relationships).                |
+| `SET_NULL` | Set the field to `NULL` (requires `null=True`).    | The relationship is optional metadata that can be cleared without removing the child row.            |
+| `PROTECT`  | Block the delete by raising `ProtectedError`.      | Only when neither `CASCADE` nor `SET_NULL` is safe (see [below](#when-protect-is-appropriate)).      |
+
+The other Django options (`SET_DEFAULT`, `SET()`, `DO_NOTHING`, `RESTRICT`) are not typically used within Nautobot.
+
+#### Default to `CASCADE` or `SET_NULL`, not `PROTECT`
+
+`PROTECT` is the most common source of friction in Nautobot's delete UX, and new models should default to `CASCADE` or `SET_NULL` whenever the relationship reasonably allows it:
+
+- A single protected reference blocks the entire delete and surfaces as a Django `ProtectedError`.
+- Users frequently expect a top-level delete to "just work"; protection forces them to discover and clear every reference by hand before the operation succeeds.
+- Bulk-delete operations become significantly harder when any one of the selected objects has a chain of protected children.
+- Apps and integrations that reorganize or replace objects programmatically must re-point every protected child individually before the original can be removed, which is verbose and error-prone.
+
+Treat `PROTECT` as the exception, not the default. If you are reaching for `PROTECT` simply because you have not decided what should happen on deletion, the answer is almost always `CASCADE` (for required, composition-style relationships) or `SET_NULL` (for optional ones).
+
+#### When `PROTECT` is appropriate
+
+`PROTECT` is the right choice when silently deleting the child row, or silently nulling the reference, would lose important data or context that the user needs to confront explicitly. Concretely, prefer `PROTECT` when **all** of the following are true:
+
+1. The relationship is required (`null=False`), so `SET_NULL` is not an option.
+2. Cascading the delete would either destroy a large amount of operational data, or erase historical context (such as an audit trail) that cannot be reconstructed.
+3. There is a reasonable expectation that the user should resolve the relationship before deletion, rather than have it resolved silently.
+
+Representative core examples that meet this bar:
+
+- **Organizational hierarchy with non-trivial children.** `Rack` and `Location` use `PROTECT` because deleting a location via `CASCADE` would destroy the racks, devices, interfaces, and IP addresses underneath it from a single click.
+- **Definitions referenced by data.** `ObjectMetadata` and `MetadataType` use `PROTECT` because removing a metadata type while data still uses it would orphan that data with no way to recover its meaning.
+- **User attribution.** `RackReservation` and `User` use `PROTECT` so deleting a user account does not silently rewrite the reservation's history.
+
+The common thread: cascading the delete would destroy or rewrite data that the user almost certainly did not intend to lose, and nulling the reference is not available because the field is required.
+
+#### Examples in core
+
+```python
+# CASCADE: the child only exists as part of the parent
+class RackReservation(...):
+    rack = models.ForeignKey(
+        to="dcim.Rack",
+        on_delete=models.CASCADE,
+        related_name="rack_reservations",
+    )
+
+
+# SET_NULL: optional organizational grouping
+class Rack(...):
+    rack_group = models.ForeignKey(
+        to="dcim.RackGroup",
+        on_delete=models.SET_NULL,
+        related_name="racks",
+        blank=True,
+        null=True,
+    )
+
+
+# PROTECT: deleting the location would destroy or orphan large amounts of infrastructure
+class Rack(...):
+    location = models.ForeignKey(
+        to="dcim.Location",
+        on_delete=models.PROTECT,
+        related_name="racks",
+    )
+```
+
+!!! tip
+    Before selecting `PROTECT`, ask: "If a user deletes the referenced object, what is the *least surprising* outcome?" If the honest answer is "delete the child row too" or "clear the reference and keep the row", use `CASCADE` or `SET_NULL`. Reach for `PROTECT` only when neither outcome is safe.
 
 ## Getting URL Routes
 
@@ -250,8 +327,8 @@ class UserFilter(NautobotFilterSet):
     class Meta:
         model = User
         fields = {
-            'username': ['exact', 'contains'],
-            'last_login': ['exact', 'year__gt'],
+            "username": ["exact", "contains"],
+            "last_login": ["exact", "year__gt"],
         }
 ```
 
@@ -339,28 +416,27 @@ For example, for a boolean filter that checks to see whether the `console_ports`
 
 ```python
 class ProductFilter(NautobotFilterSet):
-
-     class Meta:
-         model = Interface
-         fields = "__all__"
-         filter_overrides = {
-             # This would change the default to all CharFields to use lookup_expr="icontains". It
-             # would also pass in the custom `choices` generated by the `generate_choices()`
-             # function.
-             models.CharField: {
-                 "filter_class": filters.MultiValueCharFilter,
-                 "extra": lambda f: {
-                     "lookup_expr": "icontains",
-                     "choices": generate_choices(),
-                 },
-             },
-             # This would make BooleanFields use a radio select widget vs. the default of checkbox
-             models.BooleanField: {
-                 "extra": lambda f: {
-                     "widget": forms.RadioSelect,
-                 },
-             },
-         }
+    class Meta:
+        model = Interface
+        fields = "__all__"
+        filter_overrides = {
+            # This would change the default to all CharFields to use lookup_expr="icontains". It
+            # would also pass in the custom `choices` generated by the `generate_choices()`
+            # function.
+            models.CharField: {
+                "filter_class": filters.MultiValueCharFilter,
+                "extra": lambda f: {
+                    "lookup_expr": "icontains",
+                    "choices": generate_choices(),
+                },
+            },
+            # This would make BooleanFields use a radio select widget vs. the default of checkbox
+            models.BooleanField: {
+                "extra": lambda f: {
+                    "widget": forms.RadioSelect,
+                },
+            },
+        }
 ```
 
 !!!warning
@@ -373,6 +449,7 @@ Filters on a filterset can reference a `method` (either a callable, or the name 
 Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_ports`:
 
 ```python
+...
     # Filter field definition is a BooleanFilter, for which an "isnull" lookup_expr
     # is the only valid filter expression
     pass_through_ports = django_filters.BooleanFilter(
@@ -385,6 +462,7 @@ Consider this example from `nautobot.dcim.filters.DeviceFilterSet.pass_through_p
     def _pass_through_ports(self, queryset, name, value):
         breakpoint()  # This was added to illustrate debugging with pdb below
         return queryset.exclude(frontports__isnull=value, rearports__isnull=value)
+...
 ```
 
 The default `lookup_expr` unless otherwise specified is “exact”, as seen in the [`django_filters.conf`](https://github.com/carltongibson/django-filter/blob/main/django_filters/conf.py#L10) module:
@@ -410,12 +488,14 @@ Additionally, `name` variable that gets passed to the method cannot be used here
 So while this filter definition could be improved like so, there is still no way to know what is going on in the method body:
 
 ```python
+...
     pass_through_ports = django_filters.BooleanFilter(
         method="_pass_through_ports",  # The method that is called
-        exclude=True,                  # Perform an `.exclude()` vs. `.filter()``
-        lookup_expr="isnull",          # Perform `isnull` vs. `exact``
+        exclude=True,  # Perform an `.exclude()` vs. `.filter()``
+        lookup_expr="isnull",  # Perform `isnull` vs. `exact``
         label="Has pass-through ports",
     )
+...
 ```
 
 For illustration, if we use another breakpoint, you can see that the filter field now has the correct attributes that can be used to help reverse this query:

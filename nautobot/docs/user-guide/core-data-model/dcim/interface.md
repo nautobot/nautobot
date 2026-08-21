@@ -13,8 +13,8 @@ The following operational statuses are available by default:
 ## Speed and duplex
 
 +++ 2.4.22
-* `speed` (optional): Operational speed in Kbps as an integer. Value is rendered in the UI using human-readable units (e.g., Mbps/Gbps/Tbps).
-* `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
+    * `speed` (optional): Operational speed in Kbps as an integer. Value is rendered in the UI using human-readable units (e.g., Mbps/Gbps/Tbps).
+    * `duplex` (optional): Duplex setting for copper twisted‑pair interfaces. Accepted values are `auto`, `full`, or `half`.
 
 ### Validation rules for speed/duplex
 
@@ -36,9 +36,15 @@ Interfaces now have an optional `port_type` field which describes the physical c
 
 Interfaces may be physical or virtual in nature, but only physical interfaces may be connected via cables. Cables can connect interfaces to pass-through ports, circuit terminations, or other interfaces.
 
+### Subinterfaces and breakout cables
+
++++ 3.2.0
+
+Sub-interfaces (virtual interfaces associated to a `parent_interface`) may now optionally define a `breakout_position` value. This field is intended to reflect interface breakout configuration, such as a 400G parent interface broken out into four 100G subinterfaces with `breakout_position` 1 through 4. When this field is populated, and the parent interface is connected to the trunk side of a breakout [cable type](cabletype.md), the Nautobot UI for interfaces, cables, and cable path traces will display additional information reflecting this relationship.
+
 ## LAGs
 
-Physical interfaces may be arranged into a link aggregation group (LAG) and associated with a parent LAG (virtual) interface. LAG interfaces can be recursively nested to model bonding of trunk groups. Like all virtual interfaces, LAG interfaces cannot be connected physically. Interfaces can be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
+Physical interfaces and breakout sub-interfaces may be arranged into a link aggregation group (LAG) and associated with a parent LAG (virtual) interface. LAG interfaces can be recursively nested to model bonding of trunk groups. Like all virtual interfaces, LAG interfaces cannot be connected physically. Interfaces can be assigned to an [Interface Redundancy Group](./interfaceredundancygroup.md) to represent redundancy protocols such as HSRP or VRRP.
 
 +/- 2.0.0
     The relationship to IP addresses has been changed to a many-to-many relationship. This allows an IP address to be assigned to multiple interfaces, and an interface to have multiple IP addresses assigned to it.

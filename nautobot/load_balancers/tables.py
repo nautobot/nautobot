@@ -35,7 +35,7 @@ class VirtualServerTable(BaseTable):
     certificate_profiles_count = LinkedCountColumn(
         viewname="load_balancers:certificateprofile_list",
         verbose_name="Certificate Profiles",
-        url_params={"certificate_profiles": "name"},
+        url_params={"virtual_servers": "pk"},
     )
     actions = ButtonsColumn(models.VirtualServer)
     tags = TagColumn(url_name="load_balancers:virtualserver_list")
@@ -87,7 +87,6 @@ class LoadBalancerPoolTable(BaseTable):
     pk = ToggleColumn()
     health_check_monitor = tables.Column(linkify=True)
     name = tables.Column(linkify=True)
-    virtual_server = tables.Column(linkify=True)
     load_balancer_pool_member_count = LinkedCountColumn(
         viewname="load_balancers:loadbalancerpoolmember_list",
         url_params={"load_balancer_pool": "name"},
@@ -104,7 +103,6 @@ class LoadBalancerPoolTable(BaseTable):
         fields = (
             "pk",
             "name",
-            "virtual_server",
             "load_balancing_algorithm",
             "load_balancer_pool_member_count",
             "health_check_monitor",
@@ -114,7 +112,6 @@ class LoadBalancerPoolTable(BaseTable):
         default_columns = (
             "pk",
             "name",
-            "virtual_server",
             "load_balancing_algorithm",
             "load_balancer_pool_member_count",
             "actions",
@@ -126,7 +123,7 @@ class LoadBalancerPoolMemberTable(StatusTableMixin, BaseTable):
     """Table for LoadBalancerPoolMember list view."""
 
     pk = ToggleColumn()
-    display = tables.Column(linkify=True, verbose_name="Load Balancer Pool Member")
+    display = tables.Column(linkify=True, verbose_name="Load Balancer Pool Member", order_by=["ip_address", "port"])
     ip_address = tables.Column(linkify=True, verbose_name="IP Address")
     load_balancer_pool = tables.Column(linkify=True, verbose_name="Load Balancer Pool")
     health_check_monitor = tables.Column(linkify=True)
@@ -134,7 +131,7 @@ class LoadBalancerPoolMemberTable(StatusTableMixin, BaseTable):
     certificate_profiles_count = LinkedCountColumn(
         viewname="load_balancers:certificateprofile_list",
         verbose_name="Certificate Profiles",
-        url_params={"certificate_profiles": "name"},
+        url_params={"load_balancer_pool_members": "pk"},
     )
     tenant = TenantColumn()
     actions = ButtonsColumn(models.LoadBalancerPoolMember)

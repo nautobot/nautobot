@@ -6,12 +6,18 @@ site_name: "Nautobot Documentation"
 site_url: "https://docs.nautobot.com/projects/core/en/stable/"
 repo_url: "https://github.com/nautobot/nautobot"
 copyright: "Copyright &copy; The Authors"
+# use_directory_urls: false is appropriate for local development and for packaging compiled docs as static files.
+# Note that for deployment to ReadTheDocs, you may want to override this (e.g. `mkdocs build --use-directory-urls`)
+use_directory_urls: false
+strict: true
 theme:
   name: "material"
   navigation_depth: 4
   custom_dir: "docs/assets/overrides"
   hljs_languages:
     - "django"
+    - "graphql"
+    - "jinja"
     - "yaml"
   icon:
     admonition:
@@ -256,6 +262,7 @@ plugins:
         "models/extras/status.md": "user-guide/platform-functionality/status.md"
         "models/extras/team.md": "user-guide/core-data-model/extras/team.md"
         "models/ipam/ipaddress.md": "user-guide/core-data-model/ipam/ipaddress.md"
+        "models/ipam/ipaddressrange.md": "user-guide/core-data-model/ipam/ipaddressrange.md"
         "models/ipam/prefix.md": "user-guide/core-data-model/ipam/prefix.md"
         "models/ipam/rir.md": "user-guide/core-data-model/ipam/rir.md"
         "models/ipam/routetarget.md": "user-guide/core-data-model/ipam/routetarget.md"
@@ -321,6 +328,7 @@ plugins:
         "models/vpn/vpnprofile.md": "user-guide/core-data-model/vpn/vpnprofile.md"
         "models/vpn/vpntunnel.md": "user-guide/core-data-model/vpn/vpntunnel.md"
         "models/vpn/vpntunnelendpoint.md": "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
+        "models/vpn/vpntermination.md": "user-guide/core-data-model/vpn/vpntermination.md"
         "user-guide/administration/configuration/optional-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/configuration/required-settings.md": "user-guide/administration/configuration/settings.md"
         "user-guide/administration/guides/caching.md": "user-guide/administration/configuration/redis.md"
@@ -375,6 +383,7 @@ nav:
                   - LDAP: "user-guide/administration/configuration/authentication/ldap.md"
                   - SSO: "user-guide/administration/configuration/authentication/sso.md"
                   - Remote Header: "user-guide/administration/configuration/authentication/remote.md"
+              - OpenTelemetry: "user-guide/administration/configuration/opentelemetry.md"
           - Tools:
               - Nautobot Server: "user-guide/administration/tools/nautobot-server.md"
               - Nautobot Shell: "user-guide/administration/tools/nautobot-shell.md"
@@ -388,6 +397,7 @@ nav:
               - Request Profiling: "user-guide/administration/guides/request-profiling.md"
               - Django Storages with S3: "user-guide/administration/guides/s3-django-storage.md"
               - Task Queues: "user-guide/administration/guides/celery-queues.md"
+              - OpenTelemetry: "user-guide/administration/guides/opentelemetry.md"
           - Security:
               - Security and Maintenance Policy: "user-guide/administration/security/index.md"
               - Notices: "user-guide/administration/security/notices.md"
@@ -402,9 +412,13 @@ nav:
               - VLANS and VLAN Groups: "user-guide/feature-guides/getting-started/vlans-and-vlan-groups.md"
               - IP Address Management: "user-guide/feature-guides/getting-started/ipam.md"
               - The Search Bar: "user-guide/feature-guides/getting-started/search-bar.md"
+              - Homepage Panels: "user-guide/feature-guides/getting-started/homepage-panels.md"
+          - Breakout Cables: "user-guide/feature-guides/breakout-cables.md"
           - Data Compliance: "user-guide/feature-guides/data-compliance.md"
           - Contacts and Teams: "user-guide/feature-guides/contacts-and-teams.md"
-          - Custom Fields: "user-guide/feature-guides/custom-fields.md"
+          - Custom Fields:
+              - Custom Fields Overview: "user-guide/feature-guides/custom-fields.md"
+              - Custom Fields Cleanup: "user-guide/feature-guides/custom-fields-behavior.md"
           - Git as a Data Source: "user-guide/feature-guides/git-data-source.md"
           - GraphQL: "user-guide/feature-guides/graphql.md"
           - IP Address Merge Tool: "user-guide/feature-guides/ip-address-merge-tool.md"
@@ -481,15 +495,19 @@ nav:
                   - Power Port: "user-guide/core-data-model/dcim/powerport.md"
                   - Power Outlet: "user-guide/core-data-model/dcim/poweroutlet.md"
                   - Rear Port: "user-guide/core-data-model/dcim/rearport.md"
+              - Cable Type: "user-guide/core-data-model/dcim/cabletype.md"
               - Cable: "user-guide/core-data-model/dcim/cable.md"
-              - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+              - Cable to Cable Termination: "user-guide/core-data-model/dcim/cabletocabletermination.md"
+              - HA Devices:
+                  - "user-guide/core-data-model/dcim/hadevice.md"
+                  - Device Redundancy Group: "user-guide/core-data-model/dcim/deviceredundancygroup.md"
+                  - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Interface Redundancy Group: "user-guide/core-data-model/dcim/interfaceredundancygroup.md"
               - Power Panel: "user-guide/core-data-model/dcim/powerpanel.md"
               - Power Feed: "user-guide/core-data-model/dcim/powerfeed.md"
               - Rack Reservation: "user-guide/core-data-model/dcim/rackreservation.md"
               - Software Image File: "user-guide/core-data-model/dcim/softwareimagefile.md"
               - Software Version: "user-guide/core-data-model/dcim/softwareversion.md"
-              - Virtual Chassis: "user-guide/core-data-model/dcim/virtualchassis.md"
               - Controller: "user-guide/core-data-model/dcim/controller.md"
               - Controller Managed Device Group: "user-guide/core-data-model/dcim/controllermanageddevicegroup.md"
               - Virtual Device Context: "user-guide/core-data-model/dcim/virtualdevicecontext.md"
@@ -500,6 +518,7 @@ nav:
               - Team: "user-guide/core-data-model/extras/team.md"
           - IPAM:
               - IP Address: "user-guide/core-data-model/ipam/ipaddress.md"
+              - IP Address Range: "user-guide/core-data-model/ipam/ipaddressrange.md"
               - Namespace: "user-guide/core-data-model/ipam/namespace.md"
               - Prefix: "user-guide/core-data-model/ipam/prefix.md"
               - RIR: "user-guide/core-data-model/ipam/rir.md"
@@ -532,6 +551,7 @@ nav:
           - VPN:
               - "user-guide/core-data-model/vpn/index.md"
               - VPN: "user-guide/core-data-model/vpn/vpn.md"
+              - VPN Termination: "user-guide/core-data-model/vpn/vpntermination.md"
               - VPN Tunnel: "user-guide/core-data-model/vpn/vpntunnel.md"
               - VPN Tunnel Endpoint: "user-guide/core-data-model/vpn/vpntunnelendpoint.md"
               - VPN Profile: "user-guide/core-data-model/vpn/vpnprofile.md"
@@ -565,6 +585,7 @@ nav:
               - Job Hooks: "user-guide/platform-functionality/jobs/jobhook.md"
               - Kubernetes Job Support: "user-guide/platform-functionality/jobs/kubernetes-job-support.md"
               - Job Models: "user-guide/platform-functionality/jobs/models.md"
+              - Job Cancel: "user-guide/platform-functionality/jobs/job-cancel.md"
           - NAPALM: "user-guide/platform-functionality/napalm.md"
           - Notes: "user-guide/platform-functionality/note.md"
           - Object Metadata: "user-guide/platform-functionality/objectmetadata.md"
@@ -574,6 +595,7 @@ nav:
               - "user-guide/platform-functionality/rest-api/overview.md"
               - Filtering: "user-guide/platform-functionality/rest-api/filtering.md"
               - Authentication: "user-guide/platform-functionality/rest-api/authentication.md"
+              - Object Permissions: "user-guide/platform-functionality/rest-api/object-permissions.md"
               - UI Endpoints: "user-guide/platform-functionality/rest-api/ui-related-endpoints.md"
           - Roles: "user-guide/platform-functionality/role.md"
           - Secrets: "user-guide/platform-functionality/secret.md"
@@ -584,6 +606,7 @@ nav:
               - Configurable Columns: "user-guide/platform-functionality/user-interface/configurablecolumns.md"
               - Saved Views: "user-guide/platform-functionality/user-interface/savedview.md"
               - Search: "user-guide/platform-functionality/user-interface/search.md"
+              - Searchable Fields: "user-guide/platform-functionality/user-interface/searchable-fields.md"
           - Users:
               - Groups: "user-guide/platform-functionality/users/groups.md"
               - Object Permission: "user-guide/platform-functionality/users/objectpermission.md"
@@ -600,8 +623,9 @@ nav:
           - Common Job Patterns: "development/jobs/job-patterns.md"
           - Testing Jobs: "development/jobs/testing.md"
           - Job Extensions: "development/jobs/job-extensions.md"
+          - Job Execution: "development/jobs/job-execution.md"
           - Migration Guides:
-              -  Migrating from v1: "development/jobs/migration/from-v1.md"
+              - Migrating from v1: "development/jobs/migration/from-v1.md"
       - App Developer Guide:
           - "development/apps/index.md"
           - Setup: "development/apps/api/setup.md"
@@ -633,9 +657,11 @@ nav:
               - Git Repository Content: "development/apps/api/platform-features/git-repository-content.md"
               - Jinja2 Filters: "development/apps/api/platform-features/jinja2-filters.md"
               - Jobs: "development/apps/api/platform-features/jobs.md"
+              - OpenTelemetry Instrumentation: "development/apps/api/platform-features/opentelemetry.md"
               - Prepopulating Data: "development/apps/api/platform-features/prepopulating-data.md"
               - Prometheus Metrics: "development/apps/api/prometheus.md"
               - Secrets Providers: "development/apps/api/platform-features/secrets-providers.md"
+              - Skip Auto Component Creation: "development/apps/api/platform-features/skip-auto-component-creation.md"
               - Table Extensions: "development/apps/api/platform-features/table-extensions.md"
               - Uniquely Identifying a Nautobot Object: "development/apps/api/platform-features/uniquely-identify-objects.md"
           - UI Extensions:
@@ -645,6 +671,7 @@ nav:
               - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
               - Navigation: "development/apps/api/ui-extensions/navigation.md"
               - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
+              - User Facing Messages: "development/apps/api/ui-extensions/user-facing-messages.md"
           - Testing: "development/apps/api/testing.md"
           - Code Reference:
               - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
@@ -655,6 +682,7 @@ nav:
               - nautobot.apps.config: "code-reference/nautobot/apps/config.md"
               - nautobot.apps.constants: "code-reference/nautobot/apps/constants.md"
               - nautobot.apps.datasources: "code-reference/nautobot/apps/datasources.md"
+              - nautobot.apps.dcim: "code-reference/nautobot/apps/dcim.md"
               - nautobot.apps.events: "code-reference/nautobot/apps/events.md"
               - nautobot.apps.exceptions: "code-reference/nautobot/apps/exceptions.md"
               - nautobot.apps.factory: "code-reference/nautobot/apps/factory.md"
@@ -692,6 +720,7 @@ nav:
                   - Custom content: "development/apps/migration/ui-component-framework/custom-content.md"
                   - Best practices: "development/apps/migration/ui-component-framework/best-practices.md"
                   - Breadcrumbs and titles: "development/apps/migration/ui-component-framework/breadcrumbs-titles.md"
+              - Embedded Actions: "development/apps/migration/embedded_actions.md"
           - Advanced:
               - Porting NetBox Plugins to Nautobot: "development/apps/porting-from-netbox.md"
       - Core Developer Guide:
@@ -708,7 +737,7 @@ nav:
           - Generic Views: "development/core/generic-views.md"
           - Home Page Panels: "development/core/homepage.md"
           - HTMX: "development/core/htmx.md"
-          - Minikube Dev Environment for K8s Jobs: "development/core/minikube-dev-environment-for-k8s-jobs.md"
+          - Running Jobs Locally on Kubernetes: "development/core/running-jobs-locally-kubernetes.md"
           - Model Development Checklist: "development/core/model-checklist.md"
           - Model Features: "development/core/model-features.md"
           - Natural Keys: "development/core/natural-keys.md"
@@ -722,6 +751,8 @@ nav:
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 3.3: "release-notes/version-3.3.md"
+      - Version 3.2: "release-notes/version-3.2.md"
       - Version 3.1: "release-notes/version-3.1.md"
       - Version 3.0: "release-notes/version-3.0.md"
       - Version 2.4: "release-notes/version-2.4.md"

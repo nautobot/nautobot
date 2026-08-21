@@ -54,6 +54,10 @@ function watchSourceFields(context, targetField, sourceFields, repopulate){
     sourceFields.forEach(function(sourceFieldName){
         const sourceFieldId = `id_${sourceFieldName}`;
         const sourceField = context.getElementById(sourceFieldId);
+        if (!sourceField) {
+            // Skip missing source fields so partial/conditional form layouts don't break global form initialization.
+            return;
+        }
         const onFieldUpdate = function(){ repopulateIfChanged(targetField, repopulate)}
         sourceField.addEventListener('keyup', onFieldUpdate)
         sourceField.addEventListener('change', onFieldUpdate)
@@ -63,6 +67,10 @@ function watchSourceFields(context, targetField, sourceFields, repopulate){
 function watchRegenerateButton(context, targetField, repopulate){
     // If user clicks the "regenerate" button, set target field to be auto-populate again
     const regenerateButton = context.querySelector(`[data-regenerate=${targetField.getAttribute('id')}]`)
+    if (!regenerateButton) {
+        // Regenerate button is optional; skip binding when the control isn't rendered for this field.
+        return;
+    }
     regenerateButton.addEventListener('click', repopulate)
 }
 
@@ -78,7 +86,12 @@ function getSlugField(){
 
 function initializeAutoField(context, field, sourceFieldsAttrName, defaultMaxLength = 255, transformValue = null){
     // Get source fields and length values set as html attributes on given field
-    const sourceFields = field.getAttribute(sourceFieldsAttrName).split(" ");
+    const sourceFieldsAttr = field.getAttribute(sourceFieldsAttrName);
+    if (!sourceFieldsAttr) {
+        // Guard `id_key`/similar non-slug fields (e.g. API Token key) with no source attribute to avoid `.split(null)` crashes.
+        return;
+    }
+    const sourceFields = sourceFieldsAttr.split(" ");
     const length = field.getAttribute('maxlength') || defaultMaxLength
 
     // Prepare repopulate function with custom source fields and length set on this field
@@ -173,11 +186,33 @@ function initializeVLANModeSelection(context) {
 
         const $untagged = $root.find("#id_untagged_vlan");
         const $tagged = $root.find("#id_tagged_vlans");
+        const $add_tagged = $root.find("#id_add_tagged_vlans");
+        const $remove_tagged = $root.find("#id_remove_tagged_vlans");
 
-        if (!$untagged.length || !$tagged.length) return;
+        if (!$untagged.length || (!$tagged.length && (!$add_tagged.length || !$remove_tagged.length))) return;
 
-        const $rowUntagged = $untagged.parent().parent();
-        const $rowTagged = $tagged.parent().parent();
+        // Find the container div for the field row
+        // In filter drawer: .nb-form-group contains the field directly
+        // In regular forms: field is inside .col-md-9, which is inside the row container
+        function findFieldRow($field) {
+            // First try .nb-form-group (filter drawer context)
+            const $nbFormGroup = $field.closest(".nb-form-group");
+            if ($nbFormGroup.length) {
+                return $nbFormGroup;
+            }
+            // Otherwise, find .col-md-9 parent and then its parent (regular form context)
+            const $colMd9 = $field.closest(".col-md-9");
+            if ($colMd9.length) {
+                return $colMd9.parent();
+            }
+            // Fallback: return empty jQuery object (setRowVisible will handle it)
+            return $();
+        }
+
+        const $rowUntagged = findFieldRow($untagged);
+        const $rowTagged = findFieldRow($tagged);
+        const $rowAddTagged = findFieldRow($add_tagged);
+        const $rowRemoveTagged = findFieldRow($remove_tagged);
 
         function setRowVisible($row, visible) {
             const el = $row && $row.length ? $row[0] : null;
@@ -193,19 +228,33 @@ function initializeVLANModeSelection(context) {
                 // Clear values
                 $untagged.val("").trigger("change");
                 $tagged.val(null).trigger("change"); // better than [] for select2, works for multi
+                $add_tagged.val(null).trigger("change");
+                $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, false);
                 setRowVisible($rowTagged, false);
+                setRowVisible($rowAddTagged, false);
+                setRowVisible($rowRemoveTagged, false);
             } else if (mode === "access") {
                 $tagged.val(null).trigger("change");
+                $add_tagged.val(null).trigger("change");
+                $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, true);
                 setRowVisible($rowTagged, false);
+                setRowVisible($rowAddTagged, false);
+                setRowVisible($rowRemoveTagged, false);
             } else if (mode === "tagged") {
                 setRowVisible($rowUntagged, true);
                 setRowVisible($rowTagged, true);
+                setRowVisible($rowAddTagged, true);
+                setRowVisible($rowRemoveTagged, true);
             } else if (mode === "tagged-all") {
                 $tagged.val(null).trigger("change");
+                $add_tagged.val(null).trigger("change");
+                $remove_tagged.val(null).trigger("change");
                 setRowVisible($rowUntagged, true);
                 setRowVisible($rowTagged, false);
+                setRowVisible($rowAddTagged, false);
+                setRowVisible($rowRemoveTagged, false);
             }
         }
 
@@ -219,37 +268,6 @@ function initializeVLANModeSelection(context) {
 
         // Initial state
         apply($mode.val());
-    });
-}
-
-function initializeSortableList(context){
-    this_context = $(context);
-    // Rearrange options within a <select> list
-    this_context.find('#move-option-up').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option:selected').each(function () {
-            var newPos = $(select_id + ' option').index(this) - 1;
-            if (newPos > -1) {
-                $(select_id + ' option').eq(newPos).before("<option value='" + $(this).val() + "' selected='selected'>" + $(this).text() + "</option>");
-                $(this).remove();
-            }
-        });
-    });
-    this_context.find('#move-option-down').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        var countOptions = $(select_id + ' option').length;
-        var countSelectedOptions = $(select_id + ' option:selected').length;
-        $(select_id + ' option:selected').each(function () {
-            var newPos = $(select_id + ' option').index(this) + countSelectedOptions;
-            if (newPos < countOptions) {
-                $(select_id + ' option').eq(newPos).after("<option value='" + $(this).val() + "' selected='selected'>" + $(this).text() + "</option>");
-                $(this).remove();
-            }
-        });
-    });
-    this_context.find('#select-all-options').bind('click', function() {
-        var select_id = '#' + $(this).attr('data-target');
-        $(select_id + ' option').prop('selected',true);
     });
 }
 
@@ -309,7 +327,6 @@ function initializeInputs(context) {
     initializeBulkEditNullification(this_context)
     initializeDateTimePicker(this_context)
     initializeVLANModeSelection(this_context)
-    initializeSortableList(this_context)
     initializeImagePreview(this_context)
 
     window.nb.checkbox.initializeCheckboxes()
@@ -320,6 +337,36 @@ function jsify_form(context) {
     const this_context = $(context);
     // Pagination
     initializeInputs(this_context)
+}
+
+function initializePaginatorGoTo() {
+    function goToPage(input) {
+        if (input.hasAttribute('hx-get')) return;
+
+        let page = parseInt(input.value, 10);
+        const max = parseInt(input.max, 10) || Infinity;
+        if (!Number.isInteger(page)) return;
+        if (page < 1)
+            page = 1
+        if (page > max)
+            page = max
+
+        const url = new URL(window.location);
+        url.searchParams.set('page', page);
+        window.location.assign(url);
+    }
+
+    $(document).on('keydown', '#paginator-go-to', function(event) {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        goToPage(this);
+    });
+
+    $(document).on('click', '#paginator-go-to-link', function(event) {
+        event.preventDefault();
+        const input = document.getElementById('paginator-go-to');
+        if (input) goToPage(input);
+    });
 }
 
 /* =======
@@ -339,6 +386,7 @@ function submitOnEnter(event) {
 $(document).ready((e) => {
     jsify_form(this.document);
     initializeResultPerPageSelection(this.document);
+    initializePaginatorGoTo();
     document.querySelectorAll("textarea.form-control").forEach(function(element) {element.addEventListener("keydown", submitOnEnter)});
 });
 

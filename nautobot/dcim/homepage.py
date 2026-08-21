@@ -7,25 +7,29 @@ from nautobot.dcim import models
 
 def _connected_console_ports_count(request):
     # Match queryset used in dcim.views.ConsoleConnectionsListView
-    return models.ConsolePort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
+    return (
+        models.ConsolePort.objects.restrict(request.user, "view").filter(cable_paths__isnull=False).distinct().count()
+    )
 
 
 def _connected_interfaces_count(request):
-    # Match queryset used in dcim.views.InterfaceConnectionsListView
-    return (
-        models.Interface.objects.restrict(request.user, "view")
-        .filter(_path__isnull=False)
-        .exclude(
-            _path__destination_type=ContentType.objects.get_for_model(models.Interface),
-            pk__lt=F("_path__destination_id"),
-        )
-        .count()
-    )
+    # Match queryset used in dcim.views.InterfaceConnectionsListView. Counts CablePath rows so each
+    # connection (including each breakout-cable lane) is one count. Limited to connections where the
+    # user has view permission for BOTH endpoint interfaces.
+    iface_ct = ContentType.objects.get_for_model(models.Interface)
+    visible_ifaces = models.Interface.objects.restrict(request.user, "view").values("pk")
+    return models.CablePath.objects.filter(
+        origin_type=iface_ct,
+        destination_type=iface_ct,
+        origin_id__lt=F("destination_id"),
+        origin_id__in=visible_ifaces,
+        destination_id__in=visible_ifaces,
+    ).count()
 
 
 def _connected_power_ports_count(request):
     # Match queryset used in dcim.views.PowerConnectionsListView
-    return models.PowerPort.objects.restrict(request.user, "view").filter(_path__isnull=False).count()
+    return models.PowerPort.objects.restrict(request.user, "view").filter(cable_paths__isnull=False).distinct().count()
 
 
 layout = (

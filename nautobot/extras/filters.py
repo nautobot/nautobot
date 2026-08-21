@@ -27,11 +27,13 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import DeviceFamily, DeviceRedundancyGroup, DeviceType, Location, Platform
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    JobCancelTypeChoices,
     JobQueueTypeChoices,
     JobResultStatusChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
+    ScheduledJobStateChoices,
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
@@ -271,6 +273,7 @@ class ApprovalWorkflowStageFilterSet(BaseFilterSet):
         }
     )
     decision_date = MultiValueDateTimeFilter()
+    decision_date_day = django_filters.DateFilter(field_name="decision_date", lookup_expr="date")
 
     pending_my_approvals = django_filters.BooleanFilter(
         method="_pending_my_approvals", label="Filter by user's pending approvals (false returns completed approvals)"
@@ -450,11 +453,11 @@ class ConfigContextFilterSet(BaseFilterSet):
         to_field_name="name",
         label="Device Redundancy Group (name or PK)",
     )
-    tag = ModelMultipleChoiceFilter(
+    tag = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="tags",
         queryset=Tag.objects.all(),
         to_field_name="name",
-        label="Tag (name)",
+        label="Tag (ID or name)",
     )
     role = ConfigContextRoleFilter()
 
@@ -793,9 +796,49 @@ class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
         label="Group member ID",
     )
 
+    descendants = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="name",
+        method="filter_descendants",
+        label="Descendant of Dynamic Group",
+    )
+    ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=DynamicGroup.objects.all(),
+        to_field_name="name",
+        method="filter_ancestors",
+        label="Ancestor of Dynamic Group",
+    )
+
     class Meta:
         model = DynamicGroup
         fields = ("id", "name", "description", "group_type", "tags")
+
+    def filter_descendants(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        descendant_ids = set()
+        for root_group in value:
+            for membership in root_group.membership_tree():
+                descendant_ids.add(membership.group_id)
+
+        if not descendant_ids:
+            return queryset.none()
+
+        return queryset.filter(pk__in=descendant_ids)
+
+    def filter_ancestors(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        ancestor_ids = set()
+        for child_group in value:
+            ancestor_ids.update(group.pk for group in child_group.get_ancestors())
+
+        if not ancestor_ids:
+            return queryset.none()
+
+        return queryset.filter(pk__in=ancestor_ids)
 
 
 class DynamicGroupMembershipFilterSet(NautobotFilterSet):
@@ -1052,6 +1095,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "installed",
             "enabled",
             "has_sensitive_variables",
+            "console_log_default",
             "dryrun_default",
             "hidden",
             "read_only",
@@ -1062,6 +1106,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
             "is_singleton",
             "grouping_override",
             "name_override",
+            "console_log_default_override",
             "description_override",
             "dryrun_default_override",
             "hidden_override",
@@ -1175,10 +1220,29 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         label="Scheduled Job (name or ID)",
     )
     status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    has_job_console_entries = RelatedMembershipBooleanFilter(
+        field_name="job_console_entries",
+        label="Has Job Console Entries",
+    )
+
+    cancel_type = django_filters.MultipleChoiceFilter(
+        choices=JobCancelTypeChoices.CHOICES,
+    )
 
     class Meta:
         model = JobResult
-        fields = ["id", "date_created", "date_started", "date_done", "name", "status", "user", "scheduled_job"]
+        fields = [
+            "id",
+            "date_created",
+            "date_started",
+            "date_done",
+            "date_canceled",
+            "name",
+            "status",
+            "user",
+            "canceled_by",
+            "scheduled_job",
+        ]
 
 
 class JobLogEntryFilterSet(BaseFilterSet):
@@ -1222,6 +1286,7 @@ class ScheduledJobFilterSet(BaseFilterSet):
         label="Approval state",
         choices=ApprovalWorkflowStateChoices,
     )
+    state = django_filters.MultipleChoiceFilter(choices=ScheduledJobStateChoices, null_value=None)
 
     class Meta:
         model = ScheduledJob
@@ -1278,6 +1343,7 @@ class MetadataTypeFilterSet(NautobotFilterSet):
     content_types = ContentTypeMultipleChoiceFilter(
         choices=FeatureQuery("metadata").get_choices,
     )
+    content_type_id = django_filters.NumberFilter(field_name="content_types", lookup_expr="exact")
 
     class Meta:
         model = MetadataType

@@ -1,8 +1,29 @@
 # Release Notes
 
-## [3.1 - April 2026](version-3.1.md)
+## [3.3 - Fall 2026](version-3.3.md)
 
 TODO
+
+## [3.2 - July 2026](version-3.2.md)
+
+- Breakout Cables
+- IP Address Range Model
+- Job Cancel
+- Model Search Typeahead
+- Live Search
+- Homepage Stickiness
+- Modules Hierarchy Refinements
+
+## [3.1 - April 2026](version-3.1.md)
+
+- Job Console Logging
+- Custom Field Scoping
+- Dependent Object Creation and Search
+- Tree List Views on Location and Prefix
+- Async Loading on all List Views
+- Async Loading on Global Search
+- Enhanced Configurable Columns
+- Bulk Rename Across All UI ViewSets
 
 ## [3.0 - November 2025](version-3.0.md)
 

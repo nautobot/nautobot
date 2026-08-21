@@ -1,47 +1,31 @@
-{% extends 'base.html' %}
+{% extends 'generic/object_create.html' %}
 {% load form_helpers %}
 
 {% block title %}Create {{ component_type }}{% endblock %}
 
-{% block content %}
-    <form action="" method="post" class="h-100 vstack">
-        {% csrf_token %}
-        <div class="row justify-content-center align-content-start flex-fill">
-            <div class="col-xl-8 col-lg-10">
-                {% if form.non_field_errors %}
-                    <div class="card border-danger">
-                        <div class="card-header bg-danger-subtle border-danger text-body">
-                            <strong>Errors</strong>
-                        </div>
-                        <div class="card-body">
-                            {{ form.non_field_errors }}
-                        </div>
-                    </div>
-                {% endif %}
-                <div class="card">
-                    <div class="card-header">
-                        <strong>{{ component_type|title }}</strong>
-                    </div>
-                    <div class="card-body">
-                        {% render_form form %}
-                    </div>
-                </div>
-                {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
-            </div>
+{% block form %}
+    <div class="card">
+        <div class="card-header">
+            <strong>{{ component_type|title }}</strong>
         </div>
-        <div class="nb-form-sticky-footer">
-            <button type="submit" name="_create" class="btn btn-primary">
-                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                -->Create
-            </button>
-            <button type="submit" name="_addanother" class="btn btn-primary">
-                <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
-                -->Create and Add More
-            </button>
-            <a href="{{ return_url }}" class="btn btn-secondary">
-                <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
-                -->Cancel
-            </a>
+        <div class="card-body">
+            {% render_form form %}
         </div>
-    </form>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' with form=model_form %}
+{% endblock %}
+
+{% block buttons %}
+    <button type="submit" name="_create" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Create
+    </button>
+    <button type="submit" name="_addanother" class="btn btn-primary">
+        <span aria-hidden="true" class="mdi mdi-check me-4"></span><!--
+        -->Create and Add More
+    </button>
+    <a href="{{ return_url }}" class="btn btn-secondary">
+        <span aria-hidden="true" class="mdi mdi-close me-4"></span><!--
+        -->Cancel
+    </a>
 {% endblock %}

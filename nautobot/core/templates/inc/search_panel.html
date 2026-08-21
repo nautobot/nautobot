@@ -1,25 +1,28 @@
 {% load form_helpers %}
 
-<form class="h-100 vstack">
-    <div class="align-content-start flex-fill pb-20">
-        {% for field in filter_form.hidden_fields %}
-            {{ field }}
-        {% endfor %}
-        {% for field in filter_form.visible_fields %}
-            {% if field.name == "q" %}
+{% if not exclude_html_form %}
+    <form class="h-100 vstack">
+{% endif %}
+<div class="align-content-start flex-fill pb-20">
+    {% for field in filter_form.hidden_fields %}
+        {{ field }}
+    {% endfor %}
+    {% for field in filter_form.visible_fields %}
+        {% if field.name == "q" %}
                 <!--  Skip q field -->
-            {% else %}
-                <div class="nb-form-group">
-                    {% if field|widget_type == 'checkboxinput' %}
-                        <label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
-                    {% else %}
-                        {{ field.label_tag }}
-                        {{ field }}
-                    {% endif %}
-                </div>
-            {% endif %}
-        {% endfor %}
-    </div>
+        {% else %}
+            <div class="nb-form-group">
+                {% if field|widget_type == 'checkboxinput' %}
+                    <label for="{{ field.id_for_label }}">{{ field }} {{ field.label }}</label>
+                {% else %}
+                    {{ field.label_tag }}
+                    {{ field }}
+                {% endif %}
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% if not exclude_html_form %}
     <div class="justify-content-between mb-n20 nb-form-sticky-footer">
         <button type="submit" class="btn btn-primary">
             <span class="mdi mdi-check me-4" aria-hidden="true"></span><!--
@@ -30,4 +33,7 @@
             -->Clear All
         </button>
     </div>
-</form>
+{% endif %}
+{% if not exclude_html_form %}
+    </form>
+{% endif %}

@@ -8,6 +8,8 @@ from django.contrib import messages
 from django.core.cache import cache
 from django.core.exceptions import FieldError, ValidationError
 from django.db.models import ForeignKey
+from django.http import QueryDict
+from django.test.client import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -18,7 +20,6 @@ from rest_framework import exceptions, serializers
 from nautobot.core.api.fields import ChoiceField, ContentTypeField, TimeZoneSerializerField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.models.utils import is_taggable
-from nautobot.core.utils import lookup
 from nautobot.core.utils.data import is_uuid
 from nautobot.core.utils.filtering import get_filter_field_label
 from nautobot.core.utils.lookup import (
@@ -40,7 +41,7 @@ always_generated_metrics = [
 ]
 
 
-def check_filter_for_display(filters, field_name, values):
+def check_filter_for_display(filters, field_name, values, prefix=None):
     """
     Return any additional context data for the template.
 
@@ -48,6 +49,7 @@ def check_filter_for_display(filters, field_name, values):
         filters (dict): The filters of a desired FilterSet
         field_name (str): The name of the filter to get a label for and lookup values
         values (list[str]): List of strings that may be PKs to look up
+        prefix (str): Prefix for the fields
 
     Returns:
         (dict): A dict containing:
@@ -56,6 +58,11 @@ def check_filter_for_display(filters, field_name, values):
             - values: (list) List of dictionaries with the same `name` and `display` keys
     """
     values = values if isinstance(values, (list, tuple)) else [values]
+    values = [v if v != "null" else None for v in values]
+
+    filters_field_name = field_name
+    if prefix is not None:
+        filters_field_name = field_name.removeprefix(f"{prefix}-")
 
     resolved_filter = {
         "name": field_name,
@@ -63,10 +70,10 @@ def check_filter_for_display(filters, field_name, values):
         "values": [{"name": value, "display": value} for value in values],
     }
 
-    if field_name not in filters.keys():
+    if filters_field_name not in filters.keys():
         return resolved_filter
 
-    filter_field = filters[field_name]
+    filter_field = filters[filters_field_name]
 
     resolved_filter["display"] = get_filter_field_label(filter_field)
 
@@ -129,6 +136,32 @@ def get_obj_from_context(context, key=None):
     return context.get("obj") or context.get("object")
 
 
+def borrow_extras_fields(create_form, model_form):
+    """Borrow a model form's "extras" fields onto a bulk-create form, in place.
+
+    The form used for `name_pattern`/`label_pattern` bulk component creation is a plain form that does not
+    declare the "extras" fields (custom fields, relationships, object note, dynamic groups); those are
+    added dynamically to the per-instance model form. Copy them -- and the `custom_fields`/`relationships`
+    grouping metadata that the extras template renders panels from -- onto the create form, so they render
+    and validate on the single create form and flow through its `cleaned_data`.
+
+    Shared by `nautobot.core.views.generic.ComponentCreateView` and
+    `nautobot.dcim.views.ComponentCreateViewMixin`.
+    """
+    for attr in ("custom_fields", "relationships"):
+        setattr(create_form, attr, list(getattr(model_form, attr, [])))
+    extras_field_names = [
+        *getattr(model_form, "custom_fields", []),
+        *getattr(model_form, "relationships", []),
+        "object_note",
+        "dynamic_groups",
+    ]
+    for name in extras_field_names:
+        # `name in model_form.fields` skips extras the model doesn't support (e.g. no object_note/dynamic_groups).
+        if name in model_form.fields:
+            create_form.fields[name] = model_form.fields[name]
+
+
 def get_csv_form_fields_from_serializer_class(serializer_class):
     """From the given serializer class, build a list of field dicts suitable for rendering in the CSV import form."""
     serializer = serializer_class(context={"request": None, "depth": 0})
@@ -156,6 +189,8 @@ def get_csv_form_fields_from_serializer_class(serializer_class):
                     field_info["format"] = mark_safe("<code>true</code> or <code>false</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_DATE:
                     field_info["format"] = mark_safe("<code>YYYY-MM-DD</code>")
+                elif cf.type == CustomFieldTypeChoices.TYPE_DATETIME:
+                    field_info["format"] = mark_safe("<code>YYYY-MM-DDThh:mm:ssZ</code>")
                 elif cf.type == CustomFieldTypeChoices.TYPE_SELECT:
                     field_info["choices"] = {value: value for value in cf.choices}
                 elif cf.type == CustomFieldTypeChoices.TYPE_MULTISELECT:
@@ -541,12 +576,14 @@ def get_bulk_queryset_from_view(
 
     Args:
         user: The user performing the bulk operation.
-        model: The model class on which the bulk operation is being performed.
-        delete_all: Boolean indicating whether the operation applies to pk_list or not.
-        edit_all: Boolean indicating whether the operation applies to pk_list or not.
+        content_type: The ContentType of the model on which the bulk operation is being performed.
         filter_query_params: A dictionary of filter parameters to apply to the queryset as produced by convert_querydict_to_dict(request.GET).
         pk_list: A list of primary keys to include, when not using a filter.
         saved_view_id: (Optional) UUID of a saved view to apply additional filters from.
+        action: The action being performed, either "delete" or "change".
+        delete_all: Boolean indicating whether a "delete" action applies to all (filtered) objects rather than pk_list.
+        edit_all: Boolean indicating whether a "change" action applies to all (filtered) objects rather than pk_list.
+        log: (Optional) Logger to use; defaults to this module's logger.
 
     Returns:
         A Django queryset representing the objects to be affected by the bulk operation.
@@ -589,23 +626,40 @@ def get_bulk_queryset_from_view(
     if not view_class:
         raise RuntimeError(f"No view found for model {model} to determine base queryset.")
 
-    queryset = view_class.queryset.restrict(user, action)
+    # Reconstruct a job-safe synthetic request from the (already serializable) params so that the view's
+    # alter_queryset() runs identically whether we're called from a UI view (request exists) or from a
+    # background system Job (no request/view instance exists). This ensures implicit view scoping applied
+    # by alter_queryset() is respected during bulk operations rather than silently dropped.
+    get_params = QueryDict(mutable=True)
+    for key, values in (filter_query_params or {}).items():
+        values = values if isinstance(values, (list, tuple)) else [values]
+        get_params.setlist(key, [str(value) for value in values])
+    synthetic_request = RequestFactory().get("/")
+    synthetic_request.GET = get_params
+    synthetic_request.user = user
 
-    # The filterset_class is determined from model on purpose versus getting it from the view itself. This is
-    # because the filterset_class on the view as a param, will not work with a job. It is better to be consistent
-    # with each with sending the same params that will always be available from to the confirmation page and to the job.
-    filterset_class = get_filterset_for_model(model)
+    def scoped_queryset(scoping_view_class):
+        """Instantiate the given view and return its alter_queryset() result using the synthetic request."""
+        scoping_view = scoping_view_class()
+        scoping_view.request = synthetic_request
+        # Map to the permission-bearing UI action so the view's get_action()/restrict() line up with `action`.
+        scoping_view.action = "bulk_destroy" if action == "delete" else "bulk_update"
+        scoping_view.kwargs = {}
+        return scoping_view.alter_queryset(synthetic_request)
 
-    if not filterset_class:
-        log.debug(f"No filterset_class found for model {model}, returning all objects")
-        return queryset
-
-    filterset_class = lookup.get_filterset_for_model(model)
-    if filterset_class:
-        filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
-        log.debug(f"Normalized filter_query_params: {filter_query_params}")
+    if hasattr(view_class, "alter_queryset"):
+        # Case: NautobotUIViewSet
+        queryset = scoped_queryset(view_class)
     else:
-        filter_query_params = {}
+        # Case: Legacy bulk views (BulkDeleteView/BulkEditView)
+        list_view_class = get_view_for_model(model, view_type="List")
+        if list_view_class is not None and hasattr(list_view_class, "alter_queryset"):
+            # Case: Legacy list view (ObjectListView) with alter_queryset
+            queryset = scoped_queryset(list_view_class)
+        else:
+            # Case: Legacy list view (ObjectListView) without alter_queryset
+            queryset = view_class.queryset
+    queryset = queryset.restrict(user, action)
 
     # The form actually sends the pks and the "all" parameter, so seeing pk_list by itself is not
     # sufficient to determine if we are filtering by pk_list or by all. We need to see is_all=False.
@@ -617,6 +671,15 @@ def get_bulk_queryset_from_view(
     if not is_all and not pk_list:
         log.debug("Filtering by None, as no PKs provided for bulk operation, returning empty queryset")
         return queryset.none()
+
+    filterset_class = get_filterset_for_model(model)
+
+    if not filterset_class:
+        log.debug(f"No filterset_class found for model {model}, returning all objects")
+        return queryset
+
+    filter_query_params = normalize_querydict(filter_query_params, filterset=filterset_class())
+    log.debug(f"Normalized filter_query_params: {filter_query_params}")
 
     # The query params when you manually delete filters from the UI include on the saved view filter
     # set the flag all_filters_removed to true. If that is the case, we ignore the saved view below, by setting it
@@ -671,5 +734,6 @@ def get_bulk_queryset_from_view(
         log.debug("Saved view with no filters specified, returning all objects")
         return queryset
 
+    # This should be unreachable code.
     log.debug("No valid operation found to generate bulk queryset.")
     raise RuntimeError("No valid operation found to generate bulk queryset.")

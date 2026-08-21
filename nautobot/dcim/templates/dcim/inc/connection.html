@@ -1,0 +1,19 @@
+{% comment %}
+Renders the "Connection" card for a CableTermination detail view (the legacy object_retrieve-based
+templates). The inner body is shared with the UI component framework `ConnectionPanel` via
+`dcim/inc/connection_body.html`.
+
+Required context:
+  - `object`: the CableTermination being viewed.
+  - `trace_url_name`: the trace view name for this termination type (e.g. 'dcim:interface_trace').
+{% endcomment %}
+{% if object.is_connectable %}
+    <div class="card">
+        <div class="card-header">
+            <strong>Connections</strong>
+        </div>
+        <div class="card-body">
+            {% include 'dcim/inc/connection_body.html' %}
+        </div>
+    </div>
+{% endif %}

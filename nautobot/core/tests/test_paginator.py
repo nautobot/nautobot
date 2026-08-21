@@ -8,7 +8,6 @@ from django.urls import reverse
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import testing
-from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.views import paginator
 from nautobot.dcim import models as dcim_models
 from nautobot.extras import models as extras_models
@@ -50,6 +49,20 @@ class PaginatorTestCase(testing.TestCase):
         request.user = self.user
         self.assertEqual(paginator.get_paginate_count(request), 400)
 
+    def test_get_paginate_count_request_params_save_user_config(self):
+        """Get the paginate count from the request's GET params, saving it in user configuration (default behavior)."""
+        request = self.request_factory.get("some_paginated_view", {"per_page": 400})
+        request.user = self.user
+        paginator.get_paginate_count(request)
+        self.assertEqual(self.user.get_config("pagination.per_page"), 400)
+
+    def test_get_paginate_count_request_params_do_not_save_user_config(self):
+        """Get the paginate count from the request's GET params, without saving it in user configuration."""
+        request = self.request_factory.get("some_paginated_view", {"per_page": 400})
+        request.user = self.user
+        paginator.get_paginate_count(request, save_user_config=False)
+        self.assertIsNone(self.user.get_config("pagination.per_page"))
+
     @override_settings(MAX_PAGE_SIZE=10)
     @override_settings(PAGINATE_COUNT=50)
     def test_enforce_max_page_size(self):
@@ -78,7 +91,7 @@ class PaginatorTestCase(testing.TestCase):
             warning_message = (
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
-            self.assertIn(warning_message, extract_page_body(page_response.content.decode(page_response.charset)))
+            self.assertIn(warning_message, table_response.content.decode(table_response.charset))
         with self.subTest("query parameter per_page=5 returns 5 rows"):
             page_response = self.client.get(url, {"per_page": 5})
             table_response = self.client.get(url, {"per_page": 5}, headers={"HX-Request": "true"})
@@ -106,7 +119,7 @@ class PaginatorTestCase(testing.TestCase):
             warning_message = (
                 "Requested &quot;per_page&quot; is too large. No more than 10 items may be displayed at a time."
             )
-            self.assertIn(warning_message, extract_page_body(page_response.content.decode(page_response.charset)))
+            self.assertIn(warning_message, table_response.content.decode(table_response.charset))
 
     @override_settings(MAX_PAGE_SIZE=0)
     def test_error_warning_not_shown_when_max_page_size_is_0(self):
@@ -129,4 +142,4 @@ class PaginatorTestCase(testing.TestCase):
             self.assertEqual(table_response.context["paginator"].per_page, 20)
             self.assertEqual(len(table_response.context["table"].page), 20)
             warning_message = "Requested &quot;per_page&quot; is too large."
-            self.assertNotIn(warning_message, extract_page_body(page_response.content.decode(page_response.charset)))
+            self.assertNotIn(warning_message, table_response.content.decode(table_response.charset))

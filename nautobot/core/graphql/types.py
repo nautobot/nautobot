@@ -2,12 +2,41 @@ import datetime
 
 from django.contrib.contenttypes.models import ContentType
 import graphene
-import graphene_django_optimizer as gql_optimizer
+from graphene_django import DjangoObjectType
 from graphql import GraphQLError
 
 
-class OptimizedNautobotObjectType(gql_optimizer.OptimizedDjangoObjectType):
+class OptimizedNautobotObjectType(DjangoObjectType):
     url = graphene.String()
+
+    # IMPORTANT:
+    # Do NOT override get_queryset here.
+    #
+    # In graphene-django 3.1.15 and later, customizing get_queryset changes how forward FK/1:1 fields are resolved
+    # internally (it wraps FK resolvers in a custom resolver path that defeats gql optimizer hints),
+    # which can re-introduce FK N+1 query regressions.
+    #
+    # Nautobot query optimization is handled explicitly by wrapping the *root* queryset with
+    # `graphene_django_optimizer.query(...)` in our GraphQL resolvers.
+    # See nautobot/core/graphql/generators.py for more details.
+    #
+    # Permission enforcement for ID/node lookups is handled in get_node().
+
+    @classmethod
+    def get_node(cls, info, id):  # pylint: disable=redefined-builtin
+        """Override get_node to enforce object-level permissions.
+
+        We intentionally do NOT override get_queryset (see above), so permission
+        enforcement for Relay-style node lookups and any plugin code that calls
+        get_node() is handled here instead.
+        """
+        queryset = cls._meta.model.objects.all()
+        if hasattr(queryset, "restrict"):
+            queryset = queryset.restrict(info.context.user, "view")
+        try:
+            return queryset.get(pk=id)
+        except cls._meta.model.DoesNotExist:
+            return None
 
     def resolve_url(self, info):
         return self.get_absolute_url(api=True)  # pylint: disable=no-member

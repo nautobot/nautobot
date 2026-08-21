@@ -8,6 +8,12 @@
 
 {% block document_title_extra %}{% saved_view_title "plain" %}{% endblock %}
 
+{% block header_messages %}
+    {# Create a placeholder for header messages but do not actually render the current messages; #}
+    {# they will be retrieved and populated by a subsequent HTMX request #}
+    {% include "inc/header_messages.html" with messages=None %}
+{% endblock header_messages %}
+
 {% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
 
 {% block breadcrumbs_wrapper %}
@@ -37,10 +43,12 @@
         <div class="btn-group">
             {% if permissions.add and 'add' in action_buttons %}
                 {% add_button content_type.model_class|validated_viewname:"add" verbose_name=model|meta:"verbose_name"|bettertitle %}
-                <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
-                    <span class="visually-hidden">Toggle Dropdown</span>
-                    <span class="mdi mdi-chevron-down"></span>
-                </button>
+                {% if 'import' in action_buttons or 'export' in action_buttons %}
+                    <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                        <span class="visually-hidden">Toggle Dropdown</span>
+                        <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
+                    </button>
+                {% endif %}
             {% elif permissions.add and 'import' in action_buttons %}
                 <button type="button" id="actions-dropdown" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
                     Actions
@@ -52,21 +60,23 @@
                     <span class="mdi mdi-chevron-down" aria-hidden="true"></span>
                 </button>
             {% endif %}
-            <ul class="dropdown-menu dropdown-menu-end" role="menu">
-                {% if permissions.add and 'import' in action_buttons %}
-                    {% block import_list_element %}
-                        {% job_import_button content_type list_element=True%}
-                    {% endblock import_list_element %}
-                {% endif %}
-                {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
-                    <li class="dropdown-divider"></li>
-                {% endif %}
-                {% if 'export' in action_buttons %}
-                    {% block export_list_element %}
-                        {% export_button content_type list_element=True %}
-                    {% endblock export_list_element %}
-                {% endif %}
-            </ul>
+            {% if permissions.add and 'import' in action_buttons or 'export' in action_buttons %}
+                <ul class="dropdown-menu dropdown-menu-end" role="menu">
+                    {% if permissions.add and 'import' in action_buttons %}
+                        {% block import_list_element %}
+                            {% job_import_button content_type list_element=True%}
+                        {% endblock import_list_element %}
+                    {% endif %}
+                    {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
+                        <li class="dropdown-divider"></li>
+                    {% endif %}
+                    {% if 'export' in action_buttons %}
+                        {% block export_list_element %}
+                            {% export_button content_type list_element=True %}
+                        {% endblock export_list_element %}
+                    {% endif %}
+                </ul>
+            {% endif %}
         </div>
         {% comment %} TODO: 3.0 Remove legacy import_button and export button {% endcomment %}
         {% if permissions.add and 'import' in action_buttons %}
@@ -133,15 +143,25 @@
 
     <div>
         {% block table %}
-            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" %}
+            {% with bulk_edit_url=content_type.model_class|validated_viewname:"bulk_edit" bulk_delete_url=content_type.model_class|validated_viewname:"bulk_delete" bulk_rename_url=content_type.model_class|validated_viewname:"bulk_rename" bulk_disconnect_url=content_type.model_class|validated_viewname:"bulk_disconnect" %}
                 {% if permissions.change or permissions.delete %}
                     <form id="object_list_form" method="post" class="form form-horizontal">
                         {% csrf_token %}
                         <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
-                        <span id="select_all_box" class="visually-hidden card d-print-none">
+                        <span id="select_all_box" class="d-none card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
-                        <div hx-get="" hx-params="*" hx-swap="none" hx-trigger="load">
+                        <div id="object_table_wrapper"
+                             hx-get=""
+                             hx-params="*"
+                             hx-select="#object_table"
+                             {% if permissions.change or permissions.delete %}
+                                 hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator,#select_all_box"
+                             {% else %}
+                                 hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator"
+                             {% endif %}
+                             hx-trigger="load"
+                        >
                             {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                         </div>
 
@@ -151,7 +171,17 @@
                         </div>
                     </form>
                 {% else %}
-                    <div hx-get="" hx-params="*" hx-swap="none" hx-trigger="load">
+                    <div id="object_table_wrapper"
+                         hx-get=""
+                         hx-params="*"
+                         hx-select="#object_table"
+                         {% if permissions.change or permissions.delete %}
+                             hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator,#select_all_box"
+                         {% else %}
+                             hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator"
+                         {% endif %}
+                         hx-trigger="load"
+                    >
                         {% include table_template|default:'panel_table.html' with table_id="object_table" %}
                     </div>
                 {% endif %}
@@ -286,12 +316,6 @@
 {% block javascript %}
     <script src="{% static 'jquery/jquery.formset.js' %}"></script>
     <script>
-        var clipboard = new ClipboardJS('.btn');
-
-        clipboard.on('success', function (e) {});
-
-        clipboard.on('error', function (e) {});
-
         // TODO: move this to a JS file that is auto-included by dynamic_group_assignment_modal templatetag
         $("#dynamic_group_assignment_modal").on("show.bs.modal", function (event) {
             const button = $(event.relatedTarget);
@@ -344,5 +368,19 @@
                 });
             });
         })();
+
+        document.body.addEventListener('htmx:responseError', (event) => {
+            if (event.detail?.target?.id === 'object_table_wrapper' ||
+                event.detail?.elt?.classList.contains("page-link") ||
+                event.detail?.elt?.id === 'per_page'
+            ) {
+                document.querySelector("#object_table table").innerHTML = `
+                    <div class="bg-danger-subtle text-center">
+                        <strong>Failed to load table content.</strong>
+                        The server responded with status: ${event.detail.xhr.status}
+                    </div>
+                `;
+            }
+        });
     </script>
 {% endblock %}

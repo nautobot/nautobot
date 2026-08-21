@@ -13,7 +13,7 @@
                 {% job_buttons object %}
                 {% block buttons %}
                     {% plugin_buttons object %}
-                    {% render_detail_view_extra_buttons %}
+                    {% render_detail_view_extra_buttons tab_id=tab_id %}
                     {% block extra_buttons %}{% endblock extra_buttons %}
                     {% consolidate_detail_view_action_buttons %}
                 {% endblock buttons %}
@@ -23,7 +23,7 @@
         <div class="align-items-center d-flex flex-wrap mb-16 gap-8">
             <div class="flex-grow-1 m-0"></div>
             <div class="d-flex align-items-center gap-8 flex-grow-0 flex-wrap d-print-none ms-auto">
-                {% render_detail_view_extra_buttons %}
+                {% render_detail_view_extra_buttons tab_id=tab_id %}
             </div>
         </div>
     {% endif %}

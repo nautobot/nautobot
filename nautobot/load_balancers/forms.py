@@ -166,7 +166,6 @@ class VirtualServerFilterForm(NautobotFilterForm, TenancyFilterForm):  # pylint:
     name = forms.CharField(required=False, label="Name")
     source_nat_pool = DynamicModelMultipleChoiceField(
         queryset=Prefix.objects.all(),
-        to_field_name="name",
         required=False,
         label="Prefix",
     )

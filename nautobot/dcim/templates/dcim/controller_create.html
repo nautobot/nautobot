@@ -43,27 +43,30 @@
 {% endblock form %}
 
 {% block javascript %}
+    {{ block.super }}
     <script type="text/javascript">
-        const controllerDevice = $('#id_controller_device');
-        const controllerDeviceRedundancyGroup = $('#id_controller_device_redundancy_group');
+        (() => {
+            const controllerDevice = $(window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'controller_device'));
+            const controllerDeviceRedundancyGroup = $(window.nb.form.getFieldAutoId('{{ form.auto_id }}', 'controller_device_redundancy_group'));
 
-        const controllerUpdated = function() {
-            if (controllerDevice.val()) {
-                controllerDeviceRedundancyGroup.val('');
-                controllerDeviceRedundancyGroup.trigger('change');
-            }
-        };
+            const controllerUpdated = function() {
+                if (controllerDevice.val()) {
+                    controllerDeviceRedundancyGroup.val('');
+                    controllerDeviceRedundancyGroup.trigger('change');
+                }
+            };
 
-        const controllerDeviceRedundancyGroupUpdated = function() {
-            if (controllerDeviceRedundancyGroup.val()) {
-                controllerDevice.val('');
-                controllerDevice.trigger('change');
-            }
-        };
+            const controllerDeviceRedundancyGroupUpdated = function() {
+                if (controllerDeviceRedundancyGroup.val()) {
+                    controllerDevice.val('');
+                    controllerDevice.trigger('change');
+                }
+            };
 
-        controllerDevice.on('select2:select', controllerUpdated);
-        controllerDevice.on('select2:unselect', controllerUpdated);
-        controllerDeviceRedundancyGroup.on('select2:select', controllerDeviceRedundancyGroupUpdated);
-        controllerDeviceRedundancyGroup.on('select2:unselect', controllerDeviceRedundancyGroupUpdated);
+            controllerDevice.on('select2:select', controllerUpdated);
+            controllerDevice.on('select2:unselect', controllerUpdated);
+            controllerDeviceRedundancyGroup.on('select2:select', controllerDeviceRedundancyGroupUpdated);
+            controllerDeviceRedundancyGroup.on('select2:unselect', controllerDeviceRedundancyGroupUpdated);
+        })();
     </script>
 {% endblock %}

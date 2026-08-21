@@ -1,4 +1,5 @@
 import logging
+import math
 
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
@@ -18,6 +19,7 @@ from nautobot.core.factory import (
     UniqueFaker,
 )
 from nautobot.dcim.choices import (
+    CableTypePolarityMethodChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
@@ -31,8 +33,15 @@ from nautobot.dcim.choices import (
     SoftwareImageFileHashingAlgorithmChoices,
     SubdeviceRoleChoices,
 )
-from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES, RACK_U_HEIGHT_MAXIMUM
+from nautobot.dcim.component_creation import SkipAutoComponentCreation
+from nautobot.dcim.constants import (
+    CABLE_BREAKOUT_MAX_CONNECTORS,
+    CABLE_BREAKOUT_MAX_LANES,
+    NONCONNECTABLE_IFACE_TYPES,
+    RACK_U_HEIGHT_MAXIMUM,
+)
 from nautobot.dcim.models import (
+    CableType,
     ConsolePortTemplate,
     ConsoleServerPortTemplate,
     Controller,
@@ -41,9 +50,11 @@ from nautobot.dcim.models import (
     DeviceFamily,
     DeviceRedundancyGroup,
     DeviceType,
+    DeviceTypeToSoftwareImageFile,
     FrontPortTemplate,
     Interface,
     InterfaceTemplate,
+    InterfaceVDCAssignment,
     Location,
     LocationType,
     Manufacturer,
@@ -64,8 +75,10 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualDeviceContext,
 )
+from nautobot.dcim.utils import generate_cable_breakout_mapping
 from nautobot.extras.models import ExternalIntegration, Role, Status
 from nautobot.extras.utils import FeatureQuery
+from nautobot.ipam.factory import VRFDeviceAssignmentFactory
 from nautobot.ipam.models import Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster
@@ -135,6 +148,53 @@ def get_random_platform_for_manufacturer(manufacturer):
 def get_random_software_version_for_device_type(device_type):
     qs = SoftwareVersion.objects.filter(software_image_files__device_types=device_type)
     return factory.random.randgen.choice(qs) if qs.exists() else None
+
+
+class CableTypeFactory(PrimaryModelFactory):
+    class Meta:
+        model = CableType
+        exclude = ("has_description", "has_manufacturer", "has_part_number", "has_breakout")
+
+    name = UniqueFaker("word")
+    has_description = NautobotBoolIterator()
+    description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    has_manufacturer = NautobotBoolIterator()
+    manufacturer = factory.Maybe("has_manufacturer", random_instance(Manufacturer), None)
+    has_part_number = NautobotBoolIterator()
+    part_number = factory.Maybe("has_part_number", UniqueFaker("bothify", text="???-####"), "")
+    has_embedded_transceivers = NautobotBoolIterator()
+
+    has_breakout = NautobotBoolIterator()
+
+    a_connectors = factory.LazyAttribute(
+        lambda o: factory.random.randgen.randint(
+            1,
+            (CABLE_BREAKOUT_MAX_CONNECTORS - 1) if o.has_breakout else CABLE_BREAKOUT_MAX_CONNECTORS,
+        )
+    )
+    # Model requires a_connectors <= b_connectors
+    b_connectors = factory.LazyAttribute(
+        lambda o: (
+            factory.random.randgen.randint(o.a_connectors + 1, CABLE_BREAKOUT_MAX_CONNECTORS)
+            if o.has_breakout
+            else o.a_connectors
+        )
+    )
+    # total_lanes must be a multiple of lcm(a_connectors, b_connectors) and within the global max
+    total_lanes = factory.LazyAttribute(
+        lambda o: (
+            math.lcm(o.a_connectors, o.b_connectors)
+            * factory.random.randgen.randint(1, CABLE_BREAKOUT_MAX_LANES // math.lcm(o.a_connectors, o.b_connectors))
+        )
+    )
+    is_shuffle = NautobotBoolIterator()
+    strands_per_lane = factory.Faker("pyint", min_value=1, max_value=4)  # 1-2 in practice, but we want variety!
+    polarity_method = factory.LazyFunction(
+        lambda: factory.random.randgen.choice(CableTypePolarityMethodChoices.values())
+    )
+    mapping = factory.LazyAttribute(
+        lambda o: generate_cable_breakout_mapping(o.a_connectors, o.b_connectors, o.total_lanes)
+    )
 
 
 class DeviceFactory(PrimaryModelFactory):
@@ -264,6 +324,29 @@ class DeviceFactory(PrimaryModelFactory):
     #     random_instance(lambda: IPAddress.objects.filter(ip_version=6), allow_null=False),
     # )
 
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        with SkipAutoComponentCreation():
+            device = super()._create(model_class, *args, **kwargs)
+
+        for queryset in [
+            device.device_type.console_port_templates.all(),
+            device.device_type.console_server_port_templates.all(),
+            device.device_type.power_port_templates.all(),
+            device.device_type.power_outlet_templates.all(),
+            device.device_type.interface_templates.all(),
+            device.device_type.rear_port_templates.all(),
+            device.device_type.front_port_templates.all(),
+            device.device_type.device_bay_templates.all(),
+            device.device_type.module_bay_templates.all(),
+        ]:
+            for template_record in queryset:
+                record = template_record.instantiate(device=device)
+                record.pk = Faker().uuid4()
+                record.validated_save()
+
+        return device
+
 
 device_types = (
     "Router",
@@ -317,10 +400,13 @@ class DeviceTypeFactory(PrimaryModelFactory):
 
     is_full_depth = NautobotBoolIterator()
 
-    # If randomly a subdevice, also set subdevice_role to "child". We might want to reconsider this.
+    # If randomly a subdevice, also set subdevice_role to "child" or "parent-child". We might want to reconsider this.
     subdevice_role = factory.Maybe(
         "is_subdevice_child",
-        SubdeviceRoleChoices.ROLE_CHILD,
+        factory.Faker(
+            "random_element",
+            elements=[SubdeviceRoleChoices.ROLE_CHILD, SubdeviceRoleChoices.ROLE_PARENT_CHILD],
+        ),
         factory.Faker("random_element", elements=["", SubdeviceRoleChoices.ROLE_PARENT]),
     )
 
@@ -331,10 +417,15 @@ class DeviceTypeFactory(PrimaryModelFactory):
     def software_image_files(self, create, extracted, **kwargs):
         if not create:
             return
-        if extracted:
-            self.software_image_files.set(extracted)
-        else:
-            self.software_image_files.set(get_random_instances(SoftwareImageFile))
+        if not extracted:
+            extracted = get_random_instances(SoftwareImageFile)
+        for sif in extracted:
+            DeviceTypeToSoftwareImageFileFactory.create(device_type=self, software_image_file=sif)
+
+
+class DeviceTypeToSoftwareImageFileFactory(BaseModelFactory):
+    class Meta:
+        model = DeviceTypeToSoftwareImageFile
 
 
 class DeviceRedundancyGroupFactory(PrimaryModelFactory):
@@ -857,6 +948,28 @@ class ModuleFactory(PrimaryModelFactory):
     has_tenant = NautobotBoolIterator()
     tenant = factory.Maybe("has_tenant", random_instance(Tenant, allow_null=False), None)
 
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        with SkipAutoComponentCreation():
+            module = super()._create(model_class, *args, **kwargs)
+
+        for queryset in [
+            module.module_type.console_port_templates.all(),
+            module.module_type.console_server_port_templates.all(),
+            module.module_type.power_port_templates.all(),
+            module.module_type.power_outlet_templates.all(),
+            module.module_type.interface_templates.all(),
+            module.module_type.rear_port_templates.all(),
+            module.module_type.front_port_templates.all(),
+            module.module_type.module_bay_templates.all(),
+        ]:
+            for template_record in queryset:
+                record = template_record.instantiate(device=module.device, module=module)
+                record.pk = Faker().uuid4()
+                record.validated_save()
+
+        return module
+
 
 class DeviceComponentTemplateFactory(BaseModelFactory):
     class Params:
@@ -996,7 +1109,7 @@ class ModuleBayTemplateFactory(ModularDeviceComponentTemplateFactory):
 class VirtualDeviceContextFactory(PrimaryModelFactory):
     class Meta:
         model = VirtualDeviceContext
-        exclude = ("has_role", "has_tenant", "has_description")
+        exclude = ("has_role", "has_tenant", "has_description", "has_controller_managed_device_group")
 
     status = random_instance(
         lambda: Status.objects.get_for_model(VirtualDeviceContext),
@@ -1024,19 +1137,28 @@ class VirtualDeviceContextFactory(PrimaryModelFactory):
     )
     has_description = NautobotBoolIterator()
     description = factory.Maybe("has_description", factory.Faker("sentence"), "")
+    has_controller_managed_device_group = NautobotBoolIterator()
+    controller_managed_device_group = factory.Maybe(
+        "has_controller_managed_device_group", random_instance(ControllerManagedDeviceGroup, allow_null=False), None
+    )
 
     @factory.post_generation
     def interfaces(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.interfaces.set(extracted)
-            else:
-                self.interfaces.set(get_random_instances(Interface.objects.filter(device=self.device)))
+            if not extracted:
+                extracted = get_random_instances(Interface.objects.filter(device=self.device))
+            for interface in extracted:
+                InterfaceVDCAssignmentFactory.create(virtual_device_context=self, interface=interface)
 
     @factory.post_generation
     def vrfs(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.vrfs.set(extracted)
-            else:
-                self.vrfs.set(get_random_instances(VRF.objects.all()))
+            if not extracted:
+                extracted = get_random_instances(VRF.objects.all())
+            for vrf in extracted:
+                VRFDeviceAssignmentFactory.create(virtual_device_context=self, vrf=vrf)
+
+
+class InterfaceVDCAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = InterfaceVDCAssignment

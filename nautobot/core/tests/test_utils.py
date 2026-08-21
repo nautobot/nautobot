@@ -1,11 +1,15 @@
+import os
 import sys
+import tempfile
 from unittest import mock
 import uuid
+import warnings
 
 from django import forms as django_forms
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
@@ -14,13 +18,18 @@ from django.test import override_settings, tag
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
-from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils import data as data_utils, deprecation, filtering, lookup, querysets, requests
+from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key, get_request_cache, request_cache
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
-from nautobot.core.utils.module_loading import check_name_safe_to_import_privately, import_string_optional
+from nautobot.core.utils.module_loading import (
+    check_name_safe_to_import_privately,
+    import_modules_privately,
+    import_string_optional,
+)
 from nautobot.data_validation import models as data_validation_models
 from nautobot.dcim import (
     filters as dcim_filters,
@@ -129,6 +138,100 @@ class ConstructCacheKeyTest(TestCase):
 
             self.assertNotEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=True))
             self.assertEqual(ck_unaware, construct_cache_key(instance, method_name="display", branch_aware=False))
+
+
+class RequestCacheTest(TestCase):
+    """
+    Validate the operation of `request_cache()`/`get_request_cache()`.
+    """
+
+    def test_get_request_cache_returns_none_outside_of_scope(self):
+        self.assertIsNone(get_request_cache())
+
+    def test_request_cache_provides_a_dict_scoped_to_the_block(self):
+        self.assertIsNone(get_request_cache())
+        with request_cache():
+            request_scoped_cache = get_request_cache()
+            self.assertIsInstance(request_scoped_cache, dict)
+            request_scoped_cache["some_key"] = "some_value"
+            self.assertEqual(get_request_cache()["some_key"], "some_value")
+        # Cache is discarded once the block exits.
+        self.assertIsNone(get_request_cache())
+
+    def test_request_cache_does_not_leak_between_sibling_scopes(self):
+        with request_cache():
+            get_request_cache()["some_key"] = "some_value"
+        with request_cache():
+            self.assertNotIn("some_key", get_request_cache())
+
+    def test_nested_request_cache_reuses_outer_scope(self):
+        with request_cache():
+            get_request_cache()["some_key"] = "some_value"
+            with request_cache():
+                # The nested scope should see (and be able to mutate) the same dict as the outer scope.
+                self.assertEqual(get_request_cache()["some_key"], "some_value")
+                get_request_cache()["another_key"] = "another_value"
+            self.assertEqual(get_request_cache()["another_key"], "another_value")
+        self.assertIsNone(get_request_cache())
+
+
+class CacheGetOrSetTest(TestCase):
+    """
+    Validate the operation of `cache_get_or_set()`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.cache_key = f"nautobot.core.tests.cache_get_or_set.{uuid.uuid4()}"
+        self.addCleanup(cache.delete, self.cache_key)
+
+    def test_computes_and_caches_on_miss(self):
+        compute = mock.Mock(return_value="computed value")
+        value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+        self.assertEqual(value, "computed value")
+        self.assertFalse(hit)
+        compute.assert_called_once()
+        # A subsequent call should be served from Redis, not recompute.
+        compute.reset_mock()
+        value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+        self.assertEqual(value, "computed value")
+        self.assertTrue(hit)
+        compute.assert_not_called()
+
+    def test_outside_request_cache_scope_still_uses_redis(self):
+        self.assertIsNone(get_request_cache())
+        compute = mock.Mock(return_value="computed value")
+        cache_get_or_set(self.cache_key, compute, timeout=None)
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+            value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+        self.assertEqual(value, "computed value")
+        self.assertTrue(hit)
+        mock_cache_get.assert_called_once_with(self.cache_key)
+
+    def test_within_request_cache_scope_avoids_repeated_redis_lookups(self):
+        compute = mock.Mock(return_value="computed value")
+        with request_cache():
+            cache_get_or_set(
+                self.cache_key, compute, timeout=None
+            )  # First call: Redis miss, computes and populates both caches.
+            with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+                for _ in range(5):
+                    value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+                    self.assertEqual(value, "computed value")
+                    self.assertTrue(hit)
+            mock_cache_get.assert_not_called()
+        compute.assert_called_once()
+
+    def test_cache_hit_callback_is_called_with_the_hit_value(self):
+        compute = mock.Mock(return_value="computed value")
+        cache_hit_callback = mock.Mock()
+        # Miss: compute() is called, cache_hit_callback should be called with False.
+        cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
+        cache_hit_callback.assert_called_once_with(False)
+        # Hit: compute() is not called, cache_hit_callback should be called with True.
+        cache_hit_callback.reset_mock()
+        cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
+        cache_hit_callback.assert_called_once_with(True)
 
 
 class DictToFilterParamsTest(TestCase):
@@ -564,6 +667,69 @@ class IsTruthyTest(TestCase):
         self.assertFalse(settings_funcs.is_truthy("n"))
         self.assertFalse(settings_funcs.is_truthy(0))
         self.assertFalse(settings_funcs.is_truthy("0"))
+
+
+class WarnDeprecatedAtCallerTest(TestCase):
+    """Tests for `warn_deprecated_at_caller()`."""
+
+    @staticmethod
+    def _make_shim():
+        """Build a deprecation shim that lives in a *different* file than this test module.
+
+        `warn_deprecated_at_caller()` walks out of its immediate caller's module (the shim) before
+        attributing the warning, so exercising that walk correctly requires the shim's `co_filename`
+        to differ from this test's -- otherwise the walk would step over the test frame too.
+        `compile()` with an explicit filename gives us that distinct frame without a second source
+        file on disk. The returned `shim(message)` simply forwards to `warn_deprecated_at_caller()`.
+        """
+        namespace = {"warn_deprecated_at_caller": deprecation.warn_deprecated_at_caller}
+        code = compile(
+            "def shim(message):\n    warn_deprecated_at_caller(message)\n",
+            "<deprecation-shim-stand-in>",
+            "exec",
+        )
+        exec(code, namespace)  # noqa: S102  # pylint: disable=exec-used  # controlled, test-only source
+        return namespace["shim"]
+
+    def test_emits_deprecation_warning(self):
+        """The message is emitted as a `DeprecationWarning`."""
+        with self.assertWarns(DeprecationWarning) as cm:
+            deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
+        self.assertEqual(str(cm.warning), "legacy thing is deprecated")
+
+    def test_warning_is_attributed_to_caller_of_shim(self):
+        """`stacklevel` skips the shim frame so the warning points at the app code that called it."""
+        shim = self._make_shim()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+            shim("legacy thing is deprecated")
+        self.assertEqual(len(caught), 1)
+        # Blamed here (the shim's caller), not on the shim's file or on deprecation.py.
+        self.assertEqual(os.path.basename(caught[0].filename), os.path.basename(__file__))
+        self.assertEqual(caught[0].lineno, expected_lineno)
+
+    def test_logs_warning_with_matching_stacklevel_when_enabled(self):
+        """With `LOG_DEPRECATION_WARNINGS` set, a `logger.warning` fires, attributed to the same caller."""
+        shim = self._make_shim()
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", True):
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                with self.assertLogs(deprecation.logger, level="WARNING") as logs:
+                    expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+                    shim("legacy thing is deprecated")
+        self.assertEqual(len(logs.records), 1)
+        record = logs.records[0]
+        self.assertIn("legacy thing is deprecated", record.getMessage())
+        self.assertEqual(os.path.basename(record.pathname), os.path.basename(__file__))
+        self.assertEqual(record.lineno, expected_lineno)
+
+    def test_does_not_log_when_log_deprecation_warnings_disabled(self):
+        """With the setting off, only the (silenced) warning fires -- no log line."""
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", False):
+            with self.assertWarns(DeprecationWarning):
+                with self.assertNoLogs(deprecation.logger, level="WARNING"):
+                    deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
 
 
 class PrettyPrintQueryTest(TestCase):
@@ -1213,6 +1379,141 @@ class TestModuleLoadingUtils(TestCase):
                 import_string_optional("nautobot.core.tests.test_utils.TestModuleLoadingUtils"), self.__class__
             )
 
+    def _write_consumer_shared_fixture(self, package_dir):
+        """
+        Write the minimal 3-file fixture that exposes class-identity divergence.
+
+        `consumer.py` sorts before `shared.py` alphabetically, so the walker re-execs
+        `shared.py` after `consumer.py` has already captured `Widget`.
+        """
+        os.makedirs(package_dir, exist_ok=True)
+        with open(os.path.join(package_dir, "__init__.py"), "w"):
+            pass
+        with open(os.path.join(package_dir, "consumer.py"), "w") as fd:
+            fd.write("from .shared import Widget\nCAPTURED = Widget\n")
+        with open(os.path.join(package_dir, "shared.py"), "w") as fd:
+            fd.write("class Widget:\n    pass\n")
+
+    def _clear_test_modules(self, *prefixes):
+        for cached in list(sys.modules):
+            if any(cached == prefix or cached.startswith(f"{prefix}.") for prefix in prefixes):
+                del sys.modules[cached]
+
+    def test_import_modules_privately_preserves_class_identity(self):
+        """
+        Regression test for NTC-5779: a class imported by one sibling module and re-defined by the
+        walker on a subsequent iteration must remain a single object identity in sys.modules after
+        the loader returns.
+        """
+        package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                self._write_consumer_shared_fixture(os.path.join(tempdir, package_name))
+                import_modules_privately(tempdir)
+
+                consumer_module = sys.modules[f"{package_name}.consumer"]
+                shared_module = sys.modules[f"{package_name}.shared"]
+
+                self.assertIs(consumer_module.CAPTURED, shared_module.Widget)
+                self.assertIsInstance(consumer_module.CAPTURED(), shared_module.Widget)
+        finally:
+            self._clear_test_modules(package_name)
+
+    def test_import_modules_privately_module_path_filter_preserves_class_identity(self):
+        """
+        Same invariant as above, but with `module_path=[outer, pkg]` filtering, and an
+        unrelated sibling package that should not be touched by the loader.
+        """
+        outer_name = f"outer_{uuid.uuid4().hex[:8]}"
+        sibling_name = f"sibling_{uuid.uuid4().hex[:8]}"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                outer_dir = os.path.join(tempdir, outer_name)
+                os.makedirs(outer_dir)
+                with open(os.path.join(outer_dir, "__init__.py"), "w"):
+                    pass
+                self._write_consumer_shared_fixture(os.path.join(outer_dir, "pkg"))
+
+                sibling_dir = os.path.join(tempdir, sibling_name)
+                os.makedirs(sibling_dir)
+                with open(os.path.join(sibling_dir, "__init__.py"), "w"):
+                    pass
+                with open(os.path.join(sibling_dir, "should_not_load.py"), "w") as fd:
+                    fd.write("LOADED = True\n")
+
+                import_modules_privately(tempdir, module_path=[outer_name, "pkg"])
+
+                consumer_module = sys.modules[f"{outer_name}.pkg.consumer"]
+                shared_module = sys.modules[f"{outer_name}.pkg.shared"]
+                self.assertIs(consumer_module.CAPTURED, shared_module.Widget)
+
+                self.assertNotIn(f"{sibling_name}.should_not_load", sys.modules)
+        finally:
+            self._clear_test_modules(outer_name, sibling_name)
+
+    def test_import_modules_privately_cleans_up_deleted_submodules(self):
+        """
+        Loading a package with a submodule, deleting that submodule from disk, and reloading should
+        remove the stale entry from sys.modules so subsequent isinstance/import lookups don't see it.
+        """
+        package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+        submodule = f"{package_name}.removable"
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                package_dir = os.path.join(tempdir, package_name)
+                os.makedirs(package_dir)
+                with open(os.path.join(package_dir, "__init__.py"), "w"):
+                    pass
+                removable_path = os.path.join(package_dir, "removable.py")
+                with open(removable_path, "w") as fd:
+                    fd.write("VALUE = 1\n")
+
+                import_modules_privately(tempdir)
+                self.assertIn(submodule, sys.modules)
+                self.assertEqual(sys.modules[submodule].VALUE, 1)
+
+                os.remove(removable_path)
+                import_modules_privately(tempdir)
+                self.assertNotIn(submodule, sys.modules)
+                self.assertIn(package_name, sys.modules)
+        finally:
+            self._clear_test_modules(package_name)
+
+    def test_import_modules_privately_raises_when_ignore_import_errors_false(self):
+        """
+        With ignore_import_errors=False, exceptions raised by either the top-level cascade
+        (Phase 3) or the leaf-sweep (Phase 4) must propagate to the caller.
+        """
+        with self.subTest("Top-level package import error propagates"):
+            package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    package_dir = os.path.join(tempdir, package_name)
+                    os.makedirs(package_dir)
+                    with open(os.path.join(package_dir, "__init__.py"), "w") as fd:
+                        fd.write("raise ValueError('boom from __init__')\n")
+                    with self.assertRaisesRegex(ValueError, "boom from __init__"):
+                        import_modules_privately(tempdir, ignore_import_errors=False)
+                    # Same scenario with ignore_import_errors=True should swallow the exception.
+                    self.assertEqual(import_modules_privately(tempdir), [])
+            finally:
+                self._clear_test_modules(package_name)
+
+        with self.subTest("Leaf-sweep import error propagates"):
+            package_name = f"pkg_{uuid.uuid4().hex[:8]}"
+            try:
+                with tempfile.TemporaryDirectory() as tempdir:
+                    package_dir = os.path.join(tempdir, package_name)
+                    os.makedirs(package_dir)
+                    with open(os.path.join(package_dir, "__init__.py"), "w"):
+                        pass
+                    with open(os.path.join(package_dir, "leaf.py"), "w") as fd:
+                        fd.write("raise ValueError('boom from leaf')\n")
+                    with self.assertRaisesRegex(ValueError, "boom from leaf"):
+                        import_modules_privately(tempdir, ignore_import_errors=False)
+            finally:
+                self._clear_test_modules(package_name)
+
 
 class TestQuerySetUtils(TestCase):
     def test_maybe_select_related(self):
@@ -1251,3 +1552,15 @@ class TestQuerySetUtils(TestCase):
             new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
             mock_prefetch_related.assert_not_called()
             self.assertIs(new_queryset, queryset)
+
+
+class TestSerializeObjectV2(TestCase):
+    def test_serialize_object_v2_json_only(self):
+        """Make sure serialize_object_v2() returns a JSON-serializable dict and no lazy/deferred queryset data."""
+        for model_class in apps.get_models():
+            instance = model_class.objects.first()
+            if instance is None:
+                continue
+            data = models_utils.serialize_object_v2(instance)
+            with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
+                NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)

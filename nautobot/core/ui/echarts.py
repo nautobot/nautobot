@@ -206,26 +206,39 @@ class EChartsStrategyFactory:
 class EChartsBase:
     """Base definition for an ECharts chart (no rendering)."""
 
-    def __init__(
+    _chart_type = EChartsTypeChoices.BAR
+    header = ""
+    description = ""
+    show_toolbox = True
+    renderer = "canvas"
+    theme_colors = EChartsThemeColors.NAUTOBOT_COLORS
+    x_label = "X"
+    y_label = "Y"
+    legend = {}
+    additional_config = None
+    combined_with = None
+
+    def __init__(  # pylint: disable=too-many-branches,too-many-locals,too-many-arguments
         self,
         *,
-        chart_type=EChartsTypeChoices.BAR,
+        chart_type=None,
         data=None,
-        header="",
-        description="",
-        x_label="X",
-        y_label="Y",
+        header=None,
+        description=None,
+        x_label=None,
+        y_label=None,
         legend=None,
         theme_colors=None,
-        renderer="canvas",
-        show_toolbox=True,
+        renderer=None,
+        show_toolbox=None,
         save_image_options=None,
         data_view_options=None,
         additional_config=None,
-        permission=None,
         combined_with=None,
     ):
         """
+        Initialize Echarts Base class.
+
         Args:
             chart_type (str): One of `EChartsTypeChoices`.
             data (dict|callable): The dataset to render. Can be:
@@ -261,24 +274,35 @@ class EChartsBase:
                 additional configuration. Be careful as it can override existing settings. For safety,
                 override `additional_config` in your subclass. See:
                 https://echarts.apache.org/en/option.html
-            permission (str): Optional permission required to view.
             combined_with (EChartsBase): Another chart to merge with.
         """
-        self.additional_config = additional_config
-        self.chart_type = chart_type
         self._data = data
-        self.header = header
-        self.description = description
-        self.x_label = x_label
-        self.y_label = y_label
-        self.legend = legend or {}
-        self.theme_colors = theme_colors or EChartsThemeColors.NAUTOBOT_COLORS
-        self.renderer = renderer
-        self.show_toolbox = show_toolbox
+        if additional_config is not None:
+            self.additional_config = additional_config
+        if chart_type is not None:
+            self.chart_type = chart_type
+        else:
+            self.chart_type = self._chart_type  # Force strategy to be set
+        if header is not None:
+            self.header = header
+        if description is not None:
+            self.description = description
+        if x_label is not None:
+            self.x_label = x_label
+        if y_label is not None:
+            self.y_label = y_label
+        if legend is not None:
+            self.legend = legend
+        if theme_colors is not None:
+            self.theme_colors = theme_colors
+        if renderer is not None:
+            self.renderer = renderer
+        if show_toolbox is not None:
+            self.show_toolbox = show_toolbox
+        if combined_with is not None:
+            self.combined_with = combined_with
         self.save_image_options = {"name": self.header or "echart", "show": True, **(save_image_options or {})}
         self.data_view_options = {"readOnly": True, "show": True, **(data_view_options or {})}
-        self.permission = permission
-        self.combined_with = combined_with
 
     def get_transform_data(self, context: Context | None = None) -> dict[str, Any]:
         """Get the chart data in ECharts format, ready for rendering."""

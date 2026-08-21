@@ -63,7 +63,7 @@ class BulkEditObjects(Job):
             ]
 
             self.logger.debug(f"Performing update on {queryset.count()} {model._meta.verbose_name_plural}")
-            for obj in queryset.iterator():
+            for obj in queryset.iterator(chunk_size=1000):
                 # Update standard fields. If a field is listed in _nullify, delete its value.
                 for field_name in standard_fields:
                     try:

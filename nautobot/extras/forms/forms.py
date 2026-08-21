@@ -1,17 +1,18 @@
+from datetime import date, datetime
 import inspect
+import json
 import logging
 
-from celery import chain
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MinValueValidator
 from django.db.models.fields import TextField
 from django.forms import inlineformset_factory, ModelMultipleChoiceField, MultipleHiddenInput
-from django.urls.base import reverse
+from django.urls.base import reverse, reverse_lazy
 from django.utils.timezone import get_current_timezone_name
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -30,6 +31,7 @@ from nautobot.core.forms import (
     DateTimePicker,
     DynamicModelChoiceField,
     DynamicModelMultipleChoiceField,
+    JSONArrayFormField,
     JSONField,
     LaxURLField,
     MultipleContentTypeField,
@@ -46,14 +48,18 @@ from nautobot.dcim.models import Device, DeviceFamily, DeviceRedundancyGroup, De
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     ButtonClassChoices,
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     DynamicGroupTypeChoices,
+    JobCancelTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
     RelationshipTypeChoices,
+    ScheduledJobStateChoices,
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import JOB_OVERRIDABLE_FIELDS
@@ -103,8 +109,6 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
-from nautobot.extras.signals import change_context_state
-from nautobot.extras.tasks import delete_custom_field_data
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
     FeatureQuery,
@@ -156,6 +160,7 @@ __all__ = (
     "CustomFieldBulkDeleteForm",
     "CustomFieldBulkEditForm",
     "CustomFieldChoiceFormSet",
+    "CustomFieldContentTypesForm",
     "CustomFieldFilterForm",
     "CustomFieldForm",
     "CustomFieldModelCSVForm",
@@ -204,8 +209,9 @@ __all__ = (
     "NoteFilterForm",
     "NoteForm",
     "ObjectChangeFilterForm",
+    "ObjectMetadataCreateForm",
     "ObjectMetadataFilterForm",
-    "PasswordInputWithPlaceholder",
+    "ObjectMetadataForm",
     "RelationshipAssociationFilterForm",
     "RelationshipBulkEditForm",
     "RelationshipFilterForm",
@@ -296,12 +302,7 @@ class ApprovalWorkflowDefinitionFilterForm(NautobotFilterForm):
     model = ApprovalWorkflowDefinition
     q = forms.CharField(required=False, label="Search")
     name = MultiValueCharField(required=False)
-    model_content_type = MultipleContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
-            "app_label", "model"
-        ),
-        required=False,
-    )
+    model_content_type = MultipleContentTypeField(feature="approval_workflows", choices_as_strings=True, required=False)
     tags = TagFilterField(model)
 
 
@@ -335,6 +336,8 @@ ApprovalWorkflowStageDefinitionFormSet = inlineformset_factory(
     model=ApprovalWorkflowStageDefinition,
     exclude=("_custom_field_data",),
     extra=5,
+    min_num=1,
+    validate_min=True,
     widgets={
         "name": forms.TextInput(attrs={"class": "form-control"}),
         "sequence": forms.NumberInput(attrs={"class": "form-control"}),
@@ -381,7 +384,6 @@ class ApprovalWorkflowStageDefinitionFilterForm(NautobotFilterForm):
         label="Approver Group",
         help_text="User group that can approve this stage.",
     )
-    tags = TagFilterField(model)
 
 
 class ApprovalWorkflowFilterForm(NautobotFilterForm):
@@ -394,10 +396,9 @@ class ApprovalWorkflowFilterForm(NautobotFilterForm):
         required=False,
         label="Approval Workflow Definition",
     )
-    object_under_review_content_type = forms.ModelChoiceField(
-        queryset=ContentType.objects.filter(FeatureQuery("approval_workflows").get_query()).order_by(
-            "app_label", "model"
-        ),
+    object_under_review_content_type = MultipleContentTypeField(
+        feature="approval_workflows",
+        choices_as_strings=True,
         required=False,
         label="Object Under Review Content Type",
     )
@@ -430,7 +431,7 @@ class ApprovalWorkflowStageFilterForm(NautobotFilterForm):
         widget=StaticSelect2,
         label="State",
     )
-    decision_date = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
+    decision_date_day = forms.DateField(widget=DatePicker(), required=False, label="Decision Date")
 
 
 class ApprovalWorkflowStageResponseFilterForm(NautobotFilterForm):
@@ -469,6 +470,13 @@ class ComputedFieldBulkEditForm(BootstrapMixin, NoteModelBulkEditFormMixin):
     template = forms.CharField(
         max_length=500, widget=forms.Textarea, required=False, help_text="Jinja2 template code for field value"
     )
+    output_type = forms.ChoiceField(
+        required=False,
+        choices=add_blank_choice(ComputedFieldTypeChoices.CHOICES),
+        widget=StaticSelect2(),
+        label="Output Type",
+        help_text="How to display this field, markdown renders the content as Markdown",
+    )
 
     content_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
@@ -486,6 +494,14 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
         required=True,
         label="Content Type",
+    )
+    output_type = forms.ChoiceField(
+        choices=ComputedFieldTypeChoices.CHOICES,
+        required=True,
+        initial=ComputedFieldTypeChoices.TYPE_TEXT,
+        widget=StaticSelect2(),
+        label="Output Type",
+        help_text="How to display this field, markdown renders the content as Markdown",
     )
     key = SlugField(
         label="Key",
@@ -510,6 +526,7 @@ class ComputedFieldForm(BootstrapMixin, forms.ModelForm):
             "key",
             "description",
             "template",
+            "output_type",
             "fallback_value",
             "weight",
             "advanced_ui",
@@ -630,10 +647,10 @@ class ConfigContextFilterForm(BootstrapMixin, forms.Form):
     device_redundancy_group = DynamicModelMultipleChoiceField(
         queryset=DeviceRedundancyGroup.objects.all(), to_field_name="name", required=False
     )
-    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
     dynamic_groups = DynamicModelMultipleChoiceField(
         queryset=DynamicGroup.objects.all(), to_field_name="name", required=False
     )
+    tag = DynamicModelMultipleChoiceField(queryset=Tag.objects.all(), to_field_name="name", required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -774,7 +791,18 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         required=False,
     )
     content_types = MultipleContentTypeField(
-        feature="custom_fields", help_text="The object(s) to which this field applies."
+        feature="custom_fields",
+        help_text="The object(s) to which this field applies.",
+        widget=StaticSelect2Multiple(
+            attrs={
+                "hx-trigger": "change",
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-select": "#nb-scope-filter-form-container",
+                "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
+                "hx-include": "[name='required']",
+            }
+        ),
     )
 
     class Meta:
@@ -802,6 +830,17 @@ class CustomFieldForm(BootstrapMixin, forms.ModelForm):
         if self.initial.get("key"):
             self.fields["key"].disabled = True
 
+        self.fields["required"].widget.attrs.update(
+            {
+                "hx-trigger": "change",
+                "hx-get": reverse_lazy("extras:customfield_scope_filter_fields"),
+                "hx-select": "#nb-scope-filter-form-container",
+                "hx-target": "#nb-scope-filter-form-container",
+                "hx-swap": "outerHTML",
+                "hx-include": "[name='content_types']",
+            }
+        )
+
 
 class CustomFieldFilterForm(NautobotFilterForm):
     model = CustomField
@@ -812,6 +851,18 @@ class CustomFieldFilterForm(NautobotFilterForm):
         required=False,
         label="Content Type(s)",
     )
+
+
+class CustomFieldContentTypesForm(BootstrapMixin, forms.ModelForm):
+    content_types = MultipleContentTypeField(
+        feature="custom_fields",
+        help_text="The object(s) to which this field applies.",
+        required=False,
+    )
+
+    class Meta:
+        model = CustomField
+        fields = ("content_types",)
 
 
 class CustomFieldModelCSVForm(CSVModelForm, CustomFieldModelFormMixin):
@@ -841,36 +892,27 @@ class CustomFieldBulkDeleteForm(ConfirmationForm):
             queryset=queryset, widget=MultipleHiddenInput, required=not delete_all
         )
 
-    def construct_custom_field_delete_tasks(self, queryset):
-        """
-        Helper method to construct a list of celery tasks to execute when bulk deleting custom fields.
-        """
-        change_context = change_context_state.get()
-        if change_context is None:
-            context = None
-        else:
-            context = change_context.as_dict(queryset)
-            context["context_detail"] = "bulk delete custom field data"
-        tasks = []
-        for obj in queryset:
-            pk_set = set(obj.content_types.values_list("pk", flat=True))
-            if pk_set:
-                tasks.append(delete_custom_field_data.si(obj.key, pk_set, context))
-        return tasks
-
     def perform_pre_delete(self, queryset):
         """
         Remove all Custom Field Keys/Values from _custom_field_data of the related ContentType in the background.
         """
+        from nautobot.core.jobs import DeleteCustomFieldData
+        from nautobot.extras.customfields import enqueue_custom_field_job
+
         if not get_worker_count():
             logger.error("Celery worker process not running. Object custom fields may fail to reflect this deletion.")
             return
-        tasks = self.construct_custom_field_delete_tasks(queryset)
-        if tasks:
-            # Executing the tasks in the background sequentially using chain() aligns with how a single
-            # CustomField object is deleted.  We decided to not check the result because it needs at least one worker
-            # to be active and comes with extra performance penalty.
-            chain(*tasks).apply_async()
+
+        field_specs = [
+            {
+                "field_key": obj.key,
+                "content_types": [str(pk) for pk in obj.content_types.values_list("pk", flat=True)],
+            }
+            for obj in queryset
+            if obj.content_types.exists()
+        ]
+        if field_specs:
+            enqueue_custom_field_job(DeleteCustomFieldData, field_specs=json.dumps(field_specs))
 
 
 #
@@ -1013,7 +1055,10 @@ class DynamicGroupFilterForm(TenancyFilterForm, NautobotFilterForm):
     model = DynamicGroup
     q = forms.CharField(required=False, label="Search")
     content_type = MultipleContentTypeField(
-        feature="dynamic_groups", choices_as_strings=True, label="Content Type", required=False
+        feature="dynamic_groups", choices_as_strings=True, required=False, label="Content Type"
+    )
+    group_type = forms.MultipleChoiceField(
+        choices=DynamicGroupTypeChoices, required=False, widget=StaticSelect2Multiple()
     )
     tags = TagFilterField(model)
 
@@ -1108,10 +1153,7 @@ class StaticGroupAssociationFilterForm(NautobotFilterForm):
     model = StaticGroupAssociation
     q = forms.CharField(required=False, label="Search")
     dynamic_group = DynamicModelMultipleChoiceField(queryset=DynamicGroup.objects.all(), required=False)
-    assigned_object_type = CSVContentTypeField(
-        queryset=ContentType.objects.filter(FeatureQuery("dynamic_groups").get_query()).order_by("app_label", "model"),
-        required=False,
-    )
+    associated_object_type = MultipleContentTypeField(feature="dynamic_groups", choices_as_strings=True, required=False)
 
 
 #
@@ -1248,21 +1290,6 @@ def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
 
 
-class PasswordInputWithPlaceholder(forms.PasswordInput):
-    """PasswordInput that is populated with a placeholder value if any existing value is present."""
-
-    def __init__(self, attrs=None, placeholder="", render_value=False):
-        if placeholder:
-            render_value = True
-        self._placeholder = placeholder
-        super().__init__(attrs=attrs, render_value=render_value)
-
-    def get_context(self, name, value, attrs):
-        if value:
-            value = self._placeholder
-        return super().get_context(name, value, attrs)
-
-
 class GitRepositoryForm(NautobotModelForm):
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
@@ -1395,6 +1422,8 @@ class JobForm(BootstrapMixin, forms.Form):
     controlled by the job definition. See `nautobot.extras.jobs.BaseJob.as_form`
     """
 
+    # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
+
 
 class JobEditForm(NautobotModelForm):
     job_queues = DynamicModelMultipleChoiceField(
@@ -1416,6 +1445,8 @@ class JobEditForm(NautobotModelForm):
             "name",
             "grouping_override",
             "grouping",
+            "console_log_default_override",
+            "console_log_default",
             "description_override",
             "description",
             "dryrun_default_override",
@@ -1458,10 +1489,10 @@ class JobEditForm(NautobotModelForm):
             default_job_queue = cleaned_data["default_job_queue"]
             # Include the default Job Queue in the Job Queues selection
             if not cleaned_data.get("job_queues_override", False):
-                names = getattr(job_class, "task_queues", []) or [settings.CELERY_TASK_DEFAULT_QUEUE]
+                names = list(getattr(job_class, "task_queues", [])) or [settings.CELERY_TASK_DEFAULT_QUEUE]
             else:
                 names = list(cleaned_data["job_queues"].values_list("name", flat=True))
-            names += [default_job_queue]
+            names += [default_job_queue.name]
             cleaned_data["job_queues"] = JobQueue.objects.filter(name__in=names)
 
         return cleaned_data
@@ -1493,6 +1524,11 @@ class JobBulkEditForm(NautobotBulkEditForm):
     )
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=BulkEditNullBooleanSelect, help_text="Whether this job contains sensitive variables"
+    )
+    console_log_default = forms.NullBooleanField(
+        required=False,
+        widget=BulkEditNullBooleanSelect,
+        help_text="Whether the job defaults to running with console log argument set to true",
     )
     hidden = forms.NullBooleanField(
         required=False,
@@ -1560,6 +1596,10 @@ class JobBulkEditForm(NautobotBulkEditForm):
         help_text="If checked, the default job queue will be reverted to the first value of task_queues defined in each Job's source code",
     )
     # Boolean overrides
+    clear_console_log_default_override = forms.BooleanField(
+        required=False,
+        help_text="If checked, the values of console log will be reverted to the default values defined in each Job's source code",
+    )
     clear_dryrun_default_override = forms.BooleanField(
         required=False,
         help_text="If checked, the values of dryrun default will be reverted to the default values defined in each Job's source code",
@@ -1640,6 +1680,10 @@ class JobFilterForm(BootstrapMixin, forms.Form):
     enabled = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     has_sensitive_variables = forms.NullBooleanField(
         required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES)
+    )
+    console_log_default = forms.NullBooleanField(
+        required=False,
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     dryrun_default = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))
     hidden = forms.NullBooleanField(
@@ -1916,6 +1960,17 @@ class JobResultFilterForm(BootstrapMixin, forms.Form):
         required=False,
         to_field_name="name",
     )
+    has_job_console_entries = forms.NullBooleanField(
+        required=False,
+        label="Has Job Console Entries",
+        widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
+    )
+    cancel_type = forms.MultipleChoiceField(
+        choices=JobCancelTypeChoices,
+        required=False,
+        label="Cancel Type",
+        widget=StaticSelect2Multiple(),
+    )
 
 
 class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
@@ -1930,6 +1985,11 @@ class ScheduledJobFilterForm(BootstrapMixin, forms.Form):
         widget=APISelectMultiple(api_url="/api/extras/job-models/"),
     )
     total_run_count = forms.IntegerField(required=False)
+    state = forms.MultipleChoiceField(
+        choices=ScheduledJobStateChoices,
+        required=False,
+        widget=StaticSelect2Multiple(),
+    )
 
 
 #
@@ -2063,6 +2123,212 @@ class MetadataTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
         ]
 
 
+def _direct_field_names_for_content_type(ct):
+    """Return sorted direct (forward concrete and M2M) field names on the given ContentType's model."""
+    model = ct.model_class() if ct else None
+    if model is None:
+        return []
+    return sorted({f.name for f in model._meta.fields} | {f.name for f in model._meta.many_to_many})
+
+
+class ObjectMetadataForm(BootstrapMixin, forms.ModelForm):
+    scoped_fields = JSONArrayFormField(
+        required=False,
+        base_field=forms.CharField(max_length=CHARFIELD_MAX_LENGTH),
+        # Always rendered as a Select2 multi-select so client-side JS has a <select> to populate
+        # when the user changes assigned_object_type on the create form.
+        widget=StaticSelect2Multiple(),
+        help_text=(
+            "Direct fields on the assigned object's model that this metadata applies to. "
+            "Leave empty to apply to all fields."
+        ),
+    )
+    contact = DynamicModelChoiceField(
+        queryset=Contact.objects.all(),
+        required=False,
+    )
+    team = DynamicModelChoiceField(
+        queryset=Team.objects.all(),
+        required=False,
+    )
+    value = forms.JSONField(
+        required=False,
+        help_text=(
+            'Format depends on the selected metadata type (JSON-encoded value; e.g. "text", 42, true, ["a", "b"]).'
+        ),
+    )
+
+    class Meta:
+        model = ObjectMetadata
+        # contact, team, and value are mutually exclusive and their relevance depends on
+        # metadata_type.data_type, so they are grouped adjacently at the end of the form.
+        # Note: `value` is not a model field — it's handled by _post_clean below.
+        fields = ["scoped_fields", "contact", "team"]
+
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get("instance")
+        # Pre-fill the `value` form field from the instance's current value when editing.
+        if instance and instance.present_in_database:
+            kwargs.setdefault("initial", {})
+            kwargs["initial"].setdefault("value", instance._value)
+        super().__init__(*args, **kwargs)
+        self._populate_scoped_fields_choices(initial=kwargs.get("initial"))
+        self._adapt_value_field(initial=kwargs.get("initial"))
+        if instance and instance.present_in_database and instance.metadata_type_id:
+            if instance.metadata_type.data_type == MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM:
+                self.fields.pop("value", None)
+            else:
+                self.fields.pop("contact", None)
+                self.fields.pop("team", None)
+
+    def _adapt_value_field(self, initial=None):
+        """Swap the value field for one appropriate to the resolved metadata_type's data_type."""
+        mt_id = None
+        if self.is_bound:
+            mt_id = self.data.get("metadata_type")
+        if not mt_id and self.instance and self.instance.present_in_database:
+            mt_id = self.instance.metadata_type_id
+        if not mt_id and initial:
+            mt_id = initial.get("metadata_type")
+        if not mt_id:
+            return
+        try:
+            mt = MetadataType.objects.get(pk=mt_id)
+        except (MetadataType.DoesNotExist, ValidationError, ValueError, TypeError):
+            return
+        instance = getattr(self, "instance", None)
+        existing = instance._value if instance and instance.present_in_database else None
+        new_field = mt.to_form_field(required=False, initial=existing)
+        if new_field is None:
+            return
+        new_field.label = "Value"
+        new_field.help_text = f"Value for metadata type '{mt}' ({mt.get_data_type_display()})."
+        self.fields["value"] = new_field
+
+    def clean(self):
+        cleaned = super().clean()
+        # ObjectMetadata._value is a plain JSONField (default encoder), so widgets that return
+        # date/datetime objects need to be flattened to ISO strings before model save.
+        value = cleaned.get("value")
+        if isinstance(value, datetime):
+            cleaned["value"] = value.isoformat()
+        elif isinstance(value, date):
+            cleaned["value"] = value.isoformat()
+        return cleaned
+
+    def _post_clean(self):
+        # `value` is a form-only field (not in Meta.fields) so construct_instance doesn't copy
+        # it onto the instance. Apply it manually before super()._post_clean() runs model-level
+        # validation, otherwise ObjectMetadata.clean() sees a stale _value and rejects.
+        if "value" in self.cleaned_data:
+            self.instance._value = self.cleaned_data["value"]
+        super()._post_clean()
+
+    def _populate_scoped_fields_choices(self, initial=None):
+        """Populate scoped_fields choices from the resolved assigned_object_type's model."""
+        scoped = self.fields["scoped_fields"]
+        ct_id = None
+        if self.is_bound:
+            # On POST. Update form doesn't include assigned_object_type, so fall back to instance.
+            ct_id = self.data.get("assigned_object_type")
+        if not ct_id and self.instance and self.instance.present_in_database:
+            ct_id = self.instance.assigned_object_type_id
+        if not ct_id and initial:
+            ct_id = initial.get("assigned_object_type")
+        if not ct_id:
+            return
+        try:
+            ct = ContentType.objects.get(pk=ct_id)
+        except (ContentType.DoesNotExist, ValueError, TypeError):
+            return
+        choices = [(name, name) for name in _direct_field_names_for_content_type(ct)]
+        scoped.choices = choices
+        scoped.has_choices = True
+
+
+class ObjectMetadataCreateForm(ObjectMetadataForm):
+    assigned_object_type = DynamicModelChoiceField(
+        queryset=ContentType.objects.filter(FeatureQuery("metadata").get_query()),
+        query_params={"feature": "metadata"},
+        required=True,
+    )
+    metadata_type = DynamicModelChoiceField(
+        queryset=MetadataType.objects.all(),
+        query_params={"content_type_id": "$assigned_object_type"},
+        required=True,
+    )
+
+    class Meta(ObjectMetadataForm.Meta):
+        # `value` is a form-only field (handled in _post_clean); not listed here.
+        fields = [
+            "metadata_type",
+            "assigned_object_type",
+            "assigned_object_id",
+            "scoped_fields",
+            "contact",
+            "team",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Persistent HTMX swap target around the value field: when the user changes
+        # metadata_type, the wrapper's innerHTML is replaced with the appropriate input
+        # widget for that data type. `jsify_form` re-runs to re-init Select2/date pickers.
+        #
+        # The value widget lives on MetadataTypeUIViewSet as a *detail* action, so the
+        # metadata-type pk belongs in the URL path. The selected pk isn't known until the user
+        # picks one, so rather than reverse a detail URL with a throwaway pk, we hand the client
+        # the pk-less list URL and let the config-request handler assemble the detail path from it
+        # plus the current `#id_metadata_type` value (see objectmetadata_create.html).
+        if "value" in self.fields:
+            metadata_type_base_url = reverse_lazy("extras:metadatatype_list")
+            self.fields["value"].htmx_attrs = {
+                "id": "nb-objectmetadata-value-field",
+                "data-value-widget-base": metadata_type_base_url,
+                "hx-get": metadata_type_base_url,
+                "hx-trigger": "change from:#id_metadata_type",
+                "hx-target": "this",
+                "hx-swap": "innerHTML",
+                "hx-on::config-request": "objectMetadataValueWidgetConfigRequest(this, event)",
+                "hx-on::after-swap": "if (window.jsify_form) jsify_form(this);",
+            }
+        initial = kwargs.get("initial", {})
+        if initial.get("assigned_object_id") and initial.get("assigned_object_type"):
+            # Resolve the ContentType + assigned object first. Garbage query-param values
+            # (non-numeric pk, non-existent pk) fall through to default form rendering;
+            # field-level validation surfaces the actual error when the user submits.
+            try:
+                ct = ContentType.objects.get(pk=initial["assigned_object_type"])
+                obj = ct.get_object_for_this_type(pk=initial["assigned_object_id"])
+            except (ContentType.DoesNotExist, ObjectDoesNotExist, ValidationError, ValueError, TypeError):
+                ct = None
+                obj = None
+            if ct is not None:
+                self.fields["assigned_object_type"].disabled = True
+                self.fields["assigned_object_id"].disabled = True
+            if obj is not None:
+                # Replace the raw UUID input with the resolved object's __str__ (e.g. "ams01-asw-01")
+                # for a friendlier display. The original assigned_object_id field is kept as a hidden
+                # input so the ModelForm save still receives the UUID.
+                self.fields["assigned_object_id"].widget = forms.HiddenInput()
+                display_field = forms.CharField(
+                    label="Assigned object",
+                    required=False,
+                    initial=str(obj),
+                    disabled=True,
+                )
+                css_classes = display_field.widget.attrs.get("class", "")
+                if "form-control" not in css_classes:
+                    display_field.widget.attrs["class"] = ("form-control " + css_classes).strip()
+                # Insert the display field where assigned_object_id used to sit so visual order matches.
+                reordered = {}
+                for name, field in self.fields.items():
+                    if name == "assigned_object_id":
+                        reordered["assigned_object_display"] = display_field
+                    reordered[name] = field
+                self.fields = reordered
+
+
 class ObjectMetadataFilterForm(BootstrapMixin, forms.Form):
     model = ObjectMetadata
     q = forms.CharField(required=False, label="Search")
@@ -2123,6 +2389,7 @@ class NoteFilterForm(BootstrapMixin, forms.Form):
 
 
 class LocalContextFilterForm(forms.Form):
+    # TODO: 4.0 change to has_*
     local_config_context_data = forms.NullBooleanField(
         required=False,
         label="Has local config context data",
@@ -2239,6 +2506,12 @@ class RelationshipForm(BootstrapMixin, forms.ModelForm):
         label="Key",
         max_length=CHARFIELD_MAX_LENGTH,
         slug_source="label",
+    )
+    description = forms.CharField(
+        label="Description",
+        max_length=CHARFIELD_MAX_LENGTH,
+        required=False,
+        help_text="Markdown formatting and a limited subset of HTML are supported",
     )
     source_type = forms.ModelChoiceField(
         queryset=ContentType.objects.filter(FeatureQuery("relationships").get_query()).order_by("app_label", "model"),

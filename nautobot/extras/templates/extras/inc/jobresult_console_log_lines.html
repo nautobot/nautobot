@@ -1,0 +1,11 @@
+{% spaceless %}
+    {% for entry in entries %}
+        <span
+            class="console-line console-{{ entry.output_type }} d-block"
+            data-timestamp="{{ entry.timestamp.isoformat }}"
+        >
+            <span>[{{ entry.timestamp|time:"H:i:s.u"|slice:":12" }}]</span>
+            <span> {{ entry.text }}</span>
+        </span>
+    {% endfor %}
+{% endspaceless %}
