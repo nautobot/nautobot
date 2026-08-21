@@ -87,3 +87,15 @@ class BasePage:
         """Navigate browser history back one step and wait for the page to settle."""
         self.page.go_back()
         self.wait_for_load()
+
+    def _click_and_wait_for_navigation(self, selector, timeout=30_000):
+        """Click *selector* (a form submit) and wait for the resulting navigation.
+
+        The framenavigated listener is registered before the click, so the navigation
+        cannot be missed however fast it commits; a plain wait_for_load_state after the
+        click can resolve against the OLD document's already-complete load state.
+        (Playwright's expect_navigation is deprecated; this is the event it wrapped.)
+        """
+        with self.page.expect_event("framenavigated", timeout=timeout):
+            self.page.locator(selector).first.click()
+        self.wait_for_load()

@@ -152,18 +152,6 @@ class ListPage(BasePage):
         """Submit the drawer's advanced-tab filter form and wait for the reload."""
         self._click_and_wait_for_navigation(self._FILTER_APPLY_ADVANCED)
 
-    def _click_and_wait_for_navigation(self, selector, timeout=30_000):
-        """Click *selector* (a form submit) and wait for the resulting navigation.
-
-        The framenavigated listener is registered before the click, so the navigation
-        cannot be missed however fast it commits; a plain wait_for_load_state after the
-        click can resolve against the OLD document's already-complete load state.
-        (Playwright's expect_navigation is deprecated; this is the event it wrapped.)
-        """
-        with self.page.expect_event("framenavigated", timeout=timeout):
-            self.page.locator(selector).first.click()
-        self.wait_for_load()
-
     def has_active_filter_indicator(self) -> bool:
         """Return True if the Filter button shows its active-filters indicator dot."""
         indicator = self.page.locator(self._FILTER_INDICATOR)
