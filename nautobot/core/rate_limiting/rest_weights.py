@@ -9,5 +9,5 @@ REST_DEFAULT_WEIGHTS = {
     "depth_multiplier_per_level": 1.0,
     "computed_fields_multiplier": 3.0,
     "csv_multiplier": 3.0,
-    **getattr(settings, "NAUTOBOT_REST_RATE_LIMITING_DEFAULT_SETTINGS", {})
+    **getattr(settings, "NAUTOBOT_REST_RATE_LIMITING_DEFAULT_SETTINGS", {}),
 }

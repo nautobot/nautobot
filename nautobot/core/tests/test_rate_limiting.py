@@ -1,16 +1,19 @@
 """Tests for API rate limiting (nautobot.core.rate_limiting)."""
 
-from django.test import override_settings, RequestFactory, SimpleTestCase
-from nautobot.core.rate_limiting.rest_calculator import classify_rest_request_features
-from nautobot.core.rate_limiting.rest_calculator import RestRequestFeatures
+from django.test import RequestFactory, SimpleTestCase
+
+from nautobot.core.rate_limiting.rest_calculator import classify_rest_request_features, RestRequestFeatures
 from nautobot.core.rate_limiting.rest_weights import REST_DEFAULT_WEIGHTS
+
 
 class RestRequestFeaturesTestCase(SimpleTestCase):
     # TODO: Add unit tests
     pass
 
+
 class ClassifyRestRequestFeaturesTestCase(SimpleTestCase):
     """REST cost calculator: classification and estimation, no Django stack involved."""
+
     factory = RequestFactory()
 
     def test_debug(self):

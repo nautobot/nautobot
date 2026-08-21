@@ -1,9 +1,8 @@
 import dataclasses
 import math
 
-from nautobot.core.utils.data import to_int_or_none
 from nautobot.core.rate_limiting.config import KIND_REST
-from nautobot.core.rate_limiting.rest_weights import REST_DEFAULT_WEIGHTS
+from nautobot.core.utils.data import to_int_or_none
 
 # logger = logging.getLogger(__name__)
 
@@ -36,16 +35,16 @@ UNINDEXABLE_LOOKUPS = frozenset(
         "iendswith",  # ILIKE '%val'
         "endswith",  # LIKE '%val'
         # Nautobot short forms
-        "ic",   # icontains
+        "ic",  # icontains
         "nic",  # (not) icontains
-        "ie",   # iexact
+        "ie",  # iexact
         "nie",  # (not) iexact — inconsistent with "iexact" below
         "iew",  # iendswith
-        "niew", # (not) iendswith
-        "re",   # regex
+        "niew",  # (not) iendswith
+        "re",  # regex
         "nre",  # (not) regex
         "ire",  # iregex
-        "nire", # (not) iregex
+        "nire",  # (not) iregex
     }
 )
 
@@ -71,10 +70,11 @@ INDEXABLE_LOOKUPS = frozenset(
 
 READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
+
 @dataclasses.dataclass
 class RestRequestFeatures:
     request_method: str
-    records_per_page: int | None = None # AKA Limit parameter
+    records_per_page: int | None = None  # AKA Limit parameter
     depth: int = 0
     opt_in_fields: list[str] = dataclasses.field(default_factory=list)
     response_format: str = ""
@@ -103,7 +103,7 @@ def classify_rest_request_features(request, weights):
     # TODO: Revisit for upper bounds
     depth_query_parameter = to_int_or_none(query_parameters.get("depth")) or 0
     maximized_depth = max(depth_query_parameter, 0)
-    clamped_depth = min(maximized_depth, 1000) # hard-code, but pull from settings later
+    clamped_depth = min(maximized_depth, 1000)  # hard-code, but pull from settings later
 
     # TODO: Revisit this so that it accounts for min/max boundary conditions
     records_per_page_parameter = to_int_or_none(query_parameters.get("limit"))
@@ -125,7 +125,7 @@ def classify_rest_request_features(request, weights):
         rest_request_features.filter_count += 1
         segments = key.split("__")
 
-        # Remove 
+        # Remove
         last_segment = segments[-1]
         if last_segment in UNINDEXABLE_LOOKUPS:
             rest_request_features.unindexable_lookups += 1
@@ -146,6 +146,7 @@ def classify_rest_request_features(request, weights):
         rest_request_features.lookups.append(key)
 
     return rest_request_features
+
 
 def estimate_rest_request_cost(rest_request_features, weights):
     """Using a RestRequestFeatures object, provide an estimate for what the cost"""

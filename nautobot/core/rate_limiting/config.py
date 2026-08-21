@@ -32,13 +32,14 @@ RATE_LIMITING_DEFAULTS = {
     "CALIBRATION_SAMPLE_RATE": 1.0,
 }
 
+
 def get_rate_limiting_configuration():
     """Return the effective NAUTOBOT_RATE_LIMITING_SETTINGS configuration (shipped defaults merged under operator overrides)."""
     rate_limit_configurations = {
         **RATE_LIMITING_DEFAULTS,
         # TODO: Make sure this exposes the rate limiting values via environment
         #       variables in order to allow overrides without code update
-        **getattr(settings, "NAUTOBOT_RATE_LIMITING_SETTINGS", {})
+        **getattr(settings, "NAUTOBOT_RATE_LIMITING_SETTINGS", {}),
     }
 
     return rate_limit_configurations
