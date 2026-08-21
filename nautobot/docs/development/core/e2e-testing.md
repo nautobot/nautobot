@@ -30,19 +30,16 @@ the E2E suite is black-box and needs a URL and a token, not a database connectio
     Importing anything under `nautobot.core` executes `nautobot/core/__init__.py`,
     which initializes the Celery app from Django settings, and
     `nautobot/core/testing/__init__.py`, which imports Django models; either one makes
-    the import require a full Nautobot configuration. The Selenium integration tests
-    can live in `nautobot/core/testing/` because they run inside `nautobot-server
-    test`, where Django is already booted, and they use it (ORM data setup, an
-    in-process live server). The E2E suite runs in a plain pytest process pointed at
-    a URL. Moving this package would silently make every E2E run require a local
+    the import require a full Nautobot configuration.
+    The E2E suite runs in a plain pytest process pointed at a URL. Moving this package would silently make every E2E run require a local
     `nautobot_config.py`, even when the instance under test is remote.
 
 ## Why page objects
 
 If you are coming from Django, a page object is to a page what a model is to a
 database table: the schema (selectors) is defined once and consumed everywhere.
-Inline selectors in test bodies are raw SQL in every view, the exact thing Django
-exists to prevent.
+Inline selectors in test bodies are analogous to raw SQL in every view, the exact
+thing Django exists to prevent.
 
 - It is what Playwright is, not a styling choice. The official Playwright
   documentation and the pytest plugin assume the page-object model; tutorials, new
@@ -132,7 +129,11 @@ three things:
 3. Row values: the expected records are present and the decoys are absent.
 
 Mark behavioral tests with `@pytest.mark.behavioral`. App scoping needs no marker:
-the directory is the selector (`invoke e2e --app dcim`).
+the directory is the selector (`invoke e2e --app dcim`). The marker exists for
+selection: `-m behavioral` runs only the output-correctness tests, and
+`-m "not behavioral"` gives a fast structural pass. An unmarked test still runs in
+every normal invocation, and `--strict-markers` makes a misspelled marker a
+collection error rather than a silent no-op.
 
 ## Where new code goes
 
@@ -156,9 +157,10 @@ environments without the e2e dependency group.
 
 The suite targets any running Nautobot instance, configured by environment variables
 (`NAUTOBOT_E2E_URL`, `NAUTOBOT_E2E_USERNAME`, `NAUTOBOT_E2E_PASSWORD`,
-`NAUTOBOT_E2E_API_TOKEN`). The test host itself needs the repo installed (collection
-imports the `nautobot` package), so black-box describes the instance under test, not
-the host's Python environment. The defaults match a local development instance at
+`NAUTOBOT_E2E_API_TOKEN`). Black-box describes the relationship to the instance under
+test: the tests reach it only over HTTP. The machine running pytest still needs this
+repository installed (`poetry install --with e2e`), because pytest imports the
+`nautobot.e2e` package at collection time. The defaults match a local development instance at
 `http://localhost:8080` with the `admin`/`admin` superuser and the development API
 token.
 
@@ -175,7 +177,10 @@ invoke e2e --pattern filter      # subset by test name
 `invoke e2e` runs pytest with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` and enables only the
 intended plugins explicitly (`-p playwright -p base_url`). Plugin loading is an
 allowlist: nothing runs in the test process unless it was named. CI runs the same
-command against a hermetic instance seeded with `TEST_FACTORY_SEED`.
+command against a hermetic instance seeded with `TEST_FACTORY_SEED`. The records a
+test asserts on are always its own; the seed provides the realistic populated
+instance around them, so narrowing and leakage assertions are meaningful rather than
+vacuous.
 
 Run every new test against a live instance before committing it. If a behavioral
 assertion reveals the application doing something unexpected, do not bend the
