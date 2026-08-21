@@ -154,9 +154,16 @@ class ExportObjectList(Job):
         required=False,
     )
     export_format = ChoiceVar(
-        choices=(("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
+        choices=(
+            ("csv", "CSV"),
+            ("json", "JSON"),
+            ("yaml", "YAML"),
+            ("devicetype_library", "devicetype-library YAML"),
+        ),
         description="Format to export to if not using an Export Template<br>"
-        "(note, <code>dcim | device type</code> YAML export uses the devicetype-library format)",
+        "(CSV, JSON and YAML are supported for every model; <code>devicetype-library YAML</code> is the "
+        "nautobot/devicetype-library interchange format, supported for <code>dcim | device type</code> "
+        "and <code>dcim | module type</code>)",
         default="csv",
         required=False,
     )
@@ -326,9 +333,11 @@ class ExportObjectList(Job):
             filename += f".{export_template.file_extension}"
         self.create_file(filename, output)
 
-    def _render_legacy_yaml(self, queryset, filename):
-        # Device-type (etc.) legacy YAML export, preserving devicetype-library format compatibility
-        self.logger.info("Exporting %d objects to YAML. This may take some time.", queryset.count())
+    def _render_devicetype_library_yaml(self, queryset, filename):
+        # The nautobot/devicetype-library interchange format, via each model's own to_yaml(). Distinct from
+        # the generic YAML document: this one is read back by the DeviceType/ModuleType import views rather
+        # than by the ImportObjects job, so it is offered as its own export_format choice.
+        self.logger.info("Exporting %d objects to devicetype-library YAML. This may take some time.", queryset.count())
         yaml_data = [obj.to_yaml() for obj in queryset]
         self.create_file(filename + ".yaml", "---\n".join(yaml_data))
 
@@ -421,13 +430,21 @@ class ExportObjectList(Job):
 
         filename = self._export_filename(model)
 
-        # ExportTemplate and legacy (`to_yaml`) exports render straight from the queryset and bypass the
+        # ExportTemplate and devicetype-library exports render straight from the queryset and bypass the
         # serializer, so they need no match key — handle them here and return.
         if export_template is not None:
             self._render_export_template(export_template, content_type, queryset, filename)
             return
-        if export_format == "yaml" and hasattr(model, "to_yaml"):
-            self._render_legacy_yaml(queryset, filename)
+        if export_format == "devicetype_library":
+            # An explicit choice rather than something inferred from the model, so that asking for YAML
+            # always gets the standard document and this format is never substituted for it silently.
+            if not hasattr(model, "to_yaml"):
+                self.logger.error(
+                    "%s does not support the devicetype-library format; use YAML for the standard document",
+                    content_type,
+                )
+                raise RunJobTaskFailed(f"{content_type} does not support the devicetype-library format")
+            self._render_devicetype_library_yaml(queryset, filename)
             return
 
         # CSV and JSON/YAML share one normalized serialization, written per-format.

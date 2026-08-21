@@ -177,8 +177,8 @@ class ExportObjectListTest(TransactionTestCase):
         # ...and no relation is reported with the CSV "no object" sentinel; absent ones are real nulls
         self.assertNotIn(CSV_NO_OBJECT, json.dumps(record))
 
-    def test_export_devicetype_to_yaml(self):
-        """Export device-type to YAML."""
+    def test_export_devicetype_to_devicetype_library_yaml(self):
+        """Export device-type to the devicetype-library interchange format, which is now explicitly chosen."""
         mfr = Manufacturer.objects.create(name="Cisco")
         DeviceType.objects.create(
             manufacturer=mfr,
@@ -189,7 +189,7 @@ class ExportObjectListTest(TransactionTestCase):
             "nautobot.core.jobs",
             "ExportObjectList",
             content_type=ContentType.objects.get_for_model(DeviceType).pk,
-            export_format="yaml",
+            export_format="devicetype_library",
         )
         self.assertJobResultStatus(job_result)
         self.assertTrue(job_result.files.exists())

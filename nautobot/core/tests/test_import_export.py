@@ -292,6 +292,12 @@ class ImportExportJobTestCase(TransactionTestCase):
             ).exists()
         )
 
+    def assertJobLogEntry(self, job_result, contains, *, level=None):
+        qs = JobLogEntry.objects.filter(job_result=job_result, message__icontains=contains)
+        if level is not None:
+            qs = qs.filter(log_level=level)
+        self.assertTrue(qs.exists(), f"Expected a {level or 'any'}-level log entry containing {contains!r}")
+
 
 class ExportAdapterTests(ImportExportJobTestCase):
     """Per-format export behavior. The CSV/export-template/device-type-YAML basics live in
@@ -318,6 +324,28 @@ class ExportAdapterTests(ImportExportJobTestCase):
             self.export_lines(self.run_export())[0],
             f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status; match_fields=name",
         )
+
+    def test_adapter_export__yaml_is_the_document_even_for_devicetype(self):
+        """YAML always means the standard document, including for models that also have a to_yaml()."""
+        mfr = Manufacturer.objects.create(name="Standard YAML Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Standard YAML DT", u_height=1)
+        job_result = self.run_export(model=DeviceType, query_string="model=Standard+YAML+DT", export_format="yaml")
+        self.assertEqual(self.export_filename(job_result), "nautobot_device_types.yaml")
+        doc = self.export_document(job_result)
+        self.assertEqual(doc["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(doc["model"], "dcim.devicetype")
+        self.assertEqual(doc["records"][0]["model"], "Standard YAML DT")
+        self.assertEqual(doc["records"][0]["manufacturer"], {"name": "Standard YAML Mfr"})
+
+    def test_adapter_export__devicetype_library_rejects_unsupported_model(self):
+        """The devicetype-library format is only meaningful for models that implement to_yaml()."""
+        job_result = self.run_export(
+            export_format="devicetype_library", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertJobLogEntry(
+            job_result, "does not support the devicetype-library format", level=LogLevelChoices.LOG_ERROR
+        )
+        self.assertFalse(job_result.files.exists())
 
     def test_adapter_export__generic_yaml(self):
         """A model without to_yaml() exports as the same document as JSON, dumped in declaration order."""
