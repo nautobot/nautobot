@@ -53,19 +53,21 @@ def test_location_remove_filters_restores_list(auth_page, base_url, created_loca
 
     Exercises both removal gestures, mirroring the Selenium flow: the badge's
     remove-all button, then (after browser Back re-applies the filter) the badge's
-    single-value button. The filter indicator is asserted symmetrically: present
-    while the filter is applied, gone after each removal path commits.
+    single-value button. The filter indicator is asserted symmetrically: lit while
+    the filter is applied, restored to its pre-filter baseline after each removal
+    path commits.
 
-    Indicator assertions assume no instance-level default filter: an instance with
-    LOCATION_LIST_DEFAULT_MAX_DEPTH configured redirects the bare list URL to
-    ?max_depth=<n>, which legitimately keeps the indicator lit. The hermetic CI
-    instance leaves that setting unset.
+    The baseline is captured rather than assumed False so the test holds on instances
+    with an admin-configured default filter (LOCATION_LIST_DEFAULT_MAX_DEPTH redirects
+    the bare list URL to ?max_depth=<n>, which legitimately keeps the indicator lit).
+    On the hermetic CI instance the baseline is False, so the assertions are exactly
+    as strict as an absolute check there.
     """
     parent = created_location_tree["parent"]
     locations = LocationsPage(auth_page, base_url)
     locations.navigate()
     unfiltered_rows = locations.get_data_row_count()
-    assert not locations.has_active_filter_indicator()
+    baseline_indicator = locations.has_active_filter_indicator()
 
     locations.filter_by_parent(parent["name"])
     assert "parent=" in locations.current_url()
@@ -78,7 +80,7 @@ def test_location_remove_filters_restores_list(auth_page, base_url, created_loca
     locations.apply_advanced_filters()
     assert "parent=" not in locations.current_url()
     assert locations.get_data_row_count() == unfiltered_rows
-    assert not locations.has_active_filter_indicator()
+    assert locations.has_active_filter_indicator() == baseline_indicator
 
     # Back to the filtered view; remove the single filter value instead.
     locations.go_back()
@@ -87,4 +89,4 @@ def test_location_remove_filters_restores_list(auth_page, base_url, created_loca
     locations.apply_advanced_filters()
     assert "parent=" not in locations.current_url()
     assert locations.get_data_row_count() == unfiltered_rows
-    assert not locations.has_active_filter_indicator()
+    assert locations.has_active_filter_indicator() == baseline_indicator
