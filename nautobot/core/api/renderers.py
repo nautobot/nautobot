@@ -77,17 +77,18 @@ class NautobotCSVRenderer(BaseRenderer):
 
     def render_directive_row(self, writer, directives):
         """
-        Write a `# nautobot-import: ...` directive row describing how this file should be re-imported.
+        Render `build_import_metadata` as a leading `# nautobot_import_version=1; ...` row.
 
-        The directive occupies a single cell so that it survives spreadsheet open-edit-save cycles;
-        see the corresponding first-cell parsing logic in NautobotCSVParser.
+        The version directive doubles as the marker identifying the row as Nautobot's. The directive occupies
+        a single cell so it survives spreadsheet open-edit-save cycles; see the matching first-cell parsing
+        in NautobotCSVParser.
         """
         entries = []
         for key, value in directives.items():
             if isinstance(value, (list, tuple)):
                 value = " ".join(str(v) for v in value)
             entries.append(f"{key}={value}")
-        writer.writerow([f"# nautobot-import: {'; '.join(entries)}"])
+        writer.writerow([f"# {'; '.join(entries)}"])
 
     @classmethod
     def get_headers(cls, data):

@@ -1,6 +1,10 @@
-# Keys/values for the JSON/YAML metadata-document format shared by CSV/JSON/YAML import and export.
-IMPORT_DOCUMENT_VERSION = "1"
-IMPORT_DOCUMENT_VERSION_KEY = "nautobot_import"
+# Keys/values for the metadata format shared by CSV/JSON/YAML import and export. In JSON/YAML these are
+# document keys; in CSV the version appears as the leading `# key=value` directive, which is also what
+# identifies the row as Nautobot's (there is no separate marker).
+# The version continues Nautobot's existing lineage: 1 was Nautobot 1.x and 2 was 2.x through 3.2, neither of
+# which declared a version, so a file with no version key predates 3.
+IMPORT_DOCUMENT_VERSION = 3
+IMPORT_DOCUMENT_VERSION_KEY = "nautobot_import_version"
 IMPORT_DOCUMENT_MODEL_KEY = "model"
 IMPORT_DOCUMENT_MATCH_FIELDS_KEY = "match_fields"
 IMPORT_DOCUMENT_RECORDS_KEY = "records"

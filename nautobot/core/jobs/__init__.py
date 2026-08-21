@@ -20,7 +20,12 @@ from nautobot.core import constants
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
-from nautobot.core.api.utils import build_import_document, get_serializer_for_model, nest_flat_dict
+from nautobot.core.api.utils import (
+    build_import_document,
+    build_import_metadata,
+    get_serializer_for_model,
+    nest_flat_dict,
+)
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
@@ -337,7 +342,7 @@ class ExportObjectList(Job):
         if export_format in ("json", "yaml"):
             self._render_document(export_format, serializer_class, content_type, records, match_fields, filename)
         else:
-            self._render_csv(records, match_fields, filename)
+            self._render_csv(content_type, records, match_fields, filename)
 
     def _render_document(self, export_format, serializer_class, content_type, records, match_fields, filename):
         # Generic JSON/YAML export: reshape the flat records into nested records wrapped in the metadata
@@ -356,14 +361,14 @@ class ExportObjectList(Job):
             plain_document = json.loads(json.dumps(document, default=str))
             self.create_file(filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
 
-    def _render_csv(self, records, match_fields, filename):
+    def _render_csv(self, content_type, records, match_fields, filename):
         # Generic CSV export
         renderer = NautobotCSVRenderer()
         renderer_context = {}
-        # Stamp the file with its own import instructions (the model's natural key as the match key),
-        # so that an unmodified export can be re-imported as an update with no additional configuration.
-        if match_fields:
-            renderer_context["import_directives"] = {"match_fields": match_fields}
+        # Same metadata the JSON/YAML document declares, rendered as the leading directive row.
+        renderer_context["import_directives"] = build_import_metadata(
+            f"{content_type.app_label}.{content_type.model}", match_fields=match_fields
+        )
         # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
         csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
         self.create_file(filename + ".csv", csv_data)

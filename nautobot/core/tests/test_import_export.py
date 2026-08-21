@@ -32,6 +32,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.test import SimpleTestCase
 import yaml
 
+from nautobot.core.api.constants import IMPORT_DOCUMENT_VERSION
 from nautobot.core.api.utils import nest_flat_dict
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
@@ -274,7 +275,7 @@ class ExportAdapterTests(ImportExportJobTestCase):
         doc = self.export_document(
             self.run_export(model=DeviceType, query_string="model=Document+DT", export_format="json")
         )
-        self.assertEqual(doc["nautobot_import"], "1")
+        self.assertEqual(doc["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
         self.assertEqual(doc["model"], "dcim.devicetype")
         self.assertIn("match_fields", doc)
         self.assertEqual(len(doc["records"]), 1)
@@ -298,7 +299,10 @@ class ExportAdapterTests(ImportExportJobTestCase):
 
     def test_adapter_export__csv_stamps_directive(self):
         """CSV exports carry their own import instructions: the model's natural key as the match key."""
-        self.assertEqual(self.export_lines(self.run_export())[0], "# nautobot-import: match_fields=name")
+        self.assertEqual(
+            self.export_lines(self.run_export())[0],
+            f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status; match_fields=name",
+        )
 
     def test_adapter_export__via_export_template(self):
         """When an export-template is specified, it is used."""
