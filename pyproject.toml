@@ -48,6 +48,7 @@ dependencies = [
     # Advanced query filters
     "django-filter (>=25.2,<25.3)",
     # Health check endpoint
+    # 3.21.0 and later (including 4.x) have breaking changes that we'll need to account for when upgrading.
     "django-health-check (>=3.20.8,<3.21)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
@@ -70,7 +71,7 @@ dependencies = [
     # Run production webservers such as uWSGI/gunicorn as a Django management command.
     "django-webserver (>=1.2.0,<1.3)",
     # REST API framework
-    "djangorestframework (>=3.17.1,<3.18)",
+    "djangorestframework (>=3.18.0,<3.19)",
     # OpenAPI 3.0 schema generation for the REST API
     # v0.30.0 is impacted by https://github.com/tfranzel/drf-spectacular/issues/1517
     "drf-spectacular[sidecar] (>=0.29.0,<0.30)",
@@ -101,23 +102,23 @@ dependencies = [
     # OpenTelemetry (opt-in tracing/metrics/logs; enabled via OTEL_PYTHON_DJANGO_INSTRUMENT).
     # The SDK/exporter (1.4x) and the instrumentation packages (0.6xb0) release in lockstep;
     # keep them on the same coordinated line when bumping.
-    "opentelemetry-exporter-otlp (>=1.43.0,<1.44)",
-    "opentelemetry-instrumentation-celery (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-dbapi (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-django (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-logging (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-mysqlclient (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-psycopg2 (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-redis (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-requests (>=0.64b0,<0.65)",
-    "opentelemetry-instrumentation-wsgi (>=0.64b0,<0.65)",
-    "opentelemetry-sdk (>=1.43.0,<1.44)",
+    "opentelemetry-exporter-otlp (>=1.44.0,<1.45)",
+    "opentelemetry-instrumentation-celery (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-dbapi (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-django (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-logging (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-mysqlclient (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-psycopg2 (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-redis (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-requests (>=0.65b0,<0.66)",
+    "opentelemetry-instrumentation-wsgi (>=0.65b0,<0.66)",
+    "opentelemetry-sdk (>=1.44.0,<1.45)",
     # Handling of version numbers
     "packaging (>=23.2)",
     # Image processing library
     "pillow (>=12.3.0,<13)",
     # Custom prometheus metrics
-    "prometheus-client (>=0.25.0,<0.26)",
+    "prometheus-client (>=0.26.0,<0.27)",
     # PostgreSQL database adapter
     # NOTE: psycopg3 is available now and nominally replaces psycopg2
     "psycopg2-binary (>=2.9.12,<2.10)",
@@ -183,7 +184,7 @@ exclude = [
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~7.0.0"
+django-debug-toolbar = "~7.1.1"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -257,7 +258,7 @@ splinter = "~0.21.0"
 # Serialization of tracebacks - used when running unittest with --parallel flag
 tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
-time-machine = "~3.2.0"
+time-machine = "~3.4.0"
 
 [tool.poetry.scripts]
 
