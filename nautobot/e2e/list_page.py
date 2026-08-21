@@ -119,27 +119,27 @@ class ListPage(BasePage):
         self.page.locator(self._ADVANCED_FILTER_TAB).first.click()
         self.page.locator(self._FILTER_APPLY_ADVANCED).first.wait_for(state="visible", timeout=8_000)
 
-    def _filter_badge(self, field_name=None):
-        """Selector for an active-filter badge, scoped to *field_name* when given.
+    def _filter_badge(self, field_name):
+        """Selector for the active-filter badge of the filter field named *field_name*.
 
-        Scope whenever the field is known: an instance-level default (e.g.
+        Always field-scoped: an instance-level default (e.g.
         LOCATION_LIST_DEFAULT_MAX_DEPTH) can add badges the test did not create, and
         an unscoped .first would then act on the wrong one.
         """
-        if field_name:
-            return f"{self._FILTER_BADGE}[data-nb-field='{field_name}']"
-        return self._FILTER_BADGE
+        return f"{self._FILTER_BADGE}[data-nb-field='{field_name}']"
 
-    def remove_all_filters(self, field_name=None):
-        """Click a filter badge's remove-all button (Advanced tab).
+    def remove_filter(self, field_name):
+        """Click the X on *field_name*'s filter badge (Advanced tab).
 
-        Removes every value of that filter field from the *pending* filter set; the
-        list does not change until :meth:`apply_advanced_filters` commits it.
+        Removes that one filter field, with all its values, from the *pending* filter
+        set; the list does not change until :meth:`apply_advanced_filters` commits it.
+        Not to be confused with the Clear All button, which wipes every filter and
+        commits immediately (navigating to ``?all_filters_removed=true``).
         """
         self.page.locator(f"{self._filter_badge(field_name)} > {self._FILTER_BADGE_REMOVE}").first.click()
 
-    def remove_filter_value(self, field_name=None):
-        """Click a single-value remove button inside a filter badge (Advanced tab).
+    def remove_filter_value(self, field_name):
+        """Click the X on a single value inside *field_name*'s filter badge (Advanced tab).
 
         Removes one value from the *pending* filter set; the list does not change
         until :meth:`apply_advanced_filters` commits it.

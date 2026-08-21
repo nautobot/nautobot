@@ -72,9 +72,9 @@ def test_location_remove_filters_restores_list(auth_page, base_url, created_loca
     assert locations.has_active_filter_indicator()
     assert locations.get_data_row_count() < unfiltered_rows, "Filter must narrow the list before removal is tested"
 
-    # Remove the whole parent filter with the badge's remove-all button.
+    # Remove the whole parent filter with its badge's X button.
     locations.open_advanced_filter_tab()
-    locations.remove_all_filters("parent")
+    locations.remove_filter("parent")
     locations.apply_advanced_filters()
     assert "parent=" not in locations.current_url()
     assert locations.get_data_row_count() == unfiltered_rows
