@@ -7,9 +7,9 @@ nautobot.e2e.fixtures, registered in the repo-root conftest; run
 `pytest --fixtures` to list them.
 """
 
-from uuid import uuid4
-
 import pytest
+
+from nautobot.e2e.fixtures import unique_name
 
 
 @pytest.fixture
@@ -22,9 +22,7 @@ def created_location_tree(create_object, status_id_for):
     the instance holds. All records use a unique `ZZZ-e2e-` prefixed name and are
     deleted on teardown.
     """
-    # ZZZ prefix: owned records sort last, so they never perturb first-page
-    # row counts taken before the fixture's records are filtered for.
-    unique = f"ZZZ-e2e-{uuid4().hex[:8]}"
+    unique = unique_name()
     status = status_id_for("dcim.location")
     location_type = create_object("dcim/location-types", name=f"{unique}-type", nestable=True)
     parent = create_object("dcim/locations", name=f"{unique}-parent", location_type=location_type["id"], status=status)

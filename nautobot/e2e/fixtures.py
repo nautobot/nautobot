@@ -25,6 +25,7 @@ needs the repo installed (`poetry install --with e2e`).
 # pylint: disable=redefined-outer-name
 
 import os
+from uuid import uuid4
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
@@ -36,6 +37,16 @@ E2E_DEFAULT_URL = "http://localhost:8080"
 E2E_DEFAULT_USERNAME = "admin"
 E2E_DEFAULT_PASSWORD = "admin"  # noqa: S105
 E2E_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
+
+
+def unique_name(prefix="ZZZ-e2e"):
+    """Return a unique, sortable name for a test-owned record.
+
+    The prefix sorts owned records last, so they never perturb first-page row counts
+    taken before a test filters for them; the hex suffix keeps parallel runs and
+    repeated runs against a shared instance from colliding.
+    """
+    return f"{prefix}-{uuid4().hex[:8]}"
 
 
 @pytest.fixture(scope="session")
