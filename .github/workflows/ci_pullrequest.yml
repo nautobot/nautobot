@@ -17,6 +17,38 @@ jobs:
         uses: "actions/checkout@v4"
       - name: "Security checks"
         uses: "./.github/actions/security-checks"
+  dependencies-check:
+    runs-on: "ubuntu-24.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-version: "2.1.4"
+          python-version: "3.12"
+      - name: "Install OSS Nautobot Apps to verify dependency compatibility"
+        # nautobot-app-chatops[ipfabric] requires `ipfabric<7.0` as it uses APIs that are removed in later versions.
+        # nautobot-app-ssot[ipfabric] requires a more current version of `ipfabric`, so they are incompatible.
+        # This is unlikely to be resolved any time soon so we are skipping the chatops extra intentionally for now.
+        run: >-
+          poetry add
+          'git+https://github.com/nautobot/nautobot-app-bgp-models.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-capacity-metrics.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-chatops.git@ltm-2.4[aci,aristacv,ansible,grafana,meraki,panorama,slurpit]'
+          'git+https://github.com/nautobot/nautobot-app-circuit-maintenance.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-data-validation-engine.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-design-builder.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-device-onboarding.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-dns-models.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-firewall-models.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-floor-plan.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-golden-config.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-app-secrets-providers.git@ltm-2.4[all]'
+          'git+https://github.com/nautobot/nautobot-app-ssot.git@ltm-2.4[all]'
+          'git+https://github.com/nautobot/nautobot-app-welcome-wizard.git@ltm-2.4'
+          'git+https://github.com/nautobot/nautobot-plugin-nornir.git@ltm-2.4'
   ruff:
     runs-on: "ubuntu-24.04"
     env:
