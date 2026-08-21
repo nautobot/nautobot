@@ -1,2 +1,3 @@
 Changed the format of CSV exports produced by `ExportObjectList` system Job to include a header comment containing metadata.
 Changed the `ExportObjectList` system Job `export_format` parameter to distinguish between `yaml` (the new generic YAML export format) and `devicetype_library` (the custom YAML format used specifically for DeviceType and ModuleType interoperability with the [`devicetype-library` repository](https://github.com/nautobot/devicetype-library/)). Previously running the Job with `export_format="yaml"` would generate the latter format, now it generates the new format instead.
+Added database query optimizations to the `ExportObjectList` system Job to improve performance of exports.
