@@ -19,6 +19,7 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import time
 
 from invoke import Collection, task as invoke_task
@@ -1135,12 +1136,15 @@ def check_schema(context, api_version=None):
     help={
         "app": "Run only one app's E2E tests, by app label (e.g. 'dcim' runs nautobot/dcim/tests/e2e).",
         "url": "Base URL of the running Nautobot instance under test (default: NAUTOBOT_E2E_URL, or http://localhost:8080).",
+        "username": "Login username for the instance under test (default: NAUTOBOT_E2E_USERNAME, or admin).",
+        "password": "Login password for the instance under test (default: NAUTOBOT_E2E_PASSWORD, or admin).",
+        "token": "REST API token for the instance under test (default: NAUTOBOT_E2E_API_TOKEN, or the dev token).",
         "headed": "Run the browser headed (visible) instead of headless.",
         "pattern": "Only run tests whose names match the given substring (pytest -k).",
         # (e2e runs on the HOST by design; see the docstring.)
     }
 )
-def e2e(context, app=None, url=None, headed=False, pattern=None):
+def e2e(context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None):
     """Run the Playwright end-to-end test suite against a running Nautobot instance.
 
     Unlike the other test tasks, this always runs on the HOST (it deliberately does
@@ -1148,8 +1152,15 @@ def e2e(context, app=None, url=None, headed=False, pattern=None):
     host and the suite only needs HTTP reachability to the instance under test.
     Runs pytest with plugin auto-loading disabled; only the explicitly named plugins
     load. Requires the e2e dependency group and a browser:
-    `poetry install --with e2e && poetry run playwright install chromium`.
+    `poetry install --with e2e && poetry run playwright install chromium`
+    (CI adds `--with-deps` to the browser install for the runner's OS packages;
+    that is not needed on a developer machine).
     """
+    if shutil.which("pytest") is None:
+        raise Exit(
+            "pytest not found. The E2E suite needs the optional e2e dependency group and a browser:\n"
+            "  poetry install --with e2e && poetry run playwright install chromium"
+        )
     command = "pytest -p playwright -p base_url"
     if app:
         command += f" nautobot/{app}/tests/e2e"
@@ -1160,6 +1171,12 @@ def e2e(context, app=None, url=None, headed=False, pattern=None):
     env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     if url:
         env["NAUTOBOT_E2E_URL"] = url
+    if username:
+        env["NAUTOBOT_E2E_USERNAME"] = username
+    if password:
+        env["NAUTOBOT_E2E_PASSWORD"] = password
+    if token:
+        env["NAUTOBOT_E2E_API_TOKEN"] = token
     print_command(command, env=env)
     context.run(command, env=env, pty=True)
 
