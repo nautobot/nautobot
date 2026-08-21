@@ -1,10 +1,8 @@
 """Locations list-view filter flow.
 
-Playwright replacement for the Selenium test ``ListViewFilterTestCase.test_list_view_filter``
-(formerly in nautobot/core/tests/integration/test_filters.py): open the filter drawer,
-apply a parent filter, then remove it from the Advanced tab via both badge remove
-buttons. The behavioral tests additionally verify the filter's *output* (row counts
-against the REST API, cell values) — assertions the Selenium version did not make.
+Tests include: open the filter drawer, apply a parent filter, then remove it from the
+Advanced tab via both badge remove buttons. The behavioral tests additionally verify
+the filter's *output* (row counts against the REST API, cell values).
 """
 
 import pytest
@@ -51,7 +49,7 @@ def test_location_filter_by_parent_narrows_list(auth_page, base_url, api_count, 
 def test_location_remove_filters_restores_list(auth_page, base_url, created_location_tree):
     """Removing an applied filter from the Advanced tab restores the unfiltered list.
 
-    Exercises both removal gestures, mirroring the Selenium flow: the badge's
+    Exercises both removal gestures: the badge's
     remove-all button, then (after browser Back re-applies the filter) the badge's
     single-value button. The filter indicator is asserted symmetrically: lit while
     the filter is applied, restored to its pre-filter baseline after each removal
