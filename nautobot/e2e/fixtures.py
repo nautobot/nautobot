@@ -20,6 +20,10 @@ Black-box refers to the instance under test, not the test host: collection impor
 needs the repo installed (``poetry install --with e2e``).
 """
 
+# pytest injects fixtures by parameter name, so a fixture that consumes another one
+# deliberately shadows it; pylint reads that as redefinition.
+# pylint: disable=redefined-outer-name
+
 import os
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
