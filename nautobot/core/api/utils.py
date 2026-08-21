@@ -210,7 +210,7 @@ def resolve_related_object(queryset, filter_params):
             _ambiguous_related_object_message(queryset.model, filter_params, _matched_count_from_exception(e))
         ) from e
     except FieldError as e:
-        raise serializers.ValidationError(e) from e
+        raise serializers.ValidationError(str(e)) from e
 
 
 def dynamic_import(name):
