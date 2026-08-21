@@ -610,7 +610,6 @@ jobs:
       NAUTOBOT_ALLOWED_HOSTS: "localhost 127.0.0.1"
       NAUTOBOT_SECRET_KEY: "ci-e2e-only-0123456789abcdef0123456789"
       NAUTOBOT_INSTALLATION_METRICS_ENABLED: "false"
-      NAUTOBOT_SUPERUSER_API_TOKEN: "0123456789abcdef0123456789abcdef01234567"
       NAUTOBOT_E2E_API_TOKEN: "0123456789abcdef0123456789abcdef01234567"
     services:
       postgres:
@@ -646,7 +645,7 @@ jobs:
         run: |
           DJANGO_SUPERUSER_PASSWORD=admin poetry run nautobot-server createsuperuser \
             --noinput --username admin --email admin@example.com
-          poetry run nautobot-server shell --command "from django.contrib.auth import get_user_model; from nautobot.users.models import Token; Token.objects.get_or_create(user=get_user_model().objects.get(username='admin'), key='${NAUTOBOT_SUPERUSER_API_TOKEN}')"
+          poetry run nautobot-server shell --command "from django.contrib.auth import get_user_model; from nautobot.users.models import Token; Token.objects.get_or_create(user=get_user_model().objects.get(username='admin'), key='${NAUTOBOT_E2E_API_TOKEN}')"
       - name: "Start Nautobot server"
         run: |
           nohup poetry run nautobot-server runserver 8080 --noreload --insecure &> /tmp/nautobot-server.log &
