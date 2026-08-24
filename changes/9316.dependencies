@@ -1,0 +1,3 @@
+Updated dependency `django-filter` to `>=26.1,<26.2`.
+Updated dependency `social-auth-app-django` to `>=6.0.1,<6.1`.
+Updated dependency `social-auth-core` to `>=5.1.0,<5.2`.
