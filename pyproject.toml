@@ -286,7 +286,7 @@ omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
     "nautobot/core/testing/*.py",
-    "nautobot/e2e/*.py",
+    "nautobot/playwright/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
@@ -462,7 +462,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Playwright E2E tests and fixtures run under pytest, where bare `assert` is the
 # assertion idiom (there is no self.assertEqual outside unittest test cases).
-"nautobot/e2e/**" = ["S101"]
+"nautobot/playwright/**" = ["S101"]
 "nautobot/*/tests/integration/**" = ["S101"]
 
 [tool.ruff.lint.isort]

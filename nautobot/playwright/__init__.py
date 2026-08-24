@@ -14,7 +14,7 @@ def load_tests(loader, tests, pattern):  # pylint: disable=unused-argument
 
     Re-export this in each `nautobot/<app>/tests/e2e/__init__.py`:
 
-        from nautobot.e2e import load_tests  # noqa: F401
+        from nautobot.playwright import load_tests  # noqa: F401
 
     This is unittest's `load_tests` protocol: when a package defines it, discovery
     calls it instead of recursing into the package, so the pytest-only test modules

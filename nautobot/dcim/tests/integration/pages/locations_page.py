@@ -1,6 +1,6 @@
 """Page object for the Locations list view (/dcim/locations/)."""
 
-from nautobot.e2e.list_page import ListPage
+from nautobot.playwright.list_page import ListPage
 
 
 class LocationsPage(ListPage):

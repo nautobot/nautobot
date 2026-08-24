@@ -8,4 +8,4 @@ The shared E2E fixture surface is registered here because pytest only honors
 ``pytest_plugins`` in the rootdir conftest.
 """
 
-pytest_plugins = ["nautobot.e2e.fixtures"]
+pytest_plugins = ["nautobot.playwright.fixtures"]

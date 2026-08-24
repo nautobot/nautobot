@@ -12,7 +12,7 @@ import sys
 
 
 def test_e2e_package_imports_without_django_settings():
-    """`nautobot.e2e` must import in a process with no Nautobot configuration.
+    """`nautobot.playwright` must import in a process with no Nautobot configuration.
 
     Guards against relocating the shared E2E infrastructure under `nautobot.core`
     (whose package __init__ initializes the Celery app from Django settings) or adding
@@ -26,9 +26,9 @@ def test_e2e_package_imports_without_django_settings():
     env = {key: value for key, value in os.environ.items() if key not in ("NAUTOBOT_CONFIG", "DJANGO_SETTINGS_MODULE")}
     snippet = (
         "import sys\n"
-        "import nautobot.e2e.base_page\n"
-        "import nautobot.e2e.fixtures\n"
-        "import nautobot.e2e.list_page\n"
+        "import nautobot.playwright.base_page\n"
+        "import nautobot.playwright.fixtures\n"
+        "import nautobot.playwright.list_page\n"
         "sys.exit(1 if 'nautobot.core' in sys.modules else 0)\n"
     )
     result = subprocess.run(  # noqa: S603
@@ -40,5 +40,5 @@ def test_e2e_package_imports_without_django_settings():
         check=False,
     )
     assert result.returncode == 0, (
-        f"Importing nautobot.e2e in a settings-free process failed or pulled in nautobot.core. stderr:\n{result.stderr}"
+        f"Importing nautobot.playwright in a settings-free process failed or pulled in nautobot.core. stderr:\n{result.stderr}"
     )

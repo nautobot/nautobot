@@ -9,7 +9,7 @@ model:
         LIST_PATH = "/dcim/locations/"
 """
 
-from nautobot.e2e.base_page import BasePage, select2_filter_pick
+from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
 class ListPage(BasePage):
