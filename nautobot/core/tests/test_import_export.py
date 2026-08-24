@@ -23,12 +23,21 @@ from nautobot.core.api.import_export import (
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
 )
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    Manufacturer,
+    Platform,
+    Rack,
+    SoftwareImageFile,
+    SoftwareVersion,
+)
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import JobLogEntry, Status
+from nautobot.extras.models import JobLogEntry, Status, Tag
 from nautobot.ipam.models import Namespace, RouteTarget, VRF
 
 
@@ -235,6 +244,25 @@ class ImportExportJobTestCase(TransactionTestCase):
         status.content_types.set([ContentType.objects.get_for_model(Device)])
         return status
 
+    def create_device_type_with_software_image_files(self):
+        """A DeviceType whose `software_image_files` M2M members have a composite (3-part) natural key."""
+        manufacturer = Manufacturer.objects.create(name="M2M Composite Mfr")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="M2M Composite DT", u_height=1)
+        software_version = SoftwareVersion.objects.create(
+            platform=Platform.objects.create(name="M2M Composite Platform", manufacturer=manufacturer),
+            version="1.2.3",
+            status=Status.objects.get_for_model(SoftwareVersion).first(),
+        )
+        for image_file_name in ("m2m-composite-a.bin", "m2m-composite-b.bin"):
+            device_type.software_image_files.add(
+                SoftwareImageFile.objects.create(
+                    software_version=software_version,
+                    image_file_name=image_file_name,
+                    status=Status.objects.get_for_model(SoftwareImageFile).first(),
+                )
+            )
+        return list(device_type.software_image_files.all())
+
     # -- run the job -----------------------------------------------------------
     def run_export(
         self,
@@ -379,6 +407,93 @@ class ExportAdapterTests(ImportExportJobTestCase):
                 doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
                 record = next(r for r in doc["records"] if r["name"] == "M2M Export VRF")
                 self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2"])
+
+    def test_adapter_export__m2m_scalar_member_containing_the_separator(self):
+        """A member containing a comma is quoted inside the cell, so CSV still reads back two members."""
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Comma Namespace")
+        vrf = VRF.objects.create(name="M2M Comma VRF", namespace=namespace)
+        for name in ("65000:1", "65000:2,65000:3"):
+            vrf.import_targets.add(RouteTarget.objects.create(name=name))
+
+        row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Comma VRF")
+        self.assertEqual(
+            sorted(NautobotCSVParser.split_list_cell(row["import_targets"])), ["65000:1", "65000:2,65000:3"]
+        )
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Comma VRF")
+                self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2,65000:3"])
+
+    def test_adapter_export__m2m_tags(self):
+        """`tags` is a TagsManager rather than a concrete M2M, but exports like any other scalar-keyed one."""
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Tags Namespace")
+        vrf = VRF.objects.create(name="M2M Tags VRF", namespace=namespace)
+        for name in ("m2m-export-tag-a", "m2m-export-tag-b"):
+            tag = Tag.objects.create(name=name)
+            tag.content_types.add(ContentType.objects.get_for_model(VRF))
+            vrf.tags.add(tag)
+
+        row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Tags VRF")
+        self.assertEqual(sorted(row["tags"].split(",")), ["m2m-export-tag-a", "m2m-export-tag-b"])
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Tags VRF")
+                self.assertEqual(sorted(record["tags"]), ["m2m-export-tag-a", "m2m-export-tag-b"])
+
+    def test_adapter_export__m2m_content_type_members(self):
+        """An M2M to ContentType uses the scalar `<app_label>.<model>` key rather than a natural-key dict."""
+        status = self.create_status(name="M2M CT Status")  # already carries dcim.device
+        status.content_types.add(ContentType.objects.get_for_model(Rack))
+
+        row = self.export_rows(self.run_export(query_string="name=M2M+CT+Status"))[0]
+        self.assertEqual(sorted(row["content_types"].split(",")), ["dcim.device", "dcim.rack"])
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(
+                    self.run_export(query_string="name=M2M+CT+Status", export_format=export_format)
+                )
+                self.assertEqual(sorted(doc["records"][0]["content_types"]), ["dcim.device", "dcim.rack"])
+
+    def test_adapter_export__m2m_composite_members(self):
+        """A composite-natural-key M2M renders each member by that key: a JSON cell in CSV, a nested dict
+        in a document (where the member's own multi-hop lookups nest, just as the record's relations do).
+        """
+        software_image_files = self.create_device_type_with_software_image_files()
+        expected_flat = [
+            {
+                "image_file_name": image_file.image_file_name,
+                "software_version__platform__name": image_file.software_version.platform.name,
+                "software_version__version": image_file.software_version.version,
+            }
+            for image_file in software_image_files
+        ]
+        expected_nested = [
+            {
+                "image_file_name": image_file.image_file_name,
+                "software_version": {
+                    "platform": {"name": image_file.software_version.platform.name},
+                    "version": image_file.software_version.version,
+                },
+            }
+            for image_file in software_image_files
+        ]
+
+        row = self.export_rows(self.run_export(model=DeviceType, query_string="model=M2M+Composite+DT"))[0]
+        self.assertEqual(json.loads(row["software_image_files"]), expected_flat)
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(
+                    self.run_export(
+                        model=DeviceType, query_string="model=M2M+Composite+DT", export_format=export_format
+                    )
+                )
+                self.assertEqual(doc["records"][0]["software_image_files"], expected_nested)
 
     def test_adapter_export__m2m_empty(self):
         """An M2M with no members is an empty cell in CSV and an empty list in either document format."""

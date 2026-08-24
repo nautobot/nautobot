@@ -1,0 +1,1 @@
+Changed JSON/YAML export of many-to-many fields to nest each member's related-object keys (`software_version: {version: ...}`) instead of flattening them (`software_version__version: ...`), matching how other related objects are exported.

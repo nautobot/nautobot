@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 from unittest.mock import patch
 import uuid
 
@@ -8,12 +9,14 @@ from django.test import override_settings, RequestFactory, SimpleTestCase, tag, 
 from django.urls import reverse
 
 from nautobot.core.api import serializers as core_api_serializers
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from nautobot.dcim.api.serializers import DeviceSerializer
 from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.dcim.models.locations import Location
+from nautobot.dcim.models.racks import Rack
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag
@@ -350,7 +353,12 @@ class CSVParsingRelatedTestCase(TestCase):
 
     @override_settings(ALLOWED_HOSTS=["*"])
     def test_m2m_field_import(self):
-        """Test CSV import of M2M field."""
+        """Test CSV import of M2M field.
+
+        Only the last subtest uses a CSV that an export could have produced; the multi-column
+        `<field>__<lookup>` subtests cover the hand-authored dialect added in #7362, which Nautobot itself
+        never writes (`_get_related_fields_natural_key_field_lookups` skips many-to-many fields).
+        """
 
         platform = Platform.objects.first()
         software_version_status = Status.objects.get_for_model(SoftwareVersion).first()
@@ -407,6 +415,7 @@ TestDevice5,{self.device.device_type.pk},{self.device.location.pk},{self.device.
             self.assertEqual(device5.software_image_files.count(), 2)
 
         with self.subTest("Import M2M field using multiple identifying fields"):
+            # Hand-authored spelling only (#7362); export puts the members in a single column
             import_data = f"""name,device_type,location,role,status,software_image_files__software_version,software_image_files__image_file_name
 TestDevice6,{self.device.device_type.pk},{self.device.location.pk},{self.device.role.pk},{self.device.status.pk},"{software_version.pk},{software_version.pk}","{software_image_files[0].image_file_name},{software_image_files[1].image_file_name}"
 """
@@ -438,6 +447,44 @@ TestDevice7,{self.device.device_type.pk},{self.device.location.pk},{self.device.
             self.assertEqual(response.status_code, 200)
             self.assertContains(response, "Incorrect number of values provided for the software_image_files field")
             self.assertEqual(Device.objects.count(), 4)
+
+        with self.subTest("Import M2M field using the JSON cell that CSV export produces"):
+            # SoftwareImageFile's natural key is composite, so export writes the members as a JSON list of
+            # flattened natural-key lookups in a single column rather than as comma-separated values.
+            device5.software_image_files.set(software_image_files[:2])
+            exported = DeviceSerializer(
+                instance=device5, context={"request": None, "depth": 0}, exporting=True, force_csv=True
+            ).data
+            exported_row = next(iter(csv.DictReader(io.StringIO(NautobotCSVRenderer().render([exported])))))
+            self.assertEqual(
+                json.loads(exported_row["software_image_files"]),
+                [
+                    {
+                        "image_file_name": image_file.image_file_name,
+                        "software_version__platform__name": platform.name,
+                        "software_version__version": software_version.version,
+                    }
+                    for image_file in software_image_files[:2]
+                ],
+            )
+
+            # Re-import that exact row as a new device
+            del exported_row["id"]
+            exported_row["name"] = "TestDevice8"
+            with io.StringIO() as import_csv:
+                writer = csv.DictWriter(import_csv, fieldnames=list(exported_row))
+                writer.writeheader()
+                writer.writerow(exported_row)
+                data = {"csv_data": import_csv.getvalue()}
+            response = self.client.post(reverse("dcim:device_import"), data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertNotIn("FORM-ERROR", response.content.decode(response.charset))
+            device8 = Device.objects.get(name="TestDevice8")
+            self.assertEqual(
+                sorted(device8.software_image_files.values_list("image_file_name", flat=True)),
+                sorted(image_file.image_file_name for image_file in software_image_files[:2]),
+            )
 
 
 @tag("unit")
@@ -478,7 +525,10 @@ class NaturalKeyLookupValuesTest(SimpleTestCase):
 
 
 class M2MNaturalKeyValuesTest(TestCase):
-    """`_get_m2m_natural_key_values` renders an M2M field's members by natural key, for CSV export."""
+    """`_get_m2m_natural_key_values` renders an M2M field's members by natural key, for export.
+
+    It always yields a list; fitting that into a single CSV cell is `NautobotCSVRenderer`'s job.
+    """
 
     def _values(self, instance, field_name, for_csv=True):
         # `exporting` is what makes the non-default M2M fields readable here.
@@ -487,23 +537,37 @@ class M2MNaturalKeyValuesTest(TestCase):
         )
         return serializer._get_m2m_natural_key_values(instance, serializer.fields[field_name])
 
-    def test_scalar_keyed_members_join_with_commas(self):
-        """RouteTarget's natural key is a single value, so members render as a comma-separated string."""
+    def test_scalar_keyed_members_are_a_list_of_scalars(self):
+        """RouteTarget's natural key is a single value, so each member is just that value, in both formats."""
         vrf = VRF.objects.create(name="M2M NK Test VRF", namespace=Namespace.objects.first())
         for name in ("65000:101", "65000:102"):
             vrf.import_targets.add(RouteTarget.objects.create(name=name))
-        self.assertEqual(sorted(self._values(vrf, "import_targets").split(",")), ["65000:101", "65000:102"])
+        for for_csv in (True, False):
+            with self.subTest(for_csv=for_csv):
+                self.assertEqual(
+                    sorted(self._values(vrf, "import_targets", for_csv=for_csv)), ["65000:101", "65000:102"]
+                )
 
-    def test_scalar_keyed_members_stay_a_list_for_documents(self):
-        """JSON/YAML keep the list, which is lossless for values containing a comma."""
-        vrf = VRF.objects.create(name="M2M NK List VRF", namespace=Namespace.objects.first())
+    def test_scalar_keyed_members_render_as_one_csv_cell(self):
+        """CSV comma-joins the members into a single cell, as it always has."""
+        rendered = NautobotCSVRenderer().render([{"name": "vrf1", "import_targets": ["65000:101", "65000:102"]}])
+        self.assertEqual(rendered.splitlines()[1], 'vrf1,"65000:101,65000:102"')
+
+    def test_scalar_keyed_member_containing_a_comma_is_quoted(self):
+        """A member containing the separator is quoted, so it stays one member rather than becoming two."""
+        vrf = VRF.objects.create(name="M2M NK Comma VRF", namespace=Namespace.objects.first())
         vrf.import_targets.add(RouteTarget.objects.create(name="has,comma"))
-        self.assertEqual(self._values(vrf, "import_targets", for_csv=False), ["has,comma"])
+        self.assertEqual(self._values(vrf, "import_targets"), ["has,comma"])
 
-    def test_composite_keyed_members_are_natural_key_dicts(self):
-        """SoftwareImageFile has a 3-part natural key, so members become the flattened dicts import resolves."""
+        rendered = NautobotCSVRenderer().render([{"name": "vrf1", "import_targets": ["has,comma", "plain"]}])
+        # Inner quoting of the member, then outer quoting of the cell that holds it
+        self.assertEqual(rendered.splitlines()[1], 'vrf1,"""has,comma"",plain"')
+        cell = next(iter(csv.DictReader(io.StringIO(rendered))))["import_targets"]
+        self.assertEqual(NautobotCSVParser.split_list_cell(cell), ["has,comma", "plain"])
+
+    def _device_with_software_image_file(self, name):
         device = Device.objects.create(
-            name="M2M NK Test Device",
+            name=name,
             location=Location.objects.filter(location_type__name="Campus").first(),
             device_type=DeviceType.objects.first(),
             role=Role.objects.get_for_model(Device).first(),
@@ -517,6 +581,11 @@ class M2MNaturalKeyValuesTest(TestCase):
                 status=Status.objects.get_for_model(SoftwareImageFile).first(),
             )
         )
+        return device, software_version
+
+    def test_composite_keyed_members_are_flat_natural_key_dicts_for_csv(self):
+        """SoftwareImageFile has a 3-part natural key, so members become the flattened dicts import resolves."""
+        device, software_version = self._device_with_software_image_file("M2M NK Test Device")
         self.assertEqual(
             self._values(device, "software_image_files"),
             [
@@ -524,6 +593,22 @@ class M2MNaturalKeyValuesTest(TestCase):
                     "image_file_name": "m2m-nk-test.bin",
                     "software_version__platform__name": software_version.platform.name,
                     "software_version__version": software_version.version,
+                }
+            ],
+        )
+
+    def test_composite_keyed_members_are_nested_for_documents(self):
+        """Documents nest each member's multi-hop lookups, as they do the record's own relations."""
+        device, software_version = self._device_with_software_image_file("M2M NK Document Device")
+        self.assertEqual(
+            self._values(device, "software_image_files", for_csv=False),
+            [
+                {
+                    "image_file_name": "m2m-nk-test.bin",
+                    "software_version": {
+                        "platform": {"name": software_version.platform.name},
+                        "version": software_version.version,
+                    },
                 }
             ],
         )
@@ -537,17 +622,17 @@ class M2MNaturalKeyValuesTest(TestCase):
         )
 
     def test_tags_are_the_taggit_special_case(self):
-        """`tags` is a TagsManager rather than a concrete M2M, but still resolves to the comma form."""
+        """`tags` is a TagsManager rather than a concrete M2M, but resolves the same way."""
         vrf = VRF.objects.create(name="M2M NK Tagged VRF", namespace=Namespace.objects.first())
         content_type = ContentType.objects.get_for_model(VRF)
         for name in ("m2m-nk-tag-a", "m2m-nk-tag-b"):
             tag_ = Tag.objects.create(name=name)
             tag_.content_types.add(content_type)
             vrf.tags.add(tag_)
-        self.assertEqual(sorted(self._values(vrf, "tags").split(",")), ["m2m-nk-tag-a", "m2m-nk-tag-b"])
+        self.assertEqual(sorted(self._values(vrf, "tags")), ["m2m-nk-tag-a", "m2m-nk-tag-b"])
 
     def test_composite_members_render_as_a_json_cell(self):
-        """The dict form reaches CSV as a JSON-encoded cell, which the import parser can read back."""
+        """The dict form reaches CSV as a JSON-encoded cell, unambiguous however the members are punctuated."""
         rendered = NautobotCSVRenderer().render(
             [
                 {
@@ -559,4 +644,50 @@ class M2MNaturalKeyValuesTest(TestCase):
         self.assertEqual(
             rendered.splitlines()[1],
             'dev1,"[{""image_file_name"": ""a.bin"", ""software_version__version"": ""1.0""}]"',
+        )
+
+
+class M2MContentTypeValuesTest(TestCase):
+    """An M2M to ContentType exports as the scalar `<app_label>.<model>` key.
+
+    ContentType is a plain Django model with no Nautobot natural-key API, so these fields are declared as
+    `ContentTypeField` and `to_representation` deliberately leaves their representation alone rather than
+    routing them through the natural-key M2M path.
+    """
+
+    def setUp(self):
+        self.status = Status.objects.create(name="M2M CT Test Status", color="112233")
+        self.status.content_types.set(
+            [ContentType.objects.get_for_model(Device), ContentType.objects.get_for_model(Rack)]
+        )
+
+    def _representation(self, for_csv=True):
+        serializer = get_serializer_for_model(Status)(
+            instance=self.status, context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv
+        )
+        return serializer.data["content_types"]
+
+    def test_members_are_app_label_dot_model(self):
+        """The same scalar key in both formats -- not a natural-key dict, and not the integer pk."""
+        for for_csv in (True, False):
+            with self.subTest(for_csv=for_csv):
+                self.assertEqual(sorted(self._representation(for_csv=for_csv)), ["dcim.device", "dcim.rack"])
+
+    def test_members_render_as_one_csv_cell(self):
+        rendered = NautobotCSVRenderer().render([{"name": "s1", "content_types": ["dcim.device", "dcim.rack"]}])
+        self.assertEqual(rendered.splitlines()[1], 's1,"dcim.device,dcim.rack"')
+
+    def test_no_members_is_an_empty_cell(self):
+        self.status.content_types.clear()
+        self.assertEqual(self._representation(), [])
+        self.assertEqual(NautobotCSVRenderer().render([{"name": "s1", "content_types": []}]).splitlines()[1], "s1,")
+
+    def test_natural_key_m2m_path_would_lose_the_content_type(self):
+        """Why `to_representation` excludes `ContentTypeField`: routing it through the natural-key M2M path
+        falls back to the pk, and a ContentType pk is an install-specific integer that no import can resolve.
+        """
+        serializer = get_serializer_for_model(Status)(context={"request": None, "depth": 0}, exporting=True)
+        self.assertEqual(
+            sorted(serializer._get_m2m_natural_key_values(self.status, serializer.fields["content_types"])),
+            sorted(str(content_type.pk) for content_type in self.status.content_types.all()),
         )

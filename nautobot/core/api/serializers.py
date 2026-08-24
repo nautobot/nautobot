@@ -23,6 +23,7 @@ from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core import constants
 from nautobot.core.api.fields import LaxURLField, NautobotHyperlinkedRelatedField, ObjectTypeField
+from nautobot.core.api.import_export import nest_flat_dict
 from nautobot.core.api.utils import (
     dict_to_filter_params,
     get_brief_representation,
@@ -363,14 +364,12 @@ class NaturalKeyRepresentationMixin:
 
     def _get_m2m_natural_key_values(self, instance, field):
         """
-        Represent a many-to-many field's members by their natural keys, for CSV export.
+        Represent a many-to-many field's members by their natural keys, for export.
 
-        Members identified by a single scalar (e.g. tags by name) render as a comma-separated string for
-        CSV, matching historical tag behavior; JSON/YAML keep them as a list, which is both lossless for
-        values containing commas and what the document format wants anyway. Members with composite natural
-        keys render as a list of natural-key dicts, which the CSV renderer emits as a JSON-encoded cell;
-        the dicts use the same flattened lookups (e.g. `{"manufacturer__name": ..., "model": ...}`) that
-        the import path already resolves.
+        Always a list; squeezing it into one CSV cell is the renderer's job. A member with a single-valued
+        natural key (e.g. a tag's name) is that scalar, otherwise it is a natural-key dict. Documents nest
+        that dict's lookups (`{"manufacturer": {"name": ...}}`) as `build_document_records` does for the
+        record's own relations; CSV keeps them flat (`{"manufacturer__name": ...}`), as its columns are.
         """
         members = getattr(instance, field.source or field.field_name).all()
         member_keys = []
@@ -382,9 +381,10 @@ class NaturalKeyRepresentationMixin:
                 # No well-defined natural key for this model; fall back to the primary key
                 member_keys.append({"id": str(member.pk)})
         if member_keys and all(len(member_key) == 1 for member_key in member_keys):
-            scalars = [str(next(iter(member_key.values()))) for member_key in member_keys]
-            return ",".join(scalars) if self._is_csv_request() else scalars
-        return member_keys
+            return [str(next(iter(member_key.values()))) for member_key in member_keys]
+        if self._is_csv_request():
+            return member_keys
+        return [nest_flat_dict(member_key) for member_key in member_keys]
 
 
 class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, serializers.HyperlinkedModelSerializer):
