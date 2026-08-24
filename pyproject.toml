@@ -29,7 +29,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=50.0.0,<51)",
     # Fundamental web framework for Nautobot
-    "django (>=6.1,<6.2)",
+    "django (>=5.2.17,<5.3)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -49,7 +49,7 @@ dependencies = [
     "django-filter (>=26.1,<26.2)",
     # Health check endpoint
     # 3.21.0 and later (including 4.x) have breaking changes that we'll need to account for when upgrading.
-    "django-health-check (>=4.5.1,<4.6)",
+    "django-health-check (>=3.20.8,<3.21)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
@@ -144,7 +144,7 @@ all = [
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.8,<2.3)",
     "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.9.1,<4.10)",
+    "social-auth-core[saml] (>=5.1.0,<5.2)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
