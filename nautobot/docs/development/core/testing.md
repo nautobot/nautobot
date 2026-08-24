@@ -34,7 +34,7 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
 | Test Type   | Base Class                                                      | Code Location                              | Test Execution |
 | ----------- | --------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- |
 | Unit        | `nautobot.core.testing.TestCase` or subclass (see below)        | `nautobot/APP/tests/test_*.py`             | `invoke tests`                      |
-| Integration | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/integration/test_*.py` | `invoke tests --tag integration`    |
+| Selenium    | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/selenium/test_*.py`    | `invoke tests --tag integration`    |
 | Migration   | `django_test_migrations.contrib.unittest_case.MigratorTestCase` | `nautobot/APP/tests/migration/test_*.py`   | `invoke tests --tag migration_test` |
 
 - New unit tests **must always** inherit from `nautobot.core.testing.TestCase` or one of its subclasses. Do not use `django.test.TestCase` or `unittest.TestCase`.
