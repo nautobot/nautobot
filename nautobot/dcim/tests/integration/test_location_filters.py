@@ -7,7 +7,7 @@ the filter's *output* (row counts against the REST API, cell values).
 
 import pytest
 
-from nautobot.dcim.tests.e2e.pages.locations_page import LocationsPage
+from nautobot.dcim.tests.integration.pages.locations_page import LocationsPage
 
 
 def test_location_filter_drawer_opens(auth_page, base_url):

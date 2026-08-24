@@ -293,10 +293,10 @@ relative_files = true
 
 # pytest runs ONLY the Playwright E2E suites; unit and integration tests run under
 # `nautobot-server test` (unittest) and are never collected by the default pytest
-# invocation (testpaths scopes collection to the e2e trees).
+# invocation (testpaths scopes collection to the Playwright test trees).
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
-testpaths = ["nautobot/*/tests/e2e"]
+testpaths = ["nautobot/*/tests/integration"]
 markers = [
     "behavioral: verifies application output correctness, not just page structure",
 ]
@@ -463,7 +463,7 @@ ignore = [
 # Playwright E2E tests and fixtures run under pytest, where bare `assert` is the
 # assertion idiom (there is no self.assertEqual outside unittest test cases).
 "nautobot/e2e/**" = ["S101"]
-"nautobot/*/tests/e2e/**" = ["S101"]
+"nautobot/*/tests/integration/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
