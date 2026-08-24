@@ -69,7 +69,20 @@
                     <div class="position-relative text-center nb-bg-inherit">
                         <hr class="border-top m-20">
                         <span class="px-16 position-absolute start-50 text-secondary top-0 translate-middle nb-bg-inherit">Or</span>
-                        <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary w-100">Continue with SSO</a>
+                        <form method="post" action="{% url 'social:begin' backends.backends.0 %}">
+                            {% csrf_token %}
+                            {% if 'next' in request.GET %}
+                                <input type="hidden" name="next" value="{{ request.GET.next }}">
+                            {% elif 'next' in request.POST %}
+                                <input type="hidden" name="next" value="{{ request.POST.next }}">
+                            {% endif %}
+                            {% if SAML_IDP %}
+                                <input type="hidden" name="idp" value="{{ SAML_IDP }}">
+                            {% endif %}
+                            <button type="submit" id="nb-sso-login" class="btn btn-primary w-100">
+                                Continue with SSO
+                            </button>
+                        </form>
                     </div>
                 {% endif %}
             </div>
