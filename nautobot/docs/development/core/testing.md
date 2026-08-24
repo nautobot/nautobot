@@ -82,7 +82,7 @@ If the model being tested is a `PrimaryModel`, the `tags` filter will be automat
 ## Integration Tests
 
 !!! info
-    New browser-based test coverage should be written as Playwright end-to-end tests rather than Selenium integration tests. See [End-to-End Testing with Playwright](e2e-testing.md).
+    New browser-based test coverage should be written as Playwright tests (in `nautobot/APP/tests/integration/`) rather than Selenium tests. See [Playwright Testing](playwright-testing.md).
 
 ### Troubleshooting Integration Tests
 

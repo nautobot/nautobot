@@ -1,38 +1,40 @@
-# End-to-End Testing with Playwright
+# Playwright Testing
 
-Playwright end-to-end (E2E) tests drive a real browser against a running Nautobot
-instance. They are the forward standard for browser-based test coverage, replacing the
-Selenium integration tests over time. This page dissects one real test end to end,
-maps the fixture chain that makes it work, and states where each kind of new code
-belongs.
+Playwright tests drive a real browser against a running Nautobot instance. They are
+the forward standard for browser-based test coverage, replacing the Selenium tests
+over time. This page dissects one real test, maps the fixture chain that makes it
+work, and states where each kind of new code belongs.
 
-E2E tests run under pytest, in an isolated job, and never touch the unittest suites:
-`nautobot-server test` and the unit/integration workflow described in
+These tests run under pytest, in an isolated CI job, and never touch the
+unittest-based suites: `nautobot-server test` and the workflow described in
 [Testing](testing.md) are completely unchanged. pytest collects only the
-`nautobot/*/tests/e2e/` directories, and a guard in each E2E package keeps unittest
-discovery out of them.
+`nautobot/*/tests/integration/` directories, and a guard in each of those packages
+keeps unittest discovery out of them.
 
 ## The layers
 
 ```no-highlight
-nautobot/<app>/tests/e2e/test_*.py     what to verify (assertions, markers)
-nautobot/<app>/tests/e2e/conftest.py   test data: named fixtures over the shared factory
-nautobot/<app>/tests/e2e/pages/        how to drive that app's pages (selectors live here)
-nautobot/e2e/                          shared infrastructure: page-object bases, fixtures
+nautobot/<app>/tests/integration/test_*.py     what to verify (assertions, markers)
+nautobot/<app>/tests/integration/conftest.py   test data: fixtures over the shared factory
+nautobot/<app>/tests/integration/pages/        how to drive that app's pages (selectors)
+nautobot/playwright/                           shared infrastructure: page-object bases, fixtures
 ```
 
-`nautobot/e2e/` holds `BasePage` (navigation, waits), `ListPage` (tables, the filter
-drawer), and `fixtures.py` (the login chain, the REST client, and the data factory).
-It deliberately lives outside `nautobot.core` so it imports without Django settings:
-the E2E suite is black-box and needs a URL and a token, not a database connection.
+`nautobot/playwright/` holds `BasePage` (navigation, waits), `ListPage` (tables, the
+filter drawer), and `fixtures.py` (the login chain, the REST client, and the data
+factory). It deliberately lives outside `nautobot.core` so it imports without Django
+settings: the suite is black-box and needs a URL and a token, not a database
+connection. The Selenium tests, which do use the ORM and an in-process live server,
+live in `nautobot/<app>/tests/selenium/` and are unaffected by any of this.
 
 !!! warning "Do not move this package under `nautobot.core`"
     Importing anything under `nautobot.core` executes `nautobot/core/__init__.py`,
     which initializes the Celery app from Django settings, and
     `nautobot/core/testing/__init__.py`, which imports Django models; either one makes
     the import require a full Nautobot configuration.
-    The E2E suite runs in a plain pytest process pointed at a URL. Moving this package would silently make every E2E run require a local
-    `nautobot_config.py`, even when the instance under test is remote.
+    The Playwright suite runs in a plain pytest process pointed at a URL. Moving this
+    package would silently make every run require a local `nautobot_config.py`, even
+    when the instance under test is remote.
 
 ## Why page objects
 
@@ -54,7 +56,7 @@ thing Django exists to prevent.
 
 ## A test, dissected
 
-From `nautobot/dcim/tests/e2e/test_location_filters.py`:
+From `nautobot/dcim/tests/integration/test_location_filters.py`:
 
 ```python
 def test_location_filter_drawer_opens(auth_page, base_url):
@@ -67,10 +69,10 @@ def test_location_filter_drawer_opens(auth_page, base_url):
 ```
 
 - **`auth_page`** and **`base_url`** are pytest fixtures, injected by parameter name
-  from `nautobot/e2e/fixtures.py`. Run `pytest --fixtures nautobot/dcim/tests/e2e` to
-  list every available fixture with its location and docstring (a local discovery
-  convenience that relies on plugin auto-loading; `invoke e2e` disables auto-loading
-  for actual runs).
+  from `nautobot/playwright/fixtures.py`. Run
+  `pytest --fixtures nautobot/dcim/tests/integration` to list every available fixture
+  with its location and docstring (a local discovery convenience that relies on plugin
+  auto-loading; `invoke playwright` disables auto-loading for actual runs).
 - **`LocationsPage`** subclasses `ListPage` and sets `LIST_PATH`; `navigate()`,
   row counts, column reads, and all filter-drawer methods are inherited.
 - There are no selectors here, and there must never be: selectors belong in page
@@ -112,7 +114,7 @@ Owned data makes assertions exact on any instance: a filter test that creates a 
 with two children plus a decoy family can assert inclusion, exclusion, and exact
 counts without knowing anything else about the database. Prefer creating decoy or
 owned records over guarding assertions with if-statements. Use a unique prefix
-(`ZZZ-e2e-<hex>`) for every created name.
+(`ZZZ-test-<hex>`, via the shared `unique_name()` helper) for every created name.
 
 ## Structural and behavioral tests
 
@@ -129,7 +131,7 @@ three things:
 3. Row values: the expected records are present and the decoys are absent.
 
 Mark behavioral tests with `@pytest.mark.behavioral`. App scoping needs no marker:
-the directory is the selector (`invoke e2e --app dcim`). The marker exists for
+the directory is the selector (`invoke playwright --app dcim`). The marker exists for
 selection: `-m behavioral` runs only the output-correctness tests, and
 `-m "not behavioral"` gives a fast structural pass. An unmarked test still runs in
 every normal invocation, and `--strict-markers` makes a misspelled marker a
@@ -139,42 +141,43 @@ collection error rather than a silent no-op.
 
 | You need to... | It goes in... |
 |---|---|
-| Verify a behavior | `nautobot/<app>/tests/e2e/test_<feature>.py` |
-| Create or tear down a record | `nautobot/<app>/tests/e2e/conftest.py`, named `created_<thing>`, over the shared factory |
+| Verify a behavior | `nautobot/<app>/tests/integration/test_<feature>.py` |
+| Create or tear down a record | `nautobot/<app>/tests/integration/conftest.py`, named `created_<thing>`, over the shared factory |
 | Interact with a page element | A page-object method. Never a selector in a test file. |
-| A method useful on every page | `nautobot/e2e/base_page.py` |
-| A method useful on every list view | `nautobot/e2e/list_page.py` |
-| A method specific to one model's page | That app's page object, e.g. `nautobot/dcim/tests/e2e/pages/locations_page.py` |
-| A new shared fixture | `nautobot/e2e/fixtures.py` (keep this surface small) |
+| A method useful on every page | `nautobot/playwright/base_page.py` |
+| A method useful on every list view | `nautobot/playwright/list_page.py` |
+| A method specific to one model's page | That app's page object, e.g. `nautobot/dcim/tests/integration/pages/locations_page.py` |
+| A new shared fixture | `nautobot/playwright/fixtures.py` (keep this surface small) |
 
-When creating a new `nautobot/<app>/tests/e2e/` package, its `__init__.py` MUST
-re-export the discovery guard: `from nautobot.e2e import load_tests` (copy the line
-from an existing app's `__init__.py`). Nothing enforces this yet; without it,
-`nautobot-server test` discovery imports pytest-only modules and fails in
-environments without the e2e dependency group.
+When creating a new `nautobot/<app>/tests/integration/` package, its `__init__.py`
+MUST re-export the discovery guard: `from nautobot.playwright import load_tests` (copy
+the line from an existing app's `__init__.py`). Nothing enforces this yet; without it,
+`nautobot-server test` discovery imports pytest-only modules and fails in environments
+without the `playwright` dependency group.
 
 ## Running the suite
 
 The suite targets any running Nautobot instance, configured by environment variables
-(`NAUTOBOT_E2E_URL`, `NAUTOBOT_E2E_USERNAME`, `NAUTOBOT_E2E_PASSWORD`,
-`NAUTOBOT_E2E_API_TOKEN`). Black-box describes the relationship to the instance under
-test: the tests reach it only over HTTP. The machine running pytest still needs this
-repository installed (`poetry install --with e2e`), because pytest imports the
-`nautobot.e2e` package at collection time. The defaults match a local development instance at
+(`NAUTOBOT_PLAYWRIGHT_URL`, `NAUTOBOT_PLAYWRIGHT_USERNAME`,
+`NAUTOBOT_PLAYWRIGHT_PASSWORD`, `NAUTOBOT_PLAYWRIGHT_API_TOKEN`). Black-box describes
+the relationship to the instance under test: the tests reach it only over HTTP. The
+machine running pytest still needs this repository installed
+(`poetry install --with playwright`), because pytest imports the `nautobot.playwright`
+package at collection time. The defaults match a local development instance at
 `http://localhost:8080` with the `admin`/`admin` superuser and the development API
 token.
 
 ```no-highlight
-poetry install --with e2e
+poetry install --with playwright
 poetry run playwright install chromium
 
-invoke e2e                       # the whole E2E suite
-invoke e2e --app dcim            # one app's suite
-invoke e2e --headed              # watch the browser
-invoke e2e --pattern filter      # subset by test name
+invoke playwright                       # the whole suite
+invoke playwright --app dcim            # one app's suite
+invoke playwright --headed              # watch the browser
+invoke playwright --pattern filter      # subset by test name
 ```
 
-`invoke e2e` runs pytest with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` and enables only the
+`invoke playwright` runs pytest with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` and enables only the
 intended plugins explicitly (`-p playwright -p base_url`). Plugin loading is an
 allowlist: nothing runs in the test process unless it was named. CI runs the same
 command against a hermetic instance seeded with `TEST_FACTORY_SEED`. The records a

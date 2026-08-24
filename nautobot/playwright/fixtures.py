@@ -1,8 +1,8 @@
-"""Shared pytest fixture surface for Playwright E2E tests.
+"""Shared pytest fixture surface for the Playwright test suite.
 
 Registered once, via `pytest_plugins` in the repository-root `conftest.py`. Per-app
-`tests/e2e/conftest.py` files build thin named fixtures on top of
-`create_object`; run `pytest --fixtures nautobot/<app>/tests/e2e` to list every
+`tests/integration/conftest.py` files build thin named fixtures on top of
+`create_object`; run `pytest --fixtures nautobot/<app>/tests/integration` to list every
 available fixture with its location.
 
 The target instance is configured entirely by environment variables, so the same suite
@@ -11,13 +11,13 @@ development-style bootstrap that both local runs and the CI job use: an instance
 `http://localhost:8080` with the `admin`/`admin` superuser and the well-known
 development API token.
 
-- `NAUTOBOT_E2E_URL`
-- `NAUTOBOT_E2E_USERNAME` / `NAUTOBOT_E2E_PASSWORD`
-- `NAUTOBOT_E2E_API_TOKEN`
+- `NAUTOBOT_PLAYWRIGHT_URL`
+- `NAUTOBOT_PLAYWRIGHT_USERNAME` / `NAUTOBOT_PLAYWRIGHT_PASSWORD`
+- `NAUTOBOT_PLAYWRIGHT_API_TOKEN`
 
 Black-box refers to the instance under test, not the test host: collection imports the
 `nautobot` package (this module registers as a pytest plugin), so the host still
-needs the repo installed (`poetry install --with e2e`).
+needs the repo installed (`poetry install --with playwright`).
 """
 
 # pytest injects fixtures by parameter name, so a fixture that consumes another one
@@ -30,16 +30,16 @@ from uuid import uuid4
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
 
-E2E_DEFAULT_URL = "http://localhost:8080"
+PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
 # The defaults below match the documented development-instance bootstrap
 # (createsuperuser admin/admin plus the well-known dev API token); they are
 # never valid against a real deployment.
-E2E_DEFAULT_USERNAME = "admin"
-E2E_DEFAULT_PASSWORD = "admin"  # noqa: S105
-E2E_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
+PLAYWRIGHT_DEFAULT_USERNAME = "admin"
+PLAYWRIGHT_DEFAULT_PASSWORD = "admin"  # noqa: S105
+PLAYWRIGHT_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
 
 
-def unique_name(prefix="ZZZ-e2e"):
+def unique_name(prefix="ZZZ-test"):
     """Return a unique, sortable name for a test-owned record.
 
     The prefix sorts owned records last, so they never perturb first-page row counts
@@ -55,11 +55,11 @@ def base_url(pytestconfig):
 
     Deliberately shadows pytest-base-url's fixture of the same name so pytest-playwright
     picks up our resolution order: `--base-url` (pytest-base-url, bundled with
-    pytest-playwright) wins if given; otherwise `NAUTOBOT_E2E_URL`, defaulting to the
+    pytest-playwright) wins if given; otherwise `NAUTOBOT_PLAYWRIGHT_URL`, defaulting to the
     local development-style instance.
     """
     from_cli = pytestconfig.getoption("base_url", default=None)
-    return (from_cli or os.getenv("NAUTOBOT_E2E_URL") or E2E_DEFAULT_URL).rstrip("/")
+    return (from_cli or os.getenv("NAUTOBOT_PLAYWRIGHT_URL") or PLAYWRIGHT_DEFAULT_URL).rstrip("/")
 
 
 @pytest.fixture(scope="session")
@@ -69,8 +69,8 @@ def auth_state_path(browser, base_url, tmp_path_factory):
     Every browser context created afterwards (see `browser_context_args`) starts
     from this state, so tests never repeat the login flow.
     """
-    username = os.getenv("NAUTOBOT_E2E_USERNAME", E2E_DEFAULT_USERNAME)
-    password = os.getenv("NAUTOBOT_E2E_PASSWORD", E2E_DEFAULT_PASSWORD)
+    username = os.getenv("NAUTOBOT_PLAYWRIGHT_USERNAME", PLAYWRIGHT_DEFAULT_USERNAME)
+    password = os.getenv("NAUTOBOT_PLAYWRIGHT_PASSWORD", PLAYWRIGHT_DEFAULT_PASSWORD)
     state_file = tmp_path_factory.mktemp("auth") / "session.json"
     context = browser.new_context(base_url=base_url)
     page = context.new_page()
@@ -86,8 +86,8 @@ def auth_state_path(browser, base_url, tmp_path_factory):
         page.wait_for_selector("a[href='/logout/']", state="attached", timeout=15_000)
     except PlaywrightTimeoutError:
         pytest.fail(
-            f"E2E login failed as {username!r} against {base_url} (still on {page.url}). "
-            "Check NAUTOBOT_E2E_USERNAME/NAUTOBOT_E2E_PASSWORD and that the instance is up."
+            f"Playwright login failed as {username!r} against {base_url} (still on {page.url}). "
+            "Check NAUTOBOT_PLAYWRIGHT_USERNAME/NAUTOBOT_PLAYWRIGHT_PASSWORD and that the instance is up."
         )
     context.storage_state(path=str(state_file))
     context.close()
@@ -124,7 +124,7 @@ def api(playwright, base_url):
     setup. Keeping data setup on the REST API (rather than the ORM) keeps the suite
     black-box: it needs a URL and a token, not a database connection.
     """
-    token = os.getenv("NAUTOBOT_E2E_API_TOKEN", E2E_DEFAULT_API_TOKEN)
+    token = os.getenv("NAUTOBOT_PLAYWRIGHT_API_TOKEN", PLAYWRIGHT_DEFAULT_API_TOKEN)
     context = playwright.request.new_context(
         base_url=base_url,
         extra_http_headers={"Authorization": f"Token {token}", "Accept": "application/json"},

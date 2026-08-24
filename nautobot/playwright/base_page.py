@@ -1,4 +1,4 @@
-"""Base page object for Playwright E2E tests.
+"""Base page object for the Playwright test suite.
 
 Every page object extends `BasePage`. Selectors live in page objects, never in
 test files, so a markup change is a one-file fix; test bodies read as user intent

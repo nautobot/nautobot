@@ -1,1 +1,1 @@
-"""Page objects for DCIM E2E tests. Selectors live here, never in test files."""
+"""Page objects for the DCIM Playwright tests. Selectors live here, never in test files."""

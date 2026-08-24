@@ -1,6 +1,6 @@
-"""Structural guarantees for the Playwright E2E packaging.
+"""Structural guarantees for the Playwright test packaging.
 
-The E2E suite is black-box: a pytest process pointed at a URL, with no Django
+The Playwright suite is black-box: a pytest process pointed at a URL, with no Django
 settings, ORM, or database involvement. That property is what lets the same suite run
 against any deployed instance but nothing exercises it implicitly,
 because CI environments carry a Nautobot config. This meta-test enforces it.
@@ -11,17 +11,17 @@ import subprocess
 import sys
 
 
-def test_e2e_package_imports_without_django_settings():
+def test_playwright_package_imports_without_django_settings():
     """`nautobot.playwright` must import in a process with no Nautobot configuration.
 
-    Guards against relocating the shared E2E infrastructure under `nautobot.core`
+    Guards against relocating the shared Playwright infrastructure under `nautobot.core`
     (whose package __init__ initializes the Celery app from Django settings) or adding
     imports to it that pull in the Django runtime. Either would make every
-    E2E run require a local `nautobot_config.py`, even when the instance under test
+    Playwright run require a local `nautobot_config.py`, even when the instance under test
     is remote, which breaks the suite's black-box property. Checks `sys.modules`
     membership rather than import success alone, because `nautobot.core` imports
     cleanly without settings because Celery binds them lazily, while still pulling
-    Django into the process. See the "End-to-End Testing" documentation.
+    Django into the process. See the "Playwright Testing" documentation.
     """
     env = {key: value for key, value in os.environ.items() if key not in ("NAUTOBOT_CONFIG", "DJANGO_SETTINGS_MODULE")}
     snippet = (

@@ -260,12 +260,12 @@ tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~3.4.0"
 
-# Playwright E2E testing only; opt in with `poetry install --with e2e`
-[tool.poetry.group.e2e]
+# Playwright testing only; opt in with `poetry install --with playwright`
+[tool.poetry.group.playwright]
 optional = true
 
-[tool.poetry.group.e2e.dependencies]
-# Test runner for the Playwright E2E suite (not used for unit or integration tests)
+[tool.poetry.group.playwright.dependencies]
+# Test runner for the Playwright suite (not used for the unittest-based suites)
 pytest = "~9.1.1"
 # Playwright browser automation and its pytest plugin (fixtures, --headed, --tracing)
 pytest-playwright = "~0.9.0"
@@ -291,7 +291,7 @@ omit = [
 ]
 relative_files = true
 
-# pytest runs ONLY the Playwright E2E suites; unit and integration tests run under
+# pytest runs ONLY the Playwright test suites; the unittest-based suites run under
 # `nautobot-server test` (unittest) and are never collected by the default pytest
 # invocation (testpaths scopes collection to the Playwright test trees).
 [tool.pytest.ini_options]
@@ -460,7 +460,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-# Playwright E2E tests and fixtures run under pytest, where bare `assert` is the
+# Playwright tests and fixtures run under pytest, where bare `assert` is the
 # assertion idiom (there is no self.assertEqual outside unittest test cases).
 "nautobot/playwright/**" = ["S101"]
 "nautobot/*/tests/integration/**" = ["S101"]

@@ -1,4 +1,4 @@
-"""DCIM E2E fixtures: thin named fixtures over the shared `create_object` factory.
+"""DCIM Playwright fixtures: thin named fixtures over the shared `create_object` factory.
 
 The factory (`nautobot.playwright.fixtures`) owns creation and teardown;
 fixtures here decide which objects a DCIM test starts from.
@@ -19,7 +19,7 @@ def created_location_tree(create_object, status_id_for):
     Creates a parent with two children, plus a decoy parent with its own child, so a
     parent-filter test can assert both inclusion (the children) and exclusion (the
     decoy's child) against records this test controls, regardless of what other data
-    the instance holds. All records use a unique `ZZZ-e2e-` prefixed name and are
+    the instance holds. All records use a unique `ZZZ-test-` prefixed name and are
     deleted on teardown.
     """
     unique = unique_name()
