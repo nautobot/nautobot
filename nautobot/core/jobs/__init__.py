@@ -1,6 +1,7 @@
 import codecs
 import contextlib
 from io import BytesIO
+import json
 
 from django.apps import apps as global_apps
 from django.conf import settings
@@ -9,14 +10,17 @@ from django.core.exceptions import (
     PermissionDenied,
 )
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from django.http import QueryDict
 from django.urls import reverse
 from rest_framework import exceptions as drf_exceptions
+import yaml
 
 from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.import_export import build_document_records, build_import_document, build_import_metadata
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
@@ -145,9 +149,16 @@ class ExportObjectList(Job):
         required=False,
     )
     export_format = ChoiceVar(
-        choices=(("csv", "CSV"), ("yaml", "YAML")),
+        choices=(
+            ("csv", "CSV"),
+            ("json", "JSON"),
+            ("yaml", "YAML"),
+            ("devicetype_library", "devicetype-library YAML"),
+        ),
         description="Format to export to if not using an Export Template<br>"
-        "(note, in core only <code>dcim | device type</code> supports YAML export at present)",
+        "(CSV, JSON and YAML are supported for every model; <code>devicetype-library YAML</code> is the "
+        "nautobot/devicetype-library interchange format, supported for <code>dcim | device type</code> "
+        "and <code>dcim | module type</code>)",
         default="csv",
         required=False,
     )
@@ -178,6 +189,135 @@ class ExportObjectList(Job):
                 saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
             return saved_view_filters
         return {}
+
+    @staticmethod
+    def _get_match_fields(model):
+        """
+        The model's natural key lookups, to stamp exports with their own import instructions.
+
+        """
+        try:
+            match_fields = list(model.csv_natural_key_field_lookups())
+        except AttributeError:
+            # Model without an identifiable natural key
+            return None
+        return match_fields
+
+    def _get_serializer_data(self, model, serializer_class, queryset, for_csv=True):
+        """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
+
+        Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
+        JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
+        """
+        # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
+        # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
+        # the same reason CSV_NATURAL_KEY_QUERY_CHUNK exists -- MySQL rejects a statement joining more than
+        # 61 tables (#8454). Dropping the excess only costs a lazy load, since this is purely an optimization.
+        fk_field_names = [field.name for field in model._meta.fields if field.is_relation]
+        if fk_field_names:
+            queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
+
+        # Include M2M fields (represented by member natural keys) and prefetch them so serialization
+        # doesn't query per instance; select_related the members' own relations so composite-keyed
+        # members (whose natural key spans an FK) don't trigger a nested per-member lookup. Each prefetch
+        # is its own statement, so its joins are bounded separately -- but bounded all the same.
+        m2m_prefetches = []
+        for m2m_field in model._meta.many_to_many:
+            member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
+            if member_fks:
+                member_queryset = m2m_field.related_model.objects.select_related(
+                    *member_fks[:CSV_NATURAL_KEY_QUERY_CHUNK]
+                )
+                m2m_prefetches.append(Prefetch(m2m_field.name, queryset=member_queryset))
+            else:
+                m2m_prefetches.append(m2m_field.name)
+        if m2m_prefetches:
+            queryset = queryset.prefetch_related(*m2m_prefetches)
+
+        # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
+        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
+        # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
+        serializer = serializer_class(queryset, many=True, context={"request": None}, exporting=True, force_csv=for_csv)
+        return serializer.data
+
+    @staticmethod
+    def _export_filename(model):
+        """The branded, extension-less base filename for the export."""
+        return f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
+
+    def _render_export_template(self, export_template, content_type, queryset, filename):
+        if export_template.content_type != content_type:
+            self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
+            raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
+        self.logger.info(
+            "Exporting %d objects via ExportTemplate. This may take some time.",
+            queryset.count(),
+            extra={"object": export_template},
+        )
+        try:
+            # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
+            output = export_template.render(queryset)
+        except Exception as err:
+            self.logger.error("Error when rendering ExportTemplate: %s", err)
+            raise
+        if export_template.file_extension:
+            filename += f".{export_template.file_extension}"
+        self.create_file(filename, output)
+
+    def _render_devicetype_library_yaml(self, queryset, filename):
+        # The nautobot/devicetype-library interchange format, via each model's own to_yaml(). Distinct from
+        # the generic YAML document: this one is read back by the DeviceType/ModuleType import views rather
+        # than by the ImportObjects job, so it is offered as its own export_format choice.
+        self.logger.info("Exporting %d objects to devicetype-library YAML. This may take some time.", queryset.count())
+        yaml_data = [obj.to_yaml() for obj in queryset]
+        self.create_file(filename + ".yaml", "---\n".join(yaml_data))
+
+    def _render_serialized(self, export_format, model, content_type, queryset, match_fields, filename):
+        """Serialize the queryset once, then write that normalized record set as CSV or a JSON/YAML document.
+
+        `records` is the single normalized structure: the flat, natural-key-flattened rows the CSV renderer
+        consumes directly and the JSON/YAML document path reshapes into nested records. The queryset stops
+        here — the format renderers only ever see `records`.
+        """
+        serializer_class = get_serializer_for_model(model)
+        self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
+        self.logger.info(
+            "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
+        )
+        is_document = export_format in ("json", "yaml")
+        records = self._get_serializer_data(model, serializer_class, queryset, for_csv=not is_document)
+        if is_document:
+            self._render_document(export_format, content_type, records, match_fields, filename)
+        else:
+            self._render_csv(content_type, records, match_fields, filename)
+
+    def _render_document(self, export_format, content_type, records, match_fields, filename):
+        # Generic JSON/YAML export. The document format itself lives in nautobot.core.api.import_export,
+        # shared with the parsers that read it back, so writer and reader stay in lock-step.
+        document = build_import_document(
+            f"{content_type.app_label}.{content_type.model}",
+            build_document_records(records),
+            match_fields=match_fields,
+        )
+        if export_format == "json":
+            self.create_file(filename + ".json", json.dumps(document, indent=2, default=str))
+        else:
+            # Round-trip through JSON first to reduce DRF's ReturnDict/OrderedDict and other
+            # non-primitive values to plain types that yaml.safe_dump can represent.
+            plain_document = json.loads(json.dumps(document, default=str))
+            self.create_file(filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
+
+    def _render_csv(self, content_type, records, match_fields, filename):
+        # Generic CSV export
+        renderer = NautobotCSVRenderer()
+        renderer_context = {}
+        # Same metadata the JSON/YAML document declares, rendered as the leading directive row.
+        renderer_context["import_directives"] = build_import_metadata(
+            f"{content_type.app_label}.{content_type.model}", match_fields=match_fields
+        )
+        # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
+        csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
+        self.create_file(filename + ".csv", csv_data)
 
     def run(self, *, content_type, query_string="", export_format="csv", export_template=None):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
@@ -217,51 +357,29 @@ class ExportObjectList(Job):
             self.logger.error("Invalid filters were specified: %s", filterset.errors)
             raise RunJobTaskFailed("Invalid query_string value for this content_type")
         queryset = filterset.qs
-        object_count = queryset.count()
 
-        filename = f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
+        filename = self._export_filename(model)
 
+        # ExportTemplate and devicetype-library exports render straight from the queryset and bypass the
+        # serializer, so they need no match key — handle them here and return.
         if export_template is not None:
-            # Export templates
-            if export_template.content_type != content_type:
-                self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
-                raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
-            self.logger.info(
-                "Exporting %d objects via ExportTemplate. This may take some time.",
-                object_count,
-                extra={"object": export_template},
-            )
-            try:
-                # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
-                output = export_template.render(queryset)
-            except Exception as err:
-                self.logger.error("Error when rendering ExportTemplate: %s", err)
-                raise
-            if export_template.file_extension:
-                filename += f".{export_template.file_extension}"
-            self.create_file(filename, output)
-
-        elif export_format == "yaml":
-            # Device-type (etc.) YAML export
+            self._render_export_template(export_template, content_type, queryset, filename)
+            return
+        if export_format == "devicetype_library":
+            # An explicit choice rather than something inferred from the model, so that asking for YAML
+            # always gets the standard document and this format is never substituted for it silently.
             if not hasattr(model, "to_yaml"):
-                self.logger.error("Model %s doesn't support YAML export", content_type.model)
-                raise ValueError("YAML export not supported for this content-type")
-            self.logger.info("Exporting %d objects to YAML. This may take some time.", object_count)
-            yaml_data = [obj.to_yaml() for obj in queryset]
-            self.create_file(filename + ".yaml", "---\n".join(yaml_data))
+                self.logger.error(
+                    "%s does not support the devicetype-library format; use YAML for the standard document",
+                    content_type,
+                )
+                raise RunJobTaskFailed(f"{content_type} does not support the devicetype-library format")
+            self._render_devicetype_library_yaml(queryset, filename)
+            return
 
-        else:
-            # Generic CSV export
-            serializer_class = get_serializer_for_model(model)
-            self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
-            renderer = NautobotCSVRenderer()
-            self.logger.info("Exporting %d objects to CSV. This may take some time.", object_count)
-            # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
-            # object from scratch that passes all implicit and explicit assumptions in Django and DRF.
-            serializer = serializer_class(queryset, many=True, context={"request": None}, force_csv=True)
-            # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
-            csv_data = codecs.BOM_UTF8 + renderer.render(serializer.data).encode("utf-8")
-            self.create_file(filename + ".csv", csv_data)
+        # CSV and JSON/YAML share one normalized serialization, written per-format.
+        match_fields = self._get_match_fields(model)
+        self._render_serialized(export_format, model, content_type, queryset, match_fields, filename)
 
 
 class ImportObjects(Job):
