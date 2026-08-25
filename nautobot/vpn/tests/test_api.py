@@ -329,7 +329,7 @@ class VPNTunnelAPITest(APIViewTestCases.APIViewTestCase):
     def setUpTestData(cls):
         super().setUpTestData()
 
-        endpoints = models.VPNTunnelEndpoint.objects.all()
+        endpoints = list(models.VPNTunnelEndpoint.objects.order_by("pk"))
 
         cls.create_data = [
             {

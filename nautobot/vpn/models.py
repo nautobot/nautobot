@@ -475,7 +475,7 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
         null=True,
         verbose_name="Device",
     )
-    source_interface = models.OneToOneField(
+    source_interface = models.ForeignKey(
         to="dcim.Interface",
         on_delete=models.CASCADE,
         related_name="vpn_tunnel_endpoints_src_int",
@@ -556,11 +556,17 @@ class VPNTunnelEndpoint(PrimaryModel):  # pylint: disable=too-many-ancestors
     def _name(self):
         """Dynamic name field."""
         if self.source_interface:
-            parent_intf = f"{self.source_interface.parent.name} {self.source_interface.name}"
+            name = f"{self.source_interface.parent.name} {self.source_interface.name}"
             if self.source_ipaddress:
-                return f"{parent_intf} ({self.source_ipaddress.address})"
-            return parent_intf
-        return self.source_fqdn
+                name += f" ({self.source_ipaddress.address})"
+        elif self.source_ipaddress:
+            name = str(self.source_ipaddress.address)
+        else:
+            name = self.source_fqdn
+
+        if self.tunnel_interface:
+            name += f" via {self.tunnel_interface.name}"
+        return name
 
     def __str__(self):
         """Stringify instance."""
