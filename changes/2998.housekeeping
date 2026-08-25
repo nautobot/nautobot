@@ -1,0 +1,1 @@
+Removed the custom `verbose_name` from the `ObjectPermission` model so it uses the default "Object permission" naming, consistent with other models.
