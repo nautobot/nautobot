@@ -1,7 +1,7 @@
 import flatpickr from 'flatpickr';
 import { getCookie, removeCookie, setCookie } from './cookie.js';
 
-const FAVORITES_CONTAINER_CLASS = 'nb-favorites-container';
+const FAVORITES_CONTAINER_CLASS = 'nb-sidenav-favorites-container';
 
 const SIDENAV_COLLAPSED_KEY = 'sidenav_collapsed';
 
@@ -124,63 +124,41 @@ export const initializeSidenav = () => {
   }
 
   /*
-   * Persist favorites reorder after drag-and-drop. Captures the original order on dragstart and
-   * compares after dragend to avoid unnecessary requests. Uses setTimeout(0) to defer DOM reading
-   * until after draggable.js has moved elements, since initializeSidenav registers before initializeDraggable.
+   * Dispatch a custom event every time favorites are reordered (through drag and drop). This event is only intended for
+   * HTMX to consume with `hx-post` attribute on `.nb-sidenav-favorites-container` element.
    */
-  let originalFavoritesOrder = null;
-
-  document.addEventListener('dragstart', (event) => {
-    const draggable = event.target.closest('.nb-draggable');
-    const container = draggable?.closest(`.${FAVORITES_CONTAINER_CLASS}`);
-    if (container) {
-      originalFavoritesOrder = [...container.querySelectorAll('.nb-draggable[data-link]')].map((el) => el.dataset.link);
-    }
-  });
-
-  document.addEventListener('dragend', (event) => {
-    const draggable = event.target.closest('.nb-draggable');
-    if (!draggable) {
-      return;
-    }
-    const container = draggable.closest(`.${FAVORITES_CONTAINER_CLASS}`);
-    if (!container) {
+  const mutationObserver = new MutationObserver((mutations) => {
+    const isReorder = mutations.some((mutation) => mutation.addedNodes.length > 0);
+    if (!isReorder) {
       return;
     }
 
-    setTimeout(() => {
-      const orderedLinks = [...container.querySelectorAll('.nb-draggable[data-link]')].map((el) => el.dataset.link);
-      const { reorderUrl } = container.dataset;
-      if (!reorderUrl || orderedLinks.length === 0) {
-        originalFavoritesOrder = null;
-        return;
-      }
-
-      // Skip the request if the order hasn't changed.
-      if (
-        originalFavoritesOrder &&
-        orderedLinks.length === originalFavoritesOrder.length &&
-        orderedLinks.every((link, index) => link === originalFavoritesOrder[index])
-      ) {
-        originalFavoritesOrder = null;
-        return;
-      }
-      originalFavoritesOrder = null;
-
-      const csrfToken = getCookie('csrftoken');
-      fetch(reorderUrl, {
-        body: JSON.stringify({ ordered_links: orderedLinks }),
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-        method: 'POST',
-      })
-        .then((response) => {
-          if (!response.ok) {
-            window.location.reload();
-          }
-        })
-        .catch(() => {
-          window.location.reload();
-        });
-    }, 0);
+    const favoritesContainer = mutations[0].target;
+    favoritesContainer.dispatchEvent(
+      new CustomEvent('nb-sidenav-favorites:reorder', {
+        bubbles: true,
+        cancelable: true,
+        detail: {
+          ordered_links: [
+            ...favoritesContainer.querySelectorAll(':scope > [id^="sidenav-favorite-link"] > .nb-sidenav-link'),
+          ].map((link) => link.getAttribute('href')),
+        },
+      }),
+    );
   });
+
+  /*
+   * Adding or removing a favorite replaces the entire `nb-sidenav-flyout` element, so it is necessary to re-observe the
+   * favorites container every time HTMX swaps content on the page.
+   */
+  const observeFavoritesContainer = () => {
+    const favoritesContainer = document.querySelector(`.${FAVORITES_CONTAINER_CLASS}`);
+    if (favoritesContainer) {
+      mutationObserver.disconnect();
+      mutationObserver.observe(favoritesContainer, { childList: true });
+    }
+  };
+  observeFavoritesContainer();
+  document.addEventListener('htmx:afterSwap', observeFavoritesContainer);
+  document.addEventListener('htmx:oobAfterSwap', observeFavoritesContainer);
 };

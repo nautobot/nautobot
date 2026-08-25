@@ -17,9 +17,9 @@ from nautobot.users.utils import serialize_user_without_config_and_views
 User = get_user_model()
 
 SAMPLE_FAVORITES = [
-    {"link": "/dcim/devices/", "name": "Devices", "tab_name": "DCIM", "group_name": "Devices"},
-    {"link": "/dcim/locations/", "name": "Locations", "tab_name": "DCIM", "group_name": "Organization"},
-    {"link": "/ipam/prefixes/", "name": "Prefixes", "tab_name": "IPAM", "group_name": "Networks"},
+    {"link": "/dcim/devices/", "name": "Devices", "tab_name": "Devices"},
+    {"link": "/dcim/locations/", "name": "Locations", "tab_name": "Organization"},
+    {"link": "/ipam/prefixes/", "name": "Prefixes", "tab_name": "IPAM"},
 ]
 
 
@@ -228,70 +228,48 @@ class NavbarFavoritesReorderViewTest(TestCase):
         self.url = reverse("user:navbar_favorites_reorder")
         self.user.set_config("navbar_favorites", list(SAMPLE_FAVORITES), commit=True)
 
-    def _post_reorder(self, payload):
-        return self.client.post(self.url, data=json.dumps(payload), content_type="application/json")
+    def _post_reorder(self, ordered_links):
+        return self.client.post(self.url, data={"ordered_links": ordered_links}, headers={"HX-Request": "true"})
 
     def test_reorder_favorites(self):
         """Reordering should persist the new order and preserve each favorite's full metadata."""
-        reversed_links = [fav["link"] for fav in reversed(SAMPLE_FAVORITES)]
-        response = self._post_reorder({"ordered_links": reversed_links})
-        self.assertHttpStatus(response, 200)
+        reversed_links = [favorite["link"] for favorite in reversed(SAMPLE_FAVORITES)]
+        response = self._post_reorder(reversed_links)
+        self.assertHttpStatus(response, 204)
 
         self.user.refresh_from_db()
         result = self.user.get_config("navbar_favorites", [])
         self.assertEqual(result, list(reversed(SAMPLE_FAVORITES)))
 
     def test_partial_list_appends_missing(self):
-        """Favorites not included in ordered_links should be appended at the end."""
-        response = self._post_reorder({"ordered_links": ["/ipam/prefixes/"]})
-        self.assertHttpStatus(response, 200)
+        """Favorites not included in ordered_links should be appended at the end, in their existing order."""
+        response = self._post_reorder(["/ipam/prefixes/"])
+        self.assertHttpStatus(response, 204)
 
         self.user.refresh_from_db()
-        result = self.user.get_config("navbar_favorites", [])
-        links = [fav["link"] for fav in result]
-        self.assertEqual(links[0], "/ipam/prefixes/")
-        self.assertIn("/dcim/devices/", links)
-        self.assertIn("/dcim/locations/", links)
-        self.assertEqual(len(result), 3)
+        links = [favorite["link"] for favorite in self.user.get_config("navbar_favorites", [])]
+        self.assertEqual(links, ["/ipam/prefixes/", "/dcim/devices/", "/dcim/locations/"])
 
     def test_duplicate_and_unknown_links(self):
         """Duplicate links should appear once; unknown links should be ignored."""
-        response = self._post_reorder(
-            {
-                "ordered_links": ["/nonexistent/", "/dcim/devices/", "/dcim/devices/", "/ipam/prefixes/"],
-            }
-        )
-        self.assertHttpStatus(response, 200)
+        response = self._post_reorder(["/nonexistent/", "/dcim/devices/", "/dcim/devices/", "/ipam/prefixes/"])
+        self.assertHttpStatus(response, 204)
 
         self.user.refresh_from_db()
-        result = self.user.get_config("navbar_favorites", [])
-        links = [fav["link"] for fav in result]
-        self.assertNotIn("/nonexistent/", links)
-        self.assertEqual(links.count("/dcim/devices/"), 1)
-        self.assertEqual(links[0], "/dcim/devices/")
-        self.assertEqual(len(result), 3)
+        links = [favorite["link"] for favorite in self.user.get_config("navbar_favorites", [])]
+        self.assertEqual(links, ["/dcim/devices/", "/ipam/prefixes/", "/dcim/locations/"])
 
-    def test_invalid_json_returns_400(self):
-        response = self.client.post(self.url, data="not json", content_type="application/json")
-        self.assertHttpStatus(response, 400)
+    def test_non_htmx_request_redirects(self):
+        """Requests that do not come from htmx should be redirected without touching the saved order."""
+        response = self.client.post(self.url, data={"ordered_links": ["/ipam/prefixes/"]})
+        self.assertHttpStatus(response, 302)
 
-    def test_ordered_links_not_a_list_returns_400(self):
-        response = self._post_reorder({"ordered_links": "not a list"})
-        self.assertHttpStatus(response, 400)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.get_config("navbar_favorites", []), list(SAMPLE_FAVORITES))
 
     def test_unauthenticated_returns_redirect(self):
         """Unauthenticated requests should be redirected to the login page."""
         self.client.logout()
-        response = self._post_reorder({"ordered_links": []})
-        self.assertEqual(response.status_code, 302)
+        response = self._post_reorder(["/dcim/devices/"])
+        self.assertHttpStatus(response, 302)
         self.assertIn("login", response.url)
-
-    def test_no_existing_favorites(self):
-        """Reordering with no saved favorites should result in an empty list."""
-        self.user.set_config("navbar_favorites", [], commit=True)
-        response = self._post_reorder({"ordered_links": ["/dcim/devices/"]})
-        self.assertHttpStatus(response, 200)
-
-        self.user.refresh_from_db()
-        result = self.user.get_config("navbar_favorites", [])
-        self.assertEqual(result, [])

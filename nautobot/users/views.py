@@ -1,5 +1,4 @@
 from http import HTTPStatus
-import json
 import logging
 
 from django.conf import settings
@@ -10,7 +9,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.http import HttpResponseForbidden, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -35,6 +34,7 @@ from .forms import (
     LoginForm,
     NavbarFavoritesAddForm,
     NavbarFavoritesRemoveForm,
+    NavbarFavoritesReorderForm,
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
     TokenForm,
@@ -281,33 +281,25 @@ class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
         return redirect(self.get_return_url(request))
 
 
-class UserNavbarFavoritesReorderView(GenericView):
+class UserNavbarFavoritesReorderView(GetReturnURLMixin, GenericView):
     def post(self, request):
-        try:
-            data = json.loads(request.body)
-            ordered_links = data.get("ordered_links", [])
-        except (json.JSONDecodeError, AttributeError):
-            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        if request.headers.get("HX-Request", False):
+            form = NavbarFavoritesReorderForm(request.POST)
+            if form.is_valid():
+                favorites_by_link = {favorite.get("link"): favorite for favorite in request.user.navbar_favorites}
+                # `link` as key, while iterating over a concatenated list of posted and stored links, prioritizes the
+                # posted order, collapses duplicates, and appends any potential omissions to the end.
+                reordered = {
+                    link: favorites_by_link[link]
+                    for link in [*form.cleaned_data["ordered_links"], *favorites_by_link]
+                    if link in favorites_by_link
+                }
 
-        if not isinstance(ordered_links, list):
-            return JsonResponse({"error": "ordered_links must be a list"}, status=400)
+                request.user.set_config("navbar_favorites", list(reordered.values()), commit=True)
 
-        current_favorites = request.user.get_config("navbar_favorites", [])
-        favorites_by_link = {fav.get("link"): fav for fav in current_favorites}
+                return HttpResponse(status=HTTPStatus.NO_CONTENT)
 
-        reordered, seen = [], set()
-        for link in ordered_links:
-            if link in favorites_by_link and link not in seen:
-                reordered.append(favorites_by_link[link])
-                seen.add(link)
-        # Safety net: append any favorites not in the ordered list
-        for fav in current_favorites:
-            if fav.get("link") not in seen:
-                reordered.append(fav)
-                seen.add(fav.get("link"))
-
-        request.user.set_config("navbar_favorites", reordered, commit=True)
-        return JsonResponse({"status": "ok"})
+        return redirect(self.get_return_url(request))
 
 
 class ChangePasswordView(GenericView):

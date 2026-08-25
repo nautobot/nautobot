@@ -2106,6 +2106,20 @@ body {
     }
   }
 
+  .nb-sidenav-favorite-drag-handle {
+    @include fade-out;
+    @include transition($transition-base);
+    align-items: center;
+    cursor: move;
+    display: inline-flex;
+    justify-content: center;
+    margin-inline-end: -#{map.get($spacers, 20)};
+    padding-inline-end: map.get($spacers, 10);
+    padding-inline-start: map.get($spacers, 10);
+    position: relative;
+    z-index: 1;
+  }
+
   .nb-sidenav-link-wrapper {
     display: flex;
     width: $sidenav-link-width;
@@ -2119,28 +2133,8 @@ body {
     &:hover {
       background-color: $navy-2;
 
-      > .nb-sidenav-favorite {
-        @include fade-in;
-      }
-    }
-  }
-
-  .nb-favorites-drag-handle {
-    @include fade-out;
-    @include transition($transition-base);
-    align-items: center;
-    cursor: move;
-    display: flex;
-    flex: none;
-    padding-inline: map.get($spacers, 4);
-  }
-
-  .nb-favorites-container {
-    position: relative; /* Needed for drop indicator */
-
-    > .nb-sidenav-link-wrapper {
-      &:hover > .nb-favorites-drag-handle,
-      &:has(:focus-visible) > .nb-favorites-drag-handle {
+      > .nb-sidenav-favorite,
+      > .nb-sidenav-favorite-drag-handle {
         @include fade-in;
       }
     }
