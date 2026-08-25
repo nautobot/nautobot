@@ -1216,7 +1216,7 @@ class LoginUITestCase(TestCase):
 
     def make_request(self):
         response = self.client.get(reverse("login"))
-        sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
+        sso_login_pattern = re.compile(r'<button type="submit"[^>]*>\s*Continue with SSO\s*</button>')
         return sso_login_pattern.search(extract_page_body(response.content.decode(response.charset)))
 
     def test_sso_login_button_not_visible(self):
