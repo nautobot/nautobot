@@ -392,6 +392,20 @@ class ExportAdapterTests(ImportExportJobTestCase):
         # Dumped with sort_keys=False, so the version leads rather than the keys going alphabetical
         self.assertTrue(self.export_text(job_result).startswith("nautobot_import_version:"))
 
+    def test_adapter_export__includes_non_default_m2m_columns(self):
+        """The Job exports every M2M field, so the file can be re-imported in full.
+
+        A REST `?format=csv` response for the same model has neither column -- see
+        `test_csv.ExportingWidensM2MFieldsTest` for that contrast and the reasoning behind it.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Columns Namespace")
+        VRF.objects.create(name="M2M Columns VRF", namespace=namespace)
+
+        # Line 0 is the import directive, line 1 the header row
+        headers = self.export_lines(self.run_export(model=VRF))[1].split(",")
+        self.assertIn("import_targets", headers)
+        self.assertIn("export_targets", headers)
+
     def test_adapter_export__m2m_scalar_members(self):
         """A scalar-keyed M2M is comma-joined for CSV but stays a list in either document format."""
         namespace, _ = Namespace.objects.get_or_create(name="M2M Export Namespace")

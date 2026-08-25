@@ -287,6 +287,35 @@ class CSVParsingRelatedTestCase(TestCase):
         self.assertEqual(baseline, chunked)
 
     @override_settings(ALLOWED_HOSTS=["*"])
+    def test_csv_over_rest_respects_exclude_m2m(self):
+        """`?format=csv` keeps the default M2M subset, and `exclude_m2m=false` opts the rest back in.
+
+        `exclude_m2m` governs a CSV response exactly as it does a JSON one -- only the export Job widens
+        the default. See `ExportingWidensM2MFieldsTest` for the serializer-level contract behind this.
+        """
+        user = UserFactory.create()
+        user.is_superuser = True
+        user.is_active = True
+        user.save()
+        self.client.force_login(user)
+
+        vrf = VRF.objects.create(name="REST CSV VRF", namespace=Namespace.objects.first())
+        vrf.import_targets.add(RouteTarget.objects.create(name="65000:601"))
+        url = reverse("ipam-api:vrf-list") + "?format=csv&name=REST+CSV+VRF"
+
+        def csv_row(query_string=""):
+            response = self.client.get(url + query_string)
+            self.assertEqual(response.status_code, 200)
+            return next(iter(csv.DictReader(io.StringIO(response.content.decode(response.charset)))))
+
+        row = csv_row()
+        self.assertIn("tags", row)  # one of the DEFAULT_M2M_FIELDS
+        self.assertNotIn("import_targets", row)
+
+        row = csv_row("&exclude_m2m=false")
+        self.assertEqual(row["import_targets"], "65000:601")
+
+    @override_settings(ALLOWED_HOSTS=["*"])
     def test_round_trip_export_import(self):
         """"""
         user = UserFactory.create()
@@ -645,6 +674,50 @@ class M2MNaturalKeyValuesTest(TestCase):
             rendered.splitlines()[1],
             'dev1,"[{""image_file_name"": ""a.bin"", ""software_version__version"": ""1.0""}]"',
         )
+
+
+class ExportingWidensM2MFieldsTest(TestCase):
+    """`exporting=True` exposes every M2M field; a REST request, in any format, keeps the default subset.
+
+    An export file has to carry every M2M field to be re-importable, so `_include_all_m2m_by_default`
+    returns `self._exporting`. A REST response keeps `DEFAULT_M2M_FIELDS` plus `Meta.default_m2m_fields`
+    for performance and backwards compatibility -- which is why the Job's CSV has columns that the same
+    model's `?format=csv` response does not.
+    """
+
+    def setUp(self):
+        self.vrf = VRF.objects.create(name="Exporting M2M VRF", namespace=Namespace.objects.first())
+        self.vrf.import_targets.add(RouteTarget.objects.create(name="65000:501"))
+
+    def _data(self, *, exporting=False, exclude_m2m=None):
+        context = {"request": None, "depth": 0}
+        if exclude_m2m is not None:
+            context["exclude_m2m"] = exclude_m2m
+        serializer = get_serializer_for_model(VRF)(
+            instance=self.vrf, context=context, exporting=exporting, force_csv=True
+        )
+        return serializer.data
+
+    def test_export_includes_a_non_default_m2m(self):
+        """`import_targets` is not one of the DEFAULT_M2M_FIELDS, so only the export mode carries it."""
+        self.assertEqual(self._data(exporting=True)["import_targets"], ["65000:501"])
+
+    def test_rest_omits_a_non_default_m2m(self):
+        """Absent, not merely empty -- there is no column for a reader to round-trip."""
+        self.assertNotIn("import_targets", self._data())
+
+    def test_default_m2m_fields_are_in_both(self):
+        for exporting in (True, False):
+            with self.subTest(exporting=exporting):
+                self.assertIn("tags", self._data(exporting=exporting))
+
+    def test_explicit_exclude_m2m_wins_over_exporting(self):
+        """`exclude_m2m` is an instruction rather than a default, so it overrides the export widening."""
+        self.assertNotIn("import_targets", self._data(exporting=True, exclude_m2m=True))
+
+    def test_explicit_include_m2m_widens_a_rest_request(self):
+        """The same escape hatch in reverse: `exclude_m2m=false` opts a REST response into every M2M."""
+        self.assertIn("import_targets", self._data(exclude_m2m=False))
 
 
 class M2MContentTypeValuesTest(TestCase):
