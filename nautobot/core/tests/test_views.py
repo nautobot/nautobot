@@ -309,7 +309,8 @@ class HomeViewTestCase(TestCase):
 
         with mock.patch.object(get_user_model(), "save", autospec=True) as mock_save:
             self.assertHttpStatus(self.client.get(reverse("home")), 200)
-        self.assertFalse(mock_save.called, "Rendering the homepage saved the user record")
+        # Rendering the homepage must not save the user record.
+        mock_save.assert_not_called()
 
         self.user.refresh_from_db()
         self.assertEqual(
@@ -333,7 +334,8 @@ class HomeViewTestCase(TestCase):
 
         with mock.patch.object(get_user_model(), "save", autospec=True) as mock_save:
             self.assertHttpStatus(self.client.get(reverse("home")), 200)
-        self.assertFalse(mock_save.called, "Rendering the homepage saved the user record")
+        # Rendering the homepage must not save the user record.
+        mock_save.assert_not_called()
 
         self.user.refresh_from_db()
         self.assertEqual(
