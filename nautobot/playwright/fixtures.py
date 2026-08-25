@@ -164,8 +164,11 @@ def create_object(api):
 
         parent = create_object("dcim/locations", name=name, location_type=lt["id"], status=status_id)
 
-    Objects are deleted in reverse creation order at teardown; deletes that return an
-    error (e.g. a child already removed by a parent cascade) are ignored.
+    Objects are deleted in reverse creation order at teardown. A 404 is expected and
+    ignored, since a child may already have been removed by a parent's cascade delete.
+    Any other failing status is collected and reported once every delete has been
+    attempted, so a server error during cleanup is visible without leaking the records
+    that had not been deleted yet.
     """
     created = []
 
@@ -179,8 +182,13 @@ def create_object(api):
 
     yield _create
 
+    failures = []
     for endpoint, pk in reversed(created):
-        api.delete(f"/api/{endpoint}/{pk}/")
+        response = api.delete(f"/api/{endpoint}/{pk}/")
+        if not response.ok and response.status != 404:
+            failures.append(f"DELETE /api/{endpoint}/{pk}/ returned {response.status}: {response.text()[:200]}")
+    if failures:
+        pytest.fail("Test data teardown failed:\n" + "\n".join(failures))
 
 
 @pytest.fixture(scope="session")
