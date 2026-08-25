@@ -2,8 +2,7 @@
 
 from django.test import RequestFactory, SimpleTestCase
 
-from nautobot.core.rate_limiting.rest_calculator import classify_rest_request_features, RestRequestFeatures
-from nautobot.core.rate_limiting.rest_weights import REST_DEFAULT_WEIGHTS
+from nautobot.core.rate_limiting.rest_calculator import classify_rest_read_request_features, RestReadRequestFeatures
 
 
 class RestRequestFeaturesTestCase(SimpleTestCase):
@@ -21,11 +20,11 @@ class ClassifyRestRequestFeaturesTestCase(SimpleTestCase):
         # no dedicated code path, just configuration.
         test_path = "/api/dcim/devices/?limit=1000&depth=3&name__ic=foo"
         wsgi_request = self.factory.get(test_path)
-        features = classify_rest_request_features(wsgi_request, REST_DEFAULT_WEIGHTS)
+        features = classify_rest_read_request_features(wsgi_request)
         # import pdb
         # pdb.set_trace()
         # cost, _ = costing.cost(self.factory.get(path))
 
     def test_features_default_instantion_has_correct_estimation(self):
-        features = RestRequestFeatures("GET")
+        features = RestReadRequestFeatures()
         # TODO: Confirm default features
