@@ -344,22 +344,45 @@ class HomeViewTestCase(TestCase):
 
     def test_homepage_layout_panels_ignores_unknown_stored_panel_ids(self):
         """
-        Validate that panel IDs in the stored config which no longer resolve to a registered panel are ignored.
+        Validate that the homepage still renders when the stored layout contains an ID matching no available panel.
 
-        The homepage no longer prunes stale IDs from the stored config, so they must remain inert when rendering.
+        The layout lives in `User.config_data["homepage_layout"]["panels"]` as a list of `{"id", "collapsed"}`
+        entries, one list per column. An ID stops matching when the panel is removed (e.g. an App is uninstalled)
+        or the user loses the permission that made it visible. `HomeView.get()` skips such entries.
+
+        This asserts that every panel available to the user is still present, and in the same document order as
+        the render with nothing stored -- the column distribution does differ, see the comment below. The case
+        previously had no coverage;stale IDs also persist longer now that the layout is not overwritten on each
+        render.
         """
-        self.add_permissions("dcim.view_device", "dcim.view_location")
+        self.add_permissions("dcim.view_location", "circuits.view_circuit", "ipam.view_prefix", "dcim.view_device")
+        url = reverse("home")
+        panel_ids = r'class="card nb-draggable" id="([^"]+)"'
+
+        # Baseline: capture the panels rendered with nothing stored, to compare against.
+        self.user.config_data = {}
+        self.user.save()
+        response = self.client.get(url)
+        expected = re.findall(panel_ids, extract_page_body(response.content.decode(response.charset)))
+        self.assertNotEqual(
+            expected,
+            [],
+            "No panels rendered for the baseline; the panel markup or the test's permissions may have changed",
+        )
+
+        # A stored layout naming only an unavailable panel must not change which panels render.
         panels = [[{"id": "no-such-panel", "collapsed": False}]]
         panels += [[] for _ in range(HOMEPAGE_PANELS_LAYOUT_COLUMNS - 1)]
         self.user.config_data = {"homepage_layout": {"panels": panels}}
         self.user.save()
 
-        response = self.client.get(reverse("home"))
+        # With no resolvable IDs every panel is appended to the last column, so the column distribution differs
+        # from the default even spread. Document order is unaffected, which is what this compares.
+        response = self.client.get(url)
         self.assertHttpStatus(response, 200)
-        self.assertNotIn(
-            "no-such-panel",
-            extract_page_body(response.content.decode(response.charset)),
-            "A stale panel ID from the stored config was rendered instead of being ignored",
+        rendered = re.findall(panel_ids, extract_page_body(response.content.decode(response.charset)))
+        self.assertEqual(
+            rendered, expected, "An unresolvable stored panel ID changed which panels rendered, or their order"
         )
 
     def test_homepage_layout_panels_render_from_stored_layout(self):
