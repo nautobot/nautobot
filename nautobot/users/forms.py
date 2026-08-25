@@ -86,6 +86,10 @@ class NavbarFavoritesRemoveForm(forms.Form):
 
 
 class NavbarFavoritesReorderForm(forms.Form):
+    """
+    Parse and validate the reordered navbar favorite links, as submitted from the sidenav.
+    """
+
     ordered_links = MultiValueCharField()
 
 
