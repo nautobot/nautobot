@@ -596,7 +596,7 @@ files = [
     {file = "cffi-2.1.1-cp315-cp315t-win_arm64.whl", hash = "sha256:d18e5ac0f2f03f4f518d3e23db0f0cad7faa1da8620e9c09461d443bbf6e6692"},
     {file = "cffi-2.1.1.tar.gz", hash = "sha256:dd31f52ea1086513bb9df30f8fcee9b8918323ae067a3d5b78bc826a000712be"},
 ]
-markers = {main = "platform_python_implementation != \"PyPy\"", testing = "implementation_name != \"pypy\" and os_name == \"nt\""}
+markers = {main = "platform_python_implementation != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\""}
 
 [package.dependencies]
 pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
@@ -1300,14 +1300,14 @@ django = ">=4.2"
 
 [[package]]
 name = "django-filter"
-version = "25.2"
+version = "26.1"
 description = "Django-filter is a reusable Django application for allowing users to filter querysets dynamically."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "django_filter-25.2-py3-none-any.whl", hash = "sha256:9c0f8609057309bba611062fe1b720b4a873652541192d232dd28970383633e3"},
-    {file = "django_filter-25.2.tar.gz", hash = "sha256:760e984a931f4468d096f5541787efb8998c61217b73006163bf2f9523fe8f23"},
+    {file = "django_filter-26.1-py3-none-any.whl", hash = "sha256:7d98ef2899218e6242619b532cb1b95af14e09dfcf74844aecb550ad27b59ff2"},
+    {file = "django_filter-26.1.tar.gz", hash = "sha256:66ea04031b068c77c86e1ac26ced7a3f8f13ce797f5795751707e3deefc58054"},
 ]
 
 [package.dependencies]
@@ -4516,7 +4516,7 @@ files = [
     {file = "pycparser-3.0-py3-none-any.whl", hash = "sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992"},
     {file = "pycparser-3.0.tar.gz", hash = "sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"},
 ]
-markers = {main = "implementation_name != \"PyPy\" and platform_python_implementation != \"PyPy\"", testing = "implementation_name != \"pypy\" and implementation_name != \"PyPy\" and os_name == \"nt\""}
+markers = {main = "platform_python_implementation != \"PyPy\" and implementation_name != \"PyPy\"", testing = "os_name == \"nt\" and implementation_name != \"pypy\" and implementation_name != \"PyPy\""}
 
 [[package]]
 name = "pydantic"
@@ -6136,51 +6136,51 @@ files = [
 
 [[package]]
 name = "social-auth-app-django"
-version = "5.9.0"
+version = "6.0.1"
 description = "Python Social Authentication, Django integration."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "social_auth_app_django-5.9.0-py3-none-any.whl", hash = "sha256:80edf5c207d871f2225a0fc6bb414004c0342c30deb3a217eb38a63b66e749bb"},
-    {file = "social_auth_app_django-5.9.0.tar.gz", hash = "sha256:5b79c53321f9528334d53ddb154452a3b7e598b7ff4c2c1302be9a76b1349e8d"},
+    {file = "social_auth_app_django-6.0.1-py3-none-any.whl", hash = "sha256:652ec21105ef58a34ffd223a02c338bc03e5f56d357ee69c33283afd08442065"},
+    {file = "social_auth_app_django-6.0.1.tar.gz", hash = "sha256:43002de0530e2ad13ef067f54aba7185a05fc8527310006c5328dc0b5e7a4cfd"},
 ]
 
 [package.dependencies]
 asgiref = ">=3.8.1"
 Django = ">=5.2"
-social-auth-core = ">=4.8.3,<5.0.0"
+social-auth-core = ">=5.0.0,<6.0.0"
 
 [package.extras]
-dev = ["coverage (>=3.6)", "django-stubs (==6.0.3)", "django-stubs-ext (==6.0.3)", "mypy (==1.20.2)", "pre-commit", "pyright (==1.1.409)", "tox"]
+dev = ["coverage (>=3.6)", "django-stubs (==6.0.7)", "django-stubs-ext (==6.0.7)", "mypy (==2.3.0)", "pre-commit", "pyright (==1.1.411)", "tox"]
 
 [[package]]
 name = "social-auth-core"
-version = "4.9.1"
+version = "5.1.0"
 description = "Python social authentication made simple."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "social_auth_core-4.9.1-py3-none-any.whl", hash = "sha256:2eca8a6ae678bae7e24e5aa3c72f99c77983012a09b8916ce9791dcfccade725"},
-    {file = "social_auth_core-4.9.1.tar.gz", hash = "sha256:34ee16bddc10b8bf5d6a90c3a033f6e5bb1300197984ad66a4d363783f23bcd8"},
+    {file = "social_auth_core-5.1.0-py3-none-any.whl", hash = "sha256:7a622ceeab857c8310e358b4ad7727e410b735052ab90cc408835c16304b18e8"},
+    {file = "social_auth_core-5.1.0.tar.gz", hash = "sha256:1e8b678473fef38a972d3e4c5f6fa898558abe7ba46bd56b8429cc484483bf7b"},
 ]
 
 [package.dependencies]
 cryptography = ">=46.0.7"
 defusedxml = ">=0.7.1"
 oauthlib = ">=3.3.1"
-PyJWT = {version = ">=2.12.1", extras = ["crypto"]}
+PyJWT = {version = ">=2.13.0", extras = ["crypto"]}
 python3-openid = ">=3.2.0"
 python3-saml = {version = ">=1.16.0", optional = true, markers = "extra == \"saml\""}
-requests = ">=2.33.1"
+requests = ">=2.34.0"
 requests-oauthlib = ">=2.0.0"
 
 [package.extras]
 all = ["social-auth-core[azuread]", "social-auth-core[google-onetap]", "social-auth-core[saml]", "social-auth-core[shopify]"]
 allpy3 = ["social-auth-core[all]"]
-dev = ["coverage (==7.13.5)", "flake8 (==7.3.0)", "google-auth-stubs (==0.3.0)", "mypy (==1.20.2)", "pyright (==1.1.409)", "pytest (==9.0.3)", "pytest-cov (==7.1.0)", "pytest-github-actions-annotate-failures (==0.4.0)", "pytest-profiling (==1.8.1)", "pytest-xdist (==3.8.0)", "responses (==0.26.0)", "ty (==0.0.33)", "types-defusedxml (==0.7.0.20260408)", "types-oauthlib (==3.3.0.20260408)", "types-requests (==2.33.0.20260408)", "types-requests-oauthlib (==2.0.0.20260408)"]
-google-onetap = ["google-auth (>=2.40.0,<2.50)"]
+dev = ["coverage (==7.15.3)", "flake8 (==7.3.0)", "google-auth-stubs (==0.3.0)", "mypy (==2.3.0)", "pyright (==1.1.411)", "pytest (==9.1.1)", "pytest-cov (==7.1.0)", "pytest-github-actions-annotate-failures (==0.4.2)", "pytest-profiling (==1.8.1)", "pytest-xdist (==3.8.0)", "responses (==0.26.2)", "ty (==0.0.69)", "types-defusedxml (==0.7.0.20260504)", "types-oauthlib (==3.3.0.20260724)", "types-requests (==2.33.0.20260712)", "types-requests-oauthlib (==2.0.0.20260610)"]
+google-onetap = ["google-auth (>=2.40.0,<2.57)"]
 saml = ["python3-saml (>=1.16.0)"]
 shopify = ["ShopifyAPI"]
 
@@ -7157,4 +7157,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "2a4f0399903d24597398c7b74263c841522605c20ef9d78bd41035502cf720f5"
+content-hash = "a998bde27df6d07e37c594e700cd88e83d2a83c0b4a0f848827ab5c35f7f8da6"
