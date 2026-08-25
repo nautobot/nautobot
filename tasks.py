@@ -1156,12 +1156,19 @@ def playwright(context, app=None, url=None, username=None, password=None, token=
     (CI adds `--with-deps` to the browser install for the runner's OS packages;
     that is not needed on a developer machine).
     """
-    if shutil.which("pytest") is None:
+    # This task runs pytest on the host rather than in a container, so it needs the
+    # Poetry environment. Use it directly when already active, otherwise go through
+    # `poetry run` so a bare `invoke playwright` works like every other invoke task.
+    if shutil.which("pytest"):
+        runner = "pytest"
+    elif shutil.which("poetry"):
+        runner = "poetry run pytest"
+    else:
         raise Exit(
-            "pytest not found. The Playwright suite needs its optional dependency group and a browser:\n"
+            "Could not find pytest or poetry. The Playwright suite needs its optional dependency group:\n"
             "  poetry install --with playwright && poetry run playwright install chromium"
         )
-    command = "pytest -p playwright -p base_url"
+    command = f"{runner} -p playwright -p base_url"
     if app:
         command += f" nautobot/{app}/tests/integration"
     if headed:
