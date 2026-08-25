@@ -7,6 +7,7 @@ from django.contrib.auth.forms import (
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
+from nautobot.core.formats import TIME_FORMAT_12_HOUR, TIME_FORMAT_24_HOUR
 from nautobot.core.forms import BootstrapMixin, DateTimePicker
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
@@ -73,6 +74,16 @@ class AdvancedProfileSettingsForm(BootstrapMixin, forms.Form):
 
 class PreferenceProfileSettingsForm(BootstrapMixin, forms.Form):
     timezone = TimeZoneFormField(required=False, help_text="Set your preferred timezone.", widget=StaticSelect2)
+    time_format = forms.ChoiceField(
+        required=False,
+        label="Time format",
+        choices=(
+            ("", "Site default"),
+            (TIME_FORMAT_12_HOUR, "12-hour (e.g. 7:30 p.m.)"),
+            (TIME_FORMAT_24_HOUR, "24-hour (e.g. 19:30)"),
+        ),
+        help_text="Choose how times are displayed in the Nautobot UI.",
+    )
 
 
 class NavbarFavoritesAddForm(forms.Form):
