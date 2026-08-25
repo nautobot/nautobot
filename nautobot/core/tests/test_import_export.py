@@ -37,7 +37,7 @@ from nautobot.dcim.models import (
     SoftwareVersion,
 )
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import JobLogEntry, Status, Tag
+from nautobot.extras.models import JobLogEntry, SecretsGroup, Status, Tag
 from nautobot.ipam.models import Namespace, RouteTarget, VRF
 
 
@@ -405,6 +405,36 @@ class ExportAdapterTests(ImportExportJobTestCase):
         headers = self.export_lines(self.run_export(model=VRF))[1].split(",")
         self.assertIn("import_targets", headers)
         self.assertIn("export_targets", headers)
+
+    def test_adapter_export__m2m_through_data_is_reported_as_missing(self):
+        """A relation whose through model records data about each pairing exports only the membership.
+
+        `VRF.devices` is joined by `VRFDeviceAssignment`, which also records `rd` and `name`; the column
+        of member natural keys can't carry those, so the Job says so and names where to find them.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Through Namespace")
+        VRF.objects.create(name="M2M Through VRF", namespace=namespace)
+
+        job_result = self.run_export(model=VRF)
+        self.assertJobLogEntry(
+            job_result,
+            "`devices` is managed through `ipam.vrfdeviceassignment`, which also records `name`, `rd`",
+            level=LogLevelChoices.LOG_INFO,
+        )
+        # Reported at INFO, not WARNING: the export is doing the right thing, just not the whole thing
+        self.assertNoIssues(job_result)
+
+    def test_adapter_export__m2m_through_data_kept_by_the_member_key_is_not_reported(self):
+        """No notice when the column already carries the through data.
+
+        `SecretsGroup.secrets` is sourced from the association rows rather than the secrets, and their
+        natural key spans `access_type`/`secret_type`, so nothing is lost and there is nothing to say.
+        """
+        SecretsGroup.objects.create(name="M2M Through Secrets Group")
+        job_result = self.run_export(model=SecretsGroup)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, message__icontains="secretsgroupassociation").exists()
+        )
 
     def test_adapter_export__m2m_scalar_members(self):
         """A scalar-keyed M2M is comma-joined for CSV but stays a list in either document format."""

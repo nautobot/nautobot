@@ -4,6 +4,7 @@ import unicodedata
 from urllib.parse import quote_plus, unquote_plus
 
 from django.apps import apps
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
 from django.utils.tree import Node
@@ -41,6 +42,43 @@ def is_taggable(obj):
     from nautobot.core.models.managers import TagsManager
 
     return hasattr(obj, "tags") and isinstance(obj.tags, TagsManager)
+
+
+def m2m_through_data_fields(through):
+    """The user-meaningful columns a many-to-many `through` model carries beyond the two foreign keys.
+
+    Empty means the relation is fully described by its members, so it can be exported as a list of member
+    natural keys and set from one. Any name returned is data only the through model can express
+    (`SecretsGroupAssociation.access_type`, `VRFDeviceAssignment.rd`), so preserving it means targeting
+    the through model itself rather than either side of the relation.
+
+    Args:
+        through (type): The through model, e.g. `SomeModel._meta.get_field("things").remote_field.through`.
+
+    Returns:
+        (list): Sorted field names, empty for a relation whose through table is only a join.
+    """
+    joined_fks = {field.name for field in through._meta.get_fields() if field.many_to_one}
+    # A generic FK's own columns identify the member, so they are part of the join rather than data on it.
+    # Derived from the field pair rather than matched by name, so any GFK-based through is handled --
+    # notably `extras.TaggedItem`, whose `object_id` would otherwise make every tagged model look
+    # data-carrying.
+    generic_fk_columns = {
+        column
+        for field in through._meta.private_fields
+        if isinstance(field, GenericForeignKey)
+        for column in (field.ct_field, field.fk_field)
+    }
+    # The primary key needs naming explicitly: Nautobot's `BaseModel.id` is `editable=False`, but Django's
+    # auto-created through models use a plain `AutoField`, which is not.
+    ignored = joined_fks | generic_fk_columns | {through._meta.pk.name}
+    return sorted(
+        field.name
+        for field in through._meta.get_fields()
+        # `concrete` drops the GenericRelations Nautobot mixes in (`associated_object_metadata`);
+        # `editable` drops the `auto_now`/`auto_now_add` bookkeeping (`created`, `last_updated`).
+        if field.concrete and field.editable and field.name not in ignored
+    )
 
 
 def pretty_print_query(query):

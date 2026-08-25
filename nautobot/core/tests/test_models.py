@@ -3,18 +3,25 @@ from unittest import skip
 from unittest.mock import patch
 import uuid
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.test import override_settings
+from django.test import override_settings, SimpleTestCase, tag
 from django.test.utils import isolate_apps
 
-from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
+from nautobot.core.models.utils import (
+    construct_composite_key,
+    construct_natural_slug,
+    deconstruct_composite_key,
+    m2m_through_data_fields,
+)
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import DeviceType, Location, LocationType, Manufacturer
-from nautobot.extras.models import Status, Tag
+from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.extras.models import SecretsGroup, Status, Tag
+from nautobot.ipam.models import VLAN, VRF
 
 User = get_user_model()
 
@@ -56,6 +63,50 @@ class ModelUtilsTestCase(TestCase):
         with patch.object(Manufacturer, "clean", side_effect=ValidationError("clean was called")):
             with self.assertRaisesRegex(ValidationError, "clean was called"):
                 Manufacturer(name="Cisco").validated_save()
+
+
+@tag("unit")
+class M2MThroughDataFieldsTestCase(SimpleTestCase):
+    """`m2m_through_data_fields` separates a join table from one that records data about each pairing."""
+
+    def _fields(self, model, field_name):
+        return m2m_through_data_fields(model._meta.get_field(field_name).remote_field.through)
+
+    def test_auto_created_through_is_a_pure_join(self):
+        """Django's own through table holds nothing but the pk and the two foreign keys."""
+        self.assertEqual(self._fields(VRF, "import_targets"), [])
+
+    def test_custom_through_carrying_only_the_foreign_keys(self):
+        """An explicit through model is not automatically data-carrying; `VLANLocationAssignment` just joins."""
+        self.assertEqual(self._fields(VLAN, "locations"), [])
+
+    def test_custom_through_carrying_data(self):
+        self.assertEqual(self._fields(SecretsGroup, "secrets"), ["access_type", "secret_type"])
+
+    def test_generic_foreign_key_columns_belong_to_the_join(self):
+        """`TaggedItem.object_id` identifies the member, so `tags` is a join rather than data-carrying."""
+        self.assertEqual(self._fields(Device, "tags"), [])
+
+    def test_bookkeeping_columns_are_not_data(self):
+        """No through model reports its pk or its `created`/`last_updated` as data about the pairing."""
+        for through in self._all_through_models():
+            with self.subTest(through=through._meta.label):
+                self.assertNotIn(through._meta.pk.name, m2m_through_data_fields(through))
+                self.assertFalse({"created", "last_updated"} & set(m2m_through_data_fields(through)))
+
+    def test_every_through_model_classifies(self):
+        """A meta-test: whatever is added later must still be classifiable, and only by real columns."""
+        for through in self._all_through_models():
+            with self.subTest(through=through._meta.label):
+                data_fields = m2m_through_data_fields(through)
+                for field_name in data_fields:
+                    field = through._meta.get_field(field_name)
+                    self.assertTrue(field.concrete, f"{field_name} is not a database column")
+                    self.assertTrue(field.editable, f"{field_name} is not user-editable")
+
+    @staticmethod
+    def _all_through_models():
+        return {m2m_field.remote_field.through for model in apps.get_models() for m2m_field in model._meta.many_to_many}
 
 
 class NaturalKeyTestCase(TestCase):
