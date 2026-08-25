@@ -12,9 +12,9 @@ from nautobot.extras.registry import registry
 
 def get_saml_idp():
     """
-    Context function to provide a query string for the first IDP configured for SAML.
+    Context function to provide the key for the first IDP configured for SAML.
 
-    If the configured SAML IDP is `google`, this returns `idp=google`.
+    If the configured SAML IDP is `google`, this returns `google`.
 
     If SAML is not configured, this returns an empty string.
     """
@@ -27,11 +27,9 @@ def get_saml_idp():
     value = ""
     if idp_map is not None:
         try:
-            idp = next(iter(idp_map.keys()))
+            value = next(iter(idp_map.keys()))
         except IndexError:
             pass
-        else:
-            value = f"idp={idp}"
 
     return value
 
