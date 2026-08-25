@@ -61,6 +61,9 @@ class NautobotCSVRenderer(BaseRenderer):
 
         buffer = StringIO()
         writer = csv.writer(buffer)
+        import_directives = (renderer_context or {}).get("import_directives")
+        if import_directives:
+            self.render_directive_row(writer, import_directives)
         writer.writerow(headers)
         for record in data:
             writer.writerow(
@@ -72,9 +75,26 @@ class NautobotCSVRenderer(BaseRenderer):
 
         return buffer.getvalue()
 
+    def render_directive_row(self, writer, directives):
+        """
+        Render `build_import_metadata` as a leading `# nautobot_import_version=1; ...` row.
+
+        The version directive doubles as the marker identifying the row as Nautobot's. The directive occupies
+        a single cell so it survives spreadsheet open-edit-save cycles; see the matching first-cell parsing
+        in NautobotCSVParser.
+        """
+        entries = []
+        for key, value in directives.items():
+            if isinstance(value, (list, tuple)):
+                value = " ".join(str(v) for v in value)
+            entries.append(f"{key}={value}")
+        writer.writerow([f"# {'; '.join(entries)}"])
+
     @classmethod
     def get_headers(cls, data):
-        """Identify the appropriate CSV headers corresponding to the given data."""
+        """
+        Identify the appropriate CSV headers corresponding to the given data.
+        """
         base_headers = list(data[0].keys())
 
         # Remove specific headers that we know are irrelevant

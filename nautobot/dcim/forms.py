@@ -998,11 +998,11 @@ class DeviceTypeForm(NautobotModelForm):
 
 class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
-    Form for JSON/YAML import of DeviceType objects.
+    Form for single-record import, from YAML or JSON, of DeviceType objects.
 
-    TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
-    similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
-    at least nominally compatible with the netbox-community/devicetype-library repo.
+    Specifically, this follows the bespoke format used in the repository
+    https://github.com/nautobot/devicetype-library/.
+    This differs from the "generic" YAML format used for *bulk* export and import through the relevant system Jobs.
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
@@ -1118,11 +1118,11 @@ class ModuleTypeForm(NautobotModelForm):
 
 class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
-    Form for JSON/YAML import of ModuleType objects.
+    Form for single-record import, from YAML or JSON, of ModuleType objects.
 
-    TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
-    similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
-    at least nominally compatible with the netbox-community/devicetype-library repo.
+    Specifically, this follows the bespoke format used in the repository
+    https://github.com/nautobot/devicetype-library/.
+    This differs from the "generic" YAML format used for *bulk* export and import through the relevant system Jobs.
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
@@ -1953,11 +1953,13 @@ class ModuleBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
 
 class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
     """
-    Base form class for JSON/YAML import of device component templates as a part of the DeviceType import form/view.
+    Base class for JSON/YAML import of device-component templates as a part of the DeviceType/ModuleType import.
 
-    TODO: at some point we'll want to switch to general-purpose YAML import support, similar to what we've done for
-    CSV in 2.0, but for now we're keeping this as-is for nominal compatibility with the
-    netbox-community/devicetype-library repository.
+    Specifically, this follows the bespoke format used in the repository
+    https://github.com/nautobot/devicetype-library/.
+    This differs from the "generic" YAML format used for *bulk* export and import through the relevant system Jobs.
+
+    See also DeviceImportForm and ModuleImportForm.
     """
 
     Meta: type  # to be defined by concrete subclasses

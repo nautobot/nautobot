@@ -111,4 +111,4 @@ class TaggedItemTest(APITestCase):
 
         response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("Related object not found", str(response.data["tags"]))
+        self.assertIn("Reference it by field(s) unique in your data", str(response.data["tags"]))
