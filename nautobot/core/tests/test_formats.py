@@ -3,6 +3,12 @@ import datetime
 from django.template.defaultfilters import date, time
 from django.test import override_settings
 
+from nautobot.core.formats import (
+    reset_time_format_preference,
+    set_time_format_preference,
+    TIME_FORMAT_12_HOUR,
+    TIME_FORMAT_24_HOUR,
+)
 from nautobot.core.testing import TestCase
 
 
@@ -29,3 +35,63 @@ class FormatsTestCase(TestCase):
 
         with self.subTest("TIME_FORMAT"), override_settings(TIME_FORMAT="H/i.s"):
             self.assertEqual(time(datetime.datetime.fromisoformat("2026-02-23 16:54:03"), "TIME_FORMAT"), "16/54.03")
+
+    @override_settings(
+        DATETIME_FORMAT="Y/m/d H:i:s",
+        SHORT_DATETIME_FORMAT="Y-m-d H:i",
+        TIME_FORMAT="H:i:s",
+    )
+    def test_12_hour_time_preference(self):
+        value = datetime.datetime.fromisoformat("2026-02-23 16:54:03")
+        token = set_time_format_preference(TIME_FORMAT_12_HOUR)
+        try:
+            self.assertEqual(date(value, "DATETIME_FORMAT"), "2026/02/23 4:54:03 p.m.")
+            self.assertEqual(date(value, "SHORT_DATETIME_FORMAT"), "2026-02-23 4:54 p.m.")
+            self.assertEqual(time(value, "TIME_FORMAT"), "4:54:03 p.m.")
+        finally:
+            reset_time_format_preference(token)
+
+    @override_settings(
+        DATETIME_FORMAT="Y/m/d g:i:s a",
+        SHORT_DATETIME_FORMAT="Y-m-d g:i a",
+        TIME_FORMAT="g:i:s a",
+    )
+    def test_24_hour_time_preference(self):
+        value = datetime.datetime.fromisoformat("2026-02-23 16:54:03")
+        token = set_time_format_preference(TIME_FORMAT_24_HOUR)
+        try:
+            self.assertEqual(date(value, "DATETIME_FORMAT"), "2026/02/23 16:54:03")
+            self.assertEqual(date(value, "SHORT_DATETIME_FORMAT"), "2026-02-23 16:54")
+            self.assertEqual(time(value, "TIME_FORMAT"), "16:54:03")
+        finally:
+            reset_time_format_preference(token)
+
+    @override_settings(TIME_FORMAT="H:i")
+    def test_time_preference_is_request_local_with_cached_format(self):
+        value = datetime.datetime.fromisoformat("2026-02-23 16:54:03")
+        token = set_time_format_preference(TIME_FORMAT_12_HOUR)
+        try:
+            self.assertEqual(time(value, "TIME_FORMAT"), "4:54 p.m.")
+        finally:
+            reset_time_format_preference(token)
+
+        token = set_time_format_preference(TIME_FORMAT_24_HOUR)
+        try:
+            self.assertEqual(time(value, "TIME_FORMAT"), "16:54")
+        finally:
+            reset_time_format_preference(token)
+
+    def test_literal_datetime_format_honors_time_preference(self):
+        value = datetime.datetime.fromisoformat("2026-02-23 16:54:03")
+
+        token = set_time_format_preference(TIME_FORMAT_12_HOUR)
+        try:
+            self.assertEqual(date(value, "Y-m-d H:i:s.u"), "2026-02-23 4:54:03.000000 p.m.")
+        finally:
+            reset_time_format_preference(token)
+
+        token = set_time_format_preference(TIME_FORMAT_24_HOUR)
+        try:
+            self.assertEqual(date(value, "Y-m-d H:i:s.u"), "2026-02-23 16:54:03.000000")
+        finally:
+            reset_time_format_preference(token)

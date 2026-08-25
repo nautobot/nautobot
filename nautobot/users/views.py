@@ -193,6 +193,7 @@ class UserConfigView(GenericView):
     def get(self, request):
         initial = {}
         initial["timezone"] = request.user.get_config("timezone", get_default_timezone_name())
+        initial["time_format"] = request.user.get_config("time_format", "")
         form = PreferenceProfileSettingsForm(initial=initial)
         preferences = request.user.all_config()
 
@@ -217,6 +218,10 @@ class UserConfigView(GenericView):
                 response = redirect("user:preferences")
                 if timezone := form.cleaned_data["timezone"]:
                     request.user.set_config("timezone", str(timezone), commit=True)
+                if time_format := form.cleaned_data["time_format"]:
+                    request.user.set_config("time_format", time_format, commit=True)
+                else:
+                    request.user.clear_config("time_format", commit=True)
                 return response
 
             return render(

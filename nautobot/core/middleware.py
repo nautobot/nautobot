@@ -22,6 +22,10 @@ from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
 )
+from nautobot.core.formats import (
+    reset_time_format_preference,
+    set_time_format_preference,
+)
 from nautobot.core.settings_funcs import (
     ldap_auth_enabled,
     remote_auth_enabled,
@@ -223,12 +227,17 @@ class UserDefinedTimeZoneMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.user.is_authenticated:
-            if tzname := request.user.get_config("timezone"):
-                timezone.activate(ZoneInfo(tzname))
-            else:
-                timezone.deactivate()
-        return self.get_response(request)
+        preference = request.user.get_config("time_format") if request.user.is_authenticated else None
+        token = set_time_format_preference(preference)
+        try:
+            if request.user.is_authenticated:
+                if tzname := request.user.get_config("timezone"):
+                    timezone.activate(ZoneInfo(tzname))
+                else:
+                    timezone.deactivate()
+            return self.get_response(request)
+        finally:
+            reset_time_format_preference(token)
 
 
 class GraphQLOpenTelemetryMiddleware:

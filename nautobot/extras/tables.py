@@ -9,6 +9,7 @@ from django_tables2.utils import Accessor
 from jsonschema import Draft7Validator
 from jsonschema.exceptions import ValidationError as JSONSchemaValidationError
 
+from nautobot.core.formats import PreferredTimeFormat
 from nautobot.core.tables import (
     ApprovalButtonsColumn,
     BaseTable,
@@ -1257,7 +1258,7 @@ class JobHookTable(BaseTable):
 
 
 class JobLogEntryTable(BaseTable):
-    created = tables.DateTimeColumn(verbose_name="Time", format="Y-m-d H:i:s.u")
+    created = tables.DateTimeColumn(verbose_name="Time", format=PreferredTimeFormat("Y-m-d H:i:s.u"))
     grouping = tables.Column()
     log_level = tables.Column(
         verbose_name="Level",

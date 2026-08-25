@@ -10,4 +10,5 @@ The `users.User` model holds individual preferences for each user in the form of
 | `navbar_favorites` | Navbar items marked as "favorites" (starred) |
 | `pagination.per_page` | The number of items to display per page of a paginated table |
 | `tables.TABLE_NAME.columns` | The ordered list of columns to display when viewing the table |
+| `time_format` | Preferred hour-cycle for rendering time information (`12-hour` or `24-hour`) |
 | `timezone` | Time zone to use when rendering datetime information |

@@ -191,3 +191,25 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+    def test_time_format_change_and_reset(self):
+        self.user.is_superuser = True
+        self.user.save()
+        self.client.force_login(self.user)
+
+        url = reverse("user:preferences")
+        form_data = {
+            "timezone": timezone.get_current_timezone_name(),
+            "time_format": "24-hour",
+            "_update_preference_form": [""],
+        }
+        response = self.client.post(path=url, data=post_data(form_data), follow=True)
+        self.assertHttpStatus(response, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.get_config("time_format"), "24-hour")
+
+        form_data["time_format"] = ""
+        response = self.client.post(path=url, data=post_data(form_data), follow=True)
+        self.assertHttpStatus(response, 200)
+        self.user.refresh_from_db()
+        self.assertIsNone(self.user.get_config("time_format"))
