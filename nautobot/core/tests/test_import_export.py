@@ -475,9 +475,9 @@ class ExportAdapterTests(ImportExportJobTestCase):
         namespace, _ = Namespace.objects.get_or_create(name="M2M Tags Namespace")
         vrf = VRF.objects.create(name="M2M Tags VRF", namespace=namespace)
         for name in ("m2m-export-tag-a", "m2m-export-tag-b"):
-            tag = Tag.objects.create(name=name)
-            tag.content_types.add(ContentType.objects.get_for_model(VRF))
-            vrf.tags.add(tag)
+            tag_ = Tag.objects.create(name=name)
+            tag_.content_types.add(ContentType.objects.get_for_model(VRF))
+            vrf.tags.add(tag_)
 
         row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Tags VRF")
         self.assertEqual(sorted(row["tags"].split(",")), ["m2m-export-tag-a", "m2m-export-tag-b"])

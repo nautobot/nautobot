@@ -320,10 +320,10 @@ class RestrictedQuerySetTestCase(TestCase):
     def test_restrict_with_tag_constraint_single_matching_tag(self):
         """A tag-based constraint should work when an object has a single matching tag."""
         location_ct = ContentType.objects.get_for_model(Location)
-        tag = Tag.objects.create(name="PAN_site1")
-        tag.content_types.add(location_ct)
+        tag_ = Tag.objects.create(name="PAN_site1")
+        tag_.content_types.add(location_ct)
 
-        self.locations[0].tags.add(tag)
+        self.locations[0].tags.add(tag_)
 
         self.add_permissions("dcim.view_location", constraints={"tags__name__regex": "^PAN_.+$"})
         qs = Location.objects.restrict(self.user, "view")
