@@ -31,40 +31,49 @@ class VirtualServerFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # 
     )
 
     vip = django_filters.ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=IPAddress.objects.all(),
         label="VIP (ID)",
     )
     source_nat_pool = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Prefix.objects.all(),
         prefers_id=True,
         to_field_name="network",
         label="Source NAT Pool (ID or network string)",
     )
     load_balancer_pool = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.LoadBalancerPool.objects.all(),
         label="Load Balancer Pool (name or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Device.objects.all(),
         label="Device (name or ID)",
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DeviceRedundancyGroup.objects.all(),
         label="Device Redundancy Group (name or ID)",
     )
     cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=CloudService.objects.all(),
         label="Cloud Service (name or ID)",
     )
     virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=VirtualChassis.objects.all(),
         label="Virtual Chassis (name or ID)",
     )
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.HealthCheckMonitor.objects.all(),
         label="Health Check Monitor (name or ID)",
     )
     certificate_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",
@@ -82,6 +91,7 @@ class LoadBalancerPoolFilterSet(NameSearchFilterSet, NautobotFilterSet, TenancyM
     """Filter for LoadBalancerPool."""
 
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.HealthCheckMonitor.objects.all(),
         label="Health Check Monitor (name or ID)",
     )
@@ -106,19 +116,23 @@ class LoadBalancerPoolMemberFilterSet(StatusModelFilterSetMixin, TenancyModelFil
         }
     )
     ip_address = django_filters.ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=IPAddress.objects.all(),
         label="IP Address (ID)",
     )
     load_balancer_pool = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=models.LoadBalancerPool.objects.all(),
         label="Load Balancer Pool (name or ID)",
     )
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.HealthCheckMonitor.objects.all(),
         label="Health Check Monitor (name or ID)",
     )
     certificate_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",
@@ -179,11 +193,13 @@ class CertificateProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet)
     )
     expiration_date = MultiValueDateTimeFilter()
     load_balancer_pool_members = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         to_field_name="ip_address__host",
         queryset=models.LoadBalancerPoolMember.objects.all(),
         label="Load Balancer Pool Members (ID or host string)",
     )
     virtual_servers = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=models.VirtualServer.objects.all(),
         label="Virtual Servers",
     )
@@ -199,11 +215,13 @@ class VirtualServerCertificateProfileAssignmentFilterSet(BaseFilterSet):  # pyli
     """Filter for VirtualServerCertificateProfileAssignment."""
 
     virtual_server = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=models.VirtualServer.objects.all(),
         label="Virtual Server (name or ID)",
     )
     certificate_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",
@@ -220,11 +238,13 @@ class LoadBalancerPoolMemberCertificateProfileAssignmentFilterSet(BaseFilterSet)
     """Filter for LoadBalancerPoolMemberCertificateProfileAssignment."""
 
     load_balancer_pool_member = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=models.LoadBalancerPoolMember.objects.all(),
         label="Load Balancer Pool Member (name or ID)",
     )
     certificate_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",

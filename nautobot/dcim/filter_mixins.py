@@ -49,11 +49,13 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
         label="Has cable",
     )
     cable = django_filters.ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=Cable.objects.all(),
         field_name="cable_termination__cable",
         label="Cable",
     )
     available_for_cable = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Cable.objects.all(),
         to_field_name="id",
         method="_filter_available_for_cable",
@@ -76,6 +78,7 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
 
 class DeviceComponentTemplateModelFilterSetMixin(NameSearchFilterSet, CustomFieldModelFilterSetMixin):
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DeviceType.objects.all(),
         to_field_name="model",
         label="Device type (model or ID)",
@@ -92,6 +95,7 @@ class ModularDeviceComponentTemplateModelFilterSetMixin(DeviceComponentTemplateM
         label="Has device type",
     )
     module_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=ModuleType.objects.all(),
         to_field_name="model",
         label="Module type (model or ID)",
@@ -111,12 +115,14 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
         },
     )
     location = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="device__location",
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location (name or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (name or ID)",
@@ -125,11 +131,13 @@ class DeviceComponentModelFilterSetMixin(CustomFieldModelFilterSetMixin):
 
 class ModularDeviceComponentModelFilterSetMixin(DeviceComponentModelFilterSetMixin, RelationshipModelFilterSetMixin):
     module = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Module.objects.all(),
         to_field_name="module_type__model",
         label="Module (model or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Device (name or ID)",
@@ -168,6 +176,7 @@ class LocatableModelFilterSetMixin(django_filters.FilterSet):
     """
 
     location = TreeNodeMultipleChoiceFilter(
+        distinct=False,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -187,6 +196,7 @@ class PathEndpointModelFilterSetMixin(django_filters.FilterSet):
 
 class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
     mac_address = MultiValueMACAddressFilter(
+        distinct=True,
         field_name="interfaces__mac_address",
         label="MAC address",
     )
@@ -195,6 +205,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has console ports",
     )
     console_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=ConsolePort.objects.all(),
         to_field_name="name",
         label="Console Ports (name or ID)",
@@ -204,6 +215,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has console server ports",
     )
     console_server_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=ConsoleServerPort.objects.all(),
         to_field_name="name",
         label="Console Server Ports (name or ID)",
@@ -213,6 +225,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has power ports",
     )
     power_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=PowerPort.objects.all(),
         to_field_name="name",
         label="Power Ports (name or ID)",
@@ -222,6 +235,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has power outlets",
     )
     power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=PowerOutlet.objects.all(),
         to_field_name="name",
         label="Power Outlets (name or ID)",
@@ -231,6 +245,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has interfaces",
     )
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         label="Interfaces (name or ID)",
@@ -240,6 +255,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has front ports",
     )
     front_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=FrontPort.objects.all(),
         to_field_name="name",
         label="Front Ports (name or ID)",
@@ -249,6 +265,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has rear ports",
     )
     rear_ports = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=RearPort.objects.all(),
         to_field_name="name",
         label="Rear Ports (name or ID)",
@@ -262,6 +279,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         label="Has empty module bays",
     )
     module_bays = django_filters.ModelMultipleChoiceFilter(
+        distinct=True,
         queryset=ModuleBay.objects.all(),
         label="Module Bays",
     )
@@ -286,12 +304,14 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
 
 class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     manufacturer = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
         label="Manufacturer (name or ID)",
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     console_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=ConsolePortTemplate.objects.all(),
@@ -303,6 +323,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     console_server_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=ConsoleServerPortTemplate.objects.all(),
@@ -314,6 +335,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=PowerPortTemplate.objects.all(),
@@ -325,6 +347,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlet_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=PowerOutletTemplate.objects.all(),
@@ -336,6 +359,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     interface_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=InterfaceTemplate.objects.all(),
@@ -347,6 +371,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     front_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=FrontPortTemplate.objects.all(),
@@ -358,6 +383,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
     )
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     rear_port_templates = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         to_field_name="name",
         queryset=RearPortTemplate.objects.all(),
@@ -368,6 +394,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
         label="Has rear port templates",
     )
     module_bay_templates = django_filters.ModelMultipleChoiceFilter(
+        distinct=True,
         queryset=ModuleBayTemplate.objects.all(),
     )
     has_module_bay_templates = RelatedMembershipBooleanFilter(

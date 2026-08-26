@@ -187,10 +187,12 @@ class LocalContextModelFilterSetMixin(django_filters.FilterSet):
         label="Has local config context data",
     )
     local_config_context_schema_id = ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=ConfigContextSchema.objects.all(),
         label="Schema (ID) - Deprecated (use local_context_schema filter)",
     )
     local_config_context_schema = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="name",
         label="Schema (ID or name)",
@@ -292,6 +294,7 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
             # Check for invalid_relationship unit test
             if choice_model:
                 self.filters[field_name] = RelationshipFilter(
+                    distinct=relationship.has_many(peer_side),
                     relationship=relationship,
                     side=side,
                     field_name=field_name,
@@ -326,6 +329,7 @@ class RoleModelFilterSetMixin(django_filters.FilterSet):
 
         if cls._meta.model is not None:
             filters["role"] = RoleFilter(
+                distinct=False,
                 field_name="role",
                 query_params={"content_types": [cls._meta.model._meta.label_lower]},
             )
@@ -356,6 +360,7 @@ class StatusModelFilterSetMixin(django_filters.FilterSet):
 
         if cls._meta.model is not None:
             filters["status"] = StatusFilter(
+                distinct=False,
                 field_name="status",
                 query_params={"content_types": [cls._meta.model._meta.label_lower]},
             )

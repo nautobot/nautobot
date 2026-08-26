@@ -26,7 +26,7 @@ class RegularExpressionValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False, distinct=False
     )
 
     class Meta:
@@ -49,7 +49,7 @@ class MinMaxValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False, distinct=False
     )
 
     class Meta:
@@ -72,7 +72,7 @@ class RequiredValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False, distinct=False
     )
 
     class Meta:
@@ -95,7 +95,7 @@ class UniqueValidationRuleFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False, distinct=False
     )
 
     class Meta:
@@ -123,7 +123,7 @@ class DataComplianceFilterSet(NautobotFilterSet):
         }
     )
     content_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("custom_validators").get_choices, conjoined=False
+        choices=FeatureQuery("custom_validators").get_choices, conjoined=False, distinct=False
     )
 
     class Meta:

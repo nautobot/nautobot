@@ -40,6 +40,7 @@ class ProviderFilterSet(NautobotFilterSet):
     )
     circuits = NaturalKeyOrPKMultipleChoiceFilter(
         to_field_name="cid",
+        distinct=True,
         queryset=Circuit.objects.all(),
         label="Circuit (ID or circuit ID)",
     )
@@ -48,6 +49,7 @@ class ProviderFilterSet(NautobotFilterSet):
         label="Has circuits",
     )
     provider_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
     )
@@ -57,6 +59,7 @@ class ProviderFilterSet(NautobotFilterSet):
     )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
+        distinct=True,
         field_name="circuits__circuit_terminations__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -91,6 +94,7 @@ class ProviderNetworkFilterSet(NautobotFilterSet):
         label="Has circuit terminations",
     )
     provider = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="provider",
         queryset=Provider.objects.all(),
         to_field_name="name",
@@ -119,21 +123,25 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
         },
     )
     provider = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Provider.objects.all(),
         to_field_name="name",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="circuit_terminations__provider_network",
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
         label="Provider Network (name or ID)",
     )
     circuit_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=CircuitType.objects.all(),
         to_field_name="name",
     )
     location = TreeNodeMultipleChoiceFilter(
         prefers_id=True,
+        distinct=True,
         field_name="circuit_terminations__location",
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -145,6 +153,7 @@ class CircuitFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMode
     )
 
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="circuit_terminations__cloud_network",
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
@@ -182,15 +191,18 @@ class CircuitTerminationFilterSet(
         },
     )
     circuit = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="cid",
         queryset=Circuit.objects.all(),
         label="Circuit (ID or circuit ID)",
     )
     provider_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=ProviderNetwork.objects.all(),
         to_field_name="name",
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
     )

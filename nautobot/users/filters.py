@@ -40,11 +40,13 @@ class UserFilterSet(BaseFilterSet):
     # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
     #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
     groups_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="groups",
         queryset=Group.objects.all(),
         label="Group (ID)",
     )
     groups = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",
@@ -54,6 +56,7 @@ class UserFilterSet(BaseFilterSet):
         label="Has Changes",
     )
     object_changes = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="object_changes",
         queryset=ObjectChange.objects.all(),
         label="Object Changes (ID)",
@@ -63,6 +66,7 @@ class UserFilterSet(BaseFilterSet):
         label="Has object permissions",
     )
     object_permissions = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         to_field_name="name",
         queryset=ObjectPermission.objects.all(),
     )
@@ -72,6 +76,7 @@ class UserFilterSet(BaseFilterSet):
     )
     # TODO(timizuo): Since RackReservation has no natural-key field, NaturalKeyOrPKMultipleChoiceFilter can't be used
     rack_reservations_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="rack_reservations",
         queryset=RackReservation.objects.all(),
     )
@@ -99,17 +104,20 @@ class TokenFilterSet(BaseFilterSet):
 
 class ObjectPermissionFilterSet(BaseFilterSet, NameSearchFilterSet):
     users = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=get_user_model().objects.all(),
         to_field_name="username",
     )
     # TODO(timizuo): Collapse groups_id and groups into single NaturalKeyOrPKMultipleChoiceFilter; This cant be done now
     #  because Group uses integer as its pk field and NaturalKeyOrPKMultipleChoiceFilter do not properly handle this yet
     groups_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="groups",
         queryset=Group.objects.all(),
         label="Group (ID)",
     )
     groups = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="groups__name",
         queryset=Group.objects.all(),
         to_field_name="name",

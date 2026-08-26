@@ -202,10 +202,12 @@ class ApprovalWorkflowStageDefinitionFilterSet(BaseFilterSet):
         }
     )
     approval_workflow_definition = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=ApprovalWorkflowDefinition.objects.all(),
         to_field_name="name",
     )
     approval_workflow = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=ApprovalWorkflow.objects.all(),
         to_field_name="pk",
         method="_approval_workflow",
@@ -248,10 +250,12 @@ class ApprovalWorkflowFilterSet(BaseFilterSet):
         }
     )
     approval_workflow_definition = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=ApprovalWorkflowDefinition.objects.all(),
         to_field_name="name",
     )
     object_under_review_content_type = ContentTypeMultipleChoiceFilter(
+        distinct=False,
         choices=FeatureQuery("approval_workflows").get_choices,
         label="Object types allowed to be associated with this Approval Workflow",
     )
@@ -308,6 +312,7 @@ class ApprovalWorkflowStageResponseFilterSet(BaseFilterSet):
         }
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=get_user_model().objects.all(),
         to_field_name="username",
     )
@@ -365,101 +370,118 @@ class ConfigContextFilterSet(BaseFilterSet):
     )
     owner_content_type = ContentTypeFilter()
     schema = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="config_context_schema",
         queryset=ConfigContextSchema.objects.all(),
         to_field_name="name",
         label="Schema (name or PK)",
     )
     location_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="locations",
         queryset=Location.objects.all(),
         label="Location (ID) - Deprecated (use location filter)",
     )
     location = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="locations",
         queryset=Location.objects.all(),
         to_field_name="name",
         label="Location (name or ID)",
     )
     device_type_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="device_types",
         queryset=DeviceType.objects.all(),
         label="Device Type (ID) - Deprecated (use device_type filter)",
     )
     device_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="device_types",
         queryset=DeviceType.objects.all(),
         to_field_name="model",
         label="Device Type (model or ID)",
     )
     device_family = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="device_families",
         queryset=DeviceFamily.objects.all(),
         to_field_name="name",
         label="Device Family (name or ID)",
     )
     platform_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="platforms",
         queryset=Platform.objects.all(),
         label="Platform (ID) - Deprecated (use platform filter)",
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="platforms",
         queryset=Platform.objects.all(),
         to_field_name="name",
         label="Platform (ID or name)",
     )
     cluster_group_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="cluster_groups",
         queryset=ClusterGroup.objects.all(),
         to_field_name="name",
         label="Cluster group (ID or name)",
     )
     cluster_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="clusters",
         queryset=Cluster.objects.all(),
         label="Cluster (ID)",
     )
     tenant_group_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
         label="Tenant group (ID) - Deprecated (use tenant_group filter)",
     )
     tenant_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="tenant_groups",
         queryset=TenantGroup.objects.all(),
         label="Tenant group (ID or name)",
         to_field_name="name",
     )
     tenant_id = ModelMultipleChoiceFilter(
+        distinct=True,
         field_name="tenants",
         queryset=Tenant.objects.all(),
         label="Tenant (ID) - Deprecated (use tenant filter)",
     )
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="tenants",
         queryset=Tenant.objects.all(),
         label="Tenant (ID or name)",
         to_field_name="name",
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="device_redundancy_groups",
         queryset=DeviceRedundancyGroup.objects.all(),
         to_field_name="name",
         label="Device Redundancy Group (name or PK)",
     )
     tag = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         field_name="tags",
         queryset=Tag.objects.all(),
         to_field_name="name",
         label="Tag (ID or name)",
     )
-    role = ConfigContextRoleFilter()
+    role = ConfigContextRoleFilter(distinct=True)
 
     # Conditional enablement of dynamic groups filtering
     def __init__(self, *args, **kwargs):
@@ -467,6 +489,7 @@ class ConfigContextFilterSet(BaseFilterSet):
 
         if settings.CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
             self.filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
+                distinct=True,
                 queryset=DynamicGroup.objects.all(),
                 label="Dynamic Groups (name or ID)",
                 to_field_name="name",
@@ -578,6 +601,7 @@ class CustomFieldFilterSet(BaseFilterSet):
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=FeatureQuery("custom_fields").get_choices,
     )
 
@@ -589,6 +613,7 @@ class CustomFieldFilterSet(BaseFilterSet):
 class CustomFieldChoiceFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"value": "icontains"})
     custom_field = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=CustomField.objects.all(),
         to_field_name="key",
         label="Field (ID or Key)",
@@ -633,6 +658,7 @@ class ApprovalWorkflowDefinitionFilterSet(NautobotFilterSet):
         }
     )
     model_content_type = ContentTypeMultipleChoiceFilter(
+        distinct=False,
         choices=FeatureQuery("approval_workflows").get_choices,
         label="Object types allowed to be associated with this Approval Workflow Definition",
     )
@@ -661,6 +687,7 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
     )
 
     similar_to_location_data = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Location.objects.all(),
         label="Similar to location contact data",
         method="_similar_to_location_data",
@@ -706,6 +733,7 @@ class ContactTeamFilterSet(NameSearchFilterSet, NautobotFilterSet):
 
 class ContactFilterSet(ContactTeamFilterSet):
     teams = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Team.objects.all(),
         to_field_name="name",
         label="Team (name or ID)",
@@ -725,11 +753,13 @@ class ContactAssociationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, 
     )
 
     contact = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Contact.objects.all(),
         to_field_name="name",
         label="Contact (name or ID)",
     )
     team = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Team.objects.all(),
         to_field_name="name",
         label="Team (name or ID)",
@@ -790,19 +820,23 @@ class DynamicGroupFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):
             "content_type__model": "icontains",
         },
     )
-    content_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False)
+    content_type = ContentTypeMultipleChoiceFilter(
+        distinct=False, choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False
+    )
     member_id = MultiValueUUIDFilter(
         field_name="static_group_associations__associated_object_id",
         label="Group member ID",
     )
 
     descendants = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DynamicGroup.objects.all(),
         to_field_name="name",
         method="filter_descendants",
         label="Descendant of Dynamic Group",
     )
     ancestors = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DynamicGroup.objects.all(),
         to_field_name="name",
         method="filter_ancestors",
@@ -850,11 +884,13 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
         },
     )
     group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DynamicGroup.objects.all(),
         label="Group (name or ID)",
         to_field_name="name",
     )
     parent_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DynamicGroup.objects.all(),
         label="Parent Group (name or ID)",
         to_field_name="name",
@@ -868,6 +904,7 @@ class DynamicGroupMembershipFilterSet(NautobotFilterSet):
 class SavedViewFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains", "owner__username": "icontains"})
     owner = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="username",
         queryset=get_user_model().objects.all(),
         label="Owner (ID or name)",
@@ -887,11 +924,13 @@ class SavedViewFilterSet(BaseFilterSet):
 
 class UserSavedViewAssociationFilterSet(NautobotFilterSet):
     saved_view = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=SavedView.objects.all(),
         to_field_name="name",
         label="Saved View (ID or name)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="username",
         queryset=get_user_model().objects.all(),
         label="User (ID or username)",
@@ -913,12 +952,13 @@ class StaticGroupAssociationFilterSet(NautobotFilterSet):
     )
 
     dynamic_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=DynamicGroup.objects.all(),
         to_field_name="name",
         label="Dynamic group (name or ID)",
     )
     associated_object_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False
+        distinct=False, choices=FeatureQuery("dynamic_groups").get_choices, conjoined=False
     )
 
     class Meta:
@@ -967,6 +1007,7 @@ class ExternalIntegrationFilterSet(NautobotFilterSet):
         label="Has secrets group",
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (ID or name)",
     )
@@ -989,12 +1030,14 @@ class FileProxyFilterSet(BaseFilterSet):
         },
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="job_result__job_model",
         to_field_name="name",
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
     job_result_id = ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=JobResult.objects.all(),
         label="Job Result (ID)",
     )
@@ -1018,11 +1061,13 @@ class GitRepositoryFilterSet(NautobotFilterSet):
         },
     )
     secrets_group_id = ModelMultipleChoiceFilter(
+        distinct=False,
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (ID) - Deprecated (use secrets_group filter)",
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=SecretsGroup.objects.all(),
         label="Secrets group (ID or name)",
         to_field_name="name",
@@ -1080,6 +1125,7 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         },
     )
     job_queues = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=JobQueue.objects.all(),
         label="Job Queue (name or ID)",
     )
@@ -1121,9 +1167,11 @@ class JobFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
 class JobHookFilterSet(BaseFilterSet):
     q = SearchFilter(filter_predicates={"name": "icontains"})
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=ChangeLoggedModelsQuery().get_choices,
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=Job.objects.all(),
         label="Job (name or ID)",
@@ -1151,8 +1199,9 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "tenant__name": "icontains",
         },
     )
-    queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    queue_type = django_filters.MultipleChoiceFilter(distinct=False, choices=JobQueueTypeChoices, null_value=None)
     jobs = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
@@ -1183,10 +1232,12 @@ class JobQueueAssignmentFilterSet(BaseFilterSet):
         }
     )
     job = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
     job_queue = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=JobQueue.objects.all(),
         label="Job Queue (name or ID)",
     )
@@ -1206,26 +1257,30 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
     job_model_id = ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
     scheduled_job = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=ScheduledJob.objects.all(),
         label="Scheduled Job (name or ID)",
     )
-    status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    status = django_filters.MultipleChoiceFilter(distinct=False, choices=JobResultStatusChoices, null_value=None)
     has_job_console_entries = RelatedMembershipBooleanFilter(
         field_name="job_console_entries",
         label="Has Job Console Entries",
     )
 
     cancel_type = django_filters.MultipleChoiceFilter(
+        distinct=False,
         choices=JobCancelTypeChoices.CHOICES,
     )
 
@@ -1268,25 +1323,29 @@ class ScheduledJobFilterSet(BaseFilterSet):
         },
     )
     job_model = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=Job.objects.all(),
         label="Job (name or ID)",
     )
     job_model_id = ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
     time_zone = django_filters.MultipleChoiceFilter(
+        distinct=False,
         choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
         label="Time zone",
         null_value="",
     )
     approval_state = django_filters.MultipleChoiceFilter(
+        distinct=False,
         field_name="associated_approval_workflows__current_state",
         label="Approval state",
         choices=ApprovalWorkflowStateChoices,
     )
-    state = django_filters.MultipleChoiceFilter(choices=ScheduledJobStateChoices, null_value=None)
+    state = django_filters.MultipleChoiceFilter(distinct=False, choices=ScheduledJobStateChoices, null_value=None)
 
     class Meta:
         model = ScheduledJob
@@ -1308,6 +1367,7 @@ class JobButtonFilterSet(BaseFilterSet):
     )
     content_types = ContentTypeFilter()
     job = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="name",
         queryset=Job.objects.all(),
         label="Job (name or ID)",
@@ -1341,6 +1401,7 @@ class MetadataTypeFilterSet(NautobotFilterSet):
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=FeatureQuery("metadata").get_choices,
     )
     content_type_id = django_filters.NumberFilter(field_name="content_types", lookup_expr="exact")
@@ -1358,6 +1419,7 @@ class MetadataChoiceFilterSet(BaseFilterSet):
     )
 
     metadata_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=MetadataType.objects.filter(
             data_type__in=[MetadataTypeDataTypeChoices.TYPE_SELECT, MetadataTypeDataTypeChoices.TYPE_MULTISELECT]
         ),
@@ -1379,20 +1441,24 @@ class ObjectMetadataFilterSet(NautobotFilterSet):
         },
     )
     contact = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Contact.objects.all(),
         to_field_name="name",
         label="Contact (name or ID)",
     )
     team = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Team.objects.all(),
         to_field_name="name",
         label="Team (name or ID)",
     )
     metadata_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=MetadataType.objects.all(),
         label="Metadata type (name or ID)",
     )
     assigned_object_type = ContentTypeMultipleChoiceFilter(
+        distinct=False,
         choices=FeatureQuery("metadata").get_choices,
     )
     value = django_filters.Filter(field_name="_value", method="filter_value")
@@ -1424,6 +1490,7 @@ class NoteFilterSet(BaseFilterSet):
     )
     assigned_object_type = ContentTypeFilter()
     user = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         to_field_name="username",
         queryset=get_user_model().objects.all(),
         label="User (username or ID)",
@@ -1450,16 +1517,20 @@ class ObjectChangeFilterSet(BaseFilterSet):
     )
     changed_object_type = ContentTypeFilter()
     user_id = ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=get_user_model().objects.all(),
         label="User (ID) - Deprecated (use user filter)",
     )
     user = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=get_user_model().objects.all(),
         to_field_name="username",
         label="User name (ID or username)",
     )
     change_context = django_filters.MultipleChoiceFilter(
-        label="Change Context", choices=ObjectChangeEventContextChoices
+        distinct=False,
+        label="Change Context",
+        choices=ObjectChangeEventContextChoices,
     )
     change_context_detail = MultiValueCharFilter(label="Change Context Detail")
 
@@ -1493,9 +1564,15 @@ class RelationshipFilterSet(BaseFilterSet):
         }
     )
 
-    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    source_type = ContentTypeMultipleChoiceFilter(
+        distinct=False,
+        choices=FeatureQuery("relationships").get_choices,
+        conjoined=False,
+    )
     destination_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("relationships").get_choices, conjoined=False
+        distinct=False,
+        choices=FeatureQuery("relationships").get_choices,
+        conjoined=False,
     )
 
     class Meta:
@@ -1512,14 +1589,21 @@ class RelationshipAssociationFilterSet(BaseFilterSet):
     )
 
     relationship = ModelMultipleChoiceFilter(
+        distinct=False,
         field_name="relationship__key",
         queryset=Relationship.objects.all(),
         to_field_name="key",
         label="Relationship (key)",
     )
-    source_type = ContentTypeMultipleChoiceFilter(choices=FeatureQuery("relationships").get_choices, conjoined=False)
+    source_type = ContentTypeMultipleChoiceFilter(
+        distinct=False,
+        choices=FeatureQuery("relationships").get_choices,
+        conjoined=False,
+    )
     destination_type = ContentTypeMultipleChoiceFilter(
-        choices=FeatureQuery("relationships").get_choices, conjoined=False
+        distinct=False,
+        choices=FeatureQuery("relationships").get_choices,
+        conjoined=False,
     )
     peer_id = MultiValueUUIDFilter(method="peer_id_filter")
 
@@ -1558,6 +1642,7 @@ class SecretFilterSet(
         },
     )
     secrets_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=SecretsGroup.objects.all(),
         label="Groups (ID or name)",
         to_field_name="name",
@@ -1584,6 +1669,7 @@ class SecretsGroupFilterSet(
         },
     )
     secrets = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Secret.objects.all(),
         label="Secret (ID or name)",
         to_field_name="name",
@@ -1605,21 +1691,24 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
     )
 
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=SecretsGroup.objects.all(),
         label="Secrets Group (ID or name)",
         to_field_name="name",
     )
     secret_id = ModelMultipleChoiceFilter(
+        distinct=False,
         queryset=Secret.objects.all(),
         label="Secret (ID) - Deprecated (use secret filter)",
     )
     secret = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=Secret.objects.all(),
         label="Secret (ID or name)",
         to_field_name="name",
     )
-    access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
-    secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
+    access_type = django_filters.MultipleChoiceFilter(distinct=False, choices=SecretsGroupAccessTypeChoices)
+    secret_type = django_filters.MultipleChoiceFilter(distinct=False, choices=SecretsGroupSecretTypeChoices)
 
     class Meta:
         model = SecretsGroupAssociation
@@ -1641,6 +1730,7 @@ class StatusFilterSet(NautobotFilterSet):
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=FeatureQuery("statuses").get_choices,
     )
 
@@ -1669,6 +1759,7 @@ class TagFilterSet(NautobotFilterSet):
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=TaggableClassesQuery().get_choices,
     )
 
@@ -1703,6 +1794,7 @@ class WebhookFilterSet(BaseFilterSet):
         },
     )
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=FeatureQuery("webhooks").get_choices,
     )
 
@@ -1731,6 +1823,7 @@ class RoleFilterSet(NautobotFilterSet):
     # TODO(timizuo): Add a feature to set conjoined to either True/False from query param in url;
     #  this way only ConfigContext related query would set conjoined to True
     content_types = ContentTypeMultipleChoiceFilter(
+        distinct=True,
         choices=RoleModelsQuery().get_choices,
         # Set the 'conjoined' parameter to False to allow `ConfigContext`
         # to filter the queryset by a combinations of content types,

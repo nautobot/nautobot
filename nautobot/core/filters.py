@@ -84,21 +84,39 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
 #
 
 
-class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
+class MultipleChoiceFilterWithoutDefaultDistinct(django_filters.MultipleChoiceFilter):
+    """
+    django_filters.MultipleChoiceFilter, but targeted to the common case where `distinct=True` is not required.
+
+    All *other* base Filter classes default to `distinct=False`, except for `MultipleChoiceFilter`, which defaults True
+    for historical reasons. Most auto-generated filters in Nautobot do *not* need `distinct=True`, and it can impose
+    a significant performance overhead at scale, so we've added this base class for use by auto-constructed filters.
+
+    Note that Nautobot's own `ModelMultipleChoiceFilter` and its descendants like `NaturalKeyOrPKMultipleChoiceFilter`
+    and `TreeNodeMultipleChoiceFilter` do **not** inherit from this class at this time, as doing so was deemed to be
+    too risky of a defaults change outside of a Nautobot major version.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("distinct", False)  # override MultipleChoiceFilter default behavior
+        super().__init__(*args, **kwargs)
+
+
+class MultiValueCharFilter(django_filters.CharFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     field_class = forms.MultiValueCharField
 
 
-class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
+class MultiValueDateFilter(django_filters.DateFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     # TODO we don't currently have a MultiValueDatePicker widget
     field_class = multivalue_field_factory(django_forms.DateField, widget=forms.DatePicker)
 
 
-class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter):
+class MultiValueDateTimeFilter(django_filters.DateTimeFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     # TODO we don't currently have a MultiValueDateTimePicker widget
     field_class = multivalue_field_factory(django_forms.DateTimeField, widget=forms.DateTimePicker)
 
 
-class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+class MultiValueNumberFilter(django_filters.NumberFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     field_class = multivalue_field_factory(django_forms.IntegerField)
 
     def __init__(self, *args, choices=None, **kwargs):
@@ -110,15 +128,15 @@ class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
 
 
-class MultiValueFloatFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+class MultiValueFloatFilter(django_filters.NumberFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     field_class = multivalue_field_factory(django_forms.FloatField)
 
 
-class MultiValueDecimalFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+class MultiValueDecimalFilter(django_filters.NumberFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     field_class = multivalue_field_factory(django_forms.DecimalField)
 
 
-class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
+class MultiValueTimeFilter(django_filters.TimeFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     # TODO we don't currently have a MultiValueTimePicker widget
     field_class = multivalue_field_factory(django_forms.TimeField, widget=forms.TimePicker)
 
@@ -127,13 +145,13 @@ class MACAddressFilter(django_filters.CharFilter):
     field_class = forms.MACAddressField
 
 
-class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
+class MultiValueMACAddressFilter(MACAddressFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     # Don't use multivalue_field_factory(forms.MACAddressField) because that will reject partial substrings like
     # "aa:" or ":01:02", which would prevent us from using filters like `mac_address__isw` to their potential.
     field_class = forms.MultiValueCharField
 
 
-class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
+class MultiValueUUIDFilter(django_filters.UUIDFilter, MultipleChoiceFilterWithoutDefaultDistinct):
     field_class = multivalue_field_factory(django_forms.UUIDField, widget=widgets.MultiValueCharInput)
 
 
@@ -415,7 +433,14 @@ class MappedPredicatesFilterMixin:
 
 
 class ModelMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
-    """Subclass of the django-filters class by the same name with an improved default `label` formulation."""
+    """Subclass of the django-filters class by the same name with an improved default `label` formulation.
+
+    Caution: unlike most other base Filter classes, `MultipleChoiceFilter` and hence `ModelMultipleChoiceFilter`
+    default to `distinct=True`, which is often unnecessary and can impose a significant performance overhead at scale.
+    If it's not strictly necessary, you should be sure to manually specify `distinct=False`.
+
+    TODO: update this class to default to `distinct=False` for self-consistency, and update all filter declarations.
+    """
 
     def __init__(self, *args, **kwargs):
         if "to_field_name" in kwargs:
@@ -672,6 +697,7 @@ class BaseFilterSet(django_filters.FilterSet):
             models.ForeignKey: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda field: {
+                    "distinct": False,
                     "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if field.null else None,
                     "queryset": remote_queryset(field),
                     "to_field_name": field.remote_field.field_name,
@@ -683,12 +709,14 @@ class BaseFilterSet(django_filters.FilterSet):
             models.ManyToManyField: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda f: {
+                    "distinct": True,
                     "queryset": remote_queryset(f),
                 },
             },
             models.OneToOneField: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda f: {
+                    "distinct": False,
                     "queryset": remote_queryset(f),
                     "to_field_name": f.remote_field.field_name,
                     "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if f.null else None,
@@ -705,18 +733,21 @@ class BaseFilterSet(django_filters.FilterSet):
             ManyToManyRel: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda f: {
+                    "distinct": True,
                     "queryset": remote_queryset(f),
                 },
             },
             ManyToOneRel: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda f: {
+                    "distinct": True,
                     "queryset": remote_queryset(f),
                 },
             },
             OneToOneRel: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda f: {
+                    "distinct": False,
                     "queryset": remote_queryset(f),
                     "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if f.null else None,
                 },
@@ -991,8 +1022,8 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         if lookup_type == "exact" and getattr(field, "choices", None):
             if isinstance(field, timezone_field.TimeZoneField):
-                return django_filters.MultipleChoiceFilter, {"choices": ((str(v), n) for v, n in field.choices)}
-            return django_filters.MultipleChoiceFilter, {"choices": field.choices}
+                return MultipleChoiceFilterWithoutDefaultDistinct, {"choices": ((str(v), n) for v, n in field.choices)}
+            return MultipleChoiceFilterWithoutDefaultDistinct, {"choices": field.choices}
 
         return super().filter_for_lookup(field, lookup_type)
 

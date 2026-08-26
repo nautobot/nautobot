@@ -25,11 +25,13 @@ __all__ = (
 
 class TenantGroupFilterSet(NautobotFilterSet, NameSearchFilterSet):
     parent = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=TenantGroup.objects.all(),
         label="Parent tenant group (name or ID)",
         to_field_name="name",
     )
     children = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=TenantGroup.objects.all(),
         label="Children (name or ID)",
         to_field_name="name",
@@ -39,6 +41,7 @@ class TenantGroupFilterSet(NautobotFilterSet, NameSearchFilterSet):
         label="Has children",
     )
     tenants = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Tenant.objects.all(),
         label="Tenants (name or ID)",
         to_field_name="name",
@@ -62,12 +65,14 @@ class TenantFilterSet(NautobotFilterSet):
         },
     )
     tenant_group = TreeNodeMultipleChoiceFilter(
+        distinct=False,
         queryset=TenantGroup.objects.all(),
         field_name="tenant_group",
         label="Tenant group (name or ID)",
         to_field_name="name",
     )
     circuits = django_filters.ModelMultipleChoiceFilter(
+        distinct=True,
         queryset=Circuit.objects.all(),
         label="Circuits (ID)",
     )
@@ -76,6 +81,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has circuits",
     )
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Cluster.objects.all(),
         to_field_name="name",
         label="Clusters (name or ID)",
@@ -85,6 +91,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has clusters",
     )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Device.objects.all(),
         to_field_name="name",
         label="Devices (name or ID)",
@@ -94,6 +101,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has devices",
     )
     ip_addresses = django_filters.ModelMultipleChoiceFilter(
+        distinct=True,
         queryset=IPAddress.objects.all(),
         label="IP addresses (ID)",
     )
@@ -102,6 +110,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has IP addresses",
     )
     locations = TreeNodeMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -111,12 +120,13 @@ class TenantFilterSet(NautobotFilterSet):
         field_name="locations",
         label="Has locations",
     )
-    prefixes = PrefixFilter()
+    prefixes = PrefixFilter(distinct=True)
     has_prefixes = RelatedMembershipBooleanFilter(
         field_name="prefixes",
         label="Has prefixes",
     )
     rack_reservations = django_filters.ModelMultipleChoiceFilter(
+        distinct=True,
         queryset=RackReservation.objects.all(),
         label="Rack reservations (ID)",
     )
@@ -125,6 +135,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has rack reservations",
     )
     racks = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Rack.objects.all(),
         to_field_name="name",
         label="Racks (name or ID)",
@@ -134,6 +145,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has racks",
     )
     route_targets = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
         label="Route targets (name or ID)",
@@ -143,6 +155,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has route targets",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
         label="Virtual machines (name or ID)",
@@ -152,6 +165,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has virtual machines",
     )
     vlans = django_filters.ModelMultipleChoiceFilter(
+        distinct=True,
         queryset=VLAN.objects.all(),
         label="VLANs (ID)",
     )
@@ -160,6 +174,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Has VLANs",
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=VRF.objects.all(),
         to_field_name="name",
         label="VRFs (name or ID)",

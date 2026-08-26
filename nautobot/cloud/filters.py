@@ -23,10 +23,12 @@ class CloudAccountFilterSet(NautobotFilterSet):
     )
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="provider",
+        distinct=False,
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
     )
@@ -54,6 +56,7 @@ class CloudResourceTypeFilterSet(NautobotFilterSet):
     )
     provider = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="provider",
+        distinct=False,
         queryset=Manufacturer.objects.all(),
         to_field_name="name",
     )
@@ -78,15 +81,19 @@ class CloudNetworkFilterSet(NautobotFilterSet):
         },
     )
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudResourceType.objects.all(),
     )
     cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudAccount.objects.all(),
     )
     cloud_services = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=models.CloudService.objects.all(),
     )
     parent = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudNetwork.objects.all(),
         label="Parent cloud network (name or ID)",
     )
@@ -106,6 +113,7 @@ class CloudNetworkPrefixAssignmentFilterSet(BaseFilterSet):
         }
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudNetwork.objects.all(),
     )
     prefix = PrefixFilter()
@@ -129,12 +137,15 @@ class CloudServiceFilterSet(NautobotFilterSet):
         }
     )
     cloud_account = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudAccount.objects.all(),
     )
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=models.CloudNetwork.objects.all(),
     )
     cloud_resource_type = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudResourceType.objects.all(),
     )
 
@@ -161,9 +172,11 @@ class CloudServiceNetworkAssignmentFilterSet(BaseFilterSet):
         }
     )
     cloud_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudNetwork.objects.all(),
     )
     cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         queryset=models.CloudService.objects.all(),
     )
 

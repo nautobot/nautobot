@@ -1,0 +1,1 @@
+Changed the default for Nautobot's various `MultiValue<type>Filter` filter classes from `distinct=True` to `distinct=False`, which is more correct and more performant in the vast majority of cases. As a consequence, some Apps may require updates to their explicitly declared filters for correct behavior.

@@ -29,6 +29,7 @@ class SupportedDataRateFilterSet(BaseFilterSet):
         }
     )
     radio_profiles = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=models.RadioProfile.objects.all(),
         to_field_name="name",
     )
@@ -51,6 +52,7 @@ class RadioProfileFilterSet(NautobotFilterSet):
         }
     )
     regulatory_domain = django_filters.MultipleChoiceFilter(
+        distinct=False,
         choices=choices.RadioProfileRegulatoryDomainChoices,
         null_value=None,
     )
@@ -59,14 +61,17 @@ class RadioProfileFilterSet(NautobotFilterSet):
         lookup_expr="contains",
     )
     frequency = django_filters.MultipleChoiceFilter(
+        distinct=False,
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,
     )
     controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
     )
     controller_managed_device_groups__devices = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         queryset=Device.objects.all(),
         to_field_name="name",
@@ -90,29 +95,35 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         }
     )
     mode = django_filters.MultipleChoiceFilter(
+        distinct=False,
         choices=choices.WirelessNetworkModeChoices,
         null_value=None,
     )
     enabled = django_filters.BooleanFilter()
     authentication = django_filters.MultipleChoiceFilter(
+        distinct=False,
         choices=choices.WirelessNetworkAuthenticationChoices,
         null_value=None,
     )
     secrets_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="secrets_group",
         queryset=SecretsGroup.objects.all(),
         to_field_name="name",
     )
     controller_managed_device_groups = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
     )
     controller_managed_device_groups__devices = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         prefers_id=True,
         queryset=Device.objects.all(),
         to_field_name="name",
     )
     controller_managed_device_groups__controller = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=True,
         queryset=Controller.objects.all(),
         to_field_name="name",
     )
@@ -135,11 +146,13 @@ class ControllerManagedDeviceGroupWirelessNetworkAssignmentFilterSet(BaseFilterS
         }
     )
     controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="controller_managed_device_group",
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
     )
     wireless_network = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="wireless_network",
         queryset=models.WirelessNetwork.objects.all(),
         to_field_name="name",
@@ -158,11 +171,13 @@ class ControllerManagedDeviceGroupRadioProfileAssignmentFilterSet(BaseFilterSet)
         }
     )
     controller_managed_device_group = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="controller_managed_device_group",
         queryset=ControllerManagedDeviceGroup.objects.all(),
         to_field_name="name",
     )
     radio_profile = NaturalKeyOrPKMultipleChoiceFilter(
+        distinct=False,
         field_name="radio_profile",
         queryset=models.RadioProfile.objects.all(),
         to_field_name="name",
