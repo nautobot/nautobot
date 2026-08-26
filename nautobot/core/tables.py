@@ -569,8 +569,8 @@ class ButtonsColumn(django_tables2.TemplateColumn):
         )
 
         # There is nothing to sort by: this column renders a button group, not a field. Left orderable, the empty header
-        # still emitted a sort link, which is meaningless to activate and -- having no visible text -- forms a target far
-        # below the 24x24 minimum (WCAG 2.5.8).
+        # emits a sort link, which is meaningless to activate and -- having no visible text -- forms a target far below
+        # the 24x24 minimum (WCAG 2.5.8).
         kwargs.setdefault("orderable", False)
 
         super().__init__(template_code=template_code, *args, **kwargs)

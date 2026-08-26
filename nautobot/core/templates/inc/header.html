@@ -4,17 +4,16 @@
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
         {% comment %}
-        The header search is a trigger for the search dialog, so it is built as a button rather than a text field.
+        The header search is a trigger for the search dialog, so it is built as a button rather than a text field. An
+        `<input>` here would have to open the dialog and move focus into it on `focus`, which is a change of context on
+        focus (WCAG 3.2.1, Level A) -- a keyboard user tabbing through the header would be pulled into a modal they had
+        not asked for. A button opens it on activation instead; `search.js` handles that, and widens the click target to
+        the whole container.
 
-        It used to be an `<input>` whose text was made transparent, with an overlay drawn on top rendering the value so
-        that `in: <Model>` badges could sit inline with it. That had two problems. Focusing the field opened the dialog
-        and moved focus into it, which is a change of context on focus (WCAG 3.2.1, Level A) -- a keyboard user tabbing
-        through the header was pulled into a modal they had not asked for. And the transparent text over an overlaid
-        element left automated checkers unable to determine the field's contrast at all.
-
-        Everything now sits in normal flow inside a `form-control`-styled container: nothing overlaps, no text is
-        transparent, and the badge remove buttons and the help link are siblings of the trigger rather than nested inside
-        it. `search.js` opens the dialog on activation, and widens the click target to the whole container.
+        Everything sits in normal flow inside a `form-control`-styled container, so that the `in: <Model>` badges can
+        share the row with the trigger without an overlay: nothing overlaps and no text is transparent, either of which
+        would leave automated checkers unable to determine the field's contrast at all. The badge remove buttons and the
+        help link are siblings of the trigger rather than nested inside it.
 
         The `<noscript>` block below keeps search working without JavaScript, where there is no dialog to open.
         {% endcomment %}
@@ -50,8 +49,8 @@
                 `text-truncate` is load-bearing, not cosmetic. The label does not wrap, and a flex item's automatic
                 minimum size is its content unless its `overflow` is something other than `visible` -- so without it the
                 trigger sizes itself to the whole query string and paints outside the field rather than being clipped by
-                it. A long `?q=` value ran about 400px past the right-hand edge, over the user menu and off the viewport;
-                even the short keyboard hint overflowed by ~20px once an `in: <Model>` badge shared the row. The
+                it. A long `?q=` value runs some 400px past the right-hand edge, over the user menu and off the viewport,
+                and even the short keyboard hint overflows by ~20px once an `in: <Model>` badge shares the row. The
                 `overflow: hidden` it brings supplies both the shrinking and the ellipsis.
 
                 Removing it to stop the sideways overflow only trades one failure for the other: the label then wraps, and

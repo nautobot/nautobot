@@ -38,13 +38,11 @@ AXE_DEFAULT_TAGS = ("wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22a", "wcag
 # success criterion is, so a low-impact finding can still be a WCAG AA failure.
 AXE_DEFAULT_IMPACTS = ("critical", "serious", "moderate", "minor")
 
-# Third-party developer tooling that injects itself into the page. It is not part of the shipped UI -- nothing here can
-# reach a Nautobot user -- so its markup is not ours to conform and only obscures findings that are. Keep this list to
-# tools that are dev-only dependencies; anything a user can actually see belongs in the scan.
+# Third-party developer tooling that injects itself into the page: dev-only dependencies whose markup cannot reach a
+# Nautobot user, and so is not ours to conform. Anything a user can see belongs in the scan, not here.
 #
-# `#djDebugRoot` is the django-debug-toolbar container. The toolbar is a `[tool.poetry.group.dev.dependencies]` entry,
-# and only `development/nautobot_config.py` adds it to `INSTALLED_APPS`, gated on `DEBUG`. Integration tests run with it
-# absent, so this exclusion matters for scans a developer runs by hand against a `DEBUG` dev server.
+# `#djDebugRoot` is the django-debug-toolbar container, which only `development/nautobot_config.py` installs, gated on
+# `DEBUG`. It is absent under the test settings, so this matters for scans run by hand against a `DEBUG` dev server.
 AXE_EXCLUDE_SELECTORS = ("#djDebugRoot",)
 
 
@@ -512,11 +510,9 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         Assert that the page currently loaded in the browser has no axe-core accessibility violations.
 
         Args:
-            impacts (tuple): axe-core impact levels to treat as failures. Defaults to all four. An earlier version gated
-                only on `critical` and `serious`, on the assumption that lower-impact findings would be too numerous to
-                gate on; that turned out to be wrong, and it hid a real WCAG AA failure (`meta-viewport`, impact
-                `moderate`, present on every page) for as long as it was in place. Narrow this only with a comment saying
-                what is being deferred and why.
+            impacts (tuple): axe-core impact levels to treat as failures. Defaults to all four, because a low-impact
+                finding can still be a WCAG AA failure -- `meta-viewport` is `moderate` and applies to every page.
+                Narrow this only with a comment saying what is being deferred and why.
             tags (tuple): axe-core rule tags to run. Defaults to WCAG 2.2 A and AA.
             context (str, optional): CSS selector limiting the scan to part of the page. Scans the whole page by default.
             exclude (tuple): CSS selectors to leave out of the scan. Defaults to `AXE_EXCLUDE_SELECTORS`, which covers
@@ -532,8 +528,8 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
             background it cannot compute -- are not gated on, because they need human review and would make this flaky.
             They are not a substitute for manual testing of new components.
 
-            Do read them, though, rather than treating "no violations" as the whole answer. As of this change the pages
-            scanned here produce exactly one, reviewed and passing:
+            Do read them, though, rather than treating "no violations" as the whole answer. The pages scanned here
+            produce exactly one, reviewed and passing:
 
             - `#per_page` (`.form-select` in `inc/paginator.html`): "background color could not be determined due to a
               background image". The background image is Bootstrap's own dropdown chevron, an inline SVG data URI
@@ -541,11 +537,11 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
               whether it is actually behind the glyphs. Measured 17.4:1 in both light and dark themes, against a
               `--bs-body-bg` that is opaque in both, so it passes 1.4.3 AA (4.5:1) with a wide margin.
 
-            An `incomplete` here has twice pointed at a real defect that produced no violation. `#header_search_trigger`
-            reported "partially obscured by another element" because its label was overflowing the search box -- axe
-            cannot determine contrast for a part of an element lying outside the ancestor painting its background, and
-            what looked like a checker limitation was a layout bug (see `test_header_search_stays_the_size_of_the_field`).
-            Treat a new entry in this bucket as unexplained until it has been measured, not as noise.
+            An `incomplete` is where a real defect hides when it produces no violation. "Partially obscured by another
+            element" on `#header_search_trigger`, for instance, means its label is overflowing the search box: axe
+            cannot determine contrast for a part of an element lying outside the ancestor painting its background, so a
+            layout bug surfaces here and nowhere else (see `test_header_search_stays_the_size_of_the_field`). Treat a new
+            entry in this bucket as unexplained until it has been measured, not as noise.
         """
         if not AXE_CORE_PATH.is_file():
             self.skipTest(

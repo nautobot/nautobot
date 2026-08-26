@@ -5,16 +5,16 @@
  * utilities read the base color rather than the `-text-emphasis` variant, and Nautobot uses those utilities for real
  * body text throughout its templates and tables. Their contrast against `$white-0`/`$gray-0` must therefore meet the
  * WCAG 1.4.3 AA threshold of 4.5:1 for normal-size text, not just the 3:1 threshold that would apply if they were only
- * used as fills. Hue and saturation are preserved; only lightness is reduced.
+ * used as fills. Keep hue and saturation when adjusting one; lightness is the only dimension that needs to move.
  *
  * Measured against `$white-0: #ffffff` unless noted:
  *   $gray-2  4.95 (and 4.50 against `$gray-0`, which is the table header background)
  *   $blue-0  4.50
  *   $green-0 4.53
  *   $orange-0 4.51
- *   $red-0   4.79 (already compliant, unchanged)
+ *   $red-0   4.79
  *
- * The dark mode tokens further down already clear 4.5:1 and are deliberately left alone.
+ * The dark mode tokens further down clear 4.5:1 as they stand.
  */
 $bg:       #f6f6f6;
 $black-0:  #1a1a1a;
@@ -76,9 +76,9 @@ $gray-1-dark:   #2f2f2f;
 /* Dark mode form control border color; 3.03:1 against `$white-0-dark`. See `$gray-15` above. */
 $gray-15-dark:  #666666;
 /*
- * Nudged up from `#828282`. As the dark mode `$body-tertiary-color` this is the table header text color, and table
- * headers sit on `$gray-0-dark: #1e1e1e` rather than on the page background, where `#828282` reached only 4.34:1.
- * Now 4.52:1 on `#1e1e1e` and 4.72:1 on `$white-0-dark`.
+ * As the dark mode `$body-tertiary-color` this is the table header text color, and table headers sit on
+ * `$gray-0-dark: #1e1e1e` rather than on the page background -- the tighter of the two constraints, and the one to
+ * measure against. 4.52:1 on `#1e1e1e`, 4.72:1 on `$white-0-dark`.
  */
 $gray-2-dark:   #858585;
 $gray-3-dark:   #b5b5b5;

@@ -13,7 +13,6 @@
                 <br />
                 <small>
                     <span class="text-secondary">{{ approval_workflow.user }} -</span>
-                    {# Was closed with `</a>` rather than `</span>`; a stray end tag confuses the parsed document tree. #}
                     <span class="text-secondary">{{ approval_workflow.created|date:"SHORT_DATETIME_FORMAT" }}</span>
                 </small>
             </li>

@@ -115,8 +115,8 @@ export const initializeSearch = () => {
        * ever leaving the input, which is exactly the combobox pattern; declaring it as such is what lets assistive
        * technology report the expanded/collapsed state and the currently highlighted result.
        *
-       * `role="combobox"` replaces the previous `role="searchbox"`, which was redundant anyway -- `<input type="search">`
-       * already has that role implicitly.
+       * An explicit `role="searchbox"` would be redundant here in any case -- `<input type="search">` already has that
+       * role implicitly.
        *
        * `aria-expanded` is maintained by `toggleResultsVisible` and `aria-activedescendant` by `toggleResultItemActive`.
        */

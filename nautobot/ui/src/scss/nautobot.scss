@@ -825,10 +825,10 @@ button {
 /*
  * Prevent iOS Safari from auto-zooming on input focus.
  *
- * iOS zooms the viewport whenever a focused form control's font size is below 16px, and `$font-size-base` is 14px. That
- * behaviour is why the viewport meta tag used to carry `user-scalable=no`, which suppressed the zoom but also blocked
- * deliberate pinch-zoom and so failed WCAG 1.4.4. Raising the control's font size to 16px removes the trigger without
- * taking zoom away from anyone.
+ * iOS zooms the viewport whenever a focused form control's font size is below 16px, and `$font-size-base` is 14px. The
+ * other way to suppress that is `user-scalable=no` on the viewport meta tag, which also blocks deliberate pinch-zoom
+ * and so fails WCAG 1.4.4. Raising the control's font size to 16px removes the trigger without taking zoom away from
+ * anyone.
  *
  * Scoped to coarse pointers so this applies on touch devices, where it is also the more comfortable target size, and
  * leaves pointer-driven layouts untouched.
@@ -884,9 +884,9 @@ button {
 /*
  * Tag links (WCAG 2.5.8, AA).
  *
- * The link, not the badge inside it, is the pointer target, and as an inline box it was only 17px tall with about 3px
- * between adjacent tags -- too small for the 24x24 minimum and far short of the 24px clearance the spacing exception
- * would need. Size the anchor instead of the badge, so the target grows while the badge keeps its own appearance.
+ * The link, not the badge inside it, is the pointer target, and as an inline box it is only about 17px tall with some
+ * 3px between adjacent tags -- too small for the 24x24 minimum and far short of the 24px clearance the spacing
+ * exception would need. Size the anchor rather than the badge, so the target grows while the badge keeps its appearance.
  */
 .nb-tag-link {
   align-items: center;
@@ -1396,8 +1396,8 @@ textarea {
 }
 
 /*
- * Table checkboxes. Previously 16px, which combined with the hairline checkmark made checked/unchecked hard to tell
- * apart. Now matched to `$form-check-input-width` so a row checkbox is as legible as one on a form.
+ * Table checkboxes, matched to `$form-check-input-width` so that a row checkbox is as legible as one on a form. Below
+ * that, the checkmark is fine enough that checked and unchecked are hard to tell apart at a glance.
  */
 .nb-form-check-input-sm {
   height: 1.25rem; /* 20px */

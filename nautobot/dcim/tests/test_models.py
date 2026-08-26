@@ -1440,8 +1440,8 @@ class LocationTestCase(ModelTestCases.BaseModelTestCase):
         """
         `clean()` must not dereference an unset `location_type`.
 
-        `ModelForm._post_clean()` calls `full_clean()` even when `location_type` failed form validation, so `clean()`
-        used to raise `RelatedObjectDoesNotExist` and surface as a 500 rather than a form error.
+        `ModelForm._post_clean()` calls `full_clean()` even when `location_type` failed form validation, so reading the
+        unset foreign key here would raise `RelatedObjectDoesNotExist` and surface as a 500 rather than a form error.
         """
         location = Location(name="No Location Type", status=self.status)
         with self.assertRaises(ValidationError) as context:

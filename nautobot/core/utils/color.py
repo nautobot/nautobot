@@ -62,10 +62,9 @@ def foreground_color(bg_color):
 
     Picks whichever of black or white has the greater WCAG contrast ratio against the background.
 
-    This previously used a perceived-brightness heuristic (`r * 0.299 + g * 0.587 + b * 0.114 > 150`), which does not
-    correspond to WCAG contrast and chose the lower-contrast option for a range of mid-tone colors. Since status, role
-    and tag badges are colored from user-supplied values and this function chooses their text color, that produced badges
-    failing the 4.5:1 minimum (WCAG 1.4.3).
+    Status, role and tag badges are colored from user-supplied values and take their text color from here, so this has
+    to be actual contrast rather than a perceived-brightness heuristic: the two disagree across a range of mid-tones,
+    and picking the wrong one there leaves the badge short of the 4.5:1 minimum (WCAG 1.4.3).
     """
     bg_color = bg_color.strip("#")
     return "000000" if contrast_ratio(bg_color, "000000") >= contrast_ratio(bg_color, "ffffff") else "ffffff"
