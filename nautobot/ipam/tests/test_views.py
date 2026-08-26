@@ -1,9 +1,12 @@
 import datetime
 import random
+from unittest import mock
 
 from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Count
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+from django.db.models import Count, ProtectedError, QuerySet
 from django.test import override_settings
 from django.urls import reverse
 from django.utils.html import escape, strip_tags
@@ -33,6 +36,7 @@ from nautobot.extras.models import (
     Relationship,
     RelationshipAssociation,
     Role,
+    SavedView,
     Status,
     Tag,
 )
@@ -1237,6 +1241,8 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     def test_bulk_create_ips(self):
         """"""
         self.add_permissions("ipam.add_ipaddress")
+        # GET renders the bulk-add form (covers the GET branch of IPAddressUIViewSet.bulk_add).
+        self.assertHttpStatus(self.client.get(reverse("ipam:ipaddress_bulk_add")), 200)
         form_data = {
             "namespace": self.namespace.pk,
             "pattern": "192.0.2.[4-6]/24",
@@ -1254,6 +1260,171 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         self.assertTrue(IPAddress.objects.filter(address="192.0.2.6/24").exists())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_no_parent_prefix(self):
+        """Bulk-add into a namespace with no containing prefix: the per-instance 'no parent' errors are
+        surfaced on the pattern form and the page re-renders (HTTP 200), not a 500."""
+        self.add_permissions("ipam.add_ipaddress")
+        empty_namespace = Namespace.objects.create(name="bulk-add-no-parent")
+        form_data = {
+            "namespace": empty_namespace.pk,
+            "pattern": "192.0.2.[4-6]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        # Errors are surfaced on the form (HTTP 200), and nothing is created.
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(IPAddress.objects.filter(parent__namespace=empty_namespace).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_with_required_custom_field(self):
+        """Regression for nautobot#9148: a required custom field must not break the bulk-add flow.
+
+        The pattern form (IPAddressBulkCreateForm) only defines `pattern`, so a per-instance error on a
+        `cf_*` field must not raise "has no field named ...". With the value supplied the IPs are created
+        and the custom field persists; with it missing the form re-renders (HTTP 200), never a 500.
+        """
+        self.add_permissions("ipam.add_ipaddress")
+        cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Bulk Add Required CF", required=True
+        )
+        cf.content_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        base_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[20-22]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+        }
+
+        # Missing required CF: must re-render with an error (HTTP 200), not the #9148 ValueError/500.
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(base_data))
+        self.assertHttpStatus(response, 200)
+        self.assertFalse(IPAddress.objects.filter(host="192.0.2.20").exists())
+
+        # CF supplied: all IPs are created and the value persists on each.
+        response = self.client.post(
+            reverse("ipam:ipaddress_bulk_add"),
+            data=post_data({**base_data, f"cf_{cf.key}": "present"}),
+        )
+        self.assertHttpStatus(response, 302)
+        created = IPAddress.objects.filter(host__in=["192.0.2.20", "192.0.2.21", "192.0.2.22"])
+        self.assertEqual(created.count(), 3)
+        for ip in created:
+            self.assertEqual(ip.cf[cf.key], "present")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_add_another(self):
+        """Bulk-add with `_addanother` creates the IPs and redirects back to the add form."""
+        self.add_permissions("ipam.add_ipaddress")
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[43-44]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "_addanother": "1",
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 302)
+        self.assertEqual(response.url, reverse("ipam:ipaddress_bulk_add"))
+        self.assertTrue(IPAddress.objects.filter(host="192.0.2.43").exists())
+        self.assertTrue(IPAddress.objects.filter(host="192.0.2.44").exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_bulk_create_ips_object_permission_violation(self):
+        """Created IPs outside the user's constrained add permission abort the whole batch: the
+        object-level check raises, the form re-renders with an error (HTTP 200) and nothing persists."""
+        # Constrained add permission: the user may only add IPs whose dns_name is "allowed".
+        obj_perm = ObjectPermission(name="Constrained add IP", actions=["add"], constraints={"dns_name": "allowed"})
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        form_data = {
+            "namespace": self.namespace.pk,
+            "pattern": "192.0.2.[45-47]/24",
+            "status": self.statuses[1].pk,
+            "type": IPAddressTypeChoices.TYPE_DHCP,
+            "dns_name": "blocked",  # violates the constraint above
+        }
+        response = self.client.post(reverse("ipam:ipaddress_bulk_add"), data=post_data(form_data))
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "Object creation failed due to object-level permissions violation")
+        # Transaction rolled back: nothing was created.
+        self.assertFalse(IPAddress.objects.filter(host__in=["192.0.2.45", "192.0.2.46", "192.0.2.47"]).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_without_interface_redirects(self):
+        """GET on the assign endpoint with no interface/vminterface redirects to the add page."""
+        self.add_permissions("ipam.add_ipaddress")
+        response = self.client.get(reverse("ipam:ipaddress_assign"))
+        self.assertHttpStatus(response, 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_assign_with_invalid_interface_redirects(self):
+        """GET on the assign endpoint with a non-existent interface warns and redirects to the add page."""
+        self.add_permissions("ipam.add_ipaddress")
+        response = self.client.get(reverse("ipam:ipaddress_assign") + "?interface=00000000-0000-0000-0000-000000000000")
+        self.assertHttpStatus(response, 302)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_ignores_interface_query_param(self):
+        """The dispatch() interface guard is gated on the action: a `list` request with a bad
+        ?interface=<pk> must render the list (HTTP 200), not validate/redirect like add/edit/assign do."""
+        self.add_permissions("ipam.view_ipaddress")
+        response = self.client.get(reverse("ipam:ipaddress_list") + "?interface=00000000-0000-0000-0000-000000000000")
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @override_config(MAX_PAGE_SIZE=10)
+    def test_assign_search_renders_results(self):
+        """GET assign with a valid interface + q runs the candidate search (and the oversized per_page warning)."""
+        self.add_permissions("ipam.add_ipaddress", "dcim.change_interface")
+        interface = Interface.objects.first()
+        self.assertIsNotNone(interface)
+        # per_page (50) above the configured MAX_PAGE_SIZE (10) exercises the warning branch.
+        response = self.client.get(
+            reverse("ipam:ipaddress_assign") + f"?interface={interface.pk}&q=192.0.2.0/24&per_page=50"
+        )
+        self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_with_saved_view_table_config(self):
+        """A saved_view's table_config drives the assigned_count annotation in alter_queryset()."""
+        list_url = reverse("ipam:ipaddress_list")
+        # A saved view for this list whose table_config selects the "assigned" column
+        # exercises the successful-lookup path (get + view_table_config + columns).
+        saved_view = SavedView.objects.create(
+            name="IP SV assigned",
+            owner=self.user,
+            view="ipam:ipaddress_list",
+            config={"table_config": {"IPAddressDetailTable": {"columns": ["assigned", "status"]}}},
+        )
+        self.assertHttpStatus(
+            self.client.get(f"{list_url}?saved_view={saved_view.pk}", headers={"HX-Request": "true"}), 200
+        )
+        # A saved_view registered for a different list -> alter_queryset's (view, pk) lookup raises
+        # ObjectDoesNotExist, exercising the except branch (get_filter_params' by-pk lookup still succeeds).
+        other_view = SavedView.objects.create(name="Prefix SV", owner=self.user, view="ipam:prefix_list", config={})
+        self.assertHttpStatus(
+            self.client.get(f"{list_url}?saved_view={other_view.pk}", headers={"HX-Request": "true"}), 200
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_parent_inconsistency_warnings(self):
+        """Cover the 'parent appears incorrect' diagnostic branches in the detail get_extra_context()."""
+        ip = IPAddress.objects.filter(parent__isnull=False).first()
+        self.assertIsNotNone(ip)
+        detail_url = reverse("ipam:ipaddress", kwargs={"pk": ip.pk})
+
+        with self.subTest("stored parent differs from computed closest parent"):
+            with mock.patch.object(IPAddress, "_get_closest_parent", return_value=None):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
+
+        with self.subTest("no valid containing prefix, parent set"):
+            with mock.patch.object(IPAddress, "_get_closest_parent", side_effect=ValidationError("no parent")):
+                self.assertHttpStatus(self.client.get(detail_url), 200)
+
     def test_bulk_create_ips_with_duplicate(self):
         """A bulk-add pattern colliding with an existing address is rejected with a form error."""
         self.add_permissions("ipam.add_ipaddress")
@@ -1583,6 +1754,104 @@ class IPAddressMergeTestCase(ModelViewTestCase):
         for device in self.devices:
             device.refresh_from_db()
             self.assertEqual(merged_ip, device.primary_ip4)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_without_optional_fields(self):
+        """Merge without tenant/role/tags to cover the None/empty (else) branches in _perform_merge."""
+        self.add_permissions("ipam.change_ipaddress")
+        merge_data = {**self.merge_data, "tenant": "", "role": "", "tags": ""}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        merged_ip = IPAddress.objects.get(parent__namespace=self.namespace_2)
+        self.assertIsNone(merged_ip.tenant)
+        self.assertIsNone(merged_ip.role)
+        self.assertEqual(merged_ip.tags.count(), 0)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_with_nat_inside(self):
+        """Merge with a nat_inside set to cover the nat_inside lookup branch in _perform_merge."""
+        self.add_permissions("ipam.change_ipaddress")
+        nat_ip = IPAddress.objects.exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk]).first()
+        self.assertIsNotNone(nat_ip)
+        merge_data = {**self.merge_data, "nat_inside": str(nat_ip.pk)}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        merged_ip = IPAddress.objects.get(parent__namespace=self.namespace_2)
+        self.assertEqual(merged_ip.nat_inside, nat_ip)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_delete_failure_aborts(self):
+        """A ProtectedError or IntegrityError while deleting the collapsed IPs aborts the merge cleanly.
+
+        ProtectedError is raised by the collector before the SQL; an IntegrityError stands in for a
+        DEFERRABLE INITIALLY DEFERRED FK that fails at COMMIT. Both must redirect and merge nothing.
+        """
+        self.add_permissions("ipam.change_ipaddress")
+        real_delete = QuerySet.delete
+        cases = [
+            ("ProtectedError", ProtectedError("Cannot delete", IPAddress.objects.none())),
+            ("IntegrityError", IntegrityError("still referenced")),
+        ]
+        for label, exc in cases:
+            with self.subTest(error=label):
+                num_before = IPAddress.objects.count()
+
+                def fake_delete(qs, *args, _exc=exc, **kwargs):
+                    if qs.model is IPAddress:
+                        raise _exc
+                    return real_delete(qs, *args, **kwargs)
+
+                with mock.patch.object(QuerySet, "delete", new=fake_delete):
+                    response = self.client.post(self.merge_url, data=post_data(self.merge_data))
+                self.assertHttpStatus(response, 302)
+                # Transaction rolled back: nothing was deleted or merged.
+                self.assertEqual(num_before, IPAddress.objects.count())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_ip_addresses_restricted_to_permitted_pks(self):
+        """A crafted merge POST must not delete IPs the user lacks object-level "change" permission for.
+
+        _perform_merge builds collapsed_ips from the restricted queryset, so an unpermitted pk in the
+        POST is silently excluded rather than merged/deleted.
+        """
+        # Constrained change permission: the user may only change dup_ip_1 and dup_ip_2, not dup_ip_3.
+        obj_perm = ObjectPermission(
+            name="Constrained change IP",
+            actions=["change"],
+            constraints={"pk__in": [self.dup_ip_1.pk, self.dup_ip_2.pk]},
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        # merge_data["pk"] lists all three duplicates; dup_ip_3 is outside the granted permission.
+        # Source every custom-field value from a permitted IP (the default merge_data pulls the "select"
+        # CF from dup_ip_3, which is no longer part of the restricted collapsed_ips).
+        merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(self.dup_ip_1.pk)}
+        response = self.client.post(self.merge_url, data=post_data(merge_data))
+        self.assertHttpStatus(response, 302)
+        # dup_ip_3 must survive -- it was never a permitted merge candidate.
+        self.assertTrue(IPAddress.objects.filter(pk=self.dup_ip_3.pk).exists())
+        # The two permitted duplicates were merged (collapsed away).
+        self.assertFalse(IPAddress.objects.filter(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk]).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_merging_custom_field_source_restricted_to_collapsed_ips(self):
+        """A crafted merge POST cannot source custom-field data from an IP outside the merge set.
+
+        The `cf_<key>` lookup resolves against collapsed_ips, so an out-of-set pk fails and the merge
+        aborts (transaction rolled back) rather than importing that IP's custom-field value.
+        """
+        self.add_permissions("ipam.change_ipaddress")
+        external_ip = IPAddress.objects.exclude(pk__in=[self.dup_ip_1.pk, self.dup_ip_2.pk, self.dup_ip_3.pk]).first()
+        self.assertIsNotNone(external_ip)
+        num_before = IPAddress.objects.count()
+        # Point a custom-field source at an IP that is not among the merge candidates.
+        merge_data = {**self.merge_data, "cf_merge_ip_cf_select": str(external_ip.pk)}
+        with self.assertRaises(IPAddress.DoesNotExist):
+            self.client.post(self.merge_url, data=post_data(merge_data))
+        # Nothing was merged or deleted.
+        self.assertEqual(num_before, IPAddress.objects.count())
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_merging_only_one_or_zero_ip_addresses(self):
