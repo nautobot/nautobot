@@ -112,6 +112,14 @@ while in JSON or YAML it's a list of nested objects:
           version: "15.1"
 ```
 
+!!! tip "An alternate CSV representation for many-to-many imports with composite natural keys"
+    Although CSV *exports* now always produce the above embedded-JSON representation of many-to-many relations that require a composite natural key to describe, CSV *imports* additionally support an alternative representation where there is one column per field in the natural key, and the value of each column is the list of values for that field. This could look something like:
+
+    ```csv
+    name,software_image_files__image_file_name,software_image_files__software_version__platform__name,software_image_files__software_version__version
+    my-device,"ios151.bin,ios152.bin","IOS,IOS","15.1,15.2"
+    ```
+
 ### Selecting fields to export
 
 TODO - add documentation when this is implemented
