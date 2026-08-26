@@ -1,8 +1,10 @@
 {% load form_helpers %}
+{# Used for both the editable form and the read-only bulk-connect confirmation. #}
 <div class="card">
     <div class="card-header"><strong>Cable</strong></div>
     <div class="card-body">
         {% render_field form.cable_type %}
+        {% if form.count %}{% render_field form.count %}{% endif %}
         {% render_field form.status %}
         {% render_field form.type %}
         {% render_field form.label %}
@@ -32,7 +34,44 @@
         </div>
     </div>
 </div>
-<div id="lane-terminations-container">
-    {% include 'dcim/inc/cable_lane_form.html' %}
-</div>
+{% if confirming %}
+    {% for name, value in bulk_hidden_fields %}
+        <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+    <div class="card">
+        <div class="card-header"><strong>Cables to create</strong></div>
+        <div class="card-body">
+            <p class="mb-0">This will create <strong>{{ bulk_count }}</strong> cable{{ bulk_count|pluralize }}.
+            Review each cable's terminations below, then choose <strong>Create</strong>.</p>
+        </div>
+    </div>
+    {% for cable in bulk_cables %}
+        <div class="card">
+            <div class="card-header"><strong>Cable {{ cable.index }}</strong></div>
+            <table class="table mb-0">
+                <thead>
+                    <tr><th class="w-50">Side A</th><th class="w-50">Side B</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="align-top border-end">
+                            {% for term in cable.a %}
+                                <div>{{ term.type }}: {{ term.parent }} / <strong>{{ term.name }}</strong></div>
+                            {% empty %}&mdash;{% endfor %}
+                        </td>
+                        <td class="align-top">
+                            {% for term in cable.b %}
+                                <div>{{ term.type }}: {{ term.parent }} / <strong>{{ term.name }}</strong></div>
+                            {% empty %}&mdash;{% endfor %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
+{% else %}
+    <div id="lane-terminations-container">
+        {% include 'dcim/inc/cable_lane_form.html' %}
+    </div>
+{% endif %}
 {% include 'inc/extras_features_edit_form_fields.html' %}
