@@ -1681,9 +1681,9 @@ properties:
     description: "Multiplier applied to a REST API request's running cost when `format=csv` is requested."
     details: |-
       !!! warning
-          The environment variable is spelled `NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILER`
+          The environment variable is spelled `NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILIER`
           ("MULTIPILER"), which does not match the name of the setting it populates.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILER"
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILIER"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
