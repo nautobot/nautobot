@@ -1658,7 +1658,7 @@ class AutoDistinctFilterTest(TestCase):
 
     def test_generated_lookup_expressions_inherit_derived_distinct(self):
         """Lookup expressions generated for a declared filter must derive `distinct` the same way it does."""
-        self.assertTrue(self.filterset.filters["name__ic"].model is not None)
+        self.assertIsNotNone(self.filterset.filters["name__ic"].model)
         self.assertFalse(self.filterset.filters["name__ic"].distinct)
 
     def test_field_path_traverses_to_many(self):
