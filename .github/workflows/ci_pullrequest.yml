@@ -661,6 +661,13 @@ jobs:
       - name: "Server log on failure"
         if: "failure()"
         run: "tail -100 /tmp/nautobot-server.log"
+      - name: "Upload Playwright traces and screenshots on failure"
+        if: "failure()"
+        uses: "actions/upload-artifact@v4"
+        with:
+          name: "playwright-failure-artifacts"
+          path: "test-results/"
+          if-no-files-found: "ignore"
     needs:
       - "check-migrations"
       - "check-schema"

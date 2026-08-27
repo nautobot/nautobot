@@ -1168,7 +1168,10 @@ def playwright(context, app=None, url=None, username=None, password=None, token=
             "Could not find pytest or poetry. The Playwright suite needs its optional dependency group:\n"
             "  poetry install --with playwright && poetry run playwright install chromium"
         )
-    command = f"{runner} -p playwright -p base_url"
+    # Traces and screenshots are captured only when a test fails (written under
+    # test-results/), so the flags cost nothing on green runs; CI uploads the
+    # directory as a build artifact on failure.
+    command = f"{runner} -p playwright -p base_url --tracing=retain-on-failure --screenshot=only-on-failure"
     if app:
         command += f" nautobot/{app}/tests/integration"
     if headed:
