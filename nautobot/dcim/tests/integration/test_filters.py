@@ -22,9 +22,9 @@ class ListViewFilterTestCase:
         """The filter drawer starts hidden and opens from the Filter toolbar button."""
         locations = LocationsPage(auth_page, base_url)
         locations.navigate()
-        assert not locations.is_filter_drawer_open()
+        locations.expect_filter_drawer_closed()
         locations.open_filter_drawer()
-        assert locations.is_filter_drawer_open()
+        locations.expect_filter_drawer_open()
 
     @pytest.mark.behavioral
     def test_filter_by_parent_narrows_list(self, auth_page, base_url, api_count, created_location_tree):
@@ -41,10 +41,10 @@ class ListViewFilterTestCase:
 
         locations.filter_by_parent(parent["name"])
 
-        assert "parent=" in locations.current_url()
-        filtered = locations.get_data_row_count()
-        assert filtered < total, "Applying the parent filter should have narrowed the list"
-        assert filtered == api_count("dcim/locations", parent=parent["id"]), "UI row count should match the API count"
+        locations.expect_url_contains("parent=")
+        expected = api_count("dcim/locations", parent=parent["id"])
+        assert expected < total, "Applying the parent filter should narrow the list"
+        locations.expect_row_count(expected)
         names = locations.get_column_values_by_header("Name")
         for child in created_location_tree["children"]:
             assert any(child["name"] in cell for cell in names), f"{child['name']} missing from filtered rows: {names}"
@@ -74,23 +74,23 @@ class ListViewFilterTestCase:
         baseline_indicator = locations.has_active_filter_indicator()
 
         locations.filter_by_parent(parent["name"])
-        assert "parent=" in locations.current_url()
-        assert locations.has_active_filter_indicator()
+        locations.expect_url_contains("parent=")
+        locations.expect_filter_indicator(active=True)
         assert locations.get_data_row_count() < unfiltered_rows, "Filter must narrow the list before removal is tested"
 
         # Remove the whole parent filter with its badge's X button.
         locations.open_advanced_filter_tab()
         locations.remove_filter("parent")
         locations.apply_advanced_filters()
-        assert "parent=" not in locations.current_url()
-        assert locations.get_data_row_count() == unfiltered_rows
-        assert locations.has_active_filter_indicator() == baseline_indicator
+        locations.expect_url_lacks("parent=")
+        locations.expect_row_count(unfiltered_rows)
+        locations.expect_filter_indicator(active=baseline_indicator)
 
         # Back to the filtered view; remove the single filter value instead.
         locations.go_back()
         locations.open_advanced_filter_tab()
         locations.remove_filter_value("parent")
         locations.apply_advanced_filters()
-        assert "parent=" not in locations.current_url()
-        assert locations.get_data_row_count() == unfiltered_rows
-        assert locations.has_active_filter_indicator() == baseline_indicator
+        locations.expect_url_lacks("parent=")
+        locations.expect_row_count(unfiltered_rows)
+        locations.expect_filter_indicator(active=baseline_indicator)

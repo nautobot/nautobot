@@ -5,7 +5,9 @@ test files, so a markup change is a one-file fix; test bodies read as user inten
 (`locations.filter_by_parent(name)`) rather than selector plumbing.
 """
 
-from playwright.sync_api import Page
+import re
+
+from playwright.sync_api import expect, Page
 
 
 def select2_filter_pick(page, field_name, search="", pick_text=None, exact=True):
@@ -80,8 +82,16 @@ class BasePage:
             indicator.first.wait_for(state="hidden", timeout=timeout)
 
     def current_url(self) -> str:
-        """Return the browser's current URL."""
+        """Return the browser's current URL (a settled-state read; assert via expect_url_*)."""
         return self.page.url
+
+    def expect_url_contains(self, fragment):
+        """Assert (auto-retrying) that the URL contains *fragment*."""
+        expect(self.page).to_have_url(re.compile(re.escape(fragment)))
+
+    def expect_url_lacks(self, fragment):
+        """Assert (auto-retrying) that the URL does not contain *fragment*."""
+        expect(self.page).not_to_have_url(re.compile(re.escape(fragment)))
 
     def go_back(self):
         """Navigate browser history back one step and wait for the page to settle."""

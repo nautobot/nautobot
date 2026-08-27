@@ -9,6 +9,8 @@ model:
         LIST_PATH = "/dcim/locations/"
 """
 
+from playwright.sync_api import expect
+
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
@@ -52,8 +54,16 @@ class ListPage(BasePage):
         self._goto(self.LIST_PATH)
 
     def get_data_row_count(self) -> int:
-        """Return the number of data rows (rows with a pk checkbox) in the table."""
+        """Return the number of data rows (rows with a pk checkbox) in the table.
+
+        A settled-state read for baselines and comparisons; to *assert* a count, use
+        `expect_row_count`, which auto-retries.
+        """
         return self.page.locator(self._DATA_ROWS).count()
+
+    def expect_row_count(self, expected):
+        """Assert (auto-retrying) that the table shows exactly *expected* data rows."""
+        expect(self.page.locator(self._DATA_ROWS)).to_have_count(expected)
 
     def get_table_column_headers(self) -> list:
         """Text of all non-empty column headers (the checkbox column has none).
@@ -87,18 +97,31 @@ class ListPage(BasePage):
     # -------------------------------------------------------------------------
 
     def is_filter_drawer_open(self) -> bool:
-        """Return True if the filter drawer is currently open.
+        """Return True if the filter drawer is currently open (a settled-state read).
 
         Open state is the `nb-drawer-open` class on the drawer element. Playwright's
         `is_visible()` cannot be used here: the closed drawer sits off-canvas but
-        still has a layout box, so it reads as "visible" even when closed.
+        still has a layout box, so it reads as "visible" even when closed. To *assert*
+        drawer state, use `expect_filter_drawer_open`/`expect_filter_drawer_closed`.
         """
         return self.page.locator(f"{self._FILTER_DRAWER}.nb-drawer-open").count() > 0
+
+    def expect_filter_drawer_open(self):
+        """Assert (auto-retrying) that the filter drawer is open."""
+        expect(self.page.locator(f"{self._FILTER_DRAWER}.nb-drawer-open")).to_have_count(1)
+
+    def expect_filter_drawer_closed(self):
+        """Assert (auto-retrying) that the filter drawer is closed.
+
+        Retries matter especially here: a once-only "not open" check passes while the
+        drawer merely hasn't opened yet.
+        """
+        expect(self.page.locator(f"{self._FILTER_DRAWER}.nb-drawer-open")).to_have_count(0)
 
     def open_filter_drawer(self):
         """Click the Filter toolbar button and wait for the drawer to open."""
         self.page.locator(self._FILTER_TOGGLE).click()
-        self.page.locator(f"{self._FILTER_DRAWER}.nb-drawer-open").wait_for(state="attached", timeout=8_000)
+        self.expect_filter_drawer_open()
 
     def pick_filter_value(self, field_name, value, exact=True):
         """Pick *value* in the drawer's Select2 filter field named *field_name*.
@@ -153,6 +176,19 @@ class ListPage(BasePage):
         self._click_and_wait_for_navigation(self._FILTER_APPLY_ADVANCED)
 
     def has_active_filter_indicator(self) -> bool:
-        """Return True if the Filter button shows its active-filters indicator dot."""
+        """Return True if the Filter button shows its active-filters indicator dot.
+
+        A settled-state read, for capturing a baseline; to *assert* the indicator,
+        use `expect_filter_indicator`.
+        """
         indicator = self.page.locator(self._FILTER_INDICATOR)
         return indicator.count() > 0 and indicator.first.is_visible()
+
+    def expect_filter_indicator(self, active):
+        """Assert (auto-retrying) that the indicator dot matches *active* (True/False)."""
+        if active:
+            expect(self.page.locator(self._FILTER_INDICATOR).first).to_be_visible()
+        else:
+            # not_to_be_visible passes for absent OR present-but-hidden, matching the
+            # two inactive renderings has_active_filter_indicator distinguishes.
+            expect(self.page.locator(self._FILTER_INDICATOR).first).not_to_be_visible()
