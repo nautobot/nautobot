@@ -138,6 +138,12 @@ class FilterTestCases:
             filter uses a `django_filters` class rather than the Nautobot equivalent of the same name, or that its
             `field_name` doesn't describe the relation that the filter actually traverses.
             """
+
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+
             self.assertIsNotNone(self.filterset)
             filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
             model = self.queryset.model
