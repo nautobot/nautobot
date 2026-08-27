@@ -28,12 +28,7 @@ class ListViewFilterTestCase:
 
     @pytest.mark.behavioral
     def test_filter_by_parent_narrows_list(self, auth_page, base_url, api_count, created_location_tree):
-        """Filtering by parent shows exactly that parent's children.
-
-        Narrowing, UI-count-equals-API-count, and per-row inclusion/exclusion are all
-        asserted against records the test owns (see `created_location_tree`), so the
-        test is independent of whatever other data the instance holds.
-        """
+        """Filtering by parent shows exactly that parent's children."""
         parent = created_location_tree["parent"]
         locations = LocationsPage(auth_page, base_url)
         locations.navigate()
@@ -64,8 +59,6 @@ class ListViewFilterTestCase:
         The baseline is captured rather than assumed False so the test holds on instances
         with an admin-configured default filter (LOCATION_LIST_DEFAULT_MAX_DEPTH redirects
         the bare list URL to ?max_depth=<n>, which legitimately keeps the indicator lit).
-        On the hermetic CI instance the baseline is False, so the assertions are exactly
-        as strict as an absolute check there.
         """
         parent = created_location_tree["parent"]
         locations = LocationsPage(auth_page, base_url)
