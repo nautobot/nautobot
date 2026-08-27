@@ -64,7 +64,7 @@ class BasePage:
         self.page.goto(f"{self.base_url}{path}")
         self.wait_for_load()
 
-    def wait_for_load(self, timeout=30_000):
+    def wait_for_load(self, timeout=15_000):
         """Wait for the load event and for any loading overlay to disappear.
 
         Uses "load" rather than "networkidle": Nautobot is server-rendered, so the DOM
@@ -98,13 +98,12 @@ class BasePage:
         self.page.go_back()
         self.wait_for_load()
 
-    def _click_and_wait_for_navigation(self, selector, timeout=30_000):
+    def _click_and_wait_for_navigation(self, selector, timeout=15_000):
         """Click *selector* (a form submit) and wait for the resulting navigation.
 
         The framenavigated listener is registered before the click, so the navigation
         cannot be missed however fast it commits; a plain wait_for_load_state after the
         click can resolve against the OLD document's already-complete load state.
-        (Playwright's expect_navigation is deprecated; this is the event it wrapped.)
         """
         with self.page.expect_event("framenavigated", timeout=timeout):
             self.page.locator(selector).first.click()

@@ -57,7 +57,9 @@ class ListPage(BasePage):
         """Return the number of data rows (rows with a pk checkbox) in the table.
 
         A settled-state read for baselines and comparisons; to *assert* a count, use
-        `expect_row_count`, which auto-retries.
+        `expect_row_count`, which auto-retries. Counts the rendered page only — the
+        suite's one-page convention (see `api_count`) is what makes that the whole
+        result set.
         """
         return self.page.locator(self._DATA_ROWS).count()
 

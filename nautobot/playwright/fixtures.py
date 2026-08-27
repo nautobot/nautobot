@@ -107,11 +107,11 @@ def browser_context_args(browser_context_args, base_url, auth_state_path):
 
 @pytest.fixture
 def auth_page(page):
-    """An authenticated Playwright page.
+    """pytest-playwright's standard `page` fixture, under a name that marks intent.
 
-    This is pytest-playwright's standard `page` fixture (every context starts from
-    the session login state); the alias exists so a test signature states that it
-    operates on an authenticated session without the reader visiting conftest.
+    Authentication comes from `browser_context_args`, which starts every context
+    from the session login state; this alias adds no check of its own. It exists so
+    a test signature signals "this test assumes a logged-in session" to the reader.
     """
     return page
 
@@ -195,11 +195,10 @@ def create_object(api):
 def api_count(api):
     """Callable returning the API object count for an endpoint and filter params.
 
-    The ground truth for list-view assertions: page-level row checks alone would miss
-    records leaking onto later pages, so filter tests compare the visible row count
-    against `api_count("dcim/locations", parent=parent_id)`. The equality only holds
-    while the filtered results fit on one page; target owned data small enough to
-    guarantee that.
+    Gives filter tests an expected count from outside the UI: checking visible rows
+    proves the rows shown match the filter, not that every matching record was shown.
+    Valid only while the expected results fit on one page — keep owned test data
+    small enough to guarantee that.
     """
 
     def _count(endpoint, **params):
