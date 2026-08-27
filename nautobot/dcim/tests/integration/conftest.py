@@ -17,9 +17,8 @@ def created_location_tree(create_object, status_id_for):
 
     Creates a parent with two children, plus a decoy parent with its own child, so a
     parent-filter test can assert both inclusion (the children) and exclusion (the
-    decoy's child) against records this test controls, regardless of what other data
-    the instance holds. All records use a unique `ZZZ-test-` prefixed name and are
-    deleted on teardown.
+    decoy's child) against records this test controls, regardless of other data in the
+    instance. All records use a unique `ZZZ-test-` prefixed name and are deleted on teardown.
     """
     unique = unique_name()
     status = status_id_for("dcim.location")
