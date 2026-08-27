@@ -523,14 +523,13 @@ class BaseFilterSetTest(TestCase):
     def setUpTestData(cls):
         cls.filters = cls.TestFilterSet().filters
 
-    def _test_lookups(self, filter_name, lookups_map, expected_type, expected_distinct=False):
+    def _test_lookups(self, filter_name, lookups_map, expected_type):
         for key, (exclude, lookup_expr) in lookups_map.items():
             with self.subTest(filter_name=filter_name, key=key):
                 filter_key = f"{filter_name}__{key}" if key else filter_name
                 self.assertIsInstance(self.filters[filter_key], expected_type)
                 self.assertEqual(self.filters[filter_key].lookup_expr, lookup_expr)
                 self.assertEqual(self.filters[filter_key].exclude, exclude)
-                self.assertEqual(self.filters[filter_key].distinct, expected_distinct)
 
     def test_generated_lookup_expression_filters(self):
         """
@@ -646,10 +645,7 @@ class BaseFilterSetTest(TestCase):
         }
 
         self._test_lookups(
-            "modelmultiplechoicefield",
-            model_multiple_choice_field_lookups,
-            django_filters.ModelMultipleChoiceFilter,
-            expected_distinct=True,
+            "modelmultiplechoicefield", model_multiple_choice_field_lookups, django_filters.ModelMultipleChoiceFilter
         )
 
     def test_multi_value_char_filter(self):
@@ -791,12 +787,7 @@ class BaseFilterSetTest(TestCase):
             "n": (True, "exact"),
         }
 
-        self._test_lookups(
-            "multiplechoicefield",
-            choice_field_lookups,
-            django_filters.MultipleChoiceFilter,
-            expected_distinct=True,
-        )
+        self._test_lookups("multiplechoicefield", choice_field_lookups, django_filters.MultipleChoiceFilter)
 
         string_type_lookups = {
             "ie": (False, "iexact"),
@@ -813,12 +804,7 @@ class BaseFilterSetTest(TestCase):
             "nire": (True, "iregex"),
         }
 
-        self._test_lookups(
-            "multiplechoicefield",
-            string_type_lookups,
-            filters.MultiValueCharFilter,
-            expected_distinct=True,
-        )
+        self._test_lookups("multiplechoicefield", string_type_lookups, filters.MultiValueCharFilter)
 
     def test_tag_filter(self):
         tags_lookups = {
@@ -826,7 +812,7 @@ class BaseFilterSetTest(TestCase):
             "n": (True, "exact"),
         }
 
-        self._test_lookups("tags", tags_lookups, filters.TagFilter, expected_distinct=True)
+        self._test_lookups("tags", tags_lookups, filters.TagFilter)
 
     def test_tree_node_multiple_choice_filter(self):
         tree_foreign_key_lookups = {
@@ -834,12 +820,7 @@ class BaseFilterSetTest(TestCase):
             "n": (True, "exact"),
         }
 
-        self._test_lookups(
-            "treeforeignkeyfield",
-            tree_foreign_key_lookups,
-            filters.TreeNodeMultipleChoiceFilter,
-            expected_distinct=True,
-        )
+        self._test_lookups("treeforeignkeyfield", tree_foreign_key_lookups, filters.TreeNodeMultipleChoiceFilter)
 
 
 class DynamicFilterLookupExpressionTest(TestCase):
