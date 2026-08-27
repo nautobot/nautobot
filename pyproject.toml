@@ -297,6 +297,9 @@ relative_files = true
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 testpaths = ["nautobot/*/tests/integration"]
+# Default collection is Test*; *TestCase matches the repo's universal naming convention
+# (and the Selenium-named migration ledger classes, which pytest would otherwise skip silently).
+python_classes = ["Test*", "*TestCase"]
 markers = [
     "behavioral: verifies application output correctness, not just page structure",
 ]
