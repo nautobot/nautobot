@@ -138,6 +138,11 @@ class AutoDistinctFilterMixin:
 #
 # Filters
 #
+# `AutoDistinctFilterMixin` is listed first on each of these rather than being picked up via a shared
+# `MultipleChoiceFilter` base. The MRO works out the same either way, but `django_filters.Filter.__init__` does
+# not call `super().__init__()`, so static analysis (CodeQL `py/missing-call-to-init`) walking from the first
+# base reports the mixin's `__init__` as unreachable unless it comes first. Keep it first.
+#
 # Note that for the various `MultipleChoiceFilter` subclasses below, they additionally inherit from `CharFilter`,
 # `DateFilter`, `DateTimeFilter`, etc. This has no particular impact on the behavior of these filters (as we're
 # explicitly overriding their `field_class` attribute anyway), but is done as a means of type hinting
@@ -149,21 +154,23 @@ class MultipleChoiceFilter(AutoDistinctFilterMixin, django_filters.MultipleChoic
     """Subclass of the django-filters class by the same name, which auto-derives its `distinct` flag."""
 
 
-class MultiValueCharFilter(django_filters.CharFilter, MultipleChoiceFilter):
+class MultiValueCharFilter(AutoDistinctFilterMixin, django_filters.CharFilter, django_filters.MultipleChoiceFilter):
     field_class = forms.MultiValueCharField
 
 
-class MultiValueDateFilter(django_filters.DateFilter, MultipleChoiceFilter):
+class MultiValueDateFilter(AutoDistinctFilterMixin, django_filters.DateFilter, django_filters.MultipleChoiceFilter):
     # TODO we don't currently have a MultiValueDatePicker widget
     field_class = multivalue_field_factory(django_forms.DateField, widget=forms.DatePicker)
 
 
-class MultiValueDateTimeFilter(django_filters.DateTimeFilter, MultipleChoiceFilter):
+class MultiValueDateTimeFilter(
+    AutoDistinctFilterMixin, django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter
+):
     # TODO we don't currently have a MultiValueDateTimePicker widget
     field_class = multivalue_field_factory(django_forms.DateTimeField, widget=forms.DateTimePicker)
 
 
-class MultiValueNumberFilter(django_filters.NumberFilter, MultipleChoiceFilter):
+class MultiValueNumberFilter(AutoDistinctFilterMixin, django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.IntegerField)
 
     def __init__(self, *args, choices=None, **kwargs):
@@ -175,15 +182,17 @@ class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
 
 
-class MultiValueFloatFilter(django_filters.NumberFilter, MultipleChoiceFilter):
+class MultiValueFloatFilter(AutoDistinctFilterMixin, django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.FloatField)
 
 
-class MultiValueDecimalFilter(django_filters.NumberFilter, MultipleChoiceFilter):
+class MultiValueDecimalFilter(
+    AutoDistinctFilterMixin, django_filters.NumberFilter, django_filters.MultipleChoiceFilter
+):
     field_class = multivalue_field_factory(django_forms.DecimalField)
 
 
-class MultiValueTimeFilter(django_filters.TimeFilter, MultipleChoiceFilter):
+class MultiValueTimeFilter(AutoDistinctFilterMixin, django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
     # TODO we don't currently have a MultiValueTimePicker widget
     field_class = multivalue_field_factory(django_forms.TimeField, widget=forms.TimePicker)
 
@@ -192,13 +201,13 @@ class MACAddressFilter(django_filters.CharFilter):
     field_class = forms.MACAddressField
 
 
-class MultiValueMACAddressFilter(MACAddressFilter, MultipleChoiceFilter):
+class MultiValueMACAddressFilter(AutoDistinctFilterMixin, MACAddressFilter, django_filters.MultipleChoiceFilter):
     # Don't use multivalue_field_factory(forms.MACAddressField) because that will reject partial substrings like
     # "aa:" or ":01:02", which would prevent us from using filters like `mac_address__isw` to their potential.
     field_class = forms.MultiValueCharField
 
 
-class MultiValueUUIDFilter(django_filters.UUIDFilter, MultipleChoiceFilter):
+class MultiValueUUIDFilter(AutoDistinctFilterMixin, django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.UUIDField, widget=widgets.MultiValueCharInput)
 
 
@@ -348,7 +357,7 @@ class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilte
     """
 
 
-class ContentTypeMultipleChoiceFilter(MultipleChoiceFilter):
+class ContentTypeMultipleChoiceFilter(AutoDistinctFilterMixin, django_filters.MultipleChoiceFilter):
     """
     Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
 
