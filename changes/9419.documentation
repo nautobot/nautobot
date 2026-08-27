@@ -1,1 +1,1 @@
-Added guidance to the development best practices documentation, regarding the use of `distinct=True` and `distinct=False` when defining filterset filters.
+Added guidance to the development best practices documentation regarding the `distinct` flag on filterset filters.

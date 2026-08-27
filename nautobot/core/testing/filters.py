@@ -8,6 +8,7 @@ from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
+import django_filters
 from django_filters import FilterSet
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -15,6 +16,8 @@ from nautobot.core.filters import (
     ContentTypeChoiceFilter,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    field_path_traverses_to_many,
+    MappedPredicatesFilterMixin,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -107,6 +110,80 @@ class FilterTestCases:
                 "SELECT DISTINCT",
                 str(filterset.qs.query),
                 "Filter set with empty parameter added `DISTINCT` to select query. This needs to be avoided because it incurs heavy performance penalties.",
+            )
+
+        _DISTINCT_REMEDIATION = (
+            "To fix each of them:\n"
+            "  1. If the filter is declared using a `django_filters` class, switch to the Nautobot class of the "
+            "same name from `nautobot.apps.filters`, which derives `distinct` from the field path automatically "
+            "so that you don't need to declare it at all. This requires a minimum Nautobot version of 3.2.4: "
+            "`MultipleChoiceFilter` and `BooleanFilter` were *added* to `nautobot.apps.filters` in 3.2.4, so "
+            "importing them from an earlier version raises `ImportError`, while `ModelMultipleChoiceFilter` and "
+            "the `MultiValue<type>Filter` classes already existed but only gained the derivation in 3.2.4.\n"
+            "  2. If your App supports Nautobot versions earlier than 3.2.4, or the filter's `field_name` is "
+            "not a real model field path (as with `RelationshipFilter`), declare `distinct={distinct_value}` "
+            "explicitly on the filter instead, with a comment explaining why.\n"
+            "Note that `distinct` has no effect on a filter that declares a `method`; such a filter is "
+            "responsible for calling `.distinct()` itself where needed, and is not checked by this test."
+        )
+
+        def test_filters_distinct(self):
+            """Verify that each filter applies `.distinct()` if and only if it traverses a to-many relation.
+
+            A filter that traverses a to-many relation (a many-to-many field, a reverse foreign key, or a generic
+            relation) must apply `.distinct()`, as the underlying SQL join can otherwise return the same object
+            more than once. Any other filter applying `.distinct()` incurs database overhead for no benefit.
+
+            Nautobot's filter classes derive this automatically, so a failure here usually means either that the
+            filter uses a `django_filters` class rather than the Nautobot equivalent of the same name, or that its
+            `field_name` doesn't describe the relation that the filter actually traverses.
+            """
+            self.assertIsNotNone(self.filterset)
+            filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
+            model = self.queryset.model
+            should_be_distinct = []
+            should_not_be_distinct = []
+
+            for filter_name, filter_field in filterset.filters.items():
+                # `distinct` has no effect on a filter with a `method`, as django-filter replaces its `filter()`
+                if filter_field.method:
+                    continue
+                if isinstance(filter_field, MappedPredicatesFilterMixin):
+                    # A `q`-style filter ORs all of its predicates into one `.filter()` call, so it needs
+                    # `.distinct()` if any one of those predicates traverses a to-many relation.
+                    paths = list(filter_field.filter_predicates)
+                    label = f"{filter_name} (filter_predicates={paths})"
+                elif isinstance(filter_field, (django_filters.MultipleChoiceFilter, django_filters.BooleanFilter)):
+                    paths = [filter_field.field_name]
+                    label = f"{filter_name} (field_name={filter_field.field_name!r})"
+                else:
+                    continue
+                results = [field_path_traverses_to_many(model, path) for path in paths]
+                if any(result is None for result in results):
+                    # Not a resolvable model field path, so there's nothing to derive an expectation from
+                    continue
+                traverses_to_many = any(results)
+                # `RelatedMembershipBooleanFilter` repurposes `exclude` as a lookup value rather than as an
+                # instruction to negate, so it doesn't get the "`.exclude()` is a subquery" exemption.
+                negates = filter_field.exclude and getattr(filter_field, "exclude_uses_subquery", True)
+                if traverses_to_many and not negates and not filter_field.distinct:
+                    should_be_distinct.append(label)
+                elif not traverses_to_many and filter_field.distinct:
+                    should_not_be_distinct.append(label)
+
+            self.assertEqual(
+                should_be_distinct,
+                [],
+                f"The above {self.filterset.__name__} filters traverse a to-many relation (a many-to-many field, "
+                "a reverse foreign key, or a generic relation) but do not apply `.distinct()`, so they can return "
+                "the same object more than once.\n" + self._DISTINCT_REMEDIATION.format(distinct_value="True"),
+            )
+            self.assertEqual(
+                should_not_be_distinct,
+                [],
+                f"The above {self.filterset.__name__} filters apply `.distinct()` without traversing a to-many "
+                "relation. `.distinct()` cannot change the result in that case, and is a significant database "
+                "cost at scale.\n" + self._DISTINCT_REMEDIATION.format(distinct_value="False"),
             )
 
         def test_id(self):

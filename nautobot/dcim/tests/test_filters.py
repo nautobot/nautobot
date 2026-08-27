@@ -1252,7 +1252,12 @@ class RackGroupTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cust
         child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
         with self.subTest("2 child groups"):
             params = {"children": [child_groups[0].pk, child_groups[1].pk]}
-            self.assertEqual(self.filterset(params, self.queryset).qs.count(), 2)
+            # Compare against a distinct() queryset rather than asserting a count, so that a parent group matching
+            # more than one of the requested children is detected rather than being counted twice.
+            self.assertQuerySetEqualAndNotEmpty(
+                self.filterset(params, self.queryset).qs,
+                RackGroup.objects.filter(children__in=child_groups).distinct(),
+            )
         with self.subTest("repeated group"):
             rack_group_4 = RackGroup.objects.filter(name="Rack Group 4").first()
             params = {"children": [rack_group_4.pk, rack_group_4.pk]}

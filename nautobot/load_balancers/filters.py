@@ -1,10 +1,9 @@
 """Filtering for nautobot_load_balancer_models."""
 
-import django_filters
-
 from nautobot.cloud.models import CloudService
 from nautobot.core.filters import (
     BaseFilterSet,
+    ModelMultipleChoiceFilter,
     MultiValueDateTimeFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
@@ -30,50 +29,41 @@ class VirtualServerFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet):  # 
         }
     )
 
-    vip = django_filters.ModelMultipleChoiceFilter(
-        distinct=False,
+    vip = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="VIP (ID)",
     )
     source_nat_pool = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Prefix.objects.all(),
         prefers_id=True,
         to_field_name="network",
         label="Source NAT Pool (ID or network string)",
     )
     load_balancer_pool = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=models.LoadBalancerPool.objects.all(),
         label="Load Balancer Pool (name or ID)",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Device.objects.all(),
         label="Device (name or ID)",
     )
     device_redundancy_group = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=DeviceRedundancyGroup.objects.all(),
         label="Device Redundancy Group (name or ID)",
     )
     cloud_service = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=CloudService.objects.all(),
         label="Cloud Service (name or ID)",
     )
     virtual_chassis = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VirtualChassis.objects.all(),
         label="Virtual Chassis (name or ID)",
     )
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=models.HealthCheckMonitor.objects.all(),
         label="Health Check Monitor (name or ID)",
     )
     certificate_profiles = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",
@@ -91,7 +81,6 @@ class LoadBalancerPoolFilterSet(NameSearchFilterSet, NautobotFilterSet, TenancyM
     """Filter for LoadBalancerPool."""
 
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=models.HealthCheckMonitor.objects.all(),
         label="Health Check Monitor (name or ID)",
     )
@@ -115,24 +104,20 @@ class LoadBalancerPoolMemberFilterSet(StatusModelFilterSetMixin, TenancyModelFil
             "port": "icontains",
         }
     )
-    ip_address = django_filters.ModelMultipleChoiceFilter(
-        distinct=False,
+    ip_address = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="IP Address (ID)",
     )
     load_balancer_pool = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         to_field_name="name",
         queryset=models.LoadBalancerPool.objects.all(),
         label="Load Balancer Pool (name or ID)",
     )
     health_check_monitor = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=models.HealthCheckMonitor.objects.all(),
         label="Health Check Monitor (name or ID)",
     )
     certificate_profiles = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",
@@ -193,13 +178,11 @@ class CertificateProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet)
     )
     expiration_date = MultiValueDateTimeFilter()
     load_balancer_pool_members = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="ip_address__host",
         queryset=models.LoadBalancerPoolMember.objects.all(),
         label="Load Balancer Pool Members (ID or host string)",
     )
     virtual_servers = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=models.VirtualServer.objects.all(),
         label="Virtual Servers",
     )
@@ -214,14 +197,18 @@ class CertificateProfileFilterSet(TenancyModelFilterSetMixin, NautobotFilterSet)
 class VirtualServerCertificateProfileAssignmentFilterSet(BaseFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VirtualServerCertificateProfileAssignment."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "virtual_server__name": "icontains",
+            "certificate_profile__name": "icontains",
+        },
+    )
     virtual_server = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         to_field_name="name",
         queryset=models.VirtualServer.objects.all(),
         label="Virtual Server (name or ID)",
     )
     certificate_profile = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",
@@ -237,14 +224,19 @@ class VirtualServerCertificateProfileAssignmentFilterSet(BaseFilterSet):  # pyli
 class LoadBalancerPoolMemberCertificateProfileAssignmentFilterSet(BaseFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for LoadBalancerPoolMemberCertificateProfileAssignment."""
 
+    q = SearchFilter(
+        filter_predicates={
+            "load_balancer_pool_member__label": "icontains",
+            "certificate_profile__name": "icontains",
+        },
+    )
     load_balancer_pool_member = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
-        to_field_name="name",
+        # LoadBalancerPoolMember has no `name` field; match CertificateProfileFilterSet.load_balancer_pool_members
+        to_field_name="ip_address__host",
         queryset=models.LoadBalancerPoolMember.objects.all(),
-        label="Load Balancer Pool Member (name or ID)",
+        label="Load Balancer Pool Member (ID or host string)",
     )
     certificate_profile = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         to_field_name="name",
         queryset=models.CertificateProfile.objects.all(),
         label="Certificate Profile (name or ID)",

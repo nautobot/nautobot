@@ -38,7 +38,6 @@ __all__ = (
 
 class ClusterTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=Cluster.objects.all(),
         to_field_name="name",
     )
@@ -54,7 +53,6 @@ class ClusterTypeFilterSet(NautobotFilterSet, NameSearchFilterSet):
 
 class ClusterGroupFilterSet(NautobotFilterSet, NameSearchFilterSet):
     clusters = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=Cluster.objects.all(),
         to_field_name="name",
     )
@@ -76,7 +74,6 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         },
     )
     devices = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=Device.objects.all(),
     )
@@ -85,7 +82,6 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         label="Has devices",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=VirtualMachine.objects.all(),
     )
@@ -94,25 +90,21 @@ class ClusterFilterSet(NautobotFilterSet, LocatableModelFilterSetMixin, TenancyM
         label="Has virtual machines",
     )
     cluster_group_id = ModelMultipleChoiceFilter(
-        distinct=False,
         field_name="cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Parent cluster group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=ClusterGroup.objects.all(),
         label="Parent cluster group (ID or name)",
         to_field_name="name",
     )
     cluster_type_id = ModelMultipleChoiceFilter(
-        distinct=False,
         field_name="cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=ClusterType.objects.all(),
         to_field_name="name",
     )
@@ -136,41 +128,34 @@ class VirtualMachineFilterSet(
         },
     )
     cluster_group_id = ModelMultipleChoiceFilter(
-        distinct=False,
         field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         label="Cluster group (ID) - Deprecated (use cluster_group filter)",
     )
     cluster_group = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         field_name="cluster__cluster_group",
         queryset=ClusterGroup.objects.all(),
         to_field_name="name",
     )
     cluster_type_id = ModelMultipleChoiceFilter(
-        distinct=False,
         field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         label="Cluster type (ID) - Deprecated (use cluster_type filter)",
     )
     cluster_type = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         field_name="cluster__cluster_type",
         queryset=ClusterType.objects.all(),
         to_field_name="name",
     )
     cluster_id = ModelMultipleChoiceFilter(
-        distinct=False,
         queryset=Cluster.objects.all(),
         label="Cluster (ID) - Deprecated (use cluster filter)",
     )
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Cluster.objects.all(),
         to_field_name="name",
     )
     location = TreeNodeMultipleChoiceFilter(
-        distinct=False,
         prefers_id=True,
         queryset=Location.objects.all(),
         field_name="cluster__location",
@@ -178,12 +163,10 @@ class VirtualMachineFilterSet(
         label="Location (name or ID)",
     )
     platform_id = ModelMultipleChoiceFilter(
-        distinct=False,
         queryset=Platform.objects.all(),
         label="Platform (ID) - Deprecated (use platform filter)",
     )
     platform = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Platform.objects.all(),
         to_field_name="name",
     )
@@ -204,7 +187,6 @@ class VirtualMachineFilterSet(
         label="Primary IPv6 Address (address or ID)",
     )
     services = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=Service.objects.all(),
     )
@@ -213,7 +195,6 @@ class VirtualMachineFilterSet(
         label="Has services",
     )
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VMInterface.objects.all(),
         to_field_name="name",
     )
@@ -226,7 +207,6 @@ class VirtualMachineFilterSet(
         label="Has software image files",
     )
     software_image_files = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=SoftwareImageFile.objects.all(),
         to_field_name="image_file_name",
     )
@@ -235,7 +215,6 @@ class VirtualMachineFilterSet(
         label="Has software version",
     )
     software_version = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=SoftwareVersion.objects.all(),
         to_field_name="version",
     )
@@ -246,7 +225,6 @@ class VirtualMachineFilterSet(
     )
     has_ip_addresses = RelatedMembershipBooleanFilter(field_name="interfaces__ip_addresses", label="Has IP addresses")
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="VRFs (ID or RD)",
@@ -307,35 +285,29 @@ class VMInterfaceFilterSet(
     q = SearchFilter(filter_predicates={"name": "icontains"})
 
     cluster_id = ModelMultipleChoiceFilter(
-        distinct=False,
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
         label="Cluster (ID) - Deprecated (use cluster filter)",
     )
     cluster = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         field_name="virtual_machine__cluster",
         queryset=Cluster.objects.all(),
         to_field_name="name",
     )
     virtual_machine_id = ModelMultipleChoiceFilter(
-        distinct=False,
         field_name="virtual_machine",
         queryset=VirtualMachine.objects.all(),
         label="Virtual machine (ID) - Deprecated (use virtual_machine filter)",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
     )
     parent_interface = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         to_field_name="name",
         queryset=VMInterface.objects.all(),
     )
     child_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=VMInterface.objects.all(),
     )
@@ -344,12 +316,10 @@ class VMInterfaceFilterSet(
         label="Has child interfaces",
     )
     bridge = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         to_field_name="name",
         queryset=VMInterface.objects.all(),
     )
     bridged_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         to_field_name="name",
         queryset=VMInterface.objects.all(),
     )
@@ -361,7 +331,6 @@ class VMInterfaceFilterSet(
         label="MAC address",
     )
     tagged_vlans = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
@@ -371,7 +340,6 @@ class VMInterfaceFilterSet(
         label="Has Tagged VLANs",
     )
     untagged_vlan = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),

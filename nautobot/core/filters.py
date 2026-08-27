@@ -1,9 +1,11 @@
 from copy import deepcopy
+from functools import lru_cache
 import logging
 import uuid
 
 from django import forms as django_forms
 from django.conf import settings
+from django.core.exceptions import FieldError
 from django.db import models
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.related import ManyToManyRel, ManyToOneRel, OneToOneRel
@@ -74,31 +76,94 @@ def multivalue_field_factory(field_class, widget=django_forms.SelectMultiple):
     )
 
 
+@lru_cache(maxsize=None)
+def field_path_traverses_to_many(model, field_name):
+    """
+    Determine whether `field_name` crosses a to-many relation (m2m, reverse FK, or GenericRelation) on `model`.
+
+    Returns `True` or `False`, or `None` if `field_name` doesn't resolve to a model field path at all
+    (as is the case for filters that use a `method`, or that filter on something other than a model field).
+    """
+    if not field_name:
+        return None
+    try:
+        parts = get_field_parts(model, field_name)
+    except FieldError:
+        return None
+    if not parts:
+        return None
+    return any(part.many_to_many or part.one_to_many for part in parts)
+
+
+class AutoDistinctFilterMixin:
+    """
+    Mixin for `MultipleChoiceFilter` subclasses that derives the `distinct` flag from the filter's field path.
+
+    `django_filters.MultipleChoiceFilter` defaults to `distinct=True`, but a `.distinct()` call is only *needed*
+    when a filter traverses a to-many relation, and it imposes a significant performance cost at scale otherwise.
+    The model isn't known when a filter is instantiated as a class attribute, so resolution is deferred until
+    `self.model` has been set (see `django_filters.filterset.BaseFilterSet.__init__`).
+
+    An explicitly provided `distinct=` argument always takes precedence, as does the class default in cases where
+    the field path can't be resolved (a filter with a `method`, for example).
+    """
+
+    # Whether `exclude=True` means that this filter calls `qs.exclude()`, which compiles to a subquery rather
+    # than a join and so can never return duplicates. `RelatedMembershipBooleanFilter` repurposes `exclude` as
+    # the value to look up rather than as an instruction to negate, and so sets this to False.
+    exclude_uses_subquery = True
+
+    def __init__(self, *args, **kwargs):
+        # Must be checked before calling super(), as `MultipleChoiceFilter.__init__` setdefault()s the key.
+        self._distinct_explicit = "distinct" in kwargs
+        super().__init__(*args, **kwargs)
+
+    @property
+    def distinct(self):
+        model = getattr(self, "model", None)
+        if self._distinct_explicit or model is None:
+            return self._distinct
+        if self.exclude and self.exclude_uses_subquery:
+            # `qs.exclude()` across a to-many relation compiles to `NOT IN (subquery)` rather than a join,
+            # so it can never return duplicate rows.
+            return False
+        traverses_to_many = field_path_traverses_to_many(model, self.field_name)
+        return self._distinct if traverses_to_many is None else traverses_to_many
+
+    @distinct.setter
+    def distinct(self, value):
+        self._distinct = value
+
+
 #
 # Filters
 #
-# Note that for the various MultipleChoiceFilter subclasses below, they additionally inherit from `CharFilter`,
+# Note that for the various `MultipleChoiceFilter` subclasses below, they additionally inherit from `CharFilter`,
 # `DateFilter`, `DateTimeFilter`, etc. This has no particular impact on the behavior of these filters (as we're
 # explicitly overriding their `field_class` attribute anyway), but is done as a means of type hinting
 # for generating a more accurate REST API OpenAPI schema for these filter types.
 #
 
 
-class MultiValueCharFilter(django_filters.CharFilter, django_filters.MultipleChoiceFilter):
+class MultipleChoiceFilter(AutoDistinctFilterMixin, django_filters.MultipleChoiceFilter):
+    """Subclass of the django-filters class by the same name, which auto-derives its `distinct` flag."""
+
+
+class MultiValueCharFilter(django_filters.CharFilter, MultipleChoiceFilter):
     field_class = forms.MultiValueCharField
 
 
-class MultiValueDateFilter(django_filters.DateFilter, django_filters.MultipleChoiceFilter):
+class MultiValueDateFilter(django_filters.DateFilter, MultipleChoiceFilter):
     # TODO we don't currently have a MultiValueDatePicker widget
     field_class = multivalue_field_factory(django_forms.DateField, widget=forms.DatePicker)
 
 
-class MultiValueDateTimeFilter(django_filters.DateTimeFilter, django_filters.MultipleChoiceFilter):
+class MultiValueDateTimeFilter(django_filters.DateTimeFilter, MultipleChoiceFilter):
     # TODO we don't currently have a MultiValueDateTimePicker widget
     field_class = multivalue_field_factory(django_forms.DateTimeField, widget=forms.DateTimePicker)
 
 
-class MultiValueNumberFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+class MultiValueNumberFilter(django_filters.NumberFilter, MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.IntegerField)
 
     def __init__(self, *args, choices=None, **kwargs):
@@ -110,15 +175,15 @@ class MultiValueBigNumberFilter(MultiValueNumberFilter):
     """Subclass of MultiValueNumberFilter used for BigInteger model fields."""
 
 
-class MultiValueFloatFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+class MultiValueFloatFilter(django_filters.NumberFilter, MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.FloatField)
 
 
-class MultiValueDecimalFilter(django_filters.NumberFilter, django_filters.MultipleChoiceFilter):
+class MultiValueDecimalFilter(django_filters.NumberFilter, MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.DecimalField)
 
 
-class MultiValueTimeFilter(django_filters.TimeFilter, django_filters.MultipleChoiceFilter):
+class MultiValueTimeFilter(django_filters.TimeFilter, MultipleChoiceFilter):
     # TODO we don't currently have a MultiValueTimePicker widget
     field_class = multivalue_field_factory(django_forms.TimeField, widget=forms.TimePicker)
 
@@ -127,17 +192,34 @@ class MACAddressFilter(django_filters.CharFilter):
     field_class = forms.MACAddressField
 
 
-class MultiValueMACAddressFilter(MACAddressFilter, django_filters.MultipleChoiceFilter):
+class MultiValueMACAddressFilter(MACAddressFilter, MultipleChoiceFilter):
     # Don't use multivalue_field_factory(forms.MACAddressField) because that will reject partial substrings like
     # "aa:" or ":01:02", which would prevent us from using filters like `mac_address__isw` to their potential.
     field_class = forms.MultiValueCharField
 
 
-class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
+class MultiValueUUIDFilter(django_filters.UUIDFilter, MultipleChoiceFilter):
     field_class = multivalue_field_factory(django_forms.UUIDField, widget=widgets.MultiValueCharInput)
 
 
-class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
+class BooleanFilter(AutoDistinctFilterMixin, django_filters.BooleanFilter):
+    """Subclass of the django-filters class by the same name, which auto-derives its `distinct` flag.
+
+    Note that an `isnull=True` lookup can never return duplicates, even across a to-many relation: it matches
+    only objects that have *no* related rows, of which the outer join produces exactly one per object. The
+    `.distinct()` is therefore skipped for that case regardless of the derived value.
+    """
+
+    def filter(self, qs, value):
+        if value in EMPTY_VALUES:
+            return qs
+        qs = self.get_method(qs)(**{f"{self.field_name}__{self.lookup_expr}": value})
+        if self.distinct and not (self.lookup_expr == "isnull" and value):
+            qs = qs.distinct()
+        return qs
+
+
+class RelatedMembershipBooleanFilter(BooleanFilter):
     """
     BooleanFilter for related objects that will explicitly perform `isnull` lookups.
     The `field_name` argument is required and must be set to the related field on the
@@ -174,7 +256,10 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
 
     """
 
-    def __init__(self, field_name=None, lookup_expr="isnull", *, label=None, method=None, distinct=True, **kwargs):
+    # `exclude` here is the value to look up, not an instruction to negate the query; see `filter()` below.
+    exclude_uses_subquery = False
+
+    def __init__(self, field_name=None, lookup_expr="isnull", *, label=None, method=None, **kwargs):
         if field_name is None:
             raise ValueError(f"Field name is required for {self.__class__.__name__}")
 
@@ -183,7 +268,6 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
             lookup_expr=lookup_expr,
             label=label,
             method=method,
-            distinct=distinct,
             widget=forms.StaticSelect2(choices=forms.BOOLEAN_CHOICES),
             **kwargs,
         )
@@ -191,14 +275,17 @@ class RelatedMembershipBooleanFilter(django_filters.BooleanFilter):
     def filter(self, qs, value):
         if value in EMPTY_VALUES or (hasattr(value, "exists") and not value.exists()):
             return qs
-        if self.distinct:
-            qs = qs.distinct()
         lookup = f"{self.field_name}__{self.lookup_expr}"
         if bool(value):
             # if self.exclude=False, return instances with field populated
-            return qs.filter(**{lookup: self.exclude})
+            qs = qs.filter(**{lookup: self.exclude})
+            if self.distinct and not self.exclude:
+                # Only `isnull=False` joins to the related rows, and so only it can return duplicates
+                qs = qs.distinct()
+            return qs
         else:
-            # if self.exclude=False, exclude instances with field populated
+            # if self.exclude=False, exclude instances with field populated.
+            # `.exclude()` compiles to a subquery rather than a join, so it can't return duplicates.
             return qs.exclude(**{lookup: self.exclude})
 
 
@@ -261,7 +348,7 @@ class ContentTypeChoiceFilter(ContentTypeFilterMixin, django_filters.ChoiceFilte
     """
 
 
-class ContentTypeMultipleChoiceFilter(django_filters.MultipleChoiceFilter):
+class ContentTypeMultipleChoiceFilter(MultipleChoiceFilter):
     """
     Allows multiple-choice ContentType filtering by <app_label>.<model> (e.g. "dcim.location").
 
@@ -338,6 +425,8 @@ class MappedPredicatesFilterMixin:
     preserve_whitespace = ["icontains"]
 
     def __init__(self, filter_predicates=None, strip=False, *args, **kwargs):
+        # Must be checked before calling super(), which assigns `self.distinct` via the property setter below
+        self._distinct_explicit = "distinct" in kwargs
         if not isinstance(filter_predicates, dict):
             raise TypeError("filter_predicates must be a dict")
 
@@ -403,6 +492,26 @@ class MappedPredicatesFilterMixin:
         # Return this for later use (such as introspection or debugging)
         return query
 
+    @property
+    def distinct(self):
+        """Derive `distinct` from the filter predicates, as this filter has no single `field_name` of its own.
+
+        Every predicate is OR'd into a single `.filter()` call, so a `.distinct()` is required if *any* one of
+        them traverses a to-many relation. See `AutoDistinctFilterMixin`, of which this is a variation.
+        """
+        model = getattr(self, "model", None)
+        if self._distinct_explicit or model is None:
+            return self._distinct
+        results = [field_path_traverses_to_many(model, field_name) for field_name in self.filter_predicates]
+        if any(result is None for result in results):
+            # At least one predicate isn't a resolvable model field path, so err on the side of correctness
+            return True
+        return any(results)
+
+    @distinct.setter
+    def distinct(self, value):
+        self._distinct = value
+
     def filter(self, qs, value):
         if value in EMPTY_VALUES:
             return qs
@@ -411,17 +520,13 @@ class MappedPredicatesFilterMixin:
         query = self.generate_query(value=value)
         qs = self.get_method(qs)(query)
         self._most_recent_query = query
-        return qs.distinct()
+        return qs.distinct() if self.distinct else qs
 
 
-class ModelMultipleChoiceFilter(django_filters.ModelMultipleChoiceFilter):
+class ModelMultipleChoiceFilter(AutoDistinctFilterMixin, django_filters.ModelMultipleChoiceFilter):
     """Subclass of the django-filters class by the same name with an improved default `label` formulation.
 
-    Caution: unlike most other base Filter classes, `MultipleChoiceFilter` and hence `ModelMultipleChoiceFilter`
-    default to `distinct=True`, which is often unnecessary and can impose a significant performance overhead at scale.
-    If it's not strictly necessary, you should be sure to manually specify `distinct=False`.
-
-    TODO: update this class to default to `distinct=False` for self-consistency, and update all filter declarations.
+    Also auto-derives its `distinct` flag from the field path; see `AutoDistinctFilterMixin`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -665,150 +770,81 @@ class BaseFilterSet(django_filters.FilterSet):
     """
 
     FILTER_DEFAULTS = deepcopy(django_filters.filterset.FILTER_FOR_DBFIELD_DEFAULTS)
-    # NOTE: While all single-value django-filters Filter classes default to `distinct=False`, `MultipleChoiceFilter`
-    # and all of its subclasses (including all `MultiValue*Filter` classes in Nautobot) default to `distinct=True`.
-    # While `distinct=True` is "safest" it can impose a significant performance cost at scale and in many cases is
-    # not actually needed, so we've made the judgement call of having most kinds of *auto-generated* `MultiValue*Filter`
-    # be generated with an explicit `distinct=False` instead.
+    # NOTE: `distinct` is intentionally not specified for any of these; all of the filter classes used here derive
+    # it from the field path automatically. See `AutoDistinctFilterMixin`.
     FILTER_DEFAULTS.update(
         {
-            models.AutoField: {
-                "filter_class": MultiValueNumberFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.BigIntegerField: {
-                "filter_class": MultiValueBigNumberFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.CharField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.DateField: {
-                "filter_class": MultiValueDateFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.DateTimeField: {
-                "filter_class": MultiValueDateTimeFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.DecimalField: {
-                "filter_class": MultiValueDecimalFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.EmailField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.FloatField: {
-                "filter_class": MultiValueFloatFilter,
-                "extra": lambda field: {"distinct": False},
-            },
+            models.AutoField: {"filter_class": MultiValueNumberFilter},
+            models.BigIntegerField: {"filter_class": MultiValueBigNumberFilter},
+            # Note that django-filter's `filter_for_lookup()` looks up this entry specifically when generating
+            # an `isnull` filter for a field of *any* type, so this is what all `<field>__isnull` filters use.
+            models.BooleanField: {"filter_class": BooleanFilter},
+            models.CharField: {"filter_class": MultiValueCharFilter},
+            models.DateField: {"filter_class": MultiValueDateFilter},
+            models.DateTimeField: {"filter_class": MultiValueDateTimeFilter},
+            models.DecimalField: {"filter_class": MultiValueDecimalFilter},
+            models.EmailField: {"filter_class": MultiValueCharFilter},
+            models.FloatField: {"filter_class": MultiValueFloatFilter},
             # TODO: should be NaturalKeyOrPKMultipleChoiceFilter but not all models have a "name" or other natural key
             models.ForeignKey: {
                 "filter_class": ModelMultipleChoiceFilter,
                 "extra": lambda field: {
-                    "distinct": False,
                     "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if field.null else None,
                     "queryset": remote_queryset(field),
                     "to_field_name": field.remote_field.field_name,
                 },
             },
-            models.IntegerField: {
-                "filter_class": MultiValueNumberFilter,
-                "extra": lambda field: {"distinct": False},
-            },
+            models.IntegerField: {"filter_class": MultiValueNumberFilter},
             # Ref: https://github.com/carltongibson/django-filter/issues/1107
-            models.JSONField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False, "lookup_expr": "icontains"},
-            },
+            models.JSONField: {"filter_class": MultiValueCharFilter, "extra": lambda f: {"lookup_expr": "icontains"}},
             models.ManyToManyField: {
                 "filter_class": ModelMultipleChoiceFilter,
-                "extra": lambda field: {
-                    "distinct": True,
-                    "queryset": remote_queryset(field),
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
                 },
             },
             models.OneToOneField: {
                 "filter_class": ModelMultipleChoiceFilter,
-                "extra": lambda field: {
-                    "distinct": False,
-                    "queryset": remote_queryset(field),
-                    "to_field_name": field.remote_field.field_name,
-                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if field.null else None,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                    "to_field_name": f.remote_field.field_name,
+                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if f.null else None,
                 },
             },
-            models.PositiveIntegerField: {
-                "filter_class": MultiValueNumberFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.PositiveSmallIntegerField: {
-                "filter_class": MultiValueNumberFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.SlugField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.SmallIntegerField: {
-                "filter_class": MultiValueNumberFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.TextField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.TimeField: {
-                "filter_class": MultiValueTimeFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.URLField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            models.UUIDField: {
-                "filter_class": MultiValueUUIDFilter,
-                "extra": lambda field: {"distinct": False},
-            },
+            models.PositiveIntegerField: {"filter_class": MultiValueNumberFilter},
+            models.PositiveSmallIntegerField: {"filter_class": MultiValueNumberFilter},
+            models.SlugField: {"filter_class": MultiValueCharFilter},
+            models.SmallIntegerField: {"filter_class": MultiValueNumberFilter},
+            models.TextField: {"filter_class": MultiValueCharFilter},
+            models.TimeField: {"filter_class": MultiValueTimeFilter},
+            models.URLField: {"filter_class": MultiValueCharFilter},
+            models.UUIDField: {"filter_class": MultiValueUUIDFilter},
             ManyToManyRel: {
                 "filter_class": ModelMultipleChoiceFilter,
-                "extra": lambda field: {
-                    "distinct": True,
-                    "queryset": remote_queryset(field),
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
                 },
             },
             ManyToOneRel: {
                 "filter_class": ModelMultipleChoiceFilter,
-                "extra": lambda field: {
-                    "distinct": True,
-                    "queryset": remote_queryset(field),
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
                 },
             },
             OneToOneRel: {
                 "filter_class": ModelMultipleChoiceFilter,
-                "extra": lambda field: {
-                    "distinct": False,
-                    "queryset": remote_queryset(field),
-                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if field.null else None,
+                "extra": lambda f: {
+                    "queryset": remote_queryset(f),
+                    "null_label": django_filters.conf.settings.NULL_CHOICE_LABEL if f.null else None,
                 },
             },
-            core_fields.MACAddressCharField: {
-                "filter_class": MultiValueMACAddressFilter,
-                "extra": lambda field: {"distinct": False},
-            },
-            core_fields.TagsField: {
-                "filter_class": TagFilter,
-                "extra": lambda field: {"distinct": True},
-            },
-            timezone_field.TimeZoneField: {
-                "filter_class": MultiValueCharFilter,
-                "extra": lambda field: {"distinct": False},
-            },
+            core_fields.MACAddressCharField: {"filter_class": MultiValueMACAddressFilter},
+            core_fields.TagsField: {"filter_class": TagFilter},
+            timezone_field.TimeZoneField: {"filter_class": MultiValueCharFilter},
         }
     )
 
-    USE_CHAR_FILTER_FOR_LOOKUPS = [django_filters.MultipleChoiceFilter]
+    USE_CHAR_FILTER_FOR_LOOKUPS = [django_filters.MultipleChoiceFilter, MultipleChoiceFilter]
 
     @staticmethod
     def _get_filter_lookup_dict(existing_filter):
@@ -926,6 +962,18 @@ class BaseFilterSet(django_filters.FilterSet):
     def _should_use_char_filter_for_lookups(cls, filter_field):
         return type(filter_field) in cls.USE_CHAR_FILTER_FOR_LOOKUPS
 
+    @staticmethod
+    def _explicit_distinct(filter_field):
+        """
+        Return `{"distinct": ...}` if `filter_field` had `distinct` explicitly specified, else `{}`.
+
+        Filters that derive `distinct` automatically (see `AutoDistinctFilterMixin`) must be allowed to re-derive it
+        for themselves, rather than inheriting a value snapshotted before `filter_field.model` was known.
+        """
+        if getattr(filter_field, "_distinct_explicit", True):
+            return {"distinct": filter_field.distinct}
+        return {}
+
     @classmethod
     def _get_new_filter(cls, filter_field, field, filter_name, lookup_expr):
         if cls._should_use_char_filter_for_lookups(filter_field):
@@ -938,7 +986,7 @@ class BaseFilterSet(django_filters.FilterSet):
                 lookup_expr=lookup_expr,
                 label=filter_field.label,
                 exclude=filter_field.exclude,
-                distinct=filter_field.distinct,
+                **cls._explicit_distinct(filter_field),
             )
 
         if filter_name in cls.declared_filters and lookup_expr not in {"isnull"}:  # pylint: disable=no-member
@@ -953,13 +1001,20 @@ class BaseFilterSet(django_filters.FilterSet):
                 lookup_expr=lookup_expr,
                 label=filter_field.label,
                 exclude=filter_field.exclude,
-                distinct=filter_field.distinct,
+                **cls._explicit_distinct(filter_field),
                 **filter_field.extra,
             )
 
-        # The filter field is listed in Meta.fields so we can safely rely on default behavior
+        # The filter is either listed in Meta.fields, or was added post-hoc via `add_filter()` (as is the case for
+        # App-provided FilterExtensions), so we can rely on default behavior for the filter class and its arguments.
         # Will raise FieldLookupError if the lookup is invalid
-        return cls.filter_for_field(field, filter_field.field_name, lookup_expr)
+        new_filter = cls.filter_for_field(field, filter_field.field_name, lookup_expr)
+        # `filter_for_field` derives everything from the model field, so an explicit `distinct` on the filter we're
+        # deriving *from* would otherwise be silently dropped.
+        for name, value in cls._explicit_distinct(filter_field).items():
+            setattr(new_filter, name, value)
+            new_filter._distinct_explicit = True  # pylint: disable=protected-access
+        return new_filter
 
     @classmethod
     def add_filter(cls, new_filter_name, new_filter_field):
@@ -1072,11 +1127,8 @@ class BaseFilterSet(django_filters.FilterSet):
         """
         if lookup_type == "exact" and getattr(field, "choices", None):
             if isinstance(field, timezone_field.TimeZoneField):
-                return django_filters.MultipleChoiceFilter, {
-                    "choices": ((str(v), n) for v, n in field.choices),
-                    "distinct": False,
-                }
-            return django_filters.MultipleChoiceFilter, {"choices": field.choices, "distinct": False}
+                return MultipleChoiceFilter, {"choices": ((str(v), n) for v, n in field.choices)}
+            return MultipleChoiceFilter, {"choices": field.choices}
 
         return super().filter_for_lookup(field, lookup_type)
 

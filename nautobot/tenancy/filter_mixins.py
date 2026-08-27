@@ -1,6 +1,10 @@
 import django_filters
 
-from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter, TreeNodeMultipleChoiceFilter
+from nautobot.core.filters import (
+    ModelMultipleChoiceFilter,
+    NaturalKeyOrPKMultipleChoiceFilter,
+    TreeNodeMultipleChoiceFilter,
+)
 from nautobot.tenancy.models import Tenant, TenantGroup
 
 
@@ -10,19 +14,16 @@ class TenancyModelFilterSetMixin(django_filters.FilterSet):
     """
 
     tenant_group = TreeNodeMultipleChoiceFilter(
-        distinct=False,
         queryset=TenantGroup.objects.all(),
         field_name="tenant__tenant_group",
         to_field_name="name",
         label="Tenant Group (name or ID)",
     )
-    tenant_id = django_filters.ModelMultipleChoiceFilter(
-        distinct=False,
+    tenant_id = ModelMultipleChoiceFilter(
         queryset=Tenant.objects.all(),
         label='Tenant (ID) (deprecated, use "tenant" filter instead)',
     )
     tenant = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Tenant.objects.all(),
         to_field_name="name",
         label="Tenant (name or ID)",

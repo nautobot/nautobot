@@ -10,6 +10,7 @@ import netaddr
 from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     ModelMultipleChoiceFilter,
+    MultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueNumberFilter,
     MultiValueUUIDFilter,
@@ -83,34 +84,28 @@ class VRFFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyModelFil
         },
     )
     import_targets = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
     )
     export_targets = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=RouteTarget.objects.all(),
         to_field_name="name",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         field_name="devices",
         queryset=Device.objects.all(),
         to_field_name="name",
     )
     virtual_machines = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
     )
-    prefix = PrefixFilter(distinct=True, field_name="prefixes")
+    prefix = PrefixFilter(field_name="prefixes")
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Namespace.objects.all(),
         to_field_name="name",
     )
     virtual_device_contexts = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
     )
@@ -132,22 +127,18 @@ class VRFDeviceAssignmentFilterSet(NautobotFilterSet):
         },
     )
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VRF.objects.all(),
         to_field_name="name",
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Device.objects.all(),
         to_field_name="name",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
     )
     virtual_device_context = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VirtualDeviceContext.objects.all(),
         to_field_name="name",
     )
@@ -164,9 +155,8 @@ class VRFPrefixAssignmentFilterSet(NautobotFilterSet):
             "vrf__name": "icontains",
         },
     )
-    prefix = PrefixFilter(distinct=False)
+    prefix = PrefixFilter()
     vrf = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VRF.objects.all(),
         to_field_name="name",
     )
@@ -184,13 +174,11 @@ class RouteTargetFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
         },
     )
     importing_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Import VRF(s) (ID or RD)",
     )
     exporting_vrfs = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Export VRF(s) (ID or RD)",
@@ -231,7 +219,7 @@ class PrefixFilterSet(
     StatusModelFilterSetMixin,
     RoleModelFilterSetMixin,
 ):
-    parent = PrefixFilter(distinct=False)
+    parent = PrefixFilter()
     prefix = MultiValueCharFilter(
         method="filter_prefix",
         label="Prefix",
@@ -253,7 +241,6 @@ class PrefixFilterSet(
         label="Prefixes which contain this prefix or IP",
     )
     ancestors = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Prefix.objects.all(),
         prefers_id=True,
         to_field_name="network",
@@ -261,7 +248,6 @@ class PrefixFilterSet(
         label="Prefixes which are ancestors of this prefix (ID or network string)",
     )
     prefix_and_descendants = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Prefix.objects.all(),
         prefers_id=True,
         to_field_name="network",
@@ -269,7 +255,6 @@ class PrefixFilterSet(
         label="Prefixes which are the given Prefix (ID or network string) and its descendants",
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VRF.objects.all(),
         to_field_name="rd",
         label="Assigned VRF (ID or RD)",
@@ -290,7 +275,6 @@ class PrefixFilterSet(
         label="Present in VRF (RD)",
     )
     vlan_id = ModelMultipleChoiceFilter(
-        distinct=False,
         queryset=VLAN.objects.all(),
     )
     vlan_vid = MultiValueNumberFilter(
@@ -298,7 +282,6 @@ class PrefixFilterSet(
         label="VLAN number (1-4095)",
     )
     rir = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=RIR.objects.all(),
         to_field_name="name",
     )
@@ -306,20 +289,18 @@ class PrefixFilterSet(
         field_name="rir",
         label="Has RIR",
     )
-    type = django_filters.MultipleChoiceFilter(distinct=False, choices=choices.PrefixTypeChoices)
+    type = MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
     max_depth = django_filters.NumberFilter(
         method="filter_max_depth",
         exclude=True,
         label="Maximum nesting depth within parent Prefixes",
     )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Namespace.objects.all(),
         to_field_name="name",
     )
     ip_version = django_filters.NumberFilter()
     location = TreeNodeMultipleChoiceFilter(
-        distinct=True,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -327,18 +308,15 @@ class PrefixFilterSet(
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
-        distinct=True,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
     )
     cloud_networks = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=CloudNetwork.objects.all(),
         to_field_name="name",
     )
     vpn_tunnel_endpoints = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VPNTunnelEndpoint.objects.all(),
         to_field_name="pk",
         label="VPN Tunnel Endpoint ID",
@@ -462,9 +440,8 @@ class PrefixLocationAssignmentFilterSet(NautobotFilterSet):
             "location__name": "icontains",
         },
     )
-    prefix = PrefixFilter(distinct=False)
+    prefix = PrefixFilter()
     location = TreeNodeMultipleChoiceFilter(
-        distinct=False,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -487,7 +464,6 @@ class IPAddressFilterSet(
     RoleModelFilterSetMixin,
 ):
     parent = ModelMultipleChoiceFilter(
-        distinct=False,
         queryset=Prefix.objects.all(),
         label="Parent prefix",
     )
@@ -504,7 +480,6 @@ class IPAddressFilterSet(
         label="Address",
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         field_name="parent__vrfs",
         queryset=VRF.objects.all(),
         to_field_name="rd",
@@ -546,17 +521,14 @@ class IPAddressFilterSet(
         label="Virtual machine (ID)",
     )
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
     )
     vm_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VMInterface.objects.all(),
         to_field_name="name",
     )
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Namespace.objects.all(),
         field_name="parent__namespace",
         to_field_name="name",
@@ -567,7 +539,6 @@ class IPAddressFilterSet(
         label="Has Interface Assignments",
     )
     nat_inside = ModelMultipleChoiceFilter(
-        distinct=False,
         queryset=IPAddress.objects.all(),
         label="NAT (Inside)",
     )
@@ -577,7 +548,6 @@ class IPAddressFilterSet(
     )
     ip_version = django_filters.NumberFilter()
     services = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=Service.objects.all(),
         to_field_name="name",
         label="Services (name or ID)",
@@ -689,11 +659,9 @@ class IPAddressToInterfaceFilterSet(NautobotFilterSet):
         },
     )
     interface = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Interface.objects.all(),
     )
     vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VMInterface.objects.all(),
     )
 
@@ -719,9 +687,8 @@ class IPAddressRangeFilterSet(
             "description": "icontains",
         },
     )
-    parent = PrefixFilter(distinct=False)
+    parent = PrefixFilter()
     namespace = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Namespace.objects.all(),
         field_name="parent__namespace",
         to_field_name="name",
@@ -817,11 +784,9 @@ class VLANFilterSet(
         field_name="pk",
     )
     vlan_group = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VLANGroup.objects.all(),
     )
     location = TreeNodeMultipleChoiceFilter(
-        distinct=True,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -829,20 +794,17 @@ class VLANFilterSet(
         label='Location (name or ID) (deprecated, use "locations" filter instead)',
     )
     locations = TreeNodeMultipleChoiceFilter(
-        distinct=True,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
     )
     vm_interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=VMInterface.objects.all(),
         to_field_name="name",
         method="_filter_vm_interfaces",
         label="VM interface (name or ID)",
     )
     interfaces = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=True,
         queryset=Interface.objects.all(),
         to_field_name="name",
         method="_filter_interfaces",
@@ -888,14 +850,12 @@ class VLANLocationAssignmentFilterSet(NautobotFilterSet):
         },
     )
     vlan = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         prefers_id=True,
         to_field_name="vid",
         queryset=VLAN.objects.all(),
         label="VLAN (VID or ID)",
     )
     location = TreeNodeMultipleChoiceFilter(
-        distinct=False,
         prefers_id=True,
         queryset=Location.objects.all(),
         to_field_name="name",
@@ -914,12 +874,10 @@ class ServiceFilterSet(NautobotFilterSet):
         },
     )
     device = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=Device.objects.all(),
         to_field_name="name",
     )
     virtual_machine = NaturalKeyOrPKMultipleChoiceFilter(
-        distinct=False,
         queryset=VirtualMachine.objects.all(),
         to_field_name="name",
     )
