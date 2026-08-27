@@ -1141,10 +1141,11 @@ def check_schema(context, api_version=None):
         "token": "REST API token for the instance under test (default: NAUTOBOT_PLAYWRIGHT_API_TOKEN, or the dev token).",
         "headed": "Run the browser headed (visible) instead of headless.",
         "pattern": "Only run tests whose names match the given substring (pytest -k).",
+        "marker": "Only run tests carrying the given pytest mark (pytest -m), e.g. behavioral or 'not behavioral'.",
         # (this task runs on the HOST by design; see the docstring.)
     }
 )
-def playwright(context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None):
+def playwright(context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None, marker=None):
     """Run the Playwright test suite against a running Nautobot instance.
 
     Unlike the other test tasks, this always runs on the HOST (it deliberately does
@@ -1175,6 +1176,8 @@ def playwright(context, app=None, url=None, username=None, password=None, token=
         command += " --headed"
     if pattern:
         command += f" -k {shlex.quote(pattern)}"
+    if marker:
+        command += f" -m {shlex.quote(marker)}"
     env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
     if url:
         env["NAUTOBOT_PLAYWRIGHT_URL"] = url
