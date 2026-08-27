@@ -14,9 +14,6 @@ development API token.
 - `NAUTOBOT_PLAYWRIGHT_URL`
 - `NAUTOBOT_PLAYWRIGHT_USERNAME` / `NAUTOBOT_PLAYWRIGHT_PASSWORD`
 - `NAUTOBOT_PLAYWRIGHT_API_TOKEN`
-
-"Black-box" refers to the instance under test, not the test host: this module is a
-pytest plugin, so the host needs the repo installed (`poetry install --with playwright`).
 """
 
 # pytest injects fixtures by parameter name, so a fixture that consumes another one
