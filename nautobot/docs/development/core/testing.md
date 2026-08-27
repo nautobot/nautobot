@@ -35,7 +35,14 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
 | ----------- | --------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- |
 | Unit        | `nautobot.core.testing.TestCase` or subclass (see below)        | `nautobot/APP/tests/test_*.py`             | `invoke tests`                      |
 | Selenium    | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/selenium/test_*.py`    | `invoke tests --tag integration`    |
+| Playwright  | pytest (no unittest base class; interim structure — see [Playwright Testing](playwright-testing.md)) | `nautobot/APP/tests/integration/test_*.py` | `invoke playwright`                 |
 | Migration   | `django_test_migrations.contrib.unittest_case.MigratorTestCase` | `nautobot/APP/tests/migration/test_*.py`   | `invoke tests --tag migration_test` |
+
+!!! note
+    The Selenium tests keep their historical `integration` *tag* (hence
+    `invoke tests --tag integration`) even though their files now live under
+    `tests/selenium/`; the `tests/integration/` directories now hold the Playwright
+    tests, which pytest selects by path, not by tag.
 
 - New unit tests **must always** inherit from `nautobot.core.testing.TestCase` or one of its subclasses. Do not use `django.test.TestCase` or `unittest.TestCase`.
     - API view test cases should generally inherit from one or more of the classes in `nautobot.core.testing.api.APIViewTestCases`.
@@ -84,7 +91,7 @@ If the model being tested is a `PrimaryModel`, the `tags` filter will be automat
 !!! info
     New browser-based test coverage should be written as Playwright tests (in `nautobot/APP/tests/integration/`) rather than Selenium tests. See [Playwright Testing](playwright-testing.md).
 
-### Troubleshooting Integration Tests
+### Troubleshooting Selenium Tests
 
 Because integration tests normally involve interacting with Nautobot through a browser via [Selenium](https://www.selenium.dev/selenium/docs/api/py/index.html) and the [Splinter](https://splinter.readthedocs.io/en/latest/) wrapper library, they can be difficult to troubleshoot directly from the Python code when a failure occurs. A common troubleshooting technique is to add a `breakpoint()` at the appropriate place in the Python test code (i.e., immediately prior to the observed failure). When the breakpoint is hit and the test pauses, you can then use a VNC viewer application (such as macOS's "Screen Sharing" app) to connect to the running Selenium instance (`localhost:15900` if using the Docker development environment; the default password if prompted is simply "`secret`"). This will allow you to interact live with the testing web browser in its current state and can often provide invaluable insight into the nature of any test failure.
 
