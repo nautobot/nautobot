@@ -63,6 +63,7 @@ from nautobot.core.views.utils import (
     common_detail_view_context,
     get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
+    get_overview,
     get_saved_views_for_user,
     handle_protectederror,
     import_csv_helper,
@@ -157,6 +158,33 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         else:
             template_name = self.get_template_name()
         return render(request, template_name, context)
+
+
+class ObjectOverviewView(ObjectView):
+    """
+    Retrieve a single object's overview.
+
+    Only one of `overview_fields`, `overview_html`, or `overview_template_name` can be used at a time.
+
+    queryset: The base queryset for retrieving the object
+    overview_fields: The fields to display, with optional key and value transforms
+    overview_html: HTML string to render
+    overview_template_name: Name of the template to render
+    """
+
+    overview_fields = None
+    overview_html = None
+    overview_template_name = None
+
+    def get(self, request, *args, **kwargs):
+        instance = get_object_or_404(self.queryset, **kwargs)
+        payload = get_overview(
+            None,
+            overview_fields=self.overview_fields,
+            overview_html=self.overview_html,
+            overview_template_name=self.overview_template_name,
+        )
+        return render(request, payload["template"], {"object": instance, **payload})
 
 
 class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):

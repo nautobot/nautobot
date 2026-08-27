@@ -6,9 +6,10 @@ import urllib.parse
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.core.exceptions import FieldError, ValidationError
+from django.core.exceptions import FieldError, ImproperlyConfigured, ValidationError
 from django.db.models import ForeignKey
 from django.http import QueryDict
+from django.template import Template
 from django.test.client import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
@@ -36,6 +37,7 @@ from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, O
 logger = logging.getLogger(__name__)
 
 METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
+OVERVIEW_TEMPLATE = "components/htmx/overview.html"
 always_generated_metrics = [
     "nautobot_app_metrics_processing_ms"  # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
 ]
@@ -398,6 +400,78 @@ def view_changes_not_saved(request, view, current_saved_view):
             if set(value) != set(request.GET.getlist(key)):
                 return True
     return False
+
+
+def get_overview(object_detail_content, overview_fields=None, overview_html=None, overview_template_name=None):
+    """Determine what an object's overview should display, if anything.
+
+    HTML and field data are resolved lazily by the `resolve_overview` template tag, so that they are given the
+    context Django builds at render time rather than one assembled here.
+    """
+    declared = [kwarg for kwarg in (overview_fields, overview_html, overview_template_name) if kwarg is not None]
+    if len(declared) > 1:
+        raise ImproperlyConfigured(
+            "Only one of overview_fields, overview_html, or overview_template_name can be given at a time"
+        )
+
+    if overview_template_name is not None:
+        return {"template": OVERVIEW_TEMPLATE, "overview_template_name": overview_template_name}
+
+    if overview_html is not None:
+
+        def render_overview_html(context):
+            return Template(overview_html).render(context)
+
+        render_overview_html.do_not_call_in_templates = True
+
+        return {"template": OVERVIEW_TEMPLATE, "overview_html": render_overview_html}
+
+    def resolve_overview(context):
+        from nautobot.core.ui.object_detail import ObjectFieldsPanel, SectionChoices
+
+        panel = None
+        if overview_fields is not None:
+            # This panel is never displayed. It acts only as the field data and rendering engine, so that
+            # explicitly declared fields render identically to the panel resolved below.
+            panel = ObjectFieldsPanel(
+                weight=100,
+                fields=list(overview_fields),
+                key_transforms={
+                    field: spec["key_transform"]
+                    for field, spec in overview_fields.items()
+                    if (spec or {}).get("key_transform")
+                },
+                value_transforms={
+                    field: spec["value_transforms"]
+                    for field, spec in overview_fields.items()
+                    if (spec or {}).get("value_transforms")
+                },
+            )
+        elif object_detail_content is not None:
+            main_tab = next((tab for tab in object_detail_content.tabs if tab.tab_id == "main"), None)
+            if main_tab is not None:
+                panel = next(
+                    (
+                        candidate
+                        for candidate in main_tab.panels_for_section(SectionChoices.LEFT_HALF)
+                        if isinstance(candidate, ObjectFieldsPanel) and candidate.should_render(context)
+                    ),
+                    None,
+                )
+
+        if panel is None:
+            return None
+
+        overview = []
+        for key, value in panel.get_data(context).items():
+            if value_display := panel.render_value(key, value, context):
+                overview.append((panel.render_key(key, value, context), value_display))
+
+        return overview
+
+    resolve_overview.do_not_call_in_templates = True
+
+    return {"template": OVERVIEW_TEMPLATE, "overview": resolve_overview}
 
 
 def common_detail_view_context(request, instance):

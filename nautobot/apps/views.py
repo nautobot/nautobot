@@ -13,6 +13,7 @@ from nautobot.core.views.generic import (
     ObjectEditView,
     ObjectImportView,
     ObjectListView,
+    ObjectOverviewView,
     ObjectView,
 )
 from nautobot.core.views.mixins import (
@@ -30,6 +31,7 @@ from nautobot.core.views.mixins import (
     ObjectEditViewMixin,
     ObjectListViewMixin,
     ObjectNotesViewMixin,
+    ObjectOverviewViewMixin,
     ObjectPermissionRequiredMixin,
     UIComponentsMixin,
 )
@@ -86,6 +88,8 @@ __all__ = (
     "ObjectListViewMixin",
     "ObjectNotesView",
     "ObjectNotesViewMixin",
+    "ObjectOverviewView",
+    "ObjectOverviewViewMixin",
     "ObjectPermissionRequiredMixin",
     "ObjectView",
     "UIComponentsMixin",

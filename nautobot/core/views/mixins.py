@@ -54,6 +54,7 @@ from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
+    get_overview,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
@@ -1596,6 +1597,33 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
         return Response({})
+
+
+class ObjectOverviewViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for an object's overview.
+
+    Only one of `overview_fields`, `overview_html`, or `overview_template_name` can be used at a time.
+
+    overview_fields: The fields to display, with optional key and value transforms
+    overview_html: HTML string to render
+    overview_template_name: Name of the template to render
+    """
+
+    overview_fields = None
+    overview_html = None
+    overview_template_name = None
+
+    @drf_action(detail=True, custom_view_base_action="view", url_path="overview", url_name="overview")
+    def overview(self, request, *args, **kwargs):
+        return Response(
+            get_overview(
+                getattr(self, "object_detail_content", None),
+                overview_fields=self.overview_fields,
+                overview_html=self.overview_html,
+                overview_template_name=self.overview_template_name,
+            )
+        )
 
 
 class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
