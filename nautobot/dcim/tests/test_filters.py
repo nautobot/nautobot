@@ -1249,7 +1249,7 @@ class RackGroupTestCase(FilterTestCases.FilterTestCase, CustomFieldsFilters.Cust
         )
 
     def test_children(self):
-        child_groups = RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2]
+        child_groups = list(RackGroup.objects.filter(name__startswith="Child").filter(parent__isnull=False)[:2])
         with self.subTest("2 child groups"):
             params = {"children": [child_groups[0].pk, child_groups[1].pk]}
             # Compare against a distinct() queryset rather than asserting a count, so that a parent group matching
