@@ -291,14 +291,14 @@ omit = [
 ]
 relative_files = true
 
-# pytest runs ONLY the Playwright test suites; the unittest-based suites run under
+# pytest runs ONLY the Playwright test suites. The unittest-based suites run under
 # `nautobot-server test` (unittest) and are never collected by the default pytest
 # invocation (testpaths scopes collection to the Playwright test trees).
 [tool.pytest.ini_options]
 addopts = "--strict-markers"
 testpaths = ["nautobot/*/tests/integration"]
-# Default collection is Test*; *TestCase matches the repo's universal naming convention
-# (and the Selenium-named migration ledger classes, which pytest would otherwise skip silently).
+# Default collection is Test*. *TestCase matches the repo's universal naming convention
+# (and the Selenium-named migration classes, which pytest would otherwise skip silently).
 python_classes = ["Test*", "*TestCase"]
 markers = [
     "behavioral: verifies application output correctness, not just page structure",

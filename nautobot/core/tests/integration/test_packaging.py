@@ -1,10 +1,10 @@
 """Structural guarantees for the Playwright test packaging.
 
-The Playwright suite is black-box: a pytest process pointed at a URL, with no Django
-settings, ORM, or database involvement. That property lets the same suite run against
-any deployed instance. Nothing exercises it implicitly — CI machines have a Nautobot
-config available, so an accidental Django dependency would go unnoticed there. This
-meta-test checks it explicitly.
+The Playwright suite is a pytest process pointed at a URL, with no Django
+settings, ORM, or database needed, which lets the suite run against
+any deployed instance. Because of this, nautobot.playwright must import without Django
+which could break silently. An accidental Django import would only surface on a host 
+without a config pointed at a remote instance. This test fails immediately instead.
 """
 
 import os
@@ -12,7 +12,7 @@ import subprocess
 import sys
 import textwrap
 
-# The probe runs in a subprocess so it starts from a clean interpreter: whatever the
+# The probe runs in a subprocess so it starts from a clean interpreter. Whatever the
 # hosting pytest process has already imported (today or after future conftest changes)
 # can then neither mask nor fabricate the result. Every submodule is discovered rather
 # than listed, so a module added to nautobot/playwright/ later is covered without
@@ -44,16 +44,11 @@ IMPORT_PROBE = textwrap.dedent(
 
 
 def test_playwright_package_imports_without_django_settings():
-    """Every `nautobot.playwright` module must import with no Nautobot configuration.
-
-    Guards against relocating the shared Playwright infrastructure under `nautobot.core`
-    (whose package __init__ initializes the Celery app from Django settings) or adding
-    imports to it that pull in the Django runtime. Either would make every
-    Playwright run require a local `nautobot_config.py`, even when the instance under test
-    is remote, which breaks the suite's black-box property. Checks `sys.modules`
-    membership rather than import success alone, because `nautobot.core` imports
-    cleanly without settings because Celery binds them lazily, while still pulling
-    Django into the process. See the "Playwright Testing" documentation.
+    """Every nautobot.playwright module must import with no Nautobot configuration.
+▎
+▎   The check is sys.modules membership, not import success alone: nautobot.core
+    imports cleanly without settings (Celery binds them lazily) while still pulling
+▎   Django into the process.
     """
     env = {key: value for key, value in os.environ.items() if key not in ("NAUTOBOT_CONFIG", "DJANGO_SETTINGS_MODULE")}
     result = subprocess.run(  # noqa: S603

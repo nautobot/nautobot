@@ -1148,17 +1148,17 @@ def check_schema(context, api_version=None):
 def playwright(context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None, marker=None):
     """Run the Playwright test suite against a running Nautobot instance.
 
-    Unlike the other test tasks, this always runs on the HOST (it deliberately does
-    not honor the nautobot.local docker routing): the browsers are installed on the
-    host and the suite only needs HTTP reachability to the instance under test.
-    Runs pytest with plugin auto-loading disabled; only the explicitly named plugins
-    load. Requires the playwright dependency group and a browser:
+    Unlike the other test tasks, playwright does not run inside the Docker development
+    container. pytest runs directly on the host because the browsers are installed
+    there and the suite only needs HTTP reachability to the instance under test.
+    Runs pytest with plugin auto-loading disabled, only the explicitly named plugins
+    load. Requires the playwright dependency group and a browser.
     `poetry install --with playwright && poetry run playwright install chromium`
-    (CI adds `--with-deps` to the browser install for the runner's OS packages;
-    that is not needed on a developer machine).
+    CI adds `--with-deps` to the browser install for the runner's OS packages,
+    not needed on a developer machine.
     """
     # This task runs pytest on the host rather than in a container, so it needs the
-    # Poetry environment; `poetry run` works whether or not a Poetry shell is active.
+    # Poetry environment. `poetry run` works whether or not a Poetry shell is active.
     if shutil.which("poetry"):
         runner = "poetry run pytest"
     else:
@@ -1167,8 +1167,7 @@ def playwright(context, app=None, url=None, username=None, password=None, token=
             "  poetry install --with playwright && poetry run playwright install chromium"
         )
     # Traces and screenshots are captured only when a test fails (written under
-    # test-results/), so the flags cost nothing on green runs; CI uploads the
-    # directory as a build artifact on failure.
+    # test-results/). CI uploads the directory as a build artifact on failure.
     command = f"{runner} -p playwright -p base_url --tracing=retain-on-failure --screenshot=only-on-failure"
     if app:
         command += f" nautobot/{app}/tests/integration"

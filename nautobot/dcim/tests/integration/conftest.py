@@ -1,15 +1,14 @@
 """DCIM Playwright fixtures: thin named fixtures over the shared `create_object` factory.
 
-The factory (`nautobot.playwright.fixtures`) owns creation and teardown;
-fixtures here decide which objects a DCIM test starts from.
-Shared fixtures (create_object, status_id_for, auth_page, ...) are provided by
-nautobot.playwright.fixtures, registered in the repo-root conftest; run
+Shared fixtures, including creation and teardown (create_object, status_id_for, auth_page, ...)
+are provided by nautobot.playwright.fixtures, registered in the repo-root conftest. Run
 `pytest --fixtures` to list them.
+Fixtures here decide which objects a DCIM test starts from.
 """
 
 import pytest
 
-from nautobot.playwright.fixtures import unique_name
+from nautobot.playwright.helpers import unique_name
 
 
 @pytest.fixture

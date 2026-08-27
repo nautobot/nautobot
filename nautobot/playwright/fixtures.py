@@ -24,7 +24,6 @@ pytest plugin, so the host needs the repo installed (`poetry install --with play
 # pylint: disable=redefined-outer-name
 
 import os
-from uuid import uuid4
 
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
@@ -36,15 +35,6 @@ PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
 PLAYWRIGHT_DEFAULT_USERNAME = "admin"
 PLAYWRIGHT_DEFAULT_PASSWORD = "admin"  # noqa: S105
 PLAYWRIGHT_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
-
-
-def unique_name(prefix="ZZZ-test"):
-    """Return a unique, sortable name for a test-owned record.
-
-    The prefix sorts owned records last; the hex suffix keeps parallel runs and
-    repeated runs against a shared instance from colliding.
-    """
-    return f"{prefix}-{uuid4().hex[:8]}"
 
 
 @pytest.fixture(scope="session")
