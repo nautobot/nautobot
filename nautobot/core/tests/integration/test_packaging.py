@@ -1,9 +1,10 @@
 """Structural guarantees for the Playwright test packaging.
 
 The Playwright suite is black-box: a pytest process pointed at a URL, with no Django
-settings, ORM, or database involvement. That property is what lets the same suite run
-against any deployed instance but nothing exercises it implicitly,
-because CI environments carry a Nautobot config. This meta-test enforces it.
+settings, ORM, or database involvement. That property lets the same suite run against
+any deployed instance. Nothing exercises it implicitly — CI machines have a Nautobot
+config available, so an accidental Django dependency would go unnoticed there. This
+meta-test checks it explicitly.
 """
 
 import os
@@ -11,10 +12,11 @@ import subprocess
 import sys
 import textwrap
 
-# Run in a subprocess so the check starts from a clean interpreter: this test's own
-# process has Django fully loaded, which would mask exactly what is being asserted.
-# Every submodule is discovered rather than listed, so a module added to
-# nautobot/playwright/ later is covered without editing this test.
+# The probe runs in a subprocess so it starts from a clean interpreter: whatever the
+# hosting pytest process has already imported (today or after future conftest changes)
+# can then neither mask nor fabricate the result. Every submodule is discovered rather
+# than listed, so a module added to nautobot/playwright/ later is covered without
+# editing this test.
 IMPORT_PROBE = textwrap.dedent(
     """
     import importlib
@@ -63,7 +65,7 @@ def test_playwright_package_imports_without_django_settings():
         check=False,
     )
     assert result.returncode != 2, (
-        "Discovered no nautobot.playwright submodules to check; this test would pass vacuously."
+        "Discovered no nautobot.playwright submodules to check; this test would pass while checking nothing."
     )
     assert result.returncode == 0, (
         "Importing every nautobot.playwright module in a settings-free process failed, "

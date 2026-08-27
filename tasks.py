@@ -1157,11 +1157,8 @@ def playwright(context, app=None, url=None, username=None, password=None, token=
     that is not needed on a developer machine).
     """
     # This task runs pytest on the host rather than in a container, so it needs the
-    # Poetry environment. Use it directly when already active, otherwise go through
-    # `poetry run` so a bare `invoke playwright` works like every other invoke task.
-    if shutil.which("pytest"):
-        runner = "pytest"
-    elif shutil.which("poetry"):
+    # Poetry environment; `poetry run` works whether or not a Poetry shell is active.
+    if shutil.which("poetry"):
         runner = "poetry run pytest"
     else:
         raise Exit(

@@ -15,9 +15,8 @@ development API token.
 - `NAUTOBOT_PLAYWRIGHT_USERNAME` / `NAUTOBOT_PLAYWRIGHT_PASSWORD`
 - `NAUTOBOT_PLAYWRIGHT_API_TOKEN`
 
-Black-box refers to the instance under test, not the test host: collection imports the
-`nautobot` package (this module registers as a pytest plugin), so the host still
-needs the repo installed (`poetry install --with playwright`).
+"Black-box" refers to the instance under test, not the test host: this module is a
+pytest plugin, so the host needs the repo installed (`poetry install --with playwright`).
 """
 
 # pytest injects fixtures by parameter name, so a fixture that consumes another one
@@ -42,8 +41,7 @@ PLAYWRIGHT_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noq
 def unique_name(prefix="ZZZ-test"):
     """Return a unique, sortable name for a test-owned record.
 
-    The prefix sorts owned records last, so they never perturb first-page row counts
-    taken before a test filters for them; the hex suffix keeps parallel runs and
+    The prefix sorts owned records last; the hex suffix keeps parallel runs and
     repeated runs against a shared instance from colliding.
     """
     return f"{prefix}-{uuid4().hex[:8]}"

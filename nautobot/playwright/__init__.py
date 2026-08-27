@@ -1,9 +1,10 @@
 """Shared infrastructure for the Playwright test suite.
 
-Playwright tests live in per-app `nautobot/<app>/tests/integration/` packages and run
-under pytest (`invoke playwright`), never under `nautobot-server test`. This package holds everything
-they share: the page-object base classes, the pytest fixture surface, and the guard
-that keeps the unittest runner away from pytest-only modules.
+Playwright tests live in per-app `nautobot/<app>/tests/integration/` packages and are
+pytest tests, run via `invoke playwright`. The unittest-based `nautobot-server test`
+runner neither discovers nor needs them (see `load_tests` below). This package holds
+everything they share: the page-object base classes, the pytest fixture surface, and
+that discovery guard.
 """
 
 import unittest
