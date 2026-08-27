@@ -21,9 +21,6 @@ def load_tests(loader, tests, pattern):  # pylint: disable=unused-argument
     calls it instead of recursing into the package, so the pytest-only test modules
     (which import Playwright and pytest) are never imported by the unittest runner and
     no environment needs the playwright dependency group just to run `nautobot-server
-    test`. Returning an empty suite, rather than raising `unittest.SkipTest` at
-    import time, matters: a SkipTest placeholder is a dynamically created test class
-    that cannot be pickled, which crashes Django's `--parallel` test runner. pytest
-    ignores this hook entirely and collects the package normally.
+    test`. pytest ignores this hook entirely and collects the package normally.
     """
     return unittest.TestSuite()
