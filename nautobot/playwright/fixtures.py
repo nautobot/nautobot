@@ -64,10 +64,8 @@ def auth_state_path(browser, base_url, tmp_path_factory):
     page.fill("input[name='password']", password)
     page.click("button[type='submit']")
     try:
-        # The logout link is the auth-positive signal: it is always in the DOM once a
-        # session exists, but hidden inside a collapsed dropdown (hence "attached").
-        # Generic chrome like <nav> also renders on the login page, so it can't be
-        # trusted to mean "logged in".
+        # The logout link only exists once a session does. It sits in a collapsed
+        # dropdown, so wait for "attached" rather than visible.
         page.wait_for_selector("a[href='/logout/']", state="attached", timeout=15_000)
     except PlaywrightTimeoutError:
         pytest.fail(
