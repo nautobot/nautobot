@@ -3,7 +3,7 @@
 The Playwright suite is a pytest process pointed at a URL, with no Django
 settings, ORM, or database needed, which lets the suite run against
 any deployed instance. Because of this, nautobot.playwright must import without Django
-which could break silently. An accidental Django import would only surface on a host 
+which could break silently. An accidental Django import would only surface on a host
 without a config pointed at a remote instance. This test fails immediately instead.
 """
 
