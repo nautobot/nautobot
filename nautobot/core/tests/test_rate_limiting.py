@@ -15,6 +15,7 @@ class ClassifyRestReadRequestFeaturesTestCase(SimpleTestCase):
     # factory = RequestFactory()
 
     def test_features_default_instantion_has_correct_estimation(self):
+        pass
         # test_path = "/api/dcim/devices/?limit=1000&depth=3&name__ic=foo"
         # wsgi_request = self.factory.get(test_path)
 
