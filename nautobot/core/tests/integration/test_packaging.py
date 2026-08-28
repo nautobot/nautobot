@@ -45,10 +45,10 @@ IMPORT_PROBE = textwrap.dedent(
 
 def test_playwright_package_imports_without_django_settings():
     """Every nautobot.playwright module must import with no Nautobot configuration.
-▎
-▎   The check is sys.modules membership, not import success alone: nautobot.core
+
+    The check is sys.modules membership, not import success alone: nautobot.core
     imports cleanly without settings (Celery binds them lazily) while still pulling
-▎   Django into the process.
+    Django into the process.
     """
     env = {key: value for key, value in os.environ.items() if key not in ("NAUTOBOT_CONFIG", "DJANGO_SETTINGS_MODULE")}
     result = subprocess.run(  # noqa: S603

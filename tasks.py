@@ -1145,7 +1145,9 @@ def check_schema(context, api_version=None):
         # (this task runs on the HOST by design; see the docstring.)
     }
 )
-def playwright(context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None, marker=None):
+def playwright(
+    context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None, marker=None
+):
     """Run the Playwright test suite against a running Nautobot instance.
 
     Unlike the other test tasks, playwright does not run inside the Docker development
