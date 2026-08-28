@@ -178,9 +178,9 @@ def create_object(api):
 def api_count(api):
     """Callable returning the API object count for an endpoint and filter params.
 
-    Gives filter tests an expected count from outside the UI: checking visible rows
+    Gives filter tests an expected count from outside the UI. Checking visible rows
     proves the rows shown match the filter, not that every matching record was shown.
-    Valid only while the expected results fit on one page — keep owned test data
+    Valid only while the expected results fit on one page. Keep owned test data
     small enough to guarantee that.
     """
 
