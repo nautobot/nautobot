@@ -174,7 +174,7 @@ def estimate_rest_read_request_cost(rest_read_request_features):
         total_request_cost *= settings.NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER
 
     if rest_read_request_features.is_response_format_csv():
-        total_request_cost *= settings.NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILIER
+        total_request_cost *= settings.NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER
 
     rounded_total_request_cost = round(total_request_cost, 2)
 

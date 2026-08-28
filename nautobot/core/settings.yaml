@@ -1580,7 +1580,7 @@ properties:
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
   NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE:
-    default_literal: "*Unset.* Equivalent to `\"off\"`; GraphQL API requests are not metered."
+    default: "off"
     description: "Cost-based rate limiting mode for token-authenticated GraphQL API requests."
     details: |-
       | Value | Behavior |
@@ -1617,7 +1617,7 @@ properties:
     environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
     version_added: "3.2.0"
   NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG:
-    default_literal: "*Unset.* Rate limiting is not calibrated unless this variable is defined."
+    default: false
     description: >-
       Log each API request's assigned cost alongside its measured execution time, so that the cost
       weights can be regressed offline.
@@ -1625,7 +1625,7 @@ properties:
     type: "boolean"
     version_added: "3.3.0"
   NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE:
-    default_literal: "*Unset.* Every request is logged when calibration logging is enabled."
+    default: 1.0
     description: "Per-request sampling probability, from `0.0` to `1.0`, for the calibration log."
     environment_variable: "NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE"
     maximum: 1.0
@@ -1635,7 +1635,7 @@ properties:
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_RATE_LIMITING_LIMIT:
-    default_literal: "*Unset.* No budget is applied unless this variable is defined."
+    default: 1000
     description: >-
       The cost budget granted to each API token per window, in cost points.
     details: |-
@@ -1653,7 +1653,7 @@ properties:
     type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS:
-    default_literal: "*Unset.* No budget window is applied unless this variable is defined."
+    default: 60.0
     description: >-
       The length in seconds of each API token's budget window.
     details: |-
@@ -1667,7 +1667,7 @@ properties:
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER:
-    default_literal: "*Unset.*"
+    default: 3.0
     description: >-
       Multiplier applied to a REST API request's running cost when `include=computed_fields` is
       requested.
@@ -1677,19 +1677,15 @@ properties:
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER:
-    default_literal: "*Unset.*"
+    default: 3.0
     description: "Multiplier applied to a REST API request's running cost when `format=csv` is requested."
-    details: |-
-      !!! warning
-          The environment variable is spelled `NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILIER`
-          ("MULTIPILER"), which does not match the name of the setting it populates.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPILIER"
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL:
-    default_literal: "*Unset.*"
+    default: 1.0
     description: "Weight of each level of serializer nesting requested via the `depth` query parameter."
     details: |-
       When `depth` is non-zero, the request's running cost is multiplied by
@@ -1699,8 +1695,18 @@ properties:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
     version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST:
+    default: 3.0
+    description: >-
+      Cost added for each REST API filter whose lookup can use an index, such as `exact`, `in`, or
+      `isw` (`istartswith`).
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST": "#nautobot_rest_rate_limiting_unindexable_lookup_cost"
+    type: "number"
+    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_MODE:
-    default_literal: "*Unset.* Equivalent to `\"off\"`; REST API requests are not metered."
+    default: "off"
     description: "Cost-based rate limiting mode for token-authenticated REST API requests."
     details: |-
       | Value | Behavior |
@@ -1720,27 +1726,31 @@ properties:
       "NAUTOBOT_RATE_LIMITING_LIMIT": "#nautobot_rate_limiting_limit"
     type: "string"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_PER_JOIN_COST:
-    default_literal: "*Unset.*"
+  NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST:
+    default: 3.0
     description: >-
-      Cost added for each relation traversal in a REST API filter name, for example the `location`
-      hop in `location__name`.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_PER_JOIN_COST"
+      Cost added for each request a client would need to issue in order to page through the entire
+      result set.
+    details: |-
+      The number of requests is `ceil(total_records ÷ records_per_page)`, with a floor of `1`, where
+      `records_per_page` is the page size the paginator will actually serve for the request. A larger
+      `limit` therefore implies fewer requests and a lower cost.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_READ_COST:
-    default_literal: "*Unset.*"
+    default: 1.0
     description: "Base cost of a REST API `GET`, `HEAD`, or `OPTIONS` request."
     details: |-
       This is the starting point for the REST cost estimate. The weights combine as follows:
 
       1. Start from `READ_COST`, or `WRITE_COST` for any other HTTP method.
-      2. Add `PER_JOIN_COST` for every relation traversal, and `UNINDEXABLE_LOOKUP_COST` for every
-         filter whose lookup cannot use an index.
-      3. Multiply by the page count, `ceil(limit ÷ RECORDS_PER_PAGE_DIVISOR)`, when `limit` is given.
-      4. Multiply by `1 + (depth × DEPTH_MULTIPLIER_PER_LEVEL)` when `depth` is non-zero.
+      2. Add `PAGINATION_COST` for each request needed to page through the whole result set.
+      3. Multiply by `1 + (depth × DEPTH_MULTIPLIER_PER_LEVEL)` when `depth` is non-zero.
+      4. Add `INDEXABLE_LOOKUP_COST` for every filter whose lookup can use an index, and
+         `UNINDEXABLE_LOOKUP_COST` for every filter whose lookup cannot.
       5. Multiply by `COMPUTED_FIELDS_MULTIPLIER` when `include=computed_fields` is requested.
       6. Multiply by `CSV_MULTIPLIER` when `format=csv` is requested.
 
@@ -1750,22 +1760,8 @@ properties:
       "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_RECORDS_PER_PAGE_DIVISOR:
-    default_literal: "*Unset.*"
-    description: >-
-      Number of records treated as one page when converting the `limit` query parameter into a
-      page-count multiplier.
-    details: |-
-      The multiplier is `ceil(limit ÷ RECORDS_PER_PAGE_DIVISOR)`, with a floor of `1`. A smaller
-      divisor makes large pages proportionally more expensive.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_RECORDS_PER_PAGE_DIVISOR"
-    exclusiveMinimum: 0
-    see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
-    type: "number"
-    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST:
-    default_literal: "*Unset.*"
+    default: 3.0
     description: >-
       Cost added for each REST API filter whose lookup cannot use an index, such as `ic`
       (`icontains`) or `re` (`regex`).
@@ -1775,7 +1771,7 @@ properties:
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_WRITE_COST:
-    default_literal: "*Unset.*"
+    default: 3.0
     description: >-
       Base cost of a REST API request using any method other than `GET`, `HEAD`, or `OPTIONS`.
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WRITE_COST"
