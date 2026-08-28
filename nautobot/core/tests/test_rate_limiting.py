@@ -1,8 +1,8 @@
 """Tests for API rate limiting (nautobot.core.rate_limiting)."""
 
-from django.test import RequestFactory, SimpleTestCase
+from django.test import SimpleTestCase
 
-from nautobot.core.rate_limiting.rest_calculator import classify_rest_read_request_features, RestReadRequestFeatures
+# from nautobot.core.rate_limiting.rest_calculator import classify_rest_read_request_features, RestReadRequestFeatures
 
 
 class RestReadRequestFeaturesTestCase(SimpleTestCase):
