@@ -45,7 +45,7 @@ def is_taggable(obj):
 
 
 def m2m_through_data_fields(through):
-    """The user-meaningful columns a many-to-many `through` model carries beyond the two foreign keys.
+    """The user-meaningful columns a many-to-many `through` model carries beyond the fields it joins on.
 
     Empty means the relation is fully described by its members, so it can be exported as a list of member
     natural keys and set from one. Any name returned is data only the through model can express
@@ -58,7 +58,23 @@ def m2m_through_data_fields(through):
     Returns:
         (list): Sorted field names, empty for a relation whose through table is only a join.
     """
-    joined_fks = {field.name for field in through._meta.get_fields() if field.many_to_one}
+    # Imported here rather than at module scope because `nautobot.core` must not import `nautobot.extras`
+    # at startup.
+    from nautobot.extras.utils import get_explicit_m2m_through_side_field_names
+
+    # Which foreign keys are the join has to come from the `ManyToManyField` declarations, not from the
+    # through model's own fields: an extra foreign key that is not declared as a side of any relation
+    # (`ControllerManagedDeviceGroupWirelessNetworkAssignment.vlan`) is data about the pairing, while a
+    # side may be a `OneToOneField` (every `CableToCableTermination` termination side) and so is not
+    # `many_to_one` at all. The union over every relation the through model serves is what is joined on:
+    # `VRFDeviceAssignment` joins on `device`, `virtual_machine`, and `virtual_device_context` in turn,
+    # with the sides not participating in a given row simply null.
+    joined_fks = get_explicit_m2m_through_side_field_names().get(through)
+    if joined_fks is None:
+        # Django's auto-created through models and taggit's `extras.TaggedItem` are not declared as the
+        # through of a `ManyToManyField`, so no side names are recorded for them. Both are pure joins,
+        # holding only their foreign keys and a pk.
+        joined_fks = {field.name for field in through._meta.get_fields() if field.many_to_one or field.one_to_one}
     # A generic FK's own columns identify the member, so they are part of the join rather than data on it.
     # Derived from the field pair rather than matched by name, so any GFK-based through is handled --
     # notably `extras.TaggedItem`, whose `object_id` would otherwise make every tagged model look
@@ -71,7 +87,7 @@ def m2m_through_data_fields(through):
     }
     # The primary key needs naming explicitly: Nautobot's `BaseModel.id` is `editable=False`, but Django's
     # auto-created through models use a plain `AutoField`, which is not.
-    ignored = joined_fks | generic_fk_columns | {through._meta.pk.name}
+    ignored = set(joined_fks) | generic_fk_columns | {through._meta.pk.name}
     return sorted(
         field.name
         for field in through._meta.get_fields()

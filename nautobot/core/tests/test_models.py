@@ -19,8 +19,17 @@ from nautobot.core.models.utils import (
     m2m_through_data_fields,
 )
 from nautobot.core.testing import TestCase
-from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
+from nautobot.dcim.models import (
+    Cable,
+    ControllerManagedDeviceGroup,
+    Device,
+    DeviceType,
+    Location,
+    LocationType,
+    Manufacturer,
+)
 from nautobot.extras.models import SecretsGroup, Status, Tag
+from nautobot.extras.utils import get_explicit_m2m_through_side_field_names
 from nautobot.ipam.models import VLAN, VRF
 
 User = get_user_model()
@@ -83,6 +92,20 @@ class M2MThroughDataFieldsTestCase(SimpleTestCase):
     def test_custom_through_carrying_data(self):
         self.assertEqual(self._fields(SecretsGroup, "secrets"), ["access_type", "secret_type"])
 
+    def test_foreign_key_that_is_not_a_side_is_data(self):
+        """`ControllerManagedDeviceGroupWirelessNetworkAssignment.vlan` is data about the pairing, not a side of it."""
+        self.assertEqual(self._fields(ControllerManagedDeviceGroup, "wireless_networks"), ["vlan"])
+
+    def test_one_to_one_sides_belong_to_the_join(self):
+        """`CableToCableTermination` reaches each termination through a `OneToOneField`; only its own columns are data."""
+        self.assertEqual(self._fields(Cable, "interfaces"), ["cable_end", "connector"])
+
+    def test_side_of_one_relation_is_not_data_on_another(self):
+        """`VRFDeviceAssignment` serves three relations, and every side of any of them is part of the join."""
+        for field_name in ("devices", "virtual_machines", "virtual_device_contexts"):
+            with self.subTest(field_name=field_name):
+                self.assertEqual(self._fields(VRF, field_name), ["name", "rd"])
+
     def test_generic_foreign_key_columns_belong_to_the_join(self):
         """`TaggedItem.object_id` identifies the member, so `tags` is a join rather than data-carrying."""
         self.assertEqual(self._fields(Device, "tags"), [])
@@ -96,6 +119,7 @@ class M2MThroughDataFieldsTestCase(SimpleTestCase):
 
     def test_every_through_model_classifies(self):
         """A meta-test: whatever is added later must still be classifiable, and only by real columns."""
+        side_field_names = get_explicit_m2m_through_side_field_names()
         for through in self._all_through_models():
             with self.subTest(through=through._meta.label):
                 data_fields = m2m_through_data_fields(through)
@@ -103,6 +127,11 @@ class M2MThroughDataFieldsTestCase(SimpleTestCase):
                     field = through._meta.get_field(field_name)
                     self.assertTrue(field.concrete, f"{field_name} is not a database column")
                     self.assertTrue(field.editable, f"{field_name} is not user-editable")
+                    self.assertNotIn(
+                        field_name,
+                        side_field_names.get(through, ()),
+                        f"{field_name} is a side of the relation, not data about it",
+                    )
 
     @staticmethod
     def _all_through_models():
