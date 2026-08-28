@@ -1,0 +1,3 @@
+Added `nautobot.apps.filters.AutoDistinctFilterMixin`, `nautobot.apps.filters.BooleanFilter`, and `nautobot.apps.filters.MultipleChoiceFilter`.
+Added a `test_filters_distinct` test to `nautobot.apps.testing.FilterTestCases.FilterTestCase`, asserting that each filter applies `.distinct()` if and only if it traverses a to-many relation. App FilterSet test cases inherit this test automatically but it will currently report as skipped for apps outside Nautobot core so as to not break current app CI.
+Added a `q` (search) filter to the `CableToCableTermination`, `UserSavedViewAssociation`, `VirtualServerCertificateProfileAssignment`, and `LoadBalancerPoolMemberCertificateProfileAssignment` REST API and UI filtersets.
