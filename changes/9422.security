@@ -1,0 +1,1 @@
+Updated dependency `gitpython` to `>=3.1.61,<3.2` to mitigate multiple vulnerabilities.
