@@ -46,7 +46,7 @@ dependencies = [
     # AutoSlugField and shell_plus
     "django-extensions (>=4.1,<4.2)",
     # Advanced query filters
-    "django-filter (>=25.2,<25.3)",
+    "django-filter (>=26.1,<26.2)",
     # Health check endpoint
     # 3.21.0 and later (including 4.x) have breaking changes that we'll need to account for when upgrading.
     "django-health-check (>=3.20.8,<3.21)",
@@ -131,7 +131,7 @@ dependencies = [
     # Enhanced version of Python's built-in `re` module
     "regex (>=2026.7.19)",
     # Social authentication/registration with support for many auth providers
-    "social-auth-app-django (>=5.9.0,<5.10)",
+    "social-auth-app-django (>=6.0.1,<6.1)",
     # Rendering of SVG images (for rack elevations, etc.)
     "svgwrite (>=1.4.3,<1.5)",
     # Enhanced HTTP client library
@@ -144,7 +144,7 @@ all = [
     "django-storages (>=1.14.6,<1.15)",
     "mysqlclient (>=2.2.8,<2.3)",
     "napalm (>=4.1.0,<6.0.0)",
-    "social-auth-core[saml] (>=4.9.1,<4.10)",
+    "social-auth-core[saml] (>=5.1.0,<5.2)",
 ]
 # LDAP Support
 ldap = [ "django-auth-ldap (>=5.3.0,<5.4)" ]
@@ -157,7 +157,7 @@ remote_storage = [ "django-storages (>=1.14.6,<1.15)" ]
 # Social authentication core
 # Note that social-auth-app-django is a non-optional dependency, and it requires social-auth-core in turn.
 # The only part of this dependency that is actually optional is in fact social-auth-core's "saml" extra.
-sso = [ "social-auth-core[saml] (>=4.9.1,<4.10)" ]
+sso = [ "social-auth-core[saml] (>=5.1.0,<5.2)" ]
 
 [project.scripts]
 nautobot-server = "nautobot.core.cli:main"

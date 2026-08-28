@@ -9,7 +9,7 @@ from django.contrib.auth import (
     logout as auth_logout,
     update_session_auth_hash,
 )
-from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
@@ -34,6 +34,7 @@ from .forms import (
     LoginForm,
     NavbarFavoritesAddForm,
     NavbarFavoritesRemoveForm,
+    NavbarFavoritesReorderForm,
     PasswordChangeForm,
     PreferenceProfileSettingsForm,
     TokenForm,
@@ -251,7 +252,6 @@ class UserNavbarFavoritesAddView(GetReturnURLMixin, GenericView):
             if form.is_valid():
                 navbar_favorites = request.user.get_config("navbar_favorites", [])
                 navbar_favorites.append(form.cleaned_data)
-                navbar_favorites = sorted(navbar_favorites, key=lambda d: d.get("name", ""))
                 request.user.set_config("navbar_favorites", navbar_favorites, commit=True)
 
                 return render(
@@ -277,6 +277,27 @@ class UserNavbarFavoritesDeleteView(GetReturnURLMixin, GenericView):
                     "inc/nav_menu.html",
                     status=HTTPStatus.OK,
                 )
+
+        return redirect(self.get_return_url(request))
+
+
+class UserNavbarFavoritesReorderView(GetReturnURLMixin, GenericView):
+    def post(self, request):
+        if request.headers.get("HX-Request", False):
+            form = NavbarFavoritesReorderForm(request.POST)
+            if form.is_valid():
+                favorites_by_link = {favorite.get("link"): favorite for favorite in request.user.navbar_favorites}
+                # `link` as key, while iterating over a concatenated list of posted and stored links, prioritizes the
+                # posted order, collapses duplicates, and appends any potential omissions to the end.
+                reordered = {
+                    link: favorites_by_link[link]
+                    for link in [*form.cleaned_data["ordered_links"], *favorites_by_link]
+                    if link in favorites_by_link
+                }
+
+                request.user.set_config("navbar_favorites", list(reordered.values()), commit=True)
+
+                return HttpResponse(status=HTTPStatus.NO_CONTENT)
 
         return redirect(self.get_return_url(request))
 
