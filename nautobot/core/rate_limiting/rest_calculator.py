@@ -1,7 +1,10 @@
 import dataclasses
+import math
 
 from django.conf import settings
 
+from nautobot.core.constants import MAX_PAGE_SIZE_DEFAULT, PAGINATE_COUNT_DEFAULT
+from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import to_int_or_none
 
 # Query params that are pagination/rendering controls, not filters.
@@ -65,6 +68,22 @@ INDEXABLE_LOOKUPS = frozenset(
 READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
+def calculate_records_per_page(requested_records_per_page):
+    """Resolve how many records will be returned for this request."""
+    max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
+    default_records_per_page = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+
+    # Absent, non-numeric, and negative values all fall back to the server default
+    if requested_records_per_page is None or requested_records_per_page < 0:
+        return default_records_per_page
+    # With the cap disabled, `limit=0` serves every record, so the page size is unbounded
+    if not max_page_size:
+        return math.inf if requested_records_per_page == 0 else requested_records_per_page
+    if requested_records_per_page == 0:
+        return max_page_size
+    return min(requested_records_per_page, max_page_size)
+
+
 @dataclasses.dataclass
 class RestReadRequestFeatures:
     records_per_page: int | None = None  # AKA Limit parameter
@@ -94,7 +113,7 @@ def classify_rest_read_request_features(request):
     # TODO: Revisit this so that it accounts for min/max boundary conditions
     records_per_page_parameter = to_int_or_none(query_parameters.get("limit"))
 
-    rest_request_features = RestReadRequestFeatures(
+    rest_read_request_features = RestReadRequestFeatures(
         records_per_page=records_per_page_parameter,
         depth=clamped_depth,
         opt_in_fields=query_parameters.getlist("include"),
@@ -107,37 +126,47 @@ def classify_rest_read_request_features(request):
         if key in NON_FILTER_PARAMS or not key:
             continue
 
-        rest_request_features.filter_count += 1
+        rest_read_request_features.filter_count += 1
         # name__ic -> ["name", "ic"]
         segments = key.split("__")
 
         last_segment = segments[-1]
         if last_segment in INDEXABLE_LOOKUPS:
-            rest_request_features.indexable_lookups += 1
+            rest_read_request_features.indexable_lookups += 1
         if last_segment in UNINDEXABLE_LOOKUPS:
-            rest_request_features.unindexable_lookups += 1
+            rest_read_request_features.unindexable_lookups += 1
 
-    return rest_request_features
+    return rest_read_request_features
 
 
-def estimate_rest_read_request_cost(rest_request_features, weights):
+def estimate_rest_read_request_cost(rest_read_request_features):
     """Using a RestReadRequestFeatures object, provide an estimate for what the cost"""
 
     total_request_cost = 0
 
     total_request_cost += settings.NAUTOBOT_REST_RATE_LIMITING_READ_COST
 
-    if rest_request_features.depth != 0:
-        depth_cost = 1 + rest_request_features.depth * settings.NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL
+    # TODO: discuss this numerator anchoring
+    placeholder_record_count = 20
+    nautobot_allowed_records_per_page = calculate_records_per_page(rest_read_request_features.records_per_page)
+    # Floored at one: no result set, however small, is retrievable in fewer than one request
+    pages_required_for_full_read = max(1, math.ceil(placeholder_record_count / nautobot_allowed_records_per_page))
+    pagination_cost = pages_required_for_full_read * settings.NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST
+    total_request_cost += pagination_cost
+
+    if rest_read_request_features.depth != 0:
+        depth_cost = (
+            1 + rest_read_request_features.depth * settings.NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL
+        )
         total_request_cost *= depth_cost
 
     indexable_lookups_cost = (
-        rest_request_features.indexable_lookups * settings.NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST
+        rest_read_request_features.indexable_lookups * settings.NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST
     )
     total_request_cost += indexable_lookups_cost
 
     unindexable_lookups_cost = (
-        rest_request_features.unindexable_lookups * settings.NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST
+        rest_read_request_features.unindexable_lookups * settings.NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST
     )
     total_request_cost += unindexable_lookups_cost
 
