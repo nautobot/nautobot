@@ -11,6 +11,7 @@ import csv
 from io import StringIO
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import SimpleTestCase, tag
@@ -26,10 +27,16 @@ from nautobot.core.api.import_export import (
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
+from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
+from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
+    Cable,
     Device,
     DeviceType,
+    Interface,
+    Location,
+    LocationType,
     Manufacturer,
     Platform,
     Rack,
@@ -37,8 +44,8 @@ from nautobot.dcim.models import (
     SoftwareVersion,
 )
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import JobLogEntry, SecretsGroup, Status, Tag
-from nautobot.ipam.models import Namespace, RouteTarget, VRF
+from nautobot.extras.models import JobLogEntry, Role, SecretsGroup, Status, Tag
+from nautobot.ipam.models import Namespace, RouteTarget, VRF, VRFDeviceAssignment
 
 
 @tag("unit")
@@ -62,6 +69,24 @@ class NestFlatDictTests(SimpleTestCase):
 
     def test_core_nest__list_value_preserved(self):
         self.assertEqual(nest_flat_dict({"tags": ["a", "b"]}), {"tags": ["a", "b"]})
+
+
+@tag("unit")
+class OmitCoveredThroughFieldsTests(SimpleTestCase):
+    """`_omit_covered_through_fields` decides whether an M2M column already carries its through data.
+
+    Both branches that read a real relation are exercised end-to-end by the `test_adapter_export__m2m_*`
+    tests below (`VRF.devices` renders the members, `SecretsGroup.secrets` renders the through rows). What
+    only a stub reaches is a serializer field whose `source` is not a model field at all: no serializer in
+    Nautobot spells an M2M field that way today, but `source="*"` is ordinary DRF, so an App's serializer
+    can, and reporting the whole through model is the right answer when the column can't be identified.
+    """
+
+    def test_source_that_is_not_a_model_field(self):
+        data_fields = ExportObjectList._omit_covered_through_fields(
+            VRF, SimpleNamespace(source="*"), VRFDeviceAssignment, ["name", "rd"]
+        )
+        self.assertEqual(data_fields, ["name", "rd"])
 
 
 @tag("unit")
@@ -263,6 +288,42 @@ class ImportExportJobTestCase(TransactionTestCase):
             )
         return list(device_type.software_image_files.all())
 
+    def create_cable(self):
+        """A Cable terminated on two Interfaces, for the M2M fields `CableSerializer` excludes."""
+        location_type = LocationType.objects.create(name="M2M Cable Location Type")
+        location_type.content_types.add(ContentType.objects.get_for_model(Device))
+        location = Location.objects.create(
+            name="M2M Cable Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        manufacturer = Manufacturer.objects.create(name="M2M Cable Mfr")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="M2M Cable DT", u_height=1)
+        role = Role.objects.create(name="M2M Cable Role")
+        role.content_types.add(ContentType.objects.get_for_model(Device))
+        device = Device.objects.create(
+            name="M2M Cable Device",
+            device_type=device_type,
+            role=role,
+            status=Status.objects.get_for_model(Device).first(),
+            location=location,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                name=f"eth{index}",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
+            )
+            for index in (0, 1)
+        ]
+        return Cable.objects.create(
+            termination_a=interfaces[0],
+            termination_b=interfaces[1],
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
     # -- run the job -----------------------------------------------------------
     def run_export(
         self,
@@ -423,6 +484,23 @@ class ExportAdapterTests(ImportExportJobTestCase):
         )
         # Reported at INFO, not WARNING: the export is doing the right thing, just not the whole thing
         self.assertNoIssues(job_result)
+
+    def test_adapter_export__m2m_field_absent_from_the_serializer_is_not_reported(self):
+        """An M2M field the serializer omits has no column in the file, so there is nothing to report on.
+
+        `CableSerializer` excludes the typed termination accessors (`interfaces`, `front_ports`, ...) in
+        favor of its own `terminations` field. Their through model, `CableToCableTermination`, does record
+        data about each pairing (`cable_end`, `connector`), so a report would be produced if the Job went
+        looking for a column that isn't there.
+        """
+        self.create_cable()
+
+        job_result = self.run_export(model=Cable)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, message__icontains="cabletocabletermination").exists()
+        )
+        headers = self.export_lines(job_result)[1].split(",")
+        self.assertNotIn("interfaces", headers)
 
     def test_adapter_export__m2m_through_data_kept_by_the_member_key_is_not_reported(self):
         """No notice when the column already carries the through data.
