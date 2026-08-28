@@ -54,12 +54,10 @@ class ListPage(BasePage):
         self._goto(self.LIST_PATH)
 
     def get_data_row_count(self) -> int:
-        """Return the number of data rows (rows with a pk checkbox) in the table.
+        """Return the number of data rows currently rendered in the table.
 
-        A settled-state read for baselines and comparisons; to *assert* a count, use
-        `expect_row_count`, which auto-retries. Counts the rendered page only — the
-        suite's one-page convention (see `api_count`) is what makes that the whole
-        result set.
+        Reads once, with no retry. Good for capturing a baseline, not asserting.
+        Assert with `expect_row_count`, which retries. Counts the current page only.
         """
         return self.page.locator(self._DATA_ROWS).count()
 
