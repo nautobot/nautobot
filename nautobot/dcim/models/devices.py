@@ -228,6 +228,7 @@ class DeviceType(PrimaryModel):
         self._original_rear_image = self.rear_image if self.present_in_database else None
 
     def to_yaml(self):
+        """Custom export to a YAML format compatible with https://github.com/nautobot/devicetype-library/"""
         data = OrderedDict(
             (
                 ("manufacturer", self.manufacturer.name),
@@ -1865,6 +1866,7 @@ class ModuleType(PrimaryModel):
             self.rear_image.delete(save=False)
 
     def to_yaml(self):
+        """Custom export to a YAML format compatible with https://github.com/nautobot/devicetype-library/"""
         data = OrderedDict(
             (
                 ("manufacturer", self.manufacturer.name),

@@ -1,4 +1,0 @@
-Updated development dependency `djlint` to `~1.44.1`.
-Updated development dependency `pylint-django` to `~2.8.0`.
-Updated development dependency `ruff` to `~0.16.2`.
-Updated development dependency `django-test-migrations` to `~1.6.0`.

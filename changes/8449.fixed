@@ -1,1 +1,0 @@
-Fixed REST API returning an HTTP 500 error instead of an HTTP 400 when an invalid `depth` query parameter (outside the range 0-10) was provided.

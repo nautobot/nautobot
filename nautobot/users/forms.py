@@ -7,7 +7,7 @@ from django.contrib.auth.forms import (
 from timezone_field import TimeZoneFormField
 
 from nautobot.core.events import publish_event
-from nautobot.core.forms import BootstrapMixin, DateTimePicker
+from nautobot.core.forms import BootstrapMixin, DateTimePicker, MultiValueCharField
 from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.users.utils import serialize_user_without_config_and_views
@@ -83,6 +83,14 @@ class NavbarFavoritesAddForm(forms.Form):
 
 class NavbarFavoritesRemoveForm(forms.Form):
     link = forms.CharField()
+
+
+class NavbarFavoritesReorderForm(forms.Form):
+    """
+    Parse and validate the reordered navbar favorite links, as submitted from the sidenav.
+    """
+
+    ordered_links = MultiValueCharField()
 
 
 class AdminPasswordChangeForm(_AdminPasswordChangeForm):

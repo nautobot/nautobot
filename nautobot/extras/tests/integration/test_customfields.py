@@ -132,6 +132,9 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Fail editing dynamic row (nullify value of existing choice)
         #
 
+        # Close any toasts potentially obscuring the "Edit" button
+        self.dismiss_toasts()
+
         # Edit it
         self.browser.find_by_id("edit-button").click()
         self.assertIn("edit", self.browser.url)
@@ -163,6 +166,10 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         # Create the field and then click the "Edit" button
         self._create_custom_field(field_label="Test Select", field_type="select", choices=choices)
         detail_url = self.browser.url
+
+        # Close any toasts potentially obscuring the "Edit" button
+        self.dismiss_toasts()
+
         self.browser.find_by_id("edit-button").click()
 
         # Gather the rows, delete the first one, add a new one.

@@ -1,2 +1,0 @@
-Removed leftover references to unused `slugify_prefer_underscores` JavaScript variable.
-Removed leftover `ServiceEditView`, unused since 3.0.

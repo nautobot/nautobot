@@ -671,6 +671,7 @@ nav:
               - Links in the Installed Apps View: "development/apps/api/configuration-view.md"
               - Navigation: "development/apps/api/ui-extensions/navigation.md"
               - Object Detail & List Views: "development/apps/api/ui-extensions/object-views.md"
+              - User Facing Messages: "development/apps/api/ui-extensions/user-facing-messages.md"
           - Testing: "development/apps/api/testing.md"
           - Code Reference:
               - nautobot.apps: "code-reference/nautobot/apps/__init__.md"
@@ -750,6 +751,7 @@ nav:
           - Release Checklist: "development/core/release-checklist.md"
   - Release Notes:
       - "release-notes/index.md"
+      - Version 3.3: "release-notes/version-3.3.md"
       - Version 3.2: "release-notes/version-3.2.md"
       - Version 3.1: "release-notes/version-3.1.md"
       - Version 3.0: "release-notes/version-3.0.md"

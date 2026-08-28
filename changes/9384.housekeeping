@@ -1,1 +1,0 @@
-Fixed the `hadolint` download in the development Docker image to use `curl --fail`, so that an HTTP error during the download fails the build instead of installing the error response as the `hadolint` binary.

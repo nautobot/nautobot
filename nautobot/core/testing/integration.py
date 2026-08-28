@@ -423,7 +423,15 @@ class SeleniumTestCase(StaticLiveServerTestCase, testing.NautobotTestCaseMixin):
         add_button.click()
 
         # Wait for body element to appear
-        self.assertTrue(self.browser.is_element_present_by_css(".alert-success", wait_time=5), "Page failed to load")
+        self.assertTrue(self.browser.is_element_present_by_css(".nb-toast-success", wait_time=5), "Page failed to load")
+
+    def dismiss_toasts(self):
+        """
+        Helper function to dismiss all currently displayed toasts.
+        """
+        for close_button in self.browser.find_by_css("#toast-messages .toast.show .btn-close"):
+            close_button.click()
+        self.browser.is_element_not_present_by_css("#toast-messages .toast.show", wait_time=5)
 
     def _fill_select2_field(self, field_name, value, search_box_class=None):
         """

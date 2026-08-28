@@ -16,6 +16,12 @@ from nautobot.users.utils import serialize_user_without_config_and_views
 
 User = get_user_model()
 
+SAMPLE_FAVORITES = [
+    {"link": "/dcim/devices/", "name": "Devices", "tab_name": "Devices"},
+    {"link": "/dcim/locations/", "name": "Locations", "tab_name": "Organization"},
+    {"link": "/ipam/prefixes/", "name": "Prefixes", "tab_name": "IPAM"},
+]
+
 
 class PasswordUITest(TestCase):
     def test_change_password_enabled(self):
@@ -191,3 +197,58 @@ class PreferenceTestCase(TestCase):
         self.assertEqual(timezone.get_current_timezone_name(), new_timezone_name)
         self.assertNotEqual(timezone_name, new_timezone_name)
         self.assertHttpStatus(response, 200)
+
+
+class NavbarFavoritesReorderViewTest(TestCase):
+    """Tests for the UserNavbarFavoritesReorderView."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("user:navbar_favorites_reorder")
+        self.user.set_config("navbar_favorites", list(SAMPLE_FAVORITES), commit=True)
+
+    def _post_reorder(self, ordered_links):
+        return self.client.post(self.url, data={"ordered_links": ordered_links}, headers={"HX-Request": "true"})
+
+    def test_reorder_favorites(self):
+        """Reordering should persist the new order and preserve each favorite's full metadata."""
+        reversed_links = [favorite["link"] for favorite in reversed(SAMPLE_FAVORITES)]
+        response = self._post_reorder(reversed_links)
+        self.assertHttpStatus(response, 204)
+
+        self.user.refresh_from_db()
+        result = self.user.get_config("navbar_favorites", [])
+        self.assertEqual(result, list(reversed(SAMPLE_FAVORITES)))
+
+    def test_partial_list_appends_missing(self):
+        """Favorites not included in ordered_links should be appended at the end, in their existing order."""
+        response = self._post_reorder(["/ipam/prefixes/"])
+        self.assertHttpStatus(response, 204)
+
+        self.user.refresh_from_db()
+        links = [favorite["link"] for favorite in self.user.get_config("navbar_favorites", [])]
+        self.assertEqual(links, ["/ipam/prefixes/", "/dcim/devices/", "/dcim/locations/"])
+
+    def test_duplicate_and_unknown_links(self):
+        """Duplicate links should appear once; unknown links should be ignored."""
+        response = self._post_reorder(["/nonexistent/", "/dcim/devices/", "/dcim/devices/", "/ipam/prefixes/"])
+        self.assertHttpStatus(response, 204)
+
+        self.user.refresh_from_db()
+        links = [favorite["link"] for favorite in self.user.get_config("navbar_favorites", [])]
+        self.assertEqual(links, ["/dcim/devices/", "/ipam/prefixes/", "/dcim/locations/"])
+
+    def test_non_htmx_request_redirects(self):
+        """Requests that do not come from htmx should be redirected without touching the saved order."""
+        response = self.client.post(self.url, data={"ordered_links": ["/ipam/prefixes/"]})
+        self.assertHttpStatus(response, 302)
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.get_config("navbar_favorites", []), list(SAMPLE_FAVORITES))
+
+    def test_unauthenticated_returns_redirect(self):
+        """Unauthenticated requests should be redirected to the login page."""
+        self.client.logout()
+        response = self._post_reorder(["/dcim/devices/"])
+        self.assertHttpStatus(response, 302)
+        self.assertIn("login", response.url)

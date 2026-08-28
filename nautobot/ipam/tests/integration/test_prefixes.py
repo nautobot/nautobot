@@ -113,55 +113,57 @@ class PrefixHierarchyTest(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.find_by_tag("tr")[3].find_by_tag("span")[2].has_class("nb-subtree-not-expandable"))
 
     @override_settings(PREFIX_LIST_DEFAULT_MAX_DEPTH=1, MAX_PAGE_SIZE=100)
-    def test_banner_rendering(self):
-        # First, confirm that no alerts are initially displayed
+    def test_toast_rendering(self):
+        # First, confirm that no toasts are initially displayed
         self.browser.visit(f"{self.live_server_url}{reverse('ipam:prefix_list')}?namespace={self.namespace.pk}")
         self.assertEqual(
-            len(self.browser.find_by_css("#header_messages .alert")),
+            len(self.browser.find_by_css("#toast-messages .toast")),
             0,
-            [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
+            [elem.html for elem in self.browser.find_by_css("#toast-messages .toast")],
         )
 
-        # Select "per_page=1000" from the paginator and verify an alert is added
+        # Select "per_page=1000" from the paginator and verify a toast is added
         self.browser.find_by_id("per_page").first.click()
         self.browser.find_by_value("1000").last.click()
 
         self.assertTrue(self.browser.is_text_present('Requested "per_page" is too large', wait_time=10))
         self.assertEqual(
-            len(self.browser.find_by_css("#header_messages .alert")),
+            len(self.browser.find_by_css("#toast-messages .nb-toast-warning")),
             1,
-            [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
+            [elem.html for elem in self.browser.find_by_css("#toast-messages .toast")],
         )
 
-        alert = self.browser.find_by_css("#header_messages .alert-warning").first
+        toast_body = self.browser.find_by_css("#toast-messages .nb-toast-warning .toast-body").first
         self.assertEqual(
-            alert.value,
+            toast_body.value,
             'Requested "per_page" is too large. No more than 100 items may be displayed at a time.',
         )
 
-        # Next, refresh the page and make sure the alert is still rendered
+        # Next, refresh the page and make sure the toast is rendered again, as the condition still holds
         self.browser.reload()
         self.assertTrue(self.browser.is_text_present('Requested "per_page" is too large', wait_time=10))
 
         self.assertEqual(
-            len(self.browser.find_by_css("#header_messages .alert")),
+            len(self.browser.find_by_css("#toast-messages .nb-toast-warning")),
             1,
-            [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
+            [elem.html for elem in self.browser.find_by_css("#toast-messages .toast")],
         )
 
-        alert = self.browser.find_by_css("#header_messages .alert-warning").first
+        toast_body = self.browser.find_by_css("#toast-messages .nb-toast-warning .toast-body").first
         self.assertEqual(
-            alert.value,
+            toast_body.value,
             'Requested "per_page" is too large. No more than 100 items may be displayed at a time.',
         )
 
-        # Next, select "per_page=25" from the paginator and verify the alert is removed
+        # Next, select "per_page=25" from the paginator, refresh the page, and verify no toast is rendered
         self.browser.find_by_id("per_page").first.click()
         self.browser.find_by_value("25").last.click()
-        self.assertTrue(self.browser.is_text_not_present('Requested "per_page" is too large', wait_time=10))
+        self.assertTrue(self.browser.is_element_present_by_css("#per_page option[value='25'][selected]", wait_time=10))
 
+        self.browser.reload()
+        self.assertTrue(self.browser.is_element_present_by_css("#per_page option[value='25'][selected]", wait_time=10))
         self.assertEqual(
-            len(self.browser.find_by_css("#header_messages .alert")),
+            len(self.browser.find_by_css("#toast-messages .toast")),
             0,
-            [elem.value for elem in self.browser.find_by_css("#header_messages .alert")],
+            [elem.html for elem in self.browser.find_by_css("#toast-messages .toast")],
         )

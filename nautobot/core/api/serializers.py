@@ -3,11 +3,8 @@ import logging
 import uuid
 
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRel
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     FieldDoesNotExist,
-    FieldError,
-    MultipleObjectsReturned,
     ObjectDoesNotExist,
     ValidationError as DjangoValidationError,
 )
@@ -30,6 +27,7 @@ from nautobot.core.api.utils import (
     dict_to_filter_params,
     get_brief_representation,
     nested_serializer_factory,
+    resolve_related_object,
     user_can_view_object,
 )
 from nautobot.core.models.fields import LaxURLField as LaxURLModelField
@@ -68,6 +66,28 @@ class OptInFieldsMixin:
         super().__init__(*args, **kwargs)
         self.__pruned_fields = None
 
+    def _include_all_m2m_by_default(self):
+        """Whether an unspecified `exclude_m2m` should expose every M2M field, not just the default subset.
+
+        False keeps this mixin's own behavior: the default subset, for performance and backwards
+        compatibility. A subclass whose output has different needs overrides this to widen it.
+        """
+        return False
+
+    def _readable_m2m_sources(self, sources, params):
+        """Of the given M2M field `sources`, the ones that stay readable (visible) in this serializer's output.
+
+        If explicitly specified, `exclude_m2m` (query parameter or context) wins: truthy hides
+        every M2M field, falsy exposes them all. Otherwise, `self_include_all_m2m_by_default()` decides behavior.
+        """
+        exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
+        if exclude_m2m is not None:  # explicitly specified, do as instructed
+            return set() if is_truthy(exclude_m2m) else sources
+        if self._include_all_m2m_by_default():  # subclass says keep 'em all!
+            return sources
+        # Default behavior - only include fields in DEFAULT_M2M_FIELDS or Meta.default_m2m_fields, omit others
+        return sources & (set(constants.DEFAULT_M2M_FIELDS) | set(getattr(self.Meta, "default_m2m_fields", ())))
+
     @property
     def fields(self):
         """
@@ -75,8 +95,8 @@ class OptInFieldsMixin:
 
         - Removes all serializer fields specified in `Meta.opt_in_fields` list that aren't specified in the
           `include` query parameter. (applies to GET requests only)
-        - If the `exclude_m2m` query parameter is truthy, remove all many-to-many serializer fields for performance.
-          If `exclude_m2m` is not provided, only `tags`, `content_types`, and `object_types` are included by default.
+        - Possibly also removes (or marks as write-only) some or all many-to-many serializer fields (in order to
+          improve performance and reduce verbosity) -- see `_readable_m2m_sources`
 
         As an example, if the serializer specifies that `opt_in_fields = ["computed_fields"]`
         but `computed_fields` is not specified in the `?include` query parameter, `computed_fields` will be popped
@@ -113,82 +133,62 @@ class OptInFieldsMixin:
                     if field not in user_opt_in_fields:
                         fields.pop(field, None)
 
-            # If exclude_m2m is present and truthy, mark any many-to-many fields as write-only so they
-            # don't get included in the response.
-            # If exclude_m2m is not present, we include a subset of many-to-many fields by default.
-            exclude_m2m = params.get("exclude_m2m", self.context.get("exclude_m2m", None))
-            if exclude_m2m is None or is_truthy(exclude_m2m):
-                default_m2m_fields = set(constants.DEFAULT_M2M_FIELDS)
-                default_m2m_fields.update(getattr(self.Meta, "default_m2m_fields", ()))
-                for field_instance in fields.values():
-                    if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
-                        if exclude_m2m is None and field_instance.source in default_m2m_fields:
-                            continue
-                        field_instance.write_only = True
+            m2m_fields = {
+                name: instance
+                for name, instance in fields.items()
+                if isinstance(instance, (serializers.ManyRelatedField, serializers.ListSerializer))
+            }
+            readable = self._readable_m2m_sources({instance.source for instance in m2m_fields.values()}, params)
+            for name, instance in m2m_fields.items():
+                if instance.source in readable:
+                    continue
+                if instance.read_only:
+                    # A read-only M2M (the far side of a through table, e.g. `VRF.devices`) has no input to
+                    # preserve, so drop it (instead of invalidly marking it as both read-only and write-only).
+                    fields.pop(name)
+                else:
+                    # A writable M2M (e.g. `content_types`) must keep accepting input even when hidden from output.
+                    instance.write_only = True
 
             self.__pruned_fields = fields
 
         return self.__pruned_fields
 
 
-class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializer):
+class NaturalKeyRepresentationMixin:
+    """Serializer mixin holding the natural-key representation machinery.
+
+    Relations are represented by their natural keys (rather than by URL or pk) whenever a caller needs a
+    self-describing, re-importable rendering: the CSV/JSON/YAML export job, and any REST request that asks
+    for `text/csv`. All of that special-case logic lives here so it stays out of the day-to-day JSON/REST
+    code path: prefetching related objects' natural-key values in bulk (`_collect_natural_key_values` and
+    its query-`Case` builders), flattening a single FK's natural key into `a__b__name` columns
+    (`_get_natural_key_lookups_value_for_field`), and rendering M2M members by natural key
+    (`_get_m2m_natural_key_values`).
+
+    Two modes share that machinery, distinguished because CSV cannot express anything but strings:
+
+    - `_use_natural_keys()` — represent relations by flattened natural keys. True for both modes.
+    - `_is_csv_request()` — additionally coerce values to strings: `None` becomes `CSV_NULL_TYPE` and
+      scalar-keyed M2M members are comma-joined. JSON/YAML skips this so it keeps real nulls and lists.
+
+    `BaseModelSerializer` mixes this in and calls these helpers from its DRF override points
+    (`__init__` priming, `get_field_names` field filtering, `to_representation`); the methods here assume
+    the host serializer provides `Meta`, `context`, `instance`, `self._force_csv` and `self._exporting`.
     """
-    This base serializer implements common fields and logic for all ModelSerializers.
 
-    Namely, it:
-
-    - defines the `display` field which exposes a human friendly value for the given object.
-    - ensures that `id` field is always present on the serializer as well.
-    - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
-    - ensures that `object_type` field is always present on the serializer which represents the content-type of this
-      serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
-      PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
-      which of several possible serializers are in use for a given attribute.
-    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function
-      to enable the dynamic generation of nested serializers.
-    """
-
-    serializer_field_mapping = {
-        **serializers.ModelSerializer.serializer_field_mapping,
-        LaxURLModelField: LaxURLField,
-    }
-
-    serializer_related_field = NautobotHyperlinkedRelatedField
-
-    id = serializers.UUIDField(read_only=False, default=serializers.CreateOnlyDefault(uuid.uuid4))
-    display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
-    object_type = ObjectTypeField()
-    # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
     natural_keys_values = None
-    natural_slug = serializers.SerializerMethodField()
 
-    def __init__(self, *args, force_csv=False, **kwargs):
-        """
-        Instantiate a BaseModelSerializer.
+    def _is_csv_request(self):
+        """Return True if this a CSV export request"""
+        if self._force_csv:
+            return True
+        request = self.context.get("request")
+        return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
 
-        The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
-        which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
-        """
-        self._force_csv = force_csv
-
-        super().__init__(*args, **kwargs)
-        # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
-        if not self.is_nested:
-            self.Meta.depth = self.context.get("depth", 0)
-
-        # Check if the request is related to CSV export;
-        if self._is_csv_request() and self.instance:
-            # Retrieve the natural key values of related fields in an optimized way.
-            all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
-            if isinstance(self.instance, models.QuerySet):
-                queryset = self.instance
-            else:
-                # We would only need to run one additional query, making this a more efficient method of
-                # obtaining all the natural key values for this instance;
-                queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
-            self.natural_keys_values = self._collect_natural_key_values(
-                queryset, all_related_fields_natural_key_lookups
-            )
+    def _use_natural_keys(self):
+        """Return True if relations should be represented by flattened natural keys (CSV or JSON/YAML)."""
+        return self._exporting or self._is_csv_request()
 
     def _get_lookup_field_name_and_output_field(self, lookup_field):
         """Get lookup field name and its corresponding output_field.
@@ -309,7 +309,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         """
         model = self.Meta.model
         field_lookups = []
-        # NOTE: M2M and One2M fields field are ignored in csv export
+        # NOTE: one-to-many fields field are ignored in csv export
         fields = [
             field
             for field in model._meta.get_fields()
@@ -329,12 +329,134 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                 )
         return field_lookups
 
-    def _is_csv_request(self):
-        """Return True if this a CSV export request"""
-        if self._force_csv:
-            return True
-        request = self.context.get("request")
-        return hasattr(request, "accepted_media_type") and "text/csv" in request.accepted_media_type
+    def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):
+        """Extract natural key field lookups for a specific field name.
+
+        Args:
+            field_name (str): The field name to extract lookups for.
+            natural_key_field_instance (dict): The dict containing natural key field values.
+
+        Example:
+            >>> natural_key_field_instance = Device.objects.values("tenant__name", "location__name", "location__parent__name", ...)
+            >>> _get_natural_key_lookups_value_for_field("location", natural_key_field_instance)
+            {
+                "location__name": "Sample Location",
+                "location__parent__name": "Sample Location Parent Name",
+                "location__parent__parent__name": "NoObject"
+                ...
+            }
+
+        """
+        data = {}
+        for key, value in natural_key_field_instance.items():
+            if key.startswith(f"{field_name}__"):
+                if isinstance(value, uuid.UUID):
+                    data[key] = str(value)
+                elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
+                    data[key] = constants.CSV_NO_OBJECT
+                elif value is None:
+                    # CSV has no null; JSON/YAML does, so only CSV needs the sentinel here.
+                    data[key] = constants.CSV_NULL_TYPE if self._is_csv_request() else None
+                else:
+                    data[key] = value
+        return data
+
+    def _get_m2m_natural_key_values(self, instance, field):
+        """
+        Represent a many-to-many field's members by their natural keys, for CSV export.
+
+        Members identified by a single scalar (e.g. tags by name) render as a comma-separated string for
+        CSV, matching historical tag behavior; JSON/YAML keep them as a list, which is both lossless for
+        values containing commas and what the document format wants anyway. Members with composite natural
+        keys render as a list of natural-key dicts, which the CSV renderer emits as a JSON-encoded cell;
+        the dicts use the same flattened lookups (e.g. `{"manufacturer__name": ..., "model": ...}`) that
+        the import path already resolves.
+        """
+        members = getattr(instance, field.source or field.field_name).all()
+        member_keys = []
+        for member in members:
+            member_model = type(member)
+            try:
+                member_keys.append(member_model.natural_key_args_to_kwargs(member.natural_key()))
+            except (AttributeError, ValueError):
+                # No well-defined natural key for this model; fall back to the primary key
+                member_keys.append({"id": str(member.pk)})
+        if member_keys and all(len(member_key) == 1 for member_key in member_keys):
+            scalars = [str(next(iter(member_key.values()))) for member_key in member_keys]
+            return ",".join(scalars) if self._is_csv_request() else scalars
+        return member_keys
+
+
+class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, serializers.HyperlinkedModelSerializer):
+    """
+    This base serializer implements common fields and logic for all ModelSerializers.
+
+    Namely, it:
+
+    - defines the `display` field which exposes a human friendly value for the given object.
+    - ensures that `id` field is always present on the serializer as well.
+    - ensures that `created` and `last_updated` fields are always present if applicable to this model and serializer.
+    - ensures that `object_type` field is always present on the serializer which represents the content-type of this
+      serializer's associated model (e.g. "dcim.device"). This is required as the OpenAPI schema, using the
+      PolymorphicProxySerializer class defined below, relies upon this field as a way to identify to the client
+      which of several possible serializers are in use for a given attribute.
+    - supports `?depth` query parameter. It is passed in as `nested_depth` to the `build_nested_field()` function
+      to enable the dynamic generation of nested serializers.
+    """
+
+    serializer_field_mapping = {
+        **serializers.ModelSerializer.serializer_field_mapping,
+        LaxURLModelField: LaxURLField,
+    }
+
+    serializer_related_field = NautobotHyperlinkedRelatedField
+
+    id = serializers.UUIDField(read_only=False, default=serializers.CreateOnlyDefault(uuid.uuid4))
+    display = serializers.SerializerMethodField(read_only=True, help_text="Human friendly display value")
+    object_type = ObjectTypeField()
+    # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
+    natural_slug = serializers.SerializerMethodField()
+
+    def __init__(self, *args, force_csv=False, exporting=False, **kwargs):
+        """
+        Instantiate a BaseModelSerializer.
+
+        The two kwargs below are independent; the `ExportObjectList` job sets both for CSV and only
+        `exporting` for the JSON/YAML documents.
+
+        The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
+        which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
+        Because CSV can only carry strings, it also selects the coercions the documents skip (`None` becomes
+        `CSV_NULL_TYPE`, scalar-keyed M2M members are comma-joined).
+
+        The exporting kwarg marks the output as a file rather than a REST response, which is what makes every
+        M2M field visible (see `_include_all_m2m_by_default()`) rather than just the default subset present in REST.
+        """
+        self._force_csv = force_csv
+        self._exporting = exporting
+
+        super().__init__(*args, **kwargs)
+        # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
+        if not self.is_nested:
+            self.Meta.depth = self.context.get("depth", 0)
+
+        # Check if this is a natural-key export (CSV or JSON/YAML);
+        if self._use_natural_keys() and self.instance:
+            # Retrieve the natural key values of related fields in an optimized way.
+            all_related_fields_natural_key_lookups = self._get_related_fields_natural_key_field_lookups()
+            if isinstance(self.instance, models.QuerySet):
+                queryset = self.instance
+            else:
+                # We would only need to run one additional query, making this a more efficient method of
+                # obtaining all the natural key values for this instance;
+                queryset = self.Meta.model.objects.filter(pk=self.instance.pk)
+            self.natural_keys_values = self._collect_natural_key_values(
+                queryset, all_related_fields_natural_key_lookups
+            )
+
+    def _include_all_m2m_by_default(self):
+        """Widen `OptInFieldsMixin`'s default: an export file must carry every M2M field to be re-importable."""
+        return self._exporting
 
     @property
     def is_nested(self):
@@ -427,15 +549,13 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
             ):
                 return False
 
-            # Skip M2M and reverse-FK (one-to-many) fields on CSV requests — they can't be flattened
-            # into a single CSV cell. ContentType M2M is specially handled and remains exportable.
+            # In a natural-key rendering, skip reverse-FK (one-to-many) fields. They *could* be rendered
+            # like M2M members, but the relation is owned by the child's FK, so an importer has no way to
+            # set them from this side: they would be export-only, and unbounded in size (a Device has
+            # arbitrarily many Interfaces). Export those child models as their own content-type instead.
             with contextlib.suppress(FieldDoesNotExist):
-                if self._is_csv_request():
-                    field = self.Meta.model._meta.get_field(field)
-                    if field.many_to_many and field.related_model is not ContentType:
-                        return False
-                    if field.one_to_many:
-                        return False
+                if self._use_natural_keys() and self.Meta.model._meta.get_field(field).one_to_many:
+                    return False
             return True
 
         fields = [field for field in fields if filter_field(field)]
@@ -469,39 +589,6 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         return super().build_field(field_name, info, model_class, nested_depth)
 
-    def _get_natural_key_lookups_value_for_field(self, field_name, natural_key_field_instance):
-        """Extract natural key field lookups for a specific field name.
-
-        Args:
-            field_name (str): The field name to extract lookups for.
-            natural_key_field_instance (dict): The dict containing natural key field values.
-
-        Example:
-            >>> natural_key_field_instance = Device.objects.values("tenant__name", "location__name", "location__parent__name", ...)
-            >>> _get_natural_key_lookups_value_for_field("location", natural_key_field_instance)
-            {
-                "location__name": "Sample Location",
-                "location__parent__name": "Sample Location Parent Name",
-                "location__parent__parent__name": "NoObject"
-                ...
-            }
-
-        """
-        data = {}
-        for key, value in natural_key_field_instance.items():
-            if key.startswith(f"{field_name}__"):
-                if isinstance(value, uuid.UUID):
-                    data[key] = str(value)
-                elif value == constants.VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT:
-                    data[key] = constants.CSV_NO_OBJECT
-                elif value == "":
-                    data[key] = value
-                elif not value:
-                    data[key] = constants.CSV_NULL_TYPE
-                else:
-                    data[key] = value
-        return data
-
     def to_representation(self, instance):
         # For nested (depth > 0) serializers, downgrade related objects that the requesting user is not
         # permitted to view to their brief {id, object_type, url, display} representation rather than leaking
@@ -517,8 +604,23 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
         data = super().to_representation(instance)
         altered_data = {}
 
-        if self._is_csv_request():
+        if self._use_natural_keys():
+            # CSV can only carry strings, so it represents a null as the CSV_NULL_TYPE sentinel; JSON/YAML
+            # keep the real None. Sentinels are in-band (indistinguishable from a value that happens to
+            # equal them), so they are only emitted where the format leaves no alternative.
+            def scalar(value):
+                return constants.CSV_NULL_TYPE if (value is None and self._is_csv_request()) else value
+
             for key, value in data.items():
+                field = self.fields.get(key)
+                if isinstance(field, serializers.ManyRelatedField) and isinstance(
+                    field.child_relation, NautobotHyperlinkedRelatedField
+                ):
+                    # M2M field - represent members by their natural keys.
+                    # (M2M fields with other child types, e.g. ContentTypeField or SerializedPKRelatedField,
+                    # keep their existing representations, which already round-trip through the parser.)
+                    altered_data[key] = self._get_m2m_natural_key_values(instance, field)
+                    continue
                 if cleaned_natural_key_field_instance := self.natural_keys_values.get(instance.pk):
                     # FK field with natural_field_lookups
                     if natural_key_field_lookups_for_field := self._get_natural_key_lookups_value_for_field(
@@ -527,9 +629,9 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
                         altered_data.update(natural_key_field_lookups_for_field)
                     else:
                         # Not FK field
-                        altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                        altered_data[key] = scalar(value)
                 else:
-                    altered_data[key] = constants.CSV_NULL_TYPE if value is None else value
+                    altered_data[key] = scalar(value)
         else:
             altered_data = data
 
@@ -682,15 +784,7 @@ class WritableNestedSerializer(BaseModelSerializer):
                     logger.debug("Discarding non-database field %s", field_name)
                     del params[field_name]
 
-            queryset = self.get_queryset()
-            try:
-                return queryset.get(**params)
-            except ObjectDoesNotExist:
-                raise ValidationError(f"Related object not found using the provided attributes: {params}")
-            except MultipleObjectsReturned:
-                raise ValidationError(f"Multiple objects match the provided attributes: {params}")
-            except FieldError as e:
-                raise ValidationError(e)
+            return resolve_related_object(self.get_queryset(), params)
 
         queryset = self.get_queryset()
         pk = None

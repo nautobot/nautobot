@@ -46,7 +46,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         # Assert that successful object creation Django message has been displayed
         self.assertTrue(
             self.browser.is_element_present_by_xpath(
-                f"//div[@id='header_messages']//div[contains(@class, 'alert alert-success') and normalize-space()='Created tenant {tenant_name}']",
+                f"//div[@id='toast-messages']//div[contains(@class, 'nb-toast-success')]//div[normalize-space()='Created tenant {tenant_name}']",
                 wait_time=10,
             )
         )

@@ -52,7 +52,7 @@ import { getEchartsOptionsThemeOverrides } from './echarts.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
-import { refreshMessages } from './messages.js';
+import { initializeToasts, refreshMessages, watchMessages } from './messages.js';
 import { initializeModal } from './modal.js';
 import { initializeSearch } from './search.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
@@ -104,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initializeHtmxButtonSpinner();
 
   // Messages
-  window.nb.messages = { refreshMessages };
+  initializeToasts();
+  window.nb.messages = { initializeToasts, refreshMessages, watchMessages };
 
   // Modal
   initializeModal();
