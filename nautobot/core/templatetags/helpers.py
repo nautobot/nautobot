@@ -398,6 +398,39 @@ def bettertitle(value):
 
 @library.filter()
 @register.filter()
+def humanize_duration(value):
+    """
+    Humanize a `datetime.timedelta` at a readable granularity. Examples:
+
+        timedelta(milliseconds=340) => "<1s"
+        timedelta(seconds=9) => "9s"
+        timedelta(seconds=192) => "3m 12s"
+        timedelta(seconds=31300) => "8h 41m"
+        timedelta(days=1, seconds=10800) => "1d 3h"
+    """
+    if value is None:
+        return ""
+
+    total_seconds = int(value.total_seconds())
+    if total_seconds < 1:
+        return "<1s"
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+
+    minutes, seconds = divmod(total_seconds, 60)
+    if minutes < 60:
+        return f"{minutes}m {seconds}s"
+
+    hours, minutes = divmod(minutes, 60)
+    if hours < 24:
+        return f"{hours}h {minutes}m"
+
+    days, hours = divmod(hours, 24)
+    return f"{days}d {hours}h"
+
+
+@library.filter()
+@register.filter()
 def humanize_speed(speed):
     """
     Humanize speeds given in Kbps. Examples:

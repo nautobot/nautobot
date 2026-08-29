@@ -58,6 +58,8 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES,
+    JOB_RUNTIME_STATISTICS_SAMPLE_SIZE,
 )
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
@@ -2188,6 +2190,64 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.local_job = JobModel.objects.get(job_class_name="TestPassJob")
         cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="TestHasSensitiveVariables")
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
+
+    @staticmethod
+    def _add_job_result(job, seconds, status=JobResultStatusChoices.STATUS_SUCCESS, started=True, done=True):
+        started_at = now() - timedelta(hours=1)
+        result = JobResult.objects.create(job_model=job, name=job.name, status=status)
+        JobResult.objects.filter(pk=result.pk).update(
+            date_started=started_at if started else None,
+            date_done=started_at + timedelta(seconds=seconds) if done else None,
+        )
+
+    def test_runtime_statistics_requires_minimum_samples(self):
+        job = self.app_job
+        self.assertIsNone(job.runtime_statistics)
+
+        for _ in range(JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES - 1):
+            self._add_job_result(job, 10)
+        self.assertIsNone(job.runtime_statistics)
+
+        self._add_job_result(job, 10)
+        self.assertIsNotNone(job.runtime_statistics)
+
+    def test_runtime_statistics_values(self):
+        job = self.app_job
+        for seconds in (10, 20, 30):
+            self._add_job_result(job, seconds)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], 3)
+        self.assertEqual(stats["median"], timedelta(seconds=20))
+        self.assertEqual(stats["longest"], timedelta(seconds=30))
+
+    def test_runtime_statistics_varies_flag(self):
+        job = self.app_job
+        for seconds in (10, 20, 30):
+            self._add_job_result(job, seconds)
+        self.assertFalse(job.runtime_statistics["varies"])
+
+        self._add_job_result(job, 600)
+        self.assertTrue(job.runtime_statistics["varies"])
+
+    def test_runtime_statistics_ignores_incomplete_runs(self):
+        job = self.app_job
+        for seconds in (10, 20, 30):
+            self._add_job_result(job, seconds)
+
+        self._add_job_result(job, 9999, status=JobResultStatusChoices.STATUS_FAILURE)
+        self._add_job_result(job, 9999, started=False)
+        self._add_job_result(job, 9999, done=False)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], 3)
+        self.assertEqual(stats["longest"], timedelta(seconds=30))
+
+    def test_runtime_statistics_sample_size_is_capped(self):
+        job = self.app_job
+        for seconds in range(JOB_RUNTIME_STATISTICS_SAMPLE_SIZE + 10):
+            self._add_job_result(job, seconds + 1)
+        self.assertEqual(job.runtime_statistics["sample_size"], JOB_RUNTIME_STATISTICS_SAMPLE_SIZE)
 
     def test_job_class(self):
         from example_app.jobs import ExampleJob
