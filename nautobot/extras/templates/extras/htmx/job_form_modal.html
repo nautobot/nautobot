@@ -32,7 +32,7 @@
                             <span aria-hidden="true" class="mdi mdi-clock-outline"></span>
                             Across the last {{ runtime.sample_size }} successful run{{ runtime.sample_size|pluralize }},
                             this job took a median of <strong>{{ runtime.median|humanize_duration }}</strong>{% if runtime.varies %},
-                            and as long as <strong>{{ runtime.longest|humanize_duration }}</strong>{% endif %}.
+                                and as long as <strong>{{ runtime.longest|humanize_duration }}</strong>{% endif %}.
                         </div>
                     {% endif %}
                 {% endwith %}
