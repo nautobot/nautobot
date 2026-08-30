@@ -1,0 +1,23 @@
+Exposed new environment variable `NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS`
+Exposed new environment variable `NAUTOBOT_RATE_LIMITING_RECORDS_LIMIT`
+Exposed new environment variable `NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG`
+Exposed new environment variable `NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_MODE`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_READ_COST`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_WRITE_COST`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER`
+Exposed new environment variable `NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE`
+Added `nautobot/core/rate_limiting` for rate limiting logic
+Added `to_int_or_none` helper function to `nautobot/core/utils/data.py`
+Added `RestReadRequestFeatures` to track identifiable query features in a REST read request
+Added `classify_rest_read_request_features` to generate a `RestReadRequestFeatures` from a REST request
+Added `estimate_rest_read_request_cost` to generate an estimated cost from a `RestReadRequestFeatures` object
+Added `calculate_records_per_page` to resolve the page size the paginator will actually serve
+Added `number` type support to `nautobot/core/tests/test_settings_schema.py`
+Added `ClassifyRestRequestFeaturesTestCase` in `nautobot/core/tests/test_rate_limiting.py` for validation
+Documented new settings in `nautobot/core/settings.yaml`
