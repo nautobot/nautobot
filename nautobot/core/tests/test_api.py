@@ -1442,7 +1442,7 @@ class RelatedModelResolutionTest(TestCase):
     def test_related_model_of_reverse_one_to_one(self):
         """A reverse one-to-one resolves too; its descriptor exposes `related` rather than `field`."""
         field = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}).fields["parent_bay"]
-        self.assertFalse(hasattr(dcim_models.Device.parent_bay, "field"))
+        self.assertFalse(hasattr(dcim_models.Device.parent_bay, "field"))  # pylint: disable=no-member
         self.assertIs(field._related_model, dcim_models.DeviceBay)
 
     def test_related_model_is_none_when_undeterminable(self):

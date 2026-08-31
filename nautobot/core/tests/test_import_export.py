@@ -181,6 +181,43 @@ class BuildDocumentRecordsTests(SimpleTestCase):
             [{"device_type": None}],
         )
 
+    # -- custom fields have two spellings, chosen by the selection ---------------
+    CF_RECORD = [{"name": "x", "custom_fields": {"a": 1, "b": 2}}]
+
+    def test_core_cf__dict_kept_without_a_selection(self):
+        self.assertEqual(build_document_records(self.CF_RECORD), self.CF_RECORD)
+
+    def test_core_cf__dict_kept_when_named(self):
+        """Naming `custom_fields` asks for the whole dict, as an unrestricted export produces."""
+        self.assertEqual(build_document_records(self.CF_RECORD, field_order=["name", "custom_fields"]), self.CF_RECORD)
+
+    def test_core_cf__selected_keys_become_top_level_entries(self):
+        """A `cf_<key>` selection cannot be expressed inside the dict, so the dict gives way to flat keys."""
+        self.assertEqual(
+            build_document_records(self.CF_RECORD, field_order=["name", "cf_a"]),
+            [{"name": "x", "cf_a": 1}],
+        )
+
+    def test_core_cf__unselected_key_is_dropped(self):
+        """Only custom fields are filtered here; the serializer has already dropped unselected fields."""
+        self.assertEqual(
+            build_document_records([{"custom_fields": {"a": 1, "b": 2}}], field_order=["cf_b"]), [{"cf_b": 2}]
+        )
+
+    def test_core_cf__key_containing_the_separator_is_not_split(self):
+        """A custom-field key may contain `__`; the flat entry must survive `nest_flat_dict` intact.
+
+        Auto-slugification never produces a double underscore, but a key can be set explicitly.
+        """
+        self.assertEqual(
+            build_document_records([{"custom_fields": {"my__field": "v"}}], field_order=["cf_my__field"]),
+            [{"cf_my__field": "v"}],
+        )
+
+    def test_core_cf__selected_key_absent_from_the_record(self):
+        """A selected key with no value for this object is present and null, not missing."""
+        self.assertEqual(build_document_records([{"custom_fields": {"a": 1}}], field_order=["cf_b"]), [{"cf_b": None}])
+
     def test_core_prune__composite_natural_key_relation_present(self):
         self.assertEqual(
             build_document_records([{"device_type__model": "C9300", "device_type__manufacturer__name": "Cisco"}]),
@@ -1086,21 +1123,43 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertEqual(lines[2], "B value")
 
     def test_select__custom_field_in_a_document(self):
-        """In JSON/YAML a custom field stays inside the nested `custom_fields` dict, not a `cf_*` key."""
+        """A named custom field becomes a top-level `cf_<key>` in a document, not a nested dict entry.
+
+        One custom field cannot be named *inside* `custom_fields`, so a `cf_<key>` selection switches the
+        document to the same flat spelling CSV uses.
+        """
+        self.create_status_with_custom_fields()
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(
+                    self.run_export(
+                        query_string="name=Custom+Field+Status",
+                        export_format=export_format,
+                        export_fields="name,cf_export_cf_a",
+                    )
+                )
+                self.assertEqual(doc["records"], [{"name": "Custom Field Status", "cf_export_cf_a": "A value"}])
+
+    def test_select__custom_fields_dict_in_a_document(self):
+        """Naming `custom_fields` keeps the nested dict, with every custom field in it."""
         self.create_status_with_custom_fields()
         doc = self.export_document(
             self.run_export(
                 query_string="name=Custom+Field+Status",
                 export_format="json",
-                export_fields="name,cf_export_cf_a",
+                export_fields="name,custom_fields",
             )
         )
-        # TODO: the document formats do not apply the selection inside the dict at all, so the unselected
-        #   custom field is present here too -- and there is no way to ask for one custom field alone.
         self.assertEqual(
             doc["records"],
             [{"name": "Custom Field Status", "custom_fields": {"export_cf_a": "A value", "export_cf_b": "B value"}}],
         )
+
+    def test_select__no_selection_keeps_the_custom_fields_dict_in_a_document(self):
+        """With no selection the document is unchanged: custom fields stay nested."""
+        self.create_status_with_custom_fields()
+        doc = self.export_document(self.run_export(query_string="name=Custom+Field+Status", export_format="json"))
+        self.assertEqual(doc["records"][0]["custom_fields"], {"export_cf_a": "A value", "export_cf_b": "B value"})
 
     def test_select__custom_fields_dict_may_be_named_directly(self):
         """Naming `custom_fields` asks for all of them, which is what both formats already produce."""
@@ -1137,7 +1196,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
     @skip("Enable in X5: needs ExportFieldsForm (export UI)")
     def test_select__form_expands_single_fk_relations(self):
         """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
-        from nautobot.core.forms import ExportFieldsForm  # TODO: move to a top-level import once this exists
+        from nautobot.core.forms import ExportFieldsForm  # pylint: disable=no-name-in-module TODO
 
         form = ExportFieldsForm(content_type=ContentType.objects.get_for_model(Device), initial_fields=["name"])
         paths = [choice[0] for choice in form.fields["export_fields"].choices]

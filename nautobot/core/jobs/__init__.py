@@ -390,16 +390,16 @@ class ExportObjectList(Job):
             model, serializer_class, queryset, for_csv=not is_document, export_field_paths=export_field_paths
         )
         if is_document:
-            self._render_document(export_format, content_type, records, match_fields, filename)
+            self._render_document(export_format, content_type, records, match_fields, filename, export_field_paths)
         else:
             self._render_csv(content_type, records, match_fields, filename, export_field_paths)
 
-    def _render_document(self, export_format, content_type, records, match_fields, filename):
+    def _render_document(self, export_format, content_type, records, match_fields, filename, export_field_paths):
         # Generic JSON/YAML export. The document format itself lives in nautobot.core.api.import_export,
         # shared with the parsers that read it back, so writer and reader stay in lock-step.
         document = build_import_document(
             f"{content_type.app_label}.{content_type.model}",
-            build_document_records(records),
+            build_document_records(records, field_order=export_field_paths),
             match_fields=match_fields,
         )
         if export_format == "json":

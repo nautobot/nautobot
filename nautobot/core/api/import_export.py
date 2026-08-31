@@ -124,18 +124,27 @@ def _prune_missing_references(null_prefixes, prefix, value):
     return value
 
 
-def build_document_records(serializer_data):
+def build_document_records(serializer_data, field_order=None):
     """Reshape flat serializer records into the nested representation used by JSON/YAML exports.
 
     Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts collapse to
     their value; url fields are dropped.
 
+    Custom fields have two spellings, chosen by what the selection asks for: `custom_fields` (or no
+    selection at all) keeps the whole dict, while individual `cf_<key>` entries are emitted as top-level
+    `cf_<key>` keys -- the same spelling CSV uses, since one custom field cannot be named inside the dict.
+
     Args:
         serializer_data (list): Flat records, as produced by a serializer in natural-key export mode.
+        field_order (list, optional): The export field selection, if one is in effect.
 
     Returns:
         list: The nested record dicts.
     """
+    selected_custom_fields = None
+    if field_order and "custom_fields" not in field_order:
+        selected_custom_fields = [entry for entry in field_order if entry.startswith("cf_")]
+
     records = []
     for record in serializer_data:
         reshaped = {}
@@ -158,6 +167,12 @@ def build_document_records(serializer_data):
         for head in flattened_heads:
             # Collapse each null relation to a single None, at the depth the sentinel actually reports
             nested[head] = _prune_missing_references(null_prefixes, head, nested.get(head))
+        if selected_custom_fields is not None:
+            # After nesting, not before: a custom-field key may itself contain `__` (auto-slugification
+            # never produces one, but a key can be set explicitly), and `nest_flat_dict` would split it.
+            custom_fields = nested.pop("custom_fields", {})
+            for entry in selected_custom_fields:
+                nested[entry] = custom_fields.get(entry.removeprefix("cf_"))
         records.append(nested)
     return records
 
