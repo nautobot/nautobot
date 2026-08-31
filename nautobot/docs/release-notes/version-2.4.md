@@ -282,6 +282,53 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 <!-- towncrier release notes start -->
 
+## v2.4.41 (2026-08-31)
+
+### Security in v2.4.41
+
+- [#9405](https://github.com/nautobot/nautobot/issues/9405) - Updated dependency `GitPython` to `~3.1.59` to mitigate multiple vulnerabilities.
+- [#9423](https://github.com/nautobot/nautobot/issues/9423) - Updated dependency `GitPython` to `~3.1.61` to mitigate multiple vulnerabilities.
+
+### Added in v2.4.41
+
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Added `SSO_SYNC_GROUPS` setting to restrict which groups are synced into Nautobot from the SSO group claim.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added a `/api/extras/saved-views/<uuid>/set-default/` REST API endpoint, allowing a user to set (`POST`) or clear (`DELETE`) their own default Saved View without requiring any Saved View permissions.
+- [#9394](https://github.com/nautobot/nautobot/issues/9394) - Added `NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS` environment variable support for the `EXTERNAL_AUTH_DEFAULT_GROUPS` setting.
+
+### Changed in v2.4.41
+
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed the REST API `owner` field on Saved Views to be read-only; it is now always set to the requesting user, matching the UI.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed the REST API `view` field on Saved Views to be settable only when creating a Saved View.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed Saved Views and Saved View Associations to be excluded when setting `EXEMPT_VIEW_PERMISSIONS` to the implicit all (`"*"`) value.
+- [#9394](https://github.com/nautobot/nautobot/issues/9394) - Changed SSO group sync to properly revoke group memberships and staff/superuser status when the group claim changes from non-empty to empty.
+
+### Deprecated in v2.4.41
+
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Deprecated the `/api/extras/user-saved-view-associations/` REST API endpoints in favor of `/api/extras/saved-views/<uuid>/set-default/`.
+
+### Fixed in v2.4.41
+
+- [#6887](https://github.com/nautobot/nautobot/issues/6887) - Fixed SSO group syncing to also read group attributes from SAML responses.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed the Saved View edit form to apply the same ownership and permission checks as the other Saved View operations.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed enforcement of the documented `extras.change_savedview` permission requirement for setting or clearing the global default Saved View.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed a server error when an invalid or unknown `saved_view` UUID was supplied as a query parameter on an object list view.
+
+### Documentation in v2.4.41
+
+- [#978](https://github.com/nautobot/nautobot/issues/978) - Added a warning to the SSO documentation that only a single SAML identity provider is supported at a time.
+- [#6834](https://github.com/nautobot/nautobot/issues/6834) - Fixed the Okta SAML documentation example to set `requestedAuthnContext` via `SOCIAL_AUTH_SAML_SECURITY_CONFIG` instead of the unsupported per-IdP `requested_authn_context`, `force_authn`, and `allow_unsolicited` keys.
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Added documentation on writing a custom SSO group sync function and using it in place of the built-in one.
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Clarified that enabling SSO group syncing replaces a user's entire set of group memberships on each login, including groups that were assigned manually.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added guidance to the permissions documentation explaining that no Saved View permissions are needed for users to make use of Saved Views, and that they should only be granted to users who manage Saved Views for other users.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added documentation of the REST API behavior for Saved Views.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Clarified in the Saved Views documentation that a non-shared Saved View is still visible to users holding the `extras.view_savedview` permission.
+- [#9388](https://github.com/nautobot/nautobot/issues/9388) - Added a section to the permissions guide clarifying how Object Metadata permissions are evaluated.
+- [#9389](https://github.com/nautobot/nautobot/issues/9389) - Added security notice for GHSA-x69f-q4wj-vx72.
+
+### Housekeeping in v2.4.41
+
+- [#9356](https://github.com/nautobot/nautobot/issues/9356) - Added `dependencies-check` action to `ci_pullrequest` workflow to verify dependency compatibility with existing open-source Nautobot Apps.
+
 ## v2.4.40 (2026-08-17)
 
 ### Security in v2.4.40
