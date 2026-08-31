@@ -343,7 +343,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added documentation of the REST API behavior for Saved Views.
 - [#9381](https://github.com/nautobot/nautobot/issues/9381) - Clarified in the Saved Views documentation that a non-shared Saved View is still visible to users holding the `extras.view_savedview` permission.
 - [#9389](https://github.com/nautobot/nautobot/issues/9389) - Added security notice for GHSA-x69f-q4wj-vx72.
-- [#9403](https://github.com/nautobot/nautobot/issues/9403) - Updated 3.2 release note documentation to include pylint-nautobot helper command.
+- [#9403](https://github.com/nautobot/nautobot/issues/9403) - Updated 3.2 release note documentation to include `pylint-nautobot` helper command.
 - [#9419](https://github.com/nautobot/nautobot/issues/9419) - Added guidance to the development best practices documentation regarding the `distinct` flag on filterset filters.
 
 ### Housekeeping in v3.2.4
