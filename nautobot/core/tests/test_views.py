@@ -32,6 +32,7 @@ from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
+from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
@@ -1666,3 +1667,56 @@ class ViewSetCustomActionsTestCase(TestCase):
         self.add_permissions("dcim.add_location", "dcim.change_location")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+
+
+class ObjectOverviewViewTestCase(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.location = Location.objects.first()
+        self.url = reverse("dcim:location_overview", kwargs={"pk": self.location.pk})
+        self.add_permissions("dcim.view_location")
+
+    def test_default_overview(self):
+        response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        keys = re.findall(r"<span>(.*?):", response.content.decode(response.charset))
+        self.assertEqual(
+            keys,
+            ["Location Type", "Status", "Parent", "Tenant", "Facility", "AS Number", "Time Zone", "Description"],
+        )
+
+    def test_overview_fields(self):
+        overview_fields = {"name": {"key_transform": "Label", "value_transforms": [lambda value: "VALUE"]}}
+        with mock.patch.object(LocationUIViewSet, "overview_fields", overview_fields):
+            response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            '<tr><td colspan="100"><span>Label: VALUE</span></td></tr>',
+        )
+
+    def test_overview_html(self):
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr><td colspan="100"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_template_name(self):
+        template_name = "components/panel/body_wrapper_generic_table.html"
+        with mock.patch.object(LocationUIViewSet, "overview_template_name", template_name):
+            response = self.client.get(self.url)
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            '<tr><td colspan="100"><table class="collapse show table table-hover"></table></td></tr>',
+        )
+
+
+class ObjectOverviewViewWithoutPermissionTestCase(TestCase):
+    def test_overview_requires_view_permission(self):
+        location = Location.objects.first()
+        url = reverse("dcim:location_overview", kwargs={"pk": location.pk})
+        self.assertHttpStatus(self.client.get(url), 403)

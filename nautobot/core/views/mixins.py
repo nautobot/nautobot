@@ -1614,7 +1614,7 @@ class ObjectOverviewViewMixin(NautobotViewSetMixin):
     overview_html = None
     overview_template_name = None
 
-    @drf_action(detail=True, custom_view_base_action="view", url_path="overview", url_name="overview")
+    @drf_action(detail=True, custom_view_base_action="view")
     def overview(self, request, *args, **kwargs):
         return Response(
             get_overview(

@@ -1,0 +1,1 @@
+Added `ObjectOverviewViewMixin`, providing a per-object overview endpoint on `NautobotUIViewSet`.

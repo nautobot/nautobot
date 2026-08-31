@@ -5,6 +5,9 @@ New in Nautobot 1.4 is the debut of `NautobotUIViewSet`: A powerful app developm
 +++ 3.1.0 "Added bulk-rename to NautobotUIViewSet"
     In Nautobot v3.1.0 and later, NautobotUIViewSet automatically includes a `bulk_rename()` action if the associated model has an editable `name` field.
 
++++ 3.3.0 "Added object overview to NautobotUIViewSet"
+    In Nautobot v3.3.0 and later, NautobotUIViewSet automatically includes an `overview()` action. See [Object Overview](#object-overview).
+
 Note that this ViewSet is catered specifically to the UI, not the API.
 
 Concrete examples on how to use `NautobotUIViewSet` resides in `nautobot.circuits.views`.
@@ -116,6 +119,49 @@ You may see other context keys as well, but any not documented above should not 
 
 --- 2.0.0
     The `changelog_url` context key was removed. Use `object.get_changelog_url` instead.
+
+## Object Overview
+
+Every `NautobotUIViewSet` provides an `overview` action at `<object URL>/overview/`, returning a compact summary of a single object as an HTML fragment. It is intended for expanding a table row to reveal an object's key details without leaving the list view, and it requires the same `view` permission as the object's detail view.
+
+### The Default Overview
+
+With no configuration, the overview displays the same key/value pairs as the first `ObjectFieldsPanel` in the left half of the detail view's main tab.
+
+Panels are matched on their declared `section`, and a panel that does not set `section=SectionChoices.LEFT_HALF` is not considered. A model whose fields panel sits elsewhere has no default overview and should declare one explicitly.
+
+### Declaring an Overview
+
+Three attributes control what the overview displays. Only one of them can be set at a time.
+
+`overview_fields` selects the fields to display, optionally transforming a field's key or its value. An empty dict uses the field's default rendering:
+
+```python
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    overview_fields = {
+        "status": {},
+        "parent": {
+            "key_transform": "Parent Location",
+            "value_transforms": [lambda parent: f"Parent: {parent}"],
+        },
+    }
+```
+
+`overview_html` renders an HTML string:
+
+```python
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    overview_html = "<strong>{{ object.name }}</strong>"
+```
+
+`overview_template_name` renders a template file:
+
+```python
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    overview_template_name = "your_app/yourappmodel_overview.html"
+```
+
+Both the HTML string and the template file are rendered with the object's page context, so `object` and `request` are available to them.
 
 ## Excluding ViewMixins from NautobotUIViewSet
 
