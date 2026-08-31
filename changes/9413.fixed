@@ -1,0 +1,2 @@
+Fixed the homepage returning an HTTP 500 error against a read-only database, such as when `MAINTENANCE_MODE` is enabled.
+Fixed the homepage writing the panel layout to the user's configuration on every page view, which could discard a panel's saved position when an App was uninstalled or a permission was revoked.

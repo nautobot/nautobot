@@ -21,7 +21,7 @@ from prometheus_client.parser import text_string_to_metric_families
 from nautobot.circuits.models import Circuit, CircuitType, Provider
 from nautobot.circuits.tables import ProviderTable
 from nautobot.circuits.views import ProviderUIViewSet
-from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
+from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, HOMEPAGE_PANELS_LAYOUT_COLUMNS, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
@@ -292,6 +292,161 @@ class HomeViewTestCase(TestCase):
         assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
         assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
         assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
+
+    def test_homepage_layout_panels_no_stored_layout_does_not_write(self):
+        """
+        Validate that rendering the homepage without a stored panel layout performs no write.
+
+        Regression test: when no valid layout was stored, `HomeView.get()` called `clear_config(..., commit=True)`,
+        saving the user record even though nothing had changed, which raised a database error when the database
+        was read-only (e.g. under MAINTENANCE_MODE). The unrelated top-level key additionally guards against
+        `clear_config()` removing the leaf key from the wrong nesting level.
+        """
+        self.add_permissions("dcim.view_device", "dcim.view_location")
+        unrelated = {"timezone": "Europe/Rome", "panels": "unrelated-top-level-key"}
+        self.user.config_data = unrelated
+        self.user.save()
+
+        with mock.patch.object(get_user_model(), "save", autospec=True) as mock_save:
+            self.assertHttpStatus(self.client.get(reverse("home")), 200)
+        # Rendering the homepage must not save the user record.
+        mock_save.assert_not_called()
+
+        self.user.refresh_from_db()
+        self.assertEqual(
+            self.user.config_data,
+            unrelated,
+            "Rendering the homepage modified the user's stored config; a write bypassed User.save()",
+        )
+
+    def test_homepage_layout_panels_stored_layout_does_not_write(self):
+        """
+        Validate that rendering the homepage with a stored panel layout performs no write.
+
+        Regression test: when a valid layout was stored, `HomeView.get()` called `set_config(..., commit=True)`,
+        writing the computed layout back to the user's config on every GET.
+        """
+        self.add_permissions("dcim.view_device", "dcim.view_location")
+        panels = [[{"id": "organization", "collapsed": True}]]
+        panels += [[] for _ in range(HOMEPAGE_PANELS_LAYOUT_COLUMNS - 1)]
+        self.user.config_data = {"homepage_layout": {"panels": panels}}
+        self.user.save()
+
+        with mock.patch.object(get_user_model(), "save", autospec=True) as mock_save:
+            self.assertHttpStatus(self.client.get(reverse("home")), 200)
+        # Rendering the homepage must not save the user record.
+        mock_save.assert_not_called()
+
+        self.user.refresh_from_db()
+        self.assertEqual(
+            self.user.config_data["homepage_layout"]["panels"],
+            panels,
+            "Rendering the homepage modified the user's stored config; a write bypassed User.save()",
+        )
+
+    def test_homepage_layout_panels_ignores_unknown_stored_panel_ids(self):
+        """
+        Validate that the homepage still renders when the stored layout contains an ID matching no available panel.
+
+        The layout lives in `User.config_data["homepage_layout"]["panels"]` as a list of `{"id", "collapsed"}`
+        entries, one list per column. An ID stops matching when the panel is removed (e.g. an App is uninstalled)
+        or the user loses the permission that made it visible. `HomeView.get()` skips such entries.
+
+        This asserts that every panel available to the user is still present, and in the same document order as
+        the render with nothing stored -- the column distribution does differ, see the comment below. The case
+        previously had no coverage;stale IDs also persist longer now that the layout is not overwritten on each
+        render.
+        """
+        self.add_permissions("dcim.view_location", "circuits.view_circuit", "ipam.view_prefix", "dcim.view_device")
+        url = reverse("home")
+        panel_ids = r'class="card nb-draggable" id="([^"]+)"'
+
+        # Baseline: capture the panels rendered with nothing stored, to compare against.
+        self.user.config_data = {}
+        self.user.save()
+        response = self.client.get(url)
+        expected = re.findall(panel_ids, extract_page_body(response.content.decode(response.charset)))
+        self.assertNotEqual(
+            expected,
+            [],
+            "No panels rendered for the baseline; the panel markup or the test's permissions may have changed",
+        )
+
+        # A stored layout naming only an unavailable panel must not change which panels render.
+        panels = [[{"id": "no-such-panel", "collapsed": False}]]
+        panels += [[] for _ in range(HOMEPAGE_PANELS_LAYOUT_COLUMNS - 1)]
+        self.user.config_data = {"homepage_layout": {"panels": panels}}
+        self.user.save()
+
+        # With no resolvable IDs every panel is appended to the last column, so the column distribution differs
+        # from the default even spread. Document order is unaffected, which is what this compares.
+        response = self.client.get(url)
+        self.assertHttpStatus(response, 200)
+        rendered = re.findall(panel_ids, extract_page_body(response.content.decode(response.charset)))
+        self.assertEqual(
+            rendered, expected, "An unresolvable stored panel ID changed which panels rendered, or their order"
+        )
+
+    def test_homepage_layout_panels_render_from_stored_layout(self):
+        """
+        Validate that a stored panel layout still drives the rendered panel order and collapsed state.
+
+        The layout is persisted solely by the drag/collapse `PATCH` to `/api/users/config/`; the homepage no
+        longer writes its own computed copy back on GET. This guards that the homepage still *reads* and honors
+        what that `PATCH` stored, including overriding the default registry ordering. The fixture below stands
+        in for a layout the user had previously saved that way.
+        """
+        self.add_permissions("dcim.view_location", "circuits.view_circuit")
+        url = reverse("home")
+        panel_ids = r'class="card nb-draggable" id="([^"]+)"'
+
+        def rendered_panels(body):
+            return re.findall(panel_ids, body)
+
+        def panel_html(body):
+            return {chunk.split('"', 1)[0]: chunk for chunk in body.split('class="card nb-draggable" id="')[1:]}
+
+        # Baseline: with no stored layout, the default registry ordering places "organization" before "circuits".
+        self.user.config_data = {}
+        self.user.save()
+        response = self.client.get(url)
+        default_body = extract_page_body(response.content.decode(response.charset))
+        default_order = rendered_panels(default_body)
+        self.assertLess(
+            default_order.index("organization"),
+            default_order.index("circuits"),
+            "Default panel order is no longer organization-before-circuits, invalidating this test's baseline",
+        )
+
+        # A stored layout inverts that ordering and collapses "circuits" only.
+        panels = [
+            [{"id": "circuits", "collapsed": True}],
+            [{"id": "organization", "collapsed": False}],
+        ]
+        panels += [[] for _ in range(HOMEPAGE_PANELS_LAYOUT_COLUMNS - len(panels))]
+        self.user.config_data = {"homepage_layout": {"panels": panels}}
+        self.user.save()
+
+        response = self.client.get(url)
+        body = extract_page_body(response.content.decode(response.charset))
+        stored_order = rendered_panels(body)
+        self.assertLess(
+            stored_order.index("circuits"),
+            stored_order.index("organization"),
+            "The stored panel layout did not override the default panel ordering",
+        )
+
+        by_id = panel_html(body)
+        self.assertIn(
+            'aria-expanded="false"',
+            by_id["circuits"],
+            "The stored collapsed state was not applied to the circuits panel",
+        )
+        self.assertIn(
+            'aria-expanded="true"',
+            by_id["organization"],
+            "The organization panel rendered collapsed despite collapsed=False in the stored config",
+        )
 
 
 class AppDocsViewTestCase(TestCase):
