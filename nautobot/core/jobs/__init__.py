@@ -7,6 +7,7 @@ from django.apps import apps as global_apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
+    FieldDoesNotExist,
     PermissionDenied,
 )
 from django.db import transaction
@@ -33,6 +34,7 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.data_validation import models
@@ -238,7 +240,51 @@ class ExportObjectList(Job):
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
         # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
         serializer = serializer_class(queryset, many=True, context={"request": None}, exporting=True, force_csv=for_csv)
+        self._log_lossy_m2m_fields(model, serializer.child.fields)
         return serializer.data
+
+    def _log_lossy_m2m_fields(self, model, serializer_fields):
+        """Report each exported M2M field whose through model records data this file cannot represent.
+
+        A column of member natural keys says which objects are related but not what the through row says
+        about each pairing, so it is readable and diffable but not re-importable. Point at the through
+        model, which is exportable and importable as a content type in its own right.
+        """
+        for m2m_field in model._meta.many_to_many:
+            serializer_field = serializer_fields.get(m2m_field.name)
+            if serializer_field is None:
+                continue
+            through = m2m_field.remote_field.through
+            data_fields = m2m_through_data_fields(through)
+            if not data_fields:
+                continue
+            data_fields = self._omit_covered_through_fields(model, serializer_field, through, data_fields)
+            if data_fields:
+                self.logger.info(
+                    "`%s` is managed through `%s`, which also records %s. Those values are not part of this "
+                    "export; export `%s` as well to capture them.",
+                    m2m_field.name,
+                    through._meta.label_lower,
+                    ", ".join(f"`{field_name}`" for field_name in data_fields),
+                    through._meta.label_lower,
+                )
+
+    @staticmethod
+    def _omit_covered_through_fields(model, serializer_field, through, data_fields):
+        """Drop the through fields this column already carries.
+
+        Some serializers point an M2M field at the through model's own rows instead of at the far-side
+        objects (`SecretsGroup.secrets` reads `secrets_group_associations`). Those rows render by *their*
+        natural key, so any through field that key includes survives the export after all.
+        """
+        try:
+            source_field = model._meta.get_field(serializer_field.source)
+        except FieldDoesNotExist:
+            return data_fields
+        if getattr(source_field, "related_model", None) is not through:
+            return data_fields
+        covered = set(getattr(through, "natural_key_field_lookups", ()))
+        return [field_name for field_name in data_fields if field_name not in covered]
 
     @staticmethod
     def _export_filename(model):

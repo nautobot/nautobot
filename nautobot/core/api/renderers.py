@@ -35,6 +35,17 @@ class NautobotJSONRenderer(JSONRenderer):
     encoder_class = NautobotKombuJSONEncoder
 
 
+def join_list_cell(values):
+    """Join a list of values into a single comma-separated CSV cell.
+
+    Members are quoted by CSV's own rules, so a member containing a comma, quote or newline stays distinct
+    from two members and `a,b` renders exactly as it always did. Inverse of `NautobotCSVParser.split_list_cell`.
+    """
+    buffer = StringIO()
+    csv.writer(buffer, lineterminator="").writerow(values)
+    return buffer.getvalue()
+
+
 class NautobotCSVRenderer(BaseRenderer):
     """
     Render to CSV format.
@@ -187,7 +198,7 @@ class NautobotCSVRenderer(BaseRenderer):
                     value = json.dumps(value)
                 else:
                     # The below makes for better UX than `json.dump()` for most current cases.
-                    value = ",".join([str(v) if v is not None else "" for v in value])
+                    value = join_list_cell([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):
                 value = str(value)
 
