@@ -230,10 +230,11 @@ Constraints are enforced on every action. A user whose `change` or `delete` perm
 [Jobs](../../platform-functionality/jobs/index.md) deserve special attention because they execute code:
 
 - **Running**: requires the `run` action on the Job model (`extras.run_job`). Constraints can limit which specific jobs a user may run (see the [Export Job recipe](#export-job) below).
+- **Scheduling**: creating a schedule that runs a job in the future or on a recurring interval additionally requires `extras.add_scheduledjob`. `extras.run_job` on its own permits only immediate execution, so you can grant run-on-demand access without granting the ability to leave a persistent recurring schedule behind.
 - **Database access**: the permission check (and the `enabled` flag on an individual Job record) gate only whether the job may be *launched*. Once running, job code accesses the database **without any per-user restriction** by default — a job can read and write objects its submitter has no permission on, unless the job's own code enforces otherwise. Enable a job only if you trust what that job does with full database access.
 - **Canceling**: a user can always cancel a job **they submitted**, with no additional permission. Canceling another user's job requires the `cancel` action (`extras.cancel_job`), which is object-level and can be constrained to specific jobs.
 - **Re-running**: re-running a previous job result is gated by the same `run` permission as a fresh run.
-- **Scheduled jobs**: visibility of scheduled jobs follows the standard `extras.view_scheduledjob` permission — it is *not* limited to your own schedules. Taking ownership of another user's schedule requires `extras.change_scheduledjob` plus `run` on the underlying job.
+- **Scheduled jobs**: creating a schedule requires `extras.add_scheduledjob` in addition to `run` on the job (see **Scheduling** above). Visibility of scheduled jobs follows the standard `extras.view_scheduledjob` permission — it is *not* limited to your own schedules. Taking ownership of another user's schedule requires `extras.change_scheduledjob` plus `run` on the underlying job.
 - **Sensitive variables**: jobs flagged as having sensitive input variables cannot be scheduled (only run immediately) and cannot be combined with approval workflows, so that sensitive input is never persisted.
 
 ### Approval Workflows

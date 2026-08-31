@@ -998,6 +998,13 @@ class JobViewSetBase(
                 )
             schedule_data = input_serializer.validated_data.get("schedule", None)
 
+        # Creating a persistent (future or recurring) schedule is a distinct privilege from running a Job
+        # on demand; `extras.run_job` alone is not sufficient. Note that this does not apply to the
+        # approval-workflow path, which creates an "immediately" ScheduledJob as an implementation detail.
+        if schedule_data is not None and schedule_data.get("interval") in JobExecutionType.SCHEDULE_CHOICES:
+            if not request.user.has_perm("extras.add_scheduledjob"):
+                raise PermissionDenied("This user does not have permission to create scheduled jobs.")
+
         if task_queue not in valid_queues:
             raise ValidationError({"task_queue": [f'"{task_queue}" is not a valid choice.']})
 

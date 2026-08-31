@@ -2677,15 +2677,27 @@ class JobUIViewSet(NautobotUIViewSet):
                 )
         return template_name
 
+    @staticmethod
+    def _user_can_create_schedule(request):
+        """Whether this user may create a future or recurring ScheduledJob.
+
+        This is the same permission enforced when a scheduled run is submitted; it is resolved here so that
+        the scheduling form can be hidden from users who would only be rejected on submission.
+        """
+        return request.user.has_perm("extras.add_scheduledjob")
+
     def _resolve_enable_scheduling(self, request, job_model):
         """Determine whether the job modal should render the scheduling form.
 
         The setting is sourced exclusively from the server-side `_JobModalButton` component, looked up from
         the registry using the `button_id` carried in the request. The request payload's `enable_scheduling`
         value is never trusted: an unregistered (or missing) `button_id` resolves to `False`. Scheduling is
-        always disabled for jobs flagged with sensitive variables, regardless of the component setting.
+        always disabled for jobs flagged with sensitive variables, regardless of the component setting, and
+        for users lacking permission to create a ScheduledJob.
         """
         if job_model.has_sensitive_variables:
+            return False
+        if not self._user_can_create_schedule(request):
             return False
         button_id = request.POST.get("job_modal_button", "")
         job_modal_button = registry["job_modal_buttons"].get(button_id) if button_id else None
@@ -2748,6 +2760,8 @@ class JobUIViewSet(NautobotUIViewSet):
                     "job_form": job_form,
                     "job_execution_form": job_execution_form,
                     "schedule_form": schedule_form,
+                    "can_schedule": self._user_can_create_schedule(request),
+                    "immediate_schedule_type": JobExecutionType.TYPE_IMMEDIATELY,
                 },
             )
         patch_vary_headers(response, ["HX-Request"])
@@ -2853,6 +2867,15 @@ class JobUIViewSet(NautobotUIViewSet):
             and request.POST.get("_schedule_type") != JobExecutionType.TYPE_IMMEDIATELY
         ):
             messages.error(request, "Unable to schedule job: Job may have sensitive input variables.")
+        elif (
+            schedule_form_is_valid
+            and schedule_form.cleaned_data["_schedule_type"] in JobExecutionType.SCHEDULE_CHOICES
+            and not request.user.has_perm("extras.add_scheduledjob")
+        ):
+            # Creating a persistent (future or recurring) schedule is a distinct privilege from running a Job
+            # on demand; `extras.run_job` alone is not sufficient. Note that this does not apply to the
+            # approval-workflow path, which creates an "immediately" ScheduledJob as an implementation detail.
+            messages.error(request, "Unable to schedule job: You do not have permission to create scheduled jobs.")
         elif job_form_is_valid and job_execution_form_is_valid and schedule_form_is_valid:
             if job_queue.queue_type == JobQueueTypeChoices.TYPE_CELERY and not get_worker_count(queue=job_queue):
                 messages.warning(

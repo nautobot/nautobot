@@ -11,6 +11,13 @@ Jobs can be scheduled through the UI or the API.
 !!! warning
     A Job **must** be [enabled](./managing-jobs.md#enabling-and-disabling-jobs) and cannot have [has_sensitive_variables](../../../development/jobs/job-structure.md#class-metadata-attributes) set to `True` in order to be scheduled. If these requirements are not met, a warning banner will appear on the run Job view with the reason why Job Scheduling is not an option.
 
+!!! important "Scheduling requires the `extras.add_scheduledjob` permission"
+    Running a Job immediately requires only `extras.run_job`, but scheduling one to run in the future or on a recurring interval also requires `extras.add_scheduledjob`. This lets an administrator grant run-on-demand access without also granting the ability to create persistent recurring schedules.
+
+    For a user with `extras.run_job` alone, the scheduling form is not rendered at all — neither on the run Job view nor in the Job form modal — and their submissions run immediately. Should such a user submit a scheduled run anyway (for example by posting directly to the endpoint), it is rejected: in the UI with an error banner, and via the REST API with an HTTP 403 response.
+
+    This requirement does not apply to jobs that are routed through an [approval workflow](#job-approvals), which creates a `ScheduledJob` record for the pending approval as an implementation detail even for an immediate run.
+
 ### Scheduling via the UI
 
 The Job Scheduling views can be accessed via the navigation at `Jobs > Jobs`, selecting a Job as appropriate.
@@ -42,7 +49,7 @@ The most common reason to use this action is to recover a scheduled job whose or
 
 ### Scheduling via the API
 
-Jobs can also be scheduled via the REST API. The endpoint used for this is the regular job endpoint; specifying the optional `schedule` parameter will act just as scheduling in the UI.
+Jobs can also be scheduled via the REST API. The endpoint used for this is the regular job endpoint; specifying the optional `schedule` parameter will act just as scheduling in the UI. A `schedule` whose `interval` is anything other than `immediately` requires the `extras.add_scheduledjob` permission; without it the request is rejected with HTTP 403.
 
 ```no-highlight
 curl -X POST \

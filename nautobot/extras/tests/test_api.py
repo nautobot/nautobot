@@ -2825,6 +2825,7 @@ class JobTest(
         """Job run requests can reference objects by their primary keys."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
         device_role = Role.objects.get_for_model(Device).first()
         job_data = {
             "var1": "FooBar",
@@ -3126,6 +3127,7 @@ class JobTest(
 
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         job_data = {
             "var2": "Ground control to Major Tom",
@@ -3146,6 +3148,7 @@ class JobTest(
         """In addition to the base test case provided by JobAPIRunTestMixin, also verify the JSON response data."""
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
@@ -3177,9 +3180,44 @@ class JobTest(
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_scheduled_without_add_scheduledjob_permission(self, mock_get_worker_count):
+        """Scheduling a Job via the API requires extras.add_scheduledjob, not just extras.run_job."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        d = Role.objects.get_for_model(Device).first()
+        url = self.get_run_url()
+        for interval in ("future", "hourly", "daily", "weekly"):
+            data = {
+                "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
+                "schedule": {
+                    "start_time": str(now() + timedelta(minutes=1)),
+                    "interval": interval,
+                    "name": f"unauthorized {interval}",
+                },
+            }
+            response = self.client.post(url, data, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN, msg=interval)
+            self.assertFalse(ScheduledJob.objects.filter(name=data["schedule"]["name"]).exists(), msg=interval)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
+    def test_run_job_immediately_without_add_scheduledjob_permission(self, mock_get_worker_count):
+        """An immediate run via the API is unaffected by the extras.add_scheduledjob requirement."""
+        mock_get_worker_count.return_value = 1
+        self.add_permissions("extras.run_job")
+
+        d = Role.objects.get_for_model(Device).first()
+        data = {"data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk}}
+        response = self.client.post(self.get_run_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, self.run_success_response_status)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    @mock.patch("nautobot.extras.api.views.get_worker_count")
     def test_run_a_job_with_sensitive_variables_for_future(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
 
         job_model = Job.objects.get(job_class_name="TestHasSensitiveVariables")
         job_model.enabled = True
@@ -3286,6 +3324,7 @@ class JobTest(
     def test_run_job_interval(self, mock_get_worker_count):
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
+        self.add_permissions("extras.add_scheduledjob")
         d = Role.objects.get_for_model(Device).first()
         data = {
             "data": {"var1": "x", "var2": 1, "var3": False, "var4": d.pk},
@@ -3431,6 +3470,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.add_scheduledjob")
 
         url = self.get_run_url()
 
@@ -3521,6 +3561,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.add_scheduledjob")
 
         ApprovalWorkflowDefinition.objects.create(
             name="Approval Definition",
@@ -3559,6 +3600,7 @@ class JobTest(
         mock_get_worker_count.return_value = 1
         self.add_permissions("extras.run_job")
         self.add_permissions("extras.view_scheduledjob")
+        self.add_permissions("extras.add_scheduledjob")
 
         start_time = now() + timedelta(minutes=1)
         data = {
