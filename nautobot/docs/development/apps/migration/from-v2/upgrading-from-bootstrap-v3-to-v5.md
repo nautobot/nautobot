@@ -68,7 +68,7 @@ In the case of the above output snippet, you can see that while the script fixed
 
 <!-- pyml disable-num-lines 2 proper-names -->
 ??? info "Full table of Bootstrap v3 to v5 and Nautobot UI API changes"
-    {data-table ../nautobot/core/cli/bootstrap_v3_to_v5_changes.yaml}
+    {data-table ../core/cli/bootstrap_v3_to_v5_changes.yaml}
 
 ## Overview of High-Level Changes
 
