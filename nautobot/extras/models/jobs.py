@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 import signal
-from statistics import median
+from statistics import median, quantiles
 from typing import Optional, TYPE_CHECKING, Union
 
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -413,6 +413,9 @@ class Job(PrimaryModel):
 
         Returns `sample_size`, `median`, `p90` and `longest` as `timedelta`, and a `varies` flag, or
         None when fewer than JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES completed runs are on record.
+
+        Note that this queries the database on each access and is deliberately not cached, so it is
+        intended for single-object views rather than repeated use in a list view or table column.
         """
         durations = sorted(
             (date_done - date_started).total_seconds()
@@ -428,14 +431,14 @@ class Job(PrimaryModel):
         if len(durations) < JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES:
             return None
 
-        p90_index = min(int(len(durations) * 0.9), len(durations) - 1)
         median_seconds = median(durations)
+        p90_seconds = quantiles(durations, n=10, method="inclusive")[8]
         return {
             "sample_size": len(durations),
             "median": timedelta(seconds=median_seconds),
-            "p90": timedelta(seconds=durations[p90_index]),
+            "p90": timedelta(seconds=p90_seconds),
             "longest": timedelta(seconds=durations[-1]),
-            "varies": durations[p90_index] >= 2 * median_seconds,
+            "varies": p90_seconds >= 2 * median_seconds,
         }
 
     def clean(self):

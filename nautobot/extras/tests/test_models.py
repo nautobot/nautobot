@@ -2192,8 +2192,10 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
 
     @staticmethod
-    def _add_job_result(job, seconds, status=JobResultStatusChoices.STATUS_SUCCESS, started=True, done=True):
-        started_at = now() - timedelta(hours=1)
+    def _add_job_result(
+        job, seconds, status=JobResultStatusChoices.STATUS_SUCCESS, started=True, done=True, age=timedelta(hours=1)
+    ):
+        started_at = now() - age
         result = JobResult.objects.create(job_model=job, name=job.name, status=status)
         JobResult.objects.filter(pk=result.pk).update(
             date_started=started_at if started else None,
@@ -2219,7 +2221,18 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         stats = job.runtime_statistics
         self.assertEqual(stats["sample_size"], 3)
         self.assertEqual(stats["median"], timedelta(seconds=20))
+        self.assertEqual(stats["p90"], timedelta(seconds=28))
         self.assertEqual(stats["longest"], timedelta(seconds=30))
+
+    def test_runtime_statistics_p90_is_below_the_longest_run(self):
+        job = self.app_job
+        for seconds in range(10, 110, 10):
+            self._add_job_result(job, seconds)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], 10)
+        self.assertEqual(stats["p90"], timedelta(seconds=91))
+        self.assertLess(stats["p90"], stats["longest"])
 
     def test_runtime_statistics_varies_flag(self):
         job = self.app_job
@@ -2245,9 +2258,13 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
 
     def test_runtime_statistics_sample_size_is_capped(self):
         job = self.app_job
-        for seconds in range(JOB_RUNTIME_STATISTICS_SAMPLE_SIZE + 10):
-            self._add_job_result(job, seconds + 1)
-        self.assertEqual(job.runtime_statistics["sample_size"], JOB_RUNTIME_STATISTICS_SAMPLE_SIZE)
+        self._add_job_result(job, 9999, age=timedelta(days=1))
+        for _ in range(JOB_RUNTIME_STATISTICS_SAMPLE_SIZE + 10):
+            self._add_job_result(job, 10)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], JOB_RUNTIME_STATISTICS_SAMPLE_SIZE)
+        self.assertEqual(stats["longest"], timedelta(seconds=10))
 
     def test_job_class(self):
         from example_app.jobs import ExampleJob
