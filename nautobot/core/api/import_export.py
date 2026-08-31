@@ -164,16 +164,24 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
     """
     Validate a list of `__`-separated field-selection paths against a serializer's field graph.
 
-    A path's head must be a field of the serializer (or a `cf_<key>` custom-field reference); each
-    additional segment must traverse a single-valued related field, resolved through the related model's
-    serializer. Traversal into many-to-many fields is not supported (it would multiply rows).
+    A path's head must be a field of the serializer *as an export instantiates it* (or a `cf_<key>`
+    custom-field reference); each additional segment must traverse a single-valued related field, resolved
+    through the related model's serializer. Traversal into many-to-many fields is not supported (it would
+    multiply rows).
     Paths that reach a related model without a known serializer are accepted and left to the database
     to validate.
 
     Raises:
         ValueError: describing every invalid path.
     """
-    root_serializer = serializer_class(context={"request": None, "depth": 0})
+    # Instantiated the way `ExportObjectList._get_serializer_data` does, so that the field set vetted here is
+    # the one the export will actually emit: `exporting=True` is what makes the opt-in M2M fields readable
+    # (`OptInFieldsMixin._readable_m2m_sources`), and without it a column the export produces by default --
+    # `dcim.devicetype.software_image_files`, say -- could not be named explicitly.
+    # Related serializers below are deliberately *not* built this way: a selection only applies at the root
+    # (`NaturalKeyRepresentationMixin` ignores `export_fields` when nested), and a nested path is emitted as a
+    # database lookup, which a to-many field cannot satisfy.
+    root_serializer = serializer_class(context={"request": None, "depth": 0}, exporting=True)
     errors = []
     for path in paths:
         parts = path.split("__")

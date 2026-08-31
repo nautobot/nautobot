@@ -15,22 +15,32 @@ from types import SimpleNamespace
 from unittest import skip
 
 from django.contrib.contenttypes.models import ContentType
-from django.test import SimpleTestCase, tag
+from django.test import SimpleTestCase, tag, TestCase
 from django.urls import reverse
 import yaml
 
+from nautobot.circuits.api.serializers import CircuitSerializer, CircuitTerminationSerializer
+from nautobot.circuits.models import Circuit
 from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
+    validate_field_paths,
 )
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
+from nautobot.dcim.api.serializers import (
+    CableSerializer,
+    DeviceSerializer,
+    DeviceTypeSerializer,
+    InterfaceSerializer,
+)
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
     Cable,
@@ -45,6 +55,7 @@ from nautobot.dcim.models import (
     SoftwareImageFile,
     SoftwareVersion,
 )
+from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobLogEntry, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.models import Namespace, RouteTarget, VRF, VRFDeviceAssignment
@@ -634,6 +645,226 @@ class ExportAdapterTests(ImportExportJobTestCase):
                 self.assertEqual(record["import_targets"], [])
 
 
+class ValidateFieldPathsTests(TestCase):
+    """`validate_field_paths` vets an export field selection against the serializer field graph.
+
+    DB-backed rather than `SimpleTestCase` because instantiating a serializer resolves ContentTypes (the
+    `tags` field's queryset is built by `Tag.objects.get_for_model`).
+
+    Nothing here touches the database *contents*: the check is purely structural, which is what lets the
+    `ExportObjectList` job reject a bad selection before it starts serializing rows.
+    """
+
+    def assertPathsValid(self, serializer_class, paths, **kwargs):
+        """Assert the selection is accepted (the function returns None and raises nothing)."""
+        self.assertIsNone(validate_field_paths(serializer_class, paths, **kwargs))
+
+    def assertPathsInvalid(self, serializer_class, paths, *expected_fragments, **kwargs):
+        """Assert the selection is rejected, and that the message contains each expected fragment."""
+        with self.assertRaises(ValueError) as context:
+            validate_field_paths(serializer_class, paths, **kwargs)
+        message = str(context.exception)
+        self.assertTrue(message.startswith("Invalid field selection: "), message)
+        for fragment in expected_fragments:
+            self.assertIn(fragment, message)
+        return message
+
+    # -- accepted selections ---------------------------------------------------
+    def test_validate__plain_field(self):
+        self.assertPathsValid(StatusSerializer, ["name", "color"])
+
+    def test_validate__relation_head_with_no_expansion(self):
+        """A bare relation is a legal selection; the serializer expands it to the relation's natural key."""
+        self.assertPathsValid(DeviceTypeSerializer, ["manufacturer"])
+
+    def test_validate__single_hop_traversal(self):
+        self.assertPathsValid(DeviceTypeSerializer, ["model", "manufacturer__name"])
+
+    def test_validate__multi_hop_traversal(self):
+        """Each segment is resolved through the *related* model's serializer, not the root's."""
+        self.assertPathsValid(DeviceSerializer, ["device_type__manufacturer__name"])
+
+    def test_validate__at_the_maximum_depth(self):
+        """`a__b__c__d` is three hops, which the default limit allows."""
+        self.assertEqual(EXPORT_FIELD_MAX_DEPTH, 3)
+        self.assertPathsValid(InterfaceSerializer, ["device__location__parent__name"])
+
+    def test_validate__duplicate_paths_are_accepted(self):
+        """Duplicates are not deduplicated here; the serializer/renderer tolerate a repeated selection."""
+        self.assertPathsValid(StatusSerializer, ["name", "name"])
+
+    def test_validate__export_only_m2m_field(self):
+        """An opt-in M2M field is nameable, because validation instantiates the serializer as an export does.
+
+        `software_image_files` is absent from a REST-mode `DeviceTypeSerializer` and only becomes readable
+        under `exporting=True` -- but the export emits it by default (`test_adapter_export__m2m_composite_members`),
+        so a selection has to be able to name it.
+        """
+        self.assertNotIn("software_image_files", DeviceTypeSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertPathsValid(DeviceTypeSerializer, ["model", "software_image_files"])
+
+    def test_validate__field_that_export_mode_drops_is_rejected(self):
+        """The converse: a field the export cannot emit is refused even though REST has it.
+
+        `CableSerializer.terminations` is replaced by the typed accessors under `exporting=True`, so there
+        would be no such column in the file.
+        """
+        self.assertIn("terminations", CableSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertPathsInvalid(CableSerializer, ["terminations"], 'unknown field "terminations"')
+
+    # -- rejected selections ---------------------------------------------------
+    def test_validate__unknown_head(self):
+        self.assertPathsInvalid(StatusSerializer, ["no_such_field"], '"no_such_field": unknown field "no_such_field"')
+
+    def test_validate__unknown_nested_segment(self):
+        """The error names the offending segment as well as the whole path it came from."""
+        self.assertPathsInvalid(
+            DeviceSerializer,
+            ["device_type__no_such_field"],
+            '"device_type__no_such_field": unknown field "no_such_field"',
+        )
+
+    def test_validate__scalar_field_cannot_be_expanded(self):
+        self.assertPathsInvalid(
+            StatusSerializer, ["name__x"], '"name__x": "name" is not a related field and cannot be expanded'
+        )
+
+    def test_validate__non_relation_dict_field_cannot_be_expanded(self):
+        """`custom_fields` is a dict-valued field, not a relation; `cf_<key>` is the way to name one."""
+        self.assertPathsInvalid(
+            DeviceSerializer,
+            ["custom_fields__x"],
+            '"custom_fields" is not a related field and cannot be expanded',
+        )
+
+    def test_validate__m2m_cannot_be_traversed(self):
+        """Traversing a to-many relation would multiply rows, so it is refused with a specific message."""
+        self.assertPathsInvalid(
+            DeviceSerializer, ["tags__name"], '"tags__name": cannot traverse into many-to-many field "tags"'
+        )
+
+    def test_validate__m2m_of_content_types_cannot_be_traversed(self):
+        """Also refused when the M2M members are ContentTypes rather than Nautobot objects."""
+        self.assertPathsInvalid(
+            StatusSerializer, ["content_types__app_label"], 'cannot traverse into many-to-many field "content_types"'
+        )
+
+    def test_validate__beyond_the_maximum_depth(self):
+        self.assertPathsInvalid(
+            InterfaceSerializer,
+            ["device__location__parent__parent__name"],
+            '"device__location__parent__parent__name" exceeds the maximum relation depth of 3',
+        )
+
+    def test_validate__maximum_depth_is_configurable(self):
+        """`max_depth` is a parameter; the constant is only its default."""
+        self.assertPathsInvalid(
+            InterfaceSerializer,
+            ["device__location__parent__name"],
+            "exceeds the maximum relation depth of 2",
+            max_depth=2,
+        )
+        self.assertPathsInvalid(InterfaceSerializer, ["device__name"], "depth of 0", max_depth=0)
+
+    def test_validate__depth_is_checked_before_the_field_names(self):
+        """An over-deep path is reported as too deep even when none of its segments exist."""
+        message = self.assertPathsInvalid(StatusSerializer, ["a__b__c__d__e"], "exceeds the maximum relation depth")
+        self.assertNotIn("unknown field", message)
+
+    def test_validate__every_invalid_path_is_reported(self):
+        """One call reports all the problems, so a user fixes their selection in one pass."""
+        message = self.assertPathsInvalid(
+            StatusSerializer,
+            ["name", "no_such_field", "color", "also_bad"],
+            'unknown field "no_such_field"',
+            'unknown field "also_bad"',
+        )
+        self.assertEqual(message.count(";"), 1)  # the two errors, semicolon-joined
+
+    def test_validate__trailing_separator(self):
+        """A trailing `__` leaves an empty final segment, which is reported as an unknown field."""
+        self.assertPathsInvalid(DeviceTypeSerializer, ["manufacturer__"], 'unknown field ""')
+
+    def test_validate__empty_path(self):
+        self.assertPathsInvalid(StatusSerializer, [""], 'unknown field ""')
+
+    def test_validate__no_paths_is_not_an_error(self):
+        """An empty selection means "export everything", which the caller represents as no paths at all."""
+        self.assertPathsValid(StatusSerializer, [])
+
+    # -- custom fields ---------------------------------------------------------
+    def test_validate__custom_field_reference(self):
+        """`cf_<key>` names a custom field, which lives under the serializer's `custom_fields` dict."""
+        self.assertPathsValid(DeviceSerializer, ["name", "cf_my_field"])
+
+    def test_validate__custom_field_reference_cannot_be_expanded(self):
+        self.assertPathsInvalid(
+            DeviceSerializer,
+            ["cf_my_field__nested"],
+            '"cf_my_field__nested": custom-field references cannot be expanded',
+        )
+
+    # -- deferred validation ---------------------------------------------------
+    def test_validate__traversal_is_deferred_when_the_related_model_is_unknown(self):
+        """A related field that doesn't declare its target model is accepted and left to the database.
+
+        `ObjectChangeSerializer.changed_object_type` is a `ContentTypeField`, which carries no queryset and
+        no `_related_model`, so there is no serializer to resolve the next segment against. Rather than
+        reject a path that may well be valid, the function stops checking.
+        """
+        self.assertPathsValid(ObjectChangeSerializer, ["changed_object_type__app_label"])
+        # ...which necessarily means a bogus segment past that point is accepted too
+        self.assertPathsValid(ObjectChangeSerializer, ["changed_object_type__utter_nonsense"])
+
+
+class ValidateFieldPathsKnownGapsTests(TestCase):
+    """Selections that `validate_field_paths` gets wrong today, pinned so a fix is visible as a change.
+
+    Each of these asserts the *current* behavior, not the desired one, and says what the right answer
+    would be. They are separated from `ValidateFieldPathsTests` so that class reads as the contract.
+    """
+
+    # TODO: `url` is a `HyperlinkedIdentityField`, hence a `RelatedField`, so it passes the "is this
+    #   traversable" test; its `_related_model` property then raises `AttributeError`, which
+    #   `getattr(field, "_related_model", None)` silently converts to "target unknown -> defer to the
+    #   database". `url` is not a database field at all (and `EXCLUDED_DOCUMENT_FIELDS` strips it from
+    #   JSON/YAML), so nothing downstream will ever reject this.
+    def test_gap__url_is_treated_as_a_traversable_relation(self):
+        validate_field_paths(DeviceSerializer, ["url__anything", "url__total__nonsense"])
+
+    # TODO: for a read-only FK (no queryset), `NautobotHyperlinkedRelatedField._related_model` falls back
+    #   to `getattr(Meta.model, source).field.model`, which is the model *declaring* the FK rather than the
+    #   one it points at -- it should be `.related_model`. So traversal past such a field resolves the next
+    #   segment against the wrong serializer, rejecting valid paths and accepting invalid ones.
+    def test_gap__read_only_fk_resolves_against_the_wrong_serializer(self):
+        field = CircuitSerializer(context={"request": None, "depth": 0}).fields["circuit_termination_a"]
+        self.assertIsNone(field.queryset)
+        self.assertIs(field._related_model, Circuit)  # should be CircuitTermination
+        self.assertIn("term_side", CircuitTerminationSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertNotIn("cid", CircuitTerminationSerializer(context={"request": None, "depth": 0}).fields)
+
+        # A valid CircuitTermination field is rejected...
+        with self.assertRaises(ValueError) as context:
+            validate_field_paths(CircuitSerializer, ["circuit_termination_a__term_side"])
+        self.assertIn('unknown field "term_side"', str(context.exception))
+        # ...while a Circuit field, which is not on CircuitTermination at all, is accepted
+        validate_field_paths(CircuitSerializer, ["circuit_termination_a__cid"])
+
+    # TODO: `max_depth` bounds the *requested* path, but selecting a relation head expands it to that
+    #   relation's natural-key lookups, which add hops of their own. Here a 2-hop selection becomes
+    #   `device__location__parent__name` (3 hops) in the output, and a relation selected at the limit
+    #   would exceed it. The limit should be applied to the emitted lookups, or documented as advisory.
+    def test_gap__maximum_depth_does_not_bound_the_emitted_lookups(self):
+        validate_field_paths(InterfaceSerializer, ["device__location__parent"], max_depth=2)
+
+    # TODO: a `cf_` head short-circuits before any lookup, so a custom field that does not exist for this
+    #   model -- or the bare prefix -- is accepted. The selection then reaches the CSV renderer, which
+    #   derives its `cf_*` headers from the data rather than the selection, so the export silently
+    #   contains every custom field instead of the requested one.
+    def test_gap__custom_field_existence_is_not_checked(self):
+        validate_field_paths(DeviceSerializer, ["cf_definitely_not_a_custom_field", "cf_"])
+
+
 class ExportFieldSelectionTests(ImportExportJobTestCase):
     def test_select__csv(self):
         """An explicit field selection yields exactly those columns, in selection order."""
@@ -674,6 +905,34 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertEqual(
             doc["records"], [{"model": "Selection JSON DT", "manufacturer": {"name": "Selection JSON Mfr"}}]
+        )
+
+    def test_select__export_only_m2m_column(self):
+        """An opt-in M2M column can be named explicitly, not just inherited from the default field set.
+
+        `software_image_files` is only readable under `exporting=True`, which is why validation has to
+        instantiate the serializer the same way the export does.
+        """
+        software_image_files = self.create_device_type_with_software_image_files()
+        rows = self.export_rows(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=M2M+Composite+DT",
+                export_fields="model,software_image_files",
+            )
+        )
+        self.assertEqual(list(rows[0].keys()), ["model", "software_image_files"])
+        self.assertEqual(rows[0]["model"], "M2M Composite DT")
+        self.assertEqual(
+            json.loads(rows[0]["software_image_files"]),
+            [
+                {
+                    "image_file_name": image_file.image_file_name,
+                    "software_version__platform__name": image_file.software_version.platform.name,
+                    "software_version__version": image_file.software_version.version,
+                }
+                for image_file in software_image_files
+            ],
         )
 
     def test_select__invalid(self):
