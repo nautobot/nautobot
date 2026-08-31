@@ -216,6 +216,12 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
         if parts[0].startswith("cf_"):
             if len(parts) > 1:
                 errors.append(f'"{path}": custom-field references cannot be expanded')
+                continue
+            # Keys via the serializer's `custom_fields` field, so `nautobot.core` need not import
+            # `nautobot.extras`; a model with no custom fields has no such field, hence no valid keys.
+            key = parts[0].removeprefix("cf_")
+            if key not in getattr(root_serializer.fields.get("custom_fields"), "custom_field_keys", ()):
+                errors.append(f'"{path}": unknown custom field "{key}"')
             continue
         serializer = root_serializer
         for index, part in enumerate(parts):

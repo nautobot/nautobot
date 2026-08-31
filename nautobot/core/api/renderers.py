@@ -107,7 +107,8 @@ class NautobotCSVRenderer(BaseRenderer):
         Identify the appropriate CSV headers corresponding to the given data.
 
         If `field_order` (a list of field names / `__` lookup paths, e.g. from an explicit export field
-        selection) is given, headers are ordered to match it instead of the default priority ordering.
+        selection) is given, headers are ordered to match it instead of the default priority ordering, and
+        the `cf_*` headers are restricted to the custom fields it names.
         """
         base_headers = list(data[0].keys())
 
@@ -132,6 +133,14 @@ class NautobotCSVRenderer(BaseRenderer):
             cf_headers = sorted(cf_headers)
         else:
             cf_headers = []
+
+        # These headers come from the data rather than from the serializer's field set, so an explicit
+        # selection has to be applied to them here -- `OptInFieldsMixin` can only narrow the field set down
+        # to `custom_fields` as a whole, and every custom field of the object is inside it. Naming
+        # `custom_fields` asks for all of them; otherwise only the `cf_<key>` entries actually selected.
+        if field_order and "custom_fields" not in field_order:
+            selected_cf_headers = {entry for entry in field_order if entry.startswith("cf_")}
+            cf_headers = [header for header in cf_headers if header in selected_cf_headers]
 
         # TODO: relationships? computed fields?
 

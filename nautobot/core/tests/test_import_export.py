@@ -58,8 +58,8 @@ from nautobot.dcim.models import (
     SoftwareVersion,
 )
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
-from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import JobLogEntry, Role, SecretsGroup, Status, Tag
+from nautobot.extras.choices import CustomFieldTypeChoices, JobResultStatusChoices, LogLevelChoices
+from nautobot.extras.models import CustomField, JobLogEntry, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import Namespace, RouteTarget, VLAN, VRF, VRFDeviceAssignment
 from nautobot.users.api.serializers import UserSerializer
@@ -284,6 +284,18 @@ class ImportExportJobTestCase(TransactionTestCase):
     def create_status(self, name="test_update_status", color="111111"):
         status = Status.objects.create(name=name, color=color)
         status.content_types.set([ContentType.objects.get_for_model(Device)])
+        return status
+
+    def create_status_with_custom_fields(self, name="Custom Field Status"):
+        """A Status with two text custom fields set, so a selection can name one and omit the other."""
+        content_type = ContentType.objects.get_for_model(Status)
+        for key in ("export_cf_a", "export_cf_b"):
+            custom_field = CustomField.objects.create(key=key, label=key, type=CustomFieldTypeChoices.TYPE_TEXT)
+            custom_field.validated_save()
+            custom_field.content_types.set([content_type])
+        status = Status.objects.create(name=name, color="123456")
+        status._custom_field_data = {"export_cf_a": "A value", "export_cf_b": "B value"}
+        status.validated_save()
         return status
 
     def create_device_type_with_software_image_files(self):
@@ -653,10 +665,11 @@ class ValidateFieldPathsTests(TestCase):
     """`validate_field_paths` vets an export field selection against the serializer field graph.
 
     DB-backed rather than `SimpleTestCase` because instantiating a serializer resolves ContentTypes (the
-    `tags` field's queryset is built by `Tag.objects.get_for_model`).
+    `tags` field's queryset is built by `Tag.objects.get_for_model`), and because a `cf_<key>` reference is
+    checked against the model's actual custom fields.
 
-    Nothing here touches the database *contents*: the check is purely structural, which is what lets the
-    `ExportObjectList` job reject a bad selection before it starts serializing rows.
+    Otherwise the check is structural rather than about row data, which is what lets the `ExportObjectList`
+    job reject a bad selection before it starts serializing.
     """
 
     def assertPathsValid(self, serializer_class, paths, **kwargs):
@@ -813,11 +826,39 @@ class ValidateFieldPathsTests(TestCase):
         self.assertPathsValid(StatusSerializer, [])
 
     # -- custom fields ---------------------------------------------------------
+    def create_custom_field(self, key, model):
+        custom_field = CustomField.objects.create(key=key, label=key, type=CustomFieldTypeChoices.TYPE_TEXT)
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(model)])
+        return custom_field
+
     def test_validate__custom_field_reference(self):
         """`cf_<key>` names a custom field, which lives under the serializer's `custom_fields` dict."""
+        self.create_custom_field("my_field", Device)
         self.assertPathsValid(DeviceSerializer, ["name", "cf_my_field"])
 
+    def test_validate__unknown_custom_field_is_rejected(self):
+        """A `cf_<key>` naming no custom field of this model is an error, not a silently empty column."""
+        self.create_custom_field("my_field", Device)
+        self.assertPathsInvalid(
+            DeviceSerializer, ["name", "cf_no_such_field"], '"cf_no_such_field": unknown custom field "no_such_field"'
+        )
+
+    def test_validate__custom_field_of_another_model_is_rejected(self):
+        """Custom fields are per content type, so one belonging to another model does not count."""
+        self.create_custom_field("my_field", Device)
+        self.assertPathsInvalid(StatusSerializer, ["cf_my_field"], 'unknown custom field "my_field"')
+
+    def test_validate__custom_field_reference_on_a_model_without_any(self):
+        self.assertPathsInvalid(DeviceSerializer, ["cf_anything"], 'unknown custom field "anything"')
+
+    def test_validate__bare_custom_field_prefix(self):
+        """`cf_` on its own names no key, so it is reported the same way as any other unknown one."""
+        self.assertPathsInvalid(DeviceSerializer, ["cf_"], 'unknown custom field ""')
+
     def test_validate__custom_field_reference_cannot_be_expanded(self):
+        """Reported as unexpandable rather than unknown: the shape of the path is wrong either way."""
+        self.create_custom_field("my_field", Device)
         self.assertPathsInvalid(
             DeviceSerializer,
             ["cf_my_field__nested"],
@@ -918,13 +959,6 @@ class ValidateFieldPathsKnownGapsTests(TestCase):
     def test_gap__maximum_depth_does_not_bound_the_emitted_lookups(self):
         validate_field_paths(InterfaceSerializer, ["device__location__parent"], max_depth=2)
 
-    # TODO: a `cf_` head short-circuits before any lookup, so a custom field that does not exist for this
-    #   model -- or the bare prefix -- is accepted. The selection then reaches the CSV renderer, which
-    #   derives its `cf_*` headers from the data rather than the selection, so the export silently
-    #   contains every custom field instead of the requested one.
-    def test_gap__custom_field_existence_is_not_checked(self):
-        validate_field_paths(DeviceSerializer, ["cf_definitely_not_a_custom_field", "cf_"])
-
 
 class ExportFieldSelectionTests(ImportExportJobTestCase):
     def test_select__csv(self):
@@ -1006,6 +1040,87 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 job_result=job_result, message__contains="no_such_field", log_level=LogLevelChoices.LOG_ERROR
             ).exists()
         )
+
+    # -- custom fields ---------------------------------------------------------
+    # A `cf_<key>` entry is the only selection path that names something the serializer has no field for:
+    # `OptInFieldsMixin` can only translate it into the `custom_fields` dict, which holds *every* custom
+    # field of the object. CSV narrows that back down to the selected keys when it derives its `cf_*`
+    # headers; the document formats do not, which is what `test_select__custom_field_in_a_document` pins.
+
+    def test_select__custom_field_column(self):
+        """A `cf_<key>` entry produces exactly that custom field's column, positioned by the selection."""
+        self.create_status_with_custom_fields()
+        lines = self.export_lines(
+            self.run_export(query_string="name=Custom+Field+Status", export_fields="name,cf_export_cf_a")
+        )
+        self.assertEqual(lines[1], "name,cf_export_cf_a")  # cf_export_cf_b was not selected
+        self.assertEqual(lines[2], "Custom Field Status,A value")
+
+    def test_select__custom_field_ordering_is_honored(self):
+        """A selected custom field takes its requested position, ahead of a concrete field."""
+        self.create_status_with_custom_fields()
+        lines = self.export_lines(
+            self.run_export(query_string="name=Custom+Field+Status", export_fields="cf_export_cf_a,name")
+        )
+        self.assertEqual(lines[1], "cf_export_cf_a,name")
+        self.assertEqual(lines[2], "A value,Custom Field Status")
+
+    def test_select__custom_field_only_suppresses_the_match_directive(self):
+        """Selecting only a custom field leaves the natural key uncovered, so no match key is stamped."""
+        self.create_status_with_custom_fields()
+        lines = self.export_lines(
+            self.run_export(query_string="name=Custom+Field+Status", export_fields="cf_export_cf_a")
+        )
+        self.assertEqual(lines[0], f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status")
+        self.assertNotIn("match_fields", lines[0])
+        self.assertEqual(lines[1], "cf_export_cf_a")
+        self.assertEqual(lines[2], "A value")
+
+    def test_select__one_custom_field_of_several(self):
+        """Only the named custom fields appear, whichever subset is asked for."""
+        self.create_status_with_custom_fields()
+        lines = self.export_lines(
+            self.run_export(query_string="name=Custom+Field+Status", export_fields="cf_export_cf_b")
+        )
+        self.assertEqual(lines[1], "cf_export_cf_b")
+        self.assertEqual(lines[2], "B value")
+
+    def test_select__custom_field_in_a_document(self):
+        """In JSON/YAML a custom field stays inside the nested `custom_fields` dict, not a `cf_*` key."""
+        self.create_status_with_custom_fields()
+        doc = self.export_document(
+            self.run_export(
+                query_string="name=Custom+Field+Status",
+                export_format="json",
+                export_fields="name,cf_export_cf_a",
+            )
+        )
+        # TODO: the document formats do not apply the selection inside the dict at all, so the unselected
+        #   custom field is present here too -- and there is no way to ask for one custom field alone.
+        self.assertEqual(
+            doc["records"],
+            [{"name": "Custom Field Status", "custom_fields": {"export_cf_a": "A value", "export_cf_b": "B value"}}],
+        )
+
+    def test_select__custom_fields_dict_may_be_named_directly(self):
+        """Naming `custom_fields` asks for all of them, which is what both formats already produce."""
+        self.create_status_with_custom_fields()
+        lines = self.export_lines(
+            self.run_export(query_string="name=Custom+Field+Status", export_fields="name,custom_fields")
+        )
+        self.assertEqual(lines[1], "name,cf_export_cf_a,cf_export_cf_b")
+        self.assertEqual(lines[2], "Custom Field Status,A value,B value")
+
+    def test_select__unknown_custom_field_fails(self):
+        """A `cf_<key>` naming no custom field of the model fails the job rather than exporting nothing."""
+        self.create_status_with_custom_fields()
+        job_result = self.run_export(
+            query_string="name=Custom+Field+Status",
+            export_fields="name,cf_no_such_field",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, 'unknown custom field "no_such_field"', level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
 
     def test_select__write_only_field_fails_rather_than_exporting_nothing(self):
         """Selecting a write-only field fails the job instead of writing a file missing that column.
