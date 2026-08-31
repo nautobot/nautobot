@@ -189,7 +189,7 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
     """
     Validate a list of `__`-separated field-selection paths against a serializer's field graph.
 
-    A path's head must be a field of the serializer *as an export instantiates it* (or a `cf_<key>`
+    A path's head must be a readable field of the serializer *as an export instantiates it* (or a `cf_<key>`
     custom-field reference). Each additional segment must traverse a single-valued relation of the model --
     see `_traversable_relation_target` -- and is then resolved against the related model's serializer.
     Traversal into a to-many relation is not supported (it would multiply rows).
@@ -222,6 +222,12 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
             field = serializer.fields.get(part)
             if field is None:
                 errors.append(f'"{path}": unknown field "{part}"')
+                break
+            if field.write_only:
+                # Present in `fields` but not in `_readable_fields`, so `to_representation` never emits it:
+                # accepting it would write a file with a column silently missing (or, if it were the only
+                # selection, no columns at all).
+                errors.append(f'"{path}": "{part}" is write-only and cannot be exported')
                 break
             if index == len(parts) - 1:
                 break

@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from unittest import mock, skip
 
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
 from django.test import SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
@@ -60,7 +61,8 @@ from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerial
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobLogEntry, Role, SecretsGroup, Status, Tag
 from nautobot.ipam.api.serializers import VLANSerializer
-from nautobot.ipam.models import Namespace, RouteTarget, VRF, VRFDeviceAssignment
+from nautobot.ipam.models import Namespace, RouteTarget, VLAN, VRF, VRFDeviceAssignment
+from nautobot.users.api.serializers import UserSerializer
 
 
 @tag("unit")
@@ -849,14 +851,44 @@ class ValidateFieldPathsTests(TestCase):
             DeviceSerializer, ["url__anything"], '"url" is not a related field and cannot be expanded'
         )
 
+    def test_validate__write_only_field_is_rejected(self):
+        """A write-only field is in `fields` but never in the output, so naming it has to be an error.
+
+        `UserSerializer.password` is the only write-only field in core whose name is also a model field.
+        Accepted, it would produce a file with no `password` column and no warning that one was dropped --
+        or, as the only selection, a file with no columns at all.
+        """
+        serializer = UserSerializer(context={"request": None, "depth": 0}, exporting=True)
+        self.assertIn("password", serializer.fields)
+        self.assertNotIn("password", [field.field_name for field in serializer._readable_fields])
+        self.assertPathsInvalid(
+            UserSerializer, ["password"], '"password": "password" is write-only and cannot be exported'
+        )
+        # ...and it is reported rather than quietly ignored when mixed with exportable fields
+        self.assertPathsInvalid(UserSerializer, ["username", "password"], "is write-only")
+
+    def test_validate__write_only_relation_is_rejected(self):
+        """The same for a write-only relation, which the remaining four in core all are."""
+        self.assertTrue(VLANSerializer(context={"request": None, "depth": 0}).fields["location"].write_only)
+        self.assertPathsInvalid(VLANSerializer, ["vid", "location"], '"location" is write-only')
+
     def test_validate__serializer_only_relation_is_not_traversable(self):
         """A relation the serializer invents has no model field to traverse, so it cannot be expanded.
 
-        `VLANSerializer.location` is a write-only convenience over the model's `locations` M2M.
+        `CableSerializer.termination_a_type` is a readable `ContentTypeField` left over from the model's
+        pre-`terminations` shape, and it *does* carry a queryset -- so resolving the target from the
+        serializer field would happily validate `termination_a_type__app_label` against
+        `ContentTypeSerializer`, even though the lookup the export emits for it has nothing to resolve.
         """
-        self.assertIn("location", VLANSerializer(context={"request": None, "depth": 0}).fields)
+        field = CableSerializer(context={"request": None, "depth": 0}, exporting=True).fields["termination_a_type"]
+        self.assertFalse(field.write_only)
+        self.assertIsNotNone(field.queryset)  # a target is available, but not from the model
+        with self.assertRaises(FieldDoesNotExist):
+            Cable._meta.get_field("termination_a_type")
         self.assertPathsInvalid(
-            VLANSerializer, ["location__name"], '"location" is not a related field and cannot be expanded'
+            CableSerializer,
+            ["termination_a_type__app_label"],
+            '"termination_a_type" is not a related field and cannot be expanded',
         )
 
     def test_validate__traversal_is_deferred_when_the_related_model_has_no_serializer(self):
@@ -974,6 +1006,18 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 job_result=job_result, message__contains="no_such_field", log_level=LogLevelChoices.LOG_ERROR
             ).exists()
         )
+
+    def test_select__write_only_field_fails_rather_than_exporting_nothing(self):
+        """Selecting a write-only field fails the job instead of writing a file missing that column.
+
+        `VLANSerializer.location` is write-only, so it is absent from `_readable_fields`; before this was
+        validated, `export_fields="location"` produced a file with no columns and no rows at all.
+        """
+        job_result = self.run_export(
+            model=VLAN, export_fields="vid,location", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertJobLogEntry(job_result, "is write-only and cannot be exported", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
 
     @skip("Enable in X5: needs ExportFieldsForm (export UI)")
     def test_select__form_expands_single_fk_relations(self):
