@@ -12,14 +12,16 @@ from io import StringIO
 import json
 from pathlib import Path
 from types import SimpleNamespace
-from unittest import skip
+from unittest import mock, skip
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import SimpleTestCase, tag, TestCase
 from django.urls import reverse
+from rest_framework import serializers
 import yaml
 
 from nautobot.circuits.api.serializers import CircuitSerializer, CircuitTerminationSerializer
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
@@ -57,6 +59,7 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import JobLogEntry, Role, SecretsGroup, Status, Tag
+from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import Namespace, RouteTarget, VRF, VRFDeviceAssignment
 
 
@@ -819,17 +822,54 @@ class ValidateFieldPathsTests(TestCase):
             '"cf_my_field__nested": custom-field references cannot be expanded',
         )
 
-    # -- deferred validation ---------------------------------------------------
-    def test_validate__traversal_is_deferred_when_the_related_model_is_unknown(self):
-        """A related field that doesn't declare its target model is accepted and left to the database.
+    # -- what may be traversed -------------------------------------------------
+    def test_validate__traversal_of_a_field_declaring_no_target(self):
+        """A relation is resolved from the model, so a field that names no target is still traversable.
 
-        `ObjectChangeSerializer.changed_object_type` is a `ContentTypeField`, which carries no queryset and
-        no `_related_model`, so there is no serializer to resolve the next segment against. Rather than
-        reject a path that may well be valid, the function stops checking.
+        `ObjectChangeSerializer.changed_object_type` is a `ContentTypeField`: no queryset, no
+        `_related_model`. The model knows it is a foreign key to `ContentType` all the same, so the segment
+        past it is checked against `ContentTypeSerializer` rather than waved through.
         """
         self.assertPathsValid(ObjectChangeSerializer, ["changed_object_type__app_label"])
-        # ...which necessarily means a bogus segment past that point is accepted too
-        self.assertPathsValid(ObjectChangeSerializer, ["changed_object_type__utter_nonsense"])
+        self.assertPathsInvalid(
+            ObjectChangeSerializer, ["changed_object_type__utter_nonsense"], 'unknown field "utter_nonsense"'
+        )
+
+    def test_validate__identity_field_is_not_a_relation(self):
+        """`url` is a `RelatedField` subclass but not a relation: it is the object's own address.
+
+        Sourced from `"*"` rather than a model field, so there is nothing to traverse to -- and it is
+        stripped from documents entirely (`EXCLUDED_DOCUMENT_FIELDS`), so nothing downstream would have
+        objected either.
+        """
+        self.assertIsInstance(
+            DeviceSerializer(context={"request": None, "depth": 0}).fields["url"], serializers.RelatedField
+        )
+        self.assertPathsInvalid(
+            DeviceSerializer, ["url__anything"], '"url" is not a related field and cannot be expanded'
+        )
+
+    def test_validate__serializer_only_relation_is_not_traversable(self):
+        """A relation the serializer invents has no model field to traverse, so it cannot be expanded.
+
+        `VLANSerializer.location` is a write-only convenience over the model's `locations` M2M.
+        """
+        self.assertIn("location", VLANSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertPathsInvalid(
+            VLANSerializer, ["location__name"], '"location" is not a related field and cannot be expanded'
+        )
+
+    def test_validate__traversal_is_deferred_when_the_related_model_has_no_serializer(self):
+        """The one remaining deferral: a related model with no serializer is left to the database.
+
+        No core model has such a relation today, so this patches the lookup to prove the branch; an App
+        that registers a model without a serializer is the real case.
+        """
+        with mock.patch(
+            "nautobot.core.api.import_export.get_serializer_for_model",
+            side_effect=SerializerNotFound("no serializer"),
+        ):
+            self.assertPathsValid(DeviceSerializer, ["device_type__anything_at_all"])
 
 
 class ValidateFieldPathsKnownGapsTests(TestCase):
@@ -838,14 +878,6 @@ class ValidateFieldPathsKnownGapsTests(TestCase):
     Each of these asserts the *current* behavior, not the desired one, and says what the right answer
     would be. They are separated from `ValidateFieldPathsTests` so that class reads as the contract.
     """
-
-    # TODO: `url` is a `HyperlinkedIdentityField`, hence a `RelatedField`, so it passes the "is this
-    #   traversable" test; its `_related_model` property then raises `AttributeError`, which
-    #   `getattr(field, "_related_model", None)` silently converts to "target unknown -> defer to the
-    #   database". `url` is not a database field at all (and `EXCLUDED_DOCUMENT_FIELDS` strips it from
-    #   JSON/YAML), so nothing downstream will ever reject this.
-    def test_gap__url_is_treated_as_a_traversable_relation(self):
-        validate_field_paths(DeviceSerializer, ["url__anything", "url__total__nonsense"])
 
     # TODO: `max_depth` bounds the *requested* path, but selecting a relation head expands it to that
     #   relation's natural-key lookups, which add hops of their own. Here a 2-hop selection becomes

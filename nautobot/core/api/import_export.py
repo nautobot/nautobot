@@ -10,8 +10,10 @@ format is not (yet) negotiable over HTTP, so it is plain functions rather than a
 `?format=...` support for it be added later, the renderer would be a thin wrapper over these.
 """
 
-from rest_framework import exceptions, serializers
+from django.core.exceptions import FieldDoesNotExist
+from rest_framework import serializers
 
+from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import CSV_NO_OBJECT
 
@@ -160,14 +162,37 @@ def build_document_records(serializer_data):
     return records
 
 
+def _traversable_relation_target(serializer, field):
+    """The model that `field` traverses to, or None if a `__` path cannot continue through it.
+
+    The *model* is the authority here, not the serializer field. DRF's `RelatedField` covers things that are
+    not model relations at all -- `url` is a `HyperlinkedIdentityField` sourced from `"*"`, i.e. the object
+    itself -- while a genuine foreign key may be represented by a field that declares neither a queryset nor
+    a related model (`ContentTypeField`). Since a path is ultimately emitted as a database lookup, what the
+    model says is what will actually work.
+
+    To-many relations return None: traversing one would multiply rows, and the lookup the export emits for a
+    nested path cannot express it.
+    """
+    try:
+        model_field = serializer.Meta.model._meta.get_field(field.source)
+    except (AttributeError, FieldDoesNotExist):
+        # A serializer-only field (no model field of that name), or a serializer with no model at all
+        return None
+    if model_field.many_to_many or model_field.one_to_many:
+        return None
+    # None for a non-relational field, which is exactly the "cannot be expanded" answer
+    return model_field.related_model
+
+
 def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEPTH):
     """
     Validate a list of `__`-separated field-selection paths against a serializer's field graph.
 
     A path's head must be a field of the serializer *as an export instantiates it* (or a `cf_<key>`
-    custom-field reference); each additional segment must traverse a single-valued related field, resolved
-    through the related model's serializer. Traversal into many-to-many fields is not supported (it would
-    multiply rows).
+    custom-field reference). Each additional segment must traverse a single-valued relation of the model --
+    see `_traversable_relation_target` -- and is then resolved against the related model's serializer.
+    Traversal into a to-many relation is not supported (it would multiply rows).
     Paths that reach a related model without a known serializer are accepted and left to the database
     to validate.
 
@@ -194,9 +219,6 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
             continue
         serializer = root_serializer
         for index, part in enumerate(parts):
-            if serializer is None:
-                # Reached a model without a known serializer; defer validation to the database
-                break
             field = serializer.fields.get(part)
             if field is None:
                 errors.append(f'"{path}": unknown field "{part}"')
@@ -206,18 +228,15 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
             if isinstance(field, serializers.ManyRelatedField):
                 errors.append(f'"{path}": cannot traverse into many-to-many field "{part}"')
                 break
-            if not isinstance(field, serializers.RelatedField):
+            related_model = _traversable_relation_target(serializer, field)
+            if related_model is None:
                 errors.append(f'"{path}": "{part}" is not a related field and cannot be expanded')
                 break
-            related_model = getattr(field, "_related_model", None)
-            if related_model is None:
-                related_model = getattr(getattr(field, "queryset", None), "model", None)
-            if related_model is None:
-                serializer = None
-                continue
             try:
                 serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
-            except exceptions.SerializerNotFound:
-                serializer = None
+            except SerializerNotFound:
+                # A related model with no serializer of its own: accept the rest of the path and leave it
+                # to the database to validate.
+                break
     if errors:
         raise ValueError(f"Invalid field selection: {'; '.join(errors)}")
