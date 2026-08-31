@@ -7,21 +7,28 @@ import uuid
 
 from constance import config
 from constance.test import override_config
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
+from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.test import override_settings, RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
+from rest_framework.relations import ManyRelatedField
 from rest_framework.settings import api_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 import yaml
 
-from nautobot.circuits.models import Provider
+from nautobot.circuits.api import serializers as circuits_serializers
+from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core import testing
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
@@ -35,6 +42,7 @@ from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
+from nautobot.extras.api import serializers as extras_serializers
 from nautobot.ipam import filters as ipam_filters, models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
@@ -1346,6 +1354,107 @@ class ExcludeM2MWritableTest(testing.APITestCase):
         response = self.client.get(f"{self.url}?exclude_m2m=false", **self.header)
         self.assertHttpStatus(response, status.HTTP_200_OK)
         self.assertEqual([entry["id"] for entry in response.json()["import_targets"]], [str(self.route_target.pk)])
+
+
+class RelatedModelResolutionTest(TestCase):
+    """`NautobotHyperlinkedRelatedField._related_model` must name the far side of the relation.
+
+    A writable related field carries a queryset and the answer is simply its model. A *read-only* one has
+    no queryset (DRF omits it), so the model's own metadata has to be consulted -- and it must be asked for
+    the relation's target, not for the model that happens to declare the field.
+    """
+
+    def test_related_model_from_queryset(self):
+        field = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}).fields["device_type"]
+        self.assertIsNotNone(field.queryset)
+        self.assertIs(field._related_model, dcim_models.DeviceType)
+
+    def test_related_model_of_read_only_forward_fk(self):
+        """`Circuit.circuit_termination_a` is `editable=False`, so its serializer field has no queryset."""
+        serializer = circuits_serializers.CircuitSerializer(context={"request": None, "depth": 0})
+        field = serializer.fields["circuit_termination_a"]
+        self.assertIsNone(field.queryset)
+        self.assertIs(field._related_model, CircuitTermination)
+
+    def test_related_model_of_read_only_m2m(self):
+        """A to-many field is wrapped in a `ManyRelatedField`, so the serializer is one level up.
+
+        This one is also sourced from a *reverse* relation under a different name, so it exercises both
+        the unwrapping and the `source`-not-`field_name` lookup.
+        """
+        serializer = extras_serializers.SecretsGroupSerializer(context={"request": None, "depth": 0}, exporting=True)
+        field = serializer.fields["secrets"]
+        self.assertIsInstance(field, ManyRelatedField)
+        self.assertIsNone(field.child_relation.queryset)
+        self.assertEqual(field.source, "secrets_group_associations")
+        # `secrets` is sourced from the association rows rather than from the Secrets themselves
+        self.assertIs(field.child_relation._related_model, extras_models.SecretsGroupAssociation)
+
+    def test_related_model_of_read_only_reverse_relation(self):
+        """A reverse relation resolves to the model declaring the FK, which is its far side.
+
+        `IPAddress.interfaces` is the reverse of `Interface.ip_addresses`. Reverse relations are found by
+        their `related_query_name`, which equals the accessor name whenever `related_name` is set -- as it
+        is for every reverse relation a Nautobot serializer sources a field from.
+        """
+        serializer = ipam_serializers.IPAddressSerializer(context={"request": None, "depth": 0}, exporting=True)
+        field = serializer.fields["interfaces"]
+        self.assertIsNone(field.child_relation.queryset)
+        self.assertIsInstance(ipam_models.IPAddress._meta.get_field(field.source), ForeignObjectRel)
+        self.assertIs(field.child_relation._related_model, dcim_models.Interface)
+
+    def test_related_model_of_reverse_one_to_one(self):
+        """A reverse one-to-one resolves too; its descriptor exposes `related` rather than `field`."""
+        field = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}).fields["parent_bay"]
+        self.assertFalse(hasattr(dcim_models.Device.parent_bay, "field"))
+        self.assertIs(field._related_model, dcim_models.DeviceBay)
+
+    def test_related_model_is_none_when_undeterminable(self):
+        """An unbound field has no serializer to ask, and says so rather than guessing."""
+        with self.assertLogs("nautobot.core.api.fields", level="WARNING"):
+            self.assertIsNone(NautobotHyperlinkedRelatedField(read_only=True, view_name="x")._related_model)
+
+    def test_every_related_field_agrees_with_its_model(self):
+        """A meta-test: no serializer anywhere may report a target the model contradicts, or none at all.
+
+        The `unresolved` half is the one that guards against silently regressing a relation shape that
+        `_meta.get_field()` cannot look up (a default `<model>_set` accessor, say): the model-disagreement
+        check alone would skip such a field rather than fail on it.
+        """
+        mismatches = []
+        unresolved = []
+        context = {"request": None, "depth": 0}
+        for model in apps.get_models():
+            try:
+                serializer_class = get_serializer_for_model(model)
+            except SerializerNotFound:
+                # Plenty of models (through tables, internal models) have no serializer at all
+                continue
+            try:
+                fields = serializer_class(context=context, exporting=True).fields
+            except TypeError:
+                # A plain DRF serializer rather than a Nautobot one, so it takes no `exporting` kwarg -- and
+                # has no opt-in fields either, so its plain field set is the whole of it. `CablePathSerializer`
+                # is the only one in core today.
+                fields = serializer_class(context=context).fields
+            for name, field in fields.items():
+                related_field = field.child_relation if isinstance(field, ManyRelatedField) else field
+                if not isinstance(related_field, NautobotHyperlinkedRelatedField):
+                    continue
+                reported = related_field._related_model
+                if reported is None:
+                    unresolved.append(f"{serializer_class.__name__}.{name} (source={field.source!r})")
+                    continue
+                try:
+                    # `source`, not `name`: a serializer may represent a relation via another one, as
+                    # `SecretsGroupSerializer.secrets` does by sourcing the association rows.
+                    expected = model._meta.get_field(field.source).related_model
+                except FieldDoesNotExist:
+                    continue  # e.g. `tags`, which is a manager rather than a model field
+                if reported is not expected:
+                    mismatches.append(f"{serializer_class.__name__}.{name}: reported {reported}, model says {expected}")
+        self.assertEqual(mismatches, [])
+        self.assertEqual(unresolved, [])
 
 
 class NautobotGetViewNameTest(TestCase):

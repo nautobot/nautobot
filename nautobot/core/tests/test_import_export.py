@@ -20,7 +20,6 @@ from django.urls import reverse
 import yaml
 
 from nautobot.circuits.api.serializers import CircuitSerializer, CircuitTerminationSerializer
-from nautobot.circuits.models import Circuit
 from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
@@ -684,6 +683,22 @@ class ValidateFieldPathsTests(TestCase):
         """Each segment is resolved through the *related* model's serializer, not the root's."""
         self.assertPathsValid(DeviceSerializer, ["device_type__manufacturer__name"])
 
+    def test_validate__traversal_through_a_read_only_fk(self):
+        """A relation with no queryset is resolved from the model, so traversal past it still works.
+
+        `Circuit.circuit_termination_a` is `editable=False`, so DRF gives its serializer field no queryset
+        and the target comes from `NautobotHyperlinkedRelatedField._related_model` instead -- which must name
+        `CircuitTermination` rather than the `Circuit` that declares the field (see
+        `test_api.RelatedModelResolutionTest`). Getting that wrong is invisible until a path traverses it.
+        """
+        self.assertIsNone(
+            CircuitSerializer(context={"request": None, "depth": 0}).fields["circuit_termination_a"].queryset
+        )
+        self.assertPathsValid(CircuitSerializer, ["cid", "circuit_termination_a__term_side"])
+        # `cid` is a field of Circuit, not of CircuitTermination, so it must not validate past the hop
+        self.assertNotIn("cid", CircuitTerminationSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertPathsInvalid(CircuitSerializer, ["circuit_termination_a__cid"], 'unknown field "cid"')
+
     def test_validate__at_the_maximum_depth(self):
         """`a__b__c__d` is three hops, which the default limit allows."""
         self.assertEqual(EXPORT_FIELD_MAX_DEPTH, 3)
@@ -831,24 +846,6 @@ class ValidateFieldPathsKnownGapsTests(TestCase):
     #   JSON/YAML), so nothing downstream will ever reject this.
     def test_gap__url_is_treated_as_a_traversable_relation(self):
         validate_field_paths(DeviceSerializer, ["url__anything", "url__total__nonsense"])
-
-    # TODO: for a read-only FK (no queryset), `NautobotHyperlinkedRelatedField._related_model` falls back
-    #   to `getattr(Meta.model, source).field.model`, which is the model *declaring* the FK rather than the
-    #   one it points at -- it should be `.related_model`. So traversal past such a field resolves the next
-    #   segment against the wrong serializer, rejecting valid paths and accepting invalid ones.
-    def test_gap__read_only_fk_resolves_against_the_wrong_serializer(self):
-        field = CircuitSerializer(context={"request": None, "depth": 0}).fields["circuit_termination_a"]
-        self.assertIsNone(field.queryset)
-        self.assertIs(field._related_model, Circuit)  # should be CircuitTermination
-        self.assertIn("term_side", CircuitTerminationSerializer(context={"request": None, "depth": 0}).fields)
-        self.assertNotIn("cid", CircuitTerminationSerializer(context={"request": None, "depth": 0}).fields)
-
-        # A valid CircuitTermination field is rejected...
-        with self.assertRaises(ValueError) as context:
-            validate_field_paths(CircuitSerializer, ["circuit_termination_a__term_side"])
-        self.assertIn('unknown field "term_side"', str(context.exception))
-        # ...while a Circuit field, which is not on CircuitTermination at all, is accepted
-        validate_field_paths(CircuitSerializer, ["circuit_termination_a__cid"])
 
     # TODO: `max_depth` bounds the *requested* path, but selecting a relation head expands it to that
     #   relation's natural-key lookups, which add hops of their own. Here a 2-hop selection becomes
