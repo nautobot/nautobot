@@ -1,1 +1,0 @@
-Changed SSO group sync to properly revoke group memberships and staff/superuser status when the group claim changes from non-empty to empty.

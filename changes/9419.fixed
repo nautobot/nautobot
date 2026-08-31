@@ -1,4 +1,0 @@
-Fixed a number of model filters that traverse a to-many relation, such as `CircuitFilterSet.provider_network` and `TenantGroupFilterSet.children`, returning duplicate objects.
-Fixed `<field>__isnull=False` filters returning duplicate objects when the field is a many-to-many, reverse foreign key, or generic relation, such as `?tags__isnull=False`.
-Improved the performance of many UI/REST/GraphQL filters by no longer applying an unnecessary `.distinct()` to the filtered query.
-Fixed `LoadBalancerPoolMemberCertificateProfileAssignmentFilterSet.load_balancer_pool_member` raising a `FieldError` when given a non-UUID value, as `LoadBalancerPoolMember` has no `name` field to match against.
