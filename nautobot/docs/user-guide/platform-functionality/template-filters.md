@@ -137,9 +137,12 @@ timedelta(days=1, seconds=10800) => "1d 3h"
 ### humanize_speed
 
 Humanize speeds given in Kbps.
-    1544 => "1.544 Mbps"
-    100000 => "100 Mbps"
-    10000000 => "10 Gbps"
+
+```
+1544 => "1.544 Mbps"
+100000 => "100 Mbps"
+10000000 => "10 Gbps"
+```
 
 ```django
 {{ speed_value | humanize_speed }}
@@ -345,9 +348,12 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
 ### render_uptime
 
 Render an uptime value in seconds to a human readable value.
-    1024768 => "11 days 20 hours 39 minutes"
-    1 => "0 days 0 hours 0 minutes"
-    3660 => "0 days 1 hour 1 minute"
+
+```
+1024768 => "11 days 20 hours 39 minutes"
+1 => "0 days 0 hours 0 minutes"
+3660 => "0 days 1 hour 1 minute"
+```
 
 ```django
 {{ 1024768 | render_uptime }}
