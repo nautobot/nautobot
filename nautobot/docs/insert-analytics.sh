@@ -7,7 +7,7 @@
 # Do NOT reuse this to insert analytics code in your development environments
 # or into the release process (i.e. built packages).
 
-cat > ./docs/assets/overrides/main.html <<EOL
+cat > ./nautobot/docs/assets/overrides/main.html <<EOL
 {% extends "base.html" %}
 
 {% block analytics %}
