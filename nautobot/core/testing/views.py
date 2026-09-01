@@ -408,15 +408,17 @@ class ViewTestCases:
                         ]
                         required_permissions += action_func.kwargs.get("custom_view_additional_permissions", [])
 
+                    headers = {"HX-Request": "true"} if action_func.url_name == "overview" else {}
+
                     try:
                         url = self._get_url(action_func.url_name, instance)
-                        self.assertHttpStatus(self.client.get(url), [403, 404])
+                        self.assertHttpStatus(self.client.get(url, headers=headers), [403, 404])
                         for permission in required_permissions[:-1]:
                             self.add_permissions(permission)
-                            self.assertHttpStatus(self.client.get(url), [403, 404])
+                            self.assertHttpStatus(self.client.get(url, headers=headers), [403, 404])
 
                         self.add_permissions(required_permissions[-1])
-                        self.assertHttpStatus(self.client.get(url, follow=True), 200)
+                        self.assertHttpStatus(self.client.get(url, follow=True, headers=headers), 200)
                     finally:
                         # delete the permissions here so that we start from a clean slate on the next loop
                         self.remove_permissions(*required_permissions)
