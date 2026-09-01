@@ -454,10 +454,12 @@ def get_overview(object_detail_content, overview_fields=None, overview_html=None
                     (
                         candidate
                         for candidate in main_tab.panels_for_section(SectionChoices.LEFT_HALF)
-                        if isinstance(candidate, ObjectFieldsPanel) and candidate.should_render(context)
+                        if isinstance(candidate, ObjectFieldsPanel)
                     ),
                     None,
                 )
+                if panel is not None and not panel.should_render(context):
+                    panel = None
 
         if panel is None:
             return None
