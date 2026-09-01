@@ -269,6 +269,8 @@ optional = true
 pytest = "~9.1.1"
 # Playwright browser automation and its pytest plugin (fixtures, --headed, --tracing)
 pytest-playwright = "~0.9.0"
+# Pinned: Playwright ties browser builds to the driver release, so upgrades stay deliberate.
+playwright = "~1.62.0"
 
 [tool.poetry.scripts]
 
