@@ -35,7 +35,7 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
 | ----------- | --------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- |
 | Unit        | `nautobot.core.testing.TestCase` or subclass (see below)        | `nautobot/APP/tests/test_*.py`             | `invoke tests`                      |
 | Selenium    | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/selenium/test_*.py`    | `invoke tests --tag integration`    |
-| Playwright  | pytest (no unittest base class; interim structure — see [Playwright Testing](playwright-testing.md)) | `nautobot/APP/tests/integration/test_*.py` | `invoke playwright`                 |
+| Playwright  | pytest (no current base class; interim structure — see [Playwright Testing](playwright-testing.md)) | `nautobot/APP/tests/integration/test_*.py` | `invoke playwright`                 |
 | Migration   | `django_test_migrations.contrib.unittest_case.MigratorTestCase` | `nautobot/APP/tests/migration/test_*.py`   | `invoke tests --tag migration_test` |
 
 !!! note
