@@ -122,10 +122,13 @@ Return True if the user has *all* permissions in the list.
 +++ 3.2.4
 
 Humanize a `datetime.timedelta` at a readable granularity.
-    timedelta(milliseconds=340) => "<1s"
-    timedelta(seconds=192) => "3m 12s"
-    timedelta(seconds=31300) => "8h 41m"
-    timedelta(days=1, seconds=10800) => "1d 3h"
+
+```
+timedelta(milliseconds=340) => "<1s"
+timedelta(seconds=192) => "3m 12s"
+timedelta(seconds=31300) => "8h 41m"
+timedelta(days=1, seconds=10800) => "1d 3h"
+```
 
 ```django
 {{ duration_value | humanize_duration }}
