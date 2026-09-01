@@ -2,6 +2,7 @@ import django_filters
 
 from nautobot.core.filters import (
     BaseFilterSet,
+    MultipleChoiceFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     NumericArrayFilter,
     RelatedMembershipBooleanFilter,
@@ -50,7 +51,7 @@ class RadioProfileFilterSet(NautobotFilterSet):
             "frequency": "exact",
         }
     )
-    regulatory_domain = django_filters.MultipleChoiceFilter(
+    regulatory_domain = MultipleChoiceFilter(
         choices=choices.RadioProfileRegulatoryDomainChoices,
         null_value=None,
     )
@@ -58,7 +59,7 @@ class RadioProfileFilterSet(NautobotFilterSet):
         field_name="channel_width",
         lookup_expr="contains",
     )
-    frequency = django_filters.MultipleChoiceFilter(
+    frequency = MultipleChoiceFilter(
         choices=choices.RadioProfileFrequencyChoices,
         null_value=None,
     )
@@ -89,12 +90,12 @@ class WirelessNetworkFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "ssid": "icontains",
         }
     )
-    mode = django_filters.MultipleChoiceFilter(
+    mode = MultipleChoiceFilter(
         choices=choices.WirelessNetworkModeChoices,
         null_value=None,
     )
     enabled = django_filters.BooleanFilter()
-    authentication = django_filters.MultipleChoiceFilter(
+    authentication = MultipleChoiceFilter(
         choices=choices.WirelessNetworkAuthenticationChoices,
         null_value=None,
     )
