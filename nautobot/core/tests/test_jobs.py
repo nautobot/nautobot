@@ -6,6 +6,7 @@ import json
 import logging
 from pathlib import Path
 from unittest import mock
+import uuid
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
@@ -221,6 +222,8 @@ class ExportObjectListTest(TransactionTestCase):
                 {"name": ["Active"]},  # No saved view provided
                 {},
             ),
+            ({"saved_view": uuid.uuid4()}, {}),  # Saved view no longer exists
+            ({"saved_view": "not-a-uuid"}, {}),  # Malformed saved view parameter
         ]
 
         for query_params, expected_output in test_cases:
@@ -228,6 +231,15 @@ class ExportObjectListTest(TransactionTestCase):
                 job = ExportObjectList()
                 filter_params = job._get_saved_view_filter_params(query_params)
                 self.assertEqual(filter_params, expected_output)
+
+    def test_get_saved_view_filter_params_warns_when_saved_view_not_found(self):
+        """An unresolvable saved view is reported, as it silently widens the set of exported objects."""
+        job = ExportObjectList()
+        missing_pk = uuid.uuid4()
+        with mock.patch.object(job, "logger") as mock_logger:
+            self.assertEqual(job._get_saved_view_filter_params({"saved_view": missing_pk}), {})
+        mock_logger.warning.assert_called_once()
+        self.assertIn(str(missing_pk), str(mock_logger.warning.call_args))
 
     def test_export_saved_view_to_csv_without_filters(self):
         """Export a SavedView to CSV without any filters applied."""

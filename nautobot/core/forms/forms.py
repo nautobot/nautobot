@@ -402,9 +402,9 @@ class TableConfigForm(BootstrapMixin, forms.Form):
                 return columns_order
 
             # Don't import from core to extras at module level to avoid circular imports
-            from nautobot.extras.models import SavedView
+            from nautobot.extras.utils import get_saved_view_or_none
 
-            saved_view = SavedView.objects.restrict(request.user, "view").filter(pk=saved_view_id).first()
+            saved_view = get_saved_view_or_none(saved_view_id)
             if not saved_view or not saved_view.config:
                 return columns_order
 
