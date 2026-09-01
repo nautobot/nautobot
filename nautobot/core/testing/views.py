@@ -41,7 +41,7 @@ from nautobot.core.testing import mixins, utils
 from nautobot.core.testing.utils import extract_page_title
 from nautobot.core.ui.object_detail import ObjectsTablePanel
 from nautobot.core.utils import lookup
-from nautobot.core.views.mixins import NautobotViewSetMixin, PERMISSIONS_ACTION_MAP
+from nautobot.core.views.mixins import NautobotViewSetMixin, ObjectOverviewViewMixin, PERMISSIONS_ACTION_MAP
 from nautobot.dcim.models.device_components import ModularComponentModel
 from nautobot.dcim.views import ComponentBulkDisconnectViewMixin
 from nautobot.extras import choices as extras_choices, models as extras_models, querysets as extras_querysets
@@ -524,6 +524,27 @@ class ViewTestCases:
                     )
                 else:
                     self.assertNotContains(response, f"{obj.get_absolute_url()}#contacts")
+
+    class GetObjectOverviewViewTestCase(ModelViewTestCase):
+        """
+        View the overview for an instance.
+        """
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_get_object_overview(self):
+            base_view = lookup.get_view_for_model(self.model)
+            if not issubclass(base_view, ObjectOverviewViewMixin):
+                self.skipTest(f"View {base_view} does not provide an overview")
+
+            instance = self._get_queryset().first()
+            if not instance:
+                # We should have a better mechanism to test against an empty instance, but this will remove blocker for now.
+                self.skipTest("No instances to test against.")
+
+            url = self._get_url("overview", instance)
+            response = self.client.get(url, headers={"HX-Request": "true"})
+            self.assertHttpStatus(response, 200)
+            self.assertContains(response, '<td colspan="100">')
 
     class CreateObjectViewTestCase(ModelViewTestCase):
         """
@@ -2535,6 +2556,7 @@ class ViewTestCases:
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
         GetObjectNotesViewTestCase,
+        GetObjectOverviewViewTestCase,
         CreateObjectViewTestCase,
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
@@ -2553,6 +2575,7 @@ class ViewTestCases:
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
         GetObjectNotesViewTestCase,
+        GetObjectOverviewViewTestCase,
         CreateObjectViewTestCase,
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
@@ -2584,6 +2607,7 @@ class ViewTestCases:
         GetObjectViewTestCase,
         GetObjectChangelogViewTestCase,
         GetObjectNotesViewTestCase,
+        GetObjectOverviewViewTestCase,
         EditObjectViewTestCase,
         DeleteObjectViewTestCase,
         ListObjectsViewTestCase,

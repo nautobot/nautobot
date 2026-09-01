@@ -122,7 +122,7 @@ You may see other context keys as well, but any not documented above should not 
 
 ## Object Overview
 
-Every `NautobotUIViewSet` provides an `overview` action at `<object URL>/overview/`, returning a compact summary of a single object as an HTML fragment. It is intended for expanding a table row to reveal an object's key details without leaving the list view, and it requires the same `view` permission as the object's detail view.
+Every `NautobotUIViewSet` provides an `overview` action at `<object URL>/overview/`, returning a compact summary of a single object as an HTML fragment. It is intended for expanding a table row to reveal an object's key details without leaving the list view, and it requires the same `view` permission as the object's detail view. Only HTMX requests are served, so any other request receives HTTP 400.
 
 ### The Default Overview
 

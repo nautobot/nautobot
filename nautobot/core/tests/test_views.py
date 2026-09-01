@@ -1677,7 +1677,7 @@ class ObjectOverviewViewTestCase(TestCase):
         self.add_permissions("dcim.view_location")
 
     def test_default_overview(self):
-        response = self.client.get(self.url)
+        response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         keys = re.findall(r"<span>(.*?):", response.content.decode(response.charset))
         self.assertEqual(
@@ -1688,7 +1688,7 @@ class ObjectOverviewViewTestCase(TestCase):
     def test_overview_fields(self):
         overview_fields = {"name": {"key_transform": "Label", "value_transforms": [lambda value: "VALUE"]}}
         with mock.patch.object(LocationUIViewSet, "overview_fields", overview_fields):
-            response = self.client.get(self.url)
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
@@ -1697,7 +1697,7 @@ class ObjectOverviewViewTestCase(TestCase):
 
     def test_overview_html(self):
         with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
-            response = self.client.get(self.url)
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
@@ -1707,12 +1707,16 @@ class ObjectOverviewViewTestCase(TestCase):
     def test_overview_template_name(self):
         template_name = "components/panel/body_wrapper_generic_table.html"
         with mock.patch.object(LocationUIViewSet, "overview_template_name", template_name):
-            response = self.client.get(self.url)
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
             '<tr><td colspan="100"><table class="collapse show table table-hover"></table></td></tr>',
         )
+
+    def test_overview_bad_request_when_no_htmx(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 400)
 
 
 class ObjectOverviewViewWithoutPermissionTestCase(TestCase):
