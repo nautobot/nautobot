@@ -1101,6 +1101,8 @@ class BaseFilterSet(django_filters.FilterSet):
                 # Add "dynamic_groups" field as the last key
                 from nautobot.extras.models import DynamicGroup
 
+                # NOTE: `DynamicGroup._is_cache_substitution_safe()` detects cache-reading filters like this one
+                # by their declared `field_name`; any similar future filter must declare its traversal likewise.
                 filters["dynamic_groups"] = NaturalKeyOrPKMultipleChoiceFilter(
                     queryset=DynamicGroup.objects.all(),
                     field_name="static_group_association_set__dynamic_group",
