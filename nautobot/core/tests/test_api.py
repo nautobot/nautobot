@@ -30,7 +30,7 @@ from nautobot.core.api.views import ModelViewSet
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
-from nautobot.dcim import models as dcim_models
+from nautobot.dcim import filters as dcim_filters, models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
 from nautobot.ipam import filters as ipam_filters, models as ipam_models
@@ -614,6 +614,131 @@ class ModelViewSetMixinTest(testing.APITestCase):
             list(instance.vm_interfaces.all())
         with self.assertNumQueries(1):
             list(instance.tags.all())
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_get_queryset_optimizations_with_depth(self):
+        """
+        Test that `?depth=N` causes relations exposed by the resulting nested serializers to also be optimized.
+
+        Regression test for an N+1 query bug: get_queryset() previously only inspected the outermost
+        serializer's fields, so any relation exposed two or more hops deep by nested (`?depth>=1`) serialization
+        (e.g. IPAddress -> parent (Prefix) -> namespace/tenant/status/role, or IPAddress -> interfaces (M2M) ->
+        device/status) was fetched lazily, one query per row/relation, rather than being select_related/
+        prefetch_related.
+        """
+        self.user.is_superuser = True
+        self.user.save()
+
+        view = self.SimpleIPAddressViewSet()
+        view.action_map = {"get": "list"}
+        request = APIRequestFactory().get(
+            reverse("ipam-api:ipaddress-list"), headers=self.header, data={"exclude_m2m": False, "depth": 1}
+        )
+        force_authenticate(request, user=self.user)
+        request = view.initialize_request(request)
+        view.setup(request)
+        view.initial(request)
+
+        queryset = view.get_queryset()
+        instances = list(queryset.exclude(parent__isnull=True).order_by("pk")[:5])
+        self.assertGreaterEqual(len(instances), 1, "need at least one IPAddress with a parent Prefix")
+
+        # Second-hop FK relations exposed by the nested PrefixSerializer (`parent`) at depth=1 must have been
+        # select_related, regardless of how many IPAddress rows are involved (no per-row/per-relation queries).
+        with self.assertNumQueries(0):
+            for instance in instances:
+                instance.parent.namespace
+                instance.parent.tenant
+                instance.parent.status
+                instance.parent.role
+
+        # Second-hop relations reached across a to-many relation (`interfaces`) must have been prefetched
+        # (select_related can't span M2M relations, so these have to go through prefetch_related instead).
+        # Create the assignment explicitly rather than relying on it being present in the factory-seeded data.
+        assigned_ip = ipam_models.IPAddress.objects.exclude(pk__in=[instance.pk for instance in instances]).first()
+        interface = dcim_models.Interface.objects.first()
+        ipam_models.IPAddressToInterface.objects.get_or_create(ip_address=assigned_ip, interface=interface)
+
+        instances_with_interfaces = list(queryset.filter(pk=assigned_ip.pk))
+        self.assertEqual(len(instances_with_interfaces), 1)
+        with self.assertNumQueries(0):
+            for instance in instances_with_interfaces:
+                for interface in instance.interfaces.all():
+                    interface.device
+                    interface.status
+
+    class SimpleInterfaceViewSet(ModelViewSet):
+        queryset = dcim_models.Interface.objects.all()  # no explicit optimizations
+        serializer_class = dcim_serializers.InterfaceSerializer
+        filterset_class = dcim_filters.InterfaceFilterSet
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_get_queryset_optimizations_with_depth_4(self):
+        """
+        Regression test for a N+1 query bug with `GET /api/dcim/interfaces/?depth=4`: at depth=4,
+        `InterfaceSerializer` recurses into nested serializers four levels deep
+        (interface -> device -> location -> location_type -> parent), each an FK hop. Prior to this fix,
+        get_queryset() only optimized the first hop (`device`), so accessing `device.location`,
+        `device.location.location_type`, and `device.location.location_type.parent` cost one additional query
+        *per relation per row* - i.e. the query count grew linearly with the number of interfaces returned.
+        """
+        self.user.is_superuser = True
+        self.user.save()
+
+        # Build a 4-level-deep FK chain: interface -> device -> location -> location_type -> parent (LocationType).
+        device = dcim_models.Device.objects.filter(location__location_type__parent__isnull=False).first()
+        self.assertIsNotNone(device, "fixture data must include a Device whose Location uses a nested LocationType")
+        interface_status = extras_models.Status.objects.get_for_model(dcim_models.Interface).first()
+        interfaces = [
+            dcim_models.Interface.objects.create(device=device, name=f"eth{i}", status=interface_status)
+            for i in range(10)
+        ]
+
+        def make_request():
+            view = self.SimpleInterfaceViewSet()
+            view.action_map = {"get": "list"}
+            request = APIRequestFactory().get(
+                reverse("dcim-api:interface-list"), headers=self.header, data={"depth": 4}
+            )
+            force_authenticate(request, user=self.user)
+            request = view.initialize_request(request)
+            view.setup(request)
+            view.initial(request)
+            return view
+
+        def traverse_four_hops(instances):
+            for instance in instances:
+                instance.device.location.location_type.parent
+
+        # BEFORE: a naive, un-optimized queryset (no select_related/prefetch_related at all) exhibits classic N+1
+        # behavior - the query count scales with the number of rows traversed (1 initial query, plus 4 additional
+        # queries *per row* for the 4-hop FK chain).
+        naive_queryset = dcim_models.Interface.objects.filter(pk__in=[iface.pk for iface in interfaces])
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as naive_3_ctx:
+            traverse_four_hops(list(naive_queryset[:3]))
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as naive_10_ctx:
+            traverse_four_hops(list(naive_queryset[:10]))
+        self.assertEqual(len(naive_3_ctx.captured_queries), 1 + 3 * 4)
+        self.assertEqual(len(naive_10_ctx.captured_queries), 1 + 10 * 4)
+        # Confirms the N+1: tripling the row count (3 -> 10) increases the query count proportionally.
+        self.assertGreater(len(naive_10_ctx.captured_queries), len(naive_3_ctx.captured_queries))
+
+        # AFTER: the depth-aware, recursively-optimized queryset issues a constant number of queries no matter how
+        # many rows are returned - the 4-hop chain is resolved via a single select_related() JOIN.
+        optimized_queryset_3 = make_request().get_queryset().filter(pk__in=[iface.pk for iface in interfaces])
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as optimized_3_ctx:
+            traverse_four_hops(list(optimized_queryset_3[:3]))
+        optimized_queryset_10 = make_request().get_queryset().filter(pk__in=[iface.pk for iface in interfaces])
+        with CaptureQueriesContext(connections[DEFAULT_DB_ALIAS]) as optimized_10_ctx:
+            traverse_four_hops(list(optimized_queryset_10[:10]))
+
+        # Exactly one query (the single JOIN-based SELECT) regardless of row count
+        self.assertEqual(len(optimized_3_ctx.captured_queries), 1)
+        self.assertEqual(len(optimized_10_ctx.captured_queries), 1)
+        self.assertEqual(len(optimized_3_ctx.captured_queries), len(optimized_10_ctx.captured_queries))
+
+        # And, most directly: the optimized path has less queries cheaper at the same row count.
+        self.assertLess(len(optimized_10_ctx.captured_queries), len(naive_10_ctx.captured_queries))
 
 
 class WritableNestedSerializerTest(testing.APITestCase):

@@ -5,6 +5,9 @@ import sys
 
 from django.apps import apps
 from django.conf import settings
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models.fields.related import ForeignKey, ManyToManyField, RelatedField
+from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.http import JsonResponse
 from django.urls import NoReverseMatch, reverse
 from rest_framework import serializers, status
@@ -13,6 +16,7 @@ from rest_framework.utils.field_mapping import get_nested_relation_kwargs
 from rest_framework.utils.model_meta import _get_to_field, RelationInfo
 
 from nautobot.core.api import exceptions
+from nautobot.core.models.fields import TagsField
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import permission_is_exempt, qs_filter_from_constraints
 
@@ -280,6 +284,91 @@ def nested_serializer_factory(relation_info, nested_depth):
         field_class = NautobotNestedSerializer
         field_kwargs = get_nested_relation_kwargs(relation_info)
     return field_class, field_kwargs
+
+
+def get_related_field_query_optimizations(serializer, model):
+    """
+    Walk a serializer (and any nested serializers constructed for it via `?depth`) to discover the
+    select_related()/prefetch_related() lookup paths needed to avoid N+1 queries when rendering it.
+
+    Returns:
+        (list, list): A 2-tuple of (select_related lookup paths, prefetch_related lookup paths).
+    """
+    max_fields = settings.MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS
+    select_fields, prefetch_fields, remaining = _walk_serializer_fields_for_optimizations(
+        serializer, model, prefix="", force_prefetch=False, remaining=max_fields
+    )
+    if remaining <= 0:
+        logger.warning(
+            "Reached the maximum number (%s) of select_related()/prefetch_related() optimizations while "
+            "inspecting a %s serializer; some nested relations may not be optimized and could result in "
+            "additional queries. Consider a lower `?depth` value, or increase the MAX_RELATED_FIELD_QUERY_"
+            "OPTIMIZATIONS Nautobot setting if this is expected.",
+            max_fields,
+            model.__name__,
+        )
+    return select_fields, prefetch_fields
+
+
+def _walk_serializer_fields_for_optimizations(serializer, model, prefix, force_prefetch, remaining):
+    """
+    Recursive helper for get_related_field_query_optimizations(); see that function's docstring for details.
+    """
+    select_fields = []
+    prefetch_fields = []
+
+    for field_instance in serializer.fields.values():
+        if remaining <= 0:
+            break
+        if field_instance.write_only:
+            continue
+        if field_instance.source == "*":
+            continue
+        if "." in field_instance.source:
+            # DRF uses `field.nested_field` instead of `field__nested_field`
+            # TODO: We don't currently attempt to optimize nested lookups.
+            continue
+
+        source = f"{prefix}{field_instance.source}"
+        try:
+            model_field = model._meta.get_field(field_instance.source)
+        except FieldDoesNotExist:
+            continue
+
+        if isinstance(field_instance, (serializers.ManyRelatedField, serializers.ListSerializer)):
+            # ManyRelatedField with depth 0, or ListSerializer (of nested serializers) with depth > 0.
+            if not isinstance(model_field, (ManyToManyField, ManyToManyRel, RelatedField, ManyToOneRel, TagsField)):
+                continue
+            prefetch_fields.append(source)
+            remaining -= 1
+            # A ListSerializer's `.child` is the per-item (nested) serializer, present only when depth > 0.
+            child = getattr(field_instance, "child", None)
+            if child is not None and hasattr(child, "fields") and remaining > 0:
+                # Everything beneath a to-many relation must be prefetched, even simple FK fields, since
+                # select_related() cannot span M2M/reverse-FK relations. force_prefetch=True guarantees the
+                # recursive call never populates its own "select" list, so only its prefetch list matters here.
+                _, nested_prefetch, remaining = _walk_serializer_fields_for_optimizations(
+                    child, model_field.related_model, f"{source}__", True, remaining
+                )
+                prefetch_fields.extend(nested_prefetch)
+
+        elif isinstance(field_instance, (serializers.RelatedField, serializers.Serializer)):
+            # RelatedField with depth 0, or Serializer (nested) with depth > 0.
+            if not isinstance(model_field, ForeignKey):
+                continue
+            if force_prefetch:
+                prefetch_fields.append(source)
+            else:
+                select_fields.append(source)
+            remaining -= 1
+            if isinstance(field_instance, serializers.Serializer) and remaining > 0:
+                nested_select, nested_prefetch, remaining = _walk_serializer_fields_for_optimizations(
+                    field_instance, model_field.related_model, f"{source}__", force_prefetch, remaining
+                )
+                select_fields.extend(nested_select)
+                prefetch_fields.extend(nested_prefetch)
+
+    return select_fields, prefetch_fields, remaining
 
 
 def return_nested_serializer_data_based_on_depth(serializer, depth, obj, obj_related_field, obj_related_field_name):
