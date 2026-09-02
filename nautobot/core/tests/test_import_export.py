@@ -106,6 +106,63 @@ class OmitCoveredThroughFieldsTests(SimpleTestCase):
         self.assertEqual(data_fields, ["name", "rd"])
 
 
+class MatchFieldsTests(TestCase):
+    """`ExportObjectList._get_match_fields` decides whether an export can carry import instructions.
+
+    A file is only re-importable if it contains enough columns to identify each existing record, so an
+    explicit field selection must stamp the match key only when the selection covers *every* natural-key
+    lookup -- either the lookup itself (`manufacturer__name`) or the relation head that expands to it
+    (`manufacturer`). Anything less and the file must not claim a key it cannot support.
+    """
+
+    def match_fields(self, model, export_field_paths=None):
+        return ExportObjectList._get_match_fields(model, export_field_paths)
+
+    def test_match__no_selection_uses_the_whole_natural_key(self):
+        self.assertEqual(self.match_fields(Status), ["name"])
+        self.assertEqual(self.match_fields(DeviceType), ["manufacturer__name", "model"])
+
+    def test_match__selection_covering_the_key(self):
+        self.assertEqual(self.match_fields(Status, ["name", "color"]), ["name"])
+
+    def test_match__selection_omitting_the_key(self):
+        self.assertIsNone(self.match_fields(Status, ["color"]))
+
+    def test_match__composite_key_partially_covered(self):
+        """All or nothing: `model` alone cannot identify a DeviceType without its manufacturer."""
+        self.assertIsNone(self.match_fields(DeviceType, ["model"]))
+        self.assertIsNone(self.match_fields(DeviceType, ["manufacturer"]))
+        self.assertEqual(
+            self.match_fields(DeviceType, ["model", "manufacturer__name"]), ["manufacturer__name", "model"]
+        )
+
+    def test_match__relation_head_covers_its_lookups(self):
+        """A bare relation expands to its own natural key, so selecting the head covers those lookups."""
+        self.assertEqual(self.match_fields(DeviceType, ["model", "manufacturer"]), ["manufacturer__name", "model"])
+
+    def test_match__nested_selection_that_is_not_the_natural_key(self):
+        """A nested selection replaces the relation's default lookups, so this one covers nothing."""
+        self.assertIsNone(self.match_fields(DeviceType, ["model", "manufacturer__description"]))
+
+    def test_match__every_head_must_be_covered(self):
+        """An Interface is keyed by its device *and* its module, so one of the two is not enough."""
+        self.assertIn("module__pk", Interface.csv_natural_key_field_lookups())
+        self.assertIsNone(self.match_fields(Interface, ["name", "device"]))
+        self.assertEqual(
+            self.match_fields(Interface, ["name", "device", "module"]),
+            list(Interface.csv_natural_key_field_lookups()),
+        )
+
+    def test_match__partial_lookup_of_a_relation_is_not_enough(self):
+        """`device__name` is one of three `device__` lookups the key needs; naming it alone is not coverage."""
+        self.assertIsNone(self.match_fields(Interface, ["name", "device__name"]))
+
+    def test_match__model_without_a_natural_key(self):
+        """No identifiable key means no directive, selection or not."""
+        self.assertIsNone(self.match_fields(JobLogEntry))
+        self.assertIsNone(self.match_fields(JobLogEntry, ["message"]))
+
+
 @tag("unit")
 class BuildDocumentRecordsTests(SimpleTestCase):
     """`build_document_records` must collapse only genuinely-null relations.
@@ -823,7 +880,7 @@ class ValidateFieldPathsTests(TestCase):
         self.assertPathsInvalid(
             InterfaceSerializer,
             ["device__location__parent__parent__name"],
-            '"device__location__parent__parent__name" exceeds the maximum relation depth of 3',
+            '"device__location__parent__parent__name" traverses more than 3 relations',
         )
 
     def test_validate__maximum_depth_is_configurable(self):
@@ -831,14 +888,31 @@ class ValidateFieldPathsTests(TestCase):
         self.assertPathsInvalid(
             InterfaceSerializer,
             ["device__location__parent__name"],
-            "exceeds the maximum relation depth of 2",
+            "traverses more than 2 relations",
             max_depth=2,
         )
-        self.assertPathsInvalid(InterfaceSerializer, ["device__name"], "depth of 0", max_depth=0)
+        self.assertPathsInvalid(InterfaceSerializer, ["device__name"], "more than 0 relations", max_depth=0)
+
+    def test_validate__depth_counts_the_path_not_its_expansion(self):
+        """The limit bounds the relations a path *names*; the natural-key expansion is not counted.
+
+        A path ending at a relation is emitted as that relation's natural-key lookups, which add hops.
+        Those are not the user's choice and are not charged against the limit -- an unrestricted export of
+        the same model already emits them, so counting them would make a selective export stricter than a
+        full one, and would reject bare field names outright. See `EXPORT_FIELD_MAX_DEPTH`.
+        """
+        # `device` names no relation traversal at all, yet is emitted two hops deep
+        emitted = [f"device__{lookup}" for lookup in Device.csv_natural_key_field_lookups()]
+        self.assertIn("device__tenant__name", emitted)
+        self.assertPathsValid(InterfaceSerializer, ["device"], max_depth=0)
+
+        # ...and a relation named at the limit is accepted even though its expansion goes past it
+        self.assertGreater(max(lookup.count("__") for lookup in emitted), 1)
+        self.assertPathsValid(InterfaceSerializer, ["device__location__parent"], max_depth=2)
 
     def test_validate__depth_is_checked_before_the_field_names(self):
         """An over-deep path is reported as too deep even when none of its segments exist."""
-        message = self.assertPathsInvalid(StatusSerializer, ["a__b__c__d__e"], "exceeds the maximum relation depth")
+        message = self.assertPathsInvalid(StatusSerializer, ["a__b__c__d__e"], "traverses more than")
         self.assertNotIn("unknown field", message)
 
     def test_validate__every_invalid_path_is_reported(self):
@@ -982,21 +1056,6 @@ class ValidateFieldPathsTests(TestCase):
             self.assertPathsValid(DeviceSerializer, ["device_type__anything_at_all"])
 
 
-class ValidateFieldPathsKnownGapsTests(TestCase):
-    """Selections that `validate_field_paths` gets wrong today, pinned so a fix is visible as a change.
-
-    Each of these asserts the *current* behavior, not the desired one, and says what the right answer
-    would be. They are separated from `ValidateFieldPathsTests` so that class reads as the contract.
-    """
-
-    # TODO: `max_depth` bounds the *requested* path, but selecting a relation head expands it to that
-    #   relation's natural-key lookups, which add hops of their own. Here a 2-hop selection becomes
-    #   `device__location__parent__name` (3 hops) in the output, and a relation selected at the limit
-    #   would exceed it. The limit should be applied to the emitted lookups, or documented as advisory.
-    def test_gap__maximum_depth_does_not_bound_the_emitted_lookups(self):
-        validate_field_paths(InterfaceSerializer, ["device__location__parent"], max_depth=2)
-
-
 class ExportFieldSelectionTests(ImportExportJobTestCase):
     def test_select__csv(self):
         """An explicit field selection yields exactly those columns, in selection order."""
@@ -1007,11 +1066,97 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 model=DeviceType, query_string="model=Selection+DT", export_fields="model,manufacturer__name"
             )
         )
-        self.assertTrue(
-            lines[0].startswith("# nautobot_import_version=3; model=dcim.devicetype; match_fields="), lines[0]
+        self.assertEqual(
+            lines[0],
+            f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.devicetype; "
+            "match_fields=manufacturer__name model",
         )
         self.assertEqual(lines[1], "model,manufacturer__name")
         self.assertEqual(lines[2], "Selection DT,Selection Mfr")
+
+    # -- the match_fields directive under a selection ---------------------------
+    # A selection can leave the file unable to identify its own records, in which case the export must not
+    # stamp a match key. `MatchFieldsTests` covers the rule; these check what reaches the file.
+
+    def test_select__directive_drops_the_key_when_the_selection_omits_it(self):
+        """Selecting only non-key fields still writes a directive row, but with no match key in it."""
+        self.create_status(name="test_selection_status", color="445566")
+        lines = self.export_lines(self.run_export(query_string="name=test_selection_status", export_fields="color"))
+        self.assertEqual(lines[0], f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status")
+        self.assertEqual(lines[1], "color")
+        self.assertEqual(lines[2], "445566")
+
+    def test_select__directive_dropped_when_a_composite_key_is_half_covered(self):
+        """`model` identifies a DeviceType only together with its manufacturer."""
+        mfr = Manufacturer.objects.create(name="Half Key Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Half Key DT", u_height=1)
+        lines = self.export_lines(
+            self.run_export(model=DeviceType, query_string="model=Half+Key+DT", export_fields="model")
+        )
+        self.assertEqual(lines[0], f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.devicetype")
+        self.assertEqual(lines[1], "model")
+
+    def test_select__relation_head_covers_the_key_it_expands_to(self):
+        """Selecting the bare relation stamps the key, and the column it names is really in the file.
+
+        The directive would otherwise be a lie: it claims `manufacturer__name`, which is not what was
+        typed -- it is what the head expands to.
+        """
+        mfr = Manufacturer.objects.create(name="Head Key Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Head Key DT", u_height=1)
+        lines = self.export_lines(
+            self.run_export(model=DeviceType, query_string="model=Head+Key+DT", export_fields="model,manufacturer")
+        )
+        self.assertEqual(
+            lines[0],
+            f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.devicetype; "
+            "match_fields=manufacturer__name model",
+        )
+        self.assertEqual(lines[1], "model,manufacturer__name")  # the claimed column is present
+        self.assertEqual(lines[2], "Head Key DT,Head Key Mfr")
+
+    def test_select__nested_selection_that_misses_the_key(self):
+        """A nested selection replaces the relation's natural-key columns, so the key is not covered."""
+        mfr = Manufacturer.objects.create(name="Miss Key Mfr", description="a description")
+        DeviceType.objects.create(manufacturer=mfr, model="Miss Key DT", u_height=1)
+        lines = self.export_lines(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Miss+Key+DT",
+                export_fields="model,manufacturer__description",
+            )
+        )
+        self.assertEqual(lines[0], f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.devicetype")
+        self.assertEqual(lines[1], "model,manufacturer__description")
+        self.assertNotIn("manufacturer__name", lines[1])
+
+    def test_select__document_match_fields(self):
+        """The document metadata follows the same rule as the CSV directive."""
+        mfr = Manufacturer.objects.create(name="Doc Key Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Doc Key DT", u_height=1)
+        covered = self.export_document(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Doc+Key+DT",
+                export_format="json",
+                export_fields="model,manufacturer__name",
+            )
+        )
+        self.assertEqual(covered["match_fields"], ["manufacturer__name", "model"])
+        self.assertEqual(list(covered.keys()), ["nautobot_import_version", "model", "match_fields", "records"])
+
+        uncovered = self.export_document(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Doc+Key+DT",
+                export_format="json",
+                export_fields="model",
+            )
+        )
+        # `match_fields` is the only thing missing; the rest of the metadata is unaffected
+        self.assertEqual(list(uncovered.keys()), ["nautobot_import_version", "model", "records"])
+        # ...and the records really do carry only the selected field, so the dropped key is not recoverable
+        self.assertEqual(uncovered["records"], [{"model": "Doc Key DT"}])
 
     @skip("Enable in X4: uses use_current_view (sort + saved-view export config)")
     def test_select__omits_directive_when_key_not_covered(self):

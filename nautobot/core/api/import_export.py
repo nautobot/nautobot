@@ -31,7 +31,15 @@ IMPORT_DOCUMENT_RECORDS_KEY = "records"
 # Serializer fields that describe the API representation rather than the object, and so are omitted.
 EXCLUDED_DOCUMENT_FIELDS = ("url", "notes_url")
 
-# Maximum relation-traversal depth permitted in an export field selection (e.g. a__b__c__d = depth 3).
+# Maximum number of relations one export field-selection path may traverse (`a__b__c__d` = 3).
+#
+# This counts only the hops *named in the path*. A path that ends at a relation is expanded to that
+# relation's natural-key lookups, which add hops of their own, and those are deliberately not counted: the
+# expansion is how a relation is represented rather than anything the user asked for, and an unrestricted
+# export of the same model already emits it -- `dcim.CableToCableTermination` emits
+# `front_port__rear_port__device__tenant__name` (depth 4) with no selection at all. Counting it would make a
+# selective export stricter than a full one, and would reject bare field names such as
+# `CableToCableTermination.front_port` with no shorter spelling available.
 EXPORT_FIELD_MAX_DEPTH = 3
 
 
@@ -211,6 +219,9 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
     Paths that reach a related model without a known serializer are accepted and left to the database
     to validate.
 
+    `max_depth` bounds the relations a path may name; the natural-key expansion of a path that ends at a
+    relation is not counted against it. See `EXPORT_FIELD_MAX_DEPTH`.
+
     Raises:
         ValueError: describing every invalid path.
     """
@@ -226,7 +237,7 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
     for path in paths:
         parts = path.split("__")
         if len(parts) - 1 > max_depth:
-            errors.append(f'"{path}" exceeds the maximum relation depth of {max_depth}')
+            errors.append(f'"{path}" traverses more than {max_depth} relations')
             continue
         if parts[0].startswith("cf_"):
             if len(parts) > 1:
