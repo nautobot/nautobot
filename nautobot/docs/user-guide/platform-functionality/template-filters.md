@@ -122,8 +122,6 @@ Return True if the user has *all* permissions in the list.
 +++ 3.2.4
 
 Humanize a `datetime.timedelta` at a readable granularity.
-
-timedelta(milliseconds=340) => "<1s"
 timedelta(seconds=192) => "3m 12s"
 timedelta(seconds=31300) => "8h 41m"
 timedelta(days=1, seconds=10800) => "1d 3h"
@@ -136,8 +134,6 @@ timedelta(days=1, seconds=10800) => "1d 3h"
 ### humanize_speed
 
 Humanize speeds given in Kbps.
-
-1544 => "1.544 Mbps"
 100000 => "100 Mbps"
 10000000 => "10 Gbps"
 ```
@@ -346,8 +342,6 @@ The set of permitted HTML tags is defined in `nautobot.core.constants.HTML_ALLOW
 ### render_uptime
 
 Render an uptime value in seconds to a human readable value.
-
-1024768 => "11 days 20 hours 39 minutes"
 1 => "0 days 0 hours 0 minutes"
 3660 => "0 days 1 hour 1 minute"
 ```
