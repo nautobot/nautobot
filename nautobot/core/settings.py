@@ -290,6 +290,13 @@ if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEA
 if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
     RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
+# Request Metric Generation
+# Header contract defined here: https://www.w3.org/TR/server-timing/
+# Report the total server-side duration of each request in a W3C `Server-Timing` response header.
+REQUEST_TOTAL_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED", "False"))
+# Report the duration of each database query in a W3C `Server-Timing` response header.
+REQUEST_DB_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED", "False"))
+
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
 if "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS" in os.environ and os.environ["NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"] != "":
@@ -723,6 +730,7 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
+    "nautobot.core.middleware.RequestMetricMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
