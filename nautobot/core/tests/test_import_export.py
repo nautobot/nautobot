@@ -865,7 +865,11 @@ class ValidateFieldPathsTests(TestCase):
         )
 
     def test_validate__m2m_cannot_be_traversed(self):
-        """Traversing a to-many relation would multiply rows, so it is refused with a specific message."""
+        """Traversing a to-many relation is refused with a message specific to that reason.
+
+        A current limitation of the mechanism rather than of the file format -- see
+        `_traversable_relation_target`. Selecting `tags` itself is valid and yields the tag names.
+        """
         self.assertPathsInvalid(
             DeviceSerializer, ["tags__name"], '"tags__name": cannot traverse into many-to-many field "tags"'
         )

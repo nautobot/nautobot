@@ -1,0 +1,2 @@
+Enhanced `ExportObjectList` system Job with an `export_fields` parameter, restricting an export to the fields named and rendering the columns in that order. Fields may include nested references to related objects, such as `status__name` or `device_type__manufacturer__name`, as well as custom fields, such as `cf_my_field`.
+Added suppression of the `match_fields` import metadata when the selected fields do not cover the entirety of a model's default natural key.

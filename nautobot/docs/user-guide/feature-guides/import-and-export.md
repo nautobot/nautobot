@@ -122,7 +122,57 @@ while in JSON or YAML it's a list of nested objects:
 
 ### Selecting fields to export
 
-TODO - add documentation when this is implemented
+By default an export includes every field of the object type. In the **Export to file** dialog you can instead pick the specific fields you want and put them in the order you want them to appear. The `Export Object List` Job offers the same capability through its **Fields to Export** (`export_fields`) parameter, which takes a comma-separated list:
+
+```no-highlight
+model,manufacturer__name,u_height
+```
+
+The columns appear in exactly the order you list them, so this is also how you control column order:
+
+```csv
+# nautobot_import_version=3; model=dcim.devicetype; match_fields=manufacturer__name model
+model,manufacturer__name,u_height
+ISR4331,Cisco,1
+```
+
+Each entry is either a plain field (`model`), or a path that traverses one or more foreign keys to reach a field of a related object, joined by `__` (`manufacturer__name`, `device_type__manufacturer__name`). A single path may traverse at most three relations.
+
+Naming a related object *without* expanding it selects that object's whole natural key - the same columns an unrestricted export would have produced for it. So `model,manufacturer` gives you the same file as the example above minus `u_height`, because `manufacturer` expands to `manufacturer__name`:
+
+```csv
+model,manufacturer__name
+ISR4331,Cisco
+```
+
+Many-to-many fields, such as `tags`, can be selected like any other field, but cannot currently be traversed: `tags` is valid, `tags__name` is not. Selecting the field itself already gives you its members' natural keys, so `tags` yields the tag names; what is not yet supported is narrowing a member's representation to particular fields, such as asking for only `software_image_files__image_file_name`.
+
+#### Selecting custom fields
+
+Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once.
+
+In a CSV export both spellings produce one `cf_<key>` column per selected custom field, exactly as an unrestricted export does. In JSON and YAML exports, `custom_fields` keeps the nested dictionary, while an individual `cf_<key>` selection is emitted as a top-level key instead, since a single custom field cannot be named inside the dictionary:
+
+```yaml
+records:
+  - name: "Active"
+    cf_my_field: "a value"
+```
+
+#### Fields that cannot be selected
+
+The Job fails, with an error naming the entry at fault, rather than quietly writing a file that is missing what you asked for. This happens if a selection:
+
+- names a field the object type does not have, or a custom field that is not defined for it
+- names a field that exists only for input rather than output, such as the singular `location` field on VLANs and Prefixes - export the `locations` many-to-many field instead
+- attempts to traverse a many-to-many field, or a field that is not a relation at all
+- traverses more than three relations in a single path
+
+#### Effect on re-importing the file
+
+A file containing only some of an object type's fields may not contain enough information to identify the objects it describes. When the selected fields do not cover every field of the model's match key, the `match_fields` metadata is therefore omitted from the export (see [The self-describing file](#the-self-describing-file)), as in the `model,manufacturer__name` example above had `manufacturer__name` been left out.
+
+Such a file can still be imported - you just have to say what to match on, either by [specifying match fields](#match-fields) as an input to the `Import Objects` Job or by adding the metadata to the file yourself.
 
 ### Scoping the exported objects
 

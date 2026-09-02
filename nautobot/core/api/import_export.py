@@ -194,8 +194,10 @@ def _traversable_relation_target(serializer, field):
     a related model (`ContentTypeField`). Since a path is ultimately emitted as a database lookup, what the
     model says is what will actually work.
 
-    To-many relations return None: traversing one would multiply rows, and the lookup the export emits for a
-    nested path cannot express it.
+    To-many relations return None: a nested path is emitted as one flat database lookup, which cannot
+    express a value per member. Selecting the field itself works (its members render through
+    `_get_m2m_natural_key_values`), so this is a limit of the mechanism rather than of the file format --
+    which can already carry a per-member-field list, as `NautobotCSVParser` accepts on import.
     """
     try:
         model_field = serializer.Meta.model._meta.get_field(field.source)
@@ -215,7 +217,7 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
     A path's head must be a readable field of the serializer *as an export instantiates it* (or a `cf_<key>`
     custom-field reference). Each additional segment must traverse a single-valued relation of the model --
     see `_traversable_relation_target` -- and is then resolved against the related model's serializer.
-    Traversal into a to-many relation is not supported (it would multiply rows).
+    Traversal into a to-many relation is not supported; see `_traversable_relation_target`.
     Paths that reach a related model without a known serializer are accepted and left to the database
     to validate.
 
