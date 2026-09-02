@@ -119,7 +119,7 @@ Return True if the user has *all* permissions in the list.
 
 ### humanize_duration
 
-+++ 3.2.4
++++ 3.3.0
 
 Humanize a `datetime.timedelta` at a readable granularity.
 
