@@ -11,6 +11,7 @@ from django.apps import apps
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory, tag
 from django.test.utils import override_script_prefix
@@ -1713,6 +1714,16 @@ class ObjectOverviewViewTestCase(TestCase):
             response.content.decode(response.charset),
             '<tr><td colspan="100"><table class="collapse show table table-hover"></table></td></tr>',
         )
+
+    def test_overview_arguments_are_mutually_exclusive(self):
+        self.client.raise_request_exception = False
+        with (
+            mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
+            mock.patch.object(LocationUIViewSet, "overview_template_name", "components/htmx/overview.html"),
+        ):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertEqual(response.status_code, 500)
+        self.assertIsInstance(response.exc_info[1], ImproperlyConfigured)
 
     def test_overview_bad_request_when_no_htmx(self):
         response = self.client.get(self.url)
