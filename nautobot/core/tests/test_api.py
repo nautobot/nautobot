@@ -12,8 +12,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.db import connections, DEFAULT_DB_ALIAS
+from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.test import override_settings, RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
