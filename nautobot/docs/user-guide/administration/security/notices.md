@@ -2,7 +2,43 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-<!-- pyml disable-num-lines 900 proper-names -->
+<!-- pyml disable-num-lines 1000 proper-names -->
+
+## GHSA-x69f-q4wj-vx72
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>August 17, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot's legacy "connections" REST API endpoints (<code>/api/dcim/console-connections/</code>, <code>/api/dcim/power-connections/</code>, and, on 2.4.x only, <code>/api/dcim/interface-connections/</code>) were implemented as plain Django REST Framework viewsets and so never applied object-level permission constraints to their querysets. Model-level permissions were still enforced, but a user granted view permissions on ConsolePort, PowerPort, or Interface records through a constrained ObjectPermission would receive every connected console port, power port, or interface in the system, in full serialized detail, rather than only the objects within their permitted scope. The corresponding UI views were not affected.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72">GHSA-x69f-q4wj-vx72</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.40</li>
+        <li>&ge;3.0.0, &lt;3.2.3</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.40 (<a href="https://github.com/nautobot/nautobot/commit/c307c08578ad900d29b1c4cf4a11a2809b4e74b3">patch</a>)</li>
+        <li>3.2.3 (<a href="https://github.com/nautobot/nautobot/commit/b1f10f6201224c9f6aad3f0366e1f9697fb1e99b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ## GHSA-h8rv-c7c8-cvmx
 

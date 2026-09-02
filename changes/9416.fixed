@@ -1,0 +1,2 @@
+Fixed CSV export of many-to-many fields whose values contain a comma, double-quote, or newline; such values are now quoted so they can be imported correctly.
+Fixed CSV import of a many-to-many column exported for related objects that are identified by more than one field, such as a Device's software image files.

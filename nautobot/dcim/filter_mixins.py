@@ -2,6 +2,7 @@ from django.db.models import Q
 import django_filters
 
 from nautobot.core.filters import (
+    ModelMultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueUUIDFilter,
@@ -48,7 +49,7 @@ class CableTerminationModelFilterSetMixin(django_filters.FilterSet):
         field_name="cable_termination",
         label="Has cable",
     )
-    cable = django_filters.ModelMultipleChoiceFilter(
+    cable = ModelMultipleChoiceFilter(
         queryset=Cable.objects.all(),
         field_name="cable_termination__cable",
         label="Cable",
@@ -261,7 +262,7 @@ class DeviceModuleCommonFiltersMixin(django_filters.FilterSet):
         method="filter_has_empty_module_bays",
         label="Has empty module bays",
     )
-    module_bays = django_filters.ModelMultipleChoiceFilter(
+    module_bays = ModelMultipleChoiceFilter(
         queryset=ModuleBay.objects.all(),
         label="Module Bays",
     )
@@ -367,7 +368,7 @@ class DeviceTypeModuleTypeCommonFiltersMixin(django_filters.FilterSet):
         field_name="rear_port_templates",
         label="Has rear port templates",
     )
-    module_bay_templates = django_filters.ModelMultipleChoiceFilter(
+    module_bay_templates = ModelMultipleChoiceFilter(
         queryset=ModuleBayTemplate.objects.all(),
     )
     has_module_bay_templates = RelatedMembershipBooleanFilter(

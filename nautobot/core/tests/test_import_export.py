@@ -11,6 +11,7 @@ import csv
 from io import StringIO
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import SimpleTestCase, tag
@@ -23,13 +24,28 @@ from nautobot.core.api.import_export import (
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
 )
+from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
+from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, TransactionTestCase
-from nautobot.dcim.models import Device, DeviceType, Manufacturer
+from nautobot.dcim.choices import InterfaceTypeChoices
+from nautobot.dcim.models import (
+    Cable,
+    Device,
+    DeviceType,
+    Interface,
+    Location,
+    LocationType,
+    Manufacturer,
+    Platform,
+    Rack,
+    SoftwareImageFile,
+    SoftwareVersion,
+)
 from nautobot.extras.choices import JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import JobLogEntry, Status
-from nautobot.ipam.models import Namespace, RouteTarget, VRF
+from nautobot.extras.models import JobLogEntry, Role, SecretsGroup, Status, Tag
+from nautobot.ipam.models import Namespace, RouteTarget, VRF, VRFDeviceAssignment
 
 
 @tag("unit")
@@ -53,6 +69,24 @@ class NestFlatDictTests(SimpleTestCase):
 
     def test_core_nest__list_value_preserved(self):
         self.assertEqual(nest_flat_dict({"tags": ["a", "b"]}), {"tags": ["a", "b"]})
+
+
+@tag("unit")
+class OmitCoveredThroughFieldsTests(SimpleTestCase):
+    """`_omit_covered_through_fields` decides whether an M2M column already carries its through data.
+
+    Both branches that read a real relation are exercised end-to-end by the `test_adapter_export__m2m_*`
+    tests below (`VRF.devices` renders the members, `SecretsGroup.secrets` renders the through rows). What
+    only a stub reaches is a serializer field whose `source` is not a model field at all: no serializer in
+    Nautobot spells an M2M field that way today, but `source="*"` is ordinary DRF, so an App's serializer
+    can, and reporting the whole through model is the right answer when the column can't be identified.
+    """
+
+    def test_source_that_is_not_a_model_field(self):
+        data_fields = ExportObjectList._omit_covered_through_fields(
+            VRF, SimpleNamespace(source="*"), VRFDeviceAssignment, ["name", "rd"]
+        )
+        self.assertEqual(data_fields, ["name", "rd"])
 
 
 @tag("unit")
@@ -235,6 +269,61 @@ class ImportExportJobTestCase(TransactionTestCase):
         status.content_types.set([ContentType.objects.get_for_model(Device)])
         return status
 
+    def create_device_type_with_software_image_files(self):
+        """A DeviceType whose `software_image_files` M2M members have a composite (3-part) natural key."""
+        manufacturer = Manufacturer.objects.create(name="M2M Composite Mfr")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="M2M Composite DT", u_height=1)
+        software_version = SoftwareVersion.objects.create(
+            platform=Platform.objects.create(name="M2M Composite Platform", manufacturer=manufacturer),
+            version="1.2.3",
+            status=Status.objects.get_for_model(SoftwareVersion).first(),
+        )
+        for image_file_name in ("m2m-composite-a.bin", "m2m-composite-b.bin"):
+            device_type.software_image_files.add(
+                SoftwareImageFile.objects.create(
+                    software_version=software_version,
+                    image_file_name=image_file_name,
+                    status=Status.objects.get_for_model(SoftwareImageFile).first(),
+                )
+            )
+        return list(device_type.software_image_files.all())
+
+    def create_cable(self):
+        """A Cable terminated on two Interfaces, for the M2M fields `CableSerializer` excludes."""
+        location_type = LocationType.objects.create(name="M2M Cable Location Type")
+        location_type.content_types.add(ContentType.objects.get_for_model(Device))
+        location = Location.objects.create(
+            name="M2M Cable Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        manufacturer = Manufacturer.objects.create(name="M2M Cable Mfr")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="M2M Cable DT", u_height=1)
+        role = Role.objects.create(name="M2M Cable Role")
+        role.content_types.add(ContentType.objects.get_for_model(Device))
+        device = Device.objects.create(
+            name="M2M Cable Device",
+            device_type=device_type,
+            role=role,
+            status=Status.objects.get_for_model(Device).first(),
+            location=location,
+        )
+        interface_status = Status.objects.get_for_model(Interface).first()
+        interfaces = [
+            Interface.objects.create(
+                device=device,
+                name=f"eth{index}",
+                type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                status=interface_status,
+            )
+            for index in (0, 1)
+        ]
+        return Cable.objects.create(
+            termination_a=interfaces[0],
+            termination_b=interfaces[1],
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
     # -- run the job -----------------------------------------------------------
     def run_export(
         self,
@@ -364,6 +453,67 @@ class ExportAdapterTests(ImportExportJobTestCase):
         # Dumped with sort_keys=False, so the version leads rather than the keys going alphabetical
         self.assertTrue(self.export_text(job_result).startswith("nautobot_import_version:"))
 
+    def test_adapter_export__includes_non_default_m2m_columns(self):
+        """The Job exports every M2M field, so the file can be re-imported in full.
+
+        A REST `?format=csv` response for the same model has neither column -- see
+        `test_csv.ExportingWidensM2MFieldsTest` for that contrast and the reasoning behind it.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Columns Namespace")
+        VRF.objects.create(name="M2M Columns VRF", namespace=namespace)
+
+        # Line 0 is the import directive, line 1 the header row
+        headers = self.export_lines(self.run_export(model=VRF))[1].split(",")
+        self.assertIn("import_targets", headers)
+        self.assertIn("export_targets", headers)
+
+    def test_adapter_export__m2m_through_data_is_reported_as_missing(self):
+        """A relation whose through model records data about each pairing exports only the membership.
+
+        `VRF.devices` is joined by `VRFDeviceAssignment`, which also records `rd` and `name`; the column
+        of member natural keys can't carry those, so the Job says so and names where to find them.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Through Namespace")
+        VRF.objects.create(name="M2M Through VRF", namespace=namespace)
+
+        job_result = self.run_export(model=VRF)
+        self.assertJobLogEntry(
+            job_result,
+            "`devices` is managed through `ipam.vrfdeviceassignment`, which also records `name`, `rd`",
+            level=LogLevelChoices.LOG_INFO,
+        )
+        # Reported at INFO, not WARNING: the export is doing the right thing, just not the whole thing
+        self.assertNoIssues(job_result)
+
+    def test_adapter_export__m2m_field_absent_from_the_serializer_is_not_reported(self):
+        """An M2M field the serializer omits has no column in the file, so there is nothing to report on.
+
+        `CableSerializer` excludes the typed termination accessors (`interfaces`, `front_ports`, ...) in
+        favor of its own `terminations` field. Their through model, `CableToCableTermination`, does record
+        data about each pairing (`cable_end`, `connector`), so a report would be produced if the Job went
+        looking for a column that isn't there.
+        """
+        self.create_cable()
+
+        job_result = self.run_export(model=Cable)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, message__icontains="cabletocabletermination").exists()
+        )
+        headers = self.export_lines(job_result)[1].split(",")
+        self.assertNotIn("interfaces", headers)
+
+    def test_adapter_export__m2m_through_data_kept_by_the_member_key_is_not_reported(self):
+        """No notice when the column already carries the through data.
+
+        `SecretsGroup.secrets` is sourced from the association rows rather than the secrets, and their
+        natural key spans `access_type`/`secret_type`, so nothing is lost and there is nothing to say.
+        """
+        SecretsGroup.objects.create(name="M2M Through Secrets Group")
+        job_result = self.run_export(model=SecretsGroup)
+        self.assertFalse(
+            JobLogEntry.objects.filter(job_result=job_result, message__icontains="secretsgroupassociation").exists()
+        )
+
     def test_adapter_export__m2m_scalar_members(self):
         """A scalar-keyed M2M is comma-joined for CSV but stays a list in either document format."""
         namespace, _ = Namespace.objects.get_or_create(name="M2M Export Namespace")
@@ -379,6 +529,93 @@ class ExportAdapterTests(ImportExportJobTestCase):
                 doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
                 record = next(r for r in doc["records"] if r["name"] == "M2M Export VRF")
                 self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2"])
+
+    def test_adapter_export__m2m_scalar_member_containing_the_separator(self):
+        """A member containing a comma is quoted inside the cell, so CSV still reads back two members."""
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Comma Namespace")
+        vrf = VRF.objects.create(name="M2M Comma VRF", namespace=namespace)
+        for name in ("65000:1", "65000:2,65000:3"):
+            vrf.import_targets.add(RouteTarget.objects.create(name=name))
+
+        row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Comma VRF")
+        self.assertEqual(
+            sorted(NautobotCSVParser.split_list_cell(row["import_targets"])), ["65000:1", "65000:2,65000:3"]
+        )
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Comma VRF")
+                self.assertEqual(sorted(record["import_targets"]), ["65000:1", "65000:2,65000:3"])
+
+    def test_adapter_export__m2m_tags(self):
+        """`tags` is a TagsManager rather than a concrete M2M, but exports like any other scalar-keyed one."""
+        namespace, _ = Namespace.objects.get_or_create(name="M2M Tags Namespace")
+        vrf = VRF.objects.create(name="M2M Tags VRF", namespace=namespace)
+        for name in ("m2m-export-tag-a", "m2m-export-tag-b"):
+            tag_ = Tag.objects.create(name=name)
+            tag_.content_types.add(ContentType.objects.get_for_model(VRF))
+            vrf.tags.add(tag_)
+
+        row = next(r for r in self.export_rows(self.run_export(model=VRF)) if r["name"] == "M2M Tags VRF")
+        self.assertEqual(sorted(row["tags"].split(",")), ["m2m-export-tag-a", "m2m-export-tag-b"])
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(self.run_export(model=VRF, export_format=export_format))
+                record = next(r for r in doc["records"] if r["name"] == "M2M Tags VRF")
+                self.assertEqual(sorted(record["tags"]), ["m2m-export-tag-a", "m2m-export-tag-b"])
+
+    def test_adapter_export__m2m_content_type_members(self):
+        """An M2M to ContentType uses the scalar `<app_label>.<model>` key rather than a natural-key dict."""
+        status = self.create_status(name="M2M CT Status")  # already carries dcim.device
+        status.content_types.add(ContentType.objects.get_for_model(Rack))
+
+        row = self.export_rows(self.run_export(query_string="name=M2M+CT+Status"))[0]
+        self.assertEqual(sorted(row["content_types"].split(",")), ["dcim.device", "dcim.rack"])
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(
+                    self.run_export(query_string="name=M2M+CT+Status", export_format=export_format)
+                )
+                self.assertEqual(sorted(doc["records"][0]["content_types"]), ["dcim.device", "dcim.rack"])
+
+    def test_adapter_export__m2m_composite_members(self):
+        """A composite-natural-key M2M renders each member by that key: a JSON cell in CSV, a nested dict
+        in a document (where the member's own multi-hop lookups nest, just as the record's relations do).
+        """
+        software_image_files = self.create_device_type_with_software_image_files()
+        expected_flat = [
+            {
+                "image_file_name": image_file.image_file_name,
+                "software_version__platform__name": image_file.software_version.platform.name,
+                "software_version__version": image_file.software_version.version,
+            }
+            for image_file in software_image_files
+        ]
+        expected_nested = [
+            {
+                "image_file_name": image_file.image_file_name,
+                "software_version": {
+                    "platform": {"name": image_file.software_version.platform.name},
+                    "version": image_file.software_version.version,
+                },
+            }
+            for image_file in software_image_files
+        ]
+
+        row = self.export_rows(self.run_export(model=DeviceType, query_string="model=M2M+Composite+DT"))[0]
+        self.assertEqual(json.loads(row["software_image_files"]), expected_flat)
+
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                doc = self.export_document(
+                    self.run_export(
+                        model=DeviceType, query_string="model=M2M+Composite+DT", export_format=export_format
+                    )
+                )
+                self.assertEqual(doc["records"][0]["software_image_files"], expected_nested)
 
     def test_adapter_export__m2m_empty(self):
         """An M2M with no members is an empty cell in CSV and an empty list in either document format."""

@@ -18,6 +18,15 @@ class NautobotCSVParser(BaseParser):
 
     media_type = "text/csv"
 
+    @staticmethod
+    def split_list_cell(value):
+        """Split a comma-separated CSV cell into its member values.
+
+        Members are unquoted by CSV's own rules, so a member containing a comma, quote or newline is
+        recovered intact. Inverse of `renderers.join_list_cell`.
+        """
+        return next(csv.reader([value]), [])
+
     def parse(self, stream, media_type=None, parser_context=None):
         parser_context = parser_context or {}
         encoding = parser_context.get("encoding", "UTF-8")
@@ -136,9 +145,33 @@ class NautobotCSVParser(BaseParser):
 
         return data_without_missing_field_lookups_values
 
+    def _parse_m2m_cell(self, value):
+        """Parse a single-column M2M cell into the list of member references the serializer resolves.
+
+        Members with a composite natural key are exported as a JSON list of flattened lookups
+        (`[{"image_file_name": "a.bin", "software_version__version": "1.0"}]`), which nest exactly as the
+        equivalent column names would; anything else is the comma-separated form.
+        """
+        if value.startswith("["):
+            try:
+                members = json.loads(value)
+            except ValueError:
+                # Not JSON after all, just a member value that happens to start with a bracket
+                pass
+            else:
+                return [
+                    self._group_data_by_field_name(member) if isinstance(member, dict) else member for member in members
+                ]
+        return self.split_list_cell(value)
+
     def _convert_m2m_dict_to_list_of_dicts(self, data, field):
         """
         Converts a nested dictionary into list of flat dictionaries for M2M serializer.
+
+        This is an import-only dialect for hand-authored CSV, added in #7362: it spells an M2M's members
+        across several `<field>__<lookup>` columns, mirroring how a FK's natural key is spelled. Nautobot's
+        own export never writes it -- `_get_related_fields_natural_key_field_lookups` skips many-to-many
+        fields, so an export puts all the members in one column (see `_parse_m2m_cell`).
 
         Args:
             data (dict): Nested dictionary with comma-separated string values.
@@ -171,7 +204,7 @@ class NautobotCSVParser(BaseParser):
                 if isinstance(v, dict):
                     items.extend(flatten_dict(v, new_key).items())
                 else:
-                    items.append((new_key, v.split(",")))
+                    items.append((new_key, self.split_list_cell(v)))
             return dict(items)
 
         flat_data = flatten_dict(data)
@@ -222,10 +255,10 @@ class NautobotCSVParser(BaseParser):
 
             if isinstance(serializer_field, serializers.ManyRelatedField):
                 if value:
-                    # A list of related objects, represented as a list of composite-keys
+                    # A list of related objects, all in one column: what an export writes
                     if isinstance(value, str):
-                        value = value.split(",")
-                    # A dictionary of fields identifying the objects
+                        value = self._parse_m2m_cell(value)
+                    # The members spread across several `<field>__<lookup>` columns: hand-authored CSV only
                     elif isinstance(value, dict):
                         value = self._convert_m2m_dict_to_list_of_dicts(value, key)
                 else:
@@ -238,7 +271,7 @@ class NautobotCSVParser(BaseParser):
                     value = None
             elif isinstance(serializer_field, (serializers.ListField, serializers.MultipleChoiceField)):
                 if value:
-                    value = value.split(",")
+                    value = self.split_list_cell(value)
                 else:
                     value = []
             elif isinstance(serializer_field, (serializers.DictField, serializers.JSONField)):
@@ -254,7 +287,7 @@ class NautobotCSVParser(BaseParser):
                     if value.startswith(("{", "[")):
                         value = json.loads(value)
                     else:
-                        value = value.split(",")
+                        value = self.split_list_cell(value)
                         try:
                             # We have some cases where it's a list of integers, such as in RackReservation.units
                             value = [int(v) for v in value]

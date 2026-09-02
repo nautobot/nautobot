@@ -57,7 +57,7 @@ dependencies = [
     # Redis cache for Django used for distributed locking
     "django-redis (>=7.0.0,<7.1)",
     # Django silk for request profiling
-    "django-silk (>=5.5.0,<5.6)",
+    "django-silk (>=5.5.2,<5.6)",
     # Structured logging for Django
     "django-structlog[celery] (>=10.1.0,<10.2)",
     # Advanced HTML tables
@@ -78,7 +78,7 @@ dependencies = [
     # Emoji terminal output for Python.
     "emoji (>=2.15.0,<2.16)",
     # Git integrations for Python
-    "gitpython (>=3.1.58,<3.2)",
+    "gitpython (>=3.1.61,<3.2)",
     # GraphQL support
     "graphene-django (>=3.2.3,<3.3)",
     # Graphene Optimizer
@@ -98,7 +98,7 @@ dependencies = [
     #       we permit a looser (^) version constraint here.
     "netutils (>=1.14.0,<2)",
     # HTML sanitization
-    "nh3 (>=0.3.6,<0.4)",
+    "nh3 (>=0.3.7,<0.4)",
     # OpenTelemetry (opt-in tracing/metrics/logs; enabled via OTEL_PYTHON_DJANGO_INSTRUMENT).
     # The SDK/exporter (1.4x) and the instrumentation packages (0.6xb0) release in lockstep;
     # keep them on the same coordinated line when bumping.
@@ -224,21 +224,21 @@ mkdocs-section-index = "~0.3.12"
 # Automatic documentation from sources, for MkDocs
 mkdocstrings = "~1.0.6"
 # Python-specific extension to mkdocstrings
-mkdocstrings-python = "~2.0.5"
+mkdocstrings-python = "~2.0.7"
 
 [tool.poetry.group.linting.dependencies]
 # Django template files indenter
 djhtml = "~3.0.11"
 # Django template files linter and formatter
-djlint = "~1.44.1"
+djlint = "~1.44.2"
 # Code static analysis
-pylint = "~4.0.6"
+pylint = "~4.0.7"
 # Pylint extensions for Django
 pylint-django = "~2.8.0"
 # Python implementation of markdownlint
 pymarkdownlnt = "~0.9.39"
 # Combination linter and code formatter
-ruff = "~0.16.2"
+ruff = "~0.16.5"
 # YAML linting
 yamllint = "~1.38.0"
 

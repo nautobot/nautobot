@@ -7,6 +7,7 @@ from django.apps import apps as global_apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
+    FieldDoesNotExist,
     PermissionDenied,
 )
 from django.db import transaction
@@ -33,6 +34,7 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.data_validation import models
@@ -59,9 +61,10 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
+from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
+from nautobot.extras.utils import get_saved_view_or_none
 
 name = "System Jobs"
 
@@ -183,7 +186,14 @@ class ExportObjectList(Job):
     def _get_saved_view_filter_params(self, query_params):
         """Extract filter params from saved view if applicable."""
         if "saved_view" in query_params and "all_filters_removed" not in query_params:
-            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            # Not using get_saved_view_filter_params(), as that cannot distinguish a missing Saved View from one with no filter params.
+            saved_view = get_saved_view_or_none(query_params["saved_view"])
+            if saved_view is None:
+                self.logger.warning(
+                    "Saved view %s not found; exporting without its filter parameters.", query_params["saved_view"]
+                )
+                return {}
+            saved_view_filters = saved_view.config.get("filter_params", {})
             if len(query_params) > 1:
                 # Retain only filters also present in query_params
                 saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
@@ -238,7 +248,51 @@ class ExportObjectList(Job):
         # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
         # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
         serializer = serializer_class(queryset, many=True, context={"request": None}, exporting=True, force_csv=for_csv)
+        self._log_lossy_m2m_fields(model, serializer.child.fields)
         return serializer.data
+
+    def _log_lossy_m2m_fields(self, model, serializer_fields):
+        """Report each exported M2M field whose through model records data this file cannot represent.
+
+        A column of member natural keys says which objects are related but not what the through row says
+        about each pairing, so it is readable and diffable but not re-importable. Point at the through
+        model, which is exportable and importable as a content type in its own right.
+        """
+        for m2m_field in model._meta.many_to_many:
+            serializer_field = serializer_fields.get(m2m_field.name)
+            if serializer_field is None:
+                continue
+            through = m2m_field.remote_field.through
+            data_fields = m2m_through_data_fields(through)
+            if not data_fields:
+                continue
+            data_fields = self._omit_covered_through_fields(model, serializer_field, through, data_fields)
+            if data_fields:
+                self.logger.info(
+                    "`%s` is managed through `%s`, which also records %s. Those values are not part of this "
+                    "export; export `%s` as well to capture them.",
+                    m2m_field.name,
+                    through._meta.label_lower,
+                    ", ".join(f"`{field_name}`" for field_name in data_fields),
+                    through._meta.label_lower,
+                )
+
+    @staticmethod
+    def _omit_covered_through_fields(model, serializer_field, through, data_fields):
+        """Drop the through fields this column already carries.
+
+        Some serializers point an M2M field at the through model's own rows instead of at the far-side
+        objects (`SecretsGroup.secrets` reads `secrets_group_associations`). Those rows render by *their*
+        natural key, so any through field that key includes survives the export after all.
+        """
+        try:
+            source_field = model._meta.get_field(serializer_field.source)
+        except FieldDoesNotExist:
+            return data_fields
+        if getattr(source_field, "related_model", None) is not through:
+            return data_fields
+        covered = set(getattr(through, "natural_key_field_lookups", ()))
+        return [field_name for field_name in data_fields if field_name not in covered]
 
     @staticmethod
     def _export_filename(model):
