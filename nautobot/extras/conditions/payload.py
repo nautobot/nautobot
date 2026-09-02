@@ -65,14 +65,6 @@ def field_value(container, path):
     return event_value(current)
 
 
-def _serialized_data(object_change):
-    """Return the post-change serialization recorded on an ObjectChange, preferring the newer form."""
-    data = object_change.object_data_v2
-    if data is None:
-        data = object_change.object_data
-    return data
-
-
 def _assemble_payload(*, event, timestamp, model, username, request_id, data, snapshots):
     """The one place the payload's shape is defined.
 
@@ -118,6 +110,9 @@ def build_event_payload(object_change, snapshots=None):
         model=object_change.changed_object_type.model,
         username=object_change.user_name,
         request_id=str(object_change.request_id),
-        data=_serialized_data(object_change),
+        # Unconditional: `to_objectchange()` always serializes `object_data_v2`, and
+        # `serialize_object_v2()` never returns None - for a model without an API serializer it
+        # falls back to the older form internally. No v1-only row to guard against here.
+        data=object_change.object_data_v2,
         snapshots=snapshots,
     )

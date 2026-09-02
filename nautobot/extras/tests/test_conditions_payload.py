@@ -3,6 +3,8 @@
 from types import SimpleNamespace
 from unittest import TestCase
 
+from django.test import tag
+
 from nautobot.extras.conditions.payload import build_event_payload, event_value, field_value
 
 # The payload's documented shape. Condition expressions read these names; changing this set is an
@@ -24,14 +26,16 @@ def make_object_change(**overrides):
         "changed_object_type": SimpleNamespace(model="device"),
         "user_name": "kasia",
         "request_id": "req-1",
+        # `object_data` is deliberately absent: the builder reads only `object_data_v2`, so a
+        # reintroduced fallback to the older field fails loudly here instead of passing quietly.
         "object_data_v2": {"name": "sw-01", "status": {"id": "u1", "name": "Active"}},
-        "object_data": {"name": "sw-01", "status": "u1"},
         "get_snapshots": _fail_get_snapshots,
     }
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 
 
+@tag("unit")
 class EventValueTest(TestCase):
     """Reduction of a serialized field to the scalar a condition compares against."""
 
@@ -50,7 +54,10 @@ class EventValueTest(TestCase):
         self.assertEqual(event_value({"weird": 1}), {"weird": 1})
 
     def test_legacy_bare_pk_passes_untouched(self):
-        """Documented limitation: a v1 entry's bare UUID cannot be turned into a name without a query."""
+        """A related object recorded as a bare UUID stays a bare UUID: recovering the name would take
+        a query. Reachable both from an ObjectChange predating `object_data_v2` and from any model
+        without an API serializer, so this is a standing limitation rather than a legacy-only one -
+        recorded here, not papered over in the reduction."""
         self.assertEqual(event_value("b1c0f4b2-53ed-4b24-8750-7c7d31613d25"), "b1c0f4b2-53ed-4b24-8750-7c7d31613d25")
 
     def test_lists_normalize_element_by_element(self):
@@ -64,6 +71,7 @@ class EventValueTest(TestCase):
                 self.assertEqual(event_value(value), value)
 
 
+@tag("unit")
 class FieldValueTest(TestCase):
     """Dotted-path lookup with every failure resolving to None, never an exception."""
 
@@ -100,6 +108,7 @@ class FieldValueTest(TestCase):
         self.assertIsNone(field_value(self.DATA, 123))
 
 
+@tag("unit")
 class BuildEventPayloadTest(TestCase):
     def test_shape_is_exactly_the_documented_keys(self):
         payload = build_event_payload(make_object_change(), SNAPSHOTS)
@@ -141,14 +150,15 @@ class BuildEventPayloadTest(TestCase):
         self.assertEqual(len(calls), 1)
         self.assertIs(payload["snapshots"], SNAPSHOTS)
 
-    def test_data_prefers_v2(self):
+    def test_data_is_the_v2_serialization_itself(self):
+        """`data` is the serialized object, not the ObjectChange that carries it.
+
+        This is the one assertion pinning `data` to the right attribute; without it, passing the row
+        itself type-checks fine and every condition reading `data.<field>` silently stops matching.
+        """
         oc = make_object_change()
         self.assertEqual(build_event_payload(oc, SNAPSHOTS)["data"], oc.object_data_v2)
-
-    def test_data_falls_back_to_legacy_when_v2_missing(self):
-        """Old change-log rows and models without a REST serializer only carry `object_data`."""
-        oc = make_object_change(object_data_v2=None)
-        self.assertEqual(build_event_payload(oc, SNAPSHOTS)["data"], oc.object_data)
+        self.assertEqual(field_value(build_event_payload(oc, SNAPSHOTS)["data"], "status"), "Active")
 
     def test_timestamp_and_request_id_are_strings(self):
         class Uuidish:

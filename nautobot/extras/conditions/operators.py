@@ -29,6 +29,8 @@ from decimal import Decimal, InvalidOperation
 import operator as py_operator
 from typing import Any, Callable
 
+from nautobot.core.settings_funcs import is_truthy
+
 KIND_TEXT = "text"
 KIND_NUMBER = "number"
 KIND_BOOLEAN = "boolean"
@@ -36,10 +38,6 @@ KIND_DATE = "date"
 KIND_LIST = "list"
 
 ALL_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_BOOLEAN, KIND_DATE, KIND_LIST})
-
-# Strings accepted (case-insensitively) as booleans when the field's value is a real bool.
-_TRUE_TEXTS = frozenset({"true", "yes", "on", "1"})
-_FALSE_TEXTS = frozenset({"false", "no", "off", "0"})
 
 
 def _as_number(value):
@@ -71,13 +69,17 @@ def _as_text(value):
 
 
 def _as_bool(target):
-    """Interpret the form-supplied `target` string as a boolean, or None if it is neither."""
-    lowered = _as_text(target).strip().lower()
-    if lowered in _TRUE_TEXTS:
-        return True
-    if lowered in _FALSE_TEXTS:
-        return False
-    return None
+    """Interpret the stored `target` as a boolean, or None if it spells neither.
+
+    The accepted spellings are `is_truthy`'s. Two things are layered on
+    top: the target is stripped first, because a form strips its input but a REST API payload does
+    not, and the ValueError is swallowed - a saved rule meeting a target it cannot parse must fail
+    its row like any other non-match, not raise at dispatch time.
+    """
+    try:
+        return is_truthy(_as_text(target).strip())
+    except ValueError:
+        return None
 
 
 def _equals(value, target):

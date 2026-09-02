@@ -3,6 +3,8 @@
 from decimal import Decimal
 from unittest import TestCase
 
+from django.test import tag
+
 from nautobot.extras.conditions.operators import (
     _as_bool,
     _as_number,
@@ -22,6 +24,7 @@ from nautobot.extras.conditions.operators import (
 )
 
 
+@tag("unit")
 class AsNumberTest(TestCase):
     """It is precisely this numeric type forcing that makes the expression `mtu gt 9000` arithmetic rather than alphabetic."""
 
@@ -46,6 +49,7 @@ class AsNumberTest(TestCase):
         self.assertIsNone(_as_number(False))
 
 
+@tag("unit")
 class AsTextTest(TestCase):
     def test_none_becomes_empty_string(self):
         """choice: `= ""` matches both an empty and an unset field."""
@@ -57,23 +61,48 @@ class AsTextTest(TestCase):
         self.assertEqual(_as_text(True), "True")
 
 
+@tag("unit")
 class AsBoolTest(TestCase):
-    def test_truthy_spellings(self):
-        for text in ("true", "True", "TRUE", " yes ", "on", "1"):
-            with self.subTest(text=text):
-                self.assertIs(_as_bool(text), True)
+    """Only what this wrapper adds to `is_truthy`.
 
-    def test_falsy_spellings(self):
-        for text in ("false", "False", "no", "off", "0"):
-            with self.subTest(text=text):
-                self.assertIs(_as_bool(text), False)
+    The accepted spellings are `is_truthy`'s contract and are covered by `IsTruthyTest` in
+    `nautobot/core/tests/test_utils.py`.
+    """
 
-    def test_garbage_is_none(self):
-        for text in ("banana", "", "2", None):
-            with self.subTest(text=text):
-                self.assertIsNone(_as_bool(text))
+    def test_delegates_to_is_truthy(self):
+        """One case per direction, enough to catch a dropped or inverted delegation."""
+        self.assertIs(_as_bool("yes"), True)
+        self.assertIs(_as_bool("no"), False)
+
+    def test_unparseable_target_is_none_not_an_error(self):
+        """`is_truthy` raises ValueError, and absorbing it is this wrapper's reason to exist.
+
+        A stored condition must never become a dispatch-time exception, so an unparseable target
+        yields None and the row simply fails to match.
+        """
+        for target in ("banana", "", "2", None, 1500, []):
+            with self.subTest(target=target):
+                self.assertIsNone(_as_bool(target))
+
+    def test_padding_is_stripped_before_parsing(self):
+        """`is_truthy` does not strip, so `_as_bool` does.
+
+        A form strips its input before storing; a target written straight through the REST API does
+        not, and `" true "` must not become a silently unmatchable rule.
+        """
+        for target in (" yes ", "true\n", " 1", "\toff "):
+            with self.subTest(target=target):
+                self.assertIsNotNone(_as_bool(target))
+        self.assertIs(_as_bool(" yes "), True)
+        self.assertIs(_as_bool("\toff "), False)
+
+    def test_non_string_targets_resolve(self):
+        """A JSON `true` from the REST API arrives as a bool, not a string; `_as_text` routes it."""
+        self.assertIs(_as_bool(True), True)
+        self.assertIs(_as_bool(False), False)
 
 
+@tag("unit")
 class FieldMatchesTest(TestCase):
     """The full comparison matrix.
 
@@ -151,6 +180,7 @@ class FieldMatchesTest(TestCase):
                     self.assertIsInstance(result, bool)
 
 
+@tag("unit")
 class OperatorsForKindTest(TestCase):
     def test_boolean_gets_only_meaningful_operators(self):
         self.assertEqual([op.key for op in operators_for_kind(KIND_BOOLEAN)], ["=", "in"])
@@ -185,6 +215,7 @@ class OperatorsForKindTest(TestCase):
         self.assertEqual(reachable, set(FIELD_OPERATOR_KEYS))
 
 
+@tag("unit")
 class OperatorRegistryTest(TestCase):
     """Consistency of the module's public structures with each other."""
 

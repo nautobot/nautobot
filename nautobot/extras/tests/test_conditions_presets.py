@@ -4,6 +4,7 @@ import re
 from unittest import TestCase
 
 from django.core.exceptions import ValidationError
+from django.test import tag
 
 from nautobot.extras.conditions.presets import (
     BUILTIN_CONDITION_PRESETS,
@@ -39,6 +40,7 @@ class RegistryIsolationMixin:
         super().tearDown()
 
 
+@tag("unit")
 class PresetParameterCleanTest(TestCase):
     """The parameter validates its own value - kind, requiredness and choices live with it."""
 
@@ -67,6 +69,7 @@ class PresetParameterCleanTest(TestCase):
         self.assertEqual(PresetParameter(name="field", label="Field").context_name, f"{PARAM_CONTEXT_PREFIX}field")
 
 
+@tag("unit")
 class CleanParamsTest(TestCase):
     """The preset checks what only it can know; errors carry the preset key for multi-row forms."""
 
@@ -97,6 +100,7 @@ class CleanParamsTest(TestCase):
         FIELD_TRANSITION.clean_params({"field": "status", "from": "Staged", "to": "Active"})
 
 
+@tag("unit")
 class ContextVariablesTest(TestCase):
     """The single producer of the `param_*` convention the sources consume."""
 
@@ -117,6 +121,7 @@ class ContextVariablesTest(TestCase):
         self.assertEqual(context, {"param_username": "kasia"})
 
 
+@tag("unit")
 class RegistrationTest(RegistryIsolationMixin, TestCase):
     def test_register_and_get(self):
         preset = make_preset()
@@ -150,6 +155,7 @@ class RegistrationTest(RegistryIsolationMixin, TestCase):
         self.assertIsNone(get_condition_preset("no_such_preset"))
 
 
+@tag("unit")
 class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
     """Structural pins on what ships. A change here changes existing rules' behaviour on upgrade -
     which is sometimes the point (the field_changed guard was exactly that), but never an accident."""
