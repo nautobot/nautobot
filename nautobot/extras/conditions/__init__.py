@@ -18,7 +18,6 @@ from nautobot.extras.conditions.operators import (
 )
 from nautobot.extras.conditions.payload import (
     build_event_payload,
-    event_value,
     field_value,
 )
 
