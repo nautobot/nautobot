@@ -29,7 +29,6 @@ __all__ = (
     "KIND_NUMBER",
     "KIND_TEXT",
     "build_event_payload",
-    "event_value",
     "field_matches",
     "field_value",
     "operators_for_kind",

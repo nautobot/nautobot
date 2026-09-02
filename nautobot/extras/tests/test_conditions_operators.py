@@ -302,9 +302,8 @@ class FieldMatchesTest(TestCase):
                         self.assertIsInstance(field_matches(value, operator_key, target), bool)
 
     def test_non_scalar_values_never_match(self):
-        """A mapping `event_value` could not reduce, bytes, an arbitrary object, NaN: none of these
-        is a scalar a stored target could describe, so every operator returns False rather than
-        falling through to a comparison of their repr."""
+        """A mapping (a relation without a sub-field), bytes, an arbitrary object, NaN: none of these
+        is a scalar a target could describe, so every operator returns False."""
         garbage = ({}, {"name": "Active"}, object(), b"bytes", float("nan"))
         targets = ("target", "", "9000", "nan", "{}", ["a", "b"], [])
         for operator_key in FIELD_OPERATOR_KEYS:
