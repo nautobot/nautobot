@@ -294,7 +294,7 @@ if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_C
 # Header contract defined here: https://www.w3.org/TR/server-timing/
 # Report the total server-side duration of each request in a W3C `Server-Timing` response header.
 REQUEST_TOTAL_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED", "False"))
-# Report the duration of each database query in a W3C `Server-Timing` response header.
+# Report the total duration of database queries in a W3C `Server-Timing` response header.
 REQUEST_DB_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED", "False"))
 
 # Global 3rd-party authentication settings

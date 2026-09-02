@@ -2097,7 +2097,7 @@ properties:
     description: >-
       When `true` Nautobot reports the total time spent processing each request. This is
       added to the response header `Server-Timing` field.
-      Example: `Server-Timing: total;dur=42.71;desc="Total Request Duration"`, where `dur` is milliseconds.
+      Example: `Server-Timing: total;dur=42.71;desc="Total request duration"`, where `dur` is milliseconds.
     details: |-
       Measures total request processing time.
     environment_variable: "NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED"

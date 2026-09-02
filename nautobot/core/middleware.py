@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from contextlib import ExitStack
 import json
 import logging
@@ -367,7 +368,7 @@ class GraphQLOpenTelemetryMiddleware:
         return None
 
 
-class BaseRequestMetric:
+class BaseRequestMetric(ABC):
     """An abstract class used to track metrics for a request.
 
     Attributes:
@@ -381,22 +382,23 @@ class BaseRequestMetric:
 
     duration_in_milliseconds = 0.0
 
-    def __init__(self):
-        raise NotImplementedError("Implement Metric __init__")
-
     @property
+    @abstractmethod
     def name(self):
-        raise NotImplementedError("Implement Metric Name")
+        """The metric name."""
 
     @property
+    @abstractmethod
     def description(self):
-        raise NotImplementedError("Implement Metric Description")
+        """A description of the metric."""
 
+    @abstractmethod
     def __enter__(self):
-        raise NotImplementedError("Implement Metric __enter__")
+        pass
 
+    @abstractmethod
     def __exit__(self, *exception_info):
-        raise NotImplementedError("Implement Metric __exit__")
+        pass
 
 
 class TotalDurationRequestMetric(BaseRequestMetric):
@@ -410,15 +412,12 @@ class TotalDurationRequestMetric(BaseRequestMetric):
     def description(self):
         return "Total request duration"
 
-    def __init__(self):
-        pass  # Nothing Needed
-
     def __enter__(self):
-        self.start_time = time.perf_counter()
+        self.start_time = time.perf_counter_ns()
         return self
 
     def __exit__(self, *exception_info):
-        self.duration_in_milliseconds = (time.perf_counter() - self.start_time) * 1000
+        self.duration_in_milliseconds = (time.perf_counter_ns() - self.start_time) / 1_000_000
         return False
 
 
@@ -452,12 +451,12 @@ class DatabaseDurationRequestMetric(BaseRequestMetric):
         return False
 
     def __call__(self, execute, sql, params, many, context):
-        self.start_time = time.perf_counter()
+        self.start_time = time.perf_counter_ns()
         try:
             return execute(sql, params, many, context)
         finally:
             self.query_count += 1
-            self.duration_in_milliseconds += (time.perf_counter() - self.start_time) * 1000
+            self.duration_in_milliseconds += (time.perf_counter_ns() - self.start_time) / 1_000_000
 
 
 class RequestMetricMiddleware:
