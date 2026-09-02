@@ -10,7 +10,7 @@ from nautobot.extras.conditions.presets import (
     BUILTIN_CONDITION_PRESETS,
     ConditionPreset,
     FIELD_CHANGED,
-    FIELD_OPERATOR,
+    FIELD_COMPARE,
     FIELD_TRANSITION,
     get_condition_preset,
     get_condition_presets,
@@ -19,6 +19,7 @@ from nautobot.extras.conditions.presets import (
     register_builtin_condition_presets,
     register_condition_preset,
     USER_IS,
+    VALIDATION_CODE,
 )
 from nautobot.extras.registry import registry
 
@@ -65,39 +66,69 @@ class PresetParameterCleanTest(TestCase):
         with self.assertRaisesRegex(ValidationError, re.escape("must be one of: =, gt")):
             parameter.clean("regex")
 
+    def test_multiple_accepts_a_list_of_strings(self):
+        """The form's MultiValueCharField stores a list; `_as_target_list` accepts it downstream."""
+        parameter = PresetParameter(name="value", label="Value", multiple=True)
+        parameter.clean(["a", "b"])
+        parameter.clean("a,b")
+
+    def test_multiple_rejects_non_string_entries(self):
+        """Storage is uniformly text, inside a list as much as outside it."""
+        parameter = PresetParameter(name="value", label="Value", multiple=True)
+        with self.assertRaisesRegex(ValidationError, re.escape("entries must be strings")):
+            parameter.clean(["a", 1500])
+
+    def test_single_valued_parameter_rejects_a_list(self):
+        """A list left over from a set-valued operator must fail loudly, not silently never match."""
+        with self.assertRaisesRegex(ValidationError, re.escape("takes a single value, not a list")):
+            PresetParameter(name="field", label="Field").clean(["a"])
+
+    def test_required_rejects_empty_list(self):
+        with self.assertRaisesRegex(ValidationError, re.escape("`value` is required")):
+            PresetParameter(name="value", label="Value", multiple=True).clean([])
+
     def test_context_name_applies_the_prefix(self):
         self.assertEqual(PresetParameter(name="field", label="Field").context_name, f"{PARAM_CONTEXT_PREFIX}field")
 
 
 @tag("unit")
-class CleanParamsTest(TestCase):
-    """The preset checks what only it can know; errors carry the preset key for multi-row forms."""
+class CleanValuesTest(TestCase):
+    """The preset checks what only it can know; errors carry preset and parameter as structured data."""
 
     def test_none_means_no_params_and_fails_on_required(self):
         with self.assertRaisesRegex(ValidationError, re.escape("Preset `field_changed`")):
-            FIELD_CHANGED.clean_params(None)
+            FIELD_CHANGED.clean_values(None)
 
     def test_non_mapping_rejected(self):
         with self.assertRaisesRegex(ValidationError, re.escape("must be a mapping")):
-            FIELD_CHANGED.clean_params(["field"])
+            FIELD_CHANGED.clean_values(["field"])
 
     def test_unknown_parameters_named_alongside_accepted(self):
         with self.assertRaisesRegex(ValidationError, re.escape("does not accept parameter(s): extra")):
-            FIELD_CHANGED.clean_params({"field": "status", "extra": "x"})
+            FIELD_CHANGED.clean_values({"field": "status", "extra": "x"})
 
-    def test_parameter_error_is_wrapped_with_preset_context(self):
-        try:
-            FIELD_OPERATOR.clean_params({"field": "mtu", "operator": "gt"})
-        except ValidationError as error:
-            message = "; ".join(error.messages)
-            self.assertIn("field_compare", message)
-            self.assertIn("`value` is required", message)
-        else:
-            self.fail("ValidationError not raised")
+    def test_parameter_error_carries_preset_and_parameter_as_params(self):
+        """A form re-shapes these onto its own fields via `code` and `params`, not by parsing text."""
+        with self.assertRaises(ValidationError) as caught:
+            FIELD_COMPARE.clean_values({"field": "mtu", "operator": "gt"})
+        error = caught.exception
+        self.assertEqual(error.code, VALIDATION_CODE)
+        self.assertEqual(error.params["preset"], "field_compare")
+        self.assertEqual(error.params["parameter"], "value")
+        self.assertIn("field_compare", error.message)
+        self.assertIn("`value` is required", error.message)
+
+    def test_preset_level_errors_carry_the_preset_key(self):
+        for values in (["field"], {"field": "x", "extra": "y"}):
+            with self.subTest(values=values):
+                with self.assertRaises(ValidationError) as caught:
+                    FIELD_CHANGED.clean_values(values)
+                self.assertEqual(caught.exception.code, VALIDATION_CODE)
+                self.assertEqual(caught.exception.params["preset"], "field_changed")
 
     def test_valid_params_pass(self):
-        FIELD_OPERATOR.clean_params({"field": "mtu", "operator": "gt", "value": "9000"})
-        FIELD_TRANSITION.clean_params({"field": "status", "from": "Staged", "to": "Active"})
+        FIELD_COMPARE.clean_values({"field": "mtu", "operator": "gt", "value": "9000"})
+        FIELD_TRANSITION.clean_values({"field": "status", "from": "Staged", "to": "Active"})
 
 
 @tag("unit")
@@ -108,13 +139,28 @@ class ContextVariablesTest(TestCase):
         context = FIELD_TRANSITION.context_variables({"field": "status", "from": "Staged", "to": "Active"})
         self.assertEqual(context, {"param_field": "status", "param_from": "Staged", "param_to": "Active"})
 
-    def test_every_declared_parameter_is_present_missing_as_none(self):
+    def test_missing_optional_parameter_is_none(self):
         """An expression must never meet Jinja2 Undefined for its own parameter."""
-        context = FIELD_OPERATOR.context_variables({"field": "mtu"})
-        self.assertEqual(context, {"param_field": "mtu", "param_operator": None, "param_value": None})
-        self.assertEqual(USER_IS.context_variables(None), {"param_username": None})
+        preset = make_preset(
+            parameters=(
+                PresetParameter(name="field", label="Field"),
+                PresetParameter(name="note", label="Note", required=False),
+            )
+        )
+        self.assertEqual(preset.context_variables({"field": "mtu"}), {"param_field": "mtu", "param_note": None})
 
-    def test_undeclared_params_do_not_leak_into_context(self):
+    def test_missing_required_parameter_raises(self):
+        """A broken row is an error for the engine's fail-closed path to log, not a None to compare
+        against another None and quietly fire on."""
+        with self.assertRaises(ValidationError) as caught:
+            FIELD_COMPARE.context_variables({"field": "mtu"})
+        self.assertEqual(caught.exception.code, VALIDATION_CODE)
+        self.assertEqual(caught.exception.params["preset"], "field_compare")
+        self.assertEqual(caught.exception.params["missing"], ["operator", "value"])
+        with self.assertRaises(ValidationError):
+            USER_IS.context_variables(None)
+
+    def test_undeclared_values_do_not_leak_into_context(self):
         """`context_variables` iterates declared parameters, so a stray stored key (edited JSON,
         an older schema) cannot smuggle a variable into the expression's namespace."""
         context = USER_IS.context_variables({"username": "kasia", "rogue": "x"})
@@ -177,6 +223,11 @@ class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
         path for the two to drift apart on."""
         self.assertNotIn("user_is_not", [preset.key for preset in BUILTIN_CONDITION_PRESETS])
 
+    def test_field_transition_guards_against_creates(self):
+        """A transition is an update by definition; the guard says so rather than relying on the
+        None comparisons on create and delete happening to fail."""
+        self.assertTrue(FIELD_TRANSITION.source.startswith("event == 'updated'"))
+
     def test_field_changed_guards_against_creates(self):
         """On a create, differences.added holds the whole object; without the event guard every
         field would count as changed on every create. Documented semantics, not an optimisation."""
@@ -188,8 +239,8 @@ class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
         for preset in BUILTIN_CONDITION_PRESETS:
             with self.subTest(preset=preset.key):
                 used = set(re.findall(rf"{PARAM_CONTEXT_PREFIX}\w+", preset.source))
-                produced = set(preset.context_variables({}))
-                self.assertLessEqual(used, produced)
+                declared = {parameter.context_name for parameter in preset.parameters}
+                self.assertLessEqual(used, declared)
 
     def test_presets_are_immutable(self):
         with self.assertRaises(AttributeError):
@@ -197,8 +248,10 @@ class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
 
     def test_schema_serialization_shape(self):
         """The catalog endpoint and the form read this shape; external tooling builds rules from it."""
-        as_dict = FIELD_OPERATOR.as_dict()
-        self.assertEqual(set(as_dict), {"key", "label", "description", "params_schema"})
-        operator_schema = as_dict["params_schema"][1]
+        as_dict = FIELD_COMPARE.as_dict()
+        self.assertEqual(set(as_dict), {"key", "label", "description", "parameters_schema"})
+        operator_schema, value_schema = as_dict["parameters_schema"][1], as_dict["parameters_schema"][2]
         self.assertEqual(operator_schema["kind"], "choice")
         self.assertEqual(operator_schema["choices"][0], {"value": "=", "label": "= (equals)"})
+        self.assertTrue(value_schema["multiple"])
+        self.assertFalse(operator_schema["multiple"])

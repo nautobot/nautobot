@@ -1,17 +1,13 @@
 """Catalog of built-in condition presets.
 
-A preset is a parameter schema paired with a Jinja2 expression written by a Nautobot developer. It
-exists so the common conditions ("this field changed", "this field went from X to Y") need no
-expression written by the user at all.
+A preset pairs a parameter schema with a fixed Jinja2 expression, so the common conditions ("this
+field changed", "this field went from X to Y") need no expression written by the user.
 
-What a user fills in never becomes part of the expression text. Parameters are handed to the
-expression as context variables (`param_field`, `param_from`, and so on) at the moment it runs, so a
-preset's expression is a constant that compiles exactly once and there is no string assembly
-anywhere for a user to inject into. The `param_` convention has exactly one owner:
-`ConditionPreset.context_variables` produces the mapping, and the sources below consume it.
+User-supplied values never become part of the expression text. They enter the render context as
+`param_*` variables, produced by `ConditionPreset.context_variables`, so each expression is a constant
+that compiles once and contains nothing user-written.
 
-There is deliberately no negated twin of any preset. Negation is the condition row's `negate` flag,
-which inverts presets and raw expressions alike.
+There is no negated variant of any preset; negation is the condition row's `negate` flag.
 """
 
 from dataclasses import dataclass, field as dataclass_field
@@ -31,15 +27,14 @@ PARAM_KIND_CHOICE = "choice"
 # Prefix under which a preset's parameters appear in its expression's render context.
 PARAM_CONTEXT_PREFIX = "param_"
 
+# `code` carried by every ValidationError raised here; `params` names the preset and, where one is
+# at fault, the parameter.
+VALIDATION_CODE = "condition_preset"
+
 
 @dataclass(frozen=True)
 class PresetParameter:
-    """One parameter a preset accepts from the user.
-
-    The parameter owns its own validation (`clean`): it is the one thing that knows its kind,
-    whether it is required, and which choices it allows, so the preset delegates per-value checks
-    here instead of re-deriving them from the schema.
-    """
+    """One parameter a preset accepts from the user. It validates its own values (`clean`)."""
 
     name: str
     label: str
@@ -48,6 +43,9 @@ class PresetParameter:
     help_text: str = ""
     # For a `choice` parameter, the accepted `(value, label)` pairs. Empty for any other kind.
     choices: tuple = ()
+    # Whether a list of values is accepted as well as a single one. `operators.takes_a_set` decides
+    # when the form offers one.
+    multiple: bool = False
 
     @property
     def context_name(self):
@@ -59,17 +57,31 @@ class PresetParameter:
         Validate one user-supplied value against this parameter's schema.
 
         Raises:
-            ValidationError: If a required value is missing or empty, the value is not a string, or
-                a choice parameter is given a value outside its declared choices.
+            ValidationError: If a required value is missing or empty, the value is not a string (or
+                a list of strings, for a `multiple` parameter), or a choice parameter is given a
+                value outside its declared choices. The error carries `code=VALIDATION_CODE` and
+                `params={"parameter": <name>}`.
         """
-        if self.required and (value is None or value == ""):
-            raise ValidationError(f"Parameter `{self.name}` is required.")
-        if value is not None and not isinstance(value, str):
-            raise ValidationError(f"Parameter `{self.name}` must be a string, not {type(value).__name__}.")
+        if self.required and value in (None, "", []):
+            self._fail("is required.")
+        if isinstance(value, (list, tuple)):
+            if not self.multiple:
+                self._fail("takes a single value, not a list.")
+            if not all(isinstance(item, str) for item in value):
+                self._fail("entries must be strings.")
+        elif value is not None and not isinstance(value, str):
+            self._fail(f"must be a string, not {type(value).__name__}.")
         if self.choices and value:
             allowed = [choice_value for choice_value, _ in self.choices]
             if value not in allowed:
-                raise ValidationError(f"Parameter `{self.name}` must be one of: {', '.join(allowed)}.")
+                self._fail(f"must be one of: {', '.join(allowed)}.")
+
+    def _fail(self, problem):
+        raise ValidationError(
+            f"Parameter `{self.name}` {problem}",
+            code=VALIDATION_CODE,
+            params={"parameter": self.name},
+        )
 
     def as_dict(self):
         return {
@@ -77,6 +89,7 @@ class PresetParameter:
             "label": self.label,
             "kind": self.kind,
             "required": self.required,
+            "multiple": self.multiple,
             "help_text": self.help_text,
             "choices": [{"value": value, "label": label} for value, label in self.choices],
         }
@@ -93,7 +106,7 @@ class ConditionPreset:
     parameters: tuple = dataclass_field(default_factory=tuple)
 
     @property
-    def params_schema(self):
+    def parameters_schema(self):
         """JSON-serializable description of this preset's parameters, for the API and the form."""
         return [parameter.as_dict() for parameter in self.parameters]
 
@@ -102,52 +115,76 @@ class ConditionPreset:
             "key": self.key,
             "label": self.label,
             "description": self.description,
-            "params_schema": self.params_schema,
+            "parameters_schema": self.parameters_schema,
         }
 
-    def clean_params(self, params):
+    def clean_values(self, values):
         """
-        Validate user-supplied `params` against this preset's schema.
+        Validate the user-supplied `values` mapping against this preset's parameters.
 
-        The preset checks what only it can know (the value is a mapping, no unknown names); each
-        parameter checks its own value. Errors carry the preset key so a multi-row form can say
-        which row's which field is wrong.
+        The preset checks that `values` is a mapping with no unknown names; each parameter checks
+        its own value. Every error carries `code=VALIDATION_CODE` and `params` naming the preset
+        and, where one is at fault, the parameter.
 
         Raises:
-            ValidationError: If `params` is not a mapping, names an unknown parameter, or any
+            ValidationError: If `values` is not a mapping, names an unknown parameter, or any
                 parameter's own validation fails.
         """
-        if params is None:
-            params = {}
-        if not isinstance(params, dict):
-            raise ValidationError(f"Preset `{self.key}` params must be a mapping.")
+        if values is None:
+            values = {}
+        if not isinstance(values, dict):
+            raise ValidationError(
+                f"Preset `{self.key}` values must be a mapping.",
+                code=VALIDATION_CODE,
+                params={"preset": self.key},
+            )
 
         known = {parameter.name for parameter in self.parameters}
-        unknown = sorted(set(params) - known)
+        unknown = sorted(set(values) - known)
         if unknown:
             raise ValidationError(
                 f"Preset `{self.key}` does not accept parameter(s): {', '.join(unknown)}. "
-                f"Accepted: {', '.join(sorted(known)) or 'none'}."
+                f"Accepted: {', '.join(sorted(known)) or 'none'}.",
+                code=VALIDATION_CODE,
+                params={"preset": self.key, "unknown": unknown},
             )
 
         for parameter in self.parameters:
             try:
-                parameter.clean(params.get(parameter.name))
+                parameter.clean(values.get(parameter.name))
             except ValidationError as error:
-                raise ValidationError(f"Preset `{self.key}`: {'; '.join(error.messages)}") from error
+                raise ValidationError(
+                    f"Preset `{self.key}`: {error.message}",
+                    code=error.code,
+                    params={**(error.params or {}), "preset": self.key},
+                ) from error
 
-    def context_variables(self, params):
+    def context_variables(self, values):
         """
-        Map stored form values to the `param_*` variables this preset's expression reads.
+        Map stored `values` to the `param_*` variables this preset's expression reads.
 
-        Every declared parameter is present in the result, an absent or optional one as None, so the
-        expression never meets Jinja2 `Undefined` for its own parameters and needs no is-defined
-        guards. This method is the single producer of the `param_` naming convention; the engine
-        renders with exactly this mapping and never builds the names itself.
+        Every declared parameter is present in the result, so the expression never meets Jinja2
+        `Undefined` for its own parameters. An optional parameter that was not given is None. A
+        required one that was not given raises: the row is invalid, and the engine's fail-closed
+        handling reports it rather than evaluating against None.
+
+        Raises:
+            ValidationError: If a required parameter has no value. Carries `code=VALIDATION_CODE`
+                and `params={"preset": ..., "missing": [...]}`.
         """
-        params = params or {}
-        return {parameter.context_name: params.get(parameter.name) for parameter in self.parameters}
-
+        values = values or {}
+        missing = [
+            parameter.name
+            for parameter in self.parameters
+            if parameter.required and values.get(parameter.name) in (None, "", [])
+        ]
+        if missing:
+            raise ValidationError(
+                f"Preset `{self.key}` is missing required parameter(s): {', '.join(missing)}.",
+                code=VALIDATION_CODE,
+                params={"preset": self.key, "missing": missing},
+            )
+        return {parameter.context_name: values.get(parameter.name) for parameter in self.parameters}
 
 def register_condition_preset(preset):
     """
@@ -184,8 +221,11 @@ FIELD_TRANSITION = ConditionPreset(
     key="field_transition",
     label="Field transition",
     description="Fires when a field moves from one specific value to another specific value.",
+    # A transition is an update by definition: on a create `prechange` is None, on a delete
+    # `postchange` is None.
     source=(
-        "field_value(snapshots.prechange, param_field) == param_from"
+        "event == 'updated'"
+        " and field_value(snapshots.prechange, param_field) == param_from"
         " and field_value(snapshots.postchange, param_field) == param_to"
     ),
     parameters=(
@@ -199,19 +239,21 @@ FIELD_CHANGED = ConditionPreset(
     key="field_changed",
     label="Field changed",
     description="Fires when a field's value changed within an update, regardless of what it changed to.",
-    # The event guard is what keeps this honest on creates: a freshly created object's differences
-    # contain the whole object, so without it every field would count as "changed" on every create.
+    # On a create, `differences.added` holds the whole object, so without the event guard every
+    # field would count as changed.
     source="event == 'updated' and param_field in (snapshots.differences.added or {})",
     parameters=(PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD, help_text="Field to watch."),),
 )
 
-FIELD_OPERATOR = ConditionPreset(
+FIELD_COMPARE = ConditionPreset(
     key="field_compare",
     label="Field compare",
     description=(
         "Fires when a field compares as chosen against a value. The comparison reads the object's "
         "recorded state: after the change for creates and updates, the last known state for deletes."
     ),
+    # `data` rather than `snapshots.postchange`: it holds the recorded state for every event type,
+    # including the last known state on a delete, where `postchange` is None.
     source="field_matches(field_value(data, param_field), param_operator, param_value)",
     parameters=(
         PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD, help_text="Field to compare."),
@@ -225,7 +267,12 @@ FIELD_OPERATOR = ConditionPreset(
         PresetParameter(
             name="value",
             label="Value",
-            help_text="Entered and stored as text; how it compares is decided by the operator (numbers numerically, dates as ISO strings, booleans case-insensitively).",
+            multiple=True,
+            help_text=(
+                "Entered and stored as text; how it compares is decided by the operator (numbers "
+                "numerically, dates as ISO strings, booleans case-insensitively). A set of values for "
+                "`in`, and for `=` on a many-valued field."
+            ),
         ),
     ),
 )
@@ -246,7 +293,7 @@ USER_IS = ConditionPreset(
 BUILTIN_CONDITION_PRESETS = (
     FIELD_TRANSITION,
     FIELD_CHANGED,
-    FIELD_OPERATOR,
+    FIELD_COMPARE,
     USER_IS,
 )
 
