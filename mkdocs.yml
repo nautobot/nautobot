@@ -1,5 +1,6 @@
 ---
 dev_addr: "127.0.0.1:8001"
+docs_dir: "nautobot/docs"
 edit_uri: "edit/main/nautobot/docs"
 site_dir: "nautobot/project-static/docs"
 site_name: "Nautobot Documentation"
@@ -13,7 +14,7 @@ strict: true
 theme:
   name: "material"
   navigation_depth: 4
-  custom_dir: "docs/assets/overrides"
+  custom_dir: "nautobot/docs/assets/overrides"
   hljs_languages:
     - "django"
     - "graphql"
@@ -93,7 +94,7 @@ markdown_extensions:
       permalink: true
   - "attr_list"
   - "markdown_data_tables":
-      base_path: "docs"
+      base_path: "nautobot/docs"
   - "md_in_html"
   - "pymdownx.details"
     # Need pymdownx.emoji for Grid icon search
@@ -117,11 +118,11 @@ plugins:
   - "search"
   - "gen-files":
       scripts:
-        - docs/generate_code_reference_pages.py
+        - nautobot/docs/generate_code_reference_pages.py
   - "glightbox":
       manual: true # See https://blueswen.github.io/mkdocs-glightbox/flexibility/enable-by-image-or-page/
   - "macros":
-      module_name: "docs/macros"
+      module_name: "nautobot/docs/macros"
       on_error_fail: true
       on_undefined: "strict"
       render_by_default: false # Only enable macros and Jinja2 rendering on specific pages
