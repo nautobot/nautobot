@@ -77,10 +77,12 @@
                                                     <a href="{% url 'dcim:virtualchassis_remove_member' pk=device.pk %}?return_url={% url 'dcim:virtualchassis_edit' pk=virtual_chassis.pk %}"
                                                        class="btn btn-danger btn-sm">
                                                         <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                        <span class="visually-hidden">Remove {{ device }} from the virtual chassis</span>
                                                     </a>
                                                 {% else %}
                                                     <a aria-disabled="true" class="btn btn-danger btn-sm disabled">
                                                         <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                                                        <span class="visually-hidden">The master {{ device }} cannot be removed</span>
                                                     </a>
                                                 {% endif %}
                                             {% endif %}

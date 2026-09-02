@@ -1,4 +1,5 @@
 import contextvars
+import heapq
 import logging
 import operator
 from typing import Optional
@@ -52,6 +53,88 @@ logger = logging.getLogger(__name__)
 default_namespace_pk = contextvars.ContextVar("default_namespace_pk", default=None)
 
 
+class NamespaceParentedModelMixin:
+    """
+    Shared behavior for models that live inside a Namespace and whose parent Prefix
+    is auto-resolved from one or more bare host values (IPAddress, IPAddressRange).
+
+    Handles namespace resolution, closest-parent lookup, and change-tracking
+    snapshots of parent_id plus the host fields declared by the subclass.
+    """
+
+    #: VarbinaryIP field names to snapshot for change detection. parent_id is always tracked.
+    _change_tracked_host_fields = ()
+
+    def __init__(self, *args, namespace=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._parent_id = None
+        self._closest_parent_cache = {}
+        for field_name in self._change_tracked_host_fields:
+            setattr(self, f"_{field_name}", None)
+        if namespace is not None and not self.present_in_database:
+            self._provided_namespace = namespace
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        # Cache original values so clean()/save() can detect edits to immutable fields.
+        tracked = set(cls._change_tracked_host_fields)
+        for field_name, value in zip(field_names, values):
+            if field_name == "parent_id":
+                instance._parent_id = value
+            elif field_name in tracked:
+                setattr(instance, f"_{field_name}", value)
+        return instance
+
+    def save(self, *args, **kwargs):
+        self.clean()  # MUST do data fixup (parent resolution, normalization) before saving
+        super().save(*args, **kwargs)
+        self._snapshot_tracked_fields()
+
+    def _snapshot_tracked_fields(self):
+        """Re-cache field values after save so later edits to immutable fields are detectable."""
+        self._parent_id = self.parent_id
+        for field_name in self._change_tracked_host_fields:
+            setattr(self, f"_{field_name}", getattr(self, field_name))
+
+    @property
+    def _namespace(self):
+        # if a namespace was explicitly set, use it
+        if getattr(self, "_provided_namespace", None):
+            return self._provided_namespace
+        if self.parent_id is not None:
+            return self.parent.namespace
+        return get_default_namespace()
+
+    @_namespace.setter
+    def _namespace(self, namespace):
+        if namespace:
+            self.parent = None
+        self._provided_namespace = namespace
+
+    def _get_closest_parent(self, host):
+        """
+        Return the narrowest Prefix in this object's namespace containing `host`.
+        Returns None for an empty host; raises ValidationError when no containing
+        Prefix exists in the namespace. Memoized per (namespace, host).
+        """
+        empty_values = [None, b"", ""]
+        if host in empty_values:
+            return None
+        namespace = self._namespace
+        cache_key = (namespace.pk, host)
+        if cache_key in self._closest_parent_cache:
+            return self._closest_parent_cache[cache_key]
+        try:
+            parent = Prefix.objects.filter(namespace=namespace).get_closest_parent(host, include_self=True)
+        except Prefix.DoesNotExist as e:
+            raise ValidationError(
+                {"namespace": f"No suitable parent Prefix for {host} exists in Namespace {namespace}"}
+            ) from e
+        self._closest_parent_cache[cache_key] = parent
+        return parent
+
+
 @extras_features(
     "custom_links",
     "custom_validators",
@@ -84,6 +167,11 @@ class Namespace(PrimaryModel):
     def ip_addresses(self):
         """Return all IPAddresses associated to this Namespace through their parent Prefix."""
         return IPAddress.objects.filter(parent__namespace=self).distinct()
+
+    @property
+    def ip_address_ranges(self):
+        """Return all IPAddressRanges associated to this Namespace through their parent Prefix."""
+        return IPAddressRange.objects.filter(parent__namespace=self).distinct()
 
     class Meta:
         ordering = ("name",)
@@ -735,14 +823,24 @@ class Prefix(PrimaryModel):
             if self.parent is None and self.ip_addresses.exists():
                 raise models.ProtectedError(
                     msg=(
-                        f"Cannot delete Prefix {self} because it has child IPAddress objects that "
-                        "would no longer have a valid parent."
+                        f"Cannot delete Prefix {self} because it has child IP Address objects that "
+                        "would no longer have a valid parent: "
                     ),
                     protected_objects=self.ip_addresses.all(),
                 )
 
+            if self.parent is None and self.ip_address_ranges.exists():
+                raise models.ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {self} because it has child IP Address Range objects that "
+                        "would no longer have a valid parent: "
+                    ),
+                    protected_objects=self.ip_address_ranges.all(),
+                )
+
             self.children.update(parent=self.parent)
             self.ip_addresses.update(parent=self.parent)
+            self.ip_address_ranges.update(parent=self.parent)
             return super().delete(*args, **kwargs)
 
     def get_parent(self):
@@ -815,6 +913,26 @@ class Prefix(PrimaryModel):
                     {
                         "__all__": f"{orphaned_ips_count} existing IP addresses (including "
                         f"{orphaned_ips.first().host}) would no longer have a valid parent Prefix after this change."
+                    }
+                )
+
+        if self._networking_values_changed:
+            # Prefix edit must not push any contained IPAddressRange outside the new span.
+            orphaned_ranges = self.ip_address_ranges.exclude(
+                ip_version=self.ip_version,
+                start_host__gte=self.network,
+                end_host__lte=self.broadcast,
+            )
+            if orphaned_ranges.exists():
+                orphaned_range = orphaned_ranges.first()
+                raise ValidationError(
+                    {
+                        "__all__": (
+                            f"Cannot modify Prefix: IP Address Range "
+                            f"'{orphaned_range.start_address} - {orphaned_range.end_address}' "
+                            "would no longer be fully contained within this Prefix. "
+                            "Modify or delete the IP Address Range first."
+                        )
                     }
                 )
 
@@ -900,6 +1018,7 @@ class Prefix(PrimaryModel):
                 # Claim and/or un-claim child prefixes and IPs
                 self.reparent_subnets()
                 self.reparent_ips()
+                self.reparent_ip_address_ranges()
 
         self._network = self.network
         self._broadcast = self.broadcast
@@ -973,6 +1092,17 @@ class Prefix(PrimaryModel):
         preferred in new code for readability.
         """
         return self.get_all_ips()
+
+    @property
+    def all_ip_address_ranges(self):
+        """
+        All IP address ranges contained within this prefix, including
+        those in descendant prefixes.
+
+        This is a property alias for `get_all_ip_address_ranges()` and may be
+        used as `related_object_attribute` in `object_detail.DistinctViewTab`.
+        """
+        return self.get_all_ip_address_ranges()
 
     def reparent_subnets(self):
         """
@@ -1059,6 +1189,65 @@ class Prefix(PrimaryModel):
         self.get_all_ips().select_for_update().filter(parent__prefix_length__lt=self.prefix_length).update(parent=self)
 
     reparent_ips.alters_data = True
+
+    def reparent_ip_address_ranges(self):
+        """
+        Handle changes to the parentage of IPAddressRanges as a consequence of this Prefix's
+        creation or update (analogous to reparent_ips()). Unlike an IP, which is a single host,
+        a range spans two endpoints, so when picking a new parent we only reparent a range to a
+        Prefix that wholly contains its span (both endpoints), never one that covers just part of it.
+
+        - Former child ranges of ours that no longer fit our new network can be reparented to our former parent.
+        - Former child ranges that we are no longer the closest parent of can be reparented to one of our new descendants.
+        - Ranges that we are now the closest parent of can be reparented to us.
+
+        Called automatically by save(); generally not intended for use outside of that context.
+        """
+        if self._networking_values_changed:
+            # Ranges that no longer fit our new network move up to our former parent, which is
+            # guaranteed to contain them (they were inside our old network, which was inside that
+            # parent). The only failure is having no former parent — Prefix.clean() rejects that
+            # case first, so this raise is just a safety net.
+            reparentable_ranges = self.ip_address_ranges.exclude(
+                ip_version=self.ip_version,
+                start_host__gte=self.network,
+                end_host__lte=self.broadcast,
+            )
+            if self._parent_id is None and reparentable_ranges.exists():
+                raise ValidationError(
+                    {
+                        "__all__": f"{reparentable_ranges.count()} existing IP Address Ranges would no longer "
+                        "have a valid parent Prefix after this change."
+                    }
+                )
+            reparentable_ranges.update(parent_id=self._parent_id)
+
+            # Former child ranges that we are no longer closest parent of can be reparented to one of our new descendants.
+            ranges_to_reparent = []
+            for ip_range in self.ip_address_ranges.all():
+                # A child fully contains the range iff it's the closest parent of BOTH endpoints.
+                try:
+                    closest_start = self.children.get_closest_parent(ip_range.start_host, include_self=True)  # pylint: disable=no-member
+                    closest_end = self.children.get_closest_parent(ip_range.end_host, include_self=True)  # pylint: disable=no-member
+                    closest = closest_start if closest_start == closest_end else self
+                except Prefix.DoesNotExist:
+                    closest = self
+                if closest != self:
+                    ip_range.parent = closest
+                    ranges_to_reparent.append(ip_range)
+
+            IPAddressRange.objects.bulk_update(ranges_to_reparent, ["parent"], batch_size=1000)
+
+        # Ranges that we are now the closest parent of can be reparented to us.
+        IPAddressRange.objects.filter(
+            parent__namespace_id=self.namespace_id,
+            ip_version=self.ip_version,
+            start_host__gte=self.network,
+            end_host__lte=self.broadcast,
+            parent__prefix_length__lt=self.prefix_length,
+        ).select_for_update().update(parent=self)
+
+    reparent_ip_address_ranges.alters_data = True
 
     def supernets(self, direct=False, include_self=False, for_update=False):
         """
@@ -1209,10 +1398,23 @@ class Prefix(PrimaryModel):
     def get_available_ips(self):
         """
         Return all available IPs within this prefix as an IPSet.
+
+        Addresses inside exclusive IP Address Ranges are excluded (IPAddress
+        creation there is forbidden); non-exclusive ranges are NOT excluded,
+        consistent with IPAddress validation.
         """
-        prefix = netaddr.IPSet(self.prefix)
+        available_ips = netaddr.IPSet(self.prefix)
         child_ips = netaddr.IPSet([ip.address.ip for ip in self.get_all_ips()])
-        available_ips = prefix - child_ips
+        available_ips -= child_ips
+
+        # Subtract all exclusive ranges as a single IPSet operation; per-range
+        # subtraction in a loop rebuilds the set on every iteration.
+        range_cidrs = []
+        qs = self.get_all_ip_address_ranges().filter(is_exclusive=True)
+        for start_host, end_host in qs.values_list("start_host", "end_host"):
+            range_cidrs.extend(netaddr.IPRange(start_host, end_host).cidrs())
+        if range_cidrs:
+            available_ips -= netaddr.IPSet(range_cidrs)
 
         # IPv6, pool, or IPv4 /31-32 sets are fully usable
         if any(
@@ -1275,6 +1477,18 @@ class Prefix(PrimaryModel):
             host__lte=self.broadcast,
         )
 
+    def get_all_ip_address_ranges(self):
+        """
+        All IP Address Ranges within this prefix's span in the same namespace,
+        including ranges parented to descendant prefixes (analogous to get_all_ips).
+        """
+        return IPAddressRange.objects.filter(
+            parent__namespace_id=self.namespace_id,
+            ip_version=self.ip_version,
+            start_host__gte=self.network,
+            end_host__lte=self.broadcast,
+        )
+
     def get_first_available_prefix(self):
         """
         Return the first available child prefix within the prefix (or None).
@@ -1288,10 +1502,96 @@ class Prefix(PrimaryModel):
         """
         Return the first available IP within the prefix (or None).
         """
-        available_ips = self.get_available_ips()
-        if not available_ips:
+        first = self._first_available_host(exclude_child_ips=True)
+        if first is None:
             return None
-        return f"{next(available_ips.__iter__())}/{self.prefix_length}"
+        return f"{first}/{self.prefix_length}"
+
+    def get_first_available_ip_for_range(self):
+        """
+        Return the first available IP for pre-filling a new IP Address Range,
+        as a bare address string (no mask), or None.
+
+        Unlike get_first_available_ip(), this ignores existing IP Addresses,
+        since a non-exclusive Range may contain them.
+        """
+        first = self._first_available_host(exclude_child_ips=False)
+        if first is None:
+            return None
+        return str(first)
+
+    def _first_available_host(self, exclude_child_ips=True):
+        """
+        Find the first host address in this prefix not covered by any blocker,
+        without materializing the full availability set.
+
+        Blockers are contained IPAddressRanges and (optionally) IPAddresses,
+        streamed from the DB in ascending order and merged lazily; the scan
+        stops at the first gap.
+
+        All contained IPAddressRanges are treated as blockers, regardless of
+        their `count_as_utilized` or `is_exclusive` flags:
+
+        - When pre-filling a new IPAddressRange (exclude_child_ips=False), any
+        overlap with an existing range is rejected by validation
+        (`IPAddressRange._validate_no_range_overlap`), so every existing range
+        must be skipped no matter its flags.
+        - The flags have narrower, unrelated roles: `count_as_utilized` only
+        affects utilization statistics, and `is_exclusive` only affects
+        validation of creating individual IPAddresses inside the range.
+        Neither defines availability in the sense of this method.
+
+        Returns:
+            netaddr.IPAddress or None
+        """
+        fully_usable = any(
+            [
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_6,
+                self.type == choices.PrefixTypeChoices.TYPE_POOL,
+                self.ip_version == choices.IPAddressVersionChoices.VERSION_4 and self.prefix_length >= 31,
+            ]
+        )
+        candidate = self.prefix.first
+        last_usable = self.prefix.last
+        if not fully_usable:
+            # Omit the prefix's own network and broadcast addresses.
+            candidate += 1
+            last_usable -= 1
+        if candidate > last_usable:
+            return None
+
+        def range_intervals():
+            qs = self.get_all_ip_address_ranges().order_by("start_host").values_list("start_host", "end_host")
+            for start_host, end_host in qs.iterator(chunk_size=1000):
+                yield (int(netaddr.IPAddress(start_host)), int(netaddr.IPAddress(end_host)))
+
+        def ip_intervals():
+            qs = self.get_all_ips().order_by("host").values_list("host", flat=True)
+            for host in qs.iterator(chunk_size=1000):
+                value = int(netaddr.IPAddress(host))
+                yield (value, value)
+
+        if exclude_child_ips:
+            # Both streams are sorted ascending by their first element (VarbinaryIPField
+            # byte ordering == numeric ordering within a single ip_version, and both
+            # querysets are already filtered to self.ip_version). heapq.merge keeps the
+            # combined stream sorted while consuming both lazily.
+            blockers = heapq.merge(range_intervals(), ip_intervals())
+        else:
+            blockers = range_intervals()
+
+        for start, end in blockers:
+            if candidate < start:
+                # Found a gap before this blocker.
+                break
+            # This blocker starts at/before the candidate; skip past it if it covers it.
+            # (end may be < candidate for stale/overtaken blockers - just ignore those.)
+            if end >= candidate:
+                candidate = end + 1
+                if candidate > last_usable:
+                    return None
+
+        return netaddr.IPAddress(candidate, version=self.ip_version)
 
     def get_utilization(self):
         """Return the utilization of this prefix as a UtilizationData object.
@@ -1338,6 +1638,12 @@ class Prefix(PrimaryModel):
 
         numerator_set = child_ips | child_prefixes
 
+        # Add count_as_utilized IP Ranges to the numerator (each range counts as fully utilized)
+        for ip_range in self.ip_address_ranges.filter(count_as_utilized=True):
+            start = netaddr.IPAddress(ip_range.start_address)
+            end = netaddr.IPAddress(ip_range.end_address)
+            numerator_set |= netaddr.IPSet(netaddr.IPRange(start, end))
+
         # Exclude network and broadcast IPs from the denominator unless they're assigned to an IPAddress or child pool.
         # Only applies to IPv4 network prefixes with a prefix length of /30 or shorter
         if all(
@@ -1375,7 +1681,7 @@ class PrefixLocationAssignment(BaseModel):
     "statuses",
     "webhooks",
 )
-class IPAddress(PrimaryModel):
+class IPAddress(NamespaceParentedModelMixin, PrimaryModel):
     """
     An IPAddress represents an individual IPv4 or IPv6 address and its mask. The mask length should match what is
     configured in the real world. (Typically, only loopback interfaces are configured with /32 or /128 masks.) Like
@@ -1451,6 +1757,8 @@ class IPAddress(PrimaryModel):
 
     objects = BaseManager.from_queryset(IPAddressQuerySet)()
 
+    _change_tracked_host_fields = ("host",)
+
     class Meta:
         ordering = ("ip_version", "host", "mask_length")  # address may be non-unique
         verbose_name = "IP address"
@@ -1461,27 +1769,9 @@ class IPAddress(PrimaryModel):
         ]
 
     def __init__(self, *args, address=None, namespace=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self._parent = None
-        self._host = None
-
-        if namespace is not None and not self.present_in_database:
-            self._provided_namespace = namespace
-
+        super().__init__(*args, namespace=namespace, **kwargs)
         if address is not None and not self.present_in_database:
             self._deconstruct_address(address)
-
-    @classmethod
-    def from_db(cls, db, field_names, values):
-        instance = super().from_db(db, field_names, values)
-        # These cached values are used to detect changes during save
-        for field_name, value in zip(field_names, values):
-            if field_name == "host":
-                instance._host = value
-            elif field_name == "parent":
-                instance._parent = value
-        return instance
 
     def __str__(self):
         return str(self.address)
@@ -1498,29 +1788,10 @@ class IPAddress(PrimaryModel):
 
     natural_key_field_names = ["parent__namespace", "host"]
 
-    def _get_closest_parent(self):
-        # TODO: Implement proper caching of `closest_parent` and ensure the cache is invalidated when
-        #  `_namespace` changes. Currently, `_get_closest_parent` is called twice, in the `clean` and `save` methods.
-        #  Caching would improve performance.
-
-        # Host and maxlength are required to get the closest_parent
-        empty_values = [None, b"", ""]
-        if self.host in empty_values or self.mask_length in empty_values:
-            return None
-        try:
-            closest_parent = Prefix.objects.filter(namespace=self._namespace).get_closest_parent(
-                self.host, include_self=True
-            )
-            return closest_parent
-        except Prefix.DoesNotExist as e:
-            raise ValidationError(
-                {"namespace": f"No suitable parent Prefix for {self.host} exists in Namespace {self._namespace}"}
-            ) from e
-
     def clean(self):
         self._deconstruct_address(self.address)
 
-        if self.present_in_database and self._host != self.host:
+        if self.present_in_database and self._host != self.host:  # pylint: disable=no-member
             raise ValidationError({"__all__": "Host address cannot be changed once created"})
 
         # Validate IP status selection
@@ -1530,14 +1801,29 @@ class IPAddress(PrimaryModel):
         ):
             raise ValidationError({"type": "Only IPv6 addresses can be assigned SLAAC type"})
 
-        closest_parent = self._get_closest_parent()
+        if self.host and self.ip_version:
+            exclusive_range = IPAddressRange.objects.filter(
+                parent__namespace=self._namespace,
+                ip_version=self.ip_version,
+                is_exclusive=True,
+                start_host__lte=self.host,
+                end_host__gte=self.host,
+            ).first()
+            if exclusive_range:
+                raise ValidationError(
+                    {
+                        "__all__": (
+                            f"IP address {self.host} falls within exclusive IP Address Range "
+                            f'"{exclusive_range}". Creating an IP Address within an '
+                            "exclusive range is not permitted."
+                        )
+                    }
+                )
+
+        closest_parent = self._get_closest_parent(self.host)
         if closest_parent is not None:
             # If `parent` was explicitly set or changed, validate it and reject if invalid.
-            if (
-                self.parent is not None
-                and (self.parent != self._parent or not self.present_in_database)
-                and self.parent != closest_parent
-            ):
+            if self.parent is not None and self.parent != closest_parent:
                 raise ValidationError(
                     {
                         "parent": (
@@ -1550,6 +1836,11 @@ class IPAddress(PrimaryModel):
             self.parent = closest_parent
             self._namespace = None
 
+        if self.host and self.parent_id:
+            duplicate = IPAddress.objects.filter(parent_id=self.parent_id, host=self.host).exclude(pk=self.pk)
+            if duplicate.exists():
+                raise ValidationError({"__all__": f"IP address {self.address} already exists in {self.parent}."})
+
         # Force dns_name to lowercase
         if not self.dns_name.islower():
             self.dns_name = self.dns_name.lower()
@@ -1557,14 +1848,6 @@ class IPAddress(PrimaryModel):
         super().clean()
 
     clean.alters_data = True
-
-    def save(self, *args, **kwargs):
-        self.clean()  # MUST do data fixup as above
-
-        super().save(*args, **kwargs)
-
-        self._parent = self.parent
-        self._host = self.host
 
     @property
     def address(self):
@@ -1611,22 +1894,6 @@ class IPAddress(PrimaryModel):
             query = query.exclude(id=self.id)
 
         return query
-
-    @property
-    def _namespace(self):
-        # if a namespace was explicitly set, use it
-        if getattr(self, "_provided_namespace", None):
-            return self._provided_namespace
-        if self.parent is not None:
-            return self.parent.namespace
-        return get_default_namespace()
-
-    @_namespace.setter
-    def _namespace(self, namespace):
-        # unset parent when namespace is changed
-        if namespace:
-            self.parent = None
-        self._provided_namespace = namespace
 
     # 2.0 TODO: Remove exception, getter, setter below when we can safely deprecate previous properties
     class NATOutsideMultipleObjectsReturned(MultipleObjectsReturned):
@@ -1688,6 +1955,308 @@ class IPAddressToInterface(BaseModel):
             return f"{self.ip_address!s} {parent_name} {self.interface.name}"
         else:
             return f"{self.ip_address!s} {self.vm_interface.virtual_machine.name} {self.vm_interface.name}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "statuses",
+    "webhooks",
+)
+class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
+    """
+    An IPAddressRange represents a contiguous span of IP addresses defined by a start host and an end host,
+    both contained within the same parent Prefix. Unlike a Prefix or IPAddress, a range is not a network and
+    has no mask — it is simply two bare addresses marking an inclusive span.
+
+    IP Address Ranges can optionally be marked as fully utilized (counting toward parent prefix utilization) or
+    exclusive (blocking creation of individual IPAddress objects within the range).
+    """
+
+    name = models.CharField(
+        max_length=CHARFIELD_MAX_LENGTH,
+        blank=True,
+        db_index=True,
+        help_text="Name of the IP Address Range",
+    )
+    start_host = VarbinaryIPField(
+        null=False,
+        db_index=True,
+        help_text="First IP host address in the range (inclusive)",
+    )
+    end_host = VarbinaryIPField(
+        null=False,
+        db_index=True,
+        help_text="Last IP host address in the range (inclusive)",
+    )
+    ip_version = models.IntegerField(
+        choices=choices.IPAddressVersionChoices,
+        editable=False,
+        db_index=True,
+        verbose_name="IP Version",
+    )
+    # blank=True (despite null=False): parent isn't supplied on input, it's auto-resolved
+    # in clean(). full_clean() runs before clean(), so without this it'd be rejected as required.
+    parent = models.ForeignKey(
+        "ipam.Prefix",
+        blank=True,
+        null=False,
+        related_name="ip_address_ranges",
+        on_delete=models.PROTECT,
+        help_text="The parent Prefix of this IP Address Range. Auto-resolved from the start/end host.",
+    )
+    status = StatusField(blank=False, null=False)
+    role = RoleField(
+        blank=True, null=True
+    )  # starter choices: DHCP, Firewall Object, NAT Pool, Load Balancer Pool, Reserved
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant",
+        on_delete=models.PROTECT,
+        related_name="ip_address_ranges",
+        blank=True,
+        null=True,
+    )
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    count_as_utilized = models.BooleanField(
+        default=False,
+        verbose_name="Mark as fully utilized",
+        help_text="Forces this range to count as fully utilized in prefix utilization calculations.",
+    )
+    is_exclusive = models.BooleanField(
+        default=False,
+        verbose_name="Exclusive (block IPs)",
+        help_text="Prevent individual IP Address objects from being created within this range.",
+    )
+
+    clone_fields = [
+        "parent",
+        "status",
+        "role",
+        "tenant",
+        "description",
+        "count_as_utilized",
+        "is_exclusive",
+    ]
+
+    _change_tracked_host_fields = ("start_host", "end_host")
+
+    class Meta:
+        ordering = ("parent__namespace", "ip_version", "start_host")
+        verbose_name = "IP address range"
+        verbose_name_plural = "IP address ranges"
+        indexes = [
+            models.Index(fields=("parent", "ip_version", "start_host", "end_host")),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent", "start_host"],
+                name="unique_iprange_parent_start",
+            ),
+        ]
+
+    natural_key_field_names = ["parent__namespace", "start_host"]
+
+    def __init__(self, *args, start_address=None, end_address=None, namespace=None, **kwargs):
+        super().__init__(*args, namespace=namespace, **kwargs)
+        if start_address is not None and not self.present_in_database:
+            self._deconstruct_start_address(start_address)
+        if end_address is not None and not self.present_in_database:
+            self._deconstruct_end_address(end_address)
+
+    def __str__(self):
+        if self.name:
+            return f"{self.name}: {self.start_address} - {self.end_address}"
+        else:
+            return f"{self.start_address} - {self.end_address}"
+
+    def _deconstruct_start_address(self, address):
+        if address:
+            self.start_host = str(netaddr.IPAddress(address))
+
+    _deconstruct_start_address.alters_data = True
+
+    def _deconstruct_end_address(self, address):
+        if address:
+            self.end_host = str(netaddr.IPAddress(address))
+
+    _deconstruct_end_address.alters_data = True
+
+    def _deconstruct_addresses(self):
+        """
+        Derive and validate ip_version from both endpoints. A range must have both
+        endpoints in the same IP version; ip_version is set from that shared version.
+        """
+        if self.start_host and self.end_host:
+            start_version = netaddr.IPAddress(self.start_host).version
+            end_version = netaddr.IPAddress(self.end_host).version
+            if start_version != end_version:
+                raise ValidationError(
+                    {
+                        "__all__": (
+                            f"start_address (IPv{start_version}) and end_address "
+                            f"(IPv{end_version}) must be of the same IP version"
+                        )
+                    }
+                )
+            self.ip_version = start_version
+
+    _deconstruct_addresses.alters_data = True
+
+    def clean(self):
+        self._deconstruct_addresses()
+        # Skip range-level checks if either endpoint is missing (e.g. a form field failed
+        # validation), so we don't TypeError comparing None to an IPAddress. The missing
+        # value is already reported elsewhere (field error, or null=False in clean_fields).
+        if self.start_address is None or self.end_address is None:
+            super().clean()
+            return
+        self._validate_start_not_after_end()
+        self._resolve_and_validate_parent()
+        self._validate_no_range_overlap()
+        self._validate_no_exclusive_ip_conflict()
+        self._validate_no_child_prefix_overlap()
+        super().clean()
+
+    clean.alters_data = True
+
+    def _validate_start_not_after_end(self):
+        """start_address must be <= end_address."""
+        if self.start_address > self.end_address:
+            raise ValidationError({"start_address": "start_address must be less than or equal to end_address"})
+
+    def _resolve_and_validate_parent(self):
+        """Both endpoints must resolve to the same single parent Prefix.
+
+        Sets self.parent to the resolved parent, or raises if endpoints resolve to
+        different parents / an explicitly-set parent disagrees with the resolved one.
+        """
+        closest_start = self._get_closest_parent(self.start_host)
+        closest_end = self._get_closest_parent(self.end_host)
+
+        if closest_start is None or closest_end is None:
+            return
+
+        if closest_start != closest_end:
+            raise ValidationError(
+                {
+                    "__all__": (
+                        "IP Address Range must be fully contained within a single parent Prefix. "
+                        "No single Prefix in namespace contains both start_address and end_address. "
+                        "Consider creating a wider parent Prefix that covers the entire range."
+                    )
+                }
+            )
+
+        if self.parent_id is not None and self.parent_id != closest_start.pk:
+            raise ValidationError(
+                {
+                    "parent": (
+                        f"{self.parent} cannot be assigned as the parent of {self}. "
+                        f"In namespace {self._namespace}, the expected parent would be {closest_start}."
+                    )
+                }
+            )
+        self.parent = closest_start
+        self._namespace = None
+
+    def _validate_no_range_overlap(self):
+        """Must not intersect any other IP Address Range in the same namespace."""
+        overlapping_range = (
+            IPAddressRange.objects.filter(
+                parent=self.parent,
+                ip_version=self.ip_version,
+                start_host__lte=self.end_host,
+                end_host__gte=self.start_host,
+            )
+            .exclude(pk=self.pk)
+            .first()
+        )
+        if overlapping_range:
+            raise ValidationError(
+                {
+                    "__all__": (
+                        f"IP Address Range intersects with existing range "
+                        f"'{overlapping_range.start_address} - {overlapping_range.end_address}'"
+                    )
+                }
+            )
+
+    def _validate_no_exclusive_ip_conflict(self):
+        """An exclusive range may not contain any existing IPAddress."""
+        if not self.is_exclusive:
+            return
+        conflicting_ips = IPAddress.objects.filter(
+            parent=self.parent,
+            ip_version=self.ip_version,
+            host__gte=self.start_host,
+            host__lte=self.end_host,
+        )
+        if conflicting_ips.exists():
+            hosts = ", ".join(str(ip.address.ip) for ip in conflicting_ips[:5])
+            raise ValidationError(
+                {
+                    "is_exclusive": (
+                        f"Cannot make this IP Address Range exclusive: existing IP address(es) fall within the range: {hosts}"
+                    )
+                }
+            )
+
+    def _validate_no_child_prefix_overlap(self):
+        """Must not overlap any child Prefix of the parent."""
+        range_set = netaddr.IPSet(netaddr.IPRange(self.start_host, self.end_host))
+        for child in self.parent.children.all():
+            if range_set & netaddr.IPSet([child.prefix]):
+                raise ValidationError(
+                    {
+                        "__all__": (
+                            f"IP Address Range overlaps with child Prefix '{child.prefix}' of the assigned parent Prefix"
+                        )
+                    }
+                )
+
+    @property
+    def start_address(self):
+        if self.start_host is not None:
+            return netaddr.IPAddress(self.start_host)
+        return None
+
+    @start_address.setter
+    def start_address(self, address):
+        self._deconstruct_start_address(address)
+
+    @property
+    def end_address(self):
+        if self.end_host is not None:
+            return netaddr.IPAddress(self.end_host)
+        return None
+
+    @end_address.setter
+    def end_address(self, address):
+        self._deconstruct_end_address(address)
+
+    @property
+    def size(self):
+        if self.start_host is None or self.end_host is None:
+            return None
+        return netaddr.IPRange(self.start_host, self.end_host).size
+
+    @property
+    def ip_addresses(self):
+        """IPAddresses whose host falls within this range (same namespace)."""
+        return IPAddress.objects.filter(
+            parent__namespace_id=self.parent.namespace_id,
+            ip_version=self.ip_version,
+            host__gte=self.start_host,
+            host__lte=self.end_host,
+        )
+
+    def get_utilization(self):
+        """Utilization of this range as a UtilizationData object (numerator, denominator)."""
+        size = netaddr.IPRange(self.start_host, self.end_host).size
+        count = self.ip_addresses.count()
+        return UtilizationData(numerator=count, denominator=size)
 
 
 @extras_features(

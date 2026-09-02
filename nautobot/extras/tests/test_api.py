@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import AnonymousUser, Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, tag
@@ -39,6 +39,7 @@ from nautobot.extras.api.serializers import (
     ConfigContextSerializer,
     JobResultSerializer,
     RelationshipAssociationSerializer,
+    SavedViewSerializer,
 )
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
@@ -47,6 +48,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
+    LogLevelChoices,
     MetadataTypeDataTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
@@ -56,6 +58,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs_cancel import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -106,9 +109,9 @@ from nautobot.extras.models.jobs import JobButton, JobHook
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_relationships import RequiredRelationshipTestMixin
 from nautobot.extras.utils import TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup
 from nautobot.tenancy.models import Tenant
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 
 User = get_user_model()
 
@@ -930,6 +933,79 @@ class ApprovalWorkflowStageTest(
                     # Confirm correct object is returned
                     self.assertEqual(response.data["results"][0]["id"], str(self.approval_workflow_stages[0].id))
 
+    def test_responses_visible_only_with_view_permission(self):
+        """Nested responses are gated by object-level `view` on ApprovalWorkflowStageResponse (UI parity)."""
+        stage = self.approval_workflow_stages[0]
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.COMMENT,
+            comments="A response",
+        )
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+
+        with self.subTest("without view_approvalworkflowstageresponse responses hidden"):
+            self.add_permissions("extras.view_approvalworkflowstage")
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["responses"], [])
+
+        with self.subTest("with view_approvalworkflowstageresponse responses visible"):
+            self.add_permissions("extras.view_approvalworkflowstageresponse")
+            response = self.client.get(url, **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(len(response.data["responses"]), 1)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_responses_cannot_be_modified_via_stage_endpoint(self):
+        """PATCH on the stage must not create/modify responses (the `responses` field is read-only)."""
+        stage = self.approval_workflow_stages[0]
+        self.add_permissions("extras.change_approvalworkflowstage")
+        before = stage.approval_workflow_stage_responses.count()
+
+        data = {
+            "responses": [
+                {
+                    "approval_workflow_stage": str(stage.pk),
+                    "user": str(self.user.pk),
+                    "state": ApprovalWorkflowStateChoices.APPROVED,
+                    "comments": "Injected",
+                }
+            ]
+        }
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+        response = self.client.patch(url, data=data, format="json", **self.header)
+
+        # PATCH itself may succeed (it just ignores `responses`), but nothing may be written.
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        stage.refresh_from_db()
+        self.assertEqual(stage.approval_workflow_stage_responses.count(), before)
+        self.assertFalse(
+            stage.approval_workflow_stage_responses.filter(state=ApprovalWorkflowStateChoices.APPROVED).exists()
+        )
+        # And the stage state must not have advanced.
+        self.assertEqual(stage.state, ApprovalWorkflowStateChoices.PENDING)
+
+    def test_nested_response_user_has_correct_object_type(self):
+        """Regression: nested response `user` must carry its own object_type (users.user), not the parent's."""
+        stage = self.approval_workflow_stages[0]
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.COMMENT,
+            comments="A response",
+        )
+        self.add_permissions("extras.view_approvalworkflowstage", "extras.view_approvalworkflowstageresponse")
+
+        url = reverse("extras-api:approvalworkflowstage-detail", kwargs={"pk": stage.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        self.assertEqual(len(response.data["responses"]), 1)
+        nested_user = response.data["responses"][0]["user"]
+        self.assertEqual(nested_user["object_type"], "users.user")
+        self.assertEqual(nested_user["id"], self.user.pk)
+
 
 #
 #  Computed Fields
@@ -938,7 +1014,7 @@ class ApprovalWorkflowStageTest(
 
 class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
     model = ComputedField
-    choices_fields = ["content_type"]
+    choices_fields = ["content_type", "output_type"]
     create_data = [
         {
             "content_type": "dcim.location",
@@ -2166,7 +2242,7 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
-    @mock.patch("nautobot.extras.api.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
     def test_run_git_sync_with_permissions(self, _):
         """Git sync request can be submitted successfully."""
         self.add_permissions("extras.change_gitrepository")
@@ -2223,6 +2299,35 @@ class GitRepositoryTest(APIViewTestCases.APIViewTestCase):
         repo.refresh_from_db()
         self.assertEqual(repo.current_head, original_head)
         self.assertNotEqual(response.data["current_head"], bogus_sha)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_run_git_sync_with_constrained_permission(self, _):
+        """Git sync returns 404 when the user's change permission doesn't cover the object."""
+        # Grant change permission constrained to repos[1] only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": self.repos[1].pk},
+            actions=["change"],
+        )
+        obj_perm.validated_save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        with mock.patch.object(GitRepository, "sync") as mock_sync:
+            # Object outside the constraint: 404, and nothing enqueued
+            url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[0].id})
+            response = self.client.post(url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+            mock_sync.assert_not_called()
+
+            # Object inside the constraint: succeeds
+            mock_sync.return_value = JobResult.objects.create(name="git-repository-sync", user=self.user)
+            url = reverse("extras-api:gitrepository-sync", kwargs={"pk": self.repos[1].id})
+            response = self.client.post(url, format="json", **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertIn("job_result", response.data)
+            mock_sync.assert_called_once_with(user=self.user)
 
 
 class GraphQLQueryTest(APIViewTestCases.APIViewTestCase):
@@ -2859,7 +2964,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
         # No new scheduled job should be created
@@ -2899,7 +3004,7 @@ class JobTest(
         expected_enqueue_job_args = (self.job_model, self.user)
         expected_enqueue_job_kwargs = {
             "job_queue": self.job_model.default_job_queue,
-            **self.job_class.serialize_data(deserialized_data),
+            "job_kwargs": self.job_class.serialize_data(deserialized_data),
         }
         mock_enqueue_job.assert_called_with(*expected_enqueue_job_args, **expected_enqueue_job_kwargs)
 
@@ -3701,6 +3806,281 @@ class JobResultTest(
             task_kwargs={"data": {"device": uuid.uuid4(), "multichoices": ["red", "green"], "checkbox": False}},
             scheduled_job=None,
         )
+        cls.pending_job_result = JobResult.objects.filter(
+            status=JobResultStatusChoices.STATUS_PENDING, job_model__isnull=False
+        ).first()
+
+    @staticmethod
+    def _fake_cancel_success_termination_path(job_result, user):
+        """Simulate a successful cancel by flipping the job to REVOKED.
+
+        Stand-in for `CeleryStrategy.cancel` in tests of the TERMINATE path,
+        where the real code relies on Celery's async catchup to set the
+        REVOKED status. Writes the status synchronously so the view's
+        post-cancel check sees the expected terminal state.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_REVOKED
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "canceled": True}
+
+    @staticmethod
+    def _fake_cancel_no_action_termination_path(job_result, user):
+        """Simulate a cancel that lost the race to natural completion.
+
+        Stand-in for `CeleryStrategy.cancel` in tests where the job finishes
+        between the view's pre-check and the strategy call. Leaves the job
+        in a non-REVOKED terminal state (COMPLETED) so the view's post-cancel
+        check trips and returns 409.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "canceled": False}
+
+    def test_post_cancel_already_finished_returns_409(self):
+        """A finished job cannot be canceled."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn("already finished", response.data["detail"].lower())
+
+    def test_get_cancel_already_finished(self):
+        """A finished job cannot be canceled: POST returns 409, GET returns a NOOP preview."""
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        job_result.user = self.user
+        job_result.save()
+
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
+
+        response = self.client.get(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], JobResultStatusChoices.STATUS_SUCCESS)
+        self.assertNotIn("irreversible", response.data)
+        self.assertIn("message", response.data)
+        self.assertIn("timestamp", response.data)
+
+    def test_cancel_non_owner_without_cancel_job_permission_denied(self):
+        """A non-owner without cancel_job cannot cancel someone else's job."""
+        other = User.objects.create_user(username="other-owner")
+        job_result = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        job_result.user = other
+        job_result.save()
+
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_non_owner_with_dismatch_constrained_cancel_job_permission_denied(self):
+        """A non-owner whose cancel_job is constrained to a different Job is denied."""
+        other = User.objects.create_user(username="dismatch-owner")
+        other_job = Job.objects.exclude(pk=self.pending_job_result.job_model.pk).first()
+        self.pending_job_result.user = other
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.cancel_job", constraints={"pk": str(other_job.pk)})
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_orphaned_result_non_owner_without_cancel_job_denied(self):
+        """When job_model is None, a non-owner without cancel_job is still denied."""
+        other = User.objects.create_user(username="orphan-non-owner-noperm")
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending2",
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+        )
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_without_view_jobresult_permission_denied(self):
+        """Without view_jobresult the endpoint is not reachable, even for the submitter."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        # deliberately no permissions added
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @mock.patch.object(JobResult, "log")
+    def test_cancel_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+        """Unsuporrted queue type should abandon job."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.pending_job_result.refresh_from_db()
+        self.assertEqual(self.pending_job_result.status, "REVOKED")
+
+        mock_job_log.assert_called_once_with(
+            f"Abandoned job {self.pending_job_result.pk} by {self.user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="canceling",
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": None})
+    def test_cancel_get_returns_terminate_preview(self, mock_cancel, mock_liveness):
+        """GET returns the cancel TERMINATE preview payload and does not invoke cancel."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], "RUNNING")
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": None})
+    def test_cancel_get_returns_reap_preview(self, mock_cancel, mock_liveness):
+        """GET returns the cancel REAP preview payload and does not invoke cancel."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.get(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["job_status"], "NOT RUNNING")
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_submitter_without_cancel_job_permission_can_cancel(self, mock_cancel, mock_liveness):
+        """The submitter can cancel their own job without holding cancel_job (submitter bypass)."""
+        self.pending_job_result.user = self.user
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_non_owner_with_unconstrained_cancel_job_permission_can_cancel(self, mock_cancel, mock_liveness):
+        """A non-owner with unconstrained cancel_job can cancel."""
+        other = User.objects.create_user(username="some-other-owner")
+        self.pending_job_result.user = other
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_non_owner_with_matching_constrained_cancel_job_permission(self, mock_cancel, mock_liveness):
+        """A non-owner with cancel_job constrained to this result's Job can cancel."""
+        other = User.objects.create_user(username="constrained-owner")
+        self.pending_job_result.user = other
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.cancel_job", constraints={"pk": str(self.pending_job_result.job_model.pk)})
+
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], str(self.pending_job_result.pk))
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", return_value={"error": "Cancel failed: worker not responding."})
+    def test_cancel_strategy_error_returns_500(self, mock_cancel, mock_liveness):
+        """When the cancel strategy returns an error, the endpoint returns 500 with the error detail."""
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.user = self.user
+        self.pending_job_result.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+        )
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+        response = self.client.post(url, **self.header)
+
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.data["detail"], "Cancel failed: worker not responding.")
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_no_action_termination_path)
+    def test_cancel_status_not_flipped_returns_409(self, mock_cancel, mock_liveness):
+        """If the strategy reports success but the job didn't end up REVOKED, return 409."""
+        self.pending_job_result.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.pending_job_result.save()
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": self.pending_job_result.pk})
+
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertIn(response.data["detail"], "Job finished before it could be canceled. No action was taken.")
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_orphaned_result_submitter_can_cancel(self, mock_cancel, mock_liveness):
+        """When job_model is None (Job deleted/uninstalled), the submitter can still cancel."""
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending",
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        self.add_permissions("extras.view_jobresult")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_cancel.assert_called_once()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_orphaned_result_non_owner_with_cancel_job_can_cancel(self, mock_cancel, mock_liveness):
+        """When job_model is None, a non-owner with cancel_job can cancel."""
+        other = User.objects.create_user(username="orphan-non-owner")
+        orphan = JobResult.objects.create(
+            job_model=None,
+            name="deleted_module.deleted_job_pending2",
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+        url = reverse("extras-api:jobresult-cancel", kwargs={"pk": orphan.pk})
+        response = self.client.post(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_cancel.assert_called_once()
 
 
 class JobLogEntryTest(
@@ -3788,12 +4168,31 @@ class JobQueueAssignmentTestCase(APIViewTestCases.APIViewTestCase):
 
 class SavedViewTest(APIViewTestCases.APIViewTestCase):
     model = SavedView
+    update_data = {
+        "name": "Renamed Saved View",
+        "is_shared": True,
+    }
+    bulk_update_data = {"is_shared": False}
 
     def setUp(self):
         super().setUp()
+        # The factory-generated SavedViews belong to arbitrary other users, but the generic test cases pick their
+        # subject objects from an unscoped queryset while the API scopes writes to the requesting user's own views.
+        # Replace them with views owned by self.user; the cross-user test cases below build their own fixtures.
+        SavedView.objects.all().delete()
+        self.saved_views = [
+            SavedView.objects.create(
+                owner=self.user,
+                name=f"My Saved View {i}",
+                view=view,
+                is_shared=bool(i % 2),
+            )
+            for i, view in enumerate(
+                ["circuits:circuit_list", "dcim:device_list", "dcim:location_list", "ipam:prefix_list"]
+            )
+        ]
         self.create_data = [
             {
-                "owner": self.user.pk,
                 "name": "Saved View 1",
                 "view": "circuits:circuit_list",
                 "config": {
@@ -3803,7 +4202,6 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 "is_shared": True,
             },
             {
-                "owner": self.user.pk,
                 "name": "Saved View 2",
                 "view": "dcim:device_list",
                 "config": {
@@ -3817,7 +4215,6 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
                 "is_shared": False,
             },
             {
-                "owner": self.user.pk,
                 "name": "Saved View 3",
                 "view": "dcim:location_list",
                 "config": {
@@ -3839,47 +4236,404 @@ class SavedViewTest(APIViewTestCases.APIViewTestCase):
             },
         ]
 
+    def _other_user_saved_view(self, **kwargs):
+        """
+        Create a SavedView owned by some other user.
+
+        Deliberately called per-test rather than from setUp(), so as not to perturb the object counts and
+        ordering that the generic test cases depend on.
+        """
+        other_user = User.objects.create_user(username=f"other-savedview-user-{uuid.uuid4()}")
+        kwargs.setdefault("name", "Other User Saved View")
+        kwargs.setdefault("view", "dcim:rack_list")
+        return SavedView.objects.create(owner=other_user, **kwargs)
+
+    #
+    # Writable fields should match those the UI exposes: `owner` is never writable and `view` is create-only.
+    #
+
+    def test_create_object_owner_is_always_requesting_user(self):
+        self.add_permissions("extras.add_savedview")
+        response = self.client.post(self._get_list_url(), self.create_data[0], format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(SavedView.objects.get(pk=response.data["id"]).owner, self.user)
+
+    def test_create_object_owner_is_ignored(self):
+        other_user = User.objects.create_user(username="savedview-owner-spoof-target")
+        self.add_permissions("extras.add_savedview")
+        data = {**self.create_data[0], "owner": str(other_user.pk)}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(SavedView.objects.get(pk=response.data["id"]).owner, self.user)
+        self.assertFalse(SavedView.objects.filter(owner=other_user).exists())
+
+    def test_update_owner_is_ignored(self):
+        other_user = User.objects.create_user(username="savedview-owner-transfer-target")
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"owner": str(other_user.pk)}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.owner, self.user)
+
+    def test_update_view_is_rejected(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"view": "dcim:rack_list"}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("view", response.data)
+        instance.refresh_from_db()
+        self.assertEqual(instance.view, "circuits:circuit_list")
+
+    def test_update_view_to_same_value_is_permitted(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"view": instance.view}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_create_duplicate_name_returns_400(self):
+        """Making `owner` read-only drops DRF's UniqueTogetherValidator; model validation must still catch this."""
+        self.add_permissions("extras.add_savedview")
+        instance = self.saved_views[0]
+        data = {"name": instance.name, "view": instance.view}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(SavedView.objects.filter(name=instance.name, view=instance.view).count(), 1)
+
+    def test_options_owner_is_read_only(self):
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.options(self._get_list_url(), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertTrue(response.data["actions"]["POST"]["owner"]["read_only"])
+        self.assertFalse(response.data["actions"]["POST"]["owner"]["required"])
+
+    #
+    # Changing the global default view affects every user, so it requires extras.change_savedview.
+    #
+
+    def test_create_global_default_without_change_permission_is_rejected(self):
+        self.add_permissions("extras.add_savedview")
+        data = {**self.create_data[0], "is_global_default": True}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("global default", str(response.data["is_global_default"]).lower())
+        self.assertFalse(SavedView.objects.filter(is_global_default=True).exists())
+
+    def test_create_global_default_with_change_permission(self):
+        self.add_permissions("extras.add_savedview", "extras.change_savedview")
+        data = {**self.create_data[0], "is_global_default": True, "is_shared": False}
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        instance = SavedView.objects.get(pk=response.data["id"])
+        self.assertTrue(instance.is_global_default)
+        # A global default view is implicitly shared with all users.
+        self.assertTrue(instance.is_shared)
+
+    def test_set_global_default_with_change_permission(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        response = self.client.patch(
+            self._get_detail_url(instance), {"is_global_default": True}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        self.assertTrue(instance.is_shared)
+
+    def test_unset_global_default_requires_change_permission(self):
+        """Unsetting the global default is a system-wide behavior change too, so it is gated in both directions."""
+        instance = self.saved_views[0]
+        instance.is_global_default = True
+        instance.save()
+        # Without extras.change_savedview the request is rejected by the permission class before the serializer.
+        self.add_permissions("extras.view_savedview")
+        response = self.client.patch(
+            self._get_detail_url(instance), {"is_global_default": False}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+
+    def test_unset_global_default_with_change_permission(self):
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        instance.is_global_default = True
+        instance.save()
+        response = self.client.patch(
+            self._get_detail_url(instance), {"is_global_default": False}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_global_default)
+
+    def test_serializer_global_default_denied_for_anonymous_user(self):
+        """An unauthenticated request holds no permissions, so it must not be able to set the global default."""
+        request = APIRequestFactory().patch("/")
+        request.user = AnonymousUser()
+        serializer = SavedViewSerializer(
+            self.saved_views[0], data={"is_global_default": True}, partial=True, context={"request": request}
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("is_global_default", serializer.errors)
+
+    def test_serializer_global_default_permitted_without_a_request(self):
+        """Programmatic use (a Job or data migration) has no request to check permissions against."""
+        serializer = SavedViewSerializer(
+            self.saved_views[0], data={"is_global_default": True}, partial=True, context={"request": None}
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_patch_unrelated_field_on_own_global_default_view(self):
+        """Re-submitting an unchanged is_global_default must not trip the permission gate."""
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        instance.is_global_default = True
+        instance.save()
+        response = self.client.patch(
+            self._get_detail_url(instance),
+            {"name": "Renamed Global Default", "is_global_default": True},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Renamed Global Default")
+        self.assertTrue(instance.is_global_default)
+
+    #
+    # Managing other users' saved views is permitted by the standard object permissions, as in the UI.
+    #
+
+    def test_update_other_user_saved_view_with_change_permission(self):
+        self.add_permissions("extras.change_savedview", "extras.view_savedview")
+        for is_shared in (False, True):
+            with self.subTest(is_shared=is_shared):
+                instance = self._other_user_saved_view(name=f"Other User View {is_shared}", is_shared=is_shared)
+                response = self.client.patch(
+                    self._get_detail_url(instance), {"name": f"Moderated {is_shared}"}, format="json", **self.header
+                )
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                instance.refresh_from_db()
+                self.assertEqual(instance.name, f"Moderated {is_shared}")
+                # The moderated view still belongs to its original owner.
+                self.assertNotEqual(instance.owner, self.user)
+
+    def test_update_other_user_is_shared_with_change_permission(self):
+        self.add_permissions("extras.change_savedview", "extras.view_savedview")
+        instance = self._other_user_saved_view(is_shared=False)
+        response = self.client.patch(self._get_detail_url(instance), {"is_shared": True}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_shared)
+
+    def test_delete_other_user_saved_view_with_delete_permission(self):
+        self.add_permissions("extras.delete_savedview", "extras.view_savedview")
+        instance = self._other_user_saved_view()
+        response = self.client.delete(self._get_detail_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SavedView.objects.filter(pk=instance.pk).exists())
+
+    def test_update_other_user_saved_view_with_owner_constrained_permission(self):
+        """An administrator can restrict a user to their own saved views with an ObjectPermission constraint."""
+        self.add_permissions("extras.change_savedview", constraints={"owner": "$user"})
+        instance = self._other_user_saved_view(name="Constrained Target")
+        response = self.client.patch(self._get_detail_url(instance), {"name": "hacked"}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Constrained Target")
+        # The same user can still modify their own saved views.
+        own = self.saved_views[0]
+        response = self.client.patch(self._get_detail_url(own), {"name": "Renamed Own"}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+    def test_bulk_update_objects_across_owners(self):
+        self.add_permissions("extras.change_savedview")
+        other = self._other_user_saved_view(is_shared=True)
+        own = self.saved_views[:2]
+        data = [{"id": str(sv.pk), "is_shared": False} for sv in [*own, other]]
+        response = self.client.patch(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), len(own) + 1)
+        for saved_view in [*own, other]:
+            saved_view.refresh_from_db()
+            self.assertFalse(saved_view.is_shared)
+
+    def test_bulk_delete_objects_across_owners(self):
+        self.add_permissions("extras.delete_savedview")
+        other = self._other_user_saved_view()
+        own = self.saved_views[:2]
+        data = [{"id": str(sv.pk)} for sv in [*own, other]]
+        response = self.client.delete(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(SavedView.objects.filter(pk__in=[other.pk, *[sv.pk for sv in own]]).exists())
+
+    def test_bulk_update_cannot_change_owner_or_view(self):
+        other_user = User.objects.create_user(username="savedview-bulk-owner-target")
+        self.add_permissions("extras.change_savedview")
+        instance = self.saved_views[0]
+        # `owner` is read-only, so it is ignored rather than rejected.
+        response = self.client.patch(
+            self._get_list_url(),
+            [{"id": str(instance.pk), "owner": str(other_user.pk)}],
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertEqual(instance.owner, self.user)
+        # `view` is create-only, so changing it is rejected.
+        response = self.client.patch(
+            self._get_list_url(),
+            [{"id": str(instance.pk), "view": "dcim:rack_list"}],
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        instance.refresh_from_db()
+        self.assertEqual(instance.view, "circuits:circuit_list")
+
+    def test_superuser_can_manage_other_users_saved_views(self):
+        self.user.is_superuser = True
+        self.user.save()
+        instance = self._other_user_saved_view(is_shared=False)
+        self.assertHttpStatus(self.client.get(self._get_detail_url(instance), **self.header), status.HTTP_200_OK)
+        response = self.client.patch(
+            self._get_detail_url(instance),
+            {"is_shared": True, "is_global_default": True},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        # Not even a superuser can reassign ownership through the REST API.
+        response = self.client.patch(
+            self._get_detail_url(instance), {"owner": str(self.user.pk)}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        instance.refresh_from_db()
+        self.assertNotEqual(instance.owner, self.user)
+
+    #
+    # set-default action
+    #
+
+    def _get_set_default_url(self, instance):
+        return reverse("extras-api:savedview-set-default", kwargs={"pk": instance.pk})
+
+    def test_set_default_requires_no_savedview_permission(self):
+        instance = self.saved_views[0]
+        response = self.client.post(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertTrue(
+            UserSavedViewAssociation.objects.filter(
+                user=self.user, saved_view=instance, view_name=instance.view
+            ).exists()
+        )
+
+    def test_set_default_other_users_shared_view(self):
+        instance = self._other_user_saved_view(is_shared=True)
+        response = self.client.post(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertTrue(UserSavedViewAssociation.objects.filter(user=self.user, saved_view=instance).exists())
+
+    def test_set_default_other_users_private_view(self):
+        """A Saved View URL can be handed directly to another user; matches the UI's set-default behavior."""
+        instance = self._other_user_saved_view(is_shared=False)
+        response = self.client.post(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertTrue(UserSavedViewAssociation.objects.filter(user=self.user, saved_view=instance).exists())
+
+    def test_set_default_replaces_existing_pin(self):
+        first = self.saved_views[0]
+        second = SavedView.objects.create(owner=self.user, name="Another Circuits View", view=first.view)
+        self.assertHttpStatus(
+            self.client.post(self._get_set_default_url(first), **self.header), status.HTTP_201_CREATED
+        )
+        self.assertHttpStatus(
+            self.client.post(self._get_set_default_url(second), **self.header), status.HTTP_201_CREATED
+        )
+        associations = UserSavedViewAssociation.objects.filter(user=self.user, view_name=first.view)
+        self.assertEqual(associations.count(), 1)
+        self.assertEqual(associations.first().saved_view, second)
+
+    def test_clear_default(self):
+        instance = self.saved_views[0]
+        self.assertHttpStatus(
+            self.client.post(self._get_set_default_url(instance), **self.header), status.HTTP_201_CREATED
+        )
+        response = self.client.delete(self._get_set_default_url(instance), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(UserSavedViewAssociation.objects.filter(user=self.user, view_name=instance.view).exists())
+
+    def test_set_default_anonymous(self):
+        self.client.logout()
+        response = self.client.post(self._get_set_default_url(self.saved_views[0]))
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    def test_set_default_read_only_token(self):
+        read_only_token = Token.objects.create(user=self.user, write_enabled=False)
+        response = self.client.post(
+            self._get_set_default_url(self.saved_views[0]),
+            HTTP_AUTHORIZATION=f"Token {read_only_token.key}",
+        )
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
 
 class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
     model = UserSavedViewAssociation
 
-    @classmethod
-    def setUpTestData(cls):
-        cls.saved_view_views_distinct = SavedView.objects.values("view").distinct()
-        cls.users = User.objects.all()
+    def setUp(self):
+        super().setUp()
+        # The factory-generated pins belong to arbitrary users and consume the (user, view_name) unique pairs
+        # this test class needs, so replace them with a deterministic set.
+        UserSavedViewAssociation.objects.all().delete()
+        # SavedView is in EXEMPT_EXCLUDE_MODELS, so resolving the `saved_view` foreign key requires a real
+        # `extras.view_savedview` permission even under EXEMPT_VIEW_PERMISSIONS=["*"].
+        self.add_permissions("extras.view_savedview")
+        # unique_together = [["user", "view_name"]], so each pin needs a SavedView with a distinct `view`.
+        self.saved_views = [
+            SavedView.objects.create(owner=self.user, name="Association Test View", view=view)
+            for view in [
+                "circuits:circuit_list",
+                "dcim:device_list",
+                "dcim:location_list",
+                "dcim:rack_list",
+                "ipam:prefix_list",
+                "ipam:vlan_list",
+            ]
+        ]
+        for saved_view in self.saved_views[:3]:
+            UserSavedViewAssociation.objects.create(user=self.user, saved_view=saved_view, view_name=saved_view.view)
+        self.create_data = [
+            {"user": self.user.pk, "saved_view": saved_view.pk, "view_name": saved_view.view}
+            for saved_view in self.saved_views[3:]
+        ]
 
-        cls.create_data = []
-        for i, saved_view in enumerate(cls.saved_view_views_distinct[:3]):
-            sv = SavedView.objects.filter(view=saved_view["view"]).first()
-            cls.create_data.append(
-                {
-                    "user": cls.users[i].pk,
-                    "saved_view": sv.pk,
-                    "view_name": sv.view,
-                }
-            )
-        for i, saved_view in enumerate(cls.saved_view_views_distinct[4:7]):
-            sv = SavedView.objects.filter(view=saved_view["view"]).first()
-            UserSavedViewAssociation.objects.create(
-                user=cls.users[i],
-                saved_view=sv,
-                view_name=sv.view,
-            )
+    def test_get_object_depth_1_constrained_permission(self):
+        # This test asserts that a nested object the user cannot view is downgraded to brief form, so the
+        # class-wide extras.view_savedview grant from setUp() has to be dropped for it to be meaningful.
+        self.remove_permissions("extras.view_savedview")
+        super().test_get_object_depth_1_constrained_permission()
+
+    def test_list_objects_depth_1_constrained_permission(self):
+        self.remove_permissions("extras.view_savedview")
+        super().test_list_objects_depth_1_constrained_permission()
 
     def test_creating_invalid_user_to_saved_view(self):
         # Add object-level permission
-        duplicate_view_name = self.saved_view_views_distinct[0]["view"]
-        saved_view = SavedView.objects.filter(view=duplicate_view_name).first()
-        user = self.users[0]
-        UserSavedViewAssociation.objects.create(
-            saved_view=saved_view,
-            user=user,
-            view_name=saved_view.view,
-        )
+        saved_view = self.saved_views[0]
         duplicate_user_to_savedview_create_data = {
-            "user": user.pk,
+            "user": self.user.pk,
             "saved_view": saved_view.pk,
-            "view_name": duplicate_view_name,
+            "view_name": saved_view.view,
         }
         self.add_permissions("extras.add_usersavedviewassociation", "users.view_user", "extras.view_savedview")
         response = self.client.post(
@@ -3887,6 +4641,21 @@ class UserSavedViewAssociationTest(APIViewTestCases.APIViewTestCase):
         )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertIn("User saved view association with this User and View name already exists.", str(response.content))
+
+    def test_endpoints_are_deprecated(self):
+        """These endpoints are superseded by the saved-views/<uuid>/set-default/ action; see TODO for 4.0."""
+        response = self.client.get(reverse("schema"), {"format": "json"}, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        paths = response.json()["paths"]
+        for path, methods in [
+            ("/extras/user-saved-view-associations/", ["get", "post", "put", "patch", "delete"]),
+            ("/extras/user-saved-view-associations/{id}/", ["get", "put", "patch", "delete"]),
+        ]:
+            for method in methods:
+                with self.subTest(path=path, method=method):
+                    self.assertTrue(paths[path][method]["deprecated"])
+        # The replacement endpoint is of course not deprecated.
+        self.assertNotIn("deprecated", paths["/extras/saved-views/{id}/set-default/"]["post"])
 
 
 class ScheduledJobTest(
@@ -4092,6 +4861,134 @@ class ObjectMetadataTest(APIViewTestCases.APIViewTestCase):
         if instance is None:
             self.fail("Couldn't find a single deletable object with non-empty scoped_fields")
         return instance
+
+    def _constrain_permission_to_ipaddress_metadata(self, *actions):
+        """Grant `actions` on ObjectMetadata, constrained to metadata assigned to IPAddresses."""
+        obj_perm = ObjectPermission(
+            name="ObjectMetadata for IPAddresses only",
+            actions=list(actions),
+            constraints={"assigned_object_type__model": "ipaddress"},
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(ObjectMetadata))
+
+    def _ipaddress_and_prefix_metadata(self):
+        ipaddress_metadata = self._get_queryset().get(assigned_object_type=ContentType.objects.get_for_model(IPAddress))
+        prefix_metadata = (
+            self._get_queryset()
+            .filter(assigned_object_type=ContentType.objects.get_for_model(Prefix))
+            .exclude(scoped_fields=[])
+            .first()
+        )
+        self.assertIsNotNone(prefix_metadata, "Fixture requires ObjectMetadata assigned to a Prefix")
+        return ipaddress_metadata, prefix_metadata
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_create_enforces_view_permission_on_assigned_object(self):
+        """Creating metadata requires view permission on the assigned object, unlike updating or deleting it."""
+        metadata_type = MetadataType.objects.get(name="Location Metadata Type")
+        location = Location.objects.filter(associated_object_metadata__isnull=True).first()
+        data = {
+            "metadata_type": metadata_type.pk,
+            "scoped_fields": ["comments"],
+            "value": "created without parent view permission",
+            "assigned_object_type": "dcim.location",
+            "assigned_object_id": str(location.pk),
+        }
+        self.add_permissions("extras.add_objectmetadata", "extras.view_metadatatype")
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("assigned_object_id", response.data)
+
+        self.add_permissions("dcim.view_location")
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_update_and_delete_do_not_require_view_permission_on_assigned_object(self):
+        """Testing that update and delete do not require view permission on the assigned object."""
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self.add_permissions("extras.change_objectmetadata", "extras.delete_objectmetadata")
+
+        response = self.client.patch(
+            self._get_detail_url(ipaddress_metadata), {"scoped_fields": ["pk"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+        response = self.client.delete(self._get_detail_url(prefix_metadata), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_update_object_with_content_type_constrained_permission(self):
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("change")
+
+        # In scope: permitted.
+        response = self.client.patch(
+            self._get_detail_url(ipaddress_metadata), {"scoped_fields": ["pk"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        ipaddress_metadata.refresh_from_db()
+        self.assertEqual(ipaddress_metadata.scoped_fields, ["pk"])
+
+        # Out of scope: indistinguishable from a nonexistent record, and left untouched.
+        original_scoped_fields = prefix_metadata.scoped_fields
+        response = self.client.patch(
+            self._get_detail_url(prefix_metadata), {"scoped_fields": ["pk"]}, format="json", **self.header
+        )
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        prefix_metadata.refresh_from_db()
+        self.assertEqual(prefix_metadata.scoped_fields, original_scoped_fields)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_delete_object_with_content_type_constrained_permission(self):
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("delete")
+
+        response = self.client.delete(self._get_detail_url(prefix_metadata), **self.header)
+        self.assertHttpStatus(response, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(self._get_queryset().filter(pk=prefix_metadata.pk).exists())
+
+        response = self.client.delete(self._get_detail_url(ipaddress_metadata), **self.header)
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(self._get_queryset().filter(pk=ipaddress_metadata.pk).exists())
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_update_cannot_move_object_outside_constrained_permission(self):
+        """A constrained user may not reassign metadata to a content type outside their constraint."""
+        ipaddress_metadata, _ = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("change")
+        # Grant view on the new target so the GenericForeignKey validation itself passes; the constraint on
+        # the `change` permission is what must reject this.
+        self.add_permissions("ipam.view_prefix")
+        prefix = Prefix.objects.filter(associated_object_metadata__isnull=True).first()
+
+        response = self.client.patch(
+            self._get_detail_url(ipaddress_metadata),
+            {"assigned_object_type": "ipam.prefix", "assigned_object_id": str(prefix.pk)},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+        ipaddress_metadata.refresh_from_db()
+        self.assertEqual(ipaddress_metadata.assigned_object_type, ContentType.objects.get_for_model(IPAddress))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_bulk_delete_with_constrained_permission_skips_out_of_scope(self):
+        """Bulk delete silently skips records outside the constraint rather than failing the request."""
+        ipaddress_metadata, prefix_metadata = self._ipaddress_and_prefix_metadata()
+        self._constrain_permission_to_ipaddress_metadata("delete")
+
+        response = self.client.delete(
+            self._get_list_url(),
+            [{"id": str(ipaddress_metadata.pk)}, {"id": str(prefix_metadata.pk)}],
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(self._get_queryset().filter(pk=ipaddress_metadata.pk).exists())
+        self.assertTrue(self._get_queryset().filter(pk=prefix_metadata.pk).exists())
 
 
 class NoteTest(APIViewTestCases.APIViewTestCase):
@@ -4481,6 +5378,7 @@ class RelationshipTest(APIViewTestCases.APIViewTestCase, RequiredRelationshipTes
 
         # Delete existing factory generated objects that may interfere with this test
         IPAddress.objects.all().delete()
+        IPAddressRange.objects.all().delete()
         Prefix.objects.update(parent=None)
         Prefix.objects.all().delete()
         ControllerManagedDeviceGroup.objects.all().delete()
@@ -4766,7 +5664,10 @@ class RelationshipAssociationTest(APIViewTestCases.APIViewTestCase):
         """
         Check that `include=relationships` query parameter on a model endpoint includes relationships/associations.
         """
-        self.add_permissions("dcim.view_location")
+        # dcim.view_device is required in addition to dcim.view_location because the relationship's
+        # destination objects (Devices) are related objects traversed at depth=1; without permission to
+        # view them they would be downgraded to their brief {id, object_type, url} representation.
+        self.add_permissions("dcim.view_location", "dcim.view_device")
         response = self.client.get(
             reverse("dcim-api:location-detail", kwargs={"pk": self.locations[0].pk})
             + "?include=relationships"

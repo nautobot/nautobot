@@ -22,9 +22,10 @@ from nautobot.core.forms import (
 from nautobot.core.models import BaseManager, BaseModel
 from nautobot.core.models.fields import AutoSlugField, slugify_dashes_to_underscores
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.templatetags.helpers import bettertitle
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.templatetags.helpers import bettertitle, render_markdown
+from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key
 from nautobot.core.utils.lookup import get_filterset_for_model, get_route_for_model
+from nautobot.core.utils.otel import traced_span
 from nautobot.extras.choices import RelationshipRequiredSideChoices, RelationshipSideChoices, RelationshipTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
@@ -467,26 +468,39 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden=hidden,
             listing=True,
         )
-        if not get_queryset:
-            listing = cache.get(list_cache_key)
-            if listing is not None:
-                return listing
-        queryset = cache.get(cache_key)
-        if queryset is None:
+
+        def compute_queryset():
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = (
                 self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
             )  # You almost always will want access to the source_type/destination_type
             if hidden is not None:
                 queryset = queryset.filter(source_hidden=hidden)
+            return queryset
+
+        with traced_span(
+            "nautobot.extras.relationships",
+            "relationship_cache.get [source]",
+            **{
+                "nautobot.extras.relationship_cache.model": concrete_model._meta.label_lower,
+                "nautobot.extras.relationship_cache.hidden": str(hidden),
+            },
+        ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(cache_key, queryset, timeout=None)
-        if not get_queryset:
-            listing = list(queryset)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(list_cache_key, listing, timeout=None)
-            return listing
-        return queryset
+            if not get_queryset:
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
+                )
+                return listing
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            return queryset
 
     def get_for_model_destination(self, model, hidden=None, get_queryset=True):
         """
@@ -513,12 +527,8 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden=hidden,
             listing=True,
         )
-        if not get_queryset:
-            listing = cache.get(list_cache_key)
-            if listing is not None:
-                return listing
-        queryset = cache.get(cache_key)
-        if queryset is None:
+
+        def compute_queryset():
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = (
                 self.get_queryset()
@@ -527,14 +537,31 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             )  # You almost always will want access to the source_type/destination_type
             if hidden is not None:
                 queryset = queryset.filter(destination_hidden=hidden)
+            return queryset
+
+        with traced_span(
+            "nautobot.extras.relationships",
+            "relationship_cache.get [destination]",
+            **{
+                "nautobot.extras.relationship_cache.model": concrete_model._meta.label_lower,
+                "nautobot.extras.relationship_cache.hidden": str(hidden),
+            },
+        ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.relationship_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(cache_key, queryset, timeout=None)
-        if not get_queryset:
-            listing = list(queryset)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_relationship_models_cache
-            cache.set(list_cache_key, listing, timeout=None)
-            return listing
-        return queryset
+            if not get_queryset:
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
+                )
+                return listing
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            return queryset
 
     def get_required_for_model(self, model):
         """
@@ -810,7 +837,8 @@ class Relationship(
         field.required = False
         field.label = self.get_label(side)
         if self.description:
-            field.help_text = self.description
+            # Avoid script injection and similar attacks! Output HTML but only accept Markdown as input
+            field.help_text = render_markdown(self.description)
 
         return field
 

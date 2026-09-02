@@ -12,7 +12,11 @@
      {% endif %}
 >
     {% if page %}
-        <div class="nb-paginator-info">
+        {% comment %}
+        `role="status"` makes this a polite live region, so that paging through a list with HTMX -- which replaces this
+        element rather than reloading the page -- announces the new range instead of changing silently.
+        {% endcomment %}
+        <div class="nb-paginator-info" role="status">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
         {% if not exclude_controls %}
@@ -28,8 +32,13 @@
                     {% endfor %}
                 {% endif %}
             {% endfor %}
+            {% comment %}
+            The visible "per page" text after this select is not associated with it, so without `aria-label` the control
+            is announced with no name at all.
+            {% endcomment %}
             <select name="per_page"
                     id="per_page"
+                    aria-label="Items per page"
                     class="form-select"
                     {% if htmx_enabled|default:False %}
                         hx-trigger="change"
@@ -95,5 +104,25 @@
                 {% endif %}
             </ul>
         </nav>
+        <div class="pagination mb-0 d-flex align-items-center gap-4">
+            <label for="paginator-go-to">Go to page</label>
+            <div class="input-group" id="nb-paginator-go-to">
+                <input type="number" name="page" id="paginator-go-to" value="{{ page.number }}" class="form-control"
+                       min="1" max="{{ paginator.num_pages }}" aria-label="Go to page"
+                       {% if htmx_enabled|default:False %}
+                           hx-get="{% django_querystring page=None %}"
+                           hx-trigger="keydown[key=='Enter']"
+                       {% endif %}>
+                <span class="page-item">
+                    <a class="page-link px-6" href="#" aria-label="Go to page" title="Go to page" id="paginator-go-to-link"
+                       {% if htmx_enabled|default:False %}
+                           hx-get="{% django_querystring page=None %}"
+                           hx-include="#paginator-go-to"
+                       {% endif %}>
+                        <span aria-hidden="true" class="mdi mdi-chevron-right"></span>
+                    </a>
+                </span>
+            </div>
+        </div>
     {% endif %}
 </div>

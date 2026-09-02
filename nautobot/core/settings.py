@@ -91,6 +91,9 @@ if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGEL
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))
 
+# Sender address for emails sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+DEFAULT_FROM_EMAIL = os.getenv("NAUTOBOT_DEFAULT_FROM_EMAIL", "webmaster@localhost")
+
 # UUID uniquely but anonymously identifying this Nautobot deployment.
 if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID"] != "":
     DEPLOYMENT_ID = os.environ["NAUTOBOT_DEPLOYMENT_ID"]
@@ -103,6 +106,19 @@ if "NAUTOBOT_DEPLOYMENT_ID" in os.environ and os.environ["NAUTOBOT_DEPLOYMENT_ID
 if "NAUTOBOT_DEVICE_UNIQUENESS" in os.environ and os.environ["NAUTOBOT_DEVICE_UNIQUENESS"] != "":
     DEVICE_UNIQUENESS = os.environ["NAUTOBOT_DEVICE_UNIQUENESS"]
 
+# SMTP settings for outbound email sent by Nautobot (error reports to ADMINS, Jobs that send email, etc.)
+EMAIL_HOST = os.getenv("NAUTOBOT_EMAIL_HOST", "localhost")
+EMAIL_HOST_PASSWORD = os.getenv("NAUTOBOT_EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_USER = os.getenv("NAUTOBOT_EMAIL_HOST_USER", "")
+EMAIL_PORT = int(os.getenv("NAUTOBOT_EMAIL_PORT", "25"))
+if "NAUTOBOT_EMAIL_SSL_CERTFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"] != "":
+    EMAIL_SSL_CERTFILE = os.environ["NAUTOBOT_EMAIL_SSL_CERTFILE"]
+if "NAUTOBOT_EMAIL_SSL_KEYFILE" in os.environ and os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"] != "":
+    EMAIL_SSL_KEYFILE = os.environ["NAUTOBOT_EMAIL_SSL_KEYFILE"]
+EMAIL_TIMEOUT = int(os.getenv("NAUTOBOT_EMAIL_TIMEOUT", "30"))
+EMAIL_USE_SSL = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_SSL", "False"))
+EMAIL_USE_TLS = is_truthy(os.getenv("NAUTOBOT_EMAIL_USE_TLS", "False"))
+
 # Event Brokers
 EVENT_BROKERS = {}
 
@@ -112,6 +128,10 @@ EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
     ("users", "user"),
     ("users", "objectpermission"),
+    # Saved Views excluded only to bring the REST API in line with how the UI already behaves in the case of "*".
+    # The UI list view always requires `extras.view_savedview` regardless of this setting.
+    ("extras", "savedview"),
+    ("extras", "usersavedviewassociation"),
 )
 
 # Models to exempt from the enforcement of view permissions
@@ -240,6 +260,10 @@ if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_C
 
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
+if "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS" in os.environ and os.environ["NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"] != "":
+    EXTERNAL_AUTH_DEFAULT_GROUPS = os.getenv("NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS", "").split(
+        _CONFIG_SETTING_SEPARATOR
+    )
 EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 
 # Remote auth backend settings
@@ -275,6 +299,10 @@ SSO_STAFF_GROUPS = [
 # list of groups that an authenticating user can be a part of to be a Django super user
 SSO_SUPERUSER_GROUPS = [
     group for group in os.getenv("NAUTOBOT_SSO_SUPERUSER_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
+# list of groups to sync into Nautobot; if empty, every group in the claim is synced
+SSO_SYNC_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_SYNC_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
 ]
 
 # Job log entry sanitization and similar
@@ -547,16 +575,32 @@ if TESTING:
         "loggers": {"nautobot": {"handlers": ["console"], "level": "INFO"}},
     }
 else:
+    # Default (OpenTelemetry log correlation OFF) shape. When correlation is enabled, the trace/span
+    # IDs are surfaced in this output by `nautobot.core.logging.enable_otel_log_correlation()`, called
+    # from `nautobot.core.cli._preprocess_settings` after the config is fully loaded. That post-load
+    # step (not this block) is what appends the ` [trace_id=... span_id=...]` suffix to the formatters
+    # and attaches `OtelTraceContextFilter` to the handlers -- doing it there rather than here lets it
+    # read the *resolved* OTEL_PYTHON_DJANGO_INSTRUMENT / OTEL_PYTHON_LOG_CORRELATION settings (which
+    # are defined later in this module and may be overridden in nautobot_config.py), instead of
+    # re-reading the raw env vars at settings-import time.
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "otel_trace_context": {
+                "()": "nautobot.core.logging.OtelTraceContextFilter",
+            },
+        },
         "formatters": {
             "normal": {
                 "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)s :\n  %(message)s",
                 "datefmt": "%H:%M:%S",
             },
             "verbose": {
-                "format": "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s %(funcName)30s() :\n  %(message)s",
+                "format": (
+                    "%(asctime)s.%(msecs)03d %(levelname)-7s %(name)-20s %(filename)-15s "
+                    "%(funcName)30s() :\n  %(message)s"
+                ),
                 "datefmt": "%H:%M:%S",
             },
         },
@@ -565,11 +609,13 @@ else:
                 "level": "INFO",
                 "class": "logging.StreamHandler",
                 "formatter": "normal",
+                "filters": [],
             },
             "verbose_console": {
                 "level": "DEBUG",
                 "class": "logging.StreamHandler",
                 "formatter": "verbose",
+                "filters": [],
             },
         },
         "loggers": {
@@ -656,8 +702,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "nautobot.core.middleware.ExceptionHandlingMiddleware",
+    "nautobot.core.middleware.RequestCacheMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
+    "nautobot.core.middleware.GraphQLOpenTelemetryMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",
     "django_prometheus.middleware.PrometheusAfterMiddleware",
@@ -704,7 +752,7 @@ TEMPLATES = [
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
-            "environment": "jinja2.sandbox.SandboxedEnvironment",
+            "environment": "nautobot.core.templating.NautobotSandboxedEnvironment",
         },
     },
 ]
@@ -719,6 +767,11 @@ AUTHENTICATION_BACKENDS = [
 LANGUAGE_CODE = "en-us"
 USE_I18N = True
 USE_TZ = True
+# Group numbers into thousands (e.g. 1,009,518) for filters that force grouping such as `intcomma`.
+# Because our FORMAT_MODULE_PATH stub proxies format lookups to settings, this would otherwise fall
+# back to Django's default of 0, which disables grouping. USE_THOUSAND_SEPARATOR remains False, so
+# general number rendering is unaffected.
+NUMBER_GROUPING = 3
 
 # WSGI
 WSGI_APPLICATION = "nautobot.core.wsgi.application"
@@ -1137,6 +1190,7 @@ REDIS_LOCK_TIMEOUT = int(os.getenv("NAUTOBOT_REDIS_LOCK_TIMEOUT", "600"))
 # The filepath should be relative to the `MEDIA_ROOT`.
 BRANDING_FILEPATHS = {
     "logo": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_LOGO", None),  # Navbar logo
+    "navbar_icon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_NAVBAR_ICON", None),  # Collapsed navbar brand icon
     "favicon": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_FAVICON", None),  # Browser favicon
     "icon_16": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_16", None),  # 16x16px icon
     "icon_32": os.getenv("NAUTOBOT_BRANDING_FILEPATHS_ICON_32", None),  # 32x32px icon
@@ -1291,3 +1345,52 @@ KUBERNETES_SSL_CA_CERT_PATH = os.getenv(
 KUBERNETES_TOKEN_PATH = os.getenv(
     "NAUTOBOT_KUBERNETES_TOKEN_PATH", "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
+
+# Internal/dev-only: disables TLS verification for the Kubernetes API connection. Required for local clusters
+# WARNING: never set to False in production.
+KUBERNETES_VERIFY_SSL = is_truthy(os.getenv("NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL", "True"))
+
+#
+# OTEL Settings
+#
+
+OTEL_PYTHON_DJANGO_INSTRUMENT = is_truthy(os.getenv("OTEL_PYTHON_DJANGO_INSTRUMENT", "False"))
+# When True (and tracing is enabled via OTEL_PYTHON_DJANGO_INSTRUMENT), inject otelTraceID/otelSpanID/
+# otelTraceSampled/otelServiceName onto every log record so logs can be correlated to their trace. This
+# only injects the attributes; it does not add handlers or override your logging format, so it never
+# conflicts with a custom LOGGING config. When this is enabled, Nautobot's *default* LOGGING additionally
+# surfaces the trace/span IDs in console output -- applied post-load by
+# nautobot.core.logging.enable_otel_log_correlation() using the resolved settings, so it works whether
+# they are set via env var or in nautobot_config.py. If you override LOGGING at all, that step is skipped
+# and your config is left exactly as you wrote it; reference the attributes in your own formatters
+# (e.g. %(otelTraceID)s, with the OtelTraceContextFilter attached) to make them visible.
+OTEL_PYTHON_LOG_CORRELATION = is_truthy(os.getenv("OTEL_PYTHON_LOG_CORRELATION", "True"))
+OTEL_TRACES_EXPORTER = [
+    exporter
+    for exporter in os.getenv("OTEL_TRACES_EXPORTER", "otlp").split(_CONFIG_SETTING_SEPARATOR)
+    if exporter != ""
+]
+OTEL_METRICS_EXPORTER = [
+    exporter
+    for exporter in os.getenv("OTEL_METRICS_EXPORTER", "otlp").split(_CONFIG_SETTING_SEPARATOR)
+    if exporter != ""
+]
+
+OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "")
+OTEL_EXPORTER_OTLP_PROTOCOL = os.getenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+OTEL_EXPORTER_OTLP_INSECURE = is_truthy(os.getenv("OTEL_EXPORTER_OTLP_INSECURE", "False"))
+# OTEL-SDK-standard env var: an empty value means "unlimited" (SDK sentinel _ENV_VALUE_UNSET == "").
+# Nautobot applies a protective default cap of 8192 chars; set the env var to "" to restore the
+# SDK's unlimited behavior. None flows through to SpanLimits(max_span_attribute_length=None).
+OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT = (
+    int(_value) if (_value := os.getenv("OTEL_SPAN_ATTRIBUTE_VALUE_LENGTH_LIMIT", "8192")) != "" else None
+)
+del _value
+# Extra OpenTelemetry instrumentors to enable at startup, as dotted import paths to instrumentor
+# classes (e.g. "opentelemetry.instrumentation.botocore.BotocoreInstrumentor"). Nautobot core installs
+# each one against its own TracerProvider during instrument(), so apps do not need to call
+# .instrument() from AppConfig.ready() (which races when multiple apps enable the same instrumentor).
+# This is a Nautobot-specific setting (not read by the OTEL SDK), so it carries the NAUTOBOT_ prefix.
+NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS = [
+    path for path in os.getenv("NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS", "").split(_CONFIG_SETTING_SEPARATOR) if path != ""
+]

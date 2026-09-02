@@ -1,26 +1,29 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http import HTTPStatus
 import re
 from unittest import mock
 import urllib.parse
 import uuid
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.messages import get_messages
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import Q
-from django.test import override_settings, tag
+from django.test import override_settings, RequestFactory, tag
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.html import escape, format_html
 
 from nautobot.circuits.models import Circuit
 from nautobot.core.choices import ColorChoices
 from nautobot.core.models.fields import slugify_dashes_to_underscores
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.templatetags.helpers import bettertitle, HTML_NONE
 from nautobot.core.testing import (
     extract_form_failures,
     extract_page_body,
@@ -28,7 +31,7 @@ from nautobot.core.testing import (
     TestCase,
     ViewTestCases,
 )
-from nautobot.core.testing.utils import get_deletable_objects, post_data
+from nautobot.core.testing.utils import extract_page_title, get_deletable_objects, post_data
 from nautobot.core.ui.object_detail import _JobModalButton
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
@@ -42,8 +45,10 @@ from nautobot.dcim.models import (
     LocationType,
     Manufacturer,
 )
+from nautobot.extras import views
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
+    ComputedFieldTypeChoices,
     CustomFieldTypeChoices,
     DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
@@ -59,6 +64,7 @@ from nautobot.extras.choices import (
     WebhookHttpMethodChoices,
 )
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON, JOB_OVERRIDABLE_FIELDS
+from nautobot.extras.jobs_cancel import CeleryStrategy, JobLiveness
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -111,7 +117,8 @@ from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
 from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
-from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
+from nautobot.extras.views import ScheduledJobUIViewSet
+from nautobot.ipam.models import IPAddress, IPAddressRange, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
 
@@ -608,7 +615,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -627,7 +634,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -648,7 +655,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -669,7 +676,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -1403,87 +1410,30 @@ class ApprovalWorkflowStageViewTestCase(
         self.assertHttpStatus(response, 200)
         self.assertBodyContains(response, "Can not comment canceled approval workflow.")
 
+    def test_responses_panel_visible_only_with_view_permission(self):
+        """The stage detail Responses panel is gated by object-level `view` on ApprovalWorkflowStageResponse."""
+        stage = ApprovalWorkflowStage.objects.first()
+        marker = "Panel-visible response comment"
+        ApprovalWorkflowStageResponse.objects.create(
+            approval_workflow_stage=stage,
+            user=self.user,
+            state=ApprovalWorkflowStateChoices.COMMENT,
+            comments=marker,
+        )
+        self.client.force_login(self.user)
+        url = reverse("extras:approvalworkflowstage", args=[stage.pk])
 
-class ApprovalWorkflowStageResponseViewTestCase(
-    ViewTestCases.DeleteObjectViewTestCase,
-    ViewTestCases.BulkDeleteObjectsViewTestCase,
-):
-    """Test the ApprovalWorkflowStageResponse views."""
+        with self.subTest("without view_approvalworkflowstageresponse -> panel empty"):
+            self.add_permissions("extras.view_approvalworkflowstage")
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertNotContains(response, marker)
 
-    model = ApprovalWorkflowStageResponse
-
-    @classmethod
-    def setUpTestData(cls):
-        """Set up test data."""
-        super().setUpTestData()
-        cls.scheduledjob_ct = ContentType.objects.get_for_model(ScheduledJob)
-        cls.approver_groups = [Group.objects.create(name=f"Test Group {i}") for i in range(3)]
-        cls.users = User.objects.all()
-        for user in cls.users:
-            for group in cls.approver_groups:
-                user.groups.add(group)
-
-        job_model = Job.objects.get_for_class_path("pass_job.TestPassJob")
-        cls.scheduled_jobs = [
-            ScheduledJob.objects.create(
-                name=f"TessPassJob Scheduled Job {i}",
-                task="pass_job.TestPassJob",
-                job_model=job_model,
-                interval=JobExecutionType.TYPE_IMMEDIATELY,
-                user=cls.users[0],
-                start_time=timezone.now(),
-            )
-            for i in range(6)
-        ]
-
-        cls.approval_workflow_definitions = [
-            ApprovalWorkflowDefinition.objects.create(
-                name=f"Test Approval Workflow {i} Definition",
-                model_content_type=cls.scheduledjob_ct,
-                weight=i,
-                model_constraints={"job_model__name": "NoSuchJob"},
-            )
-            for i in range(5)
-        ]
-        cls.approval_workflow_stage_definitions = []
-        for approval_workflow_definition in cls.approval_workflow_definitions:
-            for i in range(3):
-                cls.approval_workflow_stage_definitions.append(
-                    ApprovalWorkflowStageDefinition.objects.create(
-                        approval_workflow_definition=approval_workflow_definition,
-                        sequence=i * 100,
-                        name=f"Test Approval Workflow Stage {i} Definition",
-                        min_approvers=i + 1,
-                        denial_message=f"Stage {i} Denial Message",
-                        approver_group=cls.approver_groups[i],
-                    )
-                )
-        cls.approval_workflows = [
-            ApprovalWorkflow.objects.create(
-                approval_workflow_definition=cls.approval_workflow_definitions[i],
-                object_under_review_content_type=cls.scheduledjob_ct,
-                object_under_review_object_id=cls.scheduled_jobs[i].pk,
-                current_state=ApprovalWorkflowStateChoices.PENDING,
-            )
-            for i in range(5)
-        ]
-        cls.approval_workflow_stages = []
-        for i, approval_workflow in enumerate(cls.approval_workflows):
-            for j in range(3):
-                approval_workflow_stage = ApprovalWorkflowStage.objects.create(
-                    approval_workflow=approval_workflow,
-                    approval_workflow_stage_definition=cls.approval_workflow_stage_definitions[i * 3 + j],
-                    state=ApprovalWorkflowStateChoices.PENDING,
-                )
-                cls.approval_workflow_stages.append(approval_workflow_stage)
-                if i < 2:
-                    # Create responses for the first two approval workflow instances
-                    ApprovalWorkflowStageResponse.objects.create(
-                        approval_workflow_stage=approval_workflow_stage,
-                        user=cls.users[i],
-                        comments=f"Test comment {i * 3 + j}",
-                        state=ApprovalWorkflowStateChoices.PENDING,
-                    )
+        with self.subTest("with view_approvalworkflowstageresponse -> response shown"):
+            self.add_permissions("extras.view_approvalworkflowstageresponse")
+            response = self.client.get(url)
+            self.assertHttpStatus(response, 200)
+            self.assertBodyContains(response, marker)
 
 
 class ComputedFieldTestCase(
@@ -1547,6 +1497,7 @@ class ComputedFieldTestCase(
 
         cls.form_data = {
             "content_type": obj_type.pk,
+            "output_type": ComputedFieldTypeChoices.TYPE_TEXT,
             "key": "computed_field_four",
             "label": "Computed Field Four",
             "template": "{{ obj.name }} is the best Location!",
@@ -3249,11 +3200,11 @@ class GitRepositoryTestCase(
         response = self.client.post(url)
         self.assertHttpStatus(response, [403, 404])
 
-    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
     def test_git_repository_custom_actions(self, _):
         """GitRepository custom actions redirect instead of returning 403/404."""
         instance = self._get_queryset().first()
-        for action_name in ["dryrun", "sync"]:
+        for action_name, dry_run in [("dryrun", True), ("sync", False)]:
             with self.subTest(action=action_name):
                 url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
                 # Without permissions, should get 403
@@ -3263,22 +3214,115 @@ class GitRepositoryTestCase(
                 # With permissions, should redirect to job result
                 self.add_permissions("extras.change_gitrepository")
                 self.add_permissions("extras.view_gitrepository")
-                with mock.patch(
-                    "nautobot.extras.views.enqueue_git_repository_diff_origin_and_local"
-                    if action_name == "dryrun"
-                    else "nautobot.extras.views.enqueue_pull_git_repository_and_refresh_data"
-                ) as mock_enqueue:
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
                     job_result = JobResult.objects.create(name=f"git-repository-{action_name}", user=self.user)
-                    mock_enqueue.return_value = job_result
+                    mock_sync.return_value = job_result
                     response = self.client.post(url)
                     self.assertRedirects(
                         response,
                         reverse("extras:gitrepository_result", kwargs={"pk": instance.pk}),
                         fetch_redirect_response=False,
                     )
-                    mock_enqueue.assert_called_once_with(instance, self.user)
+                    mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
                 self.remove_permissions("extras.change_gitrepository")
                 self.remove_permissions("extras.view_gitrepository")
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions_with_constrained_permission(self, _):
+        """Sync/dry-run return 404 when the user's change permission doesn't cover the object."""
+        instance1, instance2 = self._get_queryset().all()[:2]
+
+        # Grant change permission constrained to instance2 only
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"pk": instance2.pk},
+            actions=["change"],
+        )
+        obj_perm.validated_save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        for action_name, dry_run in [("dryrun", True), ("sync", False)]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    # Object outside the constraint: 404, and nothing enqueued
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance1.pk})
+                    response = self.client.post(url)
+                    self.assertHttpStatus(response, 404)
+                    mock_sync.assert_not_called()
+
+                    # Object inside the constraint: succeeds
+                    mock_sync.return_value = JobResult.objects.create(
+                        name=f"git-repository-{action_name}", user=self.user
+                    )
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance2.pk})
+                    response = self.client.post(url)
+                    self.assertRedirects(
+                        response,
+                        reverse("extras:gitrepository_result", kwargs={"pk": instance2.pk}),
+                        fetch_redirect_response=False,
+                    )
+                    mock_sync.assert_called_once_with(user=self.user, dry_run=dry_run)
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=0)
+    def test_git_repository_custom_actions_no_celery_worker(self, _):
+        """Sync/dry-run redirect to the repository detail page with an error message if no worker is running."""
+        self.add_permissions("extras.change_gitrepository")
+        self.add_permissions("extras.view_gitrepository")
+        instance = self._get_queryset().first()
+
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    url = reverse(f"extras:gitrepository_{action_name}", kwargs={"pk": instance.pk})
+                    response = self.client.post(url, follow=True)
+                    self.assertHttpStatus(response, 200)
+                    self.assertRedirects(response, instance.get_absolute_url())
+                    # No job should have been enqueued
+                    mock_sync.assert_not_called()
+                    # An error message should have been queued for display
+                    message = next(iter(response.context["messages"]))
+                    self.assertEqual(str(message), "Unable to run job: Celery worker process not running.")
+
+    @mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1)
+    def test_git_repository_custom_actions_nonexistent_repo(self, _):
+        """Sync/dry-run return 404 for a nonexistent repository."""
+        self.add_permissions("extras.change_gitrepository")
+
+        for action_name in ["dryrun", "sync"]:
+            with self.subTest(action=action_name):
+                with mock.patch.object(GitRepository, "sync") as mock_sync:
+                    url = reverse(
+                        f"extras:gitrepository_{action_name}",
+                        kwargs={"pk": "11111111-1111-1111-1111-111111111111"},
+                    )
+                    response = self.client.post(url)
+                    self.assertHttpStatus(response, 404)
+                    mock_sync.assert_not_called()
+
+    def test_check_and_call_git_repository_function_backwards_compat(self):
+        """The deprecated `check_and_call_git_repository_function` helper still works for downstream callers."""
+        instance = self._get_queryset().first()
+        request = RequestFactory().post(reverse("extras:gitrepository_sync", kwargs={"pk": instance.pk}))
+        request.user = self.user
+
+        # Without permission -> 403, provided function not called
+        mock_func = mock.Mock()
+        with self.assertWarns(DeprecationWarning):
+            response = views.check_and_call_git_repository_function(request, instance.pk, mock_func)
+        self.assertEqual(response.status_code, 403)
+        mock_func.assert_not_called()
+
+        # With permission and an available worker -> provided function called with (repository, user), then redirect
+        self.add_permissions("extras.change_gitrepository")
+        # Re-fetch the user so the permission cache reflects the newly-added permission.
+        request.user = User.objects.get(pk=self.user.pk)
+        mock_func = mock.Mock()
+        with mock.patch("nautobot.extras.datasources.git.get_worker_count", return_value=1):
+            with self.assertWarns(DeprecationWarning):
+                response = views.check_and_call_git_repository_function(request, instance.pk, mock_func)
+        self.assertEqual(response.status_code, 302)
+        mock_func.assert_called_once_with(instance, request.user)
 
 
 class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -3323,6 +3367,84 @@ class MetadataTypeTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Can't change data_type once set
         self.form_data["data_type"] = self.model.objects.first().data_type
         return super().test_edit_object_with_permission()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_renders_text_input_for_text_metadata_type(self):
+        """`value_widget` detail action returns a CharField-backed widget for TYPE_TEXT."""
+        text_mdt = MetadataType.objects.create(
+            name="Text MDT for value widget", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT
+        )
+        response = self.client.get(
+            reverse("extras:metadatatype_value_widget", kwargs={"pk": text_mdt.pk}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        # TYPE_TEXT renders an <input type="text"> with the field name `value`.
+        self.assertIn('name="value"', content)
+        # Help text mentions the resolved metadata type's display name.
+        self.assertIn(str(text_mdt), content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_empty_for_contact_team_metadata_type(self):
+        """For CONTACT_TEAM types, `MetadataType.to_form_field` returns None, so the value
+        widget endpoint renders an empty fragment (no input). HTMX swaps in nothing, removing
+        any prior value input."""
+        contact_team_mdt = MetadataType.objects.create(
+            name="Contact/Team MDT for value widget", data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+        )
+        response = self.client.get(
+            reverse("extras:metadatatype_value_widget", kwargs={"pk": contact_team_mdt.pk}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset).strip()
+        self.assertNotIn('name="value"', content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_value_widget_returns_404_for_nonexistent_metadata_type(self):
+        """As a detail action, an unknown metadata-type pk resolves via get_object() → 404."""
+        response = self.client.get(
+            reverse("extras:metadatatype_value_widget", kwargs={"pk": "00000000-0000-0000-0000-000000000000"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertHttpStatus(response, 404)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_without_permission(self):
+        """A user lacking `extras.view_metadatatype` is denied the value-widget detail action."""
+        mdt = MetadataType.objects.create(name="No-perm", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        url = reverse("extras:metadatatype_value_widget", kwargs={"pk": mdt.pk})
+        self.assertHttpStatus(self.client.get(url, HTTP_HX_REQUEST="true"), 403, msg=url)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_with_permission(self):
+        """With `extras.view_metadatatype`, the value widget renders for the metadata type."""
+        self.add_permissions("extras.view_metadatatype")
+        mdt = MetadataType.objects.create(name="View-perm", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        url = reverse("extras:metadatatype_value_widget", kwargs={"pk": mdt.pk})
+        self.assertBodyContains(self.client.get(url, HTTP_HX_REQUEST="true"), 'name="value"')
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_value_widget_with_constrained_permission(self):
+        """A constrained view permission renders the permitted type's widget but 404s others."""
+        permitted_mdt = MetadataType.objects.create(name="Permitted", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+        other_mdt = MetadataType.objects.create(name="Forbidden", data_type=MetadataTypeDataTypeChoices.TYPE_TEXT)
+
+        obj_perm = ObjectPermission(
+            name="Constrained metadata type view",
+            constraints={"pk": permitted_mdt.pk},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(MetadataType))
+
+        permitted_url = reverse("extras:metadatatype_value_widget", kwargs={"pk": permitted_mdt.pk})
+        self.assertBodyContains(self.client.get(permitted_url, HTTP_HX_REQUEST="true"), 'name="value"')
+
+        other_url = reverse("extras:metadatatype_value_widget", kwargs={"pk": other_mdt.pk})
+        self.assertHttpStatus(self.client.get(other_url, HTTP_HX_REQUEST="true"), 404, msg=other_url)
 
 
 class NoteTestCase(
@@ -3868,6 +3990,159 @@ class SavedViewTest(ModelViewTestCase):
                 html=True,
             )
 
+    #
+    # Saved View edit form (extras:savedview_edit), as distinct from the update-config action tested above.
+    #
+
+    def get_edit_form_url(self, saved_view):
+        return reverse("extras:savedview_edit", kwargs={"pk": saved_view.pk})
+
+    def _other_user_saved_view(self, **kwargs):
+        other_user = User.objects.create(username=f"savedview-owner-{uuid.uuid4()}", is_active=True)
+        kwargs.setdefault("name", "Other User Saved View")
+        kwargs.setdefault("view", "dcim:location_list")
+        return SavedView.objects.create(owner=other_user, **kwargs)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_other_users_saved_view_as_different_user(self):
+        instance = self._other_user_saved_view(is_shared=False)
+        different_user = User.objects.create(username="Edit Form User 1", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "hacked", "is_shared": True, "is_global_default": True}),
+            follow=True,
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Other User Saved View")
+        self.assertFalse(instance.is_shared)
+        self.assertFalse(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_get_other_users_saved_view(self):
+        """The edit form should not even be rendered for a user who is not permitted to submit it."""
+        instance = self._other_user_saved_view(is_shared=False)
+        different_user = User.objects.create(username="Edit Form User 2", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.get(self.get_edit_form_url(instance), follow=True, headers={"HX-Request": "true"})
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_other_users_saved_view_with_change_permission(self):
+        """extras.change_savedview still permits moderating other users' saved views in the UI."""
+        instance = self._other_user_saved_view(is_shared=True)
+        self.add_permissions("extras.change_savedview")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "Moderated Name", "is_shared": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Moderated Name")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_set_global_default_as_owner_without_change_permission(self):
+        instance = SavedView.objects.create(owner=self.user, name="My Own View", view="dcim:location_list")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": instance.name, "is_shared": True, "is_global_default": True}),
+            follow=True,
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, "You do not have the required permission to change the global default Saved View."
+        )
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_set_global_default_as_owner_with_change_permission(self):
+        instance = SavedView.objects.create(owner=self.user, name="My Own View", view="dcim:location_list")
+        self.add_permissions("extras.change_savedview")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": instance.name, "is_global_default": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        self.assertTrue(instance.is_shared)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rename_own_global_default_view_without_change_permission(self):
+        """An unchanged is_global_default must not trip the permission gate."""
+        instance = SavedView.objects.create(
+            owner=self.user, name="My Global Default", view="dcim:location_list", is_global_default=True
+        )
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "My Renamed Global Default", "is_shared": True, "is_global_default": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "My Renamed Global Default")
+        self.assertTrue(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_with_other_users_private_saved_view_param(self):
+        """
+        A `?saved_view=<uuid>` link applies regardless of ownership or `is_shared`.
+
+        This is a known side effect of the parameter rather than a designed sharing mechanism; it is not a
+        documented feature. If it is ever closed, this test should be updated deliberately.
+        """
+        # Create our own Locations and filter down to one of them, rather than asserting against ambient test
+        # data whose volume and pagination make presence on the first page of results unpredictable.
+        location_status = Status.objects.get_for_model(Location).first()
+        if location_status is None:
+            location_status = Status.objects.create(name="Saved View Link Status")
+            location_status.content_types.add(ContentType.objects.get_for_model(Location))
+        location_type = LocationType.objects.create(name="Saved View Link Location Type")
+        included = Location.objects.create(
+            name="Saved View Link Location Included", location_type=location_type, status=location_status
+        )
+        excluded = Location.objects.create(
+            name="Saved View Link Location Excluded", location_type=location_type, status=location_status
+        )
+        instance = self._other_user_saved_view(is_shared=False, config={"filter_params": {"name": [included.name]}})
+        different_user = User.objects.create(username="Saved View Link User", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.get(reverse("dcim:location_list") + f"?saved_view={instance.pk}", follow=True)
+        # The saved view's filter params were applied, narrowing the list to the single matching Location.
+        self.assertBodyContains(response, included.name)
+        self.assertNotIn(excluded.name, extract_page_body(response.content.decode(response.charset)))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_with_invalid_saved_view_param(self):
+        for saved_view_param in [str(uuid.uuid4()), "not-a-uuid"]:
+            with self.subTest(saved_view=saved_view_param):
+                response = self.client.get(
+                    reverse("dcim:location_list") + f"?saved_view={saved_view_param}", follow=True
+                )
+                self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_unknown_saved_view_returns_404(self):
+        """Every Saved View action that looks up its object by pk should 404 rather than error on an unknown pk."""
+        unknown_pk = uuid.uuid4()
+        for url_name in [
+            "extras:savedview_edit",
+            "extras:savedview_delete",
+            "extras:savedview_set_default",
+            "extras:savedview_update_config",
+        ]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name, kwargs={"pk": unknown_pk}))
+                self.assertHttpStatus(response, 404)
+
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
 class SecretTestCase(
@@ -4228,6 +4503,48 @@ class ScheduledJobTestCase(
         self.assertHttpStatus(response, 200)
         body = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("user that scheduled this job has been removed", body)
+
+    def test_detail_view_renders_custom_interval_with_crontab(self):
+        """The Scheduling panel appends the crontab expression for custom-interval schedules."""
+        self.add_permissions("extras.view_scheduledjob")
+        sj = self._make_scheduled_job(
+            "custom_interval_detail",
+            interval=JobExecutionType.TYPE_CUSTOM,
+            crontab="*/15 9,17 3 * 1-5",
+        )
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn(f"{JobExecutionType.TYPE_CUSTOM} (*/15 9,17 3 * 1-5)", body)
+
+    def test_detail_view_renders_datetime_in_non_default_timezone(self):
+        """When the schedule's time zone differs from the server default, both renderings are shown."""
+        self.add_permissions("extras.view_scheduledjob")
+        start_time = timezone.make_aware(datetime(2021, 6, 15, 18, 30))
+        sj = self._make_scheduled_job("non_default_tz_detail", time_zone="America/New_York", start_time=start_time)
+
+        response = self.client.get(sj.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        body = extract_page_body(response.content.decode(response.charset))
+        # The schedule's zone name is only emitted when it differs from the server default.
+        self.assertIn("America/New_York", body)
+        expected_local = date_format(start_time.astimezone(sj.time_zone), "SHORT_DATETIME_FORMAT")
+        self.assertIn(expected_local, body)
+
+    def test_user_inputs_panel_render_value(self):
+        """UserInputsPanel renders values as inline code, and renders a placeholder for unset values."""
+        panel = ScheduledJobUIViewSet.UserInputsPanel(weight=100)
+        self.assertEqual(panel.render_value("var_a", "some-value", {}), format_html("<code>{}</code>", "some-value"))
+        self.assertEqual(panel.render_value("var_b", None, {}), HTML_NONE)
+
+    def test_render_state_falls_back_for_unknown_state(self):
+        """render_state renders a neutral, title-cased badge for any state outside the known set."""
+        rendered = ScheduledJobUIViewSet.render_state("some_future_state")
+        self.assertEqual(
+            rendered,
+            format_html('<span class="badge bg-body-secondary border">{}</span>', bettertitle("some_future_state")),
+        )
 
     def test_detail_view_shows_assume_ownership_button_with_perms(self):
         self.add_permissions("extras.view_scheduledjob", "extras.change_scheduledjob", "extras.run_job")
@@ -4607,15 +4924,23 @@ class JobResultTestCase(
 
     @classmethod
     def setUpTestData(cls):
-        JobResult.objects.create(name="pass_job.TestPassJob")
-        JobResult.objects.create(name="fail.TestFailJob")
+        job_model_pass = Job.objects.get_for_class_path("pass_job.TestPassJob")
+        job_model_failed = Job.objects.get_for_class_path("fail.TestFailJob")
+        JobResult.objects.create(
+            name="pass_job.TestPassJob", celery_kwargs={"nautobot_job_queue_type": "celery"}, job_model=job_model_pass
+        )
+        JobResult.objects.create(
+            name="fail.TestFailJob", celery_kwargs={"nautobot_job_queue_type": "celery"}, job_model=job_model_failed
+        )
         JobLogEntry.objects.create(
             log_level=LogLevelChoices.LOG_INFO,
             job_result=JobResult.objects.first(),
             grouping="run",
             message="This is a test",
         )
-        cls.job_result_pending = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_PENDING).first()
+        cls.job_result_pending = JobResult.objects.filter(
+            status=JobResultStatusChoices.STATUS_PENDING, job_model__isnull=False
+        ).first()
         cls.console_entry_1 = JobConsoleEntry.objects.create(
             job_result=cls.job_result_pending, timestamp=timezone.now(), text="Starting job execution..."
         )
@@ -4645,13 +4970,57 @@ class JobResultTestCase(
             grouping="run",
             message="Restricted entry - requires special permission",
         )
-        cls.job_result_completed = JobResult.objects.filter(status=JobResultStatusChoices.STATUS_SUCCESS).first()
+        cls.job_result_completed = JobResult.objects.filter(
+            status=JobResultStatusChoices.STATUS_SUCCESS, job_model__isnull=False
+        ).first()
         JobConsoleEntry.objects.create(
             job_result=cls.job_result_completed, timestamp=timezone.now(), text="Job completed successfully"
         )
 
         file = SimpleUploadedFile(name="output.txt", content="Content\n".encode("utf-8"))
         FileProxy.objects.create(name=file.name, file=file, job_result=JobResult.objects.first())
+
+    @staticmethod
+    def _fake_cancel_success_termination_path(job_result, user):
+        """Simulate a successful cancel by flipping the job to REVOKED.
+
+        Stand-in for `CeleryStrategy.cancel` in tests of the TERMINATE path,
+        where the real code relies on Celery's async catchup to set the
+        REVOKED status. Writes the status synchronously so the view's
+        post-cancel check sees the expected terminal state.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_REVOKED
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "canceled": True}
+
+    @staticmethod
+    def _fake_cancel_no_action_termination_path(job_result, user):
+        """Simulate a cancel that lost the race to natural completion.
+
+        Stand-in for `CeleryStrategy.cancel` in tests where the job finishes
+        between the view's pre-check and the strategy call. Leaves the job
+        in a non-REVOKED terminal state (COMPLETED) so the view's post-cancel
+        check trips and returns 409.
+        """
+        job_result.status = JobResultStatusChoices.STATUS_SUCCESS
+        job_result.save(update_fields=["status"])
+        return {"job_result": job_result, "error": None, "canceled": False}
+
+    def test_get_object_with_permission(self):
+        instance = self._get_queryset().first()
+        # Add model-level permission
+        self.add_permissions("extras.view_jobresult")
+
+        # Try GET with model-level permission
+        response = self.client.get(instance.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+
+        # Unlike most models, the JobResult detail page title is derived from the
+        # associated Job (e.g. "TestFailJob") rather than from str(instance)
+        # ("fail.TestFailJob"), so the base class assertion on str(instance) does
+        # not apply. Assert on the job-derived title actually rendered instead.
+        expected_title = escape(instance.job_model.name)
+        self.assertInHTML(expected_title, extract_page_title(response.content.decode(response.charset)))
 
     def test_get_joblogentrytable_anonymous(self):
         url = reverse("extras:jobresult_log-table", kwargs={"pk": JobResult.objects.first().pk})
@@ -4706,6 +5075,38 @@ class JobResultTestCase(
         self.assertHttpStatus(response, 200)
         response_content = response.content.decode(response.charset)
         self.assertNotIn("log-table-poller", response_content)
+
+    def _get_advanced_tab_panel(self, label):
+        """Return the Advanced-tab panel with the given label from the JobResult detail view definition."""
+        content = views.JobResultUIViewSet.object_detail_content
+        advanced_tab = next(tab for tab in content.tabs if tab.label == "Advanced")
+        return next(panel for panel in advanced_tab.panels if panel.label == label)
+
+    def test_advanced_tab_panels_poll_while_job_pending(self):
+        """Worker and Traceback panels should self-poll (hx-trigger) while the job is not yet finished (#9208)."""
+        self.add_permissions("extras.view_jobresult")
+        url = self.job_result_pending.get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertIn('hx-trigger="every 3s"', content)
+
+    def test_advanced_tab_panels_do_not_poll_when_job_complete(self):
+        """Worker and Traceback panels should stop polling once the job has reached a terminal state (#9208)."""
+        self.add_permissions("extras.view_jobresult")
+        url = self.job_result_completed.get_absolute_url()
+
+        for label in ("Worker", "Traceback"):
+            with self.subTest(panel=label):
+                panel = self._get_advanced_tab_panel(label)
+                response = self.client.get(url, {"component_id": panel.component_id}, HTTP_HX_REQUEST="true")
+                self.assertHttpStatus(response, 200)
+                content = response.content.decode(response.charset)
+                self.assertNotIn('hx-trigger="every 3s"', content)
 
     def test_joblogentrytable_vary_header(self):
         """Test that Vary header includes HX-Request for proper caching."""
@@ -5008,6 +5409,326 @@ class JobResultTestCase(
         content = response.content.decode(response.charset)
         self.assertNotIn('data-nb-refresh-on-close="true"', content)
 
+    def test_cancel_job_get_anonymous_redirects_to_login(self):
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.client.logout()
+        response = self.client.get(cancel_url, follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertRedirects(response, f"/login/?next={cancel_url}")
+
+    def test_cancel_job_get_without_permission(self):
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.get(cancel_url)
+        self.assertHttpStatus(response, [403, 404])
+
+    def test_cancel_job_get_without_cancel_job_permission_redirects_with_message(self):
+        """User has view perm but no cancel_job - redirect with error message."""
+        self.add_permissions("extras.view_jobresult")
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+
+        response = self.client.get(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("You do not have permission to cancel this job." in m for m in messages_list))
+
+    def test_cancel_job_post_without_cancel_job_permission_redirects_with_message(self):
+        """POST without cancel_job - redirect with error, strategy never invoked."""
+        self.add_permissions("extras.view_jobresult")
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("You do not have permission to cancel this job." in m for m in messages_list))
+
+    def test_cancel_job_non_owner_with_dismatch_constraint_denied(self):
+        """A non-owner whose cancel_job is constrained to a different Job is denied."""
+        other = User.objects.create_user(username="dismatch-owner")
+        other_job = Job.objects.exclude(pk=self.job_result_pending.job_model.pk).first()
+        self.job_result_pending.user = other
+        self.job_result_pending.save()
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.cancel_job", constraints={"pk": str(other_job.pk)})
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("You do not have permission to cancel this job." in m for m in messages_list))
+
+    def test_cancel_job_orphaned_result_non_owner_without_cancel_job_denied(self):
+        """When job_model is None, a non-owner without cancel_job is still denied (strategy never invoked)."""
+        other = User.objects.create_user(username="orphan-non-owner-noperm")
+        orphan = JobResult.objects.create(
+            name="deleted_module.deleted_job2",
+            job_model=None,
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": orphan.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, orphan.get_absolute_url())
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("You do not have permission to cancel this job." in m for m in messages_list))
+
+    @mock.patch.object(CeleryStrategy, "cancel")
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    def test_cancel_job_get_renders_confirmation_for_running_job(self, mock_liveness, mock_cancel):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.get(cancel_url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertTemplateUsed(response, "extras/job_cancel.html")
+        self.assertEqual(response.context["object"], self.job_result_pending)
+        self.assertTrue(response.context["job_liveness_state"])
+        self.assertEqual(
+            response.context["return_url"],
+            self.job_result_pending.get_absolute_url(),
+        )
+        mock_liveness.assert_called_once_with(self.job_result_pending)
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "cancel")
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.NOT_RUNNING)
+    def test_cancel_job_get_renders_confirmation_for_dead_worker(self, mock_liveness, mock_cancel):
+        """`job_liveness_state=JobLiveness.NOT_RUNNING` is the 'reap' branch — confirmation page still shown."""
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.get(cancel_url)
+
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(response.context["job_liveness_state"], JobLiveness.NOT_RUNNING)
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "cancel")
+    @mock.patch.object(CeleryStrategy, "liveness")
+    def test_cancel_job_get_already_finished_redirects(self, mock_liveness, mock_cancel):
+        self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_completed.save()
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.get(cancel_url)
+
+        self.assertRedirects(response, self.job_result_completed.get_absolute_url())
+        mock_liveness.assert_not_called()
+        mock_cancel.assert_not_called()
+
+        messages_list = list(get_messages(response.wsgi_request))
+        self.assertTrue(
+            any("already finished" in str(m).lower() for m in messages_list),
+            f"Expected an info message about the job being finished, got: {messages_list}",
+        )
+
+    def test_cancel_job_post_without_permission(self):
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(cancel_url)
+        self.assertHttpStatus(response, [403, 404])
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_post_success(self, mock_cancel, mock_liveness):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        mock_cancel.return_value = {
+            "job_result": self.job_result_pending,
+            "error": None,
+        }
+
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("Job canceled." in m for m in messages_list),
+            f"Expected a success message, got: {messages_list}",
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_post_success_when_user_owner_without_permission(self, mock_cancel, mock_liveness):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.user = self.user
+        self.job_result_pending.save()
+        mock_cancel.return_value = {
+            "job_result": self.job_result_pending,
+            "error": None,
+        }
+
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("Job canceled." in m for m in messages_list),
+            f"Expected a success message, got: {messages_list}",
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel")
+    def test_cancel_job_post_strategy_returns_error(self, mock_cancel, mock_liveness):
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        error_message = "Broker is unreachable; could not cancel."
+        mock_cancel.return_value = {
+            "job_result": self.job_result_pending,
+            "error": error_message,
+        }
+
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn(error_message, messages_list)
+
+    @mock.patch.object(CeleryStrategy, "cancel")
+    @mock.patch.object(CeleryStrategy, "liveness")
+    def test_cancel_job_post_already_finished_does_not_invoke_strategy(self, mock_liveness, mock_cancel):
+        self.job_result_completed.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_completed.save()
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_completed.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_completed.get_absolute_url())
+        mock_liveness.assert_not_called()
+        mock_cancel.assert_not_called()
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_no_action_termination_path)
+    def test_cancel_status_not_changed_returns_409(self, mock_cancel, mock_liveness):
+        """If the strategy reports success but the job didn't end up REVOKED returns info."""
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.save()
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("Job finished before it could be canceled. No action was taken." in m for m in messages_list)
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_post_non_owner_with_matching_constraint(self, mock_cancel, mock_liveness):
+        """A non-owner with cancel_job constrained to this result's Job can cancel."""
+        other = User.objects.create_user(username="constrained-owner")
+        self.job_result_pending.celery_kwargs = {"nautobot_job_queue_type": "celery"}
+        self.job_result_pending.user = other
+        self.job_result_pending.save()
+        mock_cancel.return_value = {"job_result": self.job_result_pending, "error": None}
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.cancel_job", constraints={"pk": str(self.job_result_pending.job_model.pk)})
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+        mock_cancel.assert_called_once_with(self.job_result_pending, user=self.user)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
+
+    @mock.patch.object(JobResult, "log")
+    def test_cancel_unsupported_queue_type_should_abandon_job(self, mock_job_log):
+        """Unsuporrted queue type should abandon job."""
+        self.job_result_pending.celery_kwargs = {}
+        self.job_result_pending.save()
+        self.add_permissions(
+            "extras.view_jobresult",
+            "extras.cancel_job",
+        )
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": self.job_result_pending.pk})
+        response = self.client.post(cancel_url)
+        self.assertRedirects(response, self.job_result_pending.get_absolute_url())
+
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
+        mock_job_log.assert_called_once_with(
+            f"Abandoned job {self.job_result_pending.pk} by {self.user}",
+            level_choice=LogLevelChoices.LOG_FAILURE,
+            grouping="canceling",
+        )
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_orphaned_result_non_owner_with_cancel_job_can_cancel(self, mock_cancel, mock_liveness):
+        """When the associated Job is gone (job_model=None), a non-owner with cancel_job can still cancel."""
+        other = User.objects.create_user(username="orphan-non-owner")
+        orphan = JobResult.objects.create(
+            name="deleted_module.deleted_job",
+            job_model=None,
+            user=other,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        mock_cancel.return_value = {"job_result": orphan, "error": None}
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": orphan.pk})
+        self.add_permissions("extras.view_jobresult", "extras.cancel_job")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, orphan.get_absolute_url())
+        mock_cancel.assert_called_once_with(orphan, user=self.user)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
+
+    @mock.patch.object(CeleryStrategy, "liveness", return_value=JobLiveness.RUNNING)
+    @mock.patch.object(CeleryStrategy, "cancel", side_effect=_fake_cancel_success_termination_path)
+    def test_cancel_job_orphaned_result_submitter_can_cancel(self, mock_cancel, mock_liveness):
+        """The submitter can cancel their own orphaned result (job_model=None) without cancel_job."""
+        orphan = JobResult.objects.create(
+            name="deleted_module.deleted_job_submitter",
+            job_model=None,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_PENDING,
+            celery_kwargs={"nautobot_job_queue_type": "celery"},
+        )
+        mock_cancel.return_value = {"job_result": orphan, "error": None}
+        cancel_url = reverse("extras:jobresult_cancel_job", kwargs={"pk": orphan.pk})
+        self.add_permissions("extras.view_jobresult")
+
+        response = self.client.post(cancel_url)
+
+        self.assertRedirects(response, orphan.get_absolute_url())
+        mock_cancel.assert_called_once_with(orphan, user=self.user)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(any("Job canceled." in m for m in messages_list))
+
 
 class JobTestCase(
     # note no CreateObjectViewTestCase - we do not support user creation of Job records
@@ -5151,6 +5872,13 @@ class JobTestCase(
         """
         queryset = self._get_queryset().exclude(module_name__startswith="nautobot.")
         return get_deletable_objects(self.model, queryset).values_list("pk", flat=True)[:3]
+
+    def test_job_detail_source_version(self):
+        """The Job detail view renders the Job's source_version in the Source Code panel."""
+        self.add_permissions("extras.view_job")
+        instance = Job.objects.get(job_class_name="ExampleJob")
+        response = self.client.get(instance.get_absolute_url())
+        self.assertBodyContains(response, apps.get_app_config("example_app").version)
 
     def test_delete_system_jobs_fail(self):
         instance = self._get_queryset().filter(module_name__startswith="nautobot.").first()
@@ -6000,7 +6728,7 @@ class JobTestCase(
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
         self.assertBodyContains(response, f"{instance}")
-        changelog_table = "<thead><tr><th>Time</th><th>User name</th><th>Action</th><th>Type</th><th>Object</th><th>Request ID</th></tr></thead>"
+        changelog_table = '<thead><tr><th scope="col">Time</th><th scope="col">User name</th><th scope="col">Action</th><th scope="col">Type</th><th scope="col">Object</th><th scope="col">Request ID</th></tr></thead>'
         self.assertBodyContains(response, changelog_table, html=True)
 
 
@@ -6350,34 +7078,126 @@ class ObjectChangeTestCase(TestCase):
 
 
 class ObjectMetadataTestCase(
+    ViewTestCases.CreateObjectViewTestCase,
+    ViewTestCases.DeleteObjectViewTestCase,
+    ViewTestCases.EditObjectViewTestCase,
+    ViewTestCases.GetObjectViewTestCase,
+    ViewTestCases.GetObjectChangelogViewTestCase,
     ViewTestCases.ListObjectsViewTestCase,
+    ViewTestCases.BulkDeleteObjectsViewTestCase,
 ):
     model = ObjectMetadata
 
+    @classmethod
+    def setUpTestData(cls):
+        text_mdt = MetadataType.objects.create(
+            name="Test Text Metadata Type",
+            data_type=MetadataTypeDataTypeChoices.TYPE_TEXT,
+        )
+        text_mdt.content_types.set(ContentType.objects.all())
+
+        contact_team_mdt = MetadataType.objects.create(
+            name="Test Contact Or Team Metadata Type",
+            data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
+        )
+        contact_team_mdt.content_types.set(ContentType.objects.all())
+
+        location_ct = ContentType.objects.get_for_model(Location)
+        prefix_ct = ContentType.objects.get_for_model(Prefix)
+        device_ct = ContentType.objects.get_for_model(Device)
+        ip_ct = ContentType.objects.get_for_model(IPAddress)
+
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 1",
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 2",
+            scoped_fields=["description"],
+            assigned_object_type=prefix_ct,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 3",
+            scoped_fields=["name"],
+            assigned_object_type=device_ct,
+            assigned_object_id=Device.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        ObjectMetadata.objects.create(
+            metadata_type=text_mdt,
+            _value="text value 4",
+            scoped_fields=["type"],
+            assigned_object_type=ip_ct,
+            assigned_object_id=IPAddress.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+
+        cls.contact_team_instance_with_contact = ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            contact=Contact.objects.first(),
+            scoped_fields=["name"],
+            assigned_object_type=location_ct,
+            assigned_object_id=Location.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+        cls.contact_team_instance_with_team = ObjectMetadata.objects.create(
+            metadata_type=contact_team_mdt,
+            team=Team.objects.first(),
+            scoped_fields=["description"],
+            assigned_object_type=prefix_ct,
+            assigned_object_id=Prefix.objects.filter(associated_object_metadata__isnull=True).first().pk,
+        )
+
+        target_location = Location.objects.filter(associated_object_metadata__isnull=True).last()
+        cls.form_data = {
+            "metadata_type": text_mdt.pk,
+            "contact": None,
+            "team": None,
+            "assigned_object_type": location_ct.pk,
+            "assigned_object_id": target_location.pk,
+            "scoped_fields": "time_zone",
+            "value": "new test value",
+        }
+        # The create view requires assigned_object_type / assigned_object_id query params on GET
+        # (entry must come from the parent object's Metadata tab); stash them for test overrides.
+        cls._create_url_query = f"assigned_object_type={location_ct.pk}&assigned_object_id={target_location.pk}"
+        cls.update_data = {
+            "scoped_fields": "status",
+            "value": "updated test value",
+        }
+        cls.text_mdt = text_mdt
+        cls.contact_team_mdt = contact_team_mdt
+
+    def _get_queryset(self):
+        return super()._get_queryset().filter(metadata_type=self.text_mdt)
+
+    def _get_url(self, action, instance=None):
+        url = super()._get_url(action, instance=instance)
+        if action == "add":
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{self._create_url_query}"
+        return url
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_value_column_in_list_view_rendered_correctly(self):
-        """
-        GET a list of objects as an authenticated user with permission to view the objects.
-        """
-        instance1 = self._get_queryset().filter(contact__isnull=False).first()
-        instance2 = self._get_queryset().filter(team__isnull=False).first()
+        instance1 = self.contact_team_instance_with_contact
+        instance2 = self.contact_team_instance_with_team
 
-        # Try GET to permitted objects
-        response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
+        list_url = self._get_url("list") + f"?metadata_type={self.contact_team_mdt.pk}"
+        response = self.client.get(list_url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Check if the contact or team absolute url is rendered in the ObjectListView table
         self.assertIn(instance1.contact.get_absolute_url(), content, msg=content)
         self.assertIn(instance2.team.get_absolute_url(), content, msg=content)
-        # TODO check if other types of values are rendered correctly
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_list_objects_with_constrained_permission(self):
         instance1 = self._get_queryset().first()
         instance2 = self._get_queryset().filter(~Q(assigned_object_id=instance1.assigned_object_id)).first()
-        self._get_queryset().filter(~Q(pk=instance1.pk) & ~Q(pk=instance2.pk)).delete()
 
-        # Add object-level permission
         obj_perm = ObjectPermission(
             name="Test permission",
             constraints={"pk": instance1.pk},
@@ -6387,14 +7207,103 @@ class ObjectMetadataTestCase(
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
 
-        # Try GET with object-level permission
         response = self.client.get(self._get_url("list"), headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        # Since we do not render the absolute url in ObjectListView of ObjectMetadata, we need to check assigned_object
-        # fields and if they are rendered.
         self.assertIn(instance1.assigned_object.get_absolute_url(), content, msg=content)
         self.assertNotIn(instance2.assigned_object.get_absolute_url(), content, msg=content)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_create_view_redirects_without_query_params(self):
+        """The create view requires `assigned_object_type` + `assigned_object_id` in the URL
+        query string (entry is from the parent object's Metadata tab). Without them, GET should
+        redirect to the list view rather than rendering a form the user can't actually use."""
+        self.add_permissions("extras.add_objectmetadata")
+        response = self.client.get(reverse("extras:objectmetadata_add"))
+        self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
+        messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertTrue(
+            any("parent object's detail view" in m for m in messages_list),
+            f"Expected redirect warning, got: {messages_list}",
+        )
+
+    def test_create_view_redirects_when_query_params_do_not_resolve(self):
+        self.add_permissions("extras.add_objectmetadata")
+        location_ct = ContentType.objects.get_for_model(Location)
+        bogus_uuid = "00000000-0000-0000-0000-000000000000"
+        nonexistent_ct_pk = str(ContentType.objects.order_by("-pk").first().pk + 9999)
+        for case_name, params in [
+            ("nonexistent content type", {"assigned_object_type": nonexistent_ct_pk, "assigned_object_id": bogus_uuid}),
+            ("non-numeric content type", {"assigned_object_type": "not-a-number", "assigned_object_id": bogus_uuid}),
+            (
+                "valid CT but nonexistent object",
+                {"assigned_object_type": str(location_ct.pk), "assigned_object_id": bogus_uuid},
+            ),
+            (
+                "malformed UUID for object id",
+                {"assigned_object_type": str(location_ct.pk), "assigned_object_id": "ppp"},
+            ),
+        ]:
+            with self.subTest(case=case_name):
+                with self.assertLogs("nautobot.extras.views", level="DEBUG") as captured_logs:
+                    response = self.client.get(reverse("extras:objectmetadata_add"), data=params)
+                self.assertRedirects(response, reverse("extras:objectmetadata_list"), fetch_redirect_response=False)
+                messages_list = [str(m) for m in get_messages(response.wsgi_request)]
+                self.assertTrue(
+                    any("does not exist" in m for m in messages_list),
+                    f"[{case_name}] expected does-not-exist warning, got: {messages_list}",
+                )
+                self.assertTrue(
+                    any("could not resolve assigned object" in log for log in captured_logs.output),
+                    f"[{case_name}] expected debug log entry, got: {captured_logs.output}",
+                )
+
+    def test_create_view_honors_return_url_on_validation_failure(self):
+        self.add_permissions("extras.add_objectmetadata")
+        location_ct = ContentType.objects.get_for_model(Location)
+        return_url = "/dcim/devices/"  # any safe local URL
+        response = self.client.get(
+            reverse("extras:objectmetadata_add"),
+            data={
+                "assigned_object_type": str(location_ct.pk),
+                "assigned_object_id": "ppp",  # malformed UUID
+                "return_url": return_url,
+            },
+        )
+        self.assertRedirects(response, return_url, fetch_redirect_response=False)
+
+    def test_object_metadata_fields_panel_delegates_value_rendering_to_model(self):
+        """The panel's render_value override delegates `_value` rendering to
+        ObjectMetadata.get_value_display() so URL/Markdown/JSON/etc. produce type-appropriate output
+        (per-type rendering itself is unit-tested on the model)."""
+        from django.template import Context
+
+        from nautobot.extras.views import _ObjectMetadataFieldsPanel
+
+        panel = _ObjectMetadataFieldsPanel(
+            weight=100,
+            fields=["metadata_type", "_value"],
+        )
+        text_instance = self._get_queryset().first()
+        context = Context({"object": text_instance})
+        self.assertEqual(
+            panel.render_value("_value", text_instance._value, context),
+            text_instance.get_value_display(),
+        )
+
+    def test_object_metadata_fields_panel_hide_if_unset_drops_irrelevant_rows(self):
+        """`_value`, `contact`, and `team` are listed in `hide_if_unset` on the configured panel.
+
+        This is what makes the detail view drop the meaningless row depending on data_type:
+        - For CONTACT_TEAM records, `_value` is always None and gets hidden.
+        - For all other types, `contact`/`team` are always None and get hidden.
+        """
+        from nautobot.extras.views import ObjectMetadataUIViewSet
+
+        panel = ObjectMetadataUIViewSet.object_detail_content.panels[0]
+        self.assertIn("_value", panel.hide_if_unset)
+        self.assertIn("contact", panel.hide_if_unset)
+        self.assertIn("team", panel.hide_if_unset)
 
 
 class RelationshipTestCase(ViewTestCases.PrimaryObjectViewTestCase):
@@ -6896,6 +7805,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
         # Role objects to test.
         device_ct = ContentType.objects.get_for_model(Device)
         ipaddress_ct = ContentType.objects.get_for_model(IPAddress)
+        ipaddressrange_ct = ContentType.objects.get_for_model(IPAddressRange)
         prefix_ct = ContentType.objects.get_for_model(Prefix)
 
         cls.form_data = {
@@ -6909,7 +7819,7 @@ class RoleTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases
             "color": "000000",
             "description": "I used to be a new role object.",
             "weight": 255,
-            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk],
+            "add_content_types": [ipaddress_ct.pk, prefix_ct.pk, ipaddressrange_ct.pk],
             "remove_content_types": [device_ct.pk],
         }
 

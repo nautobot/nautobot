@@ -2,6 +2,8 @@
 
 This document describes all new features and changes in Nautobot 2.4.
 
++**Security Note:** Several CVE fixes in the 2.4.38 release introduce [Breaking Changes](#breaking-changes). These changes most commonly surface as unexpected `TypeError`, `AttributeError`, or `KeyError` responses for REST API and GraphQL clients.
+
 ## Upgrade Actions
 
 ### Administrators
@@ -20,6 +22,117 @@ This document describes all new features and changes in Nautobot 2.4.
 - Job authors should be aware of the introduction of [Job Queues](#kubernetes-job-execution-and-job-queue-data-model-experimental) as a general-purpose replacement for the Celery-specific `Job.task_queues` attribute, and if a Job specifies its preferred `task_queues`, should verify that the queue selected as its `default_job_queue` after the Nautobot upgrade is correct.
 
 ## Release Overview
+
+### Breaking Changes
+
+#### REST API Permissions Enforcement on Related Objects
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx), the REST API now enforces object-level `view` permissions when traversing from a requested object to its related objects via the [`?depth` query parameter](../user-guide/platform-functionality/rest-api/overview.md#depth-query-parameter). At `?depth=1` and beyond, a related object that the requesting user does not have permission to view is no longer serialized in full, but is instead restricted to a brief representation containing only its `id`, `object_type`, `url`, and `display` values. See [REST API Object Permissions](../user-guide/platform-functionality/rest-api/object-permissions.md) for full details.
+
+REST API clients operating with limited permissions may now receive the brief representation where a fully serialized related object was previously returned, client code that assumes the presence of other nested fields will typically surface this as a `TypeError`, `AttributeError`, or `KeyError`.
+
+For example, consider a user with `view` permission on `Devices` but not on `Locations` requesting `GET /api/dcim/devices/<uuid>/?depth=1`. Previously, the device's location was serialized in full:
+
+```json
+{
+    "name": "device1",
+    "location": {
+        "id": "8badf00d-0000-0000-0000-000000000000",
+        "object_type": "dcim.location",
+        "url": "https://nautobot.example.com/api/dcim/locations/8badf00d-0000-0000-0000-000000000000/",
+        "name": "AMER",
+        "description": "North and South America",
+        "...": "..."
+    }
+}
+```
+
+Now, because the user lacks permission to view the Location, only the brief representation is returned:
+
+```json
+{
+    "name": "device1",
+    "location": {
+        "id": "8badf00d-0000-0000-0000-000000000000",
+        "object_type": "dcim.location",
+        "url": "https://nautobot.example.com/api/dcim/locations/8badf00d-0000-0000-0000-000000000000/",
+        "display": "AMER"
+    }
+}
+```
+
+Client code such as `response["location"]["name"]` that previously worked will now raise a `KeyError`. To restore the previous behavior, grant the requesting user `view` permission on the related model (in this example, `dcim.location`), with [constraints](../user-guide/platform-functionality/users/objectpermission.md) as appropriate. Alternatively, update the client code to tolerate the brief representation, for example by falling back to the `display` value or by retrieving the related object separately via its `url`.
+
+#### GraphQL Permissions Enforcement on Related Objects
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2), GraphQL queries now enforce object-level `view` permissions when traversing the object graph into related models, not just at the root of the query. A query field resolving to a single related object now returns `null` if the user lacks permission to view that object, and a field resolving to a list of objects now includes only the objects the user is permitted to view. See [GraphQL Permissions Enforcement](../user-guide/platform-functionality/graphql.md#permissions-enforcement) for full details.
+
+GraphQL clients operating with limited permissions may now receive `null` values or shorter lists where full data was previously returned. Client code that assumes a related object is present will typically surface as a `TypeError`, `AttributeError`, or `KeyError`.
+
+For example, consider a user with `view` permission on `Devices` but not on `Locations` or `Interfaces` running the following query:
+
+```graphql
+query {
+  devices {
+    name
+    location {
+      name
+    }
+    interfaces {
+      name
+    }
+  }
+}
+```
+
+Previously, the related objects were returned in full:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": {
+          "name": "AMER"
+        },
+        "interfaces": [
+          {"name": "Ethernet1"},
+          {"name": "Ethernet2"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+Now, the single related object resolves to `null` and the list contains only viewable objects:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": null,
+        "interfaces": []
+      }
+    ]
+  }
+}
+```
+
+Client code such as `devices[0]["location"]["name"]` that previously worked will now raise a `TypeError`. To restore the previous behavior, grant the requesting user `view` permission on the related models (in this example, `dcim.location` and `dcim.interface`), with [constraints](../user-guide/platform-functionality/users/objectpermission.md) as appropriate. Alternatively, update the client code to handle `null` related objects and filtered lists.
+
+#### Jinja2 Template Rendering Restrictions
+
++/- 2.4.38
+
+As a part of the fix for security advisory [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4), Nautobot's Jinja rendering of user-configurable Jinja2 templates (computed fields, custom links, webhooks, etc.) is now more restrictive. Jinja template snippets may no longer read arbitrary values from the Django `settings` object.
 
 ### Added
 
@@ -168,6 +281,101 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v2.4.40 (2026-08-17)
+
+### Security in v2.4.40
+
+- [GHSA-x69f-q4wj-vx72](https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72) - Fixed missing object-level permission enforcement on the legacy `/api/dcim/console-connections/`, `/api/dcim/power-connections/`, and `/api/dcim/interface-connections/` REST API endpoints.
+- [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `cryptography` to `^50.0.0` to mitigate CVE-2026-69247.
+- [#9360](https://github.com/nautobot/nautobot/issues/9360) - Updated dependency `GitPython` to `~3.1.58` to mitigate multiple security vulnerabilities.
+
+### Fixed in v2.4.40
+
+- [#9282](https://github.com/nautobot/nautobot/issues/9282) - Fixed an `AttributeError` raised when editing an Interface belonging to a Module that has no parent Device while its 802.1Q mode was set to "Tagged".
+- [#9368](https://github.com/nautobot/nautobot/issues/9368) - Fixed an `AttributeError` from the legacy `/api/dcim/interface-connections/` REST API endpoint when an Interface was cabled to a non-Interface endpoint such as a CircuitTermination.
+
+### Documentation in v2.4.40
+
+- [#9324](https://github.com/nautobot/nautobot/issues/9324) - Enhanced the ["Permissions" administrator guide](../user-guide/administration/guides/permissions.md) with guidance about which permissions should be restricted to highly-trusted users, which permissions are generally safe to grant to all users, etc.
+- [#9378](https://github.com/nautobot/nautobot/issues/9378) - Updated documentation for Secrets and Security to clarify the potential for privilege escalation when granting users permission to create or edit Secrets.
+
+## v2.4.39 (2026-08-03)
+
+### Added in v2.4.39
+
+- [#9302](https://github.com/nautobot/nautobot/issues/9302) - Added `BOOLEAN_CHOICES` and `BOOLEAN_WITH_BLANK_CHOICES` to the `nautobot.apps.constants` public API.
+
+### Changed in v2.4.39
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204) - Changed change logging of many-to-many associations declared with an explicit `through` model so that both associated objects now receive a change log entry.
+
+### Fixed in v2.4.39
+
+- [#9204](https://github.com/nautobot/nautobot/issues/9204), [#9270](https://github.com/nautobot/nautobot/issues/9270) - Fixed missing change log entries, webhooks, job hooks, and events when creating or deleting many-to-many association records via the REST API.
+- [#9327](https://github.com/nautobot/nautobot/issues/9327) - Fixed GitRepository sync REST API endpoint not applying object-level permission restrictions (`restrict()`) when retrieving the repository.
+
+### Documentation in v2.4.39
+
+- [#9327](https://github.com/nautobot/nautobot/issues/9327) - Clarified that managing a Git repository (create, change, sync) grants arbitrary code execution on the worker and that syncing repository-provided Jobs does not require the Job run permission.
+
+## v2.4.38 (2026-07-27)
+
+### Breaking Changes in v2.4.38
+
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - It is no longer possible to pass an `app_name` argument to the `settings_or_config` **Jinja** template filter; this functionality is still supported in Django templates.
+
+### Security in v2.4.38
+
+- [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx) - Fixed a REST API information-disclosure issue where the `?depth=N` query parameter exposed the full detail of related objects that the requesting user did not have permission to view. Related objects that the user cannot view are now rendered in a brief `{id, object_type, url, display}` form instead of full detail. The `display` value is included for parity with the UI, where a related object's display value is visible without requiring full view permission on that object. Additionally, the Notes REST API now enforces `view` permission on the object a note is being assigned to on write (POST/PATCH), consistent with other object references.
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - Restricted the `settings_or_config` template filter and the template `settings` context to a non-sensitive allowlist of Django settings and Constance configuration values.
+- [GHSA-6jmc-h6f2-46j4](https://github.com/nautobot/nautobot/security/advisories/GHSA-6jmc-h6f2-46j4) - Removed the ability to pass an `app_name` argument to the `settings_or_config` filter to retrieve values from an app's `PLUGINS_CONFIG` in Jinja templates (this is still supported in Django templates).
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Fixed GraphQL not enforcing object-level permissions when traversing to related objects: filtering related objects (e.g. `locations { racks(...) }`), traversing Relationship associations (e.g. `rel_*` fields), forward foreign-key traversal (e.g. `racks { location }`), reverse relations (reverse foreign keys such as `*_set` fields and reverse one-to-one relations such as `module_bay { installed_module }`), and other custom/property-backed related-object accessors (e.g. a Device's `all_interfaces`, cable/connection peers, dynamic group memberships, assigned tags, and legacy `location` accessors on `Prefix`/`VLAN`) now respect the requesting user's view permissions on the related model ([GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2)).
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Changed GraphQL schema to represent all forward foreign-key fields as nullable (even if not actually nullable as database fields), since a related object the user is not permitted to view is now returned as `null`.
+- [GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach the database cursor via the Django ORM and execute arbitrary SQL.
+- [GHSA-p99c-c9qx-34fw](https://github.com/nautobot/nautobot/security/advisories/GHSA-p99c-c9qx-34fw) - Fixed a Jinja2 template sandbox escape that allowed users to reach arbitrary models via the Django application registry.
+- [GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q) - Added enforcement of the `run` permission on the Job Hook dispatch path, fixing a privilege escalation in which a user without the run permission could execute a Job by triggering a Job Hook.
+- [#9279](https://github.com/nautobot/nautobot/issues/9279) - Updated dependency `GitPython` to `~3.1.54` to mitigate multiple security vulnerabilities.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated dependency `gitpython` to `~3.1.55` to mitigate GHSA-94p4-4cq8-9g67.
+- [#9294](https://github.com/nautobot/nautobot/issues/9294) - Updated documentation dependency `mkdocs-material` to `~9.7.7` to mitigate GHSA-xvg9-69gf-fjrf.
+
+### Added in v2.4.38
+
+- [GHSA-mfwj-pjgx-22v2](https://github.com/nautobot/nautobot/security/advisories/GHSA-mfwj-pjgx-22v2) - Added GraphQL type-definition helper methods `permission_safe_resolver` and `permission_safe_attribute_resolver`. Apps defining custom GraphQL type classes may need to use these methods in some cases to prevent object-permission enforcement gaps similar to GHSA-mfwj-pjgx-22v2.
+
+### Documentation in v2.4.38
+
+- [GHSA-h8rv-c7c8-cvmx](https://github.com/nautobot/nautobot/security/advisories/GHSA-h8rv-c7c8-cvmx) - Added documentation describing the behavior of the REST API with respect to object permissions.
+- [GHSA-qr7c-g3j2-hw5q](https://github.com/nautobot/nautobot/security/advisories/GHSA-qr7c-g3j2-hw5q) - Added documentation clarifying that a Job Hook is only dispatched when the user responsible for the triggering change has permission to run the target Job.
+- [#9304](https://github.com/nautobot/nautobot/issues/9304) - Update `notices.md` release notes.
+
+### Housekeeping in v2.4.38
+
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--no-input` option to `invoke tests` task.
+- [#8925](https://github.com/nautobot/nautobot/issues/8925) - Added support for `--command` option to `invoke nbshell` task.
+
+## v2.4.37 (2026-07-17)
+
+### Security in v2.4.37
+
+- [GHSA-56v6-2fhr-wxgq](https://github.com/nautobot/nautobot/security/advisories/GHSA-56v6-2fhr-wxgq) - Fixed stored XSS vulnerabilities when rendering Relationship description and Module Family name fields.
+- [#9219](https://github.com/nautobot/nautobot/issues/9219) - Updated dependency `Pillow` to `>=12.3.0,<13` to mitigate multiple CVEs.
+
+### Changed in v2.4.37
+
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed removing a VRF from a Device or VirtualMachine to raise an error if that VRF is still attached to one of the interfaces.
+- [#9149](https://github.com/nautobot/nautobot/issues/9149) - Changed attaching a VRF to a VM interface via API/ORM to raise an error if the parent Virtual Machine does not have that VRF assigned.
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Enhanced the REST API queryset optimizer to automatically pre-fetch the related objects traversed by a model's natural key to avoid N+1 queries.
+
+### Fixed in v2.4.37
+
+- [#9250](https://github.com/nautobot/nautobot/issues/9250) - Fixed an N+1 query when listing Interfaces via the REST API.
+
+### Housekeeping in v2.4.37
+
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed the default `max_locks_per_transaction` for Postgres to 512 for test runs with many parallel workers.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Backported Django 6.0 fix for parallel test runs with --buffer.
+- [#9216](https://github.com/nautobot/nautobot/issues/9216) - Changed a virtualization test to create its `VLANGroup` directly instead of via a factory.
 
 ## v2.4.36 (2026-06-22)
 

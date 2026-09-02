@@ -915,6 +915,14 @@ class SavedView(BaseModel, ChangeLoggedModel):
     def __str__(self):
         return f"{self.owner.username} - {self.view} - {self.name}"
 
+    def clean(self):
+        super().clean()
+        # Mirror save() so that form and serializer validation see the value that will actually be persisted.
+        if self.is_global_default:
+            self.is_shared = True
+
+    clean.alters_data = True
+
     def save(self, *args, **kwargs):
         # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
         if self.is_global_default:
@@ -952,6 +960,8 @@ class UserSavedViewAssociation(BaseModel):
     view_name = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
     is_metadata_associable_model = False
     is_data_compliance_model = False
+    # A user pinning a personal default view is preference data, not shared data; don't change-log the SavedView.
+    is_m2m_change_logged = False
 
     class Meta:
         unique_together = [["user", "view_name"]]

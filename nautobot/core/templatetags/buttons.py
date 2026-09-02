@@ -94,6 +94,38 @@ def delete_button(instance, use_pk=False, key="slug"):
 
 
 #
+# Copy button
+#
+
+
+@register.inclusion_tag("buttons/copy.html")
+def copy_button(target=None, text=None, label="Copy", size=None, css_class=None):
+    """Render a reusable hover "copy to clipboard" button.
+
+    Renders the standard Nautobot hover-copy button markup (see the v2->v3 migration guide,
+    "Hover Copy Buttons"). The button is hidden until its immediate parent is hovered and copies
+    to the clipboard via ClipboardJS, which is initialized globally in `nautobot.js`.
+
+    Provide exactly one of `target` or `text`:
+
+    Args:
+        target (str, optional): CSS selector (e.g. `"#my_value_id"`) of the element whose text content
+            should be copied. Maps to ClipboardJS's `data-clipboard-target`.
+        text (str, optional): A literal string to copy. Maps to ClipboardJS's `data-clipboard-text`.
+        label (str, optional): Accessible label / tooltip text for the button. Defaults to "Copy".
+        size (str, optional): Bootstrap-style size suffix (e.g. `"sm"`, `"xs"`) applied as `btn-{size}`.
+        css_class (str, optional): Additional CSS class(es) to append to the button.
+    """
+    return {
+        "target": target,
+        "text": text,
+        "label": label,
+        "size": size,
+        "css_class": css_class,
+    }
+
+
+#
 # List buttons
 #
 
@@ -151,7 +183,7 @@ def render_tag_attrs(attrs_dict):
 @register.inclusion_tag("buttons/consolidated_bulk_action_buttons.html", takes_context=True)
 def consolidate_bulk_action_buttons(context):
     """
-    Generates a list of action buttons for bulk operations (edit, rename, update group assignment, delete) based on the
+    Generates a list of action buttons for bulk operations (edit, rename, disconnect, update group assignment, delete) based on the
     model capabilities and user permissions.
 
     Context must include the following keys:
@@ -161,6 +193,7 @@ def consolidate_bulk_action_buttons(context):
         bulk_edit_url (str): The URL for the bulk edit action.
         bulk_delete_url (str): The URL for the bulk delete action.
         bulk_rename_url (str, optional): The URL for the bulk rename action.
+        bulk_disconnect_url (str, optional): The URL for the bulk disconnect action (cabled-component models only).
         permissions (dict): A dictionary of specific permissions for the view.
     """
 
@@ -197,6 +230,21 @@ def consolidate_bulk_action_buttons(context):
                     "formaction": reverse(context["bulk_delete_url"]) + query_string,
                 },
                 "divider_after": True,
+            }
+        )
+
+    if context.get("bulk_disconnect_url") and context["permissions"]["change"]:
+        button_defs.append(
+            {
+                "label": "Disconnect Selected",
+                "icon": "mdi mdi-ethernet-cable-off",
+                "btn_class": "btn btn-sm btn-danger",
+                "dropdown_class": "dropdown-item",
+                "attrs": {
+                    "type": "submit",
+                    "name": "_disconnect",
+                    "formaction": reverse(context["bulk_disconnect_url"]) + query_string,
+                },
             }
         )
 
@@ -383,7 +431,8 @@ def consolidate_detail_view_action_buttons(context):
             detail_view_action_buttons[0] += format_html(
                 """
                 <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}">
-                    <span class="mdi mdi-chevron-down"></span>
+                    <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
+                    <span class="visually-hidden">More actions</span>
                  </button>
                 """,
                 button_class=dropdown_button_classes,
@@ -395,7 +444,7 @@ def consolidate_detail_view_action_buttons(context):
             format_html(
                 """
                 <button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="{button_class}">
-                    Actions <span class="mdi mdi-chevron-down"></span>
+                    Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
                  </button>
                 """,
                 button_class=dropdown_button_classes,

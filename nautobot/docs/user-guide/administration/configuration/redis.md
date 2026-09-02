@@ -71,7 +71,7 @@ CACHES = {
             "SENTINELS": [
                 ("mysentinel.redis.example.com", 26379),
                 ("othersentinel.redis.example.com", 26379),
-                ("thirdsentinel.redis.example.com", 26379)
+                ("thirdsentinel.redis.example.com", 26379),
             ],
         },
     },

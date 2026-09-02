@@ -1,0 +1,69 @@
+---
+volumes:
+  grafana_data:
+  mimir_data:
+
+services:
+  loki:
+    image: "grafana/loki:2.9.2"
+    ports:
+      - "3100:3100"
+    volumes:
+      - "./configs/loki-config.yaml:/etc/loki/loki-config.yaml"
+    command: "-config.file=/etc/loki/loki-config.yaml"
+
+  otel:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./configs/otel-collector.yaml:/etc/otel-collector.yaml
+    depends_on:
+      - "tempo"
+      - "mimir"
+      - "loki"
+
+  tempo:
+    image: grafana/tempo:2.6.1
+    command:
+      - -config.file
+      - /etc/tempo/tempo-config.yaml
+    volumes:
+      - ./configs/:/etc/tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+      - "55680:55680"
+
+  mimir:
+    image: grafana/mimir
+    command:
+      - -config.file=/etc/mimir/mimir-config.yaml
+      - -server.grpc-listen-port=9096
+    volumes:
+      - ./configs/:/etc/mimir
+      # Runtime data (TSDB blocks, ruler rules, compactor) lives in a named volume, not a
+      # host bind mount. A bind mount would (a) require the host rules/ dir to pre-exist or
+      # Mimir exits with "unable to read dir /tmp/mimir/rules", and (b) litter the repo tree
+      # with runtime data. Mimir creates rules/ itself inside a writable named volume.
+      - mimir_data:/tmp/mimir
+    ports:
+      - "9009:9009"
+      - "9096:9096"
+
+  promtail:
+    image: "grafana/promtail:latest"
+    volumes:
+      - "./configs/promtail.yaml:/etc/promtail/docker-config.yaml"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: "-config.file=/etc/promtail/docker-config.yaml"
+
+  grafana:
+    image: "grafana/grafana:latest"
+    ports:
+      - "3000:3000"
+    volumes:
+      - "grafana_data:/var/lib/grafana"
+      - "./configs/grafana/datasources.yaml:/etc/grafana/provisioning/datasources/all.yml"
+      - "./configs/grafana/dashboards:/etc/grafana/provisioning/dashboards"
+      - "./configs/grafana/grafana.ini:/etc/grafana/grafana.ini"

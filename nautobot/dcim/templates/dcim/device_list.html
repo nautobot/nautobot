@@ -1,4 +1,5 @@
 {% extends 'generic/object_list.html' %}
+{% load cables %}
 
 {% block bulk_buttons %}
     {% if perms.dcim.change_device %}
@@ -11,7 +12,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_consoleport' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-console" aria-hidden="true"></span> Console Ports
+                            <span class="mdi {{ 'consoleport'|termination_type_icon }}" aria-hidden="true"></span> Console Ports
                         </a>
                     </li>
                 {% endif %}
@@ -19,7 +20,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_consoleserverport' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-console-network-outline" aria-hidden="true"></span> Console Server Ports
+                            <span class="mdi {{ 'consoleserverport'|termination_type_icon }}" aria-hidden="true"></span> Console Server Ports
                         </a>
                     </li>
                 {% endif %}
@@ -27,7 +28,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_powerport' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-power-plug-outline" aria-hidden="true"></span> Power Ports
+                            <span class="mdi {{ 'powerport'|termination_type_icon }}" aria-hidden="true"></span> Power Ports
                         </a>
                     </li>
                 {% endif %}
@@ -35,7 +36,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_poweroutlet' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-power-socket" aria-hidden="true"></span> Power Outlets
+                            <span class="mdi {{ 'poweroutlet'|termination_type_icon }}" aria-hidden="true"></span> Power Outlets
                         </a>
                     </li>
                 {% endif %}
@@ -43,7 +44,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_interface' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-ethernet" aria-hidden="true"></span> Interfaces
+                            <span class="mdi {{ 'interface'|termination_type_icon }}" aria-hidden="true"></span> Interfaces
                         </a>
                     </li>
                 {% endif %}
@@ -51,7 +52,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_rearport' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Rear Ports
+                            <span class="mdi {{ 'rearport'|termination_type_icon }}" aria-hidden="true"></span> Rear Ports
                         </a>
                     </li>
                 {% endif %}
@@ -59,7 +60,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_devicebay' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-circle-outline" aria-hidden="true"></span> Device Bays
+                            <span class="mdi {{ 'devicebay'|termination_type_icon }}" aria-hidden="true"></span> Device Bays
                         </a>
                     </li>
                 {% endif %}
@@ -67,7 +68,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_modulebay' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-tray" aria-hidden="true"></span> Module Bays
+                            <span class="mdi {{ 'modulebay'|termination_type_icon }}" aria-hidden="true"></span> Module Bays
                         </a>
                     </li>
                 {% endif %}
@@ -75,7 +76,7 @@
                     <li>
                         <a href="{% url 'dcim:device_bulk_add_inventoryitem' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}"
                            class="formaction dropdown-item">
-                            <span class="mdi mdi-invoice-list-outline" aria-hidden="true"></span> Inventory Items
+                            <span class="mdi {{ 'inventoryitem'|termination_type_icon }}" aria-hidden="true"></span> Inventory Items
                         </a>
                     </li>
                 {% endif %}

@@ -13,7 +13,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
-from django.core.exceptions import ObjectDoesNotExist
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.formats import date_format
@@ -27,7 +26,8 @@ import yaml
 
 from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
-from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import NAUTOBOT_STATIC_ASSETS, PAGINATE_COUNT_DEFAULT
 from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -435,7 +435,7 @@ def tzoffset(value):
 @register.filter()
 def fgcolor(value):
     """
-    Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
+    Return the ideal foreground color (black or white) given an arbitrary background color in RRGGBB format.
 
     Args:
         value (str): Color in RRGGBB format, with or without #
@@ -445,7 +445,7 @@ def fgcolor(value):
 
     Example:
         >>> fgcolor("#999999")
-        "#ffffff"
+        "#000000"
     """
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
@@ -663,13 +663,36 @@ def get_item(d, key):
     return d.get(key)
 
 
-@library.filter()
 @register.filter()
 def settings_or_config(key, app_name=None):
-    """Get a value from Django settings (if specified there) or Constance configuration (otherwise)."""
+    """Get a value from Django settings/Constance, or from an app's `PLUGINS_CONFIG` (Django template filter).
+
+    Passing `app_name` returns a value from that app's `PLUGINS_CONFIG`. This is supported only in the
+    Django template filter, which is usable from trusted server-side HTML templates.
+    For core settings/config, only non-sensitive allowlisted values may be read;
+    requesting any other setting is treated as though it does not exist.
+    """
     if app_name:
         return get_app_settings_or_config(app_name, key)
+    if not config.is_template_exposable_setting(key):
+        # Treat a non-exposable setting as though it does not exist.
+        raise AttributeError(key)
     return config.get_settings_or_config(key)
+
+
+# Using name="settings_or_config" allows us to define the same filter as above in both places with different function names.
+# This is for backwards compatibility with existing Jinja2 templates that may legitimately use the "settings_or_config" filter.
+@library.filter(name="settings_or_config")
+def settings_or_config_jinja(key, app_name=None):
+    """Get a value from Django settings or Constance configuration (Jinja template filter).
+
+    Unlike the Django template filter, this Jinja variant does not support the `app_name` argument:
+    user-authored templates must not be able to read arbitrary app `PLUGINS_CONFIG` values, which may
+    contain secrets. Only non-sensitive allowlisted settings and Constance configuration may be read.
+    """
+    if app_name is not None:
+        raise ValueError("The 'settings_or_config' filter does not support the 'app_name' argument in Jinja templates.")
+    return settings_or_config(key)
 
 
 @library.filter()
@@ -1010,6 +1033,21 @@ def table_config_button(table, table_name=None, extra_classes="", disabled=False
     return format_html(html_template, extra_classes, table_name, "disabled" if disabled else "", table_name)
 
 
+@register.simple_tag()
+def searchable_fields_for_content_type(content_type):
+    """Return the fields searchable via the list-view search bar for the given ContentType's model.
+
+    Returns `None` if `content_type` is falsy, its model can't be resolved, or the model's FilterSet does
+    not define a `q` `SearchFilter`. Used to render the search bar help tooltip.
+    """
+    if not content_type:
+        return None
+    model = content_type.model_class()
+    if model is None:
+        return None
+    return lookup.get_searchable_fields_for_model(model)
+
+
 @register.inclusion_tag("utilities/templatetags/utilization_graph.html")
 def utilization_graph(utilization_data, warning_threshold=75, danger_threshold=90):
     """Wrapper for a horizontal bar graph indicating a percentage of utilization from a tuple of data.
@@ -1125,8 +1163,7 @@ def saved_view_modal(
     request,
 ):
     from nautobot.extras.forms import SavedViewModalForm
-    from nautobot.extras.models import SavedView
-    from nautobot.extras.utils import fixup_filterset_query_params
+    from nautobot.extras.utils import fixup_filterset_query_params, get_saved_view_or_none
 
     sort_order = []
     per_page = None
@@ -1158,11 +1195,8 @@ def saved_view_modal(
             current_saved_view_pk = filters_applied.pop(param, None)
             if current_saved_view_pk:
                 current_saved_view_pk = current_saved_view_pk[0]
-                try:
-                    # We are not using .restrict(request.user, "view") here
-                    # User should be able to see any saved view that he has the list view access to.
-                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
-                except ObjectDoesNotExist:
+                current_saved_view = get_saved_view_or_none(current_saved_view_pk)
+                if current_saved_view is None:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         elif param == "table_changes_pending":
@@ -1291,14 +1325,31 @@ def advanced_filter_indicator(basic_filter_form, filter_params):
 
 
 @register.simple_tag
-def custom_branding_or_static(branding_asset, static_asset):
+def custom_branding_or_static(branding_asset, static_asset=None):
     """
-    This tag attempts to return custom branding assets relative to the MEDIA_ROOT and MEDIA_URL, if such
-    branding has been configured in settings, else it returns stock branding via static.
+    Return the URL of an asset, honoring the following precedence:
+
+    1. Custom branding configured via `settings.BRANDING_FILEPATHS` (relative to MEDIA_ROOT/MEDIA_URL).
+    2. The static asset for the active Nautobot edition, falling back to the "community" asset for any
+       branding key the edition does not override.
+    3. The caller-provided `static_asset`, used as a backup for branding keys not defined for any edition.
     """
     if settings.BRANDING_FILEPATHS.get(branding_asset):
         url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get(branding_asset)}"
+
+    # TODO(4.0): Remove. Honor a custom `icon_32` for the navbar (the pre-`navbar_icon` key) for back-compatibility.
+    elif branding_asset == "navbar_icon" and settings.BRANDING_FILEPATHS.get("icon_32"):
+        url = f"{settings.MEDIA_URL}{settings.BRANDING_FILEPATHS.get('icon_32')}"
     else:
+        nautobot_edition_for_asset = config.get_nautobot_edition()
+        assets_for_edition = NAUTOBOT_STATIC_ASSETS.get(
+            nautobot_edition_for_asset, NAUTOBOT_STATIC_ASSETS[NautobotEditionChoices.DEFAULT]
+        )
+        # TODO(4.0): Remove the `static_asset` parameter and this backup. It is retained only for
+        # backward compatibility with callers of the previous two-argument signature; the edition map is
+        # now the source of stock asset defaults.
+        # The edition asset wins for known keys; `static_asset` is the backup for anything else.
+        static_asset = assets_for_edition.get(branding_asset, static_asset)
         url = StaticNode.handle_simple(static_asset)
     return add_nautobot_version_query_param_to_url(url)
 

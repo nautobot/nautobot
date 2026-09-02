@@ -38,11 +38,12 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.extras.choices import CustomFieldFilterLogicChoices, CustomFieldTypeChoices
+from nautobot.core.utils.otel import traced_span
+from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldFilterLogicChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import ContactMixin, DynamicGroupsModelMixin, NotesMixin, SavedViewMixin
 from nautobot.extras.utils import check_if_key_is_graphql_safe, extras_features, FeatureQuery
@@ -66,22 +67,31 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         list_cache_key = construct_cache_key(
             self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
         )
-        if not get_queryset:
-            listing = cache.get(list_cache_key)
-            if listing is not None:
-                return listing
-        queryset = cache.get(cache_key)
-        if queryset is None:
+
+        def compute_queryset():
             content_type = ContentType.objects.get_for_model(concrete_model)
-            queryset = self.get_queryset().filter(content_type=content_type)
+            return self.get_queryset().filter(content_type=content_type)
+
+        with traced_span(
+            "nautobot.extras.customfields",
+            "computed_field_cache.get",
+            **{"nautobot.extras.computed_field_cache.model": concrete_model._meta.label_lower},
+        ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.computed_field_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(cache_key, queryset, timeout=None)
-        if not get_queryset:
-            listing = list(queryset)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(list_cache_key, listing, timeout=None)
-            return listing
-        return queryset
+            if not get_queryset:
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
+                )
+                return listing
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            return queryset
 
     def populate_list_caches(self):
         """Populate all caches for `get_for_model(..., get_queryset=False)` lookups."""
@@ -146,6 +156,12 @@ class ComputedField(
         populate_from="label",
         help_text="Internal field name. Please use underscores rather than dashes in this key.",
         slugify_function=slugify_dashes_to_underscores,
+    )
+    output_type = models.CharField(
+        max_length=50,
+        choices=ComputedFieldTypeChoices,
+        default=ComputedFieldTypeChoices.TYPE_TEXT,
+        help_text="How the rendered result is to be output, by default it is as Plain Text",
     )
     grouping = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
@@ -469,24 +485,37 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             exclude_filter_disabled=exclude_filter_disabled,
             listing=True,
         )
-        if not get_queryset:
-            listing = cache.get(list_cache_key)
-            if listing is not None:
-                return listing
-        queryset = cache.get(cache_key)
-        if queryset is None:
+
+        def compute_queryset():
             content_type = ContentType.objects.get_for_model(concrete_model)
             queryset = self.get_queryset().filter(content_types=content_type)
             if exclude_filter_disabled:
                 queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
+            return queryset
+
+        with traced_span(
+            "nautobot.extras.customfields",
+            "custom_field_cache.get",
+            **{
+                "custom_field_cache.model": concrete_model._meta.label_lower,
+                "custom_field_cache.exclude_filter_disabled": exclude_filter_disabled,
+            },
+        ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.custom_field_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(cache_key, queryset, timeout=None)
-        if not get_queryset:
-            listing = list(queryset)
-            # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(list_cache_key, listing, timeout=None)
-            return listing
-        return queryset
+            if not get_queryset:
+                listing, _ = cache_get_or_set(
+                    list_cache_key,
+                    lambda: list(cache_get_or_set(cache_key, compute_queryset, timeout=None)[0]),
+                    timeout=None,
+                    cache_hit_callback=hit_callback,
+                )
+                return listing
+            queryset, _ = cache_get_or_set(cache_key, compute_queryset, timeout=None, cache_hit_callback=hit_callback)
+            return queryset
 
     def keys_for_model(self, model):
         """Return list of all keys for CustomFields assigned to the given model."""
@@ -494,12 +523,23 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
         cache_key = construct_cache_key(
             self, method_name="keys_for_model", branch_aware=True, model=concrete_model._meta.label_lower
         )
-        keys = cache.get(cache_key)
-        if keys is None:
-            keys = list(self.get_for_model(model).values_list("key", flat=True))
+        with traced_span(
+            "nautobot.extras.customfields",
+            "custom_field_keys_cache.get",
+            **{"nautobot.extras.custom_field_keys_cache.model": concrete_model._meta.label_lower},
+        ) as _span:
+
+            def hit_callback(hit):
+                _span.set_attribute("nautobot.extras.custom_field_keys_cache.hit", hit)
+
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
-            cache.set(cache_key, keys, timeout=None)
-        return keys
+            keys, _ = cache_get_or_set(
+                cache_key,
+                lambda: list(self.get_for_model(model).values_list("key", flat=True)),
+                timeout=None,
+                cache_hit_callback=hit_callback,
+            )
+            return keys
 
     def populate_list_caches(self):
         """Populate all caches for `get_for_model(..., get_queryset=False)` and `keys_for_model` lookups."""
@@ -534,8 +574,8 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                     method_name="get_for_model",
                     branch_aware=True,
                     model=label,
-                    exclude_filter_disabled=True,
-                    listing=False,
+                    exclude_filter_disabled=False,
+                    listing=True,
                 ),
                 cf_listings[label][False],
                 timeout=None,

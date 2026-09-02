@@ -12,6 +12,7 @@ from nautobot.core.utils.data import shallow_compare_dict
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL, CHANGELOG_MAX_OBJECT_REPR
+from nautobot.extras.models.mixins import SavedViewMixin
 from nautobot.extras.utils import extras_features
 
 #
@@ -65,7 +66,7 @@ class ChangeLoggedModel(models.Model):
 
 
 @extras_features("graphql")
-class ObjectChange(BaseModel):
+class ObjectChange(SavedViewMixin, BaseModel):
     """
     Record a change to an object and the user account associated with that change. A change record may optionally
     indicate an object related to the one being changed. For example, a change to an interface may also indicate the

@@ -304,13 +304,13 @@ $form-check-input-border-radius: var(--#{$prefix}border-radius);
 $form-check-input-checked-color:        var(--#{$prefix}primary-text-emphasis);
 $form-check-input-checked-bg-color:     $form-check-input-bg;
 $form-check-input-checked-border-color: $form-check-input-checked-color;
-$form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='m6 10 3 3 6-6'/></svg>");
+$form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 10 3 3 6-6'/></svg>");
 $form-check-radio-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='2' fill='#{$primary-text-emphasis}'/></svg>");
 
 $form-check-input-indeterminate-color:        $form-check-input-checked-color;
 $form-check-input-indeterminate-bg-color:     $form-check-input-checked-bg-color;
 $form-check-input-indeterminate-border-color: $form-check-input-checked-border-color;
-$form-check-input-indeterminate-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1' d='M6 10h8'/></svg>");
+$form-check-input-indeterminate-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 10h8'/></svg>");
 
 $form-check-input-disabled-opacity:     1;
 $form-check-label-disabled-opacity:     $form-check-input-disabled-opacity;
@@ -491,6 +491,13 @@ $grid-breakpoints: (
 $utilities: map-merge(
   $utilities,
   (
+    "nb-background-color": (
+      class: nb-bg,
+      property: background-color,
+      values: (
+        inherit: inherit,
+      ),
+    ),
     "nb-color": (
       class: nb-text,
       property: color,
@@ -776,6 +783,85 @@ button {
   }
 }
 
+/*
+ * Links are otherwise distinguished from surrounding text by colour alone. That is acceptable for standalone links, but
+ * WCAG 1.4.1 requires more than colour for a link sitting inside a block of text, so underline those. Form help text is
+ * where Nautobot most often embeds links in prose.
+ */
+.form-text a {
+  text-decoration: underline;
+}
+
+/*
+ * iOS Safari auto-zooms on focused form controls with a font size below 16px, and `$font-size-base` is 14px. The old
+ * workaround, `user-scalable=no` in the viewport meta tag, blocked pinch-zoom and failed WCAG 1.4.4, so the zoom
+ * trigger is removed instead: control font size is raised to 16px on coarse pointers only, with vertical padding
+ * reduced to compensate for the growth. Select2 snapshots the sizing variables into `$s2bs5-*` at import time, so its
+ * two input-sized elements, the selection box and the dropdown search field, are adjusted by hand.
+ */
+@media (pointer: coarse) {
+  $input-font-size-coarse: $font-size-root;
+  $input-padding-y-coarse: $input-padding-y - ($input-font-size-coarse - $input-font-size) * $input-line-height * 0.5;
+  /* Bootstrap's `$input-height` formula with the compensated padding; `1em` resolves against the font size set below. */
+  $input-height-coarse: add($input-line-height * 1em, add($input-padding-y-coarse * 2, $input-height-border, false));
+
+  .form-control,
+  .form-select {
+    font-size: $input-font-size-coarse;
+    padding-block: $input-padding-y-coarse;
+  }
+
+  textarea.form-control {
+    min-height: $input-height-coarse;
+  }
+
+  .select2-container--bootstrap-5 {
+    .select2-selection {
+      font-size: $input-font-size-coarse;
+      min-height: $input-height-coarse;
+      padding-block: $input-padding-y-coarse;
+    }
+
+    .select2-dropdown .select2-search .select2-search__field {
+      font-size: $input-font-size-coarse;
+      padding-block: $input-padding-y-coarse;
+    }
+  }
+}
+
+/*
+ * Focus Not Obscured (WCAG 2.4.11, AA). Focusing a field makes the browser scroll it into view, which can leave it
+ * sitting behind the pinned button bar; reserving scroll padding as tall as the bar keeps the field clear of it. Scroll
+ * padding only applies to whichever element actually scrolls, so each scrollable ancestor a footer can sit in needs a
+ * rule of its own -- at page level that element is `body`, the one given `height: 100%` and `overflow-y: scroll`.
+ */
+$nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-auto, .overflow-scroll";
+
+:root:has( .nb-form-sticky-footer:not(:is(#{$nb-form-sticky-footer-scroll-containers}) *)) {
+  scroll-padding-block-end: 4rem;
+}
+
+:is(#{$nb-form-sticky-footer-scroll-containers}):has( .nb-form-sticky-footer) {
+  scroll-padding-block-end: 4rem;
+}
+
+/*
+ * Skip link (bypass block, WCAG 2.4.1)
+ *
+ * Bootstrap's `.visually-hidden-focusable` handles revealing the link on focus, but leaves it in the normal document
+ * flow, which would shift the whole page down when it appears. Pin it to the top-left corner instead and give it
+ * button-like affordances so that it reads as a deliberate control rather than stray text.
+ */
+.nb-skip-link:focus {
+  background-color: var(--#{$prefix}body-bg);
+  border-radius: var(--#{$prefix}border-radius);
+  inset-block-start: map.get($spacers, 8);
+  inset-inline-start: map.get($spacers, 8);
+  padding: map.get($spacers, 8) map.get($spacers, 12);
+  position: fixed;
+  z-index: $zindex-tooltip;
+}
+
 /* Tables */
 .table {
   margin-block-end: map.get($spacers, 0);
@@ -988,7 +1074,16 @@ table.attr-table td:nth-child(1) {
     /* Reset `<button>` default user agent styles. */
     background: none;
     border: 0;
-    padding: 0;
+    /*
+     * Pad the hit target up to the WCAG 2.5.8 minimum size; negative margins net the layout shift to zero. The extra
+     * width comes from the leading side only, because a negative trailing margin would pull the record link over the
+     * button and axe would discount the obscured strip.
+     */
+    margin-block: map.get($spacers, 2) * -1;
+    margin-inline-start: map.get($spacers, 4) * -1;
+    padding-block: map.get($spacers, 2);
+    padding-inline-end: map.get($spacers, 0);
+    padding-inline-start: map.get($spacers, 4);
 
     &::before {
       @include subtree-icon-color-filter;
@@ -1636,6 +1731,17 @@ html, body {
 body {
   /* Transition below is Bootstrap `$transition-collapse-width` with `width` replaced by `padding-inline`. */
   @include transition(padding-inline .35s ease);
+
+  /*
+   * While a Bootstrap modal opens/closes it writes an inline `padding-right` on `<body>` to compensate for the
+   * scrollbar it hides. Because `padding-inline` is transitioned above (for the sidenav/drawer slide), that
+   * modal-driven change would otherwise animate and make the whole page slide sideways ("wiggle"). The
+   * `nb-modal-transitioning` class is toggled around the modal lifecycle (see `modal.js`) to suppress the
+   * transition only for that brief window, keeping both the sidenav and drawer animations intact. See NAPPS-1136.
+   */
+  &.nb-modal-transitioning {
+    transition: none;
+  }
   display: grid;
   grid-template-areas:
     "sidenav banner-global-area drawer"
@@ -2183,7 +2289,9 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
   padding-inline-end: 1.9375rem; /* 31px */
   width: 4.5rem; /* 72px */
 }
-
+#nb-paginator-go-to{
+  width: 5.5rem;
+}
 /* Draggable */
 .nb-draggable-container {
   /*
@@ -2241,6 +2349,10 @@ $nb-drawer-open-box-shadow: 0 0 0.625rem 0 rgba(0, 0, 0, 0.25);
     line-height: $line-height-sm;
     position: relative;
     top: map.get($spacers, 2);
+  }
+
+  &.nb-mdi-xs::before {
+    font-size: $font-size-base;
   }
 
   .alert &::before {
@@ -2697,6 +2809,89 @@ pre.version, pre.version-stamp {
       text-decoration: none;
     }
   }
+}
+
+/*
+ * Default `.htmx-indicator` style just fades out the indicator while still occupying space in the user interface.
+ * In this particular case, it is desirable to completely remove the element from the interface, hence `display: none;`.
+ */
+#search_popup .htmx-indicator:not(.htmx-request) {
+  display: none;
+}
+
+.nb-search-list-group {
+  @extend .list-group;
+
+  list-style-type: none;
+}
+
+.nb-search-list-group-item {
+  @extend .list-group-item;
+
+  --#{$prefix}list-group-active-color: currentcolor; /* Remove the default text coloring on focus and on hover. */
+
+  @include transition($btn-transition);
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  text-decoration: none !important; /* Override default `<a>` anchor link `text-decoration: underline;` hover style. */
+  /* `text-align` and `width` are cloned from `.list-group-item-action`, but this entire class must not be extended! */
+  text-align: inherit;
+  width: 100%;
+
+  span.mdi::before { /* It is required to bump selector specificity here with `span`. */
+    font-size: $font-size-lg;
+    top: map.get($spacers, 2);
+  }
+}
+
+.nb-live-search-results {
+  @extend .nb-embedded-search-results;
+
+  overflow: clip;
+  padding: 0;
+  position: relative;
+  white-space: nowrap;
+
+  /* Required to properly handle row highlight and selection via `search.js` script. */
+  > .table > tbody > tr {
+    > * {
+      @include transition($btn-transition);
+    }
+
+    &.active > * {
+      --#{$prefix}table-color-state: var(--#{$prefix}table-hover-color);
+      --#{$prefix}table-bg-state: var(--#{$prefix}table-hover-bg);
+    }
+  }
+
+  &::after {
+    background-image: linear-gradient(to left, var(--#{$prefix}body-bg) 25%, transparent 100%);
+    bottom: 0;
+    content: "";
+    display: none;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 3.75rem; /* 60px */
+  }
+
+  &.nb-live-search-results-fade-out {
+    &::after {
+      display: block;
+    }
+  }
+}
+
+@include color-mode(dark, true) {
+  .nb-card-body-exposed {
+    background: var(--#{$prefix}tertiary-bg);
+  }
+}
+
+.nb-card-body-exposed {
+  background: var(--#{$prefix}body-bg);
 }
 
 /* Workaround to fix `d-none` being overridden by `d-md-flex` (and possibly other `d-{display}` classes). */

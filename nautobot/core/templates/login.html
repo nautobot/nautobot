@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load helpers %}
 {% load form_helpers %}
+{% load static %}
 
 {% block title %}Log In{% endblock title %}
 
@@ -8,58 +9,84 @@
     {{ block.super }}
 
     <style>
-        /* This is a wrapper element containing page title, breadcrumbs, search bar, and user profile dropdown. */
-        #header :nth-child(2) {
-            display: none;
+        /* Hide chrome, but keep #header's banner/message strip so login-page banners still show. */
+        #sidenav,
+        #footer,
+        #header > .container-fluid {
+            display: none !important;
+        }
+        /* The body reserves left padding for the (now-hidden) fixed sidenav; remove it
+           so the centered card is centered against the full viewport, not offset right. */
+        body {
+            padding-inline: 0 !important;
         }
 
-        #header .alert:last-child {
+        .card .alert > :last-child {
             margin-bottom: 0;
         }
     </style>
-{% endblock %}
+{% endblock extra_styles %}
 
 {% block content %}
-    <div class="row justify-content-center" style="margin-block-start: {% if 'BANNER_LOGIN'|settings_or_config %}6.25{% else %}9.375{% endif %}rem;">
-        <div class="col-sm-12 col-md-9 col-lg-7 nb-lg-max-width">
-            {% if "BANNER_LOGIN"|settings_or_config %}
-                <div class="alert alert-info text-center" role="alert">
-                    {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
+    <div class="align-items-center gap-24 h-100 justify-content-center vstack w-100" style="min-height: min-content;">
+        <div class="card mb-0 shadow-lg w-100" style="max-width: 40rem;">
+            <div class="card-body p-24 nb-card-body-exposed">
+                <div class="mb-24 w-100" style="max-width: 15rem;">
+                    <img alt="{{ settings.BRANDING_TITLE }}" class="w-100" src="{% custom_branding_or_static 'logo' %}" />
+                    {% if show_edition_badge %}
+                        <div class="fs-3 fw-medium mt-8 text-end text-uppercase text-warning" style="letter-spacing: 0.18em">
+                            {{ nautobot_edition }}
+                        </div>
+                    {% endif %}
                 </div>
-            {% endif %}
-            {% if form.non_field_errors %}
-                <div class="card border-danger mb-20">
-                    <div class="card-header bg-danger-subtle border-danger text-body">
-                        <strong>Errors</strong>
+
+                {% if "BANNER_LOGIN"|settings_or_config %}
+                    <div class="alert alert-info" role="alert">
+                        {{ "BANNER_LOGIN"|settings_or_config|render_markdown }}
                     </div>
-                    <div class="card-body">
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger" role="alert">
                         {{ form.non_field_errors }}
                     </div>
-                </div>
-            {% endif %}
-            <form action="{% url 'login' %}" method="post">
-                <div class="card">
-                    <div class="card-header">
-                        <strong>Log In</strong>
+                {% endif %}
+
+                <form action="{% url 'login' %}" method="post">
+                    {% csrf_token %}
+                    {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
+                    {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
+                    {% for field in form.visible_fields %}
+                        <div class="nb-form-group">
+                            <label for="{{ field.auto_id }}">{{ field.label|capfirst }}</label>
+                            {{ field }}
+                        </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary w-100 mt-24">Sign in</button>
+                </form>
+
+                {% if SSO_AUTH_ENABLED %}
+                    <div class="position-relative text-center nb-bg-inherit">
+                        <hr class="border-top m-20">
+                        <span class="px-16 position-absolute start-50 text-secondary top-0 translate-middle nb-bg-inherit">Or</span>
+                        <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary w-100">Continue with SSO</a>
                     </div>
-                    <div class="card-body">
-                        {% csrf_token %}
-                        {% if 'next' in request.GET %}<input type="hidden" name="next" value="{{ request.GET.next }}" />{% endif %}
-                        {% if 'next' in request.POST %}<input type="hidden" name="next" value="{{ request.POST.next }}" />{% endif %}
-                        {% render_form form %}
-                    </div>
-                    <div class="card-footer bg-body text-center">
-                        <button type="submit" class="btn btn-primary">Log In</button>
-                    </div>
-                </div>
-            </form>
-            {% if SSO_AUTH_ENABLED %}
-                <div class="position-relative text-center">
-                    <hr class="border-top m-20">
-                    <span class="bg-body px-16 position-absolute start-50 top-0 translate-middle">Or</span>
-                    <a href="{% url 'social:begin' backends.backends.0 %}?next={{ request.get_full_path | urlencode }}&{{ SAML_IDP }}" class="btn btn-primary">Continue with SSO</a>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="fs-5 text-center text-secondary">
+            &copy;
+            {% now "Y" %} Network to Code
+            &middot;
+            Powered by
+            <a class="text-secondary" href="{{ edition_url }}" target="_blank" rel="noopener">
+                Nautobot{% if is_commercial_edition %} {{ nautobot_edition }}{% endif %}
+            </a>
+            &middot;
+            <a class="text-secondary" href="https://docs.nautobot.com" target="_blank" rel="noopener">
+                Docs
+            </a>
         </div>
     </div>
-{% endblock %}
+{% endblock content %}

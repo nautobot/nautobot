@@ -5,6 +5,7 @@ from unittest import mock
 import uuid
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import override_settings
 
@@ -13,17 +14,71 @@ from nautobot.core.testing import TestCase
 from nautobot.dcim.models import Cable, Device, PowerPort
 from nautobot.extras.choices import JobQueueTypeChoices
 from nautobot.extras.exceptions import KubernetesJobManifestError
-from nautobot.extras.models import JobQueue, JobResult
+from nautobot.extras.models import DynamicGroupMembership, JobQueue, JobResult, SavedView, TaggedItem
+from nautobot.extras.models.models import UserSavedViewAssociation
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import (
     get_base_template,
     get_celery_queues,
+    get_change_logged_m2m_through_side_field_names,
+    get_explicit_m2m_through_side_field_names,
     get_kubernetes_job_manifest,
+    get_saved_view_filter_params,
+    get_saved_view_or_none,
     get_worker_count,
     populate_model_features_registry,
     run_kubernetes_job_and_return_job_result,
 )
+from nautobot.ipam.models import IPAddressToInterface, VRF, VRFDeviceAssignment, VRFPrefixAssignment
 from nautobot.users.models import Token
+from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
+
+
+class GetExplicitM2MThroughSideFieldNamesTest(TestCase):
+    """Tests for the registry of explicit M2M through models used for automatic association change logging."""
+
+    def test_side_field_names(self):
+        mapping = get_explicit_m2m_through_side_field_names()
+
+        with self.subTest("through model with multiple M2M relations and nullable sides"):
+            self.assertEqual(mapping[IPAddressToInterface], ("interface", "ip_address", "vm_interface"))
+            self.assertEqual(
+                mapping[VRFDeviceAssignment], ("device", "virtual_device_context", "virtual_machine", "vrf")
+            )
+
+        with self.subTest("simple two-sided through model"):
+            self.assertEqual(mapping[VRFPrefixAssignment], ("prefix", "vrf"))
+
+        with self.subTest("extra foreign keys that are not M2M sides are excluded"):
+            self.assertEqual(
+                mapping[ControllerManagedDeviceGroupWirelessNetworkAssignment],
+                ("controller_managed_device_group", "wireless_network"),
+            )
+
+        with self.subTest("self-referential M2M with through_fields"):
+            self.assertEqual(mapping[DynamicGroupMembership], ("group", "parent_group"))
+
+    def test_excluded_models(self):
+        mapping = get_explicit_m2m_through_side_field_names()
+
+        with self.subTest("taggit through model (GenericForeignKey-based) is excluded"):
+            self.assertNotIn(TaggedItem, mapping)
+
+        with self.subTest("auto-created through models are excluded"):
+            self.assertNotIn(VRF.import_targets.through, mapping)
+
+    def test_change_logged_variant_respects_opt_out(self):
+        base_mapping = get_explicit_m2m_through_side_field_names()
+        change_logged_mapping = get_change_logged_m2m_through_side_field_names()
+
+        with self.subTest("is_m2m_change_logged = False models are introspected but not change-logged"):
+            self.assertIn(UserSavedViewAssociation, base_mapping)
+            self.assertNotIn(UserSavedViewAssociation, change_logged_mapping)
+
+        with self.subTest("all other through models are unaffected by the filtering"):
+            expected = dict(base_mapping)
+            del expected[UserSavedViewAssociation]
+            self.assertEqual(change_logged_mapping, expected)
 
 
 class UtilsTestCase(TestCase):
@@ -339,8 +394,8 @@ class UtilsTestCase(TestCase):
         mock_configuration.assert_called_once()
         self.assertEqual(mock_config_instance.host, "https://kubernetes.default.svc")
         self.assertEqual(mock_config_instance.ssl_ca_cert, "/path/to/ca.crt")
-        self.assertEqual(mock_config_instance.api_key_prefix["authorization"], "Bearer")
-        self.assertEqual(mock_config_instance.api_key["authorization"], "test-token")
+        self.assertEqual(mock_config_instance.api_key_prefix["BearerToken"], "Bearer")
+        self.assertEqual(mock_config_instance.api_key["BearerToken"], "test-token")
 
         # Verify ApiClient was used as context manager
         mock_api_client.assert_called_once_with(mock_config_instance)
@@ -400,3 +455,65 @@ class UtilsTestCase(TestCase):
         test_uuid = uuid.uuid4()
         encoded = NautobotKombuJSONEncoder().encode({"object_id": test_uuid})
         self.assertIn(str(test_uuid), encoded)
+
+
+class SavedViewLookupTestCase(TestCase):
+    """Tests for get_saved_view_or_none() and get_saved_view_filter_params()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.filter_params = {"status": ["active"], "name": ["test-location"]}
+        # Deliberately owned by someone other than the requesting user, and not shared.
+        cls.other_user = get_user_model().objects.create_user(username="saved-view-lookup-other-user")
+        cls.saved_view = SavedView.objects.create(
+            owner=cls.other_user,
+            name="Saved View Lookup Test View",
+            view="dcim:location_list",
+            is_shared=False,
+            config={"filter_params": cls.filter_params, "pagination_count": 50},
+        )
+        # A Saved View pk always comes from a user-supplied query parameter, so it may be absent or malformed.
+        cls.unresolvable_pks = [None, "", "not-a-uuid", uuid.uuid4(), str(uuid.uuid4())]
+
+    def test_get_saved_view_or_none_returns_saved_view(self):
+        for pk in (self.saved_view.pk, str(self.saved_view.pk)):
+            with self.subTest(pk=pk):
+                self.assertEqual(get_saved_view_or_none(pk), self.saved_view)
+
+    def test_get_saved_view_or_none_ignores_owner_and_sharing(self):
+        """A Saved View is resolved by UUID alone, making its link privately shareable."""
+        self.assertNotEqual(self.saved_view.owner, self.user)
+        self.assertFalse(self.saved_view.is_shared)
+        self.assertFalse(self.user.has_perms(["extras.view_savedview"]))
+        self.assertEqual(get_saved_view_or_none(self.saved_view.pk), self.saved_view)
+
+    def test_get_saved_view_or_none_unresolvable_pk(self):
+        for pk in self.unresolvable_pks:
+            with self.subTest(pk=pk):
+                self.assertIsNone(get_saved_view_or_none(pk))
+
+    def test_get_saved_view_or_none_view_argument(self):
+        self.assertEqual(
+            get_saved_view_or_none(self.saved_view.pk, view=self.saved_view.view),
+            self.saved_view,
+        )
+        self.assertIsNone(get_saved_view_or_none(self.saved_view.pk, view="dcim:device_list"))
+
+    def test_get_saved_view_filter_params_returns_filter_params(self):
+        self.assertEqual(get_saved_view_filter_params(self.saved_view.pk), self.filter_params)
+
+    def test_get_saved_view_filter_params_without_filter_params(self):
+        for index, config in enumerate([{}, {"pagination_count": 50}]):
+            with self.subTest(config=config):
+                saved_view = SavedView.objects.create(
+                    owner=self.other_user,
+                    name=f"Saved View Without Filter Params {index}",
+                    view="dcim:device_list",
+                    config=config,
+                )
+                self.assertEqual(get_saved_view_filter_params(saved_view.pk), {})
+
+    def test_get_saved_view_filter_params_unresolvable_pk(self):
+        for pk in self.unresolvable_pks:
+            with self.subTest(pk=pk):
+                self.assertEqual(get_saved_view_filter_params(pk), {})

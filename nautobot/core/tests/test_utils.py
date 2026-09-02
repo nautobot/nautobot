@@ -3,11 +3,13 @@ import sys
 import tempfile
 from unittest import mock
 import uuid
+import warnings
 
 from django import forms as django_forms
 from django.apps import apps
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
@@ -16,11 +18,12 @@ from django.test import override_settings, tag
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
 from nautobot.core.api import utils as api_utils
+from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.forms.utils import compress_range
 from nautobot.core.models import fields as core_fields, utils as models_utils, validators
 from nautobot.core.testing import TestCase
-from nautobot.core.utils import data as data_utils, filtering, lookup, querysets, requests
-from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils import data as data_utils, deprecation, filtering, lookup, querysets, requests
+from nautobot.core.utils.cache import cache_get_or_set, construct_cache_key, get_request_cache, request_cache
 from nautobot.core.utils.migrations import update_object_change_ct_for_replaced_models
 from nautobot.core.utils.module_loading import (
     check_name_safe_to_import_privately,
@@ -135,6 +138,100 @@ class ConstructCacheKeyTest(TestCase):
 
             self.assertNotEqual(ck, construct_cache_key(instance, method_name="display", branch_aware=True))
             self.assertEqual(ck_unaware, construct_cache_key(instance, method_name="display", branch_aware=False))
+
+
+class RequestCacheTest(TestCase):
+    """
+    Validate the operation of `request_cache()`/`get_request_cache()`.
+    """
+
+    def test_get_request_cache_returns_none_outside_of_scope(self):
+        self.assertIsNone(get_request_cache())
+
+    def test_request_cache_provides_a_dict_scoped_to_the_block(self):
+        self.assertIsNone(get_request_cache())
+        with request_cache():
+            request_scoped_cache = get_request_cache()
+            self.assertIsInstance(request_scoped_cache, dict)
+            request_scoped_cache["some_key"] = "some_value"
+            self.assertEqual(get_request_cache()["some_key"], "some_value")
+        # Cache is discarded once the block exits.
+        self.assertIsNone(get_request_cache())
+
+    def test_request_cache_does_not_leak_between_sibling_scopes(self):
+        with request_cache():
+            get_request_cache()["some_key"] = "some_value"
+        with request_cache():
+            self.assertNotIn("some_key", get_request_cache())
+
+    def test_nested_request_cache_reuses_outer_scope(self):
+        with request_cache():
+            get_request_cache()["some_key"] = "some_value"
+            with request_cache():
+                # The nested scope should see (and be able to mutate) the same dict as the outer scope.
+                self.assertEqual(get_request_cache()["some_key"], "some_value")
+                get_request_cache()["another_key"] = "another_value"
+            self.assertEqual(get_request_cache()["another_key"], "another_value")
+        self.assertIsNone(get_request_cache())
+
+
+class CacheGetOrSetTest(TestCase):
+    """
+    Validate the operation of `cache_get_or_set()`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.cache_key = f"nautobot.core.tests.cache_get_or_set.{uuid.uuid4()}"
+        self.addCleanup(cache.delete, self.cache_key)
+
+    def test_computes_and_caches_on_miss(self):
+        compute = mock.Mock(return_value="computed value")
+        value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+        self.assertEqual(value, "computed value")
+        self.assertFalse(hit)
+        compute.assert_called_once()
+        # A subsequent call should be served from Redis, not recompute.
+        compute.reset_mock()
+        value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+        self.assertEqual(value, "computed value")
+        self.assertTrue(hit)
+        compute.assert_not_called()
+
+    def test_outside_request_cache_scope_still_uses_redis(self):
+        self.assertIsNone(get_request_cache())
+        compute = mock.Mock(return_value="computed value")
+        cache_get_or_set(self.cache_key, compute, timeout=None)
+        with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+            value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+        self.assertEqual(value, "computed value")
+        self.assertTrue(hit)
+        mock_cache_get.assert_called_once_with(self.cache_key)
+
+    def test_within_request_cache_scope_avoids_repeated_redis_lookups(self):
+        compute = mock.Mock(return_value="computed value")
+        with request_cache():
+            cache_get_or_set(
+                self.cache_key, compute, timeout=None
+            )  # First call: Redis miss, computes and populates both caches.
+            with mock.patch.object(cache, "get", wraps=cache.get) as mock_cache_get:
+                for _ in range(5):
+                    value, hit = cache_get_or_set(self.cache_key, compute, timeout=None)
+                    self.assertEqual(value, "computed value")
+                    self.assertTrue(hit)
+            mock_cache_get.assert_not_called()
+        compute.assert_called_once()
+
+    def test_cache_hit_callback_is_called_with_the_hit_value(self):
+        compute = mock.Mock(return_value="computed value")
+        cache_hit_callback = mock.Mock()
+        # Miss: compute() is called, cache_hit_callback should be called with False.
+        cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
+        cache_hit_callback.assert_called_once_with(False)
+        # Hit: compute() is not called, cache_hit_callback should be called with True.
+        cache_hit_callback.reset_mock()
+        cache_get_or_set(self.cache_key, compute, timeout=None, cache_hit_callback=cache_hit_callback)
+        cache_hit_callback.assert_called_once_with(True)
 
 
 class DictToFilterParamsTest(TestCase):
@@ -570,6 +667,69 @@ class IsTruthyTest(TestCase):
         self.assertFalse(settings_funcs.is_truthy("n"))
         self.assertFalse(settings_funcs.is_truthy(0))
         self.assertFalse(settings_funcs.is_truthy("0"))
+
+
+class WarnDeprecatedAtCallerTest(TestCase):
+    """Tests for `warn_deprecated_at_caller()`."""
+
+    @staticmethod
+    def _make_shim():
+        """Build a deprecation shim that lives in a *different* file than this test module.
+
+        `warn_deprecated_at_caller()` walks out of its immediate caller's module (the shim) before
+        attributing the warning, so exercising that walk correctly requires the shim's `co_filename`
+        to differ from this test's -- otherwise the walk would step over the test frame too.
+        `compile()` with an explicit filename gives us that distinct frame without a second source
+        file on disk. The returned `shim(message)` simply forwards to `warn_deprecated_at_caller()`.
+        """
+        namespace = {"warn_deprecated_at_caller": deprecation.warn_deprecated_at_caller}
+        code = compile(
+            "def shim(message):\n    warn_deprecated_at_caller(message)\n",
+            "<deprecation-shim-stand-in>",
+            "exec",
+        )
+        exec(code, namespace)  # noqa: S102  # pylint: disable=exec-used  # controlled, test-only source
+        return namespace["shim"]
+
+    def test_emits_deprecation_warning(self):
+        """The message is emitted as a `DeprecationWarning`."""
+        with self.assertWarns(DeprecationWarning) as cm:
+            deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
+        self.assertEqual(str(cm.warning), "legacy thing is deprecated")
+
+    def test_warning_is_attributed_to_caller_of_shim(self):
+        """`stacklevel` skips the shim frame so the warning points at the app code that called it."""
+        shim = self._make_shim()
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+            shim("legacy thing is deprecated")
+        self.assertEqual(len(caught), 1)
+        # Blamed here (the shim's caller), not on the shim's file or on deprecation.py.
+        self.assertEqual(os.path.basename(caught[0].filename), os.path.basename(__file__))
+        self.assertEqual(caught[0].lineno, expected_lineno)
+
+    def test_logs_warning_with_matching_stacklevel_when_enabled(self):
+        """With `LOG_DEPRECATION_WARNINGS` set, a `logger.warning` fires, attributed to the same caller."""
+        shim = self._make_shim()
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", True):
+            with warnings.catch_warnings(record=True):
+                warnings.simplefilter("always")
+                with self.assertLogs(deprecation.logger, level="WARNING") as logs:
+                    expected_lineno = sys._getframe().f_lineno + 1  # the shim() call is the next line
+                    shim("legacy thing is deprecated")
+        self.assertEqual(len(logs.records), 1)
+        record = logs.records[0]
+        self.assertIn("legacy thing is deprecated", record.getMessage())
+        self.assertEqual(os.path.basename(record.pathname), os.path.basename(__file__))
+        self.assertEqual(record.lineno, expected_lineno)
+
+    def test_does_not_log_when_log_deprecation_warnings_disabled(self):
+        """With the setting off, only the (silenced) warning fires -- no log line."""
+        with mock.patch.object(deprecation, "LOG_DEPRECATION_WARNINGS", False):
+            with self.assertWarns(DeprecationWarning):
+                with self.assertNoLogs(deprecation.logger, level="WARNING"):
+                    deprecation.warn_deprecated_at_caller("legacy thing is deprecated")
 
 
 class PrettyPrintQueryTest(TestCase):
@@ -1392,3 +1552,15 @@ class TestQuerySetUtils(TestCase):
             new_queryset = querysets.maybe_prefetch_related(queryset, ["nat_outside_list"])
             mock_prefetch_related.assert_not_called()
             self.assertIs(new_queryset, queryset)
+
+
+class TestSerializeObjectV2(TestCase):
+    def test_serialize_object_v2_json_only(self):
+        """Make sure serialize_object_v2() returns a JSON-serializable dict and no lazy/deferred queryset data."""
+        for model_class in apps.get_models():
+            instance = model_class.objects.first()
+            if instance is None:
+                continue
+            data = models_utils.serialize_object_v2(instance)
+            with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
+                NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)

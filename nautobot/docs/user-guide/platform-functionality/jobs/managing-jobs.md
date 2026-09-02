@@ -127,6 +127,7 @@ When a Job is submitted for execution or scheduling, Nautobot checks for any rel
 
 +++ 3.1.0 "New job console log functionality is only available to users with `extras.view_jobconsoleentry` permission"
 +++ 3.1.0 "Job Log Entries are only available to users with `extras.view_joblogentry` permission"
++++ 3.2.0 "Canceling a Job requires the `extras.cancel_job` permission (submitters can cancel their own jobs without it)"
 
 | Task                       | Required permission(s)                                   |
 |----------------------------|----------------------------------------------------------|
@@ -135,6 +136,8 @@ When a Job is submitted for execution or scheduling, Nautobot checks for any rel
 | Assign Job Queues          | `extras.change_job` + permissions on specific Job Queues |
 | Delete Job                 | `extras.delete_job`                                      |
 | Run Job                    | `extras.run_job`                                         |
+| Cancel Job                 | `extras.cancel_job` (not required when canceling your own job) + `extras.view_jobresult` |
 | Approve scheduled Job      | `extras.change_approvalworkflowstage` + `extras.view_approvalworkflowstage` + `extras.change_scheduledjob`|
 | View Job Log Entries       | `extras.view_joblogentry`                                |
 | View Job Console Output    | `extras.view_jobconsoleentry`                            |
+| Download Job output file(s)| `extras.view_fileproxy`                                  |

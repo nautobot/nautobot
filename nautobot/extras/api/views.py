@@ -33,9 +33,15 @@ from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.perms import can_cancel
 from nautobot.extras import filters
-from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
+from nautobot.extras.choices import (
+    ApprovalWorkflowStateChoices,
+    JobExecutionType,
+    JobQueueTypeChoices,
+)
+from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
+from nautobot.extras.jobs_cancel import CancelFactory, JobLiveness, user_can_cancel_job_result
 from nautobot.extras.models import (
     ApprovalWorkflow,
     ApprovalWorkflowDefinition,
@@ -515,14 +521,6 @@ class ApprovalWorkflowStageViewSet(NautobotModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class ApprovalWorkflowStageResponseViewSet(ModelViewSet):
-    """ApprovalWorkflowStageResponse viewset."""
-
-    queryset = ApprovalWorkflowStageResponse.objects.all()
-    serializer_class = serializers.ApprovalWorkflowStageResponseSerializer
-    filterset_class = filters.ApprovalWorkflowStageResponseFilterSet
-
-
 #
 # Contacts
 #
@@ -605,7 +603,65 @@ class SavedViewViewSet(ModelViewSet):
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
 
+    class SetDefaultPermissions(TokenPermissions):
+        """
+        Require no SavedView permissions at all, as setting your own default view does not modify the view.
 
+        Matches the UI, where any user can pin any saved view they have a link to as their own default.
+        """
+
+        perms_map = {
+            **TokenPermissions.perms_map,
+            "POST": [],
+            "DELETE": [],
+        }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """Apply no permissions on the /set-default/ endpoint, otherwise as ModelViewSetMixin."""
+        if self.action == "set_default":
+            return
+        super().restrict_queryset(request, *args, **kwargs)
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={201: serializers.UserSavedViewAssociationSerializer},
+    )
+    @extend_schema(methods=["delete"], request=None, responses={204: None})
+    @action(
+        detail=True,
+        name="Set Default",
+        methods=["post", "delete"],
+        url_path="set-default",
+        permission_classes=[SetDefaultPermissions],
+        filterset_class=None,
+    )
+    def set_default(self, request, *args, **kwargs):
+        """Set (POST) or clear (DELETE) this saved view as the requesting user's default for its list view."""
+        saved_view = self.get_object()
+        UserSavedViewAssociation.objects.filter(user=request.user, view_name=saved_view.view).delete()
+        if request.method == "DELETE":
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        association = UserSavedViewAssociation(user=request.user, saved_view=saved_view, view_name=saved_view.view)
+        association.validated_save()
+        serializer = serializers.UserSavedViewAssociationSerializer(
+            association, context={"request": request, "depth": 0}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# TODO: 4.0 remove these endpoints in favor of the /api/extras/saved-views/<uuid>/set-default/ action.
+@extend_schema_view(
+    list=extend_schema(deprecated=True),
+    retrieve=extend_schema(deprecated=True),
+    create=extend_schema(deprecated=True),
+    update=extend_schema(deprecated=True),
+    partial_update=extend_schema(deprecated=True),
+    destroy=extend_schema(deprecated=True),
+    bulk_update=extend_schema(deprecated=True),
+    bulk_partial_update=extend_schema(deprecated=True),
+    bulk_destroy=extend_schema(deprecated=True),
+)
 class UserSavedViewAssociationViewSet(ModelViewSet):
     queryset = UserSavedViewAssociation.objects.all()
     serializer_class = serializers.UserSavedViewAssociationSerializer
@@ -701,13 +757,7 @@ class GitRepositoryViewSet(NautobotModelViewSet):
         """
         Enqueue pull git repository and refresh data.
         """
-        if not request.user.has_perm("extras.change_gitrepository"):
-            raise PermissionDenied("This user does not have permission to make changes to Git repositories.")
-
-        if not get_worker_count():
-            raise CeleryWorkerNotRunningException()
-
-        repository = get_object_or_404(GitRepository, id=pk)
+        repository = get_git_repository_for_sync(request, pk)
         job_result = repository.sync(user=request.user)
 
         data = {
@@ -982,7 +1032,7 @@ class JobViewSetBase(
                 interval=schedule_data.get("interval"),
                 crontab=schedule_data.get("crontab", ""),
                 job_queue=job_queue,
-                **job_class.serialize_data(cleaned_data),
+                job_kwargs=job_class.serialize_data(cleaned_data),
             )
 
             scheduled_job_has_approval_workflow = schedule.has_approval_workflow_definition()
@@ -1024,7 +1074,7 @@ class JobViewSetBase(
             job_model,
             request.user,
             job_queue=job_queue,
-            **job_class.serialize_data(cleaned_data),
+            job_kwargs=job_class.serialize_data(cleaned_data),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
         return Response({"scheduled_job": None, "job_result": serializer.data}, status=status.HTTP_201_CREATED)
@@ -1147,12 +1197,100 @@ class JobResultViewSet(
     serializer_class = serializers.JobResultSerializer
     filterset_class = filters.JobResultFilterSet
 
+    class CancelJobPermission(TokenPermissions):
+        """
+        Enforce `view_jobresult` permission (instead of default `add_jobresult` for POST).
+        """
+
+        perms_map = {
+            "GET": ["%(app_label)s.view_jobresult"],
+            "POST": ["%(app_label)s.view_jobresult"],
+        }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """
+        Apply special permissions as queryset filter on the /cancel/ endpoint.
+
+        Otherwise, same as ModelViewSetMixin.
+        """
+        action_to_method = {"cancel": "view"}
+        if request.user.is_authenticated and self.action in action_to_method:
+            self.queryset = self.queryset.restrict(request.user, action_to_method[self.action])
+        else:
+            super().restrict_queryset(request, *args, **kwargs)
+
     @action(detail=True)
     def logs(self, request, pk=None):
         job_result = self.get_object()
         logs = job_result.job_log_entries.all()
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
+
+    @extend_schema(
+        methods=["get"],
+        responses={
+            200: serializers.JobResultCancelPreviewSerializer,
+        },
+    )
+    @extend_schema(
+        methods=["post"],
+        responses={
+            200: serializers.JobResultSerializer,
+        },
+    )
+    @action(detail=True, methods=["get", "post"], permission_classes=[CancelJobPermission])
+    def cancel(self, request, pk=None):
+        """Cancel a running or pending Job, or reap it if its worker is gone."""
+        job_result = self.get_object()
+
+        if not user_can_cancel_job_result(request.user, job_result):
+            raise PermissionDenied("You do not have permission to cancel this job.")
+
+        if not job_result.is_unready_state and request.method == "POST":
+            return Response(
+                {"detail": "Job is already finished. Nothing to do."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        strategy = CancelFactory.get_strategy(job_result.queue_type)
+
+        job_liveness_state = strategy.liveness(job_result)
+
+        if request.method == "GET":
+            if not job_result.is_unready_state:
+                detail = {
+                    "message": f"Job '{job_result.name}' is already finished.",
+                    "job_status": job_result.status,
+                    "timestamp": timezone.now().isoformat(),
+                }
+                return Response(detail, status=status.HTTP_200_OK)
+
+            liveness_display = {
+                JobLiveness.RUNNING: "RUNNING",
+                JobLiveness.NOT_RUNNING: "NOT RUNNING",
+                JobLiveness.UNKNOWN: "UNKNOWN",
+            }
+            detail = {
+                "message": f"Are you sure you want to cancel '{job_result.name}'?",
+                "job_status": liveness_display[job_liveness_state],
+                "irreversible": "This action cannot be undone.",
+                "timestamp": timezone.now().isoformat(),
+            }
+            return Response(detail, status=status.HTTP_200_OK)
+
+        result = strategy.cancel(job_result, user=request.user)
+
+        if result["error"]:
+            return Response({"detail": result["error"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if not result["canceled"]:
+            return Response(
+                {"detail": "Job finished before it could be canceled. No action was taken."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = self.get_serializer(result["job_result"])
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 #
@@ -1243,7 +1381,7 @@ class ScheduledJobViewSet(
             job_model,
             request.user,
             celery_kwargs=scheduled_job.celery_kwargs or {},
-            **job_class.serialize_data(job_kwargs),
+            job_kwargs=job_class.serialize_data(job_kwargs),
         )
         serializer = serializers.JobResultSerializer(job_result, context={"request": request})
 

@@ -17,7 +17,11 @@ def render_field(context, field, bulk_nullable=False, container_class=None):
     field_instance = getattr(field, "field", None)
     embedded_create = getattr(field_instance, "embedded_create", False)
     embedded_search = getattr(field_instance, "embedded_search", False)
-    is_embedded = context.request.headers.get("HX-Request", False) == "true"
+    # We're rendering inside an embedded-action modal flow only when the originating HTMX request
+    # came from one of the embedded-action buttons (which set HX-Embedded-Action explicitly).
+    # Plain HTMX swaps (e.g. dynamic field updates within a normal form) don't suppress the
+    # embedded-action affordances on their fields.
+    is_embedded = context.request.headers.get("HX-Embedded-Action", "") in ("create", "search")
     has_embedded_create_permissions = context.request.user.has_perms(
         getattr(field_instance, "embedded_create_permissions", [])
     )

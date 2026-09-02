@@ -90,8 +90,8 @@ You can attach structured metadata to log messages using the `extra` parameter. 
         "Validated device",
         extra={
             "grouping": "inventory-check",
-            "object": device
-        }
+            "object": device,
+        },
     )
     ```
 
@@ -105,10 +105,11 @@ To skip writing a log entry to the database but still print it to the console of
 
 If `grouping` is not specified, Nautobot uses the current function name as a default. If `object` is omitted, the log is not associated with any model instance.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job
+
 
     class MyJob(Job):
         def run(self):
@@ -118,6 +119,10 @@ If `grouping` is not specified, Nautobot uses the current function name as a def
 ## Log Message Formatting
 
 Log messages can include Markdown formatting, and [a limited subset of HTML](../../user-guide/platform-functionality/template-filters.md#render_markdown) is also supported for added emphasis in the UI.
+
+## Tracing and Telemetry
+
+When OpenTelemetry instrumentation is enabled, a Job runs inside a Celery task span and messages logged through `self.logger` are automatically correlated to the active trace. To add your own spans around phases of a Job's `run()` - so you can measure where its time goes - see [Instrumenting Your App with OpenTelemetry](../apps/api/platform-features/opentelemetry.md).
 
 ## Sanitizing Log Messages
 

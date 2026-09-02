@@ -1,0 +1,101 @@
+# Create CableType model.
+
+import uuid
+
+import django.core.serializers.json
+import django.core.validators
+from django.db import migrations, models
+import django.db.models.deletion
+
+import nautobot.core.models.fields
+import nautobot.extras.models.mixins
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("dcim", "0085_fix_128gfc_qsfp28_typo"),
+        ("extras", "0138_job_console_log_default_and_more"),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name="CableType",
+            fields=[
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True
+                    ),
+                ),
+                ("created", models.DateTimeField(auto_now_add=True, null=True)),
+                ("last_updated", models.DateTimeField(auto_now=True, null=True)),
+                (
+                    "_custom_field_data",
+                    models.JSONField(blank=True, default=dict, encoder=django.core.serializers.json.DjangoJSONEncoder),
+                ),
+                ("name", models.CharField(max_length=255, unique=True)),
+                ("description", models.CharField(blank=True, max_length=255)),
+                (
+                    "manufacturer",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cable_types",
+                        to="dcim.manufacturer",
+                    ),
+                ),
+                ("part_number", models.CharField(blank=True, max_length=255)),
+                ("has_embedded_transceivers", models.BooleanField(default=False)),
+                (
+                    "a_connectors",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(16),
+                        ],
+                    ),
+                ),
+                (
+                    "b_connectors",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(16),
+                        ],
+                    ),
+                ),
+                (
+                    "total_lanes",
+                    models.PositiveSmallIntegerField(
+                        default=1,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(256),
+                        ],
+                    ),
+                ),
+                ("mapping", models.JSONField(blank=True, default=list)),
+                ("is_shuffle", models.BooleanField(default=False)),
+                (
+                    "strands_per_lane",
+                    models.PositiveSmallIntegerField(
+                        default=1, validators=[django.core.validators.MinValueValidator(1)]
+                    ),
+                ),
+                ("polarity_method", models.CharField(blank=True, default="", max_length=50)),
+                ("tags", nautobot.core.models.fields.TagsField(through="extras.TaggedItem", to="extras.Tag")),
+            ],
+            options={
+                "ordering": ["name"],
+            },
+            bases=(
+                nautobot.extras.models.mixins.DataComplianceModelMixin,
+                nautobot.extras.models.mixins.DynamicGroupMixin,
+                nautobot.extras.models.mixins.NotesMixin,
+                models.Model,
+            ),
+        ),
+    ]

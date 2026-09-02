@@ -58,6 +58,7 @@ from nautobot.core.views.mixins import (
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import (
+    borrow_extras_fields,
     check_filter_for_display,
     common_detail_view_context,
     get_bulk_queryset_from_view,
@@ -69,6 +70,7 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.utils import get_saved_view_filter_params, get_saved_view_or_none
 
 
 class GenericView(UIComponentsMixin, LoginRequiredMixin, View):
@@ -197,7 +199,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
             self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
         )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+            return get_saved_view_filter_params(params.get("saved_view"))
         return filter_params
 
     def get_required_permission(self):
@@ -357,11 +359,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         saved_views = get_saved_views_for_user(user, list_url)
 
         if current_saved_view_pk:
-            try:
-                # We are not using .restrict(request.user, "view") here
-                # User should be able to see any saved view that he has the list view access to.
-                current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
-            except ObjectDoesNotExist:
+            current_saved_view = get_saved_view_or_none(current_saved_view_pk, view=list_url)
+            if current_saved_view is None:
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table
@@ -553,11 +552,13 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         obj = self.alter_obj(self.get_object(kwargs), request, args, kwargs)
         if self.model_form is None:
             raise RuntimeError("self.model_form must not be None")
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = self.model_form(  # pylint: disable=not-callable
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=self.model_form),
             instance=obj,
+            **form_kwargs,
         )
         restrict_form_fields(form, request.user)
 
@@ -602,10 +603,16 @@ class ObjectEditView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
         else:
             logger.debug("Form validation failed")
 
+        base_template = (
+            "components/htmx/object_embedded_create.html"
+            if request.headers.get("HX-Request", False)
+            else "generic/object_create_base.html"
+        )
         return render(
             request,
             self.template_name,
             {
+                "base_template": base_template,
                 "obj": obj,
                 "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
@@ -1408,7 +1415,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
     queryset: Optional[QuerySet] = None  # TODO: required, declared Optional only to avoid a breaking change
     form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
     model_form: Optional[type[Form]] = None  # TODO: required, declared Optional only to avoid a breaking change
-    template_name = "dcim/device_component_add.html"
+    template_name = "generic/object_create.html"
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "add")
@@ -1419,6 +1426,7 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
         form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = self.form(initial=normalize_querydict(request.GET, form_class=self.form), **form_kwargs)  # pylint: disable=not-callable
         model_form = self.model_form(request.GET)  # pylint: disable=not-callable
+        borrow_extras_fields(form, model_form)
         base_template = (
             "components/htmx/object_embedded_create.html"
             if request.headers.get("HX-Request", False)
@@ -1431,6 +1439,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             {
                 "base_template": base_template,
                 "component_type": self.queryset.model._meta.verbose_name,
+                # Required by the generic create template (title, header, `data-nb-obj-type`).
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "model_form": model_form,
                 "form": form,
                 "return_url": self.get_return_url(request),
@@ -1445,30 +1455,15 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             raise RuntimeError("self.form, self.model_form, and self.queryset must not be None")
         form = self.form(request.POST, initial=normalize_querydict(request.GET, form_class=self.form))  # pylint: disable=not-callable
         model_form = self.model_form(request.POST, initial=normalize_querydict(request.GET, form_class=self.model_form))  # pylint: disable=not-callable
+        # Borrow the model form's "extras" fields onto the create form so they validate as part of it; their
+        # values then flow through `form.cleaned_data` into each per-instance form below. Only these borrowed
+        # fields (plus the create form's own) reach `data`, so model fields deliberately omitted from the
+        # create UI cannot be set via a crafted POST request.
+        borrow_extras_fields(form, model_form)
 
         if form.is_valid():
             new_components = []
             data = deepcopy(form.cleaned_data)
-
-            # The component create form (`self.form`) is a plain form that does not declare the "extras" fields
-            # (custom fields, relationships, notes, dynamic group assignments) that are added dynamically
-            # to the model form (`self.model_form`) and rendered alongside it. Those fields are therefore
-            # absent from `form.cleaned_data`, so we copy their values directly from the POST data; otherwise a
-            # required custom field or relationship rendered from the model form has nowhere to flow through
-            # and component creation fails. We are being explicit here about which fields are copied
-            # so that model fields deliberately omitted from the create UI cannot be set
-            # (intentionally or inadvertently) via a crafted POST request.
-            extras_field_names = set(getattr(model_form, "custom_fields", [])) | set(
-                getattr(model_form, "relationships", [])
-            )
-            extras_field_names |= {"object_note", "dynamic_groups"}.intersection(model_form.fields)
-            for field_name in extras_field_names:
-                if field_name not in request.POST:
-                    continue
-                if getattr(model_form.fields[field_name].widget, "allow_multiple_selected", False):
-                    data[field_name] = request.POST.getlist(field_name)
-                else:
-                    data[field_name] = request.POST.get(field_name)
 
             names = form.cleaned_data["name_pattern"]
             labels = form.cleaned_data.get("label_pattern")
@@ -1492,6 +1487,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
                             field = "name_pattern"
                         elif field == "label":
                             field = "label_pattern"
+                        elif field == "breakout_position":
+                            field = "breakout_position_pattern"
                         for e in errors:
                             err_str = ", ".join(e)
                             if field not in form.fields:
@@ -1532,6 +1529,8 @@ class ComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermission
             self.template_name,
             {
                 "component_type": self.queryset.model._meta.verbose_name,
+                # Required by the generic create template (title, header, `data-nb-obj-type`).
+                "obj_type": self.queryset.model._meta.verbose_name,
                 "form": form,
                 "model_form": model_form,
                 "return_url": self.get_return_url(request),
