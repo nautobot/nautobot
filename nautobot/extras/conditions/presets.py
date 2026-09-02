@@ -186,6 +186,7 @@ class ConditionPreset:
             )
         return {parameter.context_name: values.get(parameter.name) for parameter in self.parameters}
 
+
 def register_condition_preset(preset):
     """
     Register a `ConditionPreset` so the rule form and the API catalog will offer it.
