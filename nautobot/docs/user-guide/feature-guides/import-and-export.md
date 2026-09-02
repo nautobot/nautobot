@@ -167,6 +167,7 @@ The Job fails, with an error naming the entry at fault, rather than quietly writ
 - names a field that exists only for input rather than output, such as the singular `location` field on VLANs and Prefixes - export the `locations` many-to-many field instead
 - attempts to traverse a many-to-many field, or a field that is not a relation at all
 - traverses more than three relations in a single path
+- names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
 
 #### Effect on re-importing the file
 

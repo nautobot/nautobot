@@ -240,7 +240,7 @@ class ExportObjectList(Job):
         export_field_paths = import_utils.parse_match_fields(export_fields)
         if export_field_paths:
             try:
-                validate_field_paths(get_serializer_for_model(model), export_field_paths)
+                validate_field_paths(get_serializer_for_model(model), export_field_paths, user=self.user)
             except ValueError as exc:
                 self.logger.error("%s", exc)
                 raise RunJobTaskFailed(str(exc)) from exc

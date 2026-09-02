@@ -14,6 +14,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock, skip
 
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.test import SimpleTestCase, tag, TestCase
@@ -54,6 +55,7 @@ from nautobot.dcim.models import (
     Manufacturer,
     Platform,
     Rack,
+    RackReservation,
     SoftwareImageFile,
     SoftwareVersion,
 )
@@ -63,6 +65,9 @@ from nautobot.extras.models import CustomField, JobLogEntry, Role, SecretsGroup,
 from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import Namespace, RouteTarget, VLAN, VRF, VRFDeviceAssignment
 from nautobot.users.api.serializers import UserSerializer
+from nautobot.users.models import ObjectPermission
+
+User = get_user_model()
 
 
 @tag("unit")
@@ -391,6 +396,34 @@ class ImportExportJobTestCase(TransactionTestCase):
         status._custom_field_data = {"export_cf_a": "A value", "export_cf_b": "B value"}
         status.validated_save()
         return status
+
+    def create_rack_reservation_and_limited_user(self):
+        """A RackReservation plus a non-superuser who may view reservations but *not* users.
+
+        The reservation's `user` FK is the interesting relation: `UserSerializer` exposes fields such as
+        `email` and `is_superuser` that a RackReservation viewer has no business seeing.
+        """
+        location_type = LocationType.objects.create(name="Perm Location Type")
+        location_type.content_types.add(ContentType.objects.get_for_model(Rack))
+        location = Location.objects.create(
+            name="Perm Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        rack = Rack.objects.create(
+            name="Perm Rack", location=location, status=Status.objects.get_for_model(Rack).first(), u_height=10
+        )
+        reservation_owner = User.objects.create(
+            username="reservation-owner", email="owner@example.com", is_superuser=True
+        )
+        RackReservation.objects.create(rack=rack, units=[1, 2], user=reservation_owner, description="Perm Reservation")
+
+        limited_user = User.objects.create(username="limited-user", is_superuser=False)
+        permission = ObjectPermission.objects.create(name="View rack reservations", actions=["view"])
+        permission.users.add(limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(RackReservation))
+        self.assertFalse(limited_user.has_perm("users.view_user"))
+        return limited_user
 
     def create_device_type_with_software_image_files(self):
         """A DeviceType whose `software_image_files` M2M members have a composite (3-part) natural key."""
@@ -766,12 +799,19 @@ class ValidateFieldPathsTests(TestCase):
     job reject a bad selection before it starts serializing.
     """
 
+    @classmethod
+    def setUpTestData(cls):
+        """A superuser, so that the structural tests below are unaffected by the permission gate."""
+        cls.superuser = User.objects.create(username="paths-superuser", is_superuser=True)
+
     def assertPathsValid(self, serializer_class, paths, **kwargs):
         """Assert the selection is accepted (the function returns None and raises nothing)."""
+        kwargs.setdefault("user", self.superuser)
         self.assertIsNone(validate_field_paths(serializer_class, paths, **kwargs))
 
     def assertPathsInvalid(self, serializer_class, paths, *expected_fragments, **kwargs):
         """Assert the selection is rejected, and that the message contains each expected fragment."""
+        kwargs.setdefault("user", self.superuser)
         with self.assertRaises(ValueError) as context:
             validate_field_paths(serializer_class, paths, **kwargs)
         message = str(context.exception)
@@ -1059,6 +1099,105 @@ class ValidateFieldPathsTests(TestCase):
         ):
             self.assertPathsValid(DeviceSerializer, ["device_type__anything_at_all"])
 
+    # -- permission on traversed models ----------------------------------------
+    def limited_user(self):
+        """A user who may view Devices but nothing they relate to."""
+        user = User.objects.create(username="paths-limited-user", is_superuser=False)
+        permission = ObjectPermission.objects.create(name="View devices", actions=["view"])
+        permission.users.add(user)
+        permission.object_types.add(ContentType.objects.get_for_model(Device))
+        return user
+
+    def test_validate__user_is_required(self):
+        """`user` is keyword-only and mandatory, so enforcement cannot be skipped by omission."""
+        with self.assertRaises(TypeError):
+            validate_field_paths(DeviceSerializer, ["device_type__model"])
+
+    def test_validate__unviewable_relation_cannot_be_traversed(self):
+        self.assertPathsInvalid(
+            DeviceSerializer,
+            ["device_type__model"],
+            '"device_type__model": requires permission to view dcim.devicetype',
+            'only "id" may be selected',
+            user=self.limited_user(),
+        )
+
+    def test_validate__id_of_an_unviewable_relation_is_allowed(self):
+        self.assertPathsValid(DeviceSerializer, ["name", "device_type__id"], user=self.limited_user())
+
+    def test_validate__viewable_relation_can_be_traversed(self):
+        """A superuser holds every permission, so the gate never fires for one."""
+        self.assertPathsValid(DeviceSerializer, ["device_type__manufacturer__name"], user=self.superuser)
+
+    def test_validate__permission_is_checked_before_the_field_exists(self):
+        """The error must not depend on whether the named field exists, or it becomes an oracle.
+
+        A user who cannot view DeviceTypes learns nothing about which fields one has.
+        """
+        user = self.limited_user()
+        real = self.assertPathsInvalid(DeviceSerializer, ["device_type__model"], user=user)
+        bogus = self.assertPathsInvalid(DeviceSerializer, ["device_type__no_such_field"], user=user)
+        self.assertNotIn("unknown field", bogus)
+        self.assertEqual(real.replace("device_type__model", "X"), bogus.replace("device_type__no_such_field", "X"))
+
+
+class ExportRelatedObjectPermissionTests(ImportExportJobTestCase):
+    """What a user who cannot view a related model can nonetheless learn about it from an export.
+
+    A selection must not become a way to read a model the user has no permission to view. This is the
+    export-path analogue of what [GHSA-h8rv-c7c8-cvmx] fixed for `?depth=N` in the REST API; that fix does
+    not reach here, because an export flattens related objects into database lookups rather than going
+    through `return_nested_serializer_data_based_on_depth`, and `user_can_view_object` returns True outright
+    when there is no request -- which is exactly how an export serializes.
+    """
+
+    def test_perm__selection_cannot_name_fields_of_an_unviewable_relation(self):
+        """Naming a field of a related model the user cannot view fails the Job.
+
+        Without this, `export_fields` would be a way to read `users.User` with only
+        `dcim.view_rackreservation`: a default export of a RackReservation emits `user__username` alone, so
+        `email` and `is_superuser` are reachable only through a selection.
+        """
+        limited_user = self.create_rack_reservation_and_limited_user()
+        job_result = self.run_export(
+            model=RackReservation,
+            username=limited_user.username,
+            export_fields="description,user__email,user__is_superuser",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "requires permission to view users.user", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
+
+    def test_perm__id_of_an_unviewable_relation_is_allowed(self):
+        """`id` stays available: it is what an unviewable relation is reduced to.
+
+        `display` is meant to join it, but is not yet selectable through a relation for anyone -- see
+        `test_select__non_column_field_cannot_be_selected_through_a_relation`.
+        """
+        limited_user = self.create_rack_reservation_and_limited_user()
+        rows = self.export_rows(
+            self.run_export(model=RackReservation, username=limited_user.username, export_fields="description,user__id")
+        )
+        self.assertEqual(list(rows[0].keys()), ["description", "user__id"])
+        self.assertEqual(rows[0]["user__id"], str(User.objects.get(username="reservation-owner").pk))
+
+    def test_perm__a_permitted_relation_may_be_traversed(self):
+        """Granting `users.view_user` makes the very same selection succeed.
+
+        A positive control for the test above, which would also pass if the gate simply refused every
+        traversal; this pins that what it checks is the permission.
+        """
+        limited_user = self.create_rack_reservation_and_limited_user()
+        permission = ObjectPermission.objects.create(name="View users", actions=["view"])
+        permission.users.add(limited_user)
+        permission.object_types.add(ContentType.objects.get_for_model(User))
+        rows = self.export_rows(
+            self.run_export(
+                model=RackReservation, username=limited_user.username, export_fields="description,user__email"
+            )
+        )
+        self.assertEqual(rows[0]["user__email"], "owner@example.com")
+
 
 class ExportFieldSelectionTests(ImportExportJobTestCase):
     def test_select__csv(self):
@@ -1329,6 +1468,38 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertJobLogEntry(job_result, 'unknown custom field "no_such_field"', level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(job_result.files.exists())
+
+    def test_select__non_column_field_cannot_be_selected_through_a_relation(self):
+        """A readable field that is not a database column fails cleanly when named through a relation.
+
+        `display` is a model property and `url`/`object_type`/`natural_slug` are computed by the
+        serializer, so none can be emitted as the database lookup a nested path becomes. Run as the default
+        superuser to show this is a limit of the mechanism, not a permission check.
+        """
+        mfr = Manufacturer.objects.create(name="Non Column Mfr")
+        DeviceType.objects.create(manufacturer=mfr, model="Non Column DT", u_height=1)
+        for field_name in ("display", "url", "object_type", "natural_slug"):
+            with self.subTest(field_name=field_name):
+                job_result = self.run_export(
+                    model=DeviceType,
+                    query_string="model=Non+Column+DT",
+                    export_fields=f"model,manufacturer__{field_name}",
+                    expected_status=JobResultStatusChoices.STATUS_FAILURE,
+                )
+                self.assertJobLogEntry(
+                    job_result,
+                    f'"{field_name}" cannot yet be selected through a relation',
+                    level=LogLevelChoices.LOG_ERROR,
+                )
+
+    def test_select__non_column_field_may_be_selected_on_the_object_itself(self):
+        """The same fields are fine at the root, where they are rendered rather than looked up."""
+        self.create_status(name="Non Column Status", color="123456")
+        rows = self.export_rows(
+            self.run_export(query_string="name=Non+Column+Status", export_fields="name,display,natural_slug")
+        )
+        self.assertEqual(rows[0]["display"], "Non Column Status")
+        self.assertEqual(list(rows[0].keys()), ["name", "display", "natural_slug"])
 
     def test_select__write_only_field_fails_rather_than_exporting_nothing(self):
         """Selecting a write-only field fails the job instead of writing a file missing that column.

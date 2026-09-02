@@ -16,6 +16,7 @@ from rest_framework import serializers
 from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import CSV_NO_OBJECT
+from nautobot.core.utils.permissions import permission_is_exempt
 
 # Keys/values for the metadata format shared by CSV/JSON/YAML import and export. In JSON/YAML these are
 # document keys; in CSV the version appears as the leading `# key=value` directive, which is also what
@@ -185,32 +186,41 @@ def build_document_records(serializer_data, field_order=None):
     return records
 
 
+def _model_field_for(serializer, field):
+    """The model field that `field` reads, or None if it does not correspond to one.
+
+    Every segment of a path past the head is emitted as a database lookup, so it has to be a column the
+    database can resolve. `display` is a model *property*, and `url`, `object_type` and `natural_slug` are
+    computed by the serializer; none is queryable, so all four exist only on the object being exported.
+    """
+    try:
+        return serializer.Meta.model._meta.get_field(field.source)
+    except (AttributeError, FieldDoesNotExist):
+        # A serializer-only field (no model field of that name), or a serializer with no model at all
+        return None
+
+
 def _traversable_relation_target(serializer, field):
     """The model that `field` traverses to, or None if a `__` path cannot continue through it.
 
     The *model* is the authority here, not the serializer field. DRF's `RelatedField` covers things that are
     not model relations at all -- `url` is a `HyperlinkedIdentityField` sourced from `"*"`, i.e. the object
     itself -- while a genuine foreign key may be represented by a field that declares neither a queryset nor
-    a related model (`ContentTypeField`). Since a path is ultimately emitted as a database lookup, what the
-    model says is what will actually work.
+    a related model (`ContentTypeField`).
 
     To-many relations return None: a nested path is emitted as one flat database lookup, which cannot
     express a value per member. Selecting the field itself works (its members render through
     `_get_m2m_natural_key_values`), so this is a limit of the mechanism rather than of the file format --
     which can already carry a per-member-field list, as `NautobotCSVParser` accepts on import.
     """
-    try:
-        model_field = serializer.Meta.model._meta.get_field(field.source)
-    except (AttributeError, FieldDoesNotExist):
-        # A serializer-only field (no model field of that name), or a serializer with no model at all
-        return None
-    if model_field.many_to_many or model_field.one_to_many:
+    model_field = _model_field_for(serializer, field)
+    if model_field is None or model_field.many_to_many or model_field.one_to_many:
         return None
     # None for a non-relational field, which is exactly the "cannot be expanded" answer
     return model_field.related_model
 
 
-def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEPTH):
+def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIELD_MAX_DEPTH):
     """
     Validate a list of `__`-separated field-selection paths against a serializer's field graph.
 
@@ -223,6 +233,9 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
 
     `max_depth` bounds the relations a path may name; the natural-key expansion of a path that ends at a
     relation is not counted against it. See `EXPORT_FIELD_MAX_DEPTH`.
+
+    `user` must hold `view` permission on every model a path reaches into, `id` excepted. Required, with no
+    value that disables the check; pass an `AnonymousUser` to permit nothing.
 
     Raises:
         ValueError: describing every invalid path.
@@ -264,6 +277,14 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
                 errors.append(f'"{path}": "{part}" is write-only and cannot be exported')
                 break
             if index == len(parts) - 1:
+                if index > 0 and _model_field_for(serializer, field) is None:
+                    # TODO: these *should* be selectable -- they are ordinary readable fields at the root.
+                    #   Supporting them means excluding them from the natural-key `Case` query and resolving
+                    #   them per row instead (`display` is `getattr(obj, "display", str(obj))`), which is a
+                    #   change to `NaturalKeyRepresentationMixin` rather than to validation. Rejected for
+                    #   now only so the Job fails cleanly instead of raising `FieldDoesNotExist` from deep
+                    #   inside the query construction.
+                    errors.append(f'"{path}": "{part}" cannot yet be selected through a relation')
                 break
             if isinstance(field, serializers.ManyRelatedField):
                 errors.append(f'"{path}": cannot traverse into many-to-many field "{part}"')
@@ -272,6 +293,17 @@ def validate_field_paths(serializer_class, paths, max_depth=EXPORT_FIELD_MAX_DEP
             if related_model is None:
                 errors.append(f'"{path}": "{part}" is not a related field and cannot be expanded')
                 break
+            # `id` is exempt, being what an unviewable relation is reduced to; `display` is intended to join
+            # it once selectable through a relation at all (see below). Checked before the remaining
+            # segments are resolved, so this does not report whether a field a user cannot see exists.
+            if parts[index + 1 :] != ["id"]:
+                permission = f"{related_model._meta.app_label}.view_{related_model._meta.model_name}"
+                if not permission_is_exempt(permission) and not user.has_perm(permission):
+                    errors.append(
+                        f'"{path}": requires permission to view {related_model._meta.label_lower}; '
+                        'without it, only "id" may be selected'
+                    )
+                    break
             try:
                 serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
             except SerializerNotFound:
