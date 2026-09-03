@@ -42,6 +42,28 @@ class RegistryIsolationMixin:
 
 
 @tag("unit")
+class DefinitionValidationTest(TestCase):
+    """Names that end up as identifiers are checked when the preset is defined."""
+
+    def test_parameter_name_must_be_an_identifier(self):
+        """The name becomes the `param_<name>` variable in the expression."""
+        for name in ("my parameter", "1st", "field-name", ""):
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, re.escape(f"`{name}` must be a valid identifier")):
+                    PresetParameter(name=name, label="x")
+
+    def test_preset_key_must_be_an_identifier(self):
+        for key in ("field compare", "field-compare", "1field", ""):
+            with self.subTest(key=key):
+                with self.assertRaisesRegex(ValueError, re.escape(f"`{key}` must be a valid identifier")):
+                    make_preset(key=key)
+
+    def test_identifiers_pass(self):
+        PresetParameter(name="from_value", label="x")
+        make_preset(key="my_preset_2")
+
+
+@tag("unit")
 class PresetParameterCleanTest(TestCase):
     """The parameter validates its own value - kind, requiredness and choices live with it."""
 
@@ -229,9 +251,15 @@ class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
         self.assertTrue(FIELD_TRANSITION.source.startswith("event == 'updated'"))
 
     def test_field_changed_guards_against_creates(self):
-        """On a create, differences.added holds the whole object; without the event guard every
-        field would count as changed on every create. Documented semantics, not an optimisation."""
+        """On a create `prechange` is None, so without the event guard `None != value` would count
+        every field of every new object as changed."""
         self.assertTrue(FIELD_CHANGED.source.startswith("event == 'updated' and "))
+
+    def test_sources_do_not_read_differences(self):
+        """`differences` keys are top-level field names; a sub-field path would never be found there."""
+        for preset in BUILTIN_CONDITION_PRESETS:
+            with self.subTest(preset=preset.key):
+                self.assertNotIn("differences", preset.source)
 
     def test_sources_only_use_parameters_they_declare(self):
         """Every `param_*` a source references must be produced by context_variables - a typo in

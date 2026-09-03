@@ -31,7 +31,7 @@ condition through the REST API, so every combination has a documented answer:
 | str, date  | exact match   | lexicographic         | any of      | substring  | affix match             |
 | number     | numeric       | numeric               | any of      | False      | False                   |
 | bool       | parsed target | False                 | any of      | False      | False                   |
-| list       | set equality  | False                 | any element | False      | False                   |
+| list       | set equality  | False                 | False       | False      | False                   |
 
 Three rules cover the table. Text operators apply to strings only, because substring matching on a
 number or a boolean has no meaning. Ordering compares numerically when both sides are numbers and
@@ -64,7 +64,7 @@ ALL_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_BOOLEAN, KIND_DATE, KIND_LIS
 
 TEXTUAL_KINDS = frozenset({KIND_TEXT, KIND_DATE})  # contains, startswith, endswith
 ORDERABLE_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_DATE})  # gt, gte, lt, lte
-SET_MEMBER_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_DATE, KIND_LIST})  # in
+SET_MEMBER_KINDS = frozenset({KIND_TEXT, KIND_NUMBER, KIND_DATE})  # in
 
 
 def _as_number(value):
@@ -114,7 +114,7 @@ def _as_bool(target):
 
 
 def _as_target_list(target):
-    """Return a set-valued target as a list of strings.
+    """Return both sides as Decimal or as str, or None when they have no comparison.
 
     The row form's MultiValueCharField already yields a list of non-empty strings; a plain string,
     from the API or a hand-edited rule, is split on commas so it is not iterated character by
@@ -128,7 +128,7 @@ def _as_target_list(target):
     return [item for item in items if item]
 
 
-def _comparable_pair(value, target):
+def _coerce_pair(value, target):
     """Coerce both sides to one type, or return None when no comparison makes sense.
 
     Decimal when both sides read as numbers, str when the value is a string. Anything that is not a
@@ -152,21 +152,20 @@ def _comparable_pair(value, target):
 def _equals(value, target):
     # A boolean compares against the target read as a boolean, in any spelling `is_truthy` accepts.
     if isinstance(value, bool):
-        wanted = _as_bool(target)
-        return value is wanted if wanted is not None else False
+        return value is _as_bool(target)
     # A list equals a set of values: same members, order and repetition disregarded.
     if isinstance(value, (list, tuple, set)):
         return {_as_text(item) for item in value} == set(_as_target_list(target))
     # A missing value compares as the empty string, so `= ""` matches an unset field.
-    pair = _comparable_pair("" if value is None else value, target)
+    pair = _coerce_pair("" if value is None else value, target)
     return pair is not None and pair[0] == pair[1]
 
 
 def _ordering(python_operator):
     def predicate(value, target):
-        # `_comparable_pair` returns None for anything without an ordering: booleans, lists, missing
+        # `_coerce_pair` returns None for anything without an ordering: booleans, lists, missing
         # values, and numbers set against a non-numeric target.
-        pair = _comparable_pair(value, target)
+        pair = _coerce_pair(value, target)
         return pair is not None and python_operator(*pair)
 
     return predicate
@@ -176,13 +175,11 @@ def _in(value, target):
     """Whether `value` equals any of the targets.
 
     Defined in terms of `_equals` so membership inherits each kind's own equality rather than
-    defining a second one. A list field matches when any of its entries equals a target, which is
-    the only useful reading for a many-valued field; comparing the whole list against each target
-    could never match.
+    defining a second one.
     """
     targets = _as_target_list(target)
     if isinstance(value, (list, tuple, set)):
-        return any(_equals(item, target_item) for item in value for target_item in targets)
+        return False
     return any(_equals(value, item) for item in targets)
 
 

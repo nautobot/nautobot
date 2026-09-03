@@ -10,7 +10,7 @@ that compiles once and contains nothing user-written.
 There is no negated variant of any preset; negation is the condition row's `negate` flag.
 """
 
-from dataclasses import dataclass, field as dataclass_field
+from dataclasses import dataclass
 
 from django.core.exceptions import ValidationError
 
@@ -42,10 +42,16 @@ class PresetParameter:
     required: bool = True
     help_text: str = ""
     # For a `choice` parameter, the accepted `(value, label)` pairs. Empty for any other kind.
-    choices: tuple = ()
+    choices: tuple[tuple[str, str], ...] = ()
     # Whether a list of values is accepted as well as a single one. `operators.takes_a_set` decides
     # when the form offers one.
     multiple: bool = False
+
+    def __post_init__(self):
+        if not self.name.isidentifier():
+            raise ValueError(
+                f"Parameter name `{self.name}` must be a valid identifier: it becomes the `{self.context_name}` variable."
+            )
 
     @property
     def context_name(self):
@@ -102,8 +108,14 @@ class ConditionPreset:
     key: str
     label: str
     description: str
+    # A Jinja2 expression, not a template: no `{{ }}` or `{% %}`. Evaluates to a boolean. It sees the
+    # payload keys, this preset's `param_*` variables, and `field_value` / `field_matches`.
     source: str
-    parameters: tuple = dataclass_field(default_factory=tuple)
+    parameters: tuple[PresetParameter, ...] = ()
+
+    def __post_init__(self):
+        if not self.key.isidentifier():
+            raise ValueError(f"Preset key `{self.key}` must be a valid identifier.")
 
     @property
     def parameters_schema(self):
@@ -240,9 +252,13 @@ FIELD_CHANGED = ConditionPreset(
     key="field_changed",
     label="Field changed",
     description="Fires when a field's value changed within an update, regardless of what it changed to.",
-    # On a create, `differences.added` holds the whole object, so without the event guard every
-    # field would count as changed.
-    source="event == 'updated' and param_field in (snapshots.differences.added or {})",
+    # Compares the addressed value on both sides rather than looking the field up in
+    # `differences`, whose keys are top-level and would never contain a sub-field path like
+    # `status.name`.
+    source=(
+        "event == 'updated'"
+        " and field_value(snapshots.prechange, param_field) != field_value(snapshots.postchange, param_field)"
+    ),
     parameters=(PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD, help_text="Field to watch."),),
 )
 

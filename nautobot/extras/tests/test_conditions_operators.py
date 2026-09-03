@@ -10,7 +10,7 @@ from nautobot.extras.conditions.operators import (
     _as_number,
     _as_target_list,
     _as_text,
-    _comparable_pair,
+    _coerce_pair,
     ALL_KINDS,
     field_matches,
     FIELD_OPERATOR_KEYS,
@@ -169,22 +169,22 @@ class ComparablePairTest(TestCase):
     """The one conversion rule `=` and the ordering operators share."""
 
     def test_both_numeric_gives_decimals(self):
-        self.assertEqual(_comparable_pair(1500, "1500.0"), (Decimal("1500"), Decimal("1500.0")))
-        self.assertEqual(_comparable_pair("10000", "9000"), (Decimal("10000"), Decimal("9000")))
+        self.assertEqual(_coerce_pair(1500, "1500.0"), (Decimal("1500"), Decimal("1500.0")))
+        self.assertEqual(_coerce_pair("10000", "9000"), (Decimal("10000"), Decimal("9000")))
 
     def test_string_value_gives_text(self):
         """A string value compares as text even against a numeric target."""
-        self.assertEqual(_comparable_pair("sw-01", "9000"), ("sw-01", "9000"))
+        self.assertEqual(_coerce_pair("sw-01", "9000"), ("sw-01", "9000"))
 
     def test_number_against_non_numeric_target_is_incomparable(self):
         """Ordering a number against a word by its spelling would be meaningless."""
-        self.assertIsNone(_comparable_pair(9000, "sw-01"))
-        self.assertIsNone(_comparable_pair(float("nan"), "9000"))
+        self.assertIsNone(_coerce_pair(9000, "sw-01"))
+        self.assertIsNone(_coerce_pair(float("nan"), "9000"))
 
     def test_non_scalars_are_incomparable(self):
         for value in (None, True, ["a"], {}, b"bytes", object()):
             with self.subTest(value=value):
-                self.assertIsNone(_comparable_pair(value, "x"))
+                self.assertIsNone(_coerce_pair(value, "x"))
 
 
 @tag("unit")
@@ -256,9 +256,9 @@ class FieldMatchesTest(TestCase):
         ("Warsaw, Main", "in", ["Warsaw, Main", "Krakow"], True, "list target keeps a value's comma"),
         (1500, "in", "1500.0,9000", True, "membership inherits numeric equality"),
         (True, "in", "yes,no", True, "membership inherits boolean equality"),
-        (["core", "warsaw"], "in", "critical,core", True, "list field matches when any entry is a target"),
+        (["core", "warsaw"], "in", "critical,core", False, "a list field has no membership; = is set equality"),
         (["warsaw"], "in", "critical,core", False, "list field with no matching entry"),
-        ([1500], "in", ["1500.0"], True, "list entries also inherit numeric equality"),
+        ([1500], "in", ["1500.0"], False, "a list field has no membership; = is set equality"),
         ("x", "in", "", False, "empty target list matches nothing"),
         ("x", "in", [], False, "empty list target matches nothing"),
         # --- contains: strings only ---
@@ -333,8 +333,8 @@ class OperatorsForKindTest(TestCase):
         """A date is an ISO 8601 string in the payload, so every text operator makes sense for it."""
         self.assertEqual(operators_for_kind(KIND_DATE), operators_for_kind(KIND_TEXT))
 
-    def test_list_gets_set_equality_and_membership(self):
-        self.assertEqual([op.key for op in operators_for_kind(KIND_LIST)], ["=", "in"])
+    def test_list_gets_set_equality(self):
+        self.assertEqual([op.key for op in operators_for_kind(KIND_LIST)], ["="])
 
     def test_unknown_kind_gets_every_operator(self):
         """An unclassified field type must get the full list, not an empty dropdown."""
