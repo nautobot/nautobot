@@ -3,7 +3,7 @@ from django.urls import reverse
 from nautobot.core.testing.integration import ObjectsListMixin, SeleniumTestCase
 from nautobot.dcim.models import DeviceType, Manufacturer, Module, ModuleBay, ModuleType
 from nautobot.extras.models import Status
-from nautobot.extras.tests.integration import create_test_device
+from nautobot.extras.tests.selenium import create_test_device
 
 
 class ModuleBayPositionTestCase(SeleniumTestCase, ObjectsListMixin):
