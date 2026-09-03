@@ -807,7 +807,7 @@ class ValidateFieldPathsTests(TestCase):
     def assertPathsValid(self, serializer_class, paths, **kwargs):
         """Assert the selection is accepted (the function returns None and raises nothing)."""
         kwargs.setdefault("user", self.superuser)
-        self.assertIsNone(validate_field_paths(serializer_class, paths, **kwargs))
+        self.assertIsNone(validate_field_paths(serializer_class, paths, **kwargs))  # pylint: disable=missing-kwoa
 
     def assertPathsInvalid(self, serializer_class, paths, *expected_fragments, **kwargs):
         """Assert the selection is rejected, and that the message contains each expected fragment."""
@@ -1111,7 +1111,7 @@ class ValidateFieldPathsTests(TestCase):
     def test_validate__user_is_required(self):
         """`user` is keyword-only and mandatory, so enforcement cannot be skipped by omission."""
         with self.assertRaises(TypeError):
-            validate_field_paths(DeviceSerializer, ["device_type__model"])
+            validate_field_paths(DeviceSerializer, ["device_type__model"])  # pylint: disable=missing-kwoa
 
     def test_validate__unviewable_relation_cannot_be_traversed(self):
         self.assertPathsInvalid(
@@ -1516,7 +1516,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
     @skip("Enable in X5: needs ExportFieldsForm (export UI)")
     def test_select__form_expands_single_fk_relations(self):
         """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
-        from nautobot.core.forms import ExportFieldsForm  # pylint: disable=no-name-in-module TODO
+        from nautobot.core.forms import ExportFieldsForm  # TODO # pylint: disable=no-name-in-module
 
         form = ExportFieldsForm(content_type=ContentType.objects.get_for_model(Device), initial_fields=["name"])
         paths = [choice[0] for choice in form.fields["export_fields"].choices]
