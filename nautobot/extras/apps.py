@@ -76,3 +76,8 @@ class ExtrasConfig(NautobotConfig):
 
         register_secrets_provider(EnvironmentVariableSecretsProvider)
         register_secrets_provider(TextFileSecretsProvider)
+
+        # Register built-in condition presets
+        from nautobot.extras.conditions.presets import register_builtin_condition_presets
+
+        register_builtin_condition_presets()
