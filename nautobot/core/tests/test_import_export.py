@@ -397,12 +397,8 @@ class ImportExportJobTestCase(TransactionTestCase):
         status.validated_save()
         return status
 
-    def create_rack_reservation_and_limited_user(self):
-        """A RackReservation plus a non-superuser who may view reservations but *not* users.
-
-        The reservation's `user` FK is the interesting relation: `UserSerializer` exposes fields such as
-        `email` and `is_superuser` that a RackReservation viewer has no business seeing.
-        """
+    def create_rack_reservation(self):
+        """A RackReservation, whose `user` FK is a relation to a model with no natural-key overlap."""
         location_type = LocationType.objects.create(name="Perm Location Type")
         location_type.content_types.add(ContentType.objects.get_for_model(Rack))
         location = Location.objects.create(
@@ -416,8 +412,17 @@ class ImportExportJobTestCase(TransactionTestCase):
         reservation_owner = User.objects.create(
             username="reservation-owner", email="owner@example.com", is_superuser=True
         )
-        RackReservation.objects.create(rack=rack, units=[1, 2], user=reservation_owner, description="Perm Reservation")
+        return RackReservation.objects.create(
+            rack=rack, units=[1, 2], user=reservation_owner, description="Perm Reservation"
+        )
 
+    def create_rack_reservation_and_limited_user(self):
+        """A RackReservation plus a non-superuser who may view reservations but *not* users.
+
+        The reservation's `user` FK is the interesting relation: `UserSerializer` exposes fields such as
+        `email` and `is_superuser` that a RackReservation viewer has no business seeing.
+        """
+        self.create_rack_reservation()
         limited_user = User.objects.create(username="limited-user", is_superuser=False)
         permission = ObjectPermission.objects.create(name="View rack reservations", actions=["view"])
         permission.users.add(limited_user)
@@ -608,6 +613,17 @@ class ExportAdapterTests(ImportExportJobTestCase):
 
         # Dumped with sort_keys=False, so the version leads rather than the keys going alphabetical
         self.assertTrue(self.export_text(job_result).startswith("nautobot_import_version:"))
+
+    def test_adapter_export__uuid_valued_lookup_is_canonically_formatted(self):
+        """A UUID reached through a relation is hyphenated, as the object's own `id` is.
+
+        The natural-key lookups are cast to a CharField in SQL, where a UUID column is `char(32)` on MySQL
+        but a native type on PostgreSQL. Also reached by unrestricted exports, via `module__pk` and kin.
+        """
+        reservation = self.create_rack_reservation()
+        row = self.export_rows(self.run_export(model=RackReservation, export_fields="description,user__id"))[0]
+        self.assertEqual(row["user__id"], str(reservation.user.pk))
+        self.assertIn("-", row["user__id"])
 
     def test_adapter_export__includes_non_default_m2m_columns(self):
         """The Job exports every M2M field, so the file can be re-imported in full.
