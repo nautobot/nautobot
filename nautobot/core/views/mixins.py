@@ -14,7 +14,7 @@ from django.core.exceptions import (
 from django.db import transaction
 from django.db.models import CharField, ManyToManyField, Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import resolve, reverse
@@ -54,6 +54,7 @@ from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
+    get_overview,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
@@ -1601,6 +1602,38 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
         return Response({})
+
+
+class ObjectOverviewViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for an object's overview.
+
+    Only one of `overview_fields`, `overview_html`, or `overview_template_name` can be used at a time. With none of
+    them set, the overview displays the same key/value pairs as the first `ObjectFieldsPanel` in the left half of the
+    main tab of `object_detail_content`. A viewset with no such panel has no overview.
+
+    overview_fields: The fields to display, with optional key and value transforms
+    overview_html: HTML string to render
+    overview_template_name: Name of the template to render
+    """
+
+    overview_fields = None
+    overview_html = None
+    overview_template_name = None
+
+    @drf_action(detail=True, custom_view_base_action="view")
+    def overview(self, request, *args, **kwargs):
+        if request.headers.get("HX-Request", False):
+            return Response(
+                get_overview(
+                    getattr(self, "object_detail_content", None),
+                    overview_fields=self.overview_fields,
+                    overview_html=self.overview_html,
+                    overview_template_name=self.overview_template_name,
+                )
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 
 
 class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
