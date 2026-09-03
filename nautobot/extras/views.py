@@ -2904,7 +2904,7 @@ class JobUIViewSet(NautobotUIViewSet):
                             return_url,
                         )
             except ValidationError as e:
-                messages.error(request, f"Unable to schedule job: {'; '.join(e.messages)}")
+                messages.error(request, f"Unable to run or schedule job: {'; '.join(e.messages)}")
 
         if return_url:
             return redirect(return_url)
