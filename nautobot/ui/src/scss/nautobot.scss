@@ -959,6 +959,18 @@ $nb-form-sticky-footer-scroll-containers: ".nb-drawer, .modal-body, .overflow-au
       opacity: 0;
     }
   }
+
+  /* Set expanded object overview table row background color. */
+  > tbody > tr {
+    &.nb-overview-row > td {
+      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
+    }
+
+    &:has(.nb-overview-toggle[aria-expanded="true"]) > td {
+      --#{$prefix}table-bg-state: var(--#{$prefix}tertiary-bg);
+      border-bottom-color: var(--#{$prefix}table-bg-state);
+    }
+  }
 }
 
 $table-variant-primary: (
@@ -1032,6 +1044,65 @@ $table-variants: (
 
 table.attr-table td:nth-child(1) {
   width: 25%;
+}
+
+$nb-overview-fields-columns-min-width: 40rem;
+
+.table-responsive:has(.nb-overview-toggle) {
+  /* Size an expanded row's overview against the table it belongs to, not against the viewport. */
+  container-type: inline-size;
+}
+
+.nb-overview-fields {
+  column-gap: map.get($spacers, 20);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  margin-bottom: 0;
+  padding-inline-end: map.get($spacers, 20);
+
+  @container (min-width: #{$nb-overview-fields-columns-min-width}) {
+    grid-auto-flow: column;
+    grid-template-columns: repeat(2, auto 1fr);
+    grid-template-rows: repeat(var(--nb-overview-rows), auto);
+  }
+}
+
+.nb-overview-field {
+  $nb-overview-field-separator: $border-width solid var(--#{$prefix}border-color);
+
+  border-bottom: $nb-overview-field-separator;
+  column-gap: map.get($spacers, 10);
+  display: grid;
+  grid-column: span 2;
+  grid-template-columns: subgrid;
+
+  &:last-child {
+    border-bottom: 0;
+
+    @container (min-width: #{$nb-overview-fields-columns-min-width}) {
+      border-bottom: $nb-overview-field-separator;
+    }
+  }
+
+  > dt,
+  > dd {
+    padding: map.get($spacers, 4) map.get($spacers, 10);
+  }
+
+  > dt {
+    color: var(--#{$prefix}secondary-color);
+    font-weight: $font-weight-normal;
+  }
+
+  > dd {
+    margin-bottom: 0;
+  }
+}
+
+.nb-overview-field-column-end {
+  @container (min-width: #{$nb-overview-fields-columns-min-width}) {
+    border-bottom: 0;
+  }
 }
 
 @include color-mode(dark, true) {
@@ -1461,7 +1532,7 @@ textarea {
   .table {
     @mixin remove-row-border-bottom() {
       > * { /* Every cell. */
-        border-bottom: none;
+        border-bottom-width: 0;
       }
     }
 

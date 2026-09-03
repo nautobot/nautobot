@@ -1624,6 +1624,13 @@ class ObjectOverviewViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, custom_view_base_action="view")
     def overview(self, request, *args, **kwargs):
         if request.headers.get("HX-Request", False):
+            colspans = {}
+            for name, default in (("colspan_content", 100), ("colspan_indent", 0)):
+                try:
+                    colspans[name] = max(int(request.GET[name]), 0)
+                except (KeyError, ValueError):
+                    colspans[name] = default
+
             return Response(
                 get_overview(
                     getattr(self, "object_detail_content", None),
@@ -1631,6 +1638,7 @@ class ObjectOverviewViewMixin(NautobotViewSetMixin):
                     overview_html=self.overview_html,
                     overview_template_name=self.overview_template_name,
                 )
+                | colspans
             )
 
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")

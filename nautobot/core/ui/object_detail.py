@@ -1058,6 +1058,7 @@ class ObjectsTablePanel(Panel):
     related_field_name = None
     related_list_url_name = None
     select_related_fields = ()
+    show_row_overviews = None
     show_table_config_button = True
     tab_id = None
     table_attribute = None
@@ -1098,6 +1099,8 @@ class ObjectsTablePanel(Panel):
                 (or up to `max_display_count` if provided). Defaults to True.
             show_table_config_button (bool, optional): If False, do not allow user configuration of the table.
                 Defaults to True.
+            show_row_overviews (bool, optional): If False, omit the per-row button that expands the row to
+                reveal the object's overview. Defaults to None, which leaves the decision to the table.
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
@@ -1330,6 +1333,7 @@ class ObjectsTablePanel(Panel):
                 "hide_hierarchy_ui": self.hide_hierarchy_ui,
                 "user": request.user,
                 "configurable": self.show_table_config_button,
+                "show_row_overviews": self.show_row_overviews,
             }
             if self.extra_columns is not None:
                 table_kwargs["extra_columns"] = self.extra_columns

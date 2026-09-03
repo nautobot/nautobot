@@ -1,4 +1,5 @@
 import contextlib
+import itertools
 import logging
 
 from django.conf import settings
@@ -46,6 +47,7 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover nb-table-headings",
         }
         default = helpers.HTML_NONE
+        show_row_overviews = True
 
     def __init__(
         self,
@@ -60,6 +62,7 @@ class BaseTable(django_tables2.Table):
         data_transform_callback=None,
         configurable=False,
         is_object_embedded_search_results=False,
+        show_row_overviews=False,
         **kwargs,
     ):
         """
@@ -82,6 +85,9 @@ class BaseTable(django_tables2.Table):
                 `is_object_embedded_search_results` is set to `True`.
             is_object_embedded_search_results (bool): When set to `True` disable table configuration and sorting, render
                 columns unaffected by any user configuration, with static order and visibility.
+            show_row_overviews (bool): Include a per-row button that expands the row to reveal the object's overview.
+                When `None`, defer to the table's `Meta.show_row_overviews`, which tables that expand their
+                rows to children instead set to `False`.
             **kwargs (dict, optional): Passed through to django_tables2.Table
         Warning:
             Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
@@ -145,6 +151,22 @@ class BaseTable(django_tables2.Table):
         self.configurable = configurable
         self.is_object_embedded_search_results = is_object_embedded_search_results
 
+        if show_row_overviews is None:
+            show_row_overviews = getattr(self.Meta, "show_row_overviews", True)
+
+        self.show_row_overviews = False
+        if show_row_overviews and not is_object_embedded_search_results:
+            from nautobot.core.views.utils import has_overview
+
+            if has_overview(model):
+                self.show_row_overviews = True
+                kwargs["extra_columns"] = [
+                    *kwargs.get("extra_columns", []),
+                    ("overview", OverviewColumn(url_name=get_route_for_model(model, "overview"))),
+                ]
+                default_sequence = self._meta.sequence or (*(self._meta.fields or ()), "...")
+                kwargs["sequence"] = ("overview", *default_sequence)
+
         # Init table
         super().__init__(*args, order_by=order_by, orderable=orderable, row_attrs=row_attrs, **kwargs)
 
@@ -199,6 +221,10 @@ class BaseTable(django_tables2.Table):
             self.sequence = [c for c in columns if c in self.base_columns]
 
         # Always include PK and actions columns, if defined on the table, as first and last columns respectively
+        if self.show_row_overviews:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("overview")
+            self.sequence.insert(0, "overview")
         if pk:
             with contextlib.suppress(ValueError):
                 self.sequence.remove("pk")
@@ -336,12 +362,12 @@ class BaseTable(django_tables2.Table):
         selected_columns = [
             (name, column.verbose_name)
             for name, column in self.columns.items()
-            if name in self.sequence and name not in ["pk", "actions"]
+            if name in self.sequence and name not in ["pk", "actions", "overview"]
         ]
         available_columns = [
             (name, column.verbose_name)
             for name, column in self.columns.items()
-            if name not in self.sequence and name not in ["pk", "actions"]
+            if name not in self.sequence and name not in ["pk", "actions", "overview"]
         ]
         return selected_columns + available_columns
 
@@ -445,6 +471,59 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
             '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2"'
             ' aria-label="Toggle all rows" title="Toggle all" />'
         )
+
+
+OVERVIEW_TOGGLE = """
+<button
+    aria-expanded="false"
+    class="btn m-n2 nb-overview-toggle p-2 text-secondary"
+    data-nb-overview-row-id="overview-{{ record.pk }}"
+    data-nb-title-collapsed="Show details for {{ record }}"
+    data-nb-title-expanded="Hide details for {{ record }}"
+    hx-get="{% url overview_url_name pk=record.pk %}"
+    hx-indicator="closest .table-responsive"
+    hx-swap="afterend"
+    hx-sync="this:drop"
+    hx-target="closest tr"
+    hx-trigger="click[this.getAttribute('aria-expanded') === 'false']"
+    hx-vals='{"colspan_content": {{ colspan_content }}, "colspan_indent": {{ colspan_indent }}}'
+    title="Show details for {{ record }}"
+    type="button"
+>
+    <span class="visually-hidden">Show details for {{ record }}</span>
+    <span aria-hidden="true" class="mdi mdi-window-maximize"></span>
+</button>
+"""
+
+
+class OverviewColumn(django_tables2.TemplateColumn):
+    """Per-row button that expands the row to reveal the object's overview."""
+
+    def __init__(self, url_name, *args, **kwargs):
+        kwargs.setdefault("attrs", {"td": {"class": "nb-w-0"}})
+        self.url_name = url_name
+        super().__init__(
+            template_code=OVERVIEW_TOGGLE,
+            empty_values=(),
+            orderable=False,
+            verbose_name="",
+            *args,
+            **kwargs,
+        )
+
+    def get_context_data(self, *, record, table, value, bound_column, **kwargs):
+        columns = table.visible_columns
+        colspan_indent = len(list(itertools.takewhile(lambda name: name in ("overview", "pk"), columns)))
+        colspan_content = len(columns) - colspan_indent
+        if table.configurable and columns[-1] != "actions":
+            colspan_content += 1
+        return super().get_context_data(
+            record=record, table=table, value=value, bound_column=bound_column, **kwargs
+        ) | {
+            "colspan_content": colspan_content,
+            "colspan_indent": colspan_indent,
+            "overview_url_name": self.url_name,
+        }
 
 
 class BooleanColumn(django_tables2.Column):
