@@ -1,15 +1,12 @@
 """Comparison operators available to the field condition presets.
 
-Comparison semantics are implemented in Python and exposed to expressions as
-`field_matches`. This keeps type-aware conversion and comparison in one place:
-a captured value may be a string, number, boolean, or list, while a target
-comes from a form and therefore requires explicit conversion before comparison.
+`field_matches(value, operator, target)` is the single entry point expressions use. The value is
+the field's value from the serialized change: a string, number, boolean, list, or None. The target
+is what the condition row stores: a string, number or boolean, or a list of strings for `in` and
+for `=` on a many-valued field.
 
-Each operator is a frozen object holding a key, a form label, the predicate that
-performs the comparison, and `applies_to`, the value kinds for which the
-comparison is meaningful.
-
-Value kinds, as classified by whoever maps a model field to one of them:
+Each operator is a frozen object holding a key, a form label, the predicate that performs the
+comparison, and `applies_to`, the value kinds the form offers it for:
 
 - `text` - strings, and related objects reduced to their display value
 - `number` - ints, floats, Decimals, and numeric strings
@@ -17,42 +14,26 @@ Value kinds, as classified by whoever maps a model field to one of them:
 - `date` - dates and datetimes, serialized as ISO 8601 strings and compared as text
 - `list` - many-valued fields such as tags
 
-`applies_to` is advisory. Evaluation never reads it: the condition-row form (a later change) uses it
-to narrow the operator dropdown to the operators that make sense for the chosen field, but a stored
-operator meeting a value it was not designed for still gets a defined answer rather than an error.
-That matters because rules outlive the shape of the data they were written against; a custom field
-changing type must not turn a saved rule into a dispatch-time exception.
+Evaluation never reads `applies_to`. What a comparison returns depends on the value's type:
 
-It also matters because the API has no dropdown. Every combination below is reachable by writing a
-condition through the REST API, so every combination has a documented answer:
+| value type | `=`           | `gt` `gte` `lt` `lte` | `in`          | `contains` | `startswith` `endswith` |
+| ---------- | ------------- | --------------------- | ------------- | ---------- | ----------------------- |
+| str, date  | exact match   | lexicographic         | any of        | substring  | affix match             |
+| number     | numeric       | numeric               | any of        | False      | False                   |
+| bool       | bool target   | False                 | False         | False      | False                   |
+| list       | set equality  | False                 | False         | False      | False                   |
 
-| value type | `=`           | `gt` `gte` `lt` `lte` | `in`        | `contains` | `startswith` `endswith` |
-| ---------- | ------------- | --------------------- | ----------- | ---------- | ----------------------- |
-| str, date  | exact match   | lexicographic         | any of      | substring  | affix match             |
-| number     | numeric       | numeric               | any of      | False      | False                   |
-| bool       | parsed target | False                 | any of      | False      | False                   |
-| list       | set equality  | False                 | False       | False      | False                   |
+Numbers compare numerically when both sides read as numbers, otherwise as text. A target of a type
+no operator stores - None, a mapping, a string where a list is expected - raises TypeError. A target
+of a valid type that does not fit the value's is a non-match.
 
-Three rules cover the table. Text operators apply to strings only, because substring matching on a
-number or a boolean has no meaning. Ordering compares numerically when both sides are numbers and
-lexicographically otherwise, which is also what makes ISO 8601 dates order chronologically; booleans
-and lists have no ordering. And `in` is "equals any of", so it inherits each kind's own equality
-rather than defining a second one.
-
-A missing value (None) compares as the empty string for `=` and `in`, so `= ""` matches both a
-blank and an unset field; it has no ordering and is not a string, so every other operator returns
-False. A dedicated null toggle on the condition row will supersede that.
-
-There is deliberately no `!=` operator. Negation is the condition row's `negate` flag, which inverts
-any operator and raw expressions alike.
+There is no `!=` operator; negation is the condition row's `negate` flag.
 """
 
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 import operator as py_operator
 from typing import Any, Callable
-
-from nautobot.core.settings_funcs import is_truthy
 
 KIND_TEXT = "text"
 KIND_NUMBER = "number"
@@ -99,46 +80,35 @@ def _as_text(value):
     return str(value)
 
 
-def _as_bool(target):
-    """Interpret the stored `target` as a boolean, or None if it spells neither.
-
-    The accepted spellings are `is_truthy`'s. Two things are layered on top: the target is stripped
-    first, because a form strips its input but a REST API payload does not, and the ValueError is
-    swallowed - a saved rule meeting a target it cannot parse must fail its row like any other
-    non-match, not raise at dispatch time.
-    """
-    try:
-        return is_truthy(_as_text(target).strip())
-    except ValueError:
-        return None
-
-
 def _as_target_list(target):
-    """Return both sides as Decimal or as str, or None when they have no comparison.
+    """Return a set-valued target as a list of strings.
 
-    The row form's MultiValueCharField already yields a list of non-empty strings; a plain string,
-    from the API or a hand-edited rule, is split on commas so it is not iterated character by
-    character. Blank entries are dropped either way: since a missing value compares as "", a
-    trailing comma would make every unset field match.
+    The target is a list, as the form's MultiValueCharField and the REST API store it.
+
+    Raises:
+        TypeError: If `target` is not a list.
     """
-    if isinstance(target, (list, tuple, set)):
-        items = [_as_text(item).strip() for item in target]
-    else:
-        items = [item.strip() for item in _as_text(target).split(",")]
-    return [item for item in items if item]
+    if not isinstance(target, (list, tuple)):
+        raise TypeError(f"a set-valued target must be a list, not {type(target).__name__}")
+    return [_as_text(item) for item in target]
 
 
 def _coerce_pair(value, target):
-    """Coerce both sides to one type, or return None when no comparison makes sense.
+    """Coerce both sides to one type, or return None when the value has no comparison.
 
-    Decimal when both sides read as numbers, str when the value is a string. Anything that is not a
-    scalar - a boolean, a list, a mapping, bytes - has no comparison and gets None; so does a number
-    whose target does not read as one, or NaN, because ordering a number against a word by its
-    spelling would be meaningless.
+    Decimal when both sides read as numbers, str when the value is a string. A value that is not a
+    scalar - a boolean, a list, a mapping, bytes - gets None; so does a number whose target does not
+    read as one, or NaN, because ordering a number against a word by its spelling would be
+    meaningless.
 
     This is the single home of the conversion rule that `=` and the ordering operators share, so
     the two can never disagree about whether two representations of a number are equal.
+
+    Raises:
+        TypeError: If `target` is not a string or a number.
     """
+    if isinstance(target, bool) or not isinstance(target, (str, int, float, Decimal)):
+        raise TypeError(f"target must be a string or a number, not {type(target).__name__}")
     if isinstance(value, bool) or not isinstance(value, (str, int, float, Decimal)):
         return None
     left, right = _as_number(value), _as_number(target)
@@ -150,12 +120,16 @@ def _coerce_pair(value, target):
 
 
 def _equals(value, target):
-    # A boolean compares against the target read as a boolean, in any spelling `is_truthy` accepts.
+    if target is None or isinstance(target, (dict, bytes)):
+        raise TypeError(f"target must be a string, number, boolean or list, not {type(target).__name__}")
+    # A boolean value compares only against a boolean target and a list value only against a list
+    # target. Any other target type means the field's kind changed after the rule was saved.
     if isinstance(value, bool):
-        return value is _as_bool(target)
-    # A list equals a set of values: same members, order and repetition disregarded.
+        return isinstance(target, bool) and value is target
     if isinstance(value, (list, tuple, set)):
-        return {_as_text(item) for item in value} == set(_as_target_list(target))
+        return isinstance(target, (list, tuple)) and {_as_text(item) for item in value} == set(_as_target_list(target))
+    if isinstance(target, (bool, list, tuple)):
+        return False
     # A missing value compares as the empty string, so `= ""` matches an unset field.
     pair = _coerce_pair("" if value is None else value, target)
     return pair is not None and pair[0] == pair[1]
@@ -188,12 +162,17 @@ def _text_operation(string_method):
 
     Coercing a number or a boolean to text first would produce substring matches that answer no
     question anyone asked. Returning False keeps the row an ordinary non-match.
+
+    Raises:
+        TypeError: If `target` is not a string.
     """
 
     def predicate(value, target):
+        if not isinstance(target, str):
+            raise TypeError(f"target for a text operator must be a string, not {type(target).__name__}")
         if not isinstance(value, str):
             return False
-        return string_method(value, _as_text(target))
+        return string_method(value, target)
 
     return predicate
 
@@ -203,9 +182,8 @@ class Operator:
     """One comparison strategy: how to compare, what to call it, and where it makes sense.
 
     `predicate` receives the field's value from the captured change (str, number, bool or list) and
-    the target as stored on the condition row (a string, or a list for a set-valued operator), and
-    returns whether the comparison holds. That type asymmetry is handled inside the predicates
-    rather than being pushed onto whoever writes the condition.
+    the target as stored on the condition row in its canonical JSON type (str, number, bool, or a
+    list of str for a set-valued operator), and returns whether the comparison holds.
 
     `applies_to` is advisory metadata for the form and for save-time validation; evaluation never
     consults it.
@@ -217,7 +195,7 @@ class Operator:
     applies_to: frozenset
 
     def matches(self, value, target):
-        return bool(self.predicate(value, target))
+        return self.predicate(value, target)
 
 
 OPERATOR_EQUALS = "="
@@ -319,13 +297,16 @@ def field_matches(value, operator, target):
     Args:
         value: The field's value from the captured change.
         operator (str): One of `FIELD_OPERATOR_KEYS`.
-        target: The value to compare against, as stored on the condition row: a string, or a list
-            for a set-valued operator.
+        target: The value to compare against, as stored on the condition row in its canonical JSON
+            type: a string, number or boolean, or a list of strings for a set-valued operator.
 
     Returns:
         (bool): Whether the comparison holds. An unknown operator is False rather than an error: the
             row does not match, and since rows are AND-ed the rule does not fire, instead of the
             evaluation raising.
+
+    Raises:
+        TypeError: If `target` is of a type no operator could have been saved with.
     """
     strategy = OPERATOR_REGISTRY.get(operator)
     if strategy is None:

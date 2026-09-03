@@ -77,10 +77,16 @@ class PresetParameterCleanTest(TestCase):
     def test_optional_accepts_missing(self):
         PresetParameter(name="note", label="Note", required=False).clean(None)
 
-    def test_non_string_rejected_by_type_name(self):
-        """Storage is uniformly text; coercion happens at comparison time, in one place."""
-        with self.assertRaisesRegex(ValidationError, re.escape("must be a string, not int")):
-            PresetParameter(name="value", label="Value").clean(5)
+    def test_json_scalars_accepted(self):
+        """The form stores the target in the canonical type for the field's kind."""
+        parameter = PresetParameter(name="value", label="Value")
+        for value in ("Active", 9000, 15.5, True, False):
+            with self.subTest(value=value):
+                parameter.clean(value)
+
+    def test_non_scalar_rejected_by_type_name(self):
+        with self.assertRaisesRegex(ValidationError, re.escape("must be a string, number or boolean, not dict")):
+            PresetParameter(name="value", label="Value").clean({"a": 1})
 
     def test_choice_enforces_declared_values(self):
         parameter = PresetParameter(name="op", label="Op", kind="choice", choices=(("=", "eq"), ("gt", "gt")))

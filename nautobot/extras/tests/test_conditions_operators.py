@@ -1,4 +1,12 @@
-"""Tests for `nautobot.extras.conditions.operators`."""
+"""Tests for `nautobot.extras.conditions.operators`.
+
+Plain `unittest.TestCase`: the module imports nothing beyond the standard library and one Nautobot
+helper, and keeping its tests database-free both proves that and keeps them fast.
+
+The comparison semantics tested here are user-facing: how a stored condition behaves is documented in
+the module docstring's operator matrix, and a change that flips any case below changes what existing
+rules mean. A failing test is a semantics change to discuss, not a test to update.
+"""
 
 from decimal import Decimal
 from unittest import TestCase
@@ -6,7 +14,6 @@ from unittest import TestCase
 from django.test import tag
 
 from nautobot.extras.conditions.operators import (
-    _as_bool,
     _as_number,
     _as_target_list,
     _as_text,
@@ -75,7 +82,7 @@ class AsNumberTest(TestCase):
 @tag("unit")
 class AsTextTest(TestCase):
     def test_none_becomes_empty_string(self):
-        """Documented in `_as_text`: `= ""` matches both an empty and an unset field."""
+        """On either side: an unset value matches `= ""`, and a null target reads as blank."""
         self.assertEqual(_as_text(None), "")
 
     def test_values_stringify(self):
@@ -92,80 +99,22 @@ class AsTextTest(TestCase):
 
 
 @tag("unit")
-class AsBoolTest(TestCase):
-    """Only what this wrapper adds to `is_truthy`.
-
-    The accepted spellings are `is_truthy`'s contract and are covered by `IsTruthyTest` in
-    `nautobot/core/tests/test_utils.py`.
-    """
-
-    def test_delegates_to_is_truthy(self):
-        """One case per direction, enough to catch a dropped or inverted delegation."""
-        self.assertIs(_as_bool("yes"), True)
-        self.assertIs(_as_bool("no"), False)
-
-    def test_unparseable_target_is_none_not_an_error(self):
-        """`is_truthy` raises ValueError; absorbing it is this wrapper's reason to exist.
-
-        A stored condition must never become a dispatch-time exception, so an unparseable target
-        yields None and the row simply fails to match. This is deliberately not Python truthiness:
-        `bool(2)` and `bool("banana")` are True, but a target is a spelling the user typed, and only
-        the spellings `is_truthy` knows count as one.
-        """
-        for target in ("banana", "", "2", None, 1500, []):
-            with self.subTest(target=target):
-                self.assertIsNone(_as_bool(target))
-
-    def test_padding_is_stripped_before_parsing(self):
-        """`is_truthy` does not strip, so `_as_bool` does.
-
-        A form strips its input before storing; a target written straight through the REST API does
-        not, and a padded spelling must not become a silently unmatchable rule.
-        """
-        self.assertIs(_as_bool(" yes "), True)
-        self.assertIs(_as_bool("true\n"), True)
-        self.assertIs(_as_bool("\toff "), False)
-
-    def test_non_string_targets_resolve(self):
-        """A JSON `true` from the REST API arrives as a bool, not a string; `_as_text` routes it."""
-        self.assertIs(_as_bool(True), True)
-        self.assertIs(_as_bool(False), False)
-
-
-@tag("unit")
 class AsTargetListTest(TestCase):
-    """Two input shapes, one output: the form's list and the API's comma-separated string."""
-
-    def test_list_from_multi_value_field_passes_through(self):
+    def test_list_passes_through_as_strings(self):
         self.assertEqual(_as_target_list(["Active", "Planned"]), ["Active", "Planned"])
-
-    def test_list_entries_are_stripped_and_stringified(self):
-        self.assertEqual(_as_target_list([" a ", 1500, True]), ["a", "1500", "True"])
-
-    def test_list_entry_keeps_its_comma(self):
-        """The whole point of accepting a list: a value containing a comma is expressible."""
         self.assertEqual(_as_target_list(["Warsaw, Main", "Krakow"]), ["Warsaw, Main", "Krakow"])
+        self.assertEqual(_as_target_list([1500, True]), ["1500", "True"])
 
-    def test_string_is_split_on_commas(self):
-        self.assertEqual(_as_target_list("Active, Planned"), ["Active", "Planned"])
-
-    def test_string_is_not_iterated_character_by_character(self):
-        self.assertEqual(_as_target_list("Active"), ["Active"])
-
-    def test_blank_entries_are_dropped(self):
-        """Since a missing value compares as "", a stray blank target would match every unset field."""
-        self.assertEqual(_as_target_list("a,b,"), ["a", "b"])
-        self.assertEqual(_as_target_list("a, ,b"), ["a", "b"])
-        self.assertEqual(_as_target_list(["a", "", "  "]), ["a"])
-
-    def test_empty_inputs_are_empty(self):
-        for target in ("", None, [], ",,"):
+    def test_non_list_raises(self):
+        """A set-valued target is stored as a list; anything else is a broken row."""
+        for target in ("a,b", "Active", "", None, 1500, {"a": 1}):
             with self.subTest(target=target):
-                self.assertEqual(_as_target_list(target), [])
+                with self.assertRaises(TypeError):
+                    _as_target_list(target)
 
 
 @tag("unit")
-class ComparablePairTest(TestCase):
+class CoercePairTest(TestCase):
     """The one conversion rule `=` and the ordering operators share."""
 
     def test_both_numeric_gives_decimals(self):
@@ -181,10 +130,16 @@ class ComparablePairTest(TestCase):
         self.assertIsNone(_coerce_pair(9000, "sw-01"))
         self.assertIsNone(_coerce_pair(float("nan"), "9000"))
 
-    def test_non_scalars_are_incomparable(self):
+    def test_non_scalar_values_are_incomparable(self):
         for value in (None, True, ["a"], {}, b"bytes", object()):
             with self.subTest(value=value):
                 self.assertIsNone(_coerce_pair(value, "x"))
+
+    def test_non_scalar_target_raises(self):
+        for target in (None, True, ["a"], {}, b"bytes"):
+            with self.subTest(target=target):
+                with self.assertRaises(TypeError):
+                    _coerce_pair("x", target)
 
 
 @tag("unit")
@@ -198,14 +153,14 @@ class FieldMatchesTest(TestCase):
     """
 
     CASES = (
-        # --- equals: booleans ---
-        (True, "=", "true", True, "bool field matches lowercase 'true' from the form"),
-        (True, "=", "True", True, "bool field matches Python-style 'True'"),
-        (True, "=", "1", True, "bool field matches '1'"),
-        (False, "=", "no", True, "bool field matches 'no'"),
-        (True, "=", "false", False, "bool mismatch"),
-        (True, "=", "banana", False, "unparseable bool target fails, does not error"),
-        (False, "=", "", False, "empty target is not a boolean spelling"),
+        # --- equals: booleans, target is a bool ---
+        (True, "=", True, True, "bool field matches a bool target"),
+        (False, "=", False, True, "bool field matches a bool target"),
+        (True, "=", False, False, "bool mismatch"),
+        (True, "=", "true", False, "a text target against a bool value: the field's kind has changed"),
+        ("Active", "=", True, False, "a bool target against a text value: same"),
+        ("Active", "=", ["Active"], False, "a list target against a scalar value: same"),
+        (["a"], "=", "a", False, "a scalar target against a list value: same"),
         # --- equals: numbers and text ---
         ("1500", "=", "1500.0", True, "numeric strings compare numerically"),
         (1500, "=", "1500", True, "number vs numeric string"),
@@ -216,15 +171,18 @@ class FieldMatchesTest(TestCase):
         (1500, "=", "abc", False, "a number never equals a non-numeric target"),
         ("Active", "=", "Active", True, "plain text equality"),
         ("Active", "=", "active", False, "text equality is case-sensitive"),
-        (None, "=", "", True, "None compares as empty string (see _as_text)"),
+        # --- equals: emptiness, on either side ---
+        (None, "=", "", True, "an unset field is blank: serial stores '' but asset_tag stores None"),
+        ("", "=", "", True, "a blank string is blank"),
+        (None, "=", "x", False, "an unset field equals nothing else"),
+        (None, "in", ["", "a"], True, 'a blank entry matches an unset field, as `= ""` does'),
         # --- equals: lists are sets ---
         (["a", "b"], "=", ["a", "b"], True, "same members"),
         (["a", "b"], "=", ["b", "a"], True, "order disregarded"),
         (["a", "b"], "=", ["b", "a", "a"], True, "repetition disregarded"),
-        (["a", "b"], "=", "b, a", True, "string target works for lists too"),
         (["a", "b"], "=", ["a"], False, "missing member"),
         (["a"], "=", ["a", "b"], False, "extra member in target"),
-        (["critical"], "=", "critical", True, "one-element list equals its single member as a set"),
+        (["critical"], "=", ["critical"], True, "one-element list equals a one-element target"),
         ([], "=", [], True, "empty list equals empty target: no tags"),
         ([], "=", ["a"], False, "empty list does not equal a non-empty target"),
         # --- ordering: numeric when both sides look numeric ---
@@ -249,17 +207,12 @@ class FieldMatchesTest(TestCase):
         (True, "gt", "0", False, "boolean has no ordering (would otherwise read 'True' > '0')"),
         (False, "lte", "1", False, "boolean has no ordering"),
         (["a"], "gt", "a", False, "list has no ordering"),
-        # --- in: equals any of ---
-        ("Active", "in", "Active, Planned", True, "scalar in a comma-separated string, spaces trimmed"),
-        ("Active", "in", ["Active", "Planned"], True, "scalar in a list target from the form"),
-        ("Retired", "in", "Active, Planned", False, "scalar not in the list"),
-        ("Warsaw, Main", "in", ["Warsaw, Main", "Krakow"], True, "list target keeps a value's comma"),
-        (1500, "in", "1500.0,9000", True, "membership inherits numeric equality"),
-        (True, "in", "yes,no", True, "membership inherits boolean equality"),
-        (["core", "warsaw"], "in", "critical,core", False, "a list field has no membership; = is set equality"),
-        (["warsaw"], "in", "critical,core", False, "list field with no matching entry"),
-        ([1500], "in", ["1500.0"], False, "a list field has no membership; = is set equality"),
-        ("x", "in", "", False, "empty target list matches nothing"),
+        # --- in: equals any of, target is a list ---
+        ("Active", "in", ["Active", "Planned"], True, "scalar in the list"),
+        ("Retired", "in", ["Active", "Planned"], False, "scalar not in the list"),
+        ("Warsaw, Main", "in", ["Warsaw, Main", "Krakow"], True, "a value with a comma is one entry"),
+        (1500, "in", ["1500.0", "9000"], True, "membership inherits numeric equality"),
+        (["core", "warsaw"], "in", ["critical", "core"], False, "a list field has no membership; `=` is set equality"),
         ("x", "in", [], False, "empty list target matches nothing"),
         # --- contains: strings only ---
         ("Warsaw-DC1", "contains", "DC", True, "substring in text"),
@@ -287,26 +240,40 @@ class FieldMatchesTest(TestCase):
                 self.assertIs(field_matches(value, operator_key, target), expected)
 
     def test_never_raises_on_odd_values(self):
-        """Whatever the captured change contains, a comparison is a verdict, never an exception.
-
-        This asserts a bool rather than False because some odd-looking inputs legitimately match:
-        None equals "" by design, and a nested list still contains its scalar entries. The stricter
-        claim for values that can never match is `test_non_scalar_values_never_match`.
-        """
+        """Whatever the captured change contains, a comparison against a well-typed target is a
+        verdict, never an exception. Asserts a bool rather than False because some odd-looking values
+        legitimately match: None equals "", and a nested list still contains its scalar entries."""
         odd_values = (None, {}, {"name": "Active"}, ["a", ["nested"]], object(), b"bytes", float("nan"))
-        odd_targets = ("target", "", None, ["a", "b"], [], 1500)
         for operator_key in FIELD_OPERATOR_KEYS:
+            target = ["a", "b"] if operator_key == "in" else "target"
             for value in odd_values:
-                for target in odd_targets:
-                    with self.subTest(operator=operator_key, value=value, target=target):
-                        self.assertIsInstance(field_matches(value, operator_key, target), bool)
+                with self.subTest(operator=operator_key, value=value):
+                    self.assertIsInstance(field_matches(value, operator_key, target), bool)
+
+    def test_wrong_target_type_raises(self):
+        """A target no operator could have been saved with is a broken row, not a non-match."""
+        cases = (
+            ("Active", "=", None),
+            ("Active", "=", {"name": "Active"}),
+            (9216, "gt", True),
+            (9216, "gt", ["9000"]),
+            ("Active", "in", "Active, Planned"),
+            ("Active", "in", None),
+            ("Warsaw", "contains", 5),
+            ("Warsaw", "startswith", None),
+        )
+        for value, operator_key, target in cases:
+            with self.subTest(value=value, operator=operator_key, target=target):
+                with self.assertRaises(TypeError):
+                    field_matches(value, operator_key, target)
 
     def test_non_scalar_values_never_match(self):
-        """A mapping (a relation without a sub-field), bytes, an arbitrary object, NaN: none of these
-        is a scalar a target could describe, so every operator returns False."""
+        """A mapping `event_value` could not reduce, bytes, an arbitrary object, NaN: none of these
+        is a scalar a stored target could describe, so every operator returns False rather than
+        falling through to a comparison of their repr."""
         garbage = ({}, {"name": "Active"}, object(), b"bytes", float("nan"))
-        targets = ("target", "", "9000", "nan", "{}", ["a", "b"], [])
         for operator_key in FIELD_OPERATOR_KEYS:
+            targets = (["a", "b"], []) if operator_key == "in" else ("target", "", "9000", "nan", "{}")
             for value in garbage:
                 for target in targets:
                     with self.subTest(operator=operator_key, value=value, target=target):
@@ -333,7 +300,7 @@ class OperatorsForKindTest(TestCase):
         """A date is an ISO 8601 string in the payload, so every text operator makes sense for it."""
         self.assertEqual(operators_for_kind(KIND_DATE), operators_for_kind(KIND_TEXT))
 
-    def test_list_gets_set_equality(self):
+    def test_list_gets_set_equality_only(self):
         self.assertEqual([op.key for op in operators_for_kind(KIND_LIST)], ["="])
 
     def test_unknown_kind_gets_every_operator(self):

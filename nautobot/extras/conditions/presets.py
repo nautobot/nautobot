@@ -17,11 +17,11 @@ from django.core.exceptions import ValidationError
 from nautobot.extras.conditions.operators import FIELD_OPERATORS
 from nautobot.extras.registry import registry
 
-# Parameter kinds. `FIELD` names a field on the watched model, which lets the UI offer a picker
-# rather than a free-text box; `STRING` is an arbitrary value to compare against; `CHOICE` is one of
-# a fixed set of values the parameter itself declares.
+# Parameter kinds. `FIELD` names a field on the watched model, which lets the form offer a picker;
+# `VALUE` is a value to compare against, whose widget and canonical type the form derives from the
+# chosen field's kind; `CHOICE` is one of a fixed set of values the parameter itself declares.
 PARAM_KIND_FIELD = "field"
-PARAM_KIND_STRING = "string"
+PARAM_KIND_VALUE = "value"
 PARAM_KIND_CHOICE = "choice"
 
 # Prefix under which a preset's parameters appear in its expression's render context.
@@ -38,7 +38,7 @@ class PresetParameter:
 
     name: str
     label: str
-    kind: str = PARAM_KIND_STRING
+    kind: str = PARAM_KIND_VALUE
     required: bool = True
     help_text: str = ""
     # For a `choice` parameter, the accepted `(value, label)` pairs. Empty for any other kind.
@@ -63,8 +63,8 @@ class PresetParameter:
         Validate one user-supplied value against this parameter's schema.
 
         Raises:
-            ValidationError: If a required value is missing or empty, the value is not a string (or
-                a list of strings, for a `multiple` parameter), or a choice parameter is given a
+            ValidationError: If a required value is missing or empty, the value is not a JSON scalar
+                (or a list of strings, for a `multiple` parameter), or a choice parameter is given a
                 value outside its declared choices. The error carries `code=VALIDATION_CODE` and
                 `params={"parameter": <name>}`.
         """
@@ -75,8 +75,8 @@ class PresetParameter:
                 self._fail("takes a single value, not a list.")
             if not all(isinstance(item, str) for item in value):
                 self._fail("entries must be strings.")
-        elif value is not None and not isinstance(value, str):
-            self._fail(f"must be a string, not {type(value).__name__}.")
+        elif value is not None and not isinstance(value, (str, int, float, bool)):
+            self._fail(f"must be a string, number or boolean, not {type(value).__name__}.")
         if self.choices and value:
             allowed = [choice_value for choice_value, _ in self.choices]
             if value not in allowed:
@@ -285,11 +285,7 @@ FIELD_COMPARE = ConditionPreset(
             name="value",
             label="Value",
             multiple=True,
-            help_text=(
-                "Entered and stored as text; how it compares is decided by the operator (numbers "
-                "numerically, dates as ISO strings, booleans case-insensitively). A set of values for "
-                "`in`, and for `=` on a many-valued field."
-            ),
+            help_text="Value to compare against. A set of values for `in`, and for `=` on a many-valued field.",
         ),
     ),
 )
