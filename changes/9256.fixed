@@ -1,1 +1,1 @@
-Handle validation error gracefully on Job Schedule failing clean()
+Added graceful handling in the UI when creating a Scheduled Job fails validation.
