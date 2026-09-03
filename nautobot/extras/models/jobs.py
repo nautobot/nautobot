@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import logging
 import os
 import signal
+from statistics import median, quantiles
 from typing import Optional, TYPE_CHECKING, Union
 
 from billiard.exceptions import SoftTimeLimitExceeded
@@ -52,6 +53,8 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_MAX_NAME_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES,
+    JOB_RUNTIME_STATISTICS_SAMPLE_SIZE,
 )
 from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
@@ -403,6 +406,40 @@ class Job(PrimaryModel):
                 }
             )
         self.job_queues_override = value
+
+    @property
+    def runtime_statistics(self):
+        """Duration statistics for this Job's most recent successful runs.
+
+        Returns `sample_size`, `median`, `p90` and `longest` as `timedelta`, and a `varies` flag, or
+        None when fewer than JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES completed runs are on record.
+
+        Note that this queries the database on each access and is deliberately not cached, so it is
+        intended for single-object views rather than repeated use in a list view or table column.
+        """
+        durations = sorted(
+            (date_done - date_started).total_seconds()
+            for date_started, date_done in JobResult.objects.filter(
+                job_model=self,
+                status=JobResultStatusChoices.STATUS_SUCCESS,
+                date_started__isnull=False,
+                date_done__isnull=False,
+            )
+            .order_by("-date_done")
+            .values_list("date_started", "date_done")[:JOB_RUNTIME_STATISTICS_SAMPLE_SIZE]
+        )
+        if len(durations) < JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES:
+            return None
+
+        median_seconds = median(durations)
+        p90_seconds = quantiles(durations, n=10, method="inclusive")[8]
+        return {
+            "sample_size": len(durations),
+            "median": timedelta(seconds=median_seconds),
+            "p90": timedelta(seconds=p90_seconds),
+            "longest": timedelta(seconds=durations[-1]),
+            "varies": p90_seconds >= 2 * median_seconds,
+        }
 
     def clean(self):
         """For any non-overridden fields, make sure they get reset to the actual underlying class value if known."""
