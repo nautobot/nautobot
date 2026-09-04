@@ -349,8 +349,8 @@ class BaseTable(django_tables2.Table):
     def visible_columns(self):
         return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
 
-    #: Optional per-table overrides mapping a column name to the serializer field path it exports as
-    #: (or to None to exclude the column from export field selections entirely).
+    # Optional per-table overrides mapping a column name to the serializer field path it exports as
+    # (or to None to exclude the column from export field selections entirely).
     column_serializer_field_overrides = {}
 
     def serializer_paths_for_visible_columns(self, serializer_class):

@@ -68,8 +68,8 @@ def _format_filter_params(params):
     return ", ".join(f"{key}={value}" for key, value in params.items()) or "the provided attributes"
 
 
-#: Extracts the match count Django reports in a `MultipleObjectsReturned` message (see
-#: `_matched_count_from_exception`). Captures either an exact number or Django's "more than N" phrasing.
+# Extracts the match count Django reports in a `MultipleObjectsReturned` message (see
+# `_matched_count_from_exception`). Captures either an exact number or Django's "more than N" phrasing.
 _MULTIPLE_OBJECTS_COUNT_PATTERN = re.compile(r"it returned (\d+|more than \d+)!$")
 
 
