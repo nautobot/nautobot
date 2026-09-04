@@ -10,7 +10,7 @@ from nautobot.core.testing.integration import (
     SeleniumTestCase,
 )
 from nautobot.dcim.models import Controller, Device
-from nautobot.extras.tests.integration import create_test_device
+from nautobot.extras.tests.selenium import create_test_device
 
 
 class DeviceBulkOperationsTestCase(BulkOperationsTestCases.BulkOperationsTestCase):

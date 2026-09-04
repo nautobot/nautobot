@@ -5,7 +5,7 @@ from django.urls import reverse
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Module, ModuleBay, ModuleType
 from nautobot.extras.models import Status
-from nautobot.extras.tests.integration import create_test_device
+from nautobot.extras.tests.selenium import create_test_device
 
 # The module-bays panel header renders this "Expand all" toggle (an HTMX `.btn`) only when the device has
 # nested module bays. It is our real-world test subject for both spinner paths.
