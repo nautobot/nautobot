@@ -1,0 +1,2 @@
+Added `ConditionTypeChoices`.
+Added `ConditionRow` (preset and raw-expression rows) and Jinja2 expression compilation to the internal `nautobot.extras.conditions` package.

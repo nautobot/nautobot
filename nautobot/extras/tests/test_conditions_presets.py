@@ -9,6 +9,7 @@ from django.test import tag
 from nautobot.extras.conditions.presets import (
     BUILTIN_CONDITION_PRESETS,
     ConditionPreset,
+    ConditionPresetError,
     FIELD_CHANGED,
     FIELD_COMPARE,
     FIELD_TRANSITION,
@@ -19,7 +20,6 @@ from nautobot.extras.conditions.presets import (
     register_builtin_condition_presets,
     register_condition_preset,
     USER_IS,
-    VALIDATION_CODE,
 )
 from nautobot.extras.registry import registry
 
@@ -71,7 +71,7 @@ class PresetParameterCleanTest(TestCase):
         parameter = PresetParameter(name="field", label="Field")
         for value in (None, ""):
             with self.subTest(value=value):
-                with self.assertRaisesRegex(ValidationError, re.escape("`field` is required")):
+                with self.assertRaisesRegex(ConditionPresetError, re.escape("`field` is required")):
                     parameter.clean(value)
 
     def test_optional_accepts_missing(self):
@@ -85,13 +85,13 @@ class PresetParameterCleanTest(TestCase):
                 parameter.clean(value)
 
     def test_non_scalar_rejected_by_type_name(self):
-        with self.assertRaisesRegex(ValidationError, re.escape("must be a string, number or boolean, not dict")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("must be a string, number or boolean, not dict")):
             PresetParameter(name="value", label="Value").clean({"a": 1})
 
     def test_choice_enforces_declared_values(self):
         parameter = PresetParameter(name="op", label="Op", kind="choice", choices=(("=", "eq"), ("gt", "gt")))
         parameter.clean("gt")
-        with self.assertRaisesRegex(ValidationError, re.escape("must be one of: =, gt")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("must be one of: =, gt")):
             parameter.clean("regex")
 
     def test_multiple_accepts_a_list_of_strings(self):
@@ -103,16 +103,16 @@ class PresetParameterCleanTest(TestCase):
     def test_multiple_rejects_non_string_entries(self):
         """Storage is uniformly text, inside a list as much as outside it."""
         parameter = PresetParameter(name="value", label="Value", multiple=True)
-        with self.assertRaisesRegex(ValidationError, re.escape("entries must be strings")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("entries must be strings")):
             parameter.clean(["a", 1500])
 
     def test_single_valued_parameter_rejects_a_list(self):
         """A list left over from a set-valued operator must fail loudly, not silently never match."""
-        with self.assertRaisesRegex(ValidationError, re.escape("takes a single value, not a list")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("takes a single value, not a list")):
             PresetParameter(name="field", label="Field").clean(["a"])
 
     def test_required_rejects_empty_list(self):
-        with self.assertRaisesRegex(ValidationError, re.escape("`value` is required")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("`value` is required")):
             PresetParameter(name="value", label="Value", multiple=True).clean([])
 
     def test_context_name_applies_the_prefix(self):
@@ -124,23 +124,29 @@ class CleanValuesTest(TestCase):
     """The preset checks what only it can know; errors carry preset and parameter as structured data."""
 
     def test_none_means_no_params_and_fails_on_required(self):
-        with self.assertRaisesRegex(ValidationError, re.escape("Preset `field_changed`")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("Preset `field_changed`")):
             FIELD_CHANGED.clean_values(None)
 
     def test_non_mapping_rejected(self):
-        with self.assertRaisesRegex(ValidationError, re.escape("must be a mapping")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("must be a mapping")):
             FIELD_CHANGED.clean_values(["field"])
 
     def test_unknown_parameters_named_alongside_accepted(self):
-        with self.assertRaisesRegex(ValidationError, re.escape("does not accept parameter(s): extra")):
+        with self.assertRaisesRegex(ConditionPresetError, re.escape("does not accept parameter(s): extra")):
             FIELD_CHANGED.clean_values({"field": "status", "extra": "x"})
+
+    def test_preset_error_is_a_validation_error(self):
+        """`full_clean()` and forms handle it as any ValidationError; callers can also catch it by type."""
+        with self.assertRaises(ValidationError) as caught:
+            FIELD_CHANGED.clean_values(None)
+        self.assertIsInstance(caught.exception, ConditionPresetError)
 
     def test_parameter_error_carries_preset_and_parameter_as_params(self):
         """A form re-shapes these onto its own fields via `code` and `params`, not by parsing text."""
-        with self.assertRaises(ValidationError) as caught:
+        with self.assertRaises(ConditionPresetError) as caught:
             FIELD_COMPARE.clean_values({"field": "mtu", "operator": "gt"})
         error = caught.exception
-        self.assertEqual(error.code, VALIDATION_CODE)
+        self.assertEqual(error.code, ConditionPresetError.code)
         self.assertEqual(error.params["preset"], "field_compare")
         self.assertEqual(error.params["parameter"], "value")
         self.assertIn("field_compare", error.message)
@@ -149,9 +155,9 @@ class CleanValuesTest(TestCase):
     def test_preset_level_errors_carry_the_preset_key(self):
         for values in (["field"], {"field": "x", "extra": "y"}):
             with self.subTest(values=values):
-                with self.assertRaises(ValidationError) as caught:
+                with self.assertRaises(ConditionPresetError) as caught:
                     FIELD_CHANGED.clean_values(values)
-                self.assertEqual(caught.exception.code, VALIDATION_CODE)
+                self.assertEqual(caught.exception.code, ConditionPresetError.code)
                 self.assertEqual(caught.exception.params["preset"], "field_changed")
 
     def test_valid_params_pass(self):
@@ -180,12 +186,12 @@ class ContextVariablesTest(TestCase):
     def test_missing_required_parameter_raises(self):
         """A broken row is an error for the engine's fail-closed path to log, not a None to compare
         against another None and quietly fire on."""
-        with self.assertRaises(ValidationError) as caught:
+        with self.assertRaises(ConditionPresetError) as caught:
             FIELD_COMPARE.context_variables({"field": "mtu"})
-        self.assertEqual(caught.exception.code, VALIDATION_CODE)
+        self.assertEqual(caught.exception.code, ConditionPresetError.code)
         self.assertEqual(caught.exception.params["preset"], "field_compare")
         self.assertEqual(caught.exception.params["missing"], ["operator", "value"])
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ConditionPresetError):
             USER_IS.context_variables(None)
 
     def test_undeclared_values_do_not_leak_into_context(self):

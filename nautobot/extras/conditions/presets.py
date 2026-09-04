@@ -27,9 +27,14 @@ PARAM_KIND_CHOICE = "choice"
 # Prefix under which a preset's parameters appear in its expression's render context.
 PARAM_CONTEXT_PREFIX = "param_"
 
-# `code` carried by every ValidationError raised here; `params` names the preset and, where one is
-# at fault, the parameter.
-VALIDATION_CODE = "condition_preset"
+
+class ConditionPresetError(ValidationError):
+    """Stored values do not fit a preset. `params` names the preset and, where one is at fault, the parameter."""
+
+    code = "condition_preset"
+
+    def __init__(self, message, **params):
+        super().__init__(message, code=self.code, params=params)
 
 
 @dataclass(frozen=True)
@@ -63,31 +68,30 @@ class PresetParameter:
         Validate one user-supplied value against this parameter's schema.
 
         Raises:
-            ValidationError: If a required value is missing or empty, the value is not a JSON scalar
-                (or a list of strings, for a `multiple` parameter), or a choice parameter is given a
-                value outside its declared choices. The error carries `code=VALIDATION_CODE` and
-                `params={"parameter": <name>}`.
+            ConditionPresetError: If a required value is missing or empty, the value is not a JSON
+                scalar (or a list of strings, for a `multiple` parameter), or a choice parameter is
+                given a value outside its declared choices. `params["parameter"]` is this parameter.
         """
         if self.required and value in (None, "", []):
-            self._fail("is required.")
+            raise ConditionPresetError(f"Parameter `{self.name}` is required.", parameter=self.name)
         if isinstance(value, (list, tuple)):
             if not self.multiple:
-                self._fail("takes a single value, not a list.")
+                raise ConditionPresetError(
+                    f"Parameter `{self.name}` takes a single value, not a list.", parameter=self.name
+                )
             if not all(isinstance(item, str) for item in value):
-                self._fail("entries must be strings.")
+                raise ConditionPresetError(f"Parameter `{self.name}` entries must be strings.", parameter=self.name)
         elif value is not None and not isinstance(value, (str, int, float, bool)):
-            self._fail(f"must be a string, number or boolean, not {type(value).__name__}.")
+            raise ConditionPresetError(
+                f"Parameter `{self.name}` must be a string, number or boolean, not {type(value).__name__}.",
+                parameter=self.name,
+            )
         if self.choices and value:
             allowed = [choice_value for choice_value, _ in self.choices]
             if value not in allowed:
-                self._fail(f"must be one of: {', '.join(allowed)}.")
-
-    def _fail(self, problem):
-        raise ValidationError(
-            f"Parameter `{self.name}` {problem}",
-            code=VALIDATION_CODE,
-            params={"parameter": self.name},
-        )
+                raise ConditionPresetError(
+                    f"Parameter `{self.name}` must be one of: {', '.join(allowed)}.", parameter=self.name
+                )
 
     def as_dict(self):
         return {
@@ -135,40 +139,34 @@ class ConditionPreset:
         Validate the user-supplied `values` mapping against this preset's parameters.
 
         The preset checks that `values` is a mapping with no unknown names; each parameter checks
-        its own value. Every error carries `code=VALIDATION_CODE` and `params` naming the preset
-        and, where one is at fault, the parameter.
+        its own value.
 
         Raises:
-            ValidationError: If `values` is not a mapping, names an unknown parameter, or any
-                parameter's own validation fails.
+            ConditionPresetError: If `values` is not a mapping, names an unknown parameter, or any
+                parameter's own validation fails. `params["preset"]` is this preset; a parameter's
+                error also carries `params["parameter"]`.
         """
         if values is None:
             values = {}
         if not isinstance(values, dict):
-            raise ValidationError(
-                f"Preset `{self.key}` values must be a mapping.",
-                code=VALIDATION_CODE,
-                params={"preset": self.key},
-            )
+            raise ConditionPresetError(f"Preset `{self.key}` values must be a mapping.", preset=self.key)
 
         known = {parameter.name for parameter in self.parameters}
         unknown = sorted(set(values) - known)
         if unknown:
-            raise ValidationError(
+            raise ConditionPresetError(
                 f"Preset `{self.key}` does not accept parameter(s): {', '.join(unknown)}. "
                 f"Accepted: {', '.join(sorted(known)) or 'none'}.",
-                code=VALIDATION_CODE,
-                params={"preset": self.key, "unknown": unknown},
+                preset=self.key,
+                unknown=unknown,
             )
 
         for parameter in self.parameters:
             try:
                 parameter.clean(values.get(parameter.name))
-            except ValidationError as error:
-                raise ValidationError(
-                    f"Preset `{self.key}`: {error.message}",
-                    code=error.code,
-                    params={**(error.params or {}), "preset": self.key},
+            except ConditionPresetError as error:
+                raise ConditionPresetError(
+                    f"Preset `{self.key}`: {error.message}", **error.params, preset=self.key
                 ) from error
 
     def context_variables(self, values):
@@ -181,8 +179,7 @@ class ConditionPreset:
         handling reports it rather than evaluating against None.
 
         Raises:
-            ValidationError: If a required parameter has no value. Carries `code=VALIDATION_CODE`
-                and `params={"preset": ..., "missing": [...]}`.
+            ConditionPresetError: If a required parameter has no value. `params["missing"]` lists them.
         """
         values = values or {}
         missing = [
@@ -191,10 +188,10 @@ class ConditionPreset:
             if parameter.required and values.get(parameter.name) in (None, "", [])
         ]
         if missing:
-            raise ValidationError(
+            raise ConditionPresetError(
                 f"Preset `{self.key}` is missing required parameter(s): {', '.join(missing)}.",
-                code=VALIDATION_CODE,
-                params={"preset": self.key, "missing": missing},
+                preset=self.key,
+                missing=missing,
             )
         return {parameter.context_name: values.get(parameter.name) for parameter in self.parameters}
 
