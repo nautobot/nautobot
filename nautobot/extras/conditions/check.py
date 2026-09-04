@@ -1,8 +1,7 @@
-"""Checks a list of stored conditions against a payload.
+"""Checks a list of condition rows against a payload.
 
-`check()` takes the rows as they are stored on a Webhook or Job Hook and a payload built by
-`build_event_payload`, and returns a `Verdict`: a `RowVerdict` per row and `passed`, which is whether
-every row passed. Rows are AND-ed.
+`check()` takes the rows and a payload built by `build_event_payload`, and returns a `Verdict`: a
+`RowVerdict` per row and `passed`, which is whether every row passed. Rows are AND-ed.
 
 A row passes when its expression, rendered with the payload and the row's `param_*` variables, is
 truthy - `bool(result)` is the one definition of "passes" in this package - inverted by `negate`. A row
