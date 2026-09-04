@@ -2079,6 +2079,32 @@ properties:
     see_also:
       "Remote User Authentication": "./authentication/remote.md"
     type: "string"
+  REQUEST_DB_DURATION_HEADER_ENABLED:
+    default: false
+    description: >-
+      When `true` Nautobot reports the time spent executing SQL for each request. This is
+      added to the response header `Server-Timing` field.
+      Example: `Server-Timing: db;dur=9.59;desc="5 database queries"`, where `dur` is milliseconds and the description reports the number of queries.
+    details: |-
+      Measures request SQL time.
+    environment_variable: "NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED"
+    see_also:
+      "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
+    type: "boolean"
+    version_added: "3.3.0"
+  REQUEST_TOTAL_DURATION_HEADER_ENABLED:
+    default: false
+    description: >-
+      When `true` Nautobot reports the total time spent processing each request. This is
+      added to the response header `Server-Timing` field.
+      Example: `Server-Timing: total;dur=42.71;desc="Total request duration"`, where `dur` is milliseconds.
+    details: |-
+      Measures total request processing time.
+    environment_variable: "NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED"
+    see_also:
+      "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
+    type: "boolean"
+    version_added: "3.3.0"
   SANITIZER_PATTERNS:
     default: []
     default_literal: |-
