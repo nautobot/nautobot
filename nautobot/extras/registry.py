@@ -24,6 +24,7 @@ class Registry(dict):
 
 
 registry = Registry(
+    condition_presets={},
     datasource_contents=defaultdict(list),
     secrets_providers={},
     job_modal_buttons={},
