@@ -532,6 +532,42 @@ class NautobotCSVRendererTest(TestCase):
         self.assertIn("parent__name", read_data)
         self.assertEqual(read_data["parent__name"], location_type.parent.name)
 
+    # -- get_headers and the `cf_*` columns it derives from the data ------------
+    # A record carries every custom field of its object inside one `custom_fields` dict, so these headers
+    # cannot be narrowed by the serializer's field set the way concrete fields are -- only here.
+
+    CUSTOM_FIELD_DATA = [{"name": "x", "custom_fields": {"a": 1, "b": 2}}]
+
+    def test_get_headers__custom_fields_expand_when_unselected(self):
+        """With no selection every custom field gets a column, and `custom_fields` itself gets none."""
+        self.assertEqual(NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA), ["name", "cf_a", "cf_b"])
+
+    def test_get_headers__custom_fields_restricted_to_the_selection(self):
+        self.assertEqual(
+            NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["name", "cf_a"]),
+            ["name", "cf_a"],
+        )
+
+    def test_get_headers__custom_field_ordering_follows_the_selection(self):
+        self.assertEqual(
+            NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["cf_b", "name"]),
+            ["cf_b", "name"],
+        )
+
+    def test_get_headers__naming_the_dict_selects_every_custom_field(self):
+        self.assertEqual(
+            NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["name", "custom_fields"]),
+            ["name", "cf_a", "cf_b"],
+        )
+
+    def test_get_headers__selecting_no_custom_field_yields_no_cf_column(self):
+        self.assertEqual(NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["name"]), ["name"])
+
+    def test_get_headers__custom_field_present_on_only_some_records(self):
+        """Headers are unioned across all records, since a value may be missing from any one of them."""
+        data = [{"name": "x", "custom_fields": {"a": 1}}, {"name": "y", "custom_fields": {"a": 1, "b": 2}}]
+        self.assertEqual(NautobotCSVRenderer.get_headers(data, field_order=["name", "cf_b"]), ["name", "cf_b"])
+
 
 class ModelViewSetMixinTest(testing.APITestCase):
     """Unit tests for ModelViewSetMixin, base class for ModelViewSet/ReadOnlyModelViewSet classes."""

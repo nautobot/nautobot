@@ -349,6 +349,38 @@ class BaseTable(django_tables2.Table):
     def visible_columns(self):
         return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
 
+    # Optional per-table overrides mapping a column name to the serializer field path it exports as
+    # (or to None to exclude the column from export field selections entirely).
+    column_serializer_field_overrides = {}
+
+    def serializer_paths_for_visible_columns(self, serializer_class):
+        """
+        Map this table's visible columns to serializer field paths, for use as a default export field selection.
+
+        The mapping is heuristic: a column maps to `accessor.replace(".", "__")` if the head of that path
+        is a field of the given serializer; a table may override individual columns via
+        `column_serializer_field_overrides`. Columns with no serializer counterpart
+        (buttons, computed columns, ...) are omitted.
+        """
+        serializer = serializer_class(context={"request": None, "depth": 0})
+        serializer_fields = serializer.fields
+        paths = []
+        for name in self.visible_columns:
+            if name in ("pk", "actions"):
+                continue
+            if name in self.column_serializer_field_overrides:
+                override = self.column_serializer_field_overrides[name]
+                if override:
+                    paths.append(override)
+                continue
+            accessor = str(self.columns[name].accessor).replace(".", "__")
+            head = accessor.split("__", 1)[0]
+            if head in serializer_fields:
+                paths.append(accessor)
+            elif head.startswith("cf_"):
+                paths.append(head)
+        return paths
+
     @property
     def order_by(self):
         return self._order_by

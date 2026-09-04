@@ -134,6 +134,16 @@ class OptInFieldsMixin:
                     if field not in user_opt_in_fields:
                         fields.pop(field, None)
 
+            # An explicit export field selection (e.g. from ExportObjectList) restricts the field set
+            # to exactly the selected heads. Applied here, after all get_field_names() customizations,
+            # so that mixin-injected fields (tags, custom_fields, ...) are restricted as well.
+            export_fields = self.context.get("export_fields")
+            if export_fields and not getattr(self, "is_nested", False):
+                selected_heads = {path.split("__", 1)[0] for path in export_fields}
+                if any(head.startswith("cf_") for head in selected_heads):
+                    selected_heads.add("custom_fields")
+                fields = {name: field for name, field in fields.items() if name in selected_heads}
+
             m2m_fields = {
                 name: instance
                 for name, instance in fields.items()
@@ -191,6 +201,20 @@ class NaturalKeyRepresentationMixin:
         """Return True if relations should be represented by flattened natural keys (CSV or JSON/YAML)."""
         return self._exporting or self._is_csv_request()
 
+    def _resolve_lookup_field(self, lookup_field):
+        """Get the model field that a `__`-separated natural-key lookup ultimately refers to.
+
+        Example:
+            >>> self._resolve_lookup_field("device__location__name")
+            <django.db.models.fields.CharField: name>
+        """
+        *field_names, lookup = lookup_field.split("__")
+        model = self.Meta.model
+        for field_component in field_names:
+            model = model._meta.get_field(field_component).remote_field.model
+
+        return model._meta.get_field("id" if lookup == "pk" else lookup)
+
     def _get_lookup_field_name_and_output_field(self, lookup_field):
         """Get lookup field name and its corresponding output_field.
 
@@ -202,16 +226,11 @@ class NaturalKeyRepresentationMixin:
             >>> self._get_lookup_field_name_and_output_field("ipaddress__parent__network")
             ("ipaddress__parent", VarbinaryIPField)
         """
-        *field_names, lookup = lookup_field.split("__")
-        model = self.Meta.model
-        for field_component in field_names:
-            model = model._meta.get_field(field_component).remote_field.model
-
-        lookup = "id" if lookup == "pk" else lookup
-        field = model._meta.get_field(lookup)
+        field = self._resolve_lookup_field(lookup_field)
         # VarbinaryIPField needs to be handled specially in `_build_query_case_for_natural_key_field_lookup`
         output_field = field.__class__ if field.__class__ is VarbinaryIPField else models.CharField
 
+        *field_names, _lookup = lookup_field.split("__")
         field_name = "__".join(field_names)
         return field_name, output_field
 
@@ -277,10 +296,21 @@ class NaturalKeyRepresentationMixin:
         if not lookups:
             return natural_keys_values
 
+        # A UUID column is `char(32)` on MySQL but a native type on PostgreSQL, so casting it to a
+        # CharField above yields the unhyphenated form on the former and the canonical one on the latter.
+        # Normalize, so that a lookup such as `module__pk` reads the same on either backend and matches how
+        # the object's own `id` is rendered.
+        uuid_lookups = {
+            lookup for lookup in lookups if isinstance(self._resolve_lookup_field(lookup), models.UUIDField)
+        }
+
         for offset in range(0, len(lookups), CSV_NATURAL_KEY_QUERY_CHUNK):
             chunk = lookups[offset : offset + CSV_NATURAL_KEY_QUERY_CHUNK]
             case_query = self._build_query_case_for_natural_key_field_lookup(chunk)
             for item in queryset.annotate(**case_query).values(*chunk, "pk"):
+                for lookup in uuid_lookups.intersection(chunk):
+                    if (value := item[lookup]) != constants.CSV_NO_OBJECT:
+                        item[lookup] = str(uuid.UUID(value))
                 pk = item["pk"]
                 if pk not in natural_keys_values:
                     natural_keys_values[pk] = {}
@@ -310,6 +340,8 @@ class NaturalKeyRepresentationMixin:
         """
         model = self.Meta.model
         field_lookups = []
+        export_fields = self.context.get("export_fields") if not self.is_nested else None
+        selected_heads = {path.split("__", 1)[0] for path in export_fields} if export_fields else None
         # NOTE: one-to-many fields field are ignored in csv export
         fields = [
             field
@@ -322,6 +354,15 @@ class NaturalKeyRepresentationMixin:
         ]
         # Get each related field model's natural_key_fields and prepend field name
         for field in fields:
+            if selected_heads is not None:
+                if field.name not in selected_heads:
+                    continue
+                # An explicit nested selection (e.g. `device_type__manufacturer__name`) replaces the
+                # relation's natural-key defaults; a bare head selection keeps them.
+                selected_paths = [path for path in export_fields if path.startswith(f"{field.name}__")]
+                if selected_paths:
+                    field_lookups.extend(selected_paths)
+                    continue
             # ContentType and Group are not Nautobot Model hence do not have the `natural_key_field_lookups` attr.
             # fallback to using default behavior for these fields
             with contextlib.suppress(AttributeError):
