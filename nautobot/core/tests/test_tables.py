@@ -32,8 +32,9 @@ from nautobot.dcim.tables import (
 from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices
 from nautobot.extras.models import ComputedField, CustomField, JobLogEntry
 from nautobot.extras.tables import JobLogEntryTable
-from nautobot.ipam.models import RIR
-from nautobot.ipam.tables import RIRTable
+from nautobot.ipam.api.serializers import PrefixSerializer
+from nautobot.ipam.models import Prefix, RIR
+from nautobot.ipam.tables import PrefixTable, RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
 from nautobot.wireless.models import WirelessNetwork
 from nautobot.wireless.tables import WirelessNetworkTable
@@ -460,16 +461,58 @@ class SerializerPathsForVisibleColumnsTestCase(TestCase):
         self.assertNotIn("actions", mapping)
         self.assertNotIn(None, table.serializer_paths_for_visible_columns(DeviceSerializer))
 
-    def test_count_column_is_not_a_field_even_when_the_serializer_has_one(self):
-        """A `LinkedCountColumn` maps to nothing, its serializer field reading a display annotation.
+    def test_count_column_becomes_the_relation_it_counts(self):
+        """A count column carries the relation it counts, the count itself being unexportable.
 
-        `ManufacturerSerializer.device_type_count` is such a field: selecting it would put a column in
-        an export with nothing in it, an export not annotating its queryset the way this table does.
+        `PrefixTable.vrf_count` counts what `Prefix.vrfs` holds, and `PrefixSerializer` exposes that M2M
+        to an export, so the export carries the VRFs themselves in the column's place. `vrfs` is one of
+        the opt-in M2M fields, readable only when the serializer is instantiated the way an export
+        instantiates it -- which is why the mapping has to build it that way.
+        """
+        table = PrefixTable(Prefix.objects.all())
+        table.columns.show("vrf_count")
+        self.assertIsInstance(table.columns["vrf_count"].column, LinkedCountColumn)
+        self.assertNotIn("vrfs", PrefixSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertEqual(table.serializer_paths_by_visible_column(PrefixSerializer)["vrf_count"], "vrfs")
+
+    def test_count_column_is_not_a_field_even_when_the_serializer_has_one(self):
+        """Where the counted relation is not exposed, the column maps to nothing at all.
+
+        `ManufacturerSerializer` declares `device_type_count`, but that field reads an annotation made
+        for display; selecting it would put a column in an export with nothing in it. The relation the
+        count stands for is identified, but `device_types` is not a field an export can emit either.
         """
         table = ManufacturerTable(Manufacturer.objects.all())
-        self.assertIsInstance(table.columns["device_type_count"].column, LinkedCountColumn)
-        self.assertIn("device_type_count", ManufacturerSerializer(context={"request": None, "depth": 0}).fields)
+        column = table.columns["device_type_count"].column
+        self.assertIsInstance(column, LinkedCountColumn)
+        self.assertEqual(column.counted_relation(Manufacturer), "device_types")
+        serializer_fields = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True).fields
+        self.assertIn("device_type_count", serializer_fields)
+        self.assertNotIn("device_types", serializer_fields)
         self.assertIsNone(table.serializer_paths_by_visible_column(ManufacturerSerializer)["device_type_count"])
+
+    def test_counted_relation_requires_the_two_ends_to_agree(self):
+        """A coincidental relation to the counted model is not the relation being counted.
+
+        This is what keeps a column counting through some other mechanism -- `dynamic_group_count`, via
+        the static group associations -- from being mistaken for an unrelated M2M to the same model.
+        """
+        counted = LinkedCountColumn(viewname="ipam:vrf_list", url_params={"prefixes": "pk"})
+        self.assertEqual(counted.counted_relation(Prefix), "vrfs")
+        mismatched = LinkedCountColumn(
+            viewname="ipam:vrf_list", url_params={"prefixes": "pk"}, reverse_lookup="through_something_else"
+        )
+        self.assertIsNone(mismatched.counted_relation(Prefix))
+
+    def test_counted_relation_of_a_count_through_an_intermediate_model(self):
+        """A count reached through an intermediate model has no one relation for a column to hold."""
+        nested = LinkedCountColumn(
+            viewname="circuits:circuit_list",
+            url_params={"cloud_network": "name"},
+            reverse_lookup="circuit_terminations__cloud_network",
+            lookup="circuit_terminations__circuit",
+        )
+        self.assertIsNone(nested.counted_relation(Prefix))
 
     def test_custom_field_column_maps_to_its_own_name(self):
         """A custom-field column exports as `cf_<key>`, not as its `_custom_field_data` accessor."""

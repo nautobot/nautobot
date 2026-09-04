@@ -480,7 +480,9 @@ class ExportObjectList(Job):
                 # Two columns can map to the same field; a selection names each field once.
                 export_field_paths.append(path)
         if omitted:
-            self.logger.warning(
+            # Info rather than a warning: every view has columns like these, so losing them is the
+            # normal case rather than a sign that anything went wrong.
+            self.logger.info(
                 "Omitting displayed column(s) %s, which have no exportable equivalent",
                 ", ".join(f"`{column}`" for column in omitted),
             )

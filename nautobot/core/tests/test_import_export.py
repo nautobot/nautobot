@@ -45,6 +45,7 @@ from nautobot.dcim.api.serializers import (
     DeviceSerializer,
     DeviceTypeSerializer,
     InterfaceSerializer,
+    ManufacturerSerializer,
 )
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -74,7 +75,7 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.ipam.api.serializers import VLANSerializer
-from nautobot.ipam.models import Namespace, RouteTarget, VLAN, VRF, VRFDeviceAssignment
+from nautobot.ipam.models import Namespace, Prefix, RouteTarget, VLAN, VRF, VRFDeviceAssignment
 from nautobot.users.api.serializers import UserSerializer
 from nautobot.users.models import ObjectPermission
 
@@ -1113,6 +1114,37 @@ class ValidateFieldPathsTests(TestCase):
         # ...and it is reported rather than quietly ignored when mixed with exportable fields
         self.assertPathsInvalid(UserSerializer, ["username", "password"], "is write-only")
 
+    def test_validate__annotation_backed_field_is_rejected(self):
+        """A field that only renders from a queryset annotation cannot be exported, so naming it errors.
+
+        `ManufacturerSerializer.device_type_count` reads an attribute that `ManufacturerViewSet` and
+        `ManufacturerTable` annotate onto their own querysets. An export annotates nothing, so DRF skips
+        the field -- accepted, this would produce a file with no `device_type_count` column and no
+        indication that one was dropped.
+        """
+        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True)
+        self.assertIn("device_type_count", serializer.fields)
+        self.assertFalse(hasattr(Manufacturer, "device_type_count"))
+        self.assertPathsInvalid(
+            ManufacturerSerializer,
+            ["device_type_count"],
+            '"device_type_count": "device_type_count" is computed for display only and cannot be exported',
+        )
+        # ...and it is reported rather than quietly ignored when mixed with exportable fields
+        self.assertPathsInvalid(ManufacturerSerializer, ["name", "device_type_count"], "computed for display only")
+
+    def test_validate__serializer_computed_field_is_still_allowed(self):
+        """A field sourced from the object itself renders with no annotation, so it stays selectable.
+
+        The counterpart to the test above: `display` and friends have no model field behind them either,
+        but they read the whole object rather than an attribute of it.
+        """
+        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True)
+        for field_name in ("display", "object_type", "natural_slug"):
+            with self.subTest(field=field_name):
+                self.assertEqual(serializer.fields[field_name].source, "*")
+                self.assertPathsValid(ManufacturerSerializer, [field_name])
+
     def test_validate__write_only_relation_is_rejected(self):
         """The same for a write-only relation, which the remaining four in core all are."""
         self.assertTrue(VLANSerializer(context={"request": None, "depth": 0}).fields["location"].write_only)
@@ -1407,6 +1439,21 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 job_result=job_result, message__contains="no_such_field", log_level=LogLevelChoices.LOG_ERROR
             ).exists()
         )
+
+    def test_select__related_object_count_fails_rather_than_exporting_nothing(self):
+        """Selecting a related-object count fails the Job instead of writing a file without that column.
+
+        The count is a `queryset.annotate()` that the API viewset and the list table each make for
+        themselves; an export makes none, so DRF skips the field and the column would just be absent.
+        """
+        Manufacturer.objects.create(name="Counted Mfr")
+        job_result = self.run_export(
+            model=Manufacturer,
+            export_fields="name,device_type_count",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "computed for display only", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
 
     # -- custom fields ---------------------------------------------------------
     # A `cf_<key>` entry is the only selection path that names something the serializer has no field for:
@@ -1865,7 +1912,7 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
 
     def test_columns__default_columns_when_nothing_is_configured(self):
         """With neither a saved view nor a stored configuration, the view shows the table's defaults."""
-        header = self.export_header(self.run_export(use_current_view_columns=True, allow_issues=True))
+        header = self.export_header(self.run_export(use_current_view_columns=True))
         self.assertEqual(header, self.ALL_STATUS_COLUMNS)
 
     def test_columns__omits_a_count_column(self):
@@ -1873,10 +1920,11 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
 
         The serializer does declare `dynamic_group_count`, but it reads that annotation -- which an
         export does not add -- so selecting it would put a column in the file with nothing in it.
+        Reported at info level: every view has columns like this, so it is not a sign of a problem.
         """
-        job_result = self.run_export(use_current_view_columns=True, allow_issues=True)
+        job_result = self.run_export(use_current_view_columns=True)
         self.assertNotIn("dynamic_group_count", self.export_header(job_result))
-        self.assertJobLogEntry(job_result, "dynamic_group_count", level=LogLevelChoices.LOG_WARNING)
+        self.assertJobLogEntry(job_result, "dynamic_group_count", level=LogLevelChoices.LOG_INFO)
 
     def test_columns__explicit_fields_take_precedence(self):
         """An explicit selection is the user having said which fields they want; the view's are a default."""
@@ -1904,12 +1952,39 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         """Displayed columns with no exportable equivalent are reported and left out of the selection.
 
         `ManufacturerTable` shows four related-object counts on top of the injected fifth; what remains
-        is the data. The user asked for their view, so losing a column is a warning, not a failure.
+        is the data. The user asked for their view, so losing a column is reported, not fatal -- unlike
+        naming one of those columns explicitly, which fails
+        (`test_select__related_object_count_fails_rather_than_exporting_nothing`).
         """
         Manufacturer.objects.create(name="Counted Mfr", description="has counts")
-        job_result = self.run_export(model=Manufacturer, use_current_view_columns=True, allow_issues=True)
+        job_result = self.run_export(model=Manufacturer, use_current_view_columns=True)
         self.assertEqual(self.export_header(job_result), ["name", "description"])
-        self.assertJobLogEntry(job_result, "device_type_count", level=LogLevelChoices.LOG_WARNING)
+        self.assertJobLogEntry(job_result, "device_type_count", level=LogLevelChoices.LOG_INFO)
+
+    def test_columns__count_column_carries_the_relation_it_counts(self):
+        """A count column exports as the relation it counts, where an export can emit that relation.
+
+        A count is an aggregate no export can carry, but `PrefixTable.vrf_count` is *about* `Prefix.vrfs`,
+        so the export carries the VRFs themselves under that name instead of dropping the column.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="Counted Relation Namespace")
+        # `rd` is half of a VRF's natural key, so it is what identifies the member in the exported cell
+        vrf = VRF.objects.create(name="Counted VRF", rd="65000:99", namespace=namespace)
+        prefix = Prefix.objects.create(
+            prefix="10.99.0.0/16", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        prefix.vrfs.add(vrf)
+        user = self.create_user_with_table_config("PrefixTable", ["prefix", "vrf_count"])
+        rows = self.export_rows(
+            self.run_export(
+                model=Prefix,
+                username=user.username,
+                query_string="prefix=10.99.0.0/16",
+                use_current_view_columns=True,
+            )
+        )
+        self.assertEqual(list(rows[0]), ["prefix", "vrfs"])
+        self.assertIn(vrf.rd, rows[0]["vrfs"])
 
     def test_columns__custom_field_column(self):
         """A custom-field column is exportable, and is carried across as its `cf_` reference."""
@@ -1921,7 +1996,11 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         self.assertEqual(rows, [{"name": status.name, "cf_export_cf_a": "A value"}])
 
     def test_columns__non_exportable_column_does_not_fail_the_export(self):
-        """A view showing only non-exportable columns falls back to exporting every field."""
+        """A view showing only non-exportable columns falls back to exporting every field.
+
+        Warned about rather than merely noted: unlike losing one column among several, this means the
+        file bears no resemblance to the view that was asked for.
+        """
         user = self.create_user_with_table_config("StatusTable", ["dynamic_group_count"])
         job_result = self.run_export(username=user.username, use_current_view_columns=True, allow_issues=True)
         self.assertIn("name", self.export_header(job_result))

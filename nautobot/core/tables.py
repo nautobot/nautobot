@@ -364,14 +364,20 @@ class BaseTable(django_tables2.Table):
         caller can report what it could not carry over; the non-data `pk` and `actions` columns are left
         out of the mapping entirely.
 
-        A `LinkedCountColumn` maps to None even where the serializer declares a matching field, since
-        such a field reads an annotation this table adds for display rather than anything stored on the
-        record; an export that has not annotated its own queryset would emit nothing for it.
+        A `LinkedCountColumn` never maps to its own name, even where the serializer declares a matching
+        field, since such a field reads an annotation this table adds for display rather than anything
+        stored on the record. It maps instead to the relation it counts, where the serializer exposes
+        that relation and `LinkedCountColumn.counted_relation()` can identify it -- so `vrf_count`
+        carries the VRFs themselves rather than dropping out. Otherwise it maps to None.
 
         Returns:
             (dict): `{column_name: serializer_field_path_or_None}`, in column display order.
         """
-        serializer = serializer_class(context={"request": None, "depth": 0})
+        # Instantiated the way an export instantiates it, as `validate_field_paths()` also takes care to
+        # do: `exporting=True` is what makes the opt-in M2M fields readable (see
+        # `OptInFieldsMixin._readable_m2m_sources`), and without it every column backed by one of them --
+        # the VRFs behind `PrefixTable.vrf_count`, say -- looks unexportable.
+        serializer = serializer_class(context={"request": None, "depth": 0}, exporting=True)
         serializer_fields = serializer.fields
         paths = {}
         for name in self.visible_columns:
@@ -380,10 +386,13 @@ class BaseTable(django_tables2.Table):
             if name in self.column_serializer_field_overrides:
                 paths[name] = self.column_serializer_field_overrides[name] or None
                 continue
-            if isinstance(self.columns[name].column, LinkedCountColumn):
-                paths[name] = None
+            column = self.columns[name].column
+            if isinstance(column, LinkedCountColumn):
+                # The count itself is unexportable, so carry the relation it counts where there is one
+                relation = column.counted_relation(self._meta.model)
+                paths[name] = relation if relation in serializer_fields else None
                 continue
-            if isinstance(self.columns[name].column, CustomFieldColumn):
+            if isinstance(column, CustomFieldColumn):
                 # A custom-field column renders from the model's `_custom_field_data`, so its accessor is
                 # of no use here; an export names the custom field itself, which is the column's own name.
                 paths[name] = name
@@ -798,6 +807,46 @@ class LinkedCountColumn(django_tables2.Column):
         self.display_field = display_field
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
+
+    def counted_relation(self, model):
+        """The name of `model`'s own relation to the objects this column counts, or None if it is not one field.
+
+        A count column stands in for a relation: `PrefixTable.vrf_count` counts what `Prefix.vrfs` holds.
+        That makes the relation the natural thing to carry in the column's place where a count itself
+        cannot be carried -- an export, whose queryset has no `annotate()` behind the count.
+
+        Returns None unless the relation is a single field of `model`, which rules out a count reached
+        through an intermediate model (`CloudNetworkTable.circuit_count`, via circuit terminations) or
+        through the static group association machinery (`dynamic_group_count`): there is then no one
+        relation for a column to hold.
+        """
+        lookup = self.lookup or self._derived_lookup(model)
+        if not lookup or "__" in lookup:
+            return None
+        try:
+            # The far end of the relation, as the counted model names it: the reverse query name of a
+            # forward field, or the field's own name where `lookup` is itself a reverse accessor.
+            far_end = model._meta.get_field(lookup).remote_field.name
+        except (FieldDoesNotExist, AttributeError):
+            return None
+        # The two ends must describe the *same* relation. Without this check, a coincidental relation to
+        # the counted model gets mistaken for the counted one: `VpnTunnelEndpoint.dynamic_group_count`
+        # counts through static group associations, and `get_related_field_for_models()` offers its
+        # unrelated `protected_prefixes_dg` M2M, whose members are something else entirely.
+        if self.reverse_lookup and self.reverse_lookup != far_end:
+            return None
+        return lookup
+
+    def _derived_lookup(self, model):
+        """The relation from `model` to the counted model, where `lookup` was not given explicitly."""
+        if self.model is None:
+            return None
+        try:
+            # Raises if the two models have more than one relation, i.e. if which one is counted is ambiguous
+            related_field = get_related_field_for_models(model, self.model)
+        except AttributeError:
+            return None
+        return related_field.name if related_field is not None else None
 
     def render(self, *, bound_column, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         related_record = None

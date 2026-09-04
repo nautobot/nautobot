@@ -165,6 +165,7 @@ The Job fails, with an error naming the entry at fault, rather than quietly writ
 
 - names a field the object type does not have, or a custom field that is not defined for it
 - names a field that exists only for input rather than output, such as the singular `location` field on VLANs and Prefixes - export the `locations` many-to-many field instead
+- names a value computed for display rather than stored on the object, such as the related-object counts a list view shows (`device_count`, `rack_count`, and the like) - export the related objects themselves instead
 - attempts to traverse a many-to-many field, or a field that is not a relation at all
 - traverses more than three relations in a single path
 - names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
@@ -199,7 +200,11 @@ Selecting **Use Current View Columns** (`use_current_view_columns`) defaults the
 
 This is only a default for [**Fields to Export**](#selecting-fields-to-export). Naming fields explicitly takes precedence, and the option has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
 
-Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts such as **Devices** or **Dynamic Groups** are values assembled for display rather than fields of the record. Such columns are left out of the export, and the Job logs a warning naming each one, so the file never quietly disagrees with the view it came from. If none of the displayed columns can be exported, the export falls back to including every field.
+Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts are values assembled for display rather than fields of the record.
+
+A count column is *about* a relation, though, so where the relation itself is exportable the export carries that instead of the count: exporting a Prefix list view whose **VRFs** column shows a count of 3 gives you a `vrfs` column naming those three VRFs. Where the relation is not something an export can carry - a count of Devices in a Location, say, or of Dynamic Groups an object belongs to - the column is left out.
+
+Every column left out is logged, so the file never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, the export warns and falls back to including every field.
 
 ## The self-describing file
 
