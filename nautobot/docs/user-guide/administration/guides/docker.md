@@ -8,7 +8,6 @@ Docker images are published for multiple supported Python versions. The default 
 
 Currently images are pushed for the following Python versions:
 
-* 3.10
 * 3.11
 * 3.12
 * 3.13
@@ -28,6 +27,9 @@ Currently images are pushed for the following Python versions:
 
 +++ 3.1.0 "Added Python 3.14"
     Python 3.14 was added to the set of published images and became the default version.
+
+--- 3.3.0 "Removed Python 3.10"
+    Python 3.10 was removed from the set of published images as Python 3.10 is now end-of-life.
 
 ## Platforms
 
@@ -56,13 +58,13 @@ The following tags are available on both Docker Hub and the GitHub Container Reg
 | Tag                                                           | Nautobot Version      | Python Version | Example        |
 | ------------------------------------------------------------- | --------------------- | -------------- | -------------- |
 | `latest`                                                      | Latest stable release | 3.14           | `latest`       |
-| `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.10` |
+| `latest-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `latest-py3.11` |
 | `${NAUTOBOT_VER}`                                             | As specified          | 3.14           | `3.1.0`        |
-| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `3.1.0-py3.10`  |
+| `${NAUTOBOT_VER}-py${PYTHON_VER}`                             | As specified          | As specified   | `3.1.0-py3.11`  |
 | `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}`                 | As specified          | 3.14           | `3.1`          |
-| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `3.1-py3.10`    |
+| `${NAUTOBOT_MAJOR_VER}.${NAUTOBOT_MINOR_VER}-py${PYTHON_VER}` | As specified          | As specified   | `3.1-py3.11`    |
 | `stable`                                                      | Latest stable release | 3.14           | `stable`       |
-| `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.10` |
+| `stable-py${PYTHON_VER}`                                      | Latest stable release | As specified   | `stable-py3.11` |
 
 ### Developer Tags
 
@@ -249,7 +251,7 @@ Example output:
 
 ```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
-local/nautobot-dev                               local-py3.10                     0d93eec7dfea   5 minutes ago    1.31GB
+local/nautobot-dev                               local-py3.11                     0d93eec7dfea   5 minutes ago    1.31GB
 ```
 
 If you need to build or test the `final` image, you must set your `invoke.yml` to use `docker-compose.final.yml` in place of `docker-compose.dev.yml`:
@@ -284,7 +286,7 @@ Example output:
 
 ```no-highlight
 REPOSITORY                                       TAG                              IMAGE ID       CREATED          SIZE
-local/nautobot-final                             local-py3.10                     e03e752fcc6b   27 minutes ago   629MB
+local/nautobot-final                             local-py3.11                     e03e752fcc6b   27 minutes ago   629MB
 ```
 
 Similarly, you can use `docker-compose.final-dev.yml` if you wish to build and test the `final-dev` image.
