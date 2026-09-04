@@ -175,8 +175,8 @@ class ConditionPreset:
 
         Every declared parameter is present in the result, so the expression never meets Jinja2
         `Undefined` for its own parameters. An optional parameter that was not given is None. A
-        required one that was not given raises: the row is invalid, and the engine's fail-closed
-        handling reports it rather than evaluating against None.
+        required one that was not given raises, so `check` reports the row as broken instead of
+        evaluating it against None.
 
         Raises:
             ConditionPresetError: If a required parameter has no value. `params["missing"]` lists them.

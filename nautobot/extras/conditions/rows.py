@@ -1,16 +1,17 @@
-"""Condition rows: the stored shape of one condition, and what it resolves to for the engine.
+"""Condition rows: the shape of one condition, and what it resolves to for `check`.
 
-A Webhook or Job Hook stores its conditions as a JSON list of rows. A row is either a preset chosen
-from the catalog with the values the user filled in, or a raw Jinja2 expression the user wrote:
+Conditions are a list of rows. A row is either a preset from the catalog with the values filled in, or
+a raw Jinja2 expression:
 
-    {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}}
-    {"type": "expression", "source": "data.mtu > 9000 and username != 'test'"}
+    [
+        {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}},
+        {"type": "expression", "source": "data.mtu > 9000 and username != 'test'", "negate": true},
+    ]
 
-Both may carry `"negate": true`, which inverts the row's verdict.
+`negate` inverts the row's verdict and defaults to false.
 
-`ConditionRow.from_dict` is the one place that reads that shape. The form, the REST API and the
-model's `clean()` use it with `clean()` to validate what is being saved; the engine uses it with
-`resolve()` to get an expression and its context variables.
+`ConditionRow.from_dict` is the one place that reads that shape. `clean()` validates a row for saving;
+`resolve()` returns the expression and its context variables for `check`.
 """
 
 from dataclasses import dataclass
@@ -34,7 +35,7 @@ class ConditionRowError(ValidationError):
 
 @dataclass(frozen=True)
 class ConditionRow:
-    """One stored condition. Subclasses know how to resolve themselves; the engine decides what passes."""
+    """One stored condition. Subclasses know how to resolve themselves; `check` decides what passes."""
 
     negate: bool
     # Keys a stored row of this type may carry. Subclasses set it.
@@ -77,7 +78,7 @@ class ConditionRow:
         raise NotImplementedError
 
     def resolve(self):
-        """Return `(source, context_variables)` for the engine. Subclasses override."""
+        """Return `(source, context_variables)` for `check`. Subclasses override."""
         raise NotImplementedError
 
     def to_dict(self):
