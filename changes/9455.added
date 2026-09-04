@@ -1,0 +1,2 @@
+Added `ConditionTypeChoices`.
+Added `ConditionRow` (preset and raw-expression rows), expression compilation and `check()` to the internal `nautobot.extras.conditions` package.
