@@ -1,8 +1,3 @@
-Added `RequestMetricMiddleware` to `MIDDLEWARE` in `settings.py.
-Added `BaseRequestMetric` to serve as abstract for metric creation.
-Added `TotalDurationRequestMetric` to track total request duration.
-Added `DatabaseDurationRequestMetric` to track database query duration.
-Added `RequestMetricMiddleware` to perform metric runtime for requests.
-Added `REQUEST_TOTAL_DURATION_HEADER_ENABLED`, when set to true enables `TotalDurationRequestMetric` for each request.
-Added `REQUEST_DB_DURATION_HEADER_ENABLED`, when set to true enables `DatabaseDurationRequestMetric` for each request.
-Updated nautobot_config.py.j2 to have new environment variables.
+Added `RequestMetricMiddleware` to measure and report timing metrics as a `Server-Timing` header in HTTP responses.
+Added `REQUEST_TOTAL_DURATION_HEADER_ENABLED` settings variable, which when set to true enables a "total request duration" timing metric on each request/response.
+Added `REQUEST_DB_DURATION_HEADER_ENABLED` settings variable, which when set to true enables a "database query duration" timing metric on each request/response.
