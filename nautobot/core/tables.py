@@ -353,33 +353,56 @@ class BaseTable(django_tables2.Table):
     # (or to None to exclude the column from export field selections entirely).
     column_serializer_field_overrides = {}
 
-    def serializer_paths_for_visible_columns(self, serializer_class):
+    def serializer_paths_by_visible_column(self, serializer_class):
         """
-        Map this table's visible columns to serializer field paths, for use as a default export field selection.
+        Map each of this table's visible data columns to its serializer field path, or to None if it has none.
 
         The mapping is heuristic: a column maps to `accessor.replace(".", "__")` if the head of that path
-        is a field of the given serializer; a table may override individual columns via
-        `column_serializer_field_overrides`. Columns with no serializer counterpart
-        (buttons, computed columns, ...) are omitted.
+        is a field of the given serializer, and a custom-field column maps to its own `cf_<key>` name; a
+        table may override individual columns via `column_serializer_field_overrides`. Columns with no
+        serializer counterpart (buttons, computed fields, relationships, ...) map to None, so that a
+        caller can report what it could not carry over; the non-data `pk` and `actions` columns are left
+        out of the mapping entirely.
+
+        A `LinkedCountColumn` maps to None even where the serializer declares a matching field, since
+        such a field reads an annotation this table adds for display rather than anything stored on the
+        record; an export that has not annotated its own queryset would emit nothing for it.
+
+        Returns:
+            (dict): `{column_name: serializer_field_path_or_None}`, in column display order.
         """
         serializer = serializer_class(context={"request": None, "depth": 0})
         serializer_fields = serializer.fields
-        paths = []
+        paths = {}
         for name in self.visible_columns:
             if name in ("pk", "actions"):
                 continue
             if name in self.column_serializer_field_overrides:
-                override = self.column_serializer_field_overrides[name]
-                if override:
-                    paths.append(override)
+                paths[name] = self.column_serializer_field_overrides[name] or None
+                continue
+            if isinstance(self.columns[name].column, LinkedCountColumn):
+                paths[name] = None
+                continue
+            if isinstance(self.columns[name].column, CustomFieldColumn):
+                # A custom-field column renders from the model's `_custom_field_data`, so its accessor is
+                # of no use here; an export names the custom field itself, which is the column's own name.
+                paths[name] = name
                 continue
             accessor = str(self.columns[name].accessor).replace(".", "__")
             head = accessor.split("__", 1)[0]
-            if head in serializer_fields:
-                paths.append(accessor)
-            elif head.startswith("cf_"):
-                paths.append(head)
+            paths[name] = accessor if head in serializer_fields else None
         return paths
+
+    def serializer_paths_for_visible_columns(self, serializer_class):
+        """
+        The serializer field paths of this table's visible columns, for use as a default export field selection.
+
+        Columns with no serializer counterpart are omitted; see `serializer_paths_by_visible_column()`,
+        which additionally reports those. Duplicates are collapsed, two columns being able to map to the
+        same path, since a field selection names each field once.
+        """
+        paths = self.serializer_paths_by_visible_column(serializer_class).values()
+        return list(dict.fromkeys(path for path in paths if path))
 
     @property
     def order_by(self):

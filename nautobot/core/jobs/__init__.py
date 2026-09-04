@@ -41,7 +41,7 @@ from nautobot.core.jobs.customfields import (
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.models.utils import m2m_through_data_fields
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
@@ -67,12 +67,28 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
+from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
 from nautobot.extras.utils import get_saved_view_or_none
 
 name = "System Jobs"
+
+# The query parameters a list view uses for something other than filtering its queryset, and which
+# `ExportObjectList` must therefore not hand to a filterset either. Mirrors
+# `ObjectListView.non_filter_params` / `ObjectListViewMixin.non_filter_params`, which is where a list
+# view's own copy of this list lives; those may be extended per view, which is why the TODO in
+# `_get_filter_params()` wants the view to strip them before they ever reach a Job.
+NON_FILTER_PARAMS = (
+    "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+    "clear_view",  # indicator for if the clear view button is clicked or not
+    "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
+    "page",  # used by django-tables2.RequestConfig
+    "per_page",  # used by get_paginate_count
+    "saved_view",  # saved_view indicator pk or composite keys
+    "sort",  # table sorting
+    "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+)
 
 
 class GitRepositorySync(Job):
@@ -186,16 +202,17 @@ class ExportObjectList(Job):
         required=False,
         description="Optional comma-separated list of fields to export, including nested references to "
         "related objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
-        "If unspecified, all fields are exported. Not applicable to Export Templates or "
-        "devicetype-library YAML exports.",
+        "If unspecified, all fields are exported, unless <em>Use Current View Columns</em> is selected. "
+        "Not applicable to Export Templates or devicetype-library YAML exports.",
     )
-    use_current_view = BooleanVar(
-        label="Use Current View",
+    use_current_view_columns = BooleanVar(
+        label="Use Current View Columns",
         default=False,
         required=False,
-        description="Export exactly what the current list view shows: its filters and sort order, plus — for "
-        "a saved view — its saved field selection and format. Explicitly provided fields/format still take "
-        "precedence. When off, every object is exported in the model's default order.",
+        description="If no explicit list of fields to export is given, export the columns that the "
+        "corresponding list view is currently displaying — as configured by the saved view in use, if any, "
+        "else by your own table configuration for that view. Columns that have no exportable equivalent "
+        "(row selection, action buttons, computed fields, related-object counts, and the like) are omitted.",
     )
 
     class Meta:
@@ -206,31 +223,37 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def _get_saved_view_filter_params(self, query_params):
-        """Extract filter params from saved view if applicable."""
-        if "saved_view" in query_params and "all_filters_removed" not in query_params:
-            # Not using get_saved_view_filter_params(), as that cannot distinguish a missing Saved View from one with no filter params.
-            saved_view = get_saved_view_or_none(query_params["saved_view"])
-            if saved_view is None:
-                self.logger.warning(
-                    "Saved view %s not found; exporting without its filter parameters.", query_params["saved_view"]
-                )
-                return {}
-            saved_view_filters = saved_view.config.get("filter_params", {})
-            if len(query_params) > 1:
-                # Retain only filters also present in query_params
-                saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
-            return saved_view_filters
-        return {}
+    def _get_saved_view(self, query_params):
+        """The SavedView the launching list view was displaying, if it referenced one that still exists.
 
-    def _get_saved_view_export_config(self, query_params):
-        """Extract the saved export configuration (`{"fields": [...], "format": "..."}`) from the saved view, if any."""
-        if "saved_view" in query_params:
-            try:
-                return SavedView.objects.get(pk=query_params["saved_view"]).config.get("export_config", {})
-            except SavedView.DoesNotExist:
-                return {}
-        return {}
+        Resolved once per run and passed to each phase that consults it, since a Saved View records the
+        whole of a view's configuration: its filters, its sort order, and its table columns.
+        """
+        saved_view_pk = query_params.get("saved_view")
+        if not saved_view_pk:
+            return None
+        saved_view = get_saved_view_or_none(saved_view_pk)
+        if saved_view is None:
+            self.logger.warning("Saved view %s not found; exporting without its saved configuration.", saved_view_pk)
+        return saved_view
+
+    @staticmethod
+    def _get_filter_params(query_params, saved_view, filterset):
+        """The filters the launching list view had applied, resolved the way that view resolves them.
+
+        A saved view contributes its stored filters only when the query string carries none of its own:
+        the list view treats any filter in the query string as having *replaced* the saved view's filters
+        wholesale rather than merging with them, and `all_filters_removed` says the user cleared them
+        outright. Kept deliberately in lock-step with `ObjectListView.get_filter_params()`, so that an
+        export of a view covers the same records the view itself is showing.
+        """
+        # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
+        #       such that they never are even seen here.
+        filter_params = get_filterable_params_from_filter_params(query_params, NON_FILTER_PARAMS, filterset)
+        if filter_params or saved_view is None or query_params.get("all_filters_removed"):
+            return filter_params
+        # Not using get_saved_view_filter_params(), as we already have the SavedView in hand.
+        return saved_view.config.get("filter_params", {})
 
     @staticmethod
     def _get_match_fields(model, export_field_paths=None):
@@ -356,71 +379,131 @@ class ExportObjectList(Job):
         """All objects of the requested type, restricted to those the user may view (no filtering applied)."""
         return model.objects.all().restrict(self.user, "view")
 
-    def _filter_queryset(self, model, queryset, query_params):
-        """Narrow and order the queryset to the launching list view: saved-view + request filters, then sort."""
+    def _filter_queryset(self, model, queryset, query_params, saved_view):
+        """Narrow and order the queryset per `query_params`: the view's filters, then its sort order.
+
+        These are always applied — they are how the launching list view describes what it is showing —
+        so an export covers the same records, in the same order, as that view.
+        """
         filterset_class = get_filterset_for_model(model)
         self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
-        # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
-        #       such that they never are even seen here.
-        default_non_filter_params = (
-            "all_filters_removed",
-            "export",
-            "page",
-            "per_page",
-            "saved_view",
-            "sort",
-            "table_changes_pending",
-        )
-        filter_params = self._get_saved_view_filter_params(query_params)
-        filter_params.update(
-            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
-        )
+        filter_params = self._get_filter_params(query_params, saved_view, filterset_class())
         self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)
         if not filterset.is_valid():
             self.logger.error("Invalid filters were specified: %s", filterset.errors)
             raise RunJobTaskFailed("Invalid query_string value for this content_type")
-        return self._apply_current_view_sort(model, filterset.qs, query_params)
+        return self._apply_sort(model, filterset.qs, query_params, saved_view)
 
-    def _apply_current_view_sort(self, model, queryset, query_params):
-        """Apply the current view's sort order (best effort).
+    def _apply_sort(self, model, queryset, query_params, saved_view):
+        """Apply the launching view's sort order (best effort).
 
-        Validate only the head segment so related-field (`location__name`) and custom-field (`cf_*`) sorts
-        — both supported by order_by — are allowed; table-only/computed sort keys are skipped with a
-        warning rather than failing the export.
+        A `sort` parameter is the view's own sort; absent one, a saved view sorts by its stored
+        `sort_order`, which is how the view itself resolves the two (see `BaseTable.__init__`).
+
+        A sort key that `order_by()` cannot resolve is skipped with a warning rather than failing the
+        export: the view's sort is incidental to what the user asked for, and its columns include
+        table-only and computed ones that no query can order by.
         """
+        sort_params = query_params.getlist("sort")
+        if not any(sort_params) and saved_view is not None:
+            sort_params = saved_view.config.get("sort_order", [])
         sortable = []
-        for sort_param in (param for param in query_params.getlist("sort") if param):
-            head = sort_param.lstrip("-").split("__", 1)[0]
-            if head.startswith("cf_"):
+        for sort_param in (param for param in sort_params if param):
+            if self._is_sortable(model, sort_param.lstrip("-")):
                 sortable.append(sort_param)
-                continue
-            try:
-                model._meta.get_field(head)
-                sortable.append(sort_param)
-            except FieldDoesNotExist:
+            else:
                 self.logger.warning("Ignoring sort on `%s`; not a sortable field for this model", sort_param)
         if sortable:
             queryset = queryset.order_by(*sortable)
         return queryset
 
+    @staticmethod
+    def _is_sortable(model, field_path):
+        """Whether `order_by()` can resolve this field path, following any relations it traverses.
+
+        Every segment is checked, not just the head: `order_by()` validates lazily, at query evaluation,
+        so an unresolvable path would otherwise surface as a `FieldError` from deep inside serialization
+        rather than as a skipped sort.
+        """
+        if field_path.startswith("cf_"):
+            # Custom fields sort via a JSON-field lookup rather than a field of the model.
+            return True
+        for segment in field_path.split("__"):
+            if model is None:
+                return False  # a previous segment was not a relation, so there is nothing left to traverse
+            if segment == "pk":
+                model = None
+                continue
+            try:
+                model = model._meta.get_field(segment).related_model
+            except FieldDoesNotExist:
+                return False
+        return True
+
     # ---- RESOLVE FIELDS / MATCH (which columns, and the re-import match key) ----
 
-    def _resolve_export_fields(self, export_fields, saved_export_config):
-        """The effective field-selection string: the explicit choice, else the saved view's selection."""
-        if not export_fields and saved_export_config.get("fields"):
-            saved_fields = saved_export_config["fields"]
-            export_fields = ",".join(saved_fields) if isinstance(saved_fields, (list, tuple)) else saved_fields
-            self.logger.info("Applying the saved view's export field selection")
-        return export_fields
+    def _get_current_view_columns(self, model, query_params, saved_view):
+        """The columns the launching list view is displaying, as export field paths (None = no selection).
 
-    @staticmethod
-    def _normalize_export_format(export_format, saved_export_config):
-        """The effective output format: the explicit choice, else the saved view's, else CSV."""
-        return export_format or saved_export_config.get("format") or "csv"
+        Resolved by building the model's table the way the list view builds it — from the saved view in
+        use, else the user's own stored table configuration, else the table's default columns — so that
+        this is the same set of columns, in the same order, that the user is looking at.
+
+        Not every column is exportable — row selection and action buttons aren't data at all, and a
+        computed field or related-object count is a displayed value with no serializer field behind it —
+        so `BaseTable.serializer_paths_by_visible_column()` does the mapping and reports what it cannot
+        place. Losing a column that way is logged but does not fail the export: what was asked for is
+        the view, not those specific columns.
+        """
+        table_class = get_table_for_model(model)
+        if table_class is None:
+            self.logger.warning(
+                "No table class found for %s, so its list view's columns cannot be determined; "
+                "exporting all fields instead.",
+                model._meta.label_lower,
+            )
+            return None
+        self.logger.debug("Found table class: `%s`", table_class.__name__)
+        table = table_class(
+            model.objects.none(),
+            user=self.user,
+            saved_view=saved_view,
+            table_changes_pending=query_params.get("table_changes_pending", False),
+        )
+        serializer_class = get_serializer_for_model(model)
+        export_field_paths, omitted = [], []
+        for column, path in table.serializer_paths_by_visible_column(serializer_class).items():
+            if path is None or not self._is_exportable_path(serializer_class, path):
+                omitted.append(column)
+            elif path not in export_field_paths:
+                # Two columns can map to the same field; a selection names each field once.
+                export_field_paths.append(path)
+        if omitted:
+            self.logger.warning(
+                "Omitting displayed column(s) %s, which have no exportable equivalent",
+                ", ".join(f"`{column}`" for column in omitted),
+            )
+        if not export_field_paths:
+            self.logger.warning("None of the displayed columns can be exported; exporting all fields instead.")
+            return None
+        return export_field_paths
+
+    def _is_exportable_path(self, serializer_class, path):
+        """Whether an export can actually emit this field path, for this user.
+
+        The same check an explicit selection gets, applied per path so that one unusable column is
+        dropped rather than taking the whole derived selection down with it.
+        """
+        try:
+            validate_field_paths(serializer_class, [path], user=self.user)
+        except ValueError as exc:
+            self.logger.debug("Cannot export `%s`: %s", path, exc)
+            return False
+        return True
 
     def _resolve_export_field_paths(self, model, export_fields):
-        """Parse the field-selection string into validated field paths (empty = export all fields)."""
+        """Parse and validate the explicit field-selection string (None if no selection was given)."""
         export_field_paths = import_utils.parse_match_fields(export_fields)
         if export_field_paths:
             try:
@@ -428,7 +511,6 @@ class ExportObjectList(Job):
             except ValueError as exc:
                 self.logger.error("%s", exc)
                 raise RunJobTaskFailed(str(exc)) from exc
-            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
         return export_field_paths
 
     # ---- RENDER (normalize to the requested output, then write the file) ----
@@ -529,20 +611,17 @@ class ExportObjectList(Job):
         export_format="csv",
         export_template=None,
         export_fields="",
-        use_current_view=False,
+        use_current_view_columns=False,
     ):  # pylint:disable=arguments-differ
         self._require_view_permission(content_type)
         model = content_type.model_class()
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
+        saved_view = self._get_saved_view(query_params)
 
-        # RESOLVE QUERYSET — "use current view" honors the launching list view: its filters, its sort
-        # order, and (for a saved view) its saved export configuration. Otherwise this is a full export
-        # of every object in the model's default order.
-        queryset = self._get_queryset(model)
-        saved_export_config = self._get_saved_view_export_config(query_params) if use_current_view else {}
-        if use_current_view:
-            queryset = self._filter_queryset(model, queryset, query_params)
+        # RESOLVE QUERYSET — which records, in what order: whatever the query string says the launching
+        # list view was showing. An empty query string is therefore a full export in the model's own order.
+        queryset = self._filter_queryset(model, self._get_queryset(model), query_params, saved_view)
 
         filename = self._export_filename(model)
 
@@ -563,9 +642,13 @@ class ExportObjectList(Job):
             self._render_devicetype_library_yaml(queryset, filename)
             return
 
-        # RESOLVE FIELDS / MATCH
-        export_fields = self._resolve_export_fields(export_fields, saved_export_config)
+        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else (on request) the ones the
+        # launching list view is displaying, else every field of the model.
         export_field_paths = self._resolve_export_field_paths(model, export_fields)
+        if export_field_paths is None and use_current_view_columns:
+            export_field_paths = self._get_current_view_columns(model, query_params, saved_view)
+        if export_field_paths:
+            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
         match_fields = self._get_match_fields(model, export_field_paths)
 
         # RENDER — CSV and JSON/YAML share one normalized serialization, written per-format

@@ -19,11 +19,18 @@ from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
 from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
 from nautobot.core.templatetags import helpers
-from nautobot.dcim.api.serializers import DeviceSerializer
-from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
-from nautobot.dcim.tables import DeviceTable, InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
-from nautobot.extras.choices import ComputedFieldTypeChoices
-from nautobot.extras.models import ComputedField, JobLogEntry
+from nautobot.dcim.api.serializers import DeviceSerializer, ManufacturerSerializer
+from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Manufacturer, Rack, RackGroup
+from nautobot.dcim.tables import (
+    DeviceTable,
+    InventoryItemTable,
+    LocationTable,
+    LocationTypeTable,
+    ManufacturerTable,
+    RackGroupTable,
+)
+from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices
+from nautobot.extras.models import ComputedField, CustomField, JobLogEntry
 from nautobot.extras.tables import JobLogEntryTable
 from nautobot.ipam.models import RIR
 from nautobot.ipam.tables import RIRTable
@@ -432,7 +439,50 @@ class TableAccessorAuditTestCase(SimpleTestCase):
 
 
 class SerializerPathsForVisibleColumnsTestCase(TestCase):
-    """Tests for BaseTable.serializer_paths_for_visible_columns() (export field-selection defaults)."""
+    """Tests for BaseTable.serializer_paths_(by|for)_visible_columns() (export field-selection defaults)."""
+
+    def test_paths_by_column_reports_columns_it_cannot_place(self):
+        """The mapping keeps a `None` entry per unplaceable column, which the list form drops."""
+        computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            key="export_probe",
+            label="Export Probe",
+            template="{{ obj.name }}",
+        )
+        table = DeviceTable(Device.objects.all())
+        # `DeviceTable` hides its non-default columns, and only what the view displays is exported
+        table.columns.show(f"cpf_{computed_field.key}")
+        mapping = table.serializer_paths_by_visible_column(DeviceSerializer)
+        self.assertEqual(mapping["name"], "name")
+        self.assertIsNone(mapping[f"cpf_{computed_field.key}"])  # rendered from a template, not a field
+        # Non-data columns are not in the mapping at all, there being nothing to report about them
+        self.assertNotIn("pk", mapping)
+        self.assertNotIn("actions", mapping)
+        self.assertNotIn(None, table.serializer_paths_for_visible_columns(DeviceSerializer))
+
+    def test_count_column_is_not_a_field_even_when_the_serializer_has_one(self):
+        """A `LinkedCountColumn` maps to nothing, its serializer field reading a display annotation.
+
+        `ManufacturerSerializer.device_type_count` is such a field: selecting it would put a column in
+        an export with nothing in it, an export not annotating its queryset the way this table does.
+        """
+        table = ManufacturerTable(Manufacturer.objects.all())
+        self.assertIsInstance(table.columns["device_type_count"].column, LinkedCountColumn)
+        self.assertIn("device_type_count", ManufacturerSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertIsNone(table.serializer_paths_by_visible_column(ManufacturerSerializer)["device_type_count"])
+
+    def test_custom_field_column_maps_to_its_own_name(self):
+        """A custom-field column exports as `cf_<key>`, not as its `_custom_field_data` accessor."""
+        custom_field = CustomField.objects.create(
+            key="export_probe", label="Export Probe", type=CustomFieldTypeChoices.TYPE_TEXT
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Device)])
+        table = DeviceTable(Device.objects.all())
+        column_name = f"cf_{custom_field.key}"
+        table.columns.show(column_name)  # `DeviceTable` hides its non-default columns
+        self.assertEqual(str(table.columns[column_name].accessor), f"_custom_field_data__{custom_field.key}")
+        self.assertEqual(table.serializer_paths_by_visible_column(DeviceSerializer)[column_name], column_name)
 
     def test_device_table_columns_map_to_serializer_paths(self):
         table = DeviceTable(Device.objects.all())

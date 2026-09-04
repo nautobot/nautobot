@@ -177,7 +177,29 @@ Such a file can still be imported - you just have to say what to match on, eithe
 
 ### Scoping the exported objects
 
-TODO - add documentation when this is implemented
+An export always covers the same objects, in the same order, as the list view it was launched from. Exporting from a filtered, sorted view therefore gives you a file of exactly the rows you were looking at, and exporting from an unfiltered view gives you every object of that type in its default order.
+
+The `Export Object List` Job expresses that view through its **Filterset Parameters** (`query_string`) input, which takes the view's URL query string:
+
+```no-highlight
+status=active&location=ams01&sort=-name
+```
+
+The filters and the sort order both apply. When the query string references a saved view (`?saved_view=<id>`), that view's own stored filters and sort order apply as well, exactly as they do when you visit it:
+
+- Its stored filters are used as long as the query string carries no filters of its own. Any filter in the query string means you changed the view's filters, and replaces the saved view's filters entirely rather than combining with them - which is what lets you widen a saved view as well as narrow it.
+- `&all_filters_removed=true` says you cleared the filters, so none apply.
+- Its stored sort order is used unless the query string carries a `sort` of its own.
+
+A sort on something the database cannot order by - a column computed for display, say - is skipped with a warning rather than failing the export.
+
+### Exporting the columns you are looking at
+
+Selecting **Use Current View Columns** (`use_current_view_columns`) defaults the exported fields to the columns the corresponding list view is currently displaying: those of the saved view in use, if any, otherwise the ones you have configured for yourself through the table's **Configure Table** dialog, otherwise the table's default columns.
+
+This is only a default for [**Fields to Export**](#selecting-fields-to-export). Naming fields explicitly takes precedence, and the option has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
+
+Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts such as **Devices** or **Dynamic Groups** are values assembled for display rather than fields of the record. Such columns are left out of the export, and the Job logs a warning naming each one, so the file never quietly disagrees with the view it came from. If none of the displayed columns can be exported, the export falls back to including every field.
 
 ## The self-describing file
 

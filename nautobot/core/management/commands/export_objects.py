@@ -44,6 +44,13 @@ class Command(BaseCommand):
             '(e.g. "name,status__name,device_type__manufacturer__name"); default is all fields',
         )
         parser.add_argument(
+            "--use-current-view-columns",
+            action="store_true",
+            help="In the absence of --fields, export the columns that the corresponding list view would "
+            "display for this user (from the saved view named in --filter, if any, else from the user's "
+            "own table configuration)",
+        )
+        parser.add_argument(
             "-o",
             "--output",
             help="Path to write the exported file to (default: write to standard output)",
@@ -58,6 +65,7 @@ class Command(BaseCommand):
             "query_string": options["filter"],
             "export_format": options["format"],
             "export_fields": options["fields"],
+            "use_current_view_columns": options["use_current_view_columns"],
         }
 
         job_result = run_system_job_locally(self, user, JOB_CLASS_PATH, data)
