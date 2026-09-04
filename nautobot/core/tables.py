@@ -1,4 +1,5 @@
 import contextlib
+import itertools
 import logging
 
 from django.conf import settings
@@ -46,6 +47,7 @@ class BaseTable(django_tables2.Table):
             "class": "table table-hover nb-table-headings",
         }
         default = helpers.HTML_NONE
+        show_row_overviews = True
 
     def __init__(
         self,
@@ -60,6 +62,7 @@ class BaseTable(django_tables2.Table):
         data_transform_callback=None,
         configurable=False,
         is_object_embedded_search_results=False,
+        show_row_overviews=False,
         **kwargs,
     ):
         """
@@ -82,6 +85,9 @@ class BaseTable(django_tables2.Table):
                 `is_object_embedded_search_results` is set to `True`.
             is_object_embedded_search_results (bool): When set to `True` disable table configuration and sorting, render
                 columns unaffected by any user configuration, with static order and visibility.
+            show_row_overviews (bool): Include a per-row button that expands the row to reveal the object's overview.
+                Defaults to `False`, opting out regardless of `Meta`. Pass `None` to defer to the table's
+                `Meta.show_row_overviews`, which tables that expand their rows to children instead set to `False`.
             **kwargs (dict, optional): Passed through to django_tables2.Table
         Warning:
             Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
@@ -145,6 +151,23 @@ class BaseTable(django_tables2.Table):
         self.configurable = configurable
         self.is_object_embedded_search_results = is_object_embedded_search_results
 
+        # `show_row_overviews` is `False` by default to prevent unexpected overview buttons. If explicitly set to
+        # `None`, however, e.g. in `NautobotHTMLRenderer.construct_table`, it defers to the table setting, which
+        # defaults to `True`.
+        if show_row_overviews is None:
+            show_row_overviews = getattr(self.Meta, "show_row_overviews", True)
+
+        from nautobot.core.views.utils import has_overview  # Avoid circular import through nautobot.extras.tables
+
+        # Overview toggles are relevant only for views with overview endpoints, and embedded search results tables are
+        # a special case in which `show_row_overviews` must be disabled regardless of table configuration.
+        self.show_row_overviews = show_row_overviews and not is_object_embedded_search_results and has_overview(model)
+        if self.show_row_overviews:
+            kwargs["extra_columns"] = [
+                *kwargs.get("extra_columns", []),
+                ("overview", OverviewColumn(url_name=get_route_for_model(model, "overview"))),
+            ]
+
         # Init table
         super().__init__(*args, order_by=order_by, orderable=orderable, row_attrs=row_attrs, **kwargs)
 
@@ -198,6 +221,11 @@ class BaseTable(django_tables2.Table):
                     self.columns.hide(name)
             self.sequence = [c for c in columns if c in self.base_columns]
 
+        # Always include the overview column, if enabled on the table, right after the PK column
+        if self.show_row_overviews:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("overview")
+            self.sequence.insert(0, "overview")
         # Always include PK and actions columns, if defined on the table, as first and last columns respectively
         if pk:
             with contextlib.suppress(ValueError):
@@ -336,12 +364,12 @@ class BaseTable(django_tables2.Table):
         selected_columns = [
             (name, column.verbose_name)
             for name, column in self.columns.items()
-            if name in self.sequence and name not in ["pk", "actions"]
+            if name in self.sequence and name not in ["pk", "actions", "overview"]
         ]
         available_columns = [
             (name, column.verbose_name)
             for name, column in self.columns.items()
-            if name not in self.sequence and name not in ["pk", "actions"]
+            if name not in self.sequence and name not in ["pk", "actions", "overview"]
         ]
         return selected_columns + available_columns
 
@@ -477,6 +505,58 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
             '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2"'
             ' aria-label="Toggle all rows" title="Toggle all" />'
         )
+
+
+class OverviewColumn(django_tables2.TemplateColumn):
+    """Per-row button that expands the row to reveal the object's overview."""
+
+    template_code = """
+    <button
+        aria-expanded="false"
+        class="btn m-n2 nb-overview-toggle p-2 text-secondary"
+        data-nb-overview-row-id="overview-{{ record.pk }}"
+        data-nb-title-collapsed="Show details for {{ record }}"
+        data-nb-title-expanded="Hide details for {{ record }}"
+        hx-get="{% url overview_url_name pk=record.pk %}"
+        hx-indicator="closest .table-responsive"
+        hx-swap="afterend"
+        hx-sync="this:drop"
+        hx-target="closest tr"
+        hx-trigger="click[this.getAttribute('aria-expanded') === 'false']"
+        hx-vals='{"colspan_content": {{ colspan_content }}, "colspan_offset": {{ colspan_offset }}}'
+        title="Show details for {{ record }}"
+        type="button"
+    >
+        <span class="visually-hidden">Show details for {{ record }}</span>
+        <span aria-hidden="true" class="mdi mdi-window-maximize"></span>
+    </button>
+    """
+
+    def __init__(self, url_name, *args, **kwargs):
+        kwargs.setdefault("attrs", {"td": {"class": "nb-w-0"}})
+        super().__init__(
+            *args,
+            template_code=self.template_code,
+            extra_context={"overview_url_name": url_name},
+            orderable=False,
+            verbose_name="",
+            **kwargs,
+        )
+
+    def get_context_data(self, *, record, table, value, bound_column, **kwargs):
+        columns = table.visible_columns
+        # `takewhile` stops at the first content column, so only the leading toggle and checkbox cells are counted
+        colspan_offset = len(list(itertools.takewhile(lambda name: name in ("overview", "pk"), columns)))
+        colspan_content = len(columns) - colspan_offset
+        # A configurable table renders an extra cell for the config button, unless the last column is `actions` and
+        # hosts the button itself, as in `inc/table.html`
+        if table.configurable and columns[-1] != "actions":
+            colspan_content += 1
+        return {
+            **super().get_context_data(record=record, table=table, value=value, bound_column=bound_column, **kwargs),
+            "colspan_content": colspan_content,
+            "colspan_offset": colspan_offset,
+        }
 
 
 class BooleanColumn(django_tables2.Column):

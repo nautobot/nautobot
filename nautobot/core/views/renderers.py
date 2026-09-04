@@ -99,6 +99,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
+                    show_row_overviews=None,
                     is_object_embedded_search_results=is_object_embedded_search_request,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):

@@ -553,6 +553,7 @@ class PrefixTable(StatusTableMixin, RoleTableMixin, BaseTable):
         row_attrs = {
             "class": lambda record: "table-success" if not record.present_in_database else "",
         }
+        show_row_overviews = False
 
 
 class PrefixDetailTable(PrefixTable):
