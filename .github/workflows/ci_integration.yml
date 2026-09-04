@@ -285,6 +285,8 @@ jobs:
       - "tests-mysql"
       - "tests-postgres"
       - "ui-build-check"
+    permissions:
+      packages: "write"
     strategy:
       fail-fast: true
       matrix:
@@ -349,6 +351,8 @@ jobs:
       (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')
     needs:
       - "container-build"
+    permissions:
+      packages: "write"
     runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
