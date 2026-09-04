@@ -1624,21 +1624,22 @@ class ObjectOverviewViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, custom_view_base_action="view")
     def overview(self, request, *args, **kwargs):
         if request.headers.get("HX-Request", False):
-            colspans = {}
-            for name, default in (("colspan_content", 100), ("colspan_indent", 0)):
-                try:
-                    colspans[name] = max(int(request.GET[name]), 0)
-                except (KeyError, ValueError):
-                    colspans[name] = default
+            # Number of columns to skip and span, as sent by the toggle's `hx-vals`, defaulted when unusable
+            colspans = {
+                param: int(request.GET[param]) if request.GET.get(param, "").isdigit() else default
+                for param, default in (("colspan_content", 100), ("colspan_offset", 0))
+            }
 
             return Response(
-                get_overview(
-                    getattr(self, "object_detail_content", None),
-                    overview_fields=self.overview_fields,
-                    overview_html=self.overview_html,
-                    overview_template_name=self.overview_template_name,
-                )
-                | colspans
+                {
+                    **get_overview(
+                        getattr(self, "object_detail_content", None),
+                        overview_fields=self.overview_fields,
+                        overview_html=self.overview_html,
+                        overview_template_name=self.overview_template_name,
+                    ),
+                    **colspans,
+                }
             )
 
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")

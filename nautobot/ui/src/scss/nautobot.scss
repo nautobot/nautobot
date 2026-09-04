@@ -1099,7 +1099,7 @@ $nb-overview-fields-columns-min-width: 40rem;
   }
 }
 
-.nb-overview-field-column-end {
+.nb-overview-field.nb-overview-field-column-end {
   @container (min-width: #{$nb-overview-fields-columns-min-width}) {
     border-bottom: 0;
   }

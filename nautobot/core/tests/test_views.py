@@ -1701,7 +1701,7 @@ class ObjectOverviewViewTestCase(TestCase):
     def test_default_overview(self):
         response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
-        keys = re.findall(r"<span>(.*?):", response.content.decode(response.charset))
+        keys = re.findall(r"<dt>(.*?)</dt>", response.content.decode(response.charset))
         self.assertEqual(
             keys,
             ["Location Type", "Status", "Parent", "Tenant", "Facility", "AS Number", "Time Zone", "Description"],
@@ -1714,7 +1714,10 @@ class ObjectOverviewViewTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
-            '<tr><td colspan="100"><span>Label: VALUE</span></td></tr>',
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<dl class="nb-overview-fields" style="--nb-overview-rows: 1;">'
+            '<div class="nb-overview-field nb-overview-field-column-end"><dt>Label</dt><dd>VALUE</dd></div>'
+            "</dl></td></tr>",
         )
 
     def test_overview_html(self):
@@ -1723,7 +1726,8 @@ class ObjectOverviewViewTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
-            f'<tr><td colspan="100"><b>{self.location.name}</b></td></tr>',
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+            f'<td class="p-0" colspan="100"><b>{self.location.name}</b></td></tr>',
         )
 
     def test_overview_template_name(self):
@@ -1733,7 +1737,8 @@ class ObjectOverviewViewTestCase(TestCase):
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
-            '<tr><td colspan="100"><table class="collapse show table table-hover"></table></td></tr>',
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<table class="collapse show table table-hover"></table></td></tr>',
         )
 
     def test_overview_arguments_are_mutually_exclusive(self):

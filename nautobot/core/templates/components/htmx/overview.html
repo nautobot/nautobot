@@ -1,7 +1,7 @@
 {% load helpers %}
 {% load ui_framework %}
 <tr class="nb-overview-row" id="overview-{{ object.pk }}">
-    {% if colspan_indent %}<td colspan="{{ colspan_indent }}"></td>{% endif %}
+    {% if colspan_offset %}<td colspan="{{ colspan_offset }}"></td>{% endif %}
     <td class="p-0" colspan="{{ colspan_content }}">
         {% if overview_template_name %}
             {% include overview_template_name %}
@@ -9,20 +9,23 @@
             {% resolve_overview overview_html as html %}{{ html }}
         {% else %}
             {% resolve_overview overview as overview_data %}
-            {% with pair_count=overview_data|length %}
-            {% with rows=pair_count|divisibleby:2|yesno:"0,1"|add:pair_count|divide:2 %}
-            <dl class="nb-overview-fields" style="--nb-overview-rows: {{ rows }};">
-                {% for key, value in overview_data %}
-                    <div
-                        class="nb-overview-field{% if forloop.counter|divisibleby:rows %} nb-overview-field-column-end{% endif %}"
-                    >
-                        <dt>{{ key }}</dt>
-                        <dd>{{ value }}</dd>
-                    </div>
-                {% endfor %}
-            </dl>
-            {% endwith %}
-            {% endwith %}
+            {% if overview_data %}
+                {% with pair_count=overview_data|length %}
+                    {# Fields per column: half of pair_count, rounded up by adding one when the count is odd #}
+                    {% with rows=pair_count|divisibleby:2|yesno:"0,1"|add:pair_count|divide:2 %}
+                        <dl class="nb-overview-fields" style="--nb-overview-rows: {{ rows }};">
+                            {% for key, value in overview_data %}
+                                <div class="nb-overview-field{% if forloop.counter|divisibleby:rows %} nb-overview-field-column-end{% endif %}">
+                                    <dt>{{ key }}</dt>
+                                    <dd>{{ value }}</dd>
+                                </div>
+                            {% endfor %}
+                        </dl>
+                    {% endwith %}
+                {% endwith %}
+            {% else %}
+                <p class="mb-0 px-10 py-4 text-secondary">— No details to display —</p>
+            {% endif %}
         {% endif %}
     </td>
 </tr>
