@@ -32,7 +32,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_n
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
-from nautobot.core.views.utils import METRICS_CACHE_KEY
+from nautobot.core.views.utils import get_overview_panel, METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -1739,6 +1739,59 @@ class ObjectOverviewViewTestCase(TestCase):
             response.content.decode(response.charset),
             f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
             '<table class="collapse show table table-hover"></table></td></tr>',
+        )
+
+    def test_overview_colspans(self):
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(
+                self.url, {"colspan_content": 3, "colspan_offset": 2}, headers={"HX-Request": "true"}
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td colspan="2"></td>'
+            f'<td class="p-0" colspan="3"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_colspan_offset_zero(self):
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(
+                self.url, {"colspan_content": 4, "colspan_offset": 0}, headers={"HX-Request": "true"}
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+            f'<td class="p-0" colspan="4"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_colspans_fall_back_to_defaults(self):
+        for colspans in (
+            {"colspan_content": "three", "colspan_offset": "two"},
+            {"colspan_content": -3, "colspan_offset": -2},
+            {"colspan_content": "", "colspan_offset": ""},
+        ):
+            with (
+                self.subTest(colspans=colspans),
+                mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
+            ):
+                response = self.client.get(self.url, colspans, headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+                self.assertHTMLEqual(
+                    response.content.decode(response.charset),
+                    f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+                    f'<td class="p-0" colspan="100"><b>{self.location.name}</b></td></tr>',
+                )
+
+    def test_overview_placeholder_when_panel_declines_to_render(self):
+        panel = get_overview_panel(LocationUIViewSet.object_detail_content)
+        with mock.patch.object(panel, "should_render", return_value=False):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<p class="mb-0 px-10 py-4 text-secondary">— No details to display —</p></td></tr>',
         )
 
     def test_overview_arguments_are_mutually_exclusive(self):

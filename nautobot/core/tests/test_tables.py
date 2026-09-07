@@ -2,6 +2,7 @@ import contextlib
 import importlib
 import pkgutil
 from types import SimpleNamespace
+from unittest import mock
 import warnings
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -11,13 +12,14 @@ from django.db import connection
 from django.db.models import IntegerField, Value
 from django.test import SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
+from django_tables2 import Column
 from django_tables2.utils import Accessor
 
 import nautobot
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
-from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
+from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn, ToggleColumn
 from nautobot.core.templatetags import helpers
 from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
 from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
@@ -27,6 +29,7 @@ from nautobot.extras.tables import JobLogEntryTable
 from nautobot.ipam.models import RIR
 from nautobot.ipam.tables import RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
+from nautobot.users.models import User
 from nautobot.wireless.models import WirelessNetwork
 from nautobot.wireless.tables import WirelessNetworkTable
 
@@ -265,6 +268,122 @@ class BaseTableLinkedCountColumnTestCase(TestCase):
             self.assertNotIn("assigned_prefix_count", table.data.data.query.annotations)
         finally:
             del RIR.assigned_prefix_count
+
+
+class BaseTableOverviewColumnTestCase(TestCase):
+    class OverviewTable(BaseTable):
+        pk = ToggleColumn()
+        actions = ButtonsColumn(RIR)
+
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("pk", "name", "is_private", "actions")
+            exclude = ("dynamic_group_count",)
+
+    class OptedOutOverviewTable(OverviewTable):
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("pk", "name", "is_private", "actions")
+            exclude = ("dynamic_group_count",)
+            show_row_overviews = False
+
+    class OverviewTableWithoutPk(BaseTable):
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("name", "is_private")
+            exclude = ("dynamic_group_count",)
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch("nautobot.core.views.utils.has_overview", return_value=True)
+        self.mock_has_overview = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_overview_colspans(self, table):
+        bound_column = table.columns["overview"]
+        context = bound_column.column.get_context_data(
+            record=RIR(),
+            table=table,
+            value=None,
+            bound_column=bound_column,
+            bound_row=SimpleNamespace(row_counter=0),
+        )
+        return {key: context[key] for key in ("colspan_offset", "colspan_content")}
+
+    def test_meta_show_row_overviews(self):
+        self.assertTrue(self.OverviewTable.Meta.show_row_overviews)
+        self.assertFalse(self.OptedOutOverviewTable.Meta.show_row_overviews)
+
+    def test_argument_omitted(self):
+        table = self.OverviewTable(RIR.objects.none())
+        self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
+
+    def test_argument_true(self):
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True)
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_argument_none_defers_to_meta(self):
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=None)
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_argument_none_defers_to_meta_opting_out(self):
+        table = self.OptedOutOverviewTable(RIR.objects.none(), show_row_overviews=None)
+        self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
+
+    def test_argument_true_overrides_meta_opting_out(self):
+        table = self.OptedOutOverviewTable(RIR.objects.none(), show_row_overviews=True)
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_model_without_overview(self):
+        self.mock_has_overview.return_value = False
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True)
+        self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
+
+    def test_object_embedded_search_results(self):
+        for show_row_overviews in (True, None):
+            with self.subTest(show_row_overviews=show_row_overviews):
+                table = self.OverviewTable(
+                    RIR.objects.none(),
+                    show_row_overviews=show_row_overviews,
+                    is_object_embedded_search_results=True,
+                )
+                self.assertEqual(table.visible_columns, ["name", "is_private"])
+
+    def test_placed_after_visible_pk_column(self):
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True)
+        table.columns.show("pk")
+        self.assertEqual(table.visible_columns, ["pk", "overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 2, "colspan_content": 3})
+
+    def test_placed_first_without_pk_column(self):
+        table = self.OverviewTableWithoutPk(RIR.objects.none(), show_row_overviews=True)
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 2})
+
+    def test_user_column_configuration(self):
+        user = User.objects.create_user(username="overview-column")
+        user.set_config("tables.OverviewTable.columns", ["is_private", "name"], commit=True)
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True, user=user)
+        self.assertEqual(table.visible_columns, ["overview", "is_private", "name", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_extra_columns(self):
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True, extra_columns=[("extra", Column())])
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "extra", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 4})
+
+    def test_excluded_from_configurable_columns(self):
+        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True, configurable=True)
+        self.assertNotIn("overview", [name for name, _ in table.configurable_columns])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_configurable_table_without_actions_column(self):
+        table = self.OverviewTableWithoutPk(RIR.objects.none(), show_row_overviews=True, configurable=True)
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
 
 class LinkedCountColumnRenderTestCase(TestCase):
