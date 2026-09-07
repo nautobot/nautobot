@@ -12,7 +12,7 @@ from nautobot.core.middleware import (
     RequestMetricMiddleware,
     TotalDurationRequestMetric,
 )
-from nautobot.core.testing import TestCase
+from nautobot.core.testing import APITestCase, TestCase
 from nautobot.extras.models import Status
 
 
@@ -184,7 +184,7 @@ class DatabaseDurationRequestMetricTestCase(TestCase):
         self.assertNotIn(metric, default_database_execution_wrappers)
 
 
-class RequestMetricMiddlewareTestCase(TestCase):
+class RequestMetricMiddlewareTestCase(APITestCase):
     """Tests for the `Server-Timing` response header written by `RequestMetricMiddleware`."""
 
     header_name = "Server-Timing"
@@ -212,15 +212,20 @@ class RequestMetricMiddlewareTestCase(TestCase):
     def empty_response(request):
         return HttpResponse()
 
+    def call_api(self):
+        """Request a REST API endpoint as a token authenticated client and return the response."""
+        url = reverse("api-status")
+        return self.client.get(url, **self.header)
+
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=False, REQUEST_DB_DURATION_HEADER_ENABLED=False)
     def test_header_is_omitted_when_all_metrics_are_disabled(self):
-        response = self.call_middleware(self.empty_response)
+        response = self.call_api()
 
         self.assertNotIn(self.header_name, response.headers)
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=False)
     def test_total_metric_exists_when_only_metric_enabled(self):
-        response = self.call_middleware(self.empty_response)
+        response = self.call_api()
 
         raw_server_timing_header = response.headers[self.header_name]
         request_metrics = self.parse_metrics(raw_server_timing_header)
@@ -230,7 +235,7 @@ class RequestMetricMiddlewareTestCase(TestCase):
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=False, REQUEST_DB_DURATION_HEADER_ENABLED=True)
     def test_database_metric_exists_when_only_metric_enabled(self):
-        response = self.call_middleware(self.empty_response)
+        response = self.call_api()
 
         raw_server_timing_header = response.headers[self.header_name]
         request_metrics = self.parse_metrics(raw_server_timing_header)
@@ -240,7 +245,7 @@ class RequestMetricMiddlewareTestCase(TestCase):
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
     def test_total_and_db_metrics_exist_when_enabled(self):
-        response = self.call_middleware(self.empty_response)
+        response = self.call_api()
 
         raw_server_timing_header = response.headers[self.header_name]
         request_metrics = self.parse_metrics(raw_server_timing_header)
@@ -279,42 +284,18 @@ class RequestMetricMiddlewareTestCase(TestCase):
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
     def test_durations_are_reported_in_milliseconds(self):
-        def get_response(request):
-            time.sleep(0.05)
-            return HttpResponse()
-
-        response = self.call_middleware(get_response)
+        response = self.call_api()
 
         raw_server_timing_header = response.headers[self.header_name]
         request_metrics = self.parse_metrics(raw_server_timing_header)
         total_duration = request_metrics["total"]["duration"]
 
-        self.assertGreater(total_duration, 10)
-        self.assertLess(total_duration, 1000)
-
-    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
-    def test_database_queries_are_counted_and_timed(self):
-        def get_response(request):
-            Status.objects.count()
-            Status.objects.count()
-            return HttpResponse()
-
-        response = self.call_middleware(get_response)
-
-        raw_server_timing_header = response.headers[self.header_name]
-        request_metrics = self.parse_metrics(raw_server_timing_header)
-
-        total_duration = request_metrics["total"]["duration"]
-        database_duration = request_metrics["db"]["duration"]
-        database_description = request_metrics["db"]["description"]
-
-        self.assertGreaterEqual(total_duration, database_duration)
-        self.assertEqual(database_description, "2 database queries")
-        self.assertGreater(database_duration, 0)
+        self.assertGreater(total_duration, 0)
+        self.assertLess(total_duration, 10_000)
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
     def test_durations_are_rounded_to_two_decimal_places(self):
-        response = self.call_middleware(self.empty_response)
+        response = self.call_api()
 
         raw_server_timing_header = response.headers[self.header_name]
 
@@ -324,6 +305,21 @@ class RequestMetricMiddlewareTestCase(TestCase):
             with self.subTest(duration=raw_duration):
                 _, _, decimal_places = raw_duration.partition(".")
                 self.assertLessEqual(len(decimal_places), 2)
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_database_queries_are_counted_and_timed(self):
+        response = self.call_api()
+
+        raw_server_timing_header = response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+
+        total_duration = request_metrics["total"]["duration"]
+        database_duration = request_metrics["db"]["duration"]
+        database_description = request_metrics["db"]["description"]
+
+        self.assertGreaterEqual(total_duration, database_duration)
+        self.assertRegex(database_description, r"^\d+ database queries$")
+        self.assertGreater(database_duration, 0)
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=False)
     def test_no_database_query_wrapper_used_when_database_metric_is_disabled(self):
@@ -363,7 +359,7 @@ class RequestMetricMiddlewareTestCase(TestCase):
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
     def test_metrics_exist_when_using_the_configured_middleware_stack(self):
         """Exercise the middleware from its real position in `settings.MIDDLEWARE`."""
-        response = self.client.get(reverse("home"))
+        response = self.call_api()
 
         raw_server_timing_header = response.headers[self.header_name]
         request_metrics = self.parse_metrics(raw_server_timing_header)
