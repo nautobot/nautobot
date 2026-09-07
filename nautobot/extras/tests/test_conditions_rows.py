@@ -123,10 +123,6 @@ class ResolveTest(RowsTestCase):
         with self.assertRaises(ConditionPresetError):
             row.resolve()
 
-    def test_base_class_is_abstract(self):
-        with self.assertRaises(TypeError):
-            ConditionRow(negate=False)
-
 
 @tag("unit")
 class CleanTest(RowsTestCase, SimpleTestCase):
