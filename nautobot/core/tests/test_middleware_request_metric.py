@@ -1,10 +1,15 @@
+import re
 import time
 
 from django.db import connections, DEFAULT_DB_ALIAS
+from django.http import HttpResponse
+from django.test import override_settings, RequestFactory
+from django.urls import reverse
 
 from nautobot.core.middleware import (
     BaseRequestMetric,
     DatabaseDurationRequestMetric,
+    RequestMetricMiddleware,
     TotalDurationRequestMetric,
 )
 from nautobot.core.testing import TestCase
@@ -175,3 +180,134 @@ class DatabaseDurationRequestMetricTestCase(TestCase):
             self.assertIn(metric, connections[DEFAULT_DB_ALIAS].execute_wrappers)
 
         self.assertNotIn(metric, connections[DEFAULT_DB_ALIAS].execute_wrappers)
+
+
+class RequestMetricMiddlewareTestCase(TestCase):
+    """Tests for the `Server-Timing` response header written by `RequestMetricMiddleware`."""
+
+    header_name = "Server-Timing"
+    # Example:
+    # name=EXAMPLE;dur:00:00:00;desc=Test Example
+    metric_pattern = re.compile(r'(?P<name>[\w-]+);dur=(?P<duration>\d+(?:\.\d+)?);desc="(?P<description>[^"]*)"')
+
+    def parse_metrics(self, header_value):
+        """Return `{name: {"duration": duration_in_milliseconds, "description": description}}` parsed from a `Server-Timing` value."""
+        request_metrics = {
+            match.group("name"): {
+                "duration": float(match.group("duration")),
+                "description": match.group("description"),
+            }
+            for match in self.metric_pattern.finditer(header_value)
+        }
+        return request_metrics
+
+    @staticmethod
+    def call_middleware(get_response):
+        """Run the middleware around `get_response` and return the resulting response."""
+        return RequestMetricMiddleware(get_response)(RequestFactory().get("/"))
+
+    @staticmethod
+    def empty_response(request):
+        return HttpResponse()
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=False, REQUEST_DB_DURATION_HEADER_ENABLED=False)
+    def test_header_is_omitted_when_all_metrics_are_disabled(self):
+        response = self.call_middleware(self.empty_response)
+
+        self.assertNotIn(self.header_name, response.headers)
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=False)
+    def test_total_metric_exists_when_only_metric_enabled(self):
+        response = self.call_middleware(self.empty_response)
+
+        raw_server_timing_header = response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+        response_header_metric_names = list(request_metrics.keys())
+
+        self.assertEqual(response_header_metric_names, ["total"])
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=False, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_database_metric_exists_when_only_metric_enabled(self):
+        response = self.call_middleware(self.empty_response)
+
+        raw_server_timing_header = response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+        response_header_metric_names = list(request_metrics.keys())
+
+        self.assertEqual(response_header_metric_names, ["db"])
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_total_and_db_metrics_exist_when_enabled(self):
+        response = self.call_middleware(self.empty_response)
+
+        raw_server_timing_header = response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+        response_header_metric_names = list(request_metrics.keys())
+
+        self.assertEqual(response_header_metric_names, ["total", "db"])
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_durations_are_reported_in_milliseconds(self):
+        def get_response(request):
+            time.sleep(0.05)
+            return HttpResponse()
+
+        response = self.call_middleware(get_response)
+
+        raw_server_timing_header = response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+        total_duration = request_metrics["total"]["duration"]
+
+        self.assertGreater(total_duration, 10)
+        self.assertLess(total_duration, 1000)
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_database_queries_are_counted_and_timed(self):
+        def get_response(request):
+            Status.objects.count()
+            Status.objects.count()
+            return HttpResponse()
+
+        response = self.call_middleware(get_response)
+
+        raw_server_timing_header = response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+
+        total_duration = request_metrics["total"]["duration"]
+        database_duration = request_metrics["db"]["duration"]
+        database_description = request_metrics["db"]["description"]
+
+        self.assertGreaterEqual(total_duration, database_duration)
+        self.assertEqual(database_description, "2 database queries")
+        self.assertGreater(database_duration, 0)
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_durations_are_rounded_to_two_decimal_places(self):
+        response = self.call_middleware(self.empty_response)
+
+        raw_server_timing_header = response.headers[self.header_name]
+
+        raw_durations = re.findall(r";dur=([\d.]+)", raw_server_timing_header)
+
+        for raw_duration in raw_durations:
+            with self.subTest(duration=raw_duration):
+                _, _, decimal_places = raw_duration.partition(".")
+                self.assertLessEqual(len(decimal_places), 2)
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_server_timing_header_does_not_override_other_headers(self):
+        """`Server-Timing` addition does not override other settings."""
+        # Cache doesn't get used. It's placeholder to smoke-test that state is
+        # persisting between responses and not clobbering other middleware
+        def existing_headers_response(request):
+            response = HttpResponse()
+            response.headers["Server-Timing"] = 'cache;dur=1.5;desc="Cache lookup"'
+            return response
+
+        current_response = self.call_middleware(existing_headers_response)
+
+        raw_server_timing_header = current_response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+        response_header_metric_names = list(request_metrics.keys())
+
+        self.assertEqual(response_header_metric_names, ["cache", "total", "db"])
