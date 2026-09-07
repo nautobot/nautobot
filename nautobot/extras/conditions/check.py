@@ -32,8 +32,8 @@ class RowVerdict:
 class Verdict:
     """The outcome for a list of rows.
 
-    `passed` is the one value dispatch reads: whether every row passed. `rows` is for a dry-run, one
-    `RowVerdict` per stored row.
+    `passed` is all a caller acting on the verdict needs: whether every row passed. `rows` explains it,
+    one `RowVerdict` per row in order, for showing a person which row stopped the rule and why.
     """
 
     rows: tuple[RowVerdict, ...]
@@ -50,16 +50,17 @@ def check_row(index, row, payload):
     Args:
         index (int): The row's position in the stored list, reported back for display.
         row (dict): The row as stored.
-        payload (dict): The event payload. Rendered as-is; callers that reuse a payload across rows
-            or actions pass a copy.
+        payload (dict): The event payload. Expressions cannot modify it, so one payload can be shared
+            across rows and actions.
 
     Returns:
-        (RowVerdict): Never raises; a failure of any kind is a `RowVerdict` with `passed=False` and
-            `error` set.
+        (RowVerdict): Never raises
     """
     try:
         condition = ConditionRow.from_dict(row)
         source, context = condition.resolve()
+        # `context` keys are all `param_*`, so they cannot collide with payload keys; if one ever did,
+        # Python would raise on the duplicate keyword rather than let either side win.
         result = compile_condition(source)(**payload, **context)
         passed = bool(result)
         if condition.negate:
@@ -82,5 +83,5 @@ def check(conditions, payload):
     Returns:
         (Verdict): `passed` is whether every row passed.
     """
-    rows = tuple(check_row(index, row, payload) for index, row in enumerate(conditions or []))
+    rows = tuple(check_row(index, row, payload) for index, row in enumerate(conditions))
     return Verdict(rows=rows, passed=all(row.passed for row in rows))

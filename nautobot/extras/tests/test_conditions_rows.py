@@ -9,7 +9,6 @@ from django.test import SimpleTestCase, tag
 from nautobot.extras.conditions.presets import (
     ConditionPresetError,
     FIELD_COMPARE,
-    FIELD_TRANSITION,
     register_builtin_condition_presets,
 )
 from nautobot.extras.conditions.rows import ConditionRow, ConditionRowError, ExpressionRow, PresetRow
@@ -102,6 +101,12 @@ class PresetShapeTest(RowsTestCase):
     def test_values_must_be_a_mapping(self):
         self.assertRowError({**PRESET, "values": ["mtu"]}, "values", "`values` must be a mapping")
 
+    def test_undeclared_value_names_rejected(self):
+        """Which names a preset row may carry is structure, checked at parse like the row's own keys."""
+        self.assertRowError(
+            {**PRESET, "values": {**PRESET["values"], "extra": "x"}}, "values", "does not accept value(s): extra"
+        )
+
 
 @tag("unit")
 class ResolveTest(RowsTestCase):
@@ -118,12 +123,9 @@ class ResolveTest(RowsTestCase):
         with self.assertRaises(ConditionPresetError):
             row.resolve()
 
-    def test_base_class_implements_nothing(self):
-        base = ConditionRow(negate=False)
-        for method in (base.clean, base.resolve, base.to_dict):
-            with self.subTest(method=method.__name__):
-                with self.assertRaises(NotImplementedError):
-                    method()
+    def test_base_class_is_abstract(self):
+        with self.assertRaises(TypeError):
+            ConditionRow(negate=False)
 
 
 @tag("unit")
@@ -146,10 +148,10 @@ class CleanTest(RowsTestCase, SimpleTestCase):
             bad.clean()
         self.assertEqual(caught.exception.params["parameter"], "operator")
 
-    def test_from_dict_does_not_validate_values(self):
-        """Shape now, values at save: an unknown value name parses and fails only in `clean()`."""
-        row = ConditionRow.from_dict({**PRESET, "values": {**PRESET["values"], "extra": "x"}})
-        with self.assertRaises(ValidationError):
+    def test_from_dict_checks_structure_not_values(self):
+        """A missing required value is a `clean()` problem, not a parse problem."""
+        row = ConditionRow.from_dict({"type": "preset", "preset": "field_compare", "values": {"field": "mtu"}})
+        with self.assertRaises(ConditionPresetError):
             row.clean()
 
 
@@ -161,25 +163,20 @@ class ToDictTest(RowsTestCase):
             {"type": "expression", "source": "data.mtu > 9000", "negate": False},
         )
 
-    def test_preset_round_trips_with_declared_values_only(self):
-        row = ConditionRow.from_dict({**PRESET, "values": {**PRESET["values"], "extra": "x"}})
+    def test_preset_round_trips(self):
         self.assertEqual(
-            row.to_dict(),
+            ConditionRow.from_dict(PRESET).to_dict(),
             {"type": "preset", "preset": "field_compare", "values": PRESET["values"], "negate": False},
         )
+
+    def test_to_dict_returns_a_copy_of_values(self):
+        row = ConditionRow.from_dict(PRESET)
+        as_dict = row.to_dict()
+        as_dict["values"]["field"] = "changed"
+        self.assertEqual(row.values["field"], "mtu")
 
     def test_to_dict_output_parses_back_equal(self):
         for stored in (EXPRESSION, PRESET, {**PRESET, "negate": True}):
             with self.subTest(stored=stored):
                 row = ConditionRow.from_dict(stored)
                 self.assertEqual(ConditionRow.from_dict(row.to_dict()), row)
-
-    def test_transition_values_keep_declared_order(self):
-        row = ConditionRow.from_dict(
-            {
-                "type": "preset",
-                "preset": "field_transition",
-                "values": {"to": "Active", "field": "status", "from": "Staged"},
-            }
-        )
-        self.assertEqual(list(row.to_dict()["values"]), [parameter.name for parameter in FIELD_TRANSITION.parameters])

@@ -16,7 +16,7 @@ PAYLOAD = {
     "event": "updated",
     "timestamp": "2026-08-27T10:00:00+00:00",
     "model": "device",
-    "username": "kasia",
+    "username": "nautobotuser",
     "request_id": "r",
     "data": {"name": "sw-01", "mtu": 9216, "status": {"id": "u2", "name": "Active"}, "tenant": None},
     "snapshots": {
@@ -99,6 +99,16 @@ class CheckRowTest(CheckTestCase):
         self.assertEqual(verdict.index, 7)
         self.assertIs(verdict.row, row)
 
+    def test_expressions_cannot_modify_the_payload(self):
+        """The environment is read-only, so one payload is safe to share across rows and actions."""
+        payload = {**PAYLOAD, "data": dict(PAYLOAD["data"])}
+        for source in ("data.clear() or true", "data.update({'mtu': 1}) or true", "data.pop('mtu') or true"):
+            with self.subTest(source=source):
+                verdict = check_row(0, expression(source), payload)
+                self.assertFalse(verdict.passed)
+                self.assertTrue(verdict.error.startswith("SecurityError:"), verdict.error)
+        self.assertEqual(payload["data"], PAYLOAD["data"])
+
 
 @tag("unit")
 class CheckTest(CheckTestCase):
@@ -111,12 +121,11 @@ class CheckTest(CheckTestCase):
         verdict = check([expression("1 / 0"), expression("true")], PAYLOAD)
         self.assertEqual(len(verdict.rows), 2)
         self.assertTrue(verdict.rows[1].passed)
+        self.assertFalse(verdict.passed)
 
-    def test_empty_conditions_pass(self):
-        for conditions in ([], None):
-            with self.subTest(conditions=conditions):
-                verdict = check(conditions, PAYLOAD)
-                self.assertEqual(verdict, Verdict(rows=(), passed=True))
+    def test_no_conditions_pass(self):
+        """An action with no conditions fires for every change, as it did before conditions existed."""
+        self.assertEqual(check([], PAYLOAD), Verdict(rows=(), passed=True))
 
     def test_as_dict_shape(self):
         as_dict = check([expression("true")], PAYLOAD).as_dict()
@@ -164,7 +173,7 @@ class BuiltinPresetsEndToEndTest(CheckTestCase):
                 self.assertIs(check([row], PAYLOAD).passed, expected)
 
     def test_user_is(self):
-        self.assertTrue(check([preset("user_is", username="kasia")], PAYLOAD).passed)
+        self.assertTrue(check([preset("user_is", username="nautobotuser")], PAYLOAD).passed)
         self.assertFalse(check([preset("user_is", username="sync")], PAYLOAD).passed)
         self.assertTrue(check([preset("user_is", username="sync", negate=True)], PAYLOAD).passed)
 

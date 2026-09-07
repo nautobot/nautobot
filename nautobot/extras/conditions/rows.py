@@ -1,19 +1,7 @@
-"""Condition rows: the shape of one condition, and what it resolves to for `check`.
+"""Condition rows: a preset from the catalog with its values, or a raw Jinja2 expression, either one
+optionally negated."""
 
-Conditions are a list of rows. A row is either a preset from the catalog with the values filled in, or
-a raw Jinja2 expression:
-
-    [
-        {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}},
-        {"type": "expression", "source": "data.mtu > 9000 and username != 'test'", "negate": true},
-    ]
-
-`negate` inverts the row's verdict and defaults to false.
-
-`ConditionRow.from_dict` is the one place that reads that shape. `clean()` validates a row for saving;
-`resolve()` returns the expression and its context variables for `check`.
-"""
-
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -34,24 +22,26 @@ class ConditionRowError(ValidationError):
 
 
 @dataclass(frozen=True)
-class ConditionRow:
+class ConditionRow(ABC):
     """One stored condition. Subclasses know how to resolve themselves; `check` decides what passes."""
 
-    negate: bool
-    # Keys a stored row of this type may carry. Subclasses set it.
+    negate: bool  # inverts the row's result
     _allowed_keys: ClassVar[frozenset[str]] = frozenset()
 
     @staticmethod
     def from_dict(row):
         """
-        Parse a stored row into an `ExpressionRow` or a `PresetRow`.
+        Parse a row into an `ExpressionRow` or a `PresetRow`.
 
-        Checks shape only: the keys present, their types, and that a named preset exists. Values are
-        not validated here - that is `clean()`, run at save time.
+            {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}}
+            {"type": "expression", "source": "data.mtu > 9000", "negate": true}
+
+        Checks structure only: which keys are present, their types, that a named preset exists and
+        that its values use declared names. Values themselves are validated by `clean()`.
 
         Raises:
-            ValidationError: If the row is not a mapping, has an unknown `type`, carries keys the type
-                does not accept, or fails the type's own shape checks below.
+            ConditionRowError: If the row is not a mapping, has an unknown `type`, carries keys the
+                type does not accept, or fails the type's own checks.
         """
         if not isinstance(row, dict):
             raise ConditionRowError(f"A condition row must be a mapping, not {type(row).__name__}.", key="type")
@@ -62,28 +52,33 @@ class ConditionRow:
 
         row_type = row.get("type")
         if row_type == ConditionTypeChoices.TYPE_EXPRESSION:
-            return ExpressionRow._parse(row, negate)
+            return ExpressionRow.from_dict(row)
         if row_type == ConditionTypeChoices.TYPE_PRESET:
-            return PresetRow._parse(row, negate)
+            return PresetRow.from_dict(row)
         raise ConditionRowError(f"Unknown condition row type `{row_type}`.", key="type")
 
     @classmethod
-    def _reject_unknown_keys(cls, row):
+    def _common_fields(cls, row):
+        """Check the keys a row of this type may carry and return its `negate`."""
         unknown = sorted(set(row) - cls._allowed_keys)
         if unknown:
             raise ConditionRowError(f"Condition row does not accept key(s): {', '.join(unknown)}.", key=unknown[0])
+        negate = row.get("negate", False)
+        if not isinstance(negate, bool):
+            raise ConditionRowError(f"`negate` must be a boolean, not {type(negate).__name__}.", key="negate")
+        return negate
 
+    @abstractmethod
     def clean(self):
         """Validate beyond shape, for saving. Subclasses override."""
-        raise NotImplementedError
 
+    @abstractmethod
     def resolve(self):
         """Return `(source, context_variables)` for `check`. Subclasses override."""
-        raise NotImplementedError
 
+    @abstractmethod
     def to_dict(self):
         """The row in its canonical stored shape. Subclasses override."""
-        raise NotImplementedError
 
 
 @dataclass(frozen=True)
@@ -98,8 +93,8 @@ class ExpressionRow(ConditionRow):
     source: str
 
     @classmethod
-    def _parse(cls, row, negate):
-        cls._reject_unknown_keys(row)
+    def from_dict(cls, row):
+        negate = cls._common_fields(row)
         source = row.get("source")
         if not isinstance(source, str) or not source.strip():
             raise ConditionRowError("An expression row needs a non-empty `source`.", key="source")
@@ -116,7 +111,7 @@ class ExpressionRow(ConditionRow):
         """Compile the source, so a syntax error is refused at save time.
 
         Raises:
-            ValidationError: With `key="source"` and the compiler's message.
+            ConditionRowError: With `key="source"` and the compiler's message.
         """
         try:
             compile_condition(self.source)
@@ -139,8 +134,8 @@ class PresetRow(ConditionRow):
     values: dict
 
     @classmethod
-    def _parse(cls, row, negate):
-        cls._reject_unknown_keys(row)
+    def from_dict(cls, row):
+        negate = cls._common_fields(row)
         preset = get_condition_preset(row.get("preset"))
         if preset is None:
             raise ConditionRowError(f"Unknown condition preset `{row.get('preset')}`.", key="preset")
@@ -149,6 +144,11 @@ class PresetRow(ConditionRow):
             values = {}
         if not isinstance(values, dict):
             raise ConditionRowError(f"`values` must be a mapping, not {type(values).__name__}.", key="values")
+        unknown = sorted(set(values) - {parameter.name for parameter in preset.parameters})
+        if unknown:
+            raise ConditionRowError(
+                f"Preset `{preset.key}` does not accept value(s): {', '.join(unknown)}.", key="values"
+            )
         return cls(preset=preset, values=values, negate=negate)
 
     def clean(self):
@@ -158,10 +158,9 @@ class PresetRow(ConditionRow):
         return self.preset.source, self.preset.context_variables(self.values)
 
     def to_dict(self):
-        declared = [parameter.name for parameter in self.preset.parameters]
         return {
             "type": ConditionTypeChoices.TYPE_PRESET,
             "preset": self.preset.key,
-            "values": {name: self.values[name] for name in declared if name in self.values},
+            "values": dict(self.values),
             "negate": self.negate,
         }
