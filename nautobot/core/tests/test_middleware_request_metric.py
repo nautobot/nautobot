@@ -1,7 +1,7 @@
 import re
 import time
 
-from django.db import connections, DEFAULT_DB_ALIAS
+from django.db import connections
 from django.http import HttpResponse
 from django.test import override_settings, RequestFactory
 from django.urls import reverse
@@ -177,9 +177,11 @@ class DatabaseDurationRequestMetricTestCase(TestCase):
         metric = DatabaseDurationRequestMetric()
 
         with metric:
-            self.assertIn(metric, connections[DEFAULT_DB_ALIAS].execute_wrappers)
+            default_database_execution_wrappers = connections["default"].execute_wrappers
+            self.assertIn(metric, default_database_execution_wrappers)
 
-        self.assertNotIn(metric, connections[DEFAULT_DB_ALIAS].execute_wrappers)
+        default_database_execution_wrappers = connections["default"].execute_wrappers
+        self.assertNotIn(metric, default_database_execution_wrappers)
 
 
 class RequestMetricMiddlewareTestCase(TestCase):
@@ -247,6 +249,35 @@ class RequestMetricMiddlewareTestCase(TestCase):
         self.assertEqual(response_header_metric_names, ["total", "db"])
 
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_an_error_from_the_view_is_not_swallowed(self):
+        """The middleware must not hide a view failure behind its metric reporting."""
+
+        def get_response(request):
+            raise ValueError("Intentional error")
+
+        with self.assertRaises(ValueError):
+            self.call_middleware(get_response)
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_server_timing_header_does_not_override_other_headers(self):
+        """`Server-Timing` addition does not override other settings."""
+
+        # Cache doesn't get used. It's placeholder to smoke-test that state is
+        # persisting between responses and not clobbering other middleware
+        def existing_headers_response(request):
+            response = HttpResponse()
+            response.headers["Server-Timing"] = 'cache;dur=1.5;desc="Cache lookup"'
+            return response
+
+        current_response = self.call_middleware(existing_headers_response)
+
+        raw_server_timing_header = current_response.headers[self.header_name]
+        request_metrics = self.parse_metrics(raw_server_timing_header)
+        response_header_metric_names = list(request_metrics.keys())
+
+        self.assertEqual(response_header_metric_names, ["cache", "total", "db"])
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
     def test_durations_are_reported_in_milliseconds(self):
         def get_response(request):
             time.sleep(0.05)
@@ -294,20 +325,48 @@ class RequestMetricMiddlewareTestCase(TestCase):
                 _, _, decimal_places = raw_duration.partition(".")
                 self.assertLessEqual(len(decimal_places), 2)
 
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=False)
+    def test_no_database_query_wrapper_used_when_database_metric_is_disabled(self):
+        """Confirm that server runtime isn't penalized with a database wrapper when the database metric is disabled."""
+        wrappers_during_request = []
+
+        def get_response(request):
+            default_database_execution_wrappers = connections["default"].execute_wrappers
+            wrappers_during_request.extend(default_database_execution_wrappers)
+            return HttpResponse()
+
+        self.call_middleware(get_response)
+
+        database_metric_wrappers = [
+            wrapper for wrapper in wrappers_during_request if isinstance(wrapper, DatabaseDurationRequestMetric)
+        ]
+
+        self.assertEqual(database_metric_wrappers, [])
+
+    @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=False, REQUEST_DB_DURATION_HEADER_ENABLED=True)
+    def test_database_query_wrapper_used_when_the_database_metric_is_enabled(self):
+        wrappers_during_request = []
+
+        def get_response(request):
+            default_database_execution_wrappers = connections["default"].execute_wrappers
+            wrappers_during_request.extend(default_database_execution_wrappers)
+            return HttpResponse()
+
+        self.call_middleware(get_response)
+
+        database_metric_wrappers = [
+            wrapper for wrapper in wrappers_during_request if isinstance(wrapper, DatabaseDurationRequestMetric)
+        ]
+
+        self.assertEqual(len(database_metric_wrappers), 1)
+
     @override_settings(REQUEST_TOTAL_DURATION_HEADER_ENABLED=True, REQUEST_DB_DURATION_HEADER_ENABLED=True)
-    def test_server_timing_header_does_not_override_other_headers(self):
-        """`Server-Timing` addition does not override other settings."""
-        # Cache doesn't get used. It's placeholder to smoke-test that state is
-        # persisting between responses and not clobbering other middleware
-        def existing_headers_response(request):
-            response = HttpResponse()
-            response.headers["Server-Timing"] = 'cache;dur=1.5;desc="Cache lookup"'
-            return response
+    def test_metrics_exist_when_using_the_configured_middleware_stack(self):
+        """Exercise the middleware from its real position in `settings.MIDDLEWARE`."""
+        response = self.client.get(reverse("home"))
 
-        current_response = self.call_middleware(existing_headers_response)
-
-        raw_server_timing_header = current_response.headers[self.header_name]
+        raw_server_timing_header = response.headers[self.header_name]
         request_metrics = self.parse_metrics(raw_server_timing_header)
         response_header_metric_names = list(request_metrics.keys())
 
-        self.assertEqual(response_header_metric_names, ["cache", "total", "db"])
+        self.assertEqual(response_header_metric_names, ["total", "db"])
