@@ -7,20 +7,28 @@
 
 ## What is Nautobot?
 
-Nautobot is an open source Network Source of Truth and Network Automation Platform built as a web application atop the [Django](https://www.djangoproject.com/) Python framework with a [PostgreSQL](https://www.postgresql.org/) or [MySQL](https://www.mysql.com) database.
+Nautobot is the open source **Network Source of Truth** and **Network Automation Platform** for enterprises operating complex networks at scale.
+
+[Network to Code](https://networktocode.com/) is the sponsor and official steward of Nautobot.
+
+Nautobot is used by thousands of organizations around the world, including NVIDIA, Intel, Cox, Hughes, Chevron, BPCE, TNS, Arizona State University, the U.S. Department of Defense, and many others.
 
 <!-- pyml disable-next-line proper-names -->
-Try out a live demo at [https://demo.nautobot.com](https://demo.nautobot.com)
+Try Nautobot at [demo.nautobot.com](https://demo.nautobot.com), a live instance of the open source platform with several open source Apps installed.
 
-## Key Use Cases
+### Network Source of Truth
 
-Nautobot enables three (3) key use cases.
+Nautobot's data models define the *intended state* of your network: locations and racks, devices and interfaces, IP address space, VLANs, circuits, cables, and more.
 
-1. **Flexible Source of Truth for Networking** — Nautobot serves as a highly flexible source of truth for network infrastructure, utilizing its core data models to define the intended state of your network. While it provides a baseline set of models such as IP networks, devices, racks, circuits, and cables, Nautobot's true strength lies in its flexibility. Users can define custom relationships and fields for any model, ensuring that the platform adapts to their specific needs. Additionally, Nautobot's robust data validation allows for the enforcement of naming standards and the execution of automated tests before data is committed, ensuring data integrity and consistency.
+Beyond the out-of-the-box data models, Nautobot provides flexible ways to extend and validate the source of truth. Custom fields, user-defined relationships, and data validation rules allow teams to represent their own network standards, processes, and requirements directly in Nautobot.
 
-2. **Extensible Data Platform for Automation** — Nautobot is designed to seamlessly integrate with network automation solutions, offering a comprehensive feature set that includes GraphQL, native Git integration, REST APIs, and webhooks. The Git integration allows Nautobot to dynamically load YAML data files as configuration contexts. The evolving App system further enhances Nautobot's capabilities, enabling users to create custom models, APIs, and UI elements. By unifying and aggregating disparate data sources, Nautobot provides a single source of truth, simplifying data management and streamlining network automation processes.
+### Network Automation Platform
 
-3. **Platform for Network Automation Apps** — The Nautobot App system empowers users to develop custom Network Automation Apps tailored to their specific needs. Whether lightweight or complex, these apps benefit from Nautobot's existing features such as authentication, permissions, webhooks, GraphQL, and change logging, significantly reducing development time by up to 70%. This integration not only accelerates the development process but also leverages the extensive data already stored in Nautobot, providing a powerful and efficient platform for building network automation solutions.
+Nautobot also includes a built-in Automation Engine for running network automation directly against the data in the source of truth.
+
+Nautobot Jobs execute against your network data on demand or on a schedule, with permissions, logging, and approvals built in. REST and GraphQL APIs, webhooks, and native Git integration connect Nautobot to the rest of your tooling.
+
+The Nautobot App framework extends the platform with new models, APIs, UI, and Jobs while inheriting authentication, permissions, change logging, and everything else the core platform already provides.
 
 ## Getting Started
 
@@ -57,9 +65,13 @@ Nautobot enables three (3) key use cases.
 
 </div>
 
-## Nautobot Apps
+## Nautobot Apps and Editions
 
-Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
+The Nautobot App framework enables users to develop custom Network Automation Apps tailored to their specific needs.
+
+### Open Source Apps
+
+Nautobot has a thriving ecosystem of open source **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
 
 <!-- pyml disable-num-lines 42 no-inline-html -->
 <div class="grid cards" markdown>
@@ -105,6 +117,11 @@ Nautobot has a thriving ecosystem of **Apps**, developed as separate projects, f
     [Device Onboarding](https://docs.nautobot.com/projects/device-onboarding/en/latest/) brings network data into Nautobot, helping to build out the intended state from the current state of the network.
 
 </div>
+
+### Commercial Editions
+
+<!-- pyml disable-next-line proper-names -->
+Commercial editions from [Network to Code](https://networktocode.com/) build on the same open source Nautobot core. [Nautobot Professional](https://networktocode.com/nautobot/nautobot-professional/) adds supported capabilities for network discovery, onboarding, and operations. [Nautobot Enterprise](https://networktocode.com/nautobot/nautobot-enterprise/) extends the platform with additional Apps for compliance, OS upgrades, reporting, automation, and AI. [Nautobot Cloud](https://networktocode.com/nautobot/nautobot-cloud/) delivers the Enterprise platform as a fully managed SaaS offering. See [networktocode.com/nautobot](https://networktocode.com/nautobot/) to compare editions.
 
 ## Nautobot Screenshots
 
