@@ -32,8 +32,6 @@ The Nautobot App framework extends the platform with new models, APIs, UI, and J
 
 ## Nautobot Apps and Editions
 
-The Nautobot App framework enables users to develop custom Network Automation Apps tailored to their specific needs.
-
 **Open source Apps** include [Golden Configuration](https://docs.nautobot.com/projects/golden-config/en/latest/), [Device Onboarding](https://docs.nautobot.com/projects/device-onboarding/en/latest/), [Single Source of Truth](https://docs.nautobot.com/projects/ssot/en/latest/), [Device Lifecycle Management](https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt), and [Firewall Models](https://docs.nautobot.com/projects/firewall-models/en/latest/). Find more in the [Apps documentation](https://docs.nautobot.com).
 
 <!-- pyml disable-next-line proper-names -->

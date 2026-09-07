@@ -67,8 +67,6 @@ The Nautobot App framework extends the platform with new models, APIs, UI, and J
 
 ## Nautobot Apps and Editions
 
-The Nautobot App framework enables users to develop custom Network Automation Apps tailored to their specific needs.
-
 ### Open Source Apps
 
 Nautobot has a thriving ecosystem of open source **Apps**, developed as separate projects, for which you can find links to documentation under the [Nautobot Apps](apps/index.md) section.
