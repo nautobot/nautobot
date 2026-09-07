@@ -69,16 +69,6 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 ![Gif of Modes](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_modes.gif?raw=true "Modes")
 
-## Installation
-
-Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/installation/) for instructions on installing Nautobot.
-
-## Application Stack
-
-Below is a simplified overview of the Nautobot application stack for reference:
-
-![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
-
 ## Nautobot Apps and Extensibility
 
 Nautobot offers the ability to customize your setup to better align with your direct business needs. It does so through the use of various Apps that have been developed for network automation, and are designed to be used in environments where needed.
@@ -98,6 +88,16 @@ There are many Apps available within the Nautobot Apps ecosystem. The below scre
 #### ChatOps
 
 ![Gif of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
+
+## Installation
+
+Please see [the documentation](https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/installation/) for instructions on installing Nautobot.
+
+## Application Stack
+
+Below is a simplified overview of the Nautobot application stack for reference:
+
+![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
 
 ## Providing Feedback
 
