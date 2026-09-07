@@ -1,0 +1,2 @@
+Added an "Object Data v2" panel to the Change Log detail view, displaying the change's `object_data_v2`.
+Added a `collapsed` keyword argument to `Panel` and its subclasses, to render a panel with its body initially collapsed.

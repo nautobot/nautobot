@@ -69,6 +69,8 @@ jobs:
   publish_containers:
     if: ${{ ! github.event.release.draft }}
     name: "Build & Publish Container Images"
+    permissions:
+      packages: "write"
     strategy:
       fail-fast: true
       matrix:
@@ -135,6 +137,8 @@ jobs:
     if: ${{ ! github.event.release.draft }}
     needs:
       - "publish_containers"
+    permissions:
+      packages: "write"
     runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true

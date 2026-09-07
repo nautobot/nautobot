@@ -1,0 +1,1 @@
+Added an internal `nautobot.extras.conditions` package (comparison operators, event payload builder, and condition preset catalog) with a `condition_presets` registry that Apps can register into via `register_condition_preset()`.

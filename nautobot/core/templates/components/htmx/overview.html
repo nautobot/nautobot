@@ -1,0 +1,15 @@
+{% load ui_framework %}
+<tr>
+    <td colspan="100">
+        {% if overview_template_name %}
+            {% include overview_template_name %}
+        {% elif overview_html %}
+            {% resolve_overview overview_html as html %}{{ html }}
+        {% else %}
+            {% resolve_overview overview as overview_data %}
+            {% for key, value in overview_data %}
+                <span>{{ key }}: {{ value }}</span>
+            {% endfor %}
+        {% endif %}
+    </td>
+</tr>

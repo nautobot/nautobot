@@ -185,3 +185,12 @@ def render_default_panels_for_object(context, obj):
         return ""
     with context.update({"obj": obj, "object": obj, "object_detail_content": object_detail_content}):
         return render_components(context, object_detail_content.tabs[0].panels)
+
+
+@register.simple_tag(takes_context=True)
+def resolve_overview(context, overview):
+    """Resolve the given overview against the active render context.
+
+    An overview is a callable, taking the render context, that returns either an HTML string or key/value pairs.
+    """
+    return overview(context) if overview else None

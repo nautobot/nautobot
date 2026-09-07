@@ -19,6 +19,7 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import time
 
 from invoke import Collection, task as invoke_task
@@ -1129,6 +1130,66 @@ def check_schema(context, api_version=None):
     for api_vers in api_versions:
         command = f"nautobot-server spectacular --api-version {api_vers} --validate --fail-on-warn --file /dev/null"
         run_command(context, command)
+
+
+@task(
+    help={
+        "app": "Run only one app's Playwright tests, by app label (e.g. 'dcim' runs nautobot/dcim/tests/integration).",
+        "url": "Base URL of the running Nautobot instance under test (default: NAUTOBOT_PLAYWRIGHT_URL, or http://localhost:8080).",
+        "username": "Login username for the instance under test (default: NAUTOBOT_PLAYWRIGHT_USERNAME, or admin).",
+        "password": "Login password for the instance under test (default: NAUTOBOT_PLAYWRIGHT_PASSWORD, or admin).",
+        "token": "REST API token for the instance under test (default: NAUTOBOT_PLAYWRIGHT_API_TOKEN, or the dev token).",
+        "headed": "Run the browser headed (visible) instead of headless.",
+        "pattern": "Only run tests whose names match the given substring (pytest -k).",
+        "marker": "Only run tests carrying the given pytest mark (pytest -m), e.g. behavioral or 'not behavioral'.",
+        # (this task runs on the HOST by design; see the docstring.)
+    }
+)
+def playwright(
+    context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None, marker=None
+):
+    """Run the Playwright test suite against a running Nautobot instance.
+
+    Unlike the other test tasks, playwright does not run inside the Docker development
+    container. pytest runs directly on the host because the browsers are installed
+    there and the suite only needs HTTP reachability to the instance under test.
+    Runs pytest with plugin auto-loading disabled, only the explicitly named plugins
+    load. Requires the playwright dependency group and a browser.
+    `poetry install --with playwright && poetry run playwright install chromium`
+    CI adds `--with-deps` to the browser install for the runner's OS packages,
+    not needed on a developer machine.
+    """
+    # This task runs pytest on the host rather than in a container, so it needs the
+    # Poetry environment. `poetry run` works whether or not a Poetry shell is active.
+    if shutil.which("poetry"):
+        runner = "poetry run pytest"
+    else:
+        raise Exit(
+            "Could not find pytest or poetry. The Playwright suite needs its optional dependency group:\n"
+            "  poetry install --with playwright && poetry run playwright install chromium"
+        )
+    # Traces and screenshots are captured only when a test fails (written under
+    # test-results/). CI uploads the directory as a build artifact on failure.
+    command = f"{runner} -p playwright -p base_url --tracing=retain-on-failure --screenshot=only-on-failure"
+    if app:
+        command += f" nautobot/{app}/tests/integration"
+    if headed:
+        command += " --headed"
+    if pattern:
+        command += f" -k {shlex.quote(pattern)}"
+    if marker:
+        command += f" -m {shlex.quote(marker)}"
+    env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    if url:
+        env["NAUTOBOT_PLAYWRIGHT_URL"] = url
+    if username:
+        env["NAUTOBOT_PLAYWRIGHT_USERNAME"] = username
+    if password:
+        env["NAUTOBOT_PLAYWRIGHT_PASSWORD"] = password
+    if token:
+        env["NAUTOBOT_PLAYWRIGHT_API_TOKEN"] = token
+    print_command(command, env=env)
+    context.run(command, env=env, pty=True)
 
 
 @task(

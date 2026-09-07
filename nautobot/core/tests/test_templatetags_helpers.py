@@ -1,3 +1,4 @@
+import datetime
 from unittest import mock
 
 from constance.test import override_config
@@ -242,6 +243,18 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")
         self.assertEqual(helpers.bettertitle("mytitle"), "Mytitle")
         self.assertEqual(helpers.bettertitle("my title"), "My Title")
+
+    def test_humanize_duration(self):
+        self.assertEqual(helpers.humanize_duration(None), "")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=0)), "<1s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(milliseconds=340)), "<1s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=9)), "9s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=59)), "59s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=60)), "1m 0s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=192)), "3m 12s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=3600)), "1h 0m")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=31300)), "8h 41m")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(days=1, seconds=10800)), "1d 3h")
 
     def test_humanize_speed(self):
         self.assertEqual(helpers.humanize_speed(1544), "1.544 Mbps")

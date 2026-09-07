@@ -1,0 +1,1 @@
+Fixed representation of nested UUIDs in object-list exports from MySQL.

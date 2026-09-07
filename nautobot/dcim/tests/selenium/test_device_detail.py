@@ -7,7 +7,7 @@ from nautobot.core.testing.integration import CollapseAllButtonTestCase, Seleniu
 from nautobot.core.ui.object_detail import Button, Panel
 from nautobot.dcim.models import Device
 from nautobot.extras.models import ComputedField, CustomField
-from nautobot.extras.tests.integration import create_test_device
+from nautobot.extras.tests.selenium import create_test_device
 
 
 class DeviceDetailTestCase(SeleniumTestCase):

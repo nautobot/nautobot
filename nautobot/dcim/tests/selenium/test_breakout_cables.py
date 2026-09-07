@@ -7,7 +7,7 @@ from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Cable, CableType, Interface
 from nautobot.extras.models import Status
-from nautobot.extras.tests.integration import create_test_device
+from nautobot.extras.tests.selenium import create_test_device
 
 
 class BreakoutCablesTestCase(SeleniumTestCase):
