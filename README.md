@@ -79,25 +79,25 @@ Below is a simplified overview of the Nautobot application stack for reference:
 
 ![Application stack diagram](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_application_stack_high_level.png "Application stack diagram")
 
-## Plugins and Extensibility
+## Nautobot Apps and Extensibility
 
-Nautobot offers the ability to customize your setup to better align with your direct business needs. It does so through the use of various plugins that have been developed for network automation, and are designed to be used in environments where needed.
+Nautobot offers the ability to customize your setup to better align with your direct business needs. It does so through the use of various Apps that have been developed for network automation, and are designed to be used in environments where needed.
 
-There are many plugins available within the Nautobot Apps ecosystem. The below screenshots are an example of some popular ones that are currently available.
+There are many Apps available within the Nautobot Apps ecosystem. The below screenshots are an example of some popular ones that are currently available.
 
-### Plugin Screenshots
+### App Screenshots
 
-#### Golden Config Plugin
+#### Golden Config
 
 ![Gif of golden config](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_golden_config.gif?raw=true "Golden config")
 
-#### ChatOps Plugin
-
-![Gif of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
-
-#### Device Lifecycle Management Plugin
+#### Device Lifecycle Management
 
 ![Gif of DLM](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_device_lifecycle_management.gif?raw=true "Device Lifecycle Management")
+
+#### ChatOps
+
+![Gif of chatops](https://raw.githubusercontent.com/nautobot/nautobot/develop/nautobot/docs/media/nautobot_chatops.gif?raw=true "ChatOps")
 
 ## Providing Feedback
 
