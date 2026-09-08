@@ -1,0 +1,3 @@
+Fixed missing "Power Path" field when creating/editing a Power Feed.
+Fixed missing "Virtual Device Contexts" field when creating/edting a VRF.
+Fixed missing "Devices" field when creating/editing a Cluster.
