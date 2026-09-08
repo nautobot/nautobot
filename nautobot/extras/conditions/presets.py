@@ -247,7 +247,7 @@ FIELD_TRANSITION = ConditionPreset(
 
 FIELD_CHANGED = ConditionPreset(
     key="field_changed",
-    label="Field changed",
+    label="Field change",
     description="Fires when a field's value changed within an update, regardless of what it changed to.",
     # Compares the addressed value on both sides rather than looking the field up in
     # `differences`, whose keys are top-level and would never contain a sub-field path like
@@ -261,7 +261,7 @@ FIELD_CHANGED = ConditionPreset(
 
 FIELD_COMPARE = ConditionPreset(
     key="field_compare",
-    label="Field compare",
+    label="Field comparison",
     description=(
         "Fires when a field compares as chosen against a value. The comparison reads the object's "
         "recorded state: after the change for creates and updates, the last known state for deletes."

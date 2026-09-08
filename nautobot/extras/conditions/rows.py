@@ -46,10 +46,6 @@ class ConditionRow(ABC):
         if not isinstance(row, dict):
             raise ConditionRowError(f"A condition row must be a mapping, not {type(row).__name__}.", key="type")
 
-        negate = row.get("negate", False)
-        if not isinstance(negate, bool):
-            raise ConditionRowError(f"`negate` must be a boolean, not {type(negate).__name__}.", key="negate")
-
         row_type = row.get("type")
         if row_type == ConditionTypeChoices.TYPE_EXPRESSION:
             return ExpressionRow.from_dict(row)

@@ -33,8 +33,8 @@ A preset is a ready-made condition with a fixed meaning. You choose it and fill 
 | Preset | Fires when |
 |--------|-----------|
 | **Field transition** | the field went from one value to another, within an update |
-| **Field changed** | the field's value changed, whatever it changed to, within an update |
-| **Field compare** | the field compares as chosen against a value |
+| **Field change** | the field's value changed, whatever it changed to, within an update |
+| **Field comparison** | the field compares as chosen against a value |
 | **User is** | a specific user made the change |
 
 ### Field transition
@@ -45,13 +45,13 @@ A preset is a ready-made condition with a fixed meaning. You choose it and fill 
 | `from` | Value the field must have had before the change. |
 | `to` | Value the field must have after the change. |
 
-### Field changed
+### Field change
 
 | Parameter | Description |
 |-----------|-------------|
 | `field` | Field to watch, e.g. `mtu` or `status.name`. |
 
-### Field compare
+### Field comparison
 
 | Parameter | Description |
 |-----------|-------------|
@@ -67,7 +67,7 @@ A preset is a ready-made condition with a fixed meaning. You choose it and fill 
 
 ## Operators
 
-Used by **Field compare**. What a comparison does depends on the type of the field's value:
+Used by **Field comparison**. What a comparison does depends on the type of the field's value:
 
 | Value type | `=` | `gt` `gte` `lt` `lte` | `in` | `contains` | `startswith` `endswith` |
 |------------|-----|-----------------------|------|------------|-------------------------|
