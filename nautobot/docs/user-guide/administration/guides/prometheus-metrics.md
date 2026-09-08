@@ -188,8 +188,8 @@ To enable these settings use these environment variables.
 
 | Environment Variable                           | Description                                                     |
 |------------------------------------------------|-----------------------------------------------------------------|
-| NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED | The total time spent processing each request.                   |
-| NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED    | The time spent performing database operations for each request. |
+| `NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED` | The total time spent processing each request.                   |
+| `NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED`    | The time spent performing database operations for each request. |
 
 When enabled, the header of an API response will return a `Server-Timing` property.
 These standards are dervied from the W3C specification here - [https://www.w3.org/TR/server-timing/](https://www.w3.org/TR/server-timing/)
