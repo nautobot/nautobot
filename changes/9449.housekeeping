@@ -1,0 +1,3 @@
+Fixed missing permissions on GitHub workflows `ci_integration`, `release`, and `lock`.
+Removed obsolete GitHub workflows `build_dependency_image` and `build_dependency_image_conditional`.
+Updated GitHub workflow `lock` to use v6.0.2 of the `dessant/lock-threads` action.

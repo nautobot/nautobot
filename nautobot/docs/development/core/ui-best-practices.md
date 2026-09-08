@@ -225,7 +225,7 @@ Two linters enforce a subset of this automatically, so run them before opening a
 
     It gates on findings at every impact level, because impact describes how badly a violation affects a user rather
     than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
-    part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
+    part of it out. `nautobot/core/tests/selenium/test_accessibility.py` covers the shared page templates.
 
     One rule is currently switched off: `color-contrast` (WCAG 1.4.3). The theme fails it in a handful of places, and
     correcting that means retuning palette tokens, which is a deferred product decision. Contrast is therefore not

@@ -770,6 +770,8 @@ class Panel(Component):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
@@ -792,6 +794,7 @@ class Panel(Component):
     body_content_template_path = None
     body_id = None
     body_wrapper_template_path = "components/panel/body_wrapper_generic.html"
+    collapsed = False
     css_class = "default"
     footer_content_template_path = None
     header_extra_content_template_path = None
@@ -829,6 +832,7 @@ class Panel(Component):
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
                 body_id=self.body_id,
+                collapsed=self.collapsed,
             )
 
     def _get_body_id(self, context: Context):
@@ -870,6 +874,7 @@ class Panel(Component):
             context,
             body_id=self.body_id,
             body_content=self.render_body_content(context),
+            collapsed=self.collapsed,
         )
 
     def render_body_content(self, context: Context):
@@ -926,6 +931,8 @@ class DataTablePanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1128,6 +1135,8 @@ class ObjectsTablePanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1498,6 +1507,8 @@ class KeyValueTablePanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1721,6 +1732,8 @@ class EChartsPanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1809,6 +1822,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -2052,6 +2067,8 @@ class BaseTextPanel(Panel):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -2117,6 +2134,8 @@ class ObjectTextPanel(BaseTextPanel):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -2151,6 +2170,8 @@ class TextPanel(BaseTextPanel):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -2187,6 +2208,8 @@ class StatsPanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -2275,6 +2298,8 @@ class AsyncStatsPanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.

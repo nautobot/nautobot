@@ -159,7 +159,6 @@ RUN --mount=type=cache,target="/root/.cache",sharing=locked \
 FROM python-dev-dependencies AS build-nautobot
 
 COPY --chown=nautobot:nautobot mkdocs.yml /source/mkdocs.yml
-COPY --chown=nautobot:nautobot docs /source/docs
 COPY --chown=nautobot:nautobot nautobot /source/nautobot
 
 # Build the rendered docs, this ensures that the docs are in the final image.

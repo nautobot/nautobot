@@ -14,13 +14,12 @@ classifiers = [
     "Intended Audience :: Developers",
     "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.11,<3.15"
 dependencies = [
     # Background task processing
     "celery (>=5.6.3,<5.7)",
@@ -61,7 +60,7 @@ dependencies = [
     # Structured logging for Django
     "django-structlog[celery] (>=10.1.0,<10.2)",
     # Advanced HTML tables
-    "django-tables2 (>=3.0.0,<3.1)",
+    "django-tables2 (>=3.0.1,<3.1)",
     # Tags
     "django-taggit (>=6.1.0,<6.2)",
     # Represent time zones in Django
@@ -260,6 +259,18 @@ tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~3.4.0"
 
+# Playwright testing only; opt in with `poetry install --with playwright`
+[tool.poetry.group.playwright]
+optional = true
+
+[tool.poetry.group.playwright.dependencies]
+# Test runner for the Playwright suite (not used for the unittest-based suites)
+pytest = "~9.1.1"
+# Playwright browser automation and its pytest plugin (fixtures, --headed, --tracing)
+pytest-playwright = "~0.9.0"
+# Pinned: Playwright ties browser builds to the driver release, so upgrades stay deliberate.
+playwright = "~1.62.0"
+
 [tool.poetry.scripts]
 
 [build-system]
@@ -276,9 +287,23 @@ omit = [
     # Don't measure coverage of test code
     "nautobot/**/tests/**/*.py",
     "nautobot/core/testing/*.py",
+    "nautobot/playwright/*.py",
     "nautobot/extras/test_jobs/*.py",
 ]
 relative_files = true
+
+# pytest runs ONLY the Playwright test suites. The unittest-based suites run under
+# `nautobot-server test` (unittest) and are never collected by the default pytest
+# invocation (testpaths scopes collection to the Playwright test trees).
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+testpaths = ["nautobot/*/tests/integration"]
+# Default collection is Test*. *TestCase matches the repo's universal naming convention
+# (and the Selenium-named migration classes, which pytest would otherwise skip silently).
+python_classes = ["Test*", "*TestCase"]
+markers = [
+    "behavioral: verifies application output correctness, not just page structure",
+]
 
 [tool.djlint]
 custom_blocks="captureas"
@@ -294,7 +319,7 @@ ignore-paths = [
 ]
 init-hook = "import nautobot; nautobot.setup()"
 load-plugins = "pylint_django"
-py-version = "3.10"
+py-version = "3.11"
 
 [tool.pylint.basic]
 # No docstrings required yet for private functions, or for test_* functions, or for inner Meta classes.
@@ -413,7 +438,7 @@ plugins.ul-indent.enabled = false  # doesn't work well with MkDocs expectations,
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+target-version = "py311"
 extend-exclude = [
     # Intentionally malformed files
     "nautobot/extras/tests/git_data/02-invalid-files/jobs",
@@ -437,6 +462,12 @@ ignore = [
     "RUF003",  # ambiguous-unicode-character-comment - see https://github.com/astral-sh/ruff/issues/23886
     "RUF012",  # mutable-class-default - see https://github.com/astral-sh/ruff/issues/5243
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Playwright tests and fixtures run under pytest, where bare `assert` is the
+# assertion idiom (there is no self.assertEqual outside unittest test cases).
+"nautobot/playwright/**" = ["S101"]
+"nautobot/*/tests/integration/**" = ["S101"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
