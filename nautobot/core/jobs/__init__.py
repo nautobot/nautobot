@@ -40,6 +40,7 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
@@ -207,6 +208,8 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
+    # ---- SHARED (resolved once, consulted by more than one phase below) ----
+
     def _get_saved_view(self, query_params):
         """The SavedView the launching list view was displaying, if it referenced one that still exists.
 
@@ -220,6 +223,56 @@ class ExportObjectList(Job):
         if saved_view is None:
             self.logger.warning("Saved view %s not found; exporting without its saved configuration.", saved_view_pk)
         return saved_view
+
+    # ---- RESOLVE QUERYSET (what to export) ----
+
+    def _require_view_permission(self, content_type):
+        """Abort unless the user may view the requested content-type."""
+        if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
+            self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
+            raise PermissionDenied("User does not have view permissions on the requested content-type")
+
+    def _restricted_queryset(self, model):
+        """Every object of the requested type that the user may view, unfiltered and unordered.
+
+        A model whose default manager is not one of Nautobot's has no `restrict()` to call --
+        `auth.Group` and `contenttypes.ContentType` are both exportable and both plain Django models.
+        Wrapping such a model in a `RestrictedQuerySet` applies object permissions to it all the same,
+        which is what `users.api.views.GroupViewSet` does for the very same reason.
+        """
+        queryset = model.objects.all()
+        if not hasattr(queryset, "restrict"):
+            queryset = RestrictedQuerySet(model=model)
+        return queryset.restrict(self.user, "view")
+
+    def _filter_queryset(self, model, queryset, query_params, saved_view):
+        """Narrow and order the queryset per `query_params`: the view's filters, then its sort order.
+
+        These are always applied — they are how the launching list view describes what it is showing —
+        so an export covers the same records, in the same order, as that view.
+        """
+        non_filter_params = self._get_non_filter_params(model)
+        filterset_class = get_filterset_for_model(model)
+        if filterset_class is None:
+            # A few exportable models have no FilterSet at all -- `dcim.cablepath`, for one -- and so
+            # cannot be narrowed. Sorting still applies, since that needs only the model's own fields.
+            self.logger.debug("No filterset class found for `%s`", model._meta.label_lower)
+            self._require_no_filters(model, query_params, non_filter_params, saved_view)
+            return self._apply_sort(model, queryset, query_params, saved_view)
+        self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
+        filter_params = resolve_filter_params(
+            query_params,
+            non_filter_params,
+            filterset_class(),
+            # The SavedView is already in hand, so this never needs to look one up.
+            lambda: saved_view.config.get("filter_params", {}) if saved_view is not None else {},
+        )
+        self.logger.debug("Filterset params: `%s`", filter_params)
+        filterset = filterset_class(filter_params, queryset)
+        if not filterset.is_valid():
+            self.logger.error("Invalid filters were specified: %s", filterset.errors)
+            raise RunJobTaskFailed("Invalid query_string value for this content_type")
+        return self._apply_sort(model, filterset.qs, query_params, saved_view)
 
     def _get_non_filter_params(self, model):
         """The query parameters the launching list view uses for something other than filtering.
@@ -236,151 +289,22 @@ class ExportObjectList(Job):
         view_class = get_view_for_model(model, "List")
         return {*NON_FILTER_PARAMS, *getattr(view_class, "non_filter_params", ())}
 
-    @staticmethod
-    def _get_match_fields(model, export_field_paths=None):
+    def _require_no_filters(self, model, query_params, non_filter_params, saved_view):
+        """Abort if filters were asked for that this model has no filterset to apply.
+
+        Exporting everything instead would hand back records the user did not ask for, with only a log
+        line to say so -- the same reason an invalid filter fails the Job rather than being dropped.
         """
-        The model's natural key lookups, to stamp exports with their own import instructions.
-
-        When an explicit field selection is in effect, the match key is only stamped if the selection
-        actually includes every match field (otherwise a re-import couldn't resolve the key).
-        """
-        try:
-            match_fields = list(model.csv_natural_key_field_lookups())
-        except AttributeError:
-            # Model without an identifiable natural key
-            return None
-        if export_field_paths is not None:
-            for match_field in match_fields:
-                head = match_field.split("__", 1)[0]
-                if match_field not in export_field_paths and head not in export_field_paths:
-                    return None
-        return match_fields
-
-    def _get_serializer_data(self, model, serializer_class, queryset, for_csv=True, export_field_paths=None):
-        """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
-
-        Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
-        JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
-        """
-        selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
-
-        # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
-        # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
-        # the same reason CSV_NATURAL_KEY_QUERY_CHUNK exists -- MySQL rejects a statement joining more than
-        # 61 tables (#8454). Dropping the excess only costs a lazy load, since this is purely an optimization.
-        fk_field_names = [
-            field.name
-            for field in model._meta.fields
-            if field.is_relation and (selected_heads is None or field.name in selected_heads)
-        ]
-        if fk_field_names:
-            queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
-
-        # Include M2M fields (represented by member natural keys) and prefetch them so serialization
-        # doesn't query per instance; select_related the members' own relations so composite-keyed
-        # members (whose natural key spans an FK) don't trigger a nested per-member lookup. Each prefetch
-        # is its own statement, so its joins are bounded separately -- but bounded all the same.
-        m2m_prefetches = []
-        for m2m_field in model._meta.many_to_many:
-            if selected_heads is not None and m2m_field.name not in selected_heads:
-                continue
-            member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
-            if member_fks:
-                member_queryset = m2m_field.related_model.objects.select_related(
-                    *member_fks[:CSV_NATURAL_KEY_QUERY_CHUNK]
-                )
-                m2m_prefetches.append(Prefetch(m2m_field.name, queryset=member_queryset))
-            else:
-                m2m_prefetches.append(m2m_field.name)
-        if m2m_prefetches:
-            queryset = queryset.prefetch_related(*m2m_prefetches)
-
-        # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
-        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
-        # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
-        context = {"request": None}
-        if export_field_paths:
-            context["export_fields"] = export_field_paths
-        serializer = serializer_class(queryset, many=True, context=context, exporting=True, force_csv=for_csv)
-        self._log_lossy_m2m_fields(model, serializer.child.fields)
-        return serializer.data
-
-    def _log_lossy_m2m_fields(self, model, serializer_fields):
-        """Report each exported M2M field whose through model records data this file cannot represent.
-
-        A column of member natural keys says which objects are related but not what the through row says
-        about each pairing, so it is readable and diffable but not re-importable. Point at the through
-        model, which is exportable and importable as a content type in its own right.
-        """
-        for m2m_field in model._meta.many_to_many:
-            serializer_field = serializer_fields.get(m2m_field.name)
-            if serializer_field is None:
-                continue
-            through = m2m_field.remote_field.through
-            data_fields = m2m_through_data_fields(through)
-            if not data_fields:
-                continue
-            data_fields = self._omit_covered_through_fields(model, serializer_field, through, data_fields)
-            if data_fields:
-                self.logger.info(
-                    "`%s` is managed through `%s`, which also records %s. Those values are not part of this "
-                    "export; export `%s` as well to capture them.",
-                    m2m_field.name,
-                    through._meta.label_lower,
-                    ", ".join(f"`{field_name}`" for field_name in data_fields),
-                    through._meta.label_lower,
-                )
-
-    @staticmethod
-    def _omit_covered_through_fields(model, serializer_field, through, data_fields):
-        """Drop the through fields this column already carries.
-
-        Some serializers point an M2M field at the through model's own rows instead of at the far-side
-        objects (`SecretsGroup.secrets` reads `secrets_group_associations`). Those rows render by *their*
-        natural key, so any through field that key includes survives the export after all.
-        """
-        try:
-            source_field = model._meta.get_field(serializer_field.source)
-        except FieldDoesNotExist:
-            return data_fields
-        if getattr(source_field, "related_model", None) is not through:
-            return data_fields
-        covered = set(getattr(through, "natural_key_field_lookups", ()))
-        return [field_name for field_name in data_fields if field_name not in covered]
-
-    # ---- RESOLVE QUERYSET (what to export) ----
-
-    def _require_view_permission(self, content_type):
-        """Abort unless the user may view the requested content-type."""
-        if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
-            self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
-            raise PermissionDenied("User does not have view permissions on the requested content-type")
-
-    def _get_queryset(self, model):
-        """All objects of the requested type, restricted to those the user may view (no filtering applied)."""
-        return model.objects.all().restrict(self.user, "view")
-
-    def _filter_queryset(self, model, queryset, query_params, saved_view):
-        """Narrow and order the queryset per `query_params`: the view's filters, then its sort order.
-
-        These are always applied — they are how the launching list view describes what it is showing —
-        so an export covers the same records, in the same order, as that view.
-        """
-        filterset_class = get_filterset_for_model(model)
-        self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
-        filter_params = resolve_filter_params(
-            query_params,
-            self._get_non_filter_params(model),
-            filterset_class(),
-            # The SavedView is already in hand, so this never needs to look one up.
-            lambda: saved_view.config.get("filter_params", {}) if saved_view is not None else {},
-        )
-        self.logger.debug("Filterset params: `%s`", filter_params)
-        filterset = filterset_class(filter_params, queryset)
-        if not filterset.is_valid():
-            self.logger.error("Invalid filters were specified: %s", filterset.errors)
-            raise RunJobTaskFailed("Invalid query_string value for this content_type")
-        return self._apply_sort(model, filterset.qs, query_params, saved_view)
+        requested = [param for param in query_params if param not in non_filter_params and query_params[param]]
+        if saved_view is not None and saved_view.config.get("filter_params"):
+            requested.extend(saved_view.config["filter_params"])
+        if requested:
+            self.logger.error(
+                "Filters %s were specified, but %s has no filterset to apply them",
+                ", ".join(f"`{param}`" for param in sorted(set(requested))),
+                model._meta.label_lower,
+            )
+            raise RunJobTaskFailed("Filters were specified but this content_type has no filterset")
 
     def _apply_sort(self, model, queryset, query_params, saved_view):
         """Apply the launching view's sort order (best effort).
@@ -502,6 +426,26 @@ class ExportObjectList(Job):
                 raise RunJobTaskFailed(str(exc)) from exc
         return export_field_paths
 
+    @staticmethod
+    def _get_match_fields(model, export_field_paths=None):
+        """
+        The model's natural key lookups, to stamp exports with their own import instructions.
+
+        When an explicit field selection is in effect, the match key is only stamped if the selection
+        actually includes every match field (otherwise a re-import couldn't resolve the key).
+        """
+        try:
+            match_fields = list(model.csv_natural_key_field_lookups())
+        except AttributeError:
+            # Model without an identifiable natural key
+            return None
+        if export_field_paths is not None:
+            for match_field in match_fields:
+                head = match_field.split("__", 1)[0]
+                if match_field not in export_field_paths and head not in export_field_paths:
+                    return None
+        return match_fields
+
     # ---- RENDER (normalize to the requested output, then write the file) ----
 
     @staticmethod
@@ -562,6 +506,98 @@ class ExportObjectList(Job):
             _filename, content = self._render_csv(content_type, records, match_fields, filename, export_field_paths)
         self.create_file(_filename, content)
 
+    def _get_serializer_data(self, model, serializer_class, queryset, for_csv=True, export_field_paths=None):
+        """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
+
+        Both output shapes want the natural-key flattening; only CSV wants values coerced to strings, so
+        JSON/YAML asks for `natural_keys` instead and keeps real nulls and lists.
+        """
+        selected_heads = {path.split("__", 1)[0] for path in export_field_paths} if export_field_paths else None
+
+        # select_related the single-valued relations so serializer fields that traverse them (e.g. `display`)
+        # don't issue a per-row lookup. Each one is a JOIN in a single statement, so the count is capped for
+        # the same reason CSV_NATURAL_KEY_QUERY_CHUNK exists -- MySQL rejects a statement joining more than
+        # 61 tables (#8454). Dropping the excess only costs a lazy load, since this is purely an optimization.
+        fk_field_names = [
+            field.name
+            for field in model._meta.fields
+            if field.is_relation and (selected_heads is None or field.name in selected_heads)
+        ]
+        if fk_field_names:
+            queryset = queryset.select_related(*fk_field_names[:CSV_NATURAL_KEY_QUERY_CHUNK])
+
+        # Include M2M fields (represented by member natural keys) and prefetch them so serialization
+        # doesn't query per instance; select_related the members' own relations so composite-keyed
+        # members (whose natural key spans an FK) don't trigger a nested per-member lookup. Each prefetch
+        # is its own statement, so its joins are bounded separately -- but bounded all the same.
+        m2m_prefetches = []
+        for m2m_field in model._meta.many_to_many:
+            if selected_heads is not None and m2m_field.name not in selected_heads:
+                continue
+            member_fks = [field.name for field in m2m_field.related_model._meta.fields if field.is_relation]
+            if member_fks:
+                member_queryset = m2m_field.related_model.objects.select_related(
+                    *member_fks[:CSV_NATURAL_KEY_QUERY_CHUNK]
+                )
+                m2m_prefetches.append(Prefetch(m2m_field.name, queryset=member_queryset))
+            else:
+                m2m_prefetches.append(m2m_field.name)
+        if m2m_prefetches:
+            queryset = queryset.prefetch_related(*m2m_prefetches)
+
+        # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
+        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
+        # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
+        context = {"request": None}
+        if export_field_paths:
+            context["export_fields"] = export_field_paths
+        serializer = serializer_class(queryset, many=True, context=context, exporting=True, force_csv=for_csv)
+        self._log_lossy_m2m_fields(model, serializer.child.fields)
+        return serializer.data
+
+    def _log_lossy_m2m_fields(self, model, serializer_fields):
+        """Report each exported M2M field whose through model records data this file cannot represent.
+
+        A column of member natural keys says which objects are related but not what the through row says
+        about each pairing, so it is readable and diffable but not re-importable. Point at the through
+        model, which is exportable and importable as a content type in its own right.
+        """
+        for m2m_field in model._meta.many_to_many:
+            serializer_field = serializer_fields.get(m2m_field.name)
+            if serializer_field is None:
+                continue
+            through = m2m_field.remote_field.through
+            data_fields = m2m_through_data_fields(through)
+            if not data_fields:
+                continue
+            data_fields = self._omit_covered_through_fields(model, serializer_field, through, data_fields)
+            if data_fields:
+                self.logger.info(
+                    "`%s` is managed through `%s`, which also records %s. Those values are not part of this "
+                    "export; export `%s` as well to capture them.",
+                    m2m_field.name,
+                    through._meta.label_lower,
+                    ", ".join(f"`{field_name}`" for field_name in data_fields),
+                    through._meta.label_lower,
+                )
+
+    @staticmethod
+    def _omit_covered_through_fields(model, serializer_field, through, data_fields):
+        """Drop the through fields this column already carries.
+
+        Some serializers point an M2M field at the through model's own rows instead of at the far-side
+        objects (`SecretsGroup.secrets` reads `secrets_group_associations`). Those rows render by *their*
+        natural key, so any through field that key includes survives the export after all.
+        """
+        try:
+            source_field = model._meta.get_field(serializer_field.source)
+        except FieldDoesNotExist:
+            return data_fields
+        if getattr(source_field, "related_model", None) is not through:
+            return data_fields
+        covered = set(getattr(through, "natural_key_field_lookups", ()))
+        return [field_name for field_name in data_fields if field_name not in covered]
+
     def _render_document(self, export_format, content_type, records, match_fields, filename, export_field_paths):
         # Generic JSON/YAML export. The document format itself lives in nautobot.core.api.import_export,
         # shared with the parsers that read it back, so writer and reader stay in lock-step.
@@ -604,13 +640,21 @@ class ExportObjectList(Job):
     ):  # pylint:disable=arguments-differ
         self._require_view_permission(content_type)
         model = content_type.model_class()
+        if model is None:
+            self.logger.error(
+                'Could not find the "%s.%s" data model. Perhaps an app is uninstalled?',
+                content_type.app_label,
+                content_type.model,
+            )
+            raise RunJobTaskFailed("Model not found")
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
         saved_view = self._get_saved_view(query_params)
 
         # RESOLVE QUERYSET — which records, in what order: whatever the query string says the launching
         # list view was showing. An empty query string is therefore a full export in the model's own order.
-        queryset = self._filter_queryset(model, self._get_queryset(model), query_params, saved_view)
+        queryset = self._restricted_queryset(model)
+        queryset = self._filter_queryset(model, queryset, query_params, saved_view)
 
         filename = self._export_filename(model)
 

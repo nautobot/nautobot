@@ -66,6 +66,28 @@ class ExportObjectListTest(TransactionTestCase):
         self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to view status objects')
         self.assertFalse(job_result.files.exists())
 
+    def test_export_content_type_without_a_model(self):
+        """A content type whose model is gone fails with an explanatory error, not an AttributeError.
+
+        A ContentType row outlives the app that declared its model, so `model_class()` returning None is
+        a state a user can reach by uninstalling an App and then exporting from a stale bookmark.
+        """
+        content_type = ContentType.objects.create(app_label="nonexistent_app", model="nonexistentmodel")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ExportObjectList",
+            content_type=content_type.pk,
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertTrue(
+            JobLogEntry.objects.filter(
+                job_result=job_result,
+                message__contains="Could not find the",
+                log_level=LogLevelChoices.LOG_ERROR,
+            ).exists()
+        )
+        self.assertFalse(job_result.files.exists())
+
     def test_export_with_constrained_permission(self):
         """Job should only allow the user to export objects they have permission to view."""
         instance1, instance2 = Status.objects.all()[:2]

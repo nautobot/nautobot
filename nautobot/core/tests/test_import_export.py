@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from unittest import mock, skip
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.test import SimpleTestCase, tag, TestCase
@@ -38,7 +39,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
-from nautobot.core.utils.lookup import get_view_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
     CableSerializer,
@@ -1709,6 +1710,34 @@ class ExportScopeTests(ImportExportJobTestCase):
         job_result = self.run_export(model=DeviceType, query_string="sort=manufacturer__nope", allow_issues=True)
         self.assertTrue(job_result.files.exists())
         self.assertJobLogEntry(job_result, "Ignoring sort", level=LogLevelChoices.LOG_WARNING)
+
+    def test_scope__model_that_is_not_an_ordinary_nautobot_model(self):
+        """`auth.Group` and `contenttypes.ContentType` are exportable despite being plain Django models.
+
+        Each is missing two things an export would otherwise take for granted, and needs both handled:
+        a `FilterSet` (a query string always reaches one now, so its absence cannot raise) and a
+        manager with `restrict()` (supplied by wrapping the model in a `RestrictedQuerySet`, so that
+        object permissions still apply -- as `users.api.views.GroupViewSet` does for the same reason).
+        """
+        for model in (Group, ContentType):
+            with self.subTest(model=model._meta.label_lower):
+                self.assertIsNone(get_filterset_for_model(model))
+                self.assertFalse(hasattr(model.objects.all(), "restrict"))
+                rows = self.export_rows(self.run_export(model=model))
+                self.assertEqual(len(rows), model.objects.count())
+
+    def test_scope__filters_on_a_model_without_a_filterset_fail(self):
+        """Filters that cannot possibly be applied fail the export rather than being ignored.
+
+        Exporting everything instead would hand back records the user did not ask for.
+        """
+        job_result = self.run_export(
+            model=Group,
+            query_string="name=whatever",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "has no filterset to apply them", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
 
     def test_scope__is_sortable(self):
         """Which sort keys `_apply_sort()` will pass to `order_by()`."""
