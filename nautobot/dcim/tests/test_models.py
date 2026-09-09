@@ -15,6 +15,7 @@ from nautobot.circuits.models import Circuit, CircuitTermination, CircuitType, P
 from nautobot.core import settings
 from nautobot.core.testing.models import ModelTestCases
 from nautobot.dcim.choices import (
+    CableLengthUnitChoices,
     CableStatusChoices,
     CableTypeChoices,
     ConsolePortTypeChoices,
@@ -750,6 +751,22 @@ class CableLengthTestCase(TestCase):
         cable.length = 2
         cable.save()
         cable.full_clean()
+
+    def test_cable_length_unit_miles(self):
+        """Miles is an offered CableLengthUnitChoices value, so saving a cable in miles must work."""
+        interfacestatus = Status.objects.get_for_model(Interface).first()
+        interface5 = Interface.objects.create(device=self.device1, name="eth2", status=interfacestatus)
+        interface6 = Interface.objects.create(device=self.device2, name="eth2", status=interfacestatus)
+        cable = Cable(
+            termination_a=interface5,
+            termination_b=interface6,
+            length_unit=CableLengthUnitChoices.UNIT_MILE,
+            length=2,
+            status=self.status,
+        )
+        cable.validated_save()
+        cable.refresh_from_db()
+        self.assertEqual(cable._abs_length, Decimal("3218.6880"))
 
 
 class InterfaceTemplateCustomFieldTestCase(TestCase):
