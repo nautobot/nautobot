@@ -48,7 +48,9 @@ from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
     get_filterable_params_from_filter_params,
+    NON_FILTER_PARAMS,
     normalize_querydict,
+    resolve_filter_params,
 )
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
@@ -654,14 +656,12 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(
+        return resolve_filter_params(
             params,
             self.non_filter_params,
             self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
+            lambda: get_saved_view_filter_params(params.get("saved_view")),
         )
-        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return get_saved_view_filter_params(params.get("saved_view"))
-        return filter_params
 
     def get_queryset(self):
         """
@@ -852,16 +852,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     filterset_class: Optional[type[FilterSet]] = None
     filterset_form_class: Optional[type[Form]] = None
     hide_hierarchy_ui = False
-    non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
-        "page",  # used by django-tables2.RequestConfig
-        "per_page",  # used by get_paginate_count
-        "sort",  # table sorting
-        "saved_view",  # saved_view indicator pk or composite keys
-        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
-        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
-        "clear_view",  # indicator for if the clear view button is clicked or not
-    )
+    non_filter_params = NON_FILTER_PARAMS
 
     def filter_queryset(self, queryset):
         """

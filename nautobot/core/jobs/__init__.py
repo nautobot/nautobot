@@ -41,8 +41,8 @@ from nautobot.core.jobs.customfields import (
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.models.utils import m2m_through_data_fields
-from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model
-from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model, get_view_for_model
+from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
     BaseValidator,
@@ -73,22 +73,6 @@ from nautobot.extras.registry import registry
 from nautobot.extras.utils import get_saved_view_or_none
 
 name = "System Jobs"
-
-# The query parameters a list view uses for something other than filtering its queryset, and which
-# `ExportObjectList` must therefore not hand to a filterset either. Mirrors
-# `ObjectListView.non_filter_params` / `ObjectListViewMixin.non_filter_params`, which is where a list
-# view's own copy of this list lives; those may be extended per view, which is why the TODO in
-# `_get_filter_params()` wants the view to strip them before they ever reach a Job.
-NON_FILTER_PARAMS = (
-    "all_filters_removed",  # indicator for if all filters have been removed from the saved view
-    "clear_view",  # indicator for if the clear view button is clicked or not
-    "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
-    "page",  # used by django-tables2.RequestConfig
-    "per_page",  # used by get_paginate_count
-    "saved_view",  # saved_view indicator pk or composite keys
-    "sort",  # table sorting
-    "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
-)
 
 
 class GitRepositorySync(Job):
@@ -237,23 +221,20 @@ class ExportObjectList(Job):
             self.logger.warning("Saved view %s not found; exporting without its saved configuration.", saved_view_pk)
         return saved_view
 
-    @staticmethod
-    def _get_filter_params(query_params, saved_view, filterset):
-        """The filters the launching list view had applied, resolved the way that view resolves them.
+    def _get_non_filter_params(self, model):
+        """The query parameters the launching list view uses for something other than filtering.
 
-        A saved view contributes its stored filters only when the query string carries none of its own:
-        the list view treats any filter in the query string as having *replaced* the saved view's filters
-        wholesale rather than merging with them, and `all_filters_removed` says the user cleared them
-        outright. Kept deliberately in lock-step with `ObjectListView.get_filter_params()`, so that an
-        export of a view covers the same records the view itself is showing.
+        Anything not on this list is handed to the filterset, so it has to account for the parameters
+        that view reads for itself -- `expanded_subtree` on the Prefix and Device list views, say. Taken
+        from the view's own declaration rather than assumed, since a Job is otherwise the only consumer
+        of a query string that cannot see which view produced it.
+
+        Unioned with `NON_FILTER_PARAMS` rather than replacing it: a view that declares a narrower list
+        would otherwise have its `saved_view` parameter passed along as a filter, and unioning can only
+        ever strip more parameters, never fewer.
         """
-        # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
-        #       such that they never are even seen here.
-        filter_params = get_filterable_params_from_filter_params(query_params, NON_FILTER_PARAMS, filterset)
-        if filter_params or saved_view is None or query_params.get("all_filters_removed"):
-            return filter_params
-        # Not using get_saved_view_filter_params(), as we already have the SavedView in hand.
-        return saved_view.config.get("filter_params", {})
+        view_class = get_view_for_model(model, "List")
+        return {*NON_FILTER_PARAMS, *getattr(view_class, "non_filter_params", ())}
 
     @staticmethod
     def _get_match_fields(model, export_field_paths=None):
@@ -387,7 +368,13 @@ class ExportObjectList(Job):
         """
         filterset_class = get_filterset_for_model(model)
         self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
-        filter_params = self._get_filter_params(query_params, saved_view, filterset_class())
+        filter_params = resolve_filter_params(
+            query_params,
+            self._get_non_filter_params(model),
+            filterset_class(),
+            # The SavedView is already in hand, so this never needs to look one up.
+            lambda: saved_view.config.get("filter_params", {}) if saved_view is not None else {},
+        )
         self.logger.debug("Filterset params: `%s`", filter_params)
         filterset = filterset_class(filter_params, queryset)
         if not filterset.is_valid():

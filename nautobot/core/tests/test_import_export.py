@@ -17,7 +17,6 @@ from unittest import mock, skip
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.http import QueryDict
 from django.test import SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
@@ -39,7 +38,8 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
-from nautobot.core.utils.lookup import get_filterset_for_model
+from nautobot.core.utils.lookup import get_view_for_model
+from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
     CableSerializer,
     DeviceSerializer,
@@ -1821,32 +1821,45 @@ class ExportScopeTests(ImportExportJobTestCase):
                 self.assertEqual(len(self.export_rows(job_result)), Status.objects.count())
                 self.assertJobLogEntry(job_result, "not found", level=LogLevelChoices.LOG_WARNING)
 
-    def test_scope__get_filter_params(self):
-        """The saved view's stored filters apply only when the query string carries none of its own."""
-        saved_view = self.create_saved_view(config={"filter_params": {"name": ["Active"]}})
-        filterset = get_filterset_for_model(Status)()
-        test_cases = [
-            # (query string, saved view in use?, expected filter params)
-            ("", False, {}),
-            ("name=Active", False, {"name": ["Active"]}),
-            ("", True, {"name": ["Active"]}),
-            # non-filter params are the view's own bookkeeping, and do not displace the saved filters
-            ("sort=-name&page=2&per_page=50&table_changes_pending=true&clear_view=true", True, {"name": ["Active"]}),
-            # ...whereas any real filter is the complete set of filters, replacing the saved view's
-            ("description=test", True, {"description": ["test"]}),
-            ("all_filters_removed=true", True, {}),
-        ]
-        for query_string, use_saved_view, expected in test_cases:
-            with self.subTest(query_string=query_string, use_saved_view=use_saved_view):
-                query_params = QueryDict(
-                    f"saved_view={saved_view.pk}&{query_string}" if use_saved_view else query_string
-                )
-                self.assertEqual(
-                    ExportObjectList()._get_filter_params(
-                        query_params, saved_view if use_saved_view else None, filterset
-                    ),
-                    expected,
-                )
+    def test_scope__view_specific_non_filter_params_are_not_filters(self):
+        """A parameter the launching view reads for itself is not handed to the filterset as a filter.
+
+        The Prefix list view adds `expanded_subtree` to its `non_filter_params`; a Job cannot see which
+        view produced a query string, so it takes that list from the view rather than assuming the
+        default. Were it assumed, `expanded_subtree` would count as a filter and would therefore be
+        taken as having replaced the saved view's filters.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="Non Filter Params Namespace")
+        status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.create(prefix="10.98.0.0/16", namespace=namespace, status=status)
+        Prefix.objects.create(prefix="10.97.0.0/16", namespace=namespace, status=status)
+        saved_view = self.create_saved_view(model_class=Prefix, config={"filter_params": {"prefix": ["10.98.0.0/16"]}})
+        rows = self.export_rows(
+            self.run_export(
+                model=Prefix,
+                query_string=f"saved_view={saved_view.pk}&expanded_subtree=true",
+            )
+        )
+        self.assertEqual([row["prefix"] for row in rows], ["10.98.0.0/16"])
+
+    def test_scope__non_filter_params_union_the_view_and_the_default(self):
+        """A view's own list is unioned into the default, so a narrower one cannot admit a filter.
+
+        Replacing the default outright would let a view that omits `saved_view` -- or an App's view that
+        simply has not kept up -- hand that parameter to a filterset as though it were a filter.
+        """
+        job = ExportObjectList()
+        self.assertEqual(job._get_non_filter_params(Status), set(NON_FILTER_PARAMS))
+        self.assertEqual(job._get_non_filter_params(Prefix), {*NON_FILTER_PARAMS, "expanded_subtree"})
+        # A through model is exportable as a content type of its own but has no list view to ask
+        self.assertIsNone(get_view_for_model(VRFDeviceAssignment, "List"))
+        self.assertEqual(job._get_non_filter_params(VRFDeviceAssignment), set(NON_FILTER_PARAMS))
+
+        class NarrowView:
+            non_filter_params = ("page",)
+
+        with mock.patch("nautobot.core.jobs.get_view_for_model", return_value=NarrowView):
+            self.assertEqual(job._get_non_filter_params(Status), set(NON_FILTER_PARAMS))
 
 
 # ===========================================================================

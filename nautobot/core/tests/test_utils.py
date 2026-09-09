@@ -1188,6 +1188,40 @@ class LookupRelatedFunctionTest(TestCase):
 
         self.assertEqual(data, {"name": ["Location 1"], "status": ["active", "planned"]})
 
+    def test_resolve_filter_params(self):
+        """A saved view's filters apply only when the query string carries no filters of its own."""
+        saved_view_filters = {"name": ["Location 1"]}
+        filterset = dcim_filters.LocationFilterSet()
+        test_cases = [
+            # (query string, saved view referenced?, expected filter params)
+            ("", False, {}),
+            ("name=Location+2", False, {"name": ["Location 2"]}),
+            ("", True, saved_view_filters),
+            # non-filter params are the view's own bookkeeping, and do not displace the saved filters
+            ("sort=-name&page=2&per_page=50&table_changes_pending=true&clear_view=true", True, saved_view_filters),
+            # ...whereas any real filter is the complete set of filters, replacing the saved view's
+            ("status=active", True, {"status": ["active"]}),
+            ("all_filters_removed=true", True, {}),
+        ]
+        for query_string, references_saved_view, expected in test_cases:
+            with self.subTest(query_string=query_string, references_saved_view=references_saved_view):
+                if references_saved_view:
+                    query_string = f"saved_view={uuid.uuid4()}&{query_string}"
+                data = requests.resolve_filter_params(
+                    QueryDict(query_string),
+                    requests.NON_FILTER_PARAMS,
+                    filterset,
+                    lambda: saved_view_filters,
+                )
+                self.assertEqual(data, expected)
+
+    def test_resolve_filter_params_without_a_saved_view_lookup(self):
+        """The saved-view fallback is optional; without it a bare `saved_view` reference adds nothing."""
+        data = requests.resolve_filter_params(
+            QueryDict(f"saved_view={uuid.uuid4()}"), requests.NON_FILTER_PARAMS, dcim_filters.LocationFilterSet()
+        )
+        self.assertEqual(data, {})
+
     def test_ensure_content_type_and_field_name_in_query_params(self):
         with self.assertRaises(django_forms.ValidationError) as err:
             requests.ensure_content_type_and_field_name_in_query_params({})
