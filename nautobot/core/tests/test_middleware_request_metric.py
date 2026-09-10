@@ -208,10 +208,6 @@ class RequestMetricMiddlewareTestCase(APITestCase):
         """Run the middleware around `get_response` and return the resulting response."""
         return RequestMetricMiddleware(get_response)(RequestFactory().get("/"))
 
-    @staticmethod
-    def empty_response(request):
-        return HttpResponse()
-
     def call_api(self):
         """Request a REST API endpoint as a token authenticated client and return the response."""
         url = reverse("api-status")
