@@ -1,0 +1,2 @@
+Added a "Fields to Export" picker to the export dialog, for checking the specific fields to export - including fields of related objects, such as a device's manufacturer - and dragging them into the order the columns should appear in.
+Added a download button to the export progress dialog, offering the exported file as soon as the export finishes.
