@@ -3066,5 +3066,9 @@ class ExportObjectListModalButton(_JobModalButton):
             "url": url,
             "label": f"Download {file_proxy.name}",
             "color": "success",
-            "attributes": {"download": file_proxy.name, "data-nb-auto-download": "true"},
+            # `download` only applies to a same-origin URL, which is what the database and local-filesystem
+            # job-file backends produce. A remote backend (S3 and the like) hands back a URL on its own
+            # origin, where the browser ignores `download` and simply follows the link -- so open that in a
+            # new tab rather than navigating the page the modal is sitting on away to the file.
+            "attributes": {"download": file_proxy.name, "target": "_blank", "rel": "noopener"},
         }

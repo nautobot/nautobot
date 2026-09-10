@@ -2078,14 +2078,14 @@ class ExportResultModalTests(ImportExportJobTestCase):
         self.assertTrue(redirect_button["url"])
         self.assertIn("Download", redirect_button["label"])
         self.assertEqual(redirect_button["color"], "success")
-        self.assertEqual(redirect_button["attributes"]["data-nb-auto-download"], "true")
+        self.assertEqual(redirect_button["attributes"]["download"], job_result.files.first().name)
 
         job_result.status = JobResultStatusChoices.STATUS_FAILURE
         job_result.save()
         self.assertEqual(button.get_redirect_button(job_result, RequestFactory().get("/")), {})
 
     def test_jobresult_modal_offers_export_download(self):
-        """The job-result modal renders the auto-downloading Download button for a completed export."""
+        """The job-result modal renders a Download button for the file a completed export produced."""
         job_result = self.run_export()
         self.add_permissions("extras.view_jobresult")
         response = self.client.post(
@@ -2095,5 +2095,5 @@ class ExportResultModalTests(ImportExportJobTestCase):
         )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
-        self.assertIn("data-nb-auto-download", content)
+        self.assertIn(f'download="{job_result.files.first().name}"', content)
         self.assertIn("Download", content)
