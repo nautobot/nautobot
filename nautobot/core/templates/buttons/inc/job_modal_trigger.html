@@ -1,0 +1,32 @@
+{% comment %}
+A button (or dropdown <li>) that opens a system Job's form in the shared generic modal via HTMX.
+
+Shared by the export and import list-view buttons; the HTMX wiring itself is built once in Python by
+`_JobModalButton.build_trigger_context()`. Expected context:
+
+    trigger_url     - URL to hx-post to (the Job's run-by-class-path view)
+    trigger_hx_vals - JSON-encoded hx-vals for that post
+    list_element    - render as a dropdown <li> rather than a standalone button
+    button_class    - btn-* class to use when not a list element
+    button_id       - optional id attribute for the button
+    icon            - mdi icon name, e.g. "mdi-database-export"
+    label           - button text when rendered standalone
+    list_label      - button text when rendered as a dropdown item
+    disabled        - user may not run this Job, or it is not enabled
+    disabled_title  - tooltip explaining why it is disabled
+{% endcomment %}
+{% if list_element %}<li>{% endif %}
+<button type="button"
+        {% if button_id %}id="{{ button_id }}"{% endif %}
+        class="{% if list_element %}dropdown-item{% else %}btn {{ button_class }}{% endif %}"
+        {% if disabled %}
+            disabled aria-disabled="true" title="{{ disabled_title }}"
+        {% else %}
+            data-bs-toggle="modal" data-bs-target="#nautobot-generic-modal"
+            hx-post="{{ trigger_url }}" hx-target="#modal-content-container" hx-swap="innerHTML"
+            hx-vals='{{ trigger_hx_vals }}'
+        {% endif %}>
+    <span class="mdi {{ icon }}{% if list_element %} text-secondary{% endif %}" aria-hidden="true"></span>
+    {% if list_element %}{{ list_label }}{% else %}{{ label }}{% endif %}
+</button>
+{% if list_element %}</li>{% endif %}
