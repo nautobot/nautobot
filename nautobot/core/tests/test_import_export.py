@@ -29,6 +29,8 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    enumerate_field_paths,
+    EXCLUDED_CSV_FIELDS,
     EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
@@ -1603,12 +1605,22 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertJobLogEntry(job_result, "is write-only and cannot be exported", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(job_result.files.exists())
 
-    def test_select__form_expands_single_fk_relations(self):
-        """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
+    def picker_paths(self, model, initial_fields=None, user=None):
+        """The field paths `ExportFieldsForm` offers for a model, in the order it offers them."""
         from nautobot.core.forms import ExportFieldsForm  # TODO # pylint: disable=no-name-in-module
 
-        form = ExportFieldsForm(content_type=ContentType.objects.get_for_model(Device), initial_fields=["name"])
-        paths = [choice[0] for choice in form.fields["export_fields"].choices]
+        if user is None:
+            user, _ = User.objects.get_or_create(username="export-picker-superuser", defaults={"is_superuser": True})
+        form = ExportFieldsForm(
+            content_type=ContentType.objects.get_for_model(model),
+            initial_fields=initial_fields,
+            user=user,
+        )
+        return form, [choice[0] for choice in form.fields["export_fields"].choices]
+
+    def test_select__form_expands_single_fk_relations(self):
+        """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
+        form, paths = self.picker_paths(Device, initial_fields=["name"])
         self.assertIn("name", paths)
         self.assertIn("device_type__manufacturer", paths)
         self.assertIn("status__name", paths)
@@ -1618,6 +1630,74 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("export-field-caret", rendered)
         self.assertIn("export-nested", rendered)
         self.assertIn('value="device_type__manufacturer"', rendered)
+
+    def test_select__form_offers_what_an_export_emits(self):
+        """The picker enumerates the *export's* field set: the read-only fields a default export emits are
+        selectable, and the fields that have no flat spelling are not offered at all.
+
+        Built from the import form's field list instead, as it once was, the picker could not offer any
+        read-only field -- `id` and `display` among them -- so an untouched selection would have produced a
+        narrower file than exporting with no selection at all.
+        """
+        _form, paths = self.picker_paths(Status)
+        for field_name in ("id", "display", "object_type", "natural_slug", "created", "last_updated"):
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, paths)
+        for field_name in EXCLUDED_CSV_FIELDS:
+            if field_name == "custom_fields":
+                continue  # Offered at the root; see `test_select__form_offers_custom_fields_as_a_whole`
+            with self.subTest(field_name=field_name):
+                self.assertNotIn(field_name, paths)
+
+    def test_select__form_offers_opt_in_m2m_fields(self):
+        """A field readable only in export mode (`exporting=True`) is offered, being one an export emits."""
+        _form, paths = self.picker_paths(DeviceType)
+        self.assertIn("software_image_files", paths)
+
+    def test_select__form_offers_each_custom_field(self):
+        """Custom fields are offered one `cf_<key>` at a time, which is how a flat export spells them."""
+        self.create_status_with_custom_fields()
+        _form, paths = self.picker_paths(Status)
+        self.assertIn("cf_export_cf_a", paths)
+        self.assertIn("cf_export_cf_b", paths)
+
+    def test_select__form_offers_custom_fields_as_a_whole(self):
+        """`custom_fields` is offered too, being the only way to ask for all of them at once.
+
+        A selection of individual `cf_<key>` entries goes stale as soon as a custom field is added;
+        `custom_fields` does not, and it is what a document export spells the nested dict with. Offered at
+        the root only -- through a relation the same name would be a lookup returning raw JSON.
+        """
+        self.create_status_with_custom_fields()
+        _form, paths = self.picker_paths(Status)
+        self.assertIn("custom_fields", paths)
+
+        _form, device_paths = self.picker_paths(Device)
+        self.assertFalse([path for path in device_paths if path.endswith("__custom_fields")])
+
+    def test_select__form_offers_only_valid_paths(self):
+        """Every path the picker offers passes validation, so it can never propose an unexportable column.
+
+        The invariant that makes the picker trustworthy: `enumerate_field_paths()` is a subset of what
+        `validate_field_paths()` accepts, and this asserts it over a wide model rather than by inspection.
+        """
+        user = User.objects.create(username="export-picker-invariant-user", is_superuser=True)
+        _form, paths = self.picker_paths(Device, user=user)
+        validate_field_paths(DeviceSerializer, paths, user=user)  # raises ValueError if any path is invalid
+
+    def test_select__form_expansion_respects_object_permissions(self):
+        """A relation the user cannot view contributes only its `id`, as that is all a selection may name."""
+        limited_user = self.create_rack_reservation_and_limited_user()
+        _form, paths = self.picker_paths(RackReservation, user=limited_user)
+        self.assertIn("user", paths)
+        self.assertIn("user__id", paths)
+        self.assertNotIn("user__username", paths)
+        self.assertNotIn("user__is_superuser", paths)
+
+    def test_select__form_orders_rows_by_the_seeded_selection(self):
+        """Seeded fields come first, in the given order, so the file's columns match the order asked for."""
+        _form, paths = self.picker_paths(Status, initial_fields=["description", "name"])
+        self.assertEqual(paths[:2], ["description", "name"])
 
     def test_select__modal_renders_selector(self):
         """The ExportObjectList job form renders via the custom modal template with the orderable selector."""

@@ -446,85 +446,82 @@ class ExportFieldsForm(BootstrapMixin, forms.Form):
     Orderable selection of serializer fields to export.
 
     Mirrors `TableConfigForm`: a single `MultipleChoiceField` rendered with `SelectMultipleOrderable`
-    whose choices are built dynamically for a content type, seeded (and pre-ordered) from an initial
-    field list (typically the current view's visible columns). On submit the checked values arrive in
-    drag order, giving the export a user-controlled column order.
+    whose choices are built dynamically for a content type, from the paths an export of that type can
+    actually emit (`enumerate_field_paths`). On submit the checked values arrive in drag order, giving the
+    export a user-controlled column order.
+
+    An initial field list (typically the current view's visible columns) is pre-checked, and the rows are
+    ordered to match it, so that the export's columns come out in the order the list showed them.
     """
 
     export_fields = forms.MultipleChoiceField(
         choices=[],
         required=False,
         widget=nautobot_widgets.ExportFieldSelect(),
-        help_text="Select and drag to order the fields to export. Leave all unchecked to export every field.",
+        help_text=(
+            "Select and drag to order the fields to export. Leave all unchecked to export every field. "
+            "A field marked <code>*</code> is one an import requires, so a selection that omits it cannot "
+            "be imported back."
+        ),
     )
 
-    def __init__(self, content_type, initial_fields=None, *args, **kwargs):
+    def __init__(self, content_type, initial_fields=None, user=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Lazy imports to avoid a circular import at module load (views.utils imports forms).
-        from django.apps import apps
+        from django.contrib.auth.models import AnonymousUser
 
         from nautobot.core.api.exceptions import SerializerNotFound
-        from nautobot.core.api.import_export import EXPORT_FIELD_MAX_DEPTH
+        from nautobot.core.api.import_export import enumerate_field_paths
         from nautobot.core.api.utils import get_serializer_for_model
-        from nautobot.core.views.utils import get_csv_form_fields_from_serializer_class
-
-        # Enumerate paths up to this many `__`-separated segments (e.g. device_type__manufacturer__name),
-        # derived from the export's relation-depth constant so the two stay in lockstep. This is one
-        # segment shallower than the validator's absolute allowance (`len(parts) - 1 <= EXPORT_FIELD_MAX_DEPTH`).
-        max_segments = EXPORT_FIELD_MAX_DEPTH
 
         initial_fields = [field for field in (initial_fields or []) if field]
 
-        def _label(path, required):
-            return path + (" *" if required else "")
-
-        fields_cache = {}
-
-        def _fields_for(model):
-            # Memoize per model so a serializer shared by many relations is built only once.
-            if model not in fields_cache:
-                try:
-                    fields_cache[model] = get_csv_form_fields_from_serializer_class(get_serializer_for_model(model))
-                except SerializerNotFound:
-                    fields_cache[model] = []
-            return fields_cache[model]
-
-        choices = []
-
-        def _expand(prefix, model, segments):
-            for field in _fields_for(model):
-                # Only offer M2M columns at the top level (e.g. tags, content_types), where they export as
-                # a comma-joined list. A M2M reached through a relation (e.g. status__content_types) can't
-                # serialize to a single cell and isn't round-trippable, so it is not offered.
-                if prefix and field.get("many"):
-                    continue
-                path = f"{prefix}__{field['name']}" if prefix else field["name"]
-                choices.append((path, _label(path, field["required"])))
-                # Expand single-FK relations into their natural-key columns (e.g. device_type__manufacturer,
-                # device_type__manufacturer__name). M2M relations are not traversable — a M2M column would
-                # multiply rows — so they are left as a single column, not expanded. Depth is capped.
-                if field["foreign_key"] and not field.get("many") and segments < max_segments:
-                    try:
-                        related_model = apps.get_model(field["foreign_key"])
-                    except LookupError:
-                        continue
-                    _expand(path, related_model, segments + 1)
-
+        # Enumerated from the export's own field graph rather than the import form's: an export emits every
+        # readable field, the read-only ones (`id`, `display`, `created`, ...) included, and an import form
+        # has no use for those and so does not list them.
+        enumerated = []
         model = content_type.model_class() if content_type is not None else None
         if model is not None:
-            _expand("", model, 1)
+            try:
+                enumerated = enumerate_field_paths(get_serializer_for_model(model), user=user or AnonymousUser())
+            except SerializerNotFound:
+                # Export-template-only content types have no serializer, hence no fields to select.
+                pass
 
-        # Include any seeded paths (e.g. deeper view columns) not already enumerated, so the current
-        # view's selection is preserved and selectable. The widget groups paths under their top-level
-        # parent by name, so ordering here need not keep parents and children adjacent.
-        present = {choice[0] for choice in choices}
+        choices = [(entry["path"], entry["path"] + (" *" if entry["required"] else "")) for entry in enumerated]
+
+        # Include any seeded path not enumerated -- a view column deeper than the enumeration goes, say --
+        # so that the initial selection is preserved and can be seen.
+        present = {path for path, _label in choices}
         for path in initial_fields:
             if path not in present:
                 choices.append((path, path))
                 present.add(path)
 
-        self.fields["export_fields"].choices = choices
+        self.fields["export_fields"].choices = self._ordered_by_selection(choices, initial_fields)
         self.fields["export_fields"].initial = [path for path in initial_fields if path in present]
+
+    @staticmethod
+    def _ordered_by_selection(choices, initial_fields):
+        """Order `choices` so that the seeded selection comes first, in the order it was given.
+
+        Only top-level rows are orderable in the rendered tree -- a nested path moves with its parent -- so
+        it is the *root* of each path that is ranked, by the earliest selected path falling under it. A
+        submitted selection is read back in this order, and the exported columns follow it, so this is what
+        makes the file's column order match the order the selection arrived in.
+        """
+        if not initial_fields:
+            return choices
+
+        root_rank = {}
+        for index, selected in enumerate(initial_fields):
+            root = selected.split("__", 1)[0]
+            root_rank.setdefault(root, index)
+        unranked = len(initial_fields)
+        return sorted(
+            choices,
+            key=lambda choice: (root_rank.get(choice[0].split("__", 1)[0], unranked), choices.index(choice)),
+        )
 
 
 class DynamicFilterForm(BootstrapMixin, forms.Form):
