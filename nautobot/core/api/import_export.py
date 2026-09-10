@@ -38,6 +38,11 @@ EXCLUDED_DOCUMENT_FIELDS = ("url", "notes_url")
 # `relationships` have no flat spelling at all.
 EXCLUDED_CSV_FIELDS = (*EXCLUDED_DOCUMENT_FIELDS, "computed_fields", "custom_fields", "relationships")
 
+# The fields that identify an object rather than describe it, in the order they should lead: a flat export
+# puts these columns first whatever the serializer's own order (`NautobotCSVRenderer.get_headers`), and the
+# export field picker lists them first for the same reason -- they are what someone looks for first.
+PRIORITY_CSV_FIELDS = ("name", "display", "composite_key", "id")
+
 # Maximum number of relations one export field-selection path may traverse (`a__b__c__d` = 3).
 #
 # This counts only the hops *named in the path*. A path that ends at a relation is expanded to that
@@ -346,13 +351,23 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
         raise ValueError(f"Invalid field selection: {'; '.join(errors)}")
 
 
-def enumerate_field_paths(serializer_class, *, user, max_segments=EXPORT_FIELD_MAX_DEPTH, for_csv=True):
+def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEPTH, for_csv=True):
     """
-    Every field path a selection may name for this serializer, in the order the serializer declares them.
+    Every field path a selection may name for this serializer, in an order meant to be read by a person.
 
-    The counterpart to `validate_field_paths()`, and deliberately its subset: every path returned here
-    validates, so a UI that offers only these can never propose a column the export would reject or
-    silently drop. Where the two differ, this is the stricter one:
+    Among the fields of one object -- the top-level rows, or the fields nested under one relation -- what
+    identifies it leads (`PRIORITY_CSV_FIELDS`, as in an unordered export's columns), then the fields an
+    import requires, then the rest, each of those two groups alphabetical, and `custom_fields` last with
+    its own fields nested under it. Serializer declaration order is deliberately not used: it is rarely
+    arranged with intent, so it reads as arbitrary in a list someone has to find a field in.
+
+    This is the order the fields are *offered* in, which is only the starting point for a selection: the
+    order a selection is submitted in is the order its columns come out in, and rearranging it is what the
+    picker is for.
+
+    The counterpart to `validate_field_paths()`, and for the shape of a path its subset: what is offered
+    here validates, so a UI built on it cannot propose a column the export would reject or silently drop.
+    Where the two differ on shape, this is the stricter one:
 
     * The fields that hold a collection of other data (`EXCLUDED_CSV_FIELDS`) are left out below the root,
       `custom_fields` included -- it is reachable as a model field (`_custom_field_data`) through a
@@ -361,21 +376,27 @@ def enumerate_field_paths(serializer_class, *, user, max_segments=EXPORT_FIELD_M
       so the query would multiply rows; selecting it at the root is fine, where its members render as a
       joined list.
 
+    Permissions are deliberately *not* consulted: this enumerates what the data model allows, and
+    `validate_field_paths()` remains the single authority on what a given user may select -- it refuses a
+    path into a model the user cannot view, with a message naming the permission. Gating here instead would
+    mean a picker that renders differently per user and a second place for the rule to be wrong, in exchange
+    for hiding a path the run would reject anyway.
+
     `max_segments` bounds the segments a path may have, rather than the relations it traverses as
     `EXPORT_FIELD_MAX_DEPTH` does, so the default enumerates one relation less deep than a hand-written
     selection may name. The field graph fans out fast enough that the last level is mostly noise.
 
     Args:
         serializer_class: The serializer of the model being exported.
-        user: The requesting user. A relation the user cannot view contributes only its `id`, matching what
-            `validate_field_paths()` will accept from them.
         max_segments (int): Longest path to enumerate, counted in `__`-separated segments.
         for_csv (bool): Whether the paths are for a flat (CSV) export, which has fewer emittable fields
             than the document formats.
 
     Returns:
-        list: `{"path": str, "required": bool}` dicts, `required` being whether an import would demand the
-            field -- which is what makes a selection round-trippable, so it is worth surfacing.
+        list: `{"path": str, "parent": str | None, "required": bool}` dicts. `parent` is the path this one
+            nests under, which is all but the last segment except for a `cf_<key>`, whose parent is
+            `custom_fields` -- the field that asks for every custom field at once. `required` is whether an
+            import would demand the field, which is what makes a selection round-trippable.
     """
     # `custom_fields` is offered at the root even though a flat export emits no column of that name: naming
     # it asks for every custom field of the object at once -- including any added after the selection was
@@ -388,8 +409,22 @@ def enumerate_field_paths(serializer_class, *, user, max_segments=EXPORT_FIELD_M
     )
     paths = []
 
+    def _sort_key(field_name, field):
+        if field_name in PRIORITY_CSV_FIELDS:
+            # What identifies the object, ahead of everything and in their own order.
+            return (0, PRIORITY_CSV_FIELDS.index(field_name), "")
+        if field_name == "custom_fields":
+            # Last, with its own fields nested under it: whatever this model happens to have been given,
+            # rather than part of its shape.
+            return (3, 0, field_name)
+        return (1 if field.required else 2, 0, field_name)
+
+    def _ordered_fields(serializer):
+        """This object's fields, in the order a person reads them; see this function's docstring."""
+        return sorted(serializer.fields.items(), key=lambda item: _sort_key(*item))
+
     def _walk(prefix, serializer, segments):
-        for field_name, field in serializer.fields.items():
+        for field_name, field in _ordered_fields(serializer):
             if field_name in (excluded_below_root if prefix else excluded_at_root):
                 continue
             if field.write_only or _needs_a_queryset_annotation(serializer, field):
@@ -402,15 +437,11 @@ def enumerate_field_paths(serializer_class, *, user, max_segments=EXPORT_FIELD_M
                 # cannot be a to-many.
                 continue
             path = f"{prefix}__{field_name}" if prefix else field_name
-            paths.append({"path": path, "required": field.required})
+            paths.append({"path": path, "parent": prefix or None, "required": field.required})
             if segments >= max_segments:
                 continue
             related_model = _traversable_relation_target(serializer, field)
             if related_model is None:
-                continue
-            permission = f"{related_model._meta.app_label}.view_{related_model._meta.model_name}"
-            if not permission_is_exempt(permission) and not user.has_perm(permission):
-                paths.append({"path": f"{path}__id", "required": False})
                 continue
             try:
                 related_serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
@@ -427,8 +458,11 @@ def enumerate_field_paths(serializer_class, *, user, max_segments=EXPORT_FIELD_M
 
     if for_csv:
         # One column per custom field, which is how CSV spells a single one; last, as `get_headers()` orders
-        # them. These sit alongside `custom_fields`, which asks for all of them at once.
+        # them. Nested under `custom_fields`, which asks for all of them at once, so that the two spellings
+        # read as what they are -- the whole and its parts -- rather than as overlapping options.
         custom_field_keys = getattr(root_serializer.fields.get("custom_fields"), "custom_field_keys", ())
-        paths.extend({"path": f"cf_{key}", "required": False} for key in custom_field_keys)
+        paths.extend(
+            {"path": f"cf_{key}", "parent": "custom_fields", "required": False} for key in sorted(custom_field_keys)
+        )
 
     return paths

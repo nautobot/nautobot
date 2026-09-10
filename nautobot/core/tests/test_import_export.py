@@ -1605,28 +1605,24 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertJobLogEntry(job_result, "is write-only and cannot be exported", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(job_result.files.exists())
 
-    def picker_paths(self, model, initial_fields=None, user=None):
-        """The field paths `ExportFieldsForm` offers for a model, in the order it offers them."""
-        from nautobot.core.forms import ExportFieldsForm  # TODO # pylint: disable=no-name-in-module
+    def picker_field(self, model):
+        """The Job's `export_fields` form field, configured for `model` as the rendered form configures it."""
+        job_form = ExportObjectList.as_form(data={"content_type": str(ContentType.objects.get_for_model(model).pk)})
+        return job_form.fields["export_fields"]
 
-        if user is None:
-            user, _ = User.objects.get_or_create(username="export-picker-superuser", defaults={"is_superuser": True})
-        form = ExportFieldsForm(
-            content_type=ContentType.objects.get_for_model(model),
-            initial_fields=initial_fields,
-            user=user,
-        )
-        return form, [choice[0] for choice in form.fields["export_fields"].choices]
+    def picker_paths(self, model):
+        """The field paths the picker offers for a model, in the order it offers them."""
+        field = self.picker_field(model)
+        return field, [choice[0] for choice in field.choices]
 
     def test_select__form_expands_single_fk_relations(self):
-        """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
-        form, paths = self.picker_paths(Device, initial_fields=["name"])
+        """The picker offers an orderable tree including single-FK relations expanded one level."""
+        field, paths = self.picker_paths(Device)
         self.assertIn("name", paths)
         self.assertIn("device_type__manufacturer", paths)
         self.assertIn("status__name", paths)
         self.assertFalse([path for path in paths if path.startswith("tags__")])
-        self.assertEqual(form.fields["export_fields"].initial, ["name"])
-        rendered = str(form["export_fields"].as_widget())
+        rendered = str(field.widget.render("export_fields", ["name"], attrs={"id": "id_export_fields"}))
         self.assertIn("export-field-caret", rendered)
         self.assertIn("export-nested", rendered)
         self.assertIn('value="device_type__manufacturer"', rendered)
@@ -1669,38 +1665,84 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         the root only -- through a relation the same name would be a lookup returning raw JSON.
         """
         self.create_status_with_custom_fields()
-        _form, paths = self.picker_paths(Status)
+        field, paths = self.picker_paths(Status)
         self.assertIn("custom_fields", paths)
+        # The individual fields nest under it, so the two spellings read as the whole and its parts.
+        self.assertEqual(field.widget.parent_paths["cf_export_cf_a"], "custom_fields")
 
-        _form, device_paths = self.picker_paths(Device)
+        _field, device_paths = self.picker_paths(Device)
         self.assertFalse([path for path in device_paths if path.endswith("__custom_fields")])
+
+    def test_select__form_orders_fields_for_reading(self):
+        """What identifies the object leads, then what an import requires, then the rest alphabetically.
+
+        Serializer declaration order is not used: it is rarely arranged with intent. `custom_fields` goes
+        last, being whatever this model happens to have been given rather than part of its shape.
+        """
+        field, paths = self.picker_paths(Status)
+        parents = field.widget.parent_paths
+        roots = [path for path in paths if parents.get(path) is None]
+        self.assertEqual(roots[:3], ["name", "display", "id"])
+        self.assertEqual(roots[-1], "custom_fields")
+
+        required = {path for path, label in field.choices if label.endswith(" *")}
+        middle = roots[3:-1]
+        optional = [path for path in middle if path not in required]
+        self.assertEqual(optional, sorted(optional))
+        required_positions = [index for index, path in enumerate(middle) if path in required]
+        if required_positions and optional:
+            self.assertLess(max(required_positions), middle.index(optional[0]))
+
+    def test_select__form_accepts_a_comma_separated_selection(self):
+        """A selection spelled the export's own way is read as the fields it names, and leads the rows.
+
+        Everything but a browser sends it as one comma-separated string -- the list view's modal through
+        `hx-vals`, a URL query through `normalize_querydict()`, the REST API and the management command
+        directly -- and it arrives as a single-element list holding the whole string. Left unsplit it
+        matched no field at all: the picker grew a row named after the entire selection, and checked none.
+        """
+        content_type = ContentType.objects.get_for_model(Status)
+        form = ExportObjectList.as_form(data={"content_type": str(content_type.pk), "export_fields": "color,name"})
+        field = form.fields["export_fields"]
+        paths = [choice[0] for choice in field.choices]
+        self.assertFalse([path for path in paths if "," in path])
+        self.assertEqual(paths[:2], ["color", "name"])
+        self.assertEqual(form["export_fields"].value(), ["color", "name"])
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["export_fields"], "color,name")
 
     def test_select__form_offers_only_valid_paths(self):
         """Every path the picker offers passes validation, so it can never propose an unexportable column.
 
-        The invariant that makes the picker trustworthy: `enumerate_field_paths()` is a subset of what
-        `validate_field_paths()` accepts, and this asserts it over a wide model rather than by inspection.
+        The invariant that makes the picker trustworthy: what `enumerate_field_paths()` offers is a subset
+        of the path shapes `validate_field_paths()` accepts, asserted over a wide model rather than by
+        inspection. Validated as a superuser, permissions being the one thing the enumeration leaves to
+        validation rather than mirroring.
         """
         user = User.objects.create(username="export-picker-invariant-user", is_superuser=True)
-        _form, paths = self.picker_paths(Device, user=user)
+        _field, paths = self.picker_paths(Device)
         validate_field_paths(DeviceSerializer, paths, user=user)  # raises ValueError if any path is invalid
 
-    def test_select__form_expansion_respects_object_permissions(self):
-        """A relation the user cannot view contributes only its `id`, as that is all a selection may name."""
-        limited_user = self.create_rack_reservation_and_limited_user()
-        _form, paths = self.picker_paths(RackReservation, user=limited_user)
-        self.assertIn("user", paths)
-        self.assertIn("user__id", paths)
-        self.assertNotIn("user__username", paths)
-        self.assertNotIn("user__is_superuser", paths)
+    def test_select__form_enumeration_is_permission_blind(self):
+        """The picker offers the whole field graph; a user's permissions are the run's business, not its.
 
-    def test_select__form_orders_rows_by_the_seeded_selection(self):
-        """Seeded fields come first, in the given order, so the file's columns match the order asked for."""
-        _form, paths = self.picker_paths(Status, initial_fields=["description", "name"])
-        self.assertEqual(paths[:2], ["description", "name"])
+        Gating here would make the picker render differently per user, and put the permission rule in a
+        second place -- while `validate_field_paths()` refuses the same path at run time with a message
+        naming the permission (`test_perm__selection_cannot_name_fields_of_an_unviewable_relation`).
+        """
+        limited_user = self.create_rack_reservation_and_limited_user()
+        self.assertFalse(limited_user.has_perm("users.view_user"))
+        _field, paths = self.picker_paths(RackReservation)
+        self.assertIn("user", paths)
+        self.assertIn("user__username", paths)
 
     def test_select__modal_renders_selector(self):
-        """The ExportObjectList job form renders via the custom modal template with the orderable selector."""
+        """The Job's own form renders the picker in the HTMX modal, no template of its own involved.
+
+        The picker is the `export_fields` variable's form field, so it comes with the Job form wherever
+        that is rendered; the checkboxes carry the variable's own name, and a browser submits them in
+        document order, which is how a dragged order reaches the export.
+        """
         get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")  # ensure the job model is enabled
         self.add_permissions("extras.run_job")
         response = self.client.post(
@@ -1714,18 +1756,26 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
             HTTP_HX_REQUEST="true",
         )
         self.assertHttpStatus(response, 200)
-        # Assert the template path explicitly: JobView._get_template_name falls back to the generic modal
-        # (with only a message) if htmx_template_name can't be loaded, so a bad path degrades silently.
-        self.assertTemplateUsed(response, "system_jobs/export_job_form_modal.html")
         content = response.content.decode(response.charset)
-        self.assertIn("export-fields-selector", content)
         self.assertIn("nb-select-multiple-orderable-list", content)
-        self.assertIn('value="name"', content)
         self.assertInHTML(
-            '<input class="form-check-input my-6" id="id_export_selector-export_fields_option_name" '
-            'name="export_selector-export_fields" type="checkbox" value="name" checked>',
+            '<input class="form-check-input my-6" id="id_export_fields_option_name" '
+            'name="export_fields" type="checkbox" value="name" checked>',
             content,
         )
+
+    def test_select__full_page_job_form_renders_selector(self):
+        """And in the full-page Job view, which is the same form rendered by a different view."""
+        job_model = get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")[1]
+        self.add_permissions("extras.run_job", "extras.view_job")
+        response = self.client.get(
+            reverse("extras:job_run", kwargs={"pk": job_model.pk}),
+            data={"content_type": ContentType.objects.get_for_model(Status).pk},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("nb-select-multiple-orderable-list", content)
+        self.assertIn('name="export_fields" type="checkbox" value="name"', content)
 
 
 # ===========================================================================

@@ -32,7 +32,6 @@ __all__ = (
     "ConfirmationForm",
     "DynamicFilterForm",
     "EmbeddedActionsFormMixin",
-    "ExportFieldsForm",
     "ImportForm",
     "PrefixFieldMixin",
     "ReturnURLForm",
@@ -92,6 +91,11 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
             nautobot_widgets.ClearableFileInput,
             nautobot_widgets.SelectMultipleOrderable,
+            # Listed in its own right because the check below is by exact class rather than by subclass.
+            # TODO: `isinstance` would express the intent better, but would newly exempt Django's
+            #   `ClearableFileInput` -- the default widget of every `FileField`, `FileVar` included -- which
+            #   Bootstrap 5 styles *via* `form-control`. Worth doing, with a look over the file inputs.
+            nautobot_widgets.ExportFieldSelect,
         ]
 
         for field in self.fields.values():
@@ -439,89 +443,6 @@ class TableConfigForm(BootstrapMixin, forms.Form):
     @property
     def table_name(self):
         return self.table.__class__.__name__
-
-
-class ExportFieldsForm(BootstrapMixin, forms.Form):
-    """
-    Orderable selection of serializer fields to export.
-
-    Mirrors `TableConfigForm`: a single `MultipleChoiceField` rendered with `SelectMultipleOrderable`
-    whose choices are built dynamically for a content type, from the paths an export of that type can
-    actually emit (`enumerate_field_paths`). On submit the checked values arrive in drag order, giving the
-    export a user-controlled column order.
-
-    An initial field list (typically the current view's visible columns) is pre-checked, and the rows are
-    ordered to match it, so that the export's columns come out in the order the list showed them.
-    """
-
-    export_fields = forms.MultipleChoiceField(
-        choices=[],
-        required=False,
-        widget=nautobot_widgets.ExportFieldSelect(),
-        help_text=(
-            "Select and drag to order the fields to export. Leave all unchecked to export every field. "
-            "A field marked <code>*</code> is one an import requires, so a selection that omits it cannot "
-            "be imported back."
-        ),
-    )
-
-    def __init__(self, content_type, initial_fields=None, user=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Lazy imports to avoid a circular import at module load (views.utils imports forms).
-        from django.contrib.auth.models import AnonymousUser
-
-        from nautobot.core.api.exceptions import SerializerNotFound
-        from nautobot.core.api.import_export import enumerate_field_paths
-        from nautobot.core.api.utils import get_serializer_for_model
-
-        initial_fields = [field for field in (initial_fields or []) if field]
-
-        # Enumerated from the export's own field graph rather than the import form's: an export emits every
-        # readable field, the read-only ones (`id`, `display`, `created`, ...) included, and an import form
-        # has no use for those and so does not list them.
-        enumerated = []
-        model = content_type.model_class() if content_type is not None else None
-        if model is not None:
-            try:
-                enumerated = enumerate_field_paths(get_serializer_for_model(model), user=user or AnonymousUser())
-            except SerializerNotFound:
-                # Export-template-only content types have no serializer, hence no fields to select.
-                pass
-
-        choices = [(entry["path"], entry["path"] + (" *" if entry["required"] else "")) for entry in enumerated]
-
-        # Include any seeded path not enumerated -- a view column deeper than the enumeration goes, say --
-        # so that the initial selection is preserved and can be seen.
-        present = {path for path, _label in choices}
-        for path in initial_fields:
-            if path not in present:
-                choices.append((path, path))
-                present.add(path)
-
-        self.fields["export_fields"].choices = self._ordered_by_selection(choices, initial_fields)
-        self.fields["export_fields"].initial = [path for path in initial_fields if path in present]
-
-    @staticmethod
-    def _ordered_by_selection(choices, initial_fields):
-        """Order `choices` so that the seeded selection comes first, in the order it was given.
-
-        Only top-level rows are orderable in the rendered tree -- a nested path moves with its parent -- so
-        it is the *root* of each path that is ranked, by the earliest selected path falling under it. A
-        submitted selection is read back in this order, and the exported columns follow it, so this is what
-        makes the file's column order match the order the selection arrived in.
-        """
-        if not initial_fields:
-            return choices
-
-        root_rank = {}
-        for index, selected in enumerate(initial_fields):
-            root = selected.split("__", 1)[0]
-            root_rank.setdefault(root, index)
-        unranked = len(initial_fields)
-        return sorted(
-            choices,
-            key=lambda choice: (root_rank.get(choice[0].split("__", 1)[0], unranked), choices.index(choice)),
-        )
 
 
 class DynamicFilterForm(BootstrapMixin, forms.Form):

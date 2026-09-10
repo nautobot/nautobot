@@ -602,33 +602,3 @@ def export_button(context, content_type=None, list_element=False):
             "export_fields": default_export_fields,
         },
     )
-
-
-@register.inclusion_tag("buttons/export_fields_selector.html", takes_context=True)
-def export_fields_selector(context, content_type_id, initial_fields=""):
-    """Render the orderable export field selector for a content type.
-
-    Reuses the `SelectMultipleOrderable` pattern (as `TableConfigForm` does). The field is prefixed so its
-    inputs do not collide with the job form's own `export_fields` variable; a small script in the export
-    job modal serializes the checked-in-order selection into that variable.
-
-    Args:
-        context (dict): current Django Template context, for the requesting user -- a relation the user
-            cannot view offers only its `id`, matching what the export itself will accept from them.
-        content_type_id: PK of the ContentType being exported.
-        initial_fields (str): Comma-separated field paths to pre-select and order first (the view's
-            visible columns).
-    """
-    from django.contrib.contenttypes.models import ContentType
-
-    from nautobot.core.forms import ExportFieldsForm
-
-    content_type = ContentType.objects.filter(pk=content_type_id).first() if content_type_id else None
-    initial_list = [field for field in (initial_fields or "").split(",") if field]
-    form = ExportFieldsForm(
-        content_type=content_type,
-        initial_fields=initial_list,
-        user=getattr(context.get("request"), "user", None),
-        prefix="export_selector",
-    )
-    return {"export_fields_form": form}

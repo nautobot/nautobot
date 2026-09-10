@@ -112,42 +112,149 @@ class SelectMultipleOrderable(forms.SelectMultiple):
 
 class ExportFieldSelect(SelectMultipleOrderable):
     """
-    `SelectMultipleOrderable` variant that groups dunder-nested paths under their top-level parent.
+    `SelectMultipleOrderable` variant that nests each field path under the path it belongs to.
 
-    Top-level fields are draggable/orderable rows; nested paths (e.g. `device_type__manufacturer`) are
-    rendered as indented, collapsible checkboxes inside their parent row, so reordering a parent moves its
-    nested columns with it and nested columns are not independently orderable.
+    Top-level fields are draggable/orderable rows; nested paths (e.g. `device_type__manufacturer`, or a
+    `cf_<key>` under `custom_fields`) are rendered as indented, collapsible checkboxes inside their parent
+    row, so reordering a parent moves its nested columns with it and nested columns are not independently
+    orderable. The submitted order is therefore the order of the top-level rows, which is what the export
+    lays its columns out in.
+
+    `parent_paths` maps each value to the value it nests under; `ExportFieldsChoiceField` sets it from
+    `enumerate_field_paths()`. Without it, nesting falls back to the dunder structure of the path itself.
 
     The markup is built in Python rather than via a template: the field tree can hold hundreds of nodes,
     and a recursive per-node ``{% include %}`` is instrumented per render by dev tooling (debug-toolbar),
     turning a ~25ms render into many seconds. Building the HTML directly keeps it fast in every environment.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, parent_paths=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.parent_paths = parent_paths or {}
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
         self.attrs["class"] = "list-group list-unstyled nb-draggable-container nb-select-multiple-orderable-list py-8"
+
+    def parent_of(self, path):
+        """The value `path` nests under, or None if it is a top-level row."""
+        if path in self.parent_paths:
+            return self.parent_paths[path]
+        return path.rsplit("__", 1)[0] if "__" in path else None
+
+    @staticmethod
+    def flatten_paths(value):
+        """A selection as a flat list of paths, however it was spelled.
+
+        A browser posts one value per checked box, but every other way of setting this field sends the
+        comma-separated string the export itself takes -- the list view's modal seeds it through `hx-vals`,
+        a URL query populates it through `normalize_querydict()`, and the REST API and
+        `nautobot-server export_objects` pass it straight through. Those arrive as a *single-element list
+        holding the whole string*, so splitting only a bare `str` is not enough: unsplit, the string
+        matches no field and the selection silently comes out empty.
+        """
+        if not value:
+            return []
+        if isinstance(value, str):
+            value = [value]
+        return [path.strip() for entry in value for path in str(entry).split(",") if path.strip()]
+
+    def value_from_datadict(self, data, files, name):
+        """The submitted selection, in submitted (drag) order."""
+        return self.flatten_paths(super().value_from_datadict(data, files, name))
+
+    def format_value(self, value):
+        """The selection being rendered, so that the right boxes come out checked."""
+        return self.flatten_paths(value)
 
     def render(self, name, value, attrs=None, renderer=None):
         context = super().get_context(name, value, attrs)
         widget = context["widget"]
         options = [option for _group, subgroup, _index in widget["optgroups"] for option in subgroup]
 
-        # Build a tree keyed by full dunder path: each path attaches under its immediate parent path
-        # (value minus the last segment), so parents/children nest to any depth.
         nodes = {str(option["value"]): {"option": option, "children": []} for option in options}
         roots = []
         for path, node in nodes.items():
-            parent = nodes.get(path.rsplit("__", 1)[0]) if "__" in path else None
+            parent = nodes.get(self.parent_of(path))
+            # A path whose parent is not itself offered is rendered as a top-level row rather than dropped,
+            # so a selection seeded with something the enumeration does not reach is still visible.
             (parent["children"] if parent is not None else roots).append(node)
 
-        rows = format_html_join(
-            "", "{}", ((self._render_node(node, widget["attrs"].get("id") or "", name, True),) for node in roots)
-        )
+        widget_id = widget["attrs"].get("id") or ""
+        rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
         return format_html(
-            '<ol id="{}" class="{}">{}</ol>', widget["attrs"].get("id") or "", widget["attrs"].get("class") or "", rows
+            '<ol id="{}" class="{}">{}</ol>{}',
+            widget_id,
+            widget["attrs"].get("class") or "",
+            rows,
+            self._behavior_script(),
+        )
+
+    @staticmethod
+    def _behavior_script():
+        """The tree's own client-side behavior, shipped with the markup.
+
+        Delegated from `document` and guarded by a flag, so that it binds once however many times a widget
+        renders -- the export form is rendered both as a full page and, repeatedly, into the HTMX modal.
+        Kept here rather than in a template or the JS bundle so that every renderer of the widget gets the
+        behavior without having to include anything.
+
+        Relationships are read from DOM nesting rather than from the `__` structure of the values, so a
+        `cf_<key>` nested under `custom_fields` behaves like any other child despite sharing no prefix
+        with it.
+        """
+        return format_html(
+            """<script type="text/javascript">
+(function () {{
+    if (window.nbExportFieldSelectBound) return;
+    window.nbExportFieldSelectBound = true;
+    const LIST = ".nb-select-multiple-orderable-list";
+    const boxesWithin = (element) => Array.from(element.querySelectorAll('input[type="checkbox"]'));
+
+    document.addEventListener("change", function (event) {{
+        const changed = event.target;
+        if (!changed.matches(LIST + ' input[type="checkbox"]')) return;
+        const list = changed.closest(LIST);
+        const row = changed.closest("li");
+        if (changed.checked && row) {{
+            // A field and any field nested under it are mutually exclusive: selecting the parent asks for
+            // its natural key (or, for `custom_fields`, every custom field), while selecting a descendant
+            // asks for that column instead. Enforcing it keeps what is shown equal to what will export.
+            boxesWithin(row).forEach((box) => {{
+                if (box !== changed) box.checked = false;
+            }});
+            for (let ancestor = row.parentElement; ancestor && list.contains(ancestor); ancestor = ancestor.parentElement) {{
+                if (ancestor.tagName !== "LI") continue;
+                // A row's own checkbox is the first in its subtree, its header preceding any nested rows.
+                const box = ancestor.querySelector('input[type="checkbox"]');
+                if (box) box.checked = false;
+            }}
+        }}
+        // A parent with a selected descendant but no selection of its own reads as "customized".
+        boxesWithin(list).forEach((box) => {{
+            const boxRow = box.closest("li");
+            box.indeterminate =
+                !box.checked && boxRow !== null && boxesWithin(boxRow).some((inner) => inner !== box && inner.checked);
+        }});
+    }});
+
+    // Collapse/expand a parent's nested columns, at any depth.
+    document.addEventListener("click", function (event) {{
+        const caret = event.target.closest(".export-field-caret");
+        if (!caret || !caret.closest(LIST)) return;
+        const row = caret.closest("li");
+        const nested = row ? row.querySelector(":scope > .export-nested") : null;
+        if (!nested) return;
+        const collapsed = nested.classList.toggle("d-none");
+        caret.setAttribute("aria-expanded", String(!collapsed));
+        const icon = caret.querySelector(".mdi");
+        if (icon) {{
+            icon.classList.toggle("mdi-chevron-down", collapsed);
+            icon.classList.toggle("mdi-chevron-up", !collapsed);
+        }}
+    }});
+}})();
+</script>"""
         )
 
     def _render_node(self, node, widget_id, name, is_root):

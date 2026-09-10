@@ -40,6 +40,7 @@ __all__ = (
     "DynamicModelMultipleChoiceField",
     "ExpandableIPAddressField",
     "ExpandableNameField",
+    "ExportFieldsChoiceField",
     "JSONArrayFormField",
     "JSONField",
     "LaxURLField",
@@ -926,3 +927,127 @@ class TagFilterField(DynamicModelMultipleChoiceField):
             *args,
             **kwargs,
         )
+
+
+class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
+    """
+    Orderable, nested selection of the fields an export of a given content type may emit.
+
+    Rendered by `ExportFieldSelect`, and used as the form field of the `ExportObjectList` Job's
+    `export_fields` variable, so that every rendering of that Job's form -- the HTMX modal, the full-page
+    Job view, an approval review -- gets the picker without a template of its own.
+
+    Two things make it usable as a Job variable rather than only in a hand-built form:
+
+    * The choices depend on a *sibling* field (`content_type`), whose value is not known when the form
+      class is built. `JobForm` calls `configure_for_form()` once the form exists, which is where the
+      choices are populated; until then the field simply offers nothing.
+    * The value crosses the wire as the comma-separated string the Job's `run()` takes, in both
+      directions: `to_python()` accepts that spelling (as the REST API, a scheduled Job, and
+      `nautobot-server export_objects` all send it) as readily as the list a browser posts, and `clean()`
+      returns it. The widget's own ordering therefore survives, since a browser submits its checkboxes in
+      document order.
+
+    Selection is deliberately *not* restricted to the offered choices: `enumerate_field_paths()` stops one
+    relation shallower than a path may legally traverse, and `validate_field_paths()` is the authority on
+    what a given user may select. A path this field has never heard of is passed through for the Job to
+    accept or reject with a message that explains itself.
+    """
+
+    widget = widgets.ExportFieldSelect
+
+    #: The name of the sibling form field naming the content type whose fields are offered.
+    content_type_field_name = "content_type"
+
+    def __init__(self, *args, content_type=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.set_content_type(content_type)
+
+    def set_content_type(self, content_type, selection=None):
+        """Offer the field paths an export of `content_type` may emit, or nothing if there are none.
+
+        `selection` -- the paths already chosen -- is brought to the front, in the order given, since the
+        rows' order is the order the selection is submitted in and so the order the columns come out in.
+        """
+        from nautobot.core.api.exceptions import SerializerNotFound
+        from nautobot.core.api.import_export import enumerate_field_paths
+        from nautobot.core.api.utils import get_serializer_for_model
+
+        self.content_type = content_type
+        entries = []
+        model = content_type.model_class() if content_type is not None else None
+        if model is not None:
+            try:
+                entries = enumerate_field_paths(get_serializer_for_model(model))
+            except SerializerNotFound:
+                # An export-template-only content type has no serializer, and so no fields to select.
+                pass
+
+        parent_paths = {entry["path"]: entry["parent"] for entry in entries}
+        choices = [(entry["path"], entry["path"] + (" *" if entry["required"] else "")) for entry in entries]
+        # A selected path the enumeration does not reach is offered anyway -- one naming a relation deeper
+        # than the tree goes, say -- so that the selection stays visible and can be unselected.
+        offered = set(parent_paths)
+        for path in selection or []:
+            if path not in offered:
+                choices.append((path, path))
+                parent_paths[path] = None
+                offered.add(path)
+
+        self.choices = self._ordered_by_selection(choices, selection, parent_paths)
+        self.widget.parent_paths = parent_paths
+
+    @staticmethod
+    def _ordered_by_selection(choices, selection, parent_paths):
+        """Bring the rows of `selection` to the front, in its order, leaving the rest as enumerated.
+
+        Only top-level rows are orderable in the rendered tree -- a nested path moves with its parent -- so
+        what is ranked is the *root* of each path, by the earliest selected path beneath it. The sort is
+        stable, so within a root everything keeps the order it was enumerated in.
+        """
+        if not selection:
+            return choices
+
+        def root_of(path):
+            while parent_paths.get(path) is not None:
+                path = parent_paths[path]
+            return path
+
+        root_rank = {}
+        for index, selected in enumerate(selection):
+            root_rank.setdefault(root_of(selected), index)
+        unranked = len(selection)
+        return sorted(choices, key=lambda choice: root_rank.get(root_of(choice[0]), unranked))
+
+    def configure_for_form(self, form, name):
+        """Populate the choices from the form's own `content_type` value, and pre-order by its selection.
+
+        Called by `JobForm.__init__()` with this field's name in that form. Values may arrive as posted
+        data (a pk, a comma-separated string) or as initial data (which may hold a `ContentType` and a
+        list), so both spellings are accepted.
+        """
+        content_type = None
+        selection = None
+        if form.is_bound:
+            content_type = form.data.get(form.add_prefix(self.content_type_field_name))
+            selection = form.data.get(form.add_prefix(name))
+        if not content_type:
+            content_type = form.initial.get(self.content_type_field_name)
+        if not selection:
+            selection = form.initial.get(name) or self.initial
+
+        if not isinstance(content_type, ContentType):
+            content_type = ContentType.objects.filter(pk=content_type).first() if content_type else None
+        self.set_content_type(content_type, selection=self.to_python(selection))
+
+    def to_python(self, value):
+        """The selected paths as a list, however the selection was spelled; see `flatten_paths()`."""
+        return self.widget.flatten_paths(value)
+
+    def valid_value(self, value):
+        """Accept any non-empty path; `validate_field_paths()` is what judges a selection."""
+        return bool(value)
+
+    def clean(self, value):
+        """The selection as the comma-separated string the Job's `export_fields` variable takes."""
+        return ",".join(super().clean(value))

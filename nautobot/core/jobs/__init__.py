@@ -30,6 +30,7 @@ from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms.fields import ExportFieldsChoiceField
 from nautobot.core.jobs import import_utils
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
@@ -143,11 +144,31 @@ class GitRepositoryDryRun(Job):
             self.logger.info(f"Repository dry run completed in {job_result.duration}")
 
 
+class ExportFieldsStringVar(StringVar):
+    """The `export_fields` variable of `ExportObjectList`, rendered as an orderable tree of field paths.
+
+    A `StringVar` because its value *is* the comma-separated string the export takes, however it was
+    chosen: that is what a caller sends, and it is what the REST API reports as this variable's type, the
+    class name being all the API has to go on. Only the rendering is specialized, by
+    `ExportFieldsChoiceField`; `min_length`, `max_length` and `regex` have no meaning here.
+
+    Kept to this module rather than offered alongside `StringVar` and friends, since what it enumerates is
+    the field graph of whatever content type a *sibling* variable names -- particular to this Job, rather
+    than a general shape a Job variable might take.
+    """
+
+    form_field = ExportFieldsChoiceField
+
+    def as_field(self):
+        field = super().as_field()
+        # `ScriptVariable.as_field()` adds Bootstrap's `form-control` to every non-checkbox widget, which
+        # styles an input box; the widget renders a list of rows and brings its own classes.
+        field.widget.attrs["class"] = field.widget.attrs.get("class", "").replace(" form-control", "")
+        return field
+
+
 class ExportObjectList(Job):
     """System Job to export a list of objects via CSV or ExportTemplate."""
-
-    # Custom HTMX job-modal template that renders the standard job form plus the field-selection tree picker.
-    htmx_template_name = "system_jobs/export_job_form_modal.html"
 
     content_type = ObjectVar(
         model=ContentType,
@@ -184,14 +205,15 @@ class ExportObjectList(Job):
         default=None,
         required=False,
     )
-    export_fields = StringVar(
+    export_fields = ExportFieldsStringVar(
         label="Fields to Export",
         default="",
         required=False,
-        description="Optional comma-separated list of fields to export, including nested references to "
-        "related objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
-        "If unspecified, all fields are exported, unless <em>Use Current View Columns</em> is selected. "
-        "Not applicable to Export Templates or devicetype-library YAML exports.",
+        description="Select and drag to order the fields to export, including nested references to related "
+        "objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). A field marked "
+        "<code>*</code> is one an import requires, so a selection that omits it cannot be imported back. "
+        "If nothing is selected, all fields are exported, unless <em>Use Current View Columns</em> is "
+        "selected. Not applicable to Export Templates or devicetype-library YAML exports.",
     )
     use_current_view_columns = BooleanVar(
         label="Use Current View Columns",
