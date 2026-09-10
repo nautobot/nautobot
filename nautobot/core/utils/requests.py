@@ -11,6 +11,26 @@ import django_filters
 from nautobot.core import exceptions
 from nautobot.core.utils.filtering import get_filterset_field
 
+NON_FILTER_PARAMS = (
+    "all_filters_removed",  # indicator for if all filters have been removed from the saved view
+    "clear_view",  # indicator for if the clear view button is clicked or not
+    "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
+    "page",  # used by django-tables2.RequestConfig
+    "per_page",  # used by get_paginate_count
+    "saved_view",  # saved_view indicator pk or composite keys
+    "sort",  # table sorting
+    "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
+)
+"""The query parameters a list view uses for something other than filtering its queryset.
+
+Every list view starts from these (as `ObjectListView.non_filter_params` /
+`ObjectListViewMixin.non_filter_params`) and a view that reads additional parameters of its own extends
+them, e.g. `non_filter_params = (*NautobotUIViewSet.non_filter_params, "expanded_subtree")`. Anything
+left over is handed to the view's filterset, so a parameter missing from a view's list is treated as a
+filter -- which is why `ExportObjectList` unions a view's list into these rather than assuming these
+alone; see `ExportObjectList._get_non_filter_params()`.
+"""
+
 
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):
     """
@@ -141,6 +161,41 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
             )
 
     return final_filter_params
+
+
+def resolve_filter_params(query_params, non_filter_params, filterset, get_saved_view_filter_params=None):
+    """
+    The filters a list view has applied, given its request's query parameters.
+
+    A saved view contributes the filters it has stored only when the query string carries none of its
+    own: any filter in the query string means the user changed the view's filters, and *replaces* the
+    saved view's set rather than merging with it -- which is what lets a user widen a saved view as well
+    as narrow it. `all_filters_removed` says the user cleared them outright.
+
+    Shared by everything that has to answer this question the way a list view answers it: the list views
+    themselves (`ObjectListView.get_filter_params()`, `NautobotViewSetMixin.get_filter_params()`) and the
+    `ExportObjectList` Job, so that exporting a view covers the records that view is showing.
+
+    Args:
+        query_params (QueryDict): The request's query parameters.
+        non_filter_params (iterable): Parameters this view uses for something other than filtering the
+            queryset; see `NON_FILTER_PARAMS`.
+        filterset (FilterSet): An instance of the view's filterset, used to tell single-valued filters
+            from multi-valued ones.
+        get_saved_view_filter_params (Optional[callable]): Zero-argument callable returning the filters
+            stored on the saved view named by the `saved_view` query parameter. Called only if those
+            filters are actually needed, so that a caller which would have to query for them does not
+            pay for them on every request.
+
+    Returns:
+        (dict): The filter parameters to instantiate the filterset with.
+    """
+    filter_params = get_filterable_params_from_filter_params(query_params, non_filter_params, filterset)
+    if filter_params or query_params.get("all_filters_removed") or not query_params.get("saved_view"):
+        return filter_params
+    if get_saved_view_filter_params is None:
+        return filter_params
+    return get_saved_view_filter_params()
 
 
 def normalize_querydict(querydict, form_class=None, filterset=None):

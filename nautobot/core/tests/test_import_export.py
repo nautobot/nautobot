@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from unittest import mock, skip
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.test import SimpleTestCase, tag, TestCase
@@ -38,11 +39,14 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
+from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
+from nautobot.core.utils.requests import NON_FILTER_PARAMS
 from nautobot.dcim.api.serializers import (
     CableSerializer,
     DeviceSerializer,
     DeviceTypeSerializer,
     InterfaceSerializer,
+    ManufacturerSerializer,
 )
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -61,9 +65,18 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import CustomFieldTypeChoices, JobResultStatusChoices, LogLevelChoices
-from nautobot.extras.models import CustomField, JobLogEntry, Role, SecretsGroup, Status, Tag
+from nautobot.extras.models import (
+    CustomField,
+    ExportTemplate,
+    JobLogEntry,
+    Role,
+    SavedView,
+    SecretsGroup,
+    Status,
+    Tag,
+)
 from nautobot.ipam.api.serializers import VLANSerializer
-from nautobot.ipam.models import Namespace, RouteTarget, VLAN, VRF, VRFDeviceAssignment
+from nautobot.ipam.models import Namespace, Prefix, RouteTarget, VLAN, VRF, VRFDeviceAssignment
 from nautobot.users.api.serializers import UserSerializer
 from nautobot.users.models import ObjectPermission
 
@@ -380,6 +393,25 @@ class ImportExportJobTestCase(TransactionTestCase):
     databases = ("default", "job_logs")
 
     # -- scenario setup --------------------------------------------------------
+    def create_saved_view(self, model_class=Status, config=None):
+        return SavedView.objects.create(
+            name="Global default View",
+            owner=self.user,
+            view=f"{model_class._meta.app_label}:{model_class._meta.model_name}_list",
+            is_global_default=True,
+            config=config or {},
+        )
+
+    def create_user_with_table_config(self, table_name, columns, username="table-config-user"):
+        """A superuser whose own table configuration displays exactly `columns` for the named table.
+
+        The export job reads the table configuration of the user it runs as, so a test that exercises
+        `use_current_view_columns` must run the job as this user (`run_export(username=...)`).
+        """
+        user = User.objects.create(username=username, is_superuser=True)
+        user.set_config(f"tables.{table_name}.columns", columns, commit=True)
+        return user
+
     def create_status(self, name="test_update_status", color="111111"):
         status = Status.objects.create(name=name, color=color)
         status.content_types.set([ContentType.objects.get_for_model(Device)])
@@ -528,6 +560,10 @@ class ImportExportJobTestCase(TransactionTestCase):
         """Parsed CSV data rows (directive/comment lines skipped)."""
         lines = [line for line in self.export_lines(job_result) if not line.startswith("#")]
         return list(csv.DictReader(StringIO("\n".join(lines))))
+
+    def export_header(self, job_result):
+        """The CSV header row's column names, in order (the leading directive line skipped)."""
+        return next(line for line in self.export_lines(job_result) if not line.startswith("#")).split(",")
 
     def export_document(self, job_result):
         """The JSON or YAML export parsed into Python (chosen by file extension)."""
@@ -1079,6 +1115,37 @@ class ValidateFieldPathsTests(TestCase):
         # ...and it is reported rather than quietly ignored when mixed with exportable fields
         self.assertPathsInvalid(UserSerializer, ["username", "password"], "is write-only")
 
+    def test_validate__annotation_backed_field_is_rejected(self):
+        """A field that only renders from a queryset annotation cannot be exported, so naming it errors.
+
+        `ManufacturerSerializer.device_type_count` reads an attribute that `ManufacturerViewSet` and
+        `ManufacturerTable` annotate onto their own querysets. An export annotates nothing, so DRF skips
+        the field -- accepted, this would produce a file with no `device_type_count` column and no
+        indication that one was dropped.
+        """
+        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True)
+        self.assertIn("device_type_count", serializer.fields)
+        self.assertFalse(hasattr(Manufacturer, "device_type_count"))
+        self.assertPathsInvalid(
+            ManufacturerSerializer,
+            ["device_type_count"],
+            '"device_type_count": "device_type_count" is computed for display only and cannot be exported',
+        )
+        # ...and it is reported rather than quietly ignored when mixed with exportable fields
+        self.assertPathsInvalid(ManufacturerSerializer, ["name", "device_type_count"], "computed for display only")
+
+    def test_validate__serializer_computed_field_is_still_allowed(self):
+        """A field sourced from the object itself renders with no annotation, so it stays selectable.
+
+        The counterpart to the test above: `display` and friends have no model field behind them either,
+        but they read the whole object rather than an attribute of it.
+        """
+        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True)
+        for field_name in ("display", "object_type", "natural_slug"):
+            with self.subTest(field=field_name):
+                self.assertEqual(serializer.fields[field_name].source, "*")
+                self.assertPathsValid(ManufacturerSerializer, [field_name])
+
     def test_validate__write_only_relation_is_rejected(self):
         """The same for a write-only relation, which the remaining four in core all are."""
         self.assertTrue(VLANSerializer(context={"request": None, "depth": 0}).fields["location"].write_only)
@@ -1222,7 +1289,9 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         DeviceType.objects.create(manufacturer=mfr, model="Selection DT", u_height=1)
         lines = self.export_lines(
             self.run_export(
-                model=DeviceType, query_string="model=Selection+DT", export_fields="model,manufacturer__name"
+                model=DeviceType,
+                query_string="model=Selection+DT",
+                export_fields="model,manufacturer__name",
             )
         )
         self.assertEqual(
@@ -1317,16 +1386,6 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         # ...and the records really do carry only the selected field, so the dropped key is not recoverable
         self.assertEqual(uncovered["records"], [{"model": "Doc Key DT"}])
 
-    @skip("Enable in X4: uses use_current_view (sort + saved-view export config)")
-    def test_select__omits_directive_when_key_not_covered(self):
-        """If the selection omits the natural key, the export is not stamped with a match directive."""
-        Status.objects.create(name="test_selection_status", color="445566")
-        lines = self.export_lines(
-            self.run_export(query_string="name=test_selection_status", export_fields="color", use_current_view=True)
-        )
-        self.assertEqual(lines[0], "color")
-        self.assertEqual(lines[1], "445566")
-
     def test_select__json(self):
         """Field selection applies to JSON document exports as well, with nested related fields."""
         mfr = Manufacturer.objects.create(name="Selection JSON Mfr")
@@ -1381,6 +1440,21 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 job_result=job_result, message__contains="no_such_field", log_level=LogLevelChoices.LOG_ERROR
             ).exists()
         )
+
+    def test_select__related_object_count_fails_rather_than_exporting_nothing(self):
+        """Selecting a related-object count fails the Job instead of writing a file without that column.
+
+        The count is a `queryset.annotate()` that the API viewset and the list table each make for
+        themselves; an export makes none, so DRF skips the field and the column would just be absent.
+        """
+        Manufacturer.objects.create(name="Counted Mfr")
+        job_result = self.run_export(
+            model=Manufacturer,
+            export_fields="name,device_type_count",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "computed for display only", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
 
     # -- custom fields ---------------------------------------------------------
     # A `cf_<key>` entry is the only selection path that names something the serializer has no field for:
@@ -1571,3 +1645,419 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
             'name="export_selector-export_fields" type="checkbox" value="name" checked>',
             content,
         )
+
+
+# ===========================================================================
+# Export scope — the filters and sort order the query string describes
+# ===========================================================================
+class ExportScopeTests(ImportExportJobTestCase):
+    """`query_string` is how the launching list view says what it is showing, and always applies.
+
+    It carries the view's own filters, a reference to the Saved View in use (whose stored filters and
+    sort order are part of the view just as much), and the column the user sorted by. None of that is
+    conditional on any other input: an export of a view covers what that view covers.
+    """
+
+    def test_scope__no_query_string_exports_every_object(self):
+        """With nothing to narrow it, an export is of the whole model in its own default order."""
+        Status.objects.create(name="zzz_full_export", color="111111")
+        rows = self.export_rows(self.run_export())
+        self.assertEqual([row["name"] for row in rows], [status.name for status in Status.objects.all()])
+
+    def test_scope__applies_filters(self):
+        """A filter in the query string narrows the export to the matching records."""
+        Status.objects.create(name="zzz_only_me", color="111111")
+        rows = self.export_rows(self.run_export(query_string="name=zzz_only_me"))
+        self.assertEqual([row["name"] for row in rows], ["zzz_only_me"])
+
+    def test_scope__invalid_filter_fails_the_job(self):
+        """A filter the filterset rejects fails the export rather than silently exporting everything."""
+        job_result = self.run_export(
+            query_string="created=not-a-date", expected_status=JobResultStatusChoices.STATUS_FAILURE
+        )
+        self.assertJobLogEntry(job_result, "Invalid filters were specified", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
+
+    def test_scope__applies_sort(self):
+        """A `sort` parameter orders the exported rows the way the view orders its own."""
+        Status.objects.create(name="zzz_sort_a", color="111111")
+        Status.objects.create(name="zzz_sort_b", color="222222")
+        rows = self.export_rows(self.run_export(query_string="name=zzz_sort_a&name=zzz_sort_b&sort=-name"))
+        self.assertEqual([row["name"] for row in rows], ["zzz_sort_b", "zzz_sort_a"])
+
+    def test_scope__applies_related_field_sort(self):
+        """A sort that traverses a relation is passed through, being something `order_by` supports."""
+        manufacturer = Manufacturer.objects.create(name="Sort Mfr")
+        for model in ("zzz_sort_dt_a", "zzz_sort_dt_b"):
+            DeviceType.objects.create(manufacturer=manufacturer, model=model, u_height=1)
+        rows = self.export_rows(
+            self.run_export(model=DeviceType, query_string="manufacturer=Sort+Mfr&sort=-manufacturer__name&sort=-model")
+        )
+        self.assertEqual([row["model"] for row in rows], ["zzz_sort_dt_b", "zzz_sort_dt_a"])
+
+    def test_scope__bad_sort_key(self):
+        """A sort on a non-sortable key is ignored with a warning; the export still succeeds."""
+        job_result = self.run_export(query_string="sort=not_a_real_field", allow_issues=True)
+        self.assertTrue(job_result.files.exists())
+        self.assertJobLogEntry(job_result, "Ignoring sort", level=LogLevelChoices.LOG_WARNING)
+
+    def test_scope__bad_sort_key_beyond_the_first_segment(self):
+        """Every segment of a sort key is checked, `order_by()` validating only at query evaluation.
+
+        Were only the head checked, this would raise `FieldError` from inside serialization, long after
+        the sort was accepted, and fail the export.
+        """
+        job_result = self.run_export(model=DeviceType, query_string="sort=manufacturer__nope", allow_issues=True)
+        self.assertTrue(job_result.files.exists())
+        self.assertJobLogEntry(job_result, "Ignoring sort", level=LogLevelChoices.LOG_WARNING)
+
+    def test_scope__model_that_is_not_an_ordinary_nautobot_model(self):
+        """`auth.Group` and `contenttypes.ContentType` are exportable despite being plain Django models.
+
+        Each is missing two things an export would otherwise take for granted, and needs both handled:
+        a `FilterSet` (a query string always reaches one now, so its absence cannot raise) and a
+        manager with `restrict()` (supplied by wrapping the model in a `RestrictedQuerySet`, so that
+        object permissions still apply -- as `users.api.views.GroupViewSet` does for the same reason).
+        """
+        for model in (Group, ContentType):
+            with self.subTest(model=model._meta.label_lower):
+                self.assertIsNone(get_filterset_for_model(model))
+                self.assertFalse(hasattr(model.objects.all(), "restrict"))
+                rows = self.export_rows(self.run_export(model=model))
+                self.assertEqual(len(rows), model.objects.count())
+
+    def test_scope__filters_on_a_model_without_a_filterset_fail(self):
+        """Filters that cannot possibly be applied fail the export rather than being ignored.
+
+        Exporting everything instead would hand back records the user did not ask for.
+        """
+        job_result = self.run_export(
+            model=Group,
+            query_string="name=whatever",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "has no filterset to apply them", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(job_result.files.exists())
+
+    def test_scope__is_sortable(self):
+        """Which sort keys `_apply_sort()` will pass to `order_by()`."""
+        test_cases = [
+            ("model", True),
+            ("pk", True),
+            ("manufacturer", True),  # ordering by a relation uses the related model's own ordering
+            ("manufacturer__name", True),
+            ("cf_anything", True),  # custom fields sort via a JSON-field lookup, not a model field
+            ("not_a_real_field", False),
+            ("manufacturer__nope", False),
+            ("model__nope", False),  # `model` is not a relation, so there is nothing to traverse
+            ("manufacturer__name,-model", False),  # a comma-joined value is not a single field path
+        ]
+        for field_path, expected in test_cases:
+            with self.subTest(field_path=field_path):
+                self.assertEqual(ExportObjectList._is_sortable(DeviceType, field_path), expected)
+
+    def test_scope__saved_view_filters(self):
+        """A referenced saved view contributes the filters it has stored."""
+        filter_name = Status.objects.first().name
+        saved_view = self.create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={saved_view.pk}"))
+        self.assertEqual([row["name"] for row in rows], [filter_name])
+
+    def test_scope__saved_view_without_filters(self):
+        """A saved view that stores no filters narrows nothing."""
+        saved_view = self.create_saved_view()
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={saved_view.pk}"))
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_scope__saved_view_filters_survive_non_filter_params(self):
+        """Sorting or paging a saved view does not discard the filters that view is showing through.
+
+        These parameters are the view's own bookkeeping rather than filters, so their presence must not
+        be read as the user having replaced the saved view's filters with something else.
+        """
+        filter_name = Status.objects.first().name
+        saved_view = self.create_saved_view(config={"filter_params": {"name": [filter_name]}})
+        rows = self.export_rows(
+            self.run_export(query_string=f"saved_view={saved_view.pk}&sort=-name&page=1&per_page=50")
+        )
+        self.assertEqual([row["name"] for row in rows], [filter_name])
+
+    def test_scope__query_string_filters_replace_saved_view_filters(self):
+        """A filter in the query string means the user changed the view's filters, so it replaces them.
+
+        The list view does not merge the two: whatever filters the request carries are the complete set,
+        which is what lets a user narrow *or widen* a saved view. Mirrors
+        `ObjectListView.get_filter_params()`.
+        """
+        manufacturer = Manufacturer.objects.create(name="Test Manufacturer")
+        manufacturer2 = Manufacturer.objects.create(name="Test2 Manufacturer", description="test filter")
+        saved_view = self.create_saved_view(
+            model_class=Manufacturer, config={"filter_params": {"name": [manufacturer.name]}}
+        )
+        rows = self.export_rows(
+            self.run_export(
+                model=Manufacturer,
+                query_string=f"saved_view={saved_view.pk}&description={manufacturer2.description}",
+            )
+        )
+        self.assertEqual([row["name"] for row in rows], [manufacturer2.name])
+
+    def test_scope__query_string_filters_can_widen_a_saved_view(self):
+        """Re-stating a saved view's filter with more values exports all of them, not the intersection."""
+        first_name = Status.objects.first().name
+        last_name = Status.objects.last().name
+        saved_view = self.create_saved_view(config={"filter_params": {"name": [first_name]}})
+        rows = self.export_rows(
+            self.run_export(query_string=f"saved_view={saved_view.pk}&name={first_name}&name={last_name}")
+        )
+        self.assertEqual(sorted(row["name"] for row in rows), sorted([first_name, last_name]))
+
+    def test_scope__saved_view_after_removing_all_filters(self):
+        """`all_filters_removed` says the user cleared the saved view's filters, so none apply."""
+        saved_view = self.create_saved_view(config={"filter_params": {"name": [Status.objects.first().name]}})
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={saved_view.pk}&all_filters_removed=true"))
+        self.assertEqual(len(rows), Status.objects.count())
+
+    def test_scope__saved_view_sort_order(self):
+        """Absent a `sort` parameter, a saved view sorts by the order it has stored."""
+        Status.objects.create(name="zzz_sv_sort_a", color="111111")
+        Status.objects.create(name="zzz_sv_sort_b", color="222222")
+        saved_view = self.create_saved_view(
+            config={"filter_params": {"name": ["zzz_sv_sort_a", "zzz_sv_sort_b"]}, "sort_order": ["-name"]}
+        )
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={saved_view.pk}"))
+        self.assertEqual([row["name"] for row in rows], ["zzz_sv_sort_b", "zzz_sv_sort_a"])
+
+    def test_scope__sort_param_overrides_saved_view_sort_order(self):
+        """A `sort` parameter is the user having re-sorted the saved view, and wins over its stored order."""
+        Status.objects.create(name="zzz_sv_resort_a", color="111111")
+        Status.objects.create(name="zzz_sv_resort_b", color="222222")
+        saved_view = self.create_saved_view(
+            config={"filter_params": {"name": ["zzz_sv_resort_a", "zzz_sv_resort_b"]}, "sort_order": ["-name"]}
+        )
+        rows = self.export_rows(self.run_export(query_string=f"saved_view={saved_view.pk}&sort=name"))
+        self.assertEqual([row["name"] for row in rows], ["zzz_sv_resort_a", "zzz_sv_resort_b"])
+
+    def test_scope__unresolvable_saved_view(self):
+        """A saved_view reference that resolves to nothing warns and exports unfiltered, not erroring.
+
+        The reference comes straight from a `?saved_view=` query parameter, so it may name a view that
+        has since been deleted, or be malformed outright.
+        """
+        for saved_view_pk in ("00000000-0000-0000-0000-000000000000", "not-a-uuid"):
+            with self.subTest(saved_view=saved_view_pk):
+                job_result = self.run_export(query_string=f"saved_view={saved_view_pk}", allow_issues=True)
+                self.assertEqual(len(self.export_rows(job_result)), Status.objects.count())
+                self.assertJobLogEntry(job_result, "not found", level=LogLevelChoices.LOG_WARNING)
+
+    def test_scope__view_specific_non_filter_params_are_not_filters(self):
+        """A parameter the launching view reads for itself is not handed to the filterset as a filter.
+
+        The Prefix list view adds `expanded_subtree` to its `non_filter_params`; a Job cannot see which
+        view produced a query string, so it takes that list from the view rather than assuming the
+        default. Were it assumed, `expanded_subtree` would count as a filter and would therefore be
+        taken as having replaced the saved view's filters.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="Non Filter Params Namespace")
+        status = Status.objects.get_for_model(Prefix).first()
+        Prefix.objects.create(prefix="10.98.0.0/16", namespace=namespace, status=status)
+        Prefix.objects.create(prefix="10.97.0.0/16", namespace=namespace, status=status)
+        saved_view = self.create_saved_view(model_class=Prefix, config={"filter_params": {"prefix": ["10.98.0.0/16"]}})
+        rows = self.export_rows(
+            self.run_export(
+                model=Prefix,
+                query_string=f"saved_view={saved_view.pk}&expanded_subtree=true",
+            )
+        )
+        self.assertEqual([row["prefix"] for row in rows], ["10.98.0.0/16"])
+
+    def test_scope__non_filter_params_union_the_view_and_the_default(self):
+        """A view's own list is unioned into the default, so a narrower one cannot admit a filter.
+
+        Replacing the default outright would let a view that omits `saved_view` -- or an App's view that
+        simply has not kept up -- hand that parameter to a filterset as though it were a filter.
+        """
+        job = ExportObjectList()
+        self.assertEqual(job._get_non_filter_params(Status), set(NON_FILTER_PARAMS))
+        self.assertEqual(job._get_non_filter_params(Prefix), {*NON_FILTER_PARAMS, "expanded_subtree"})
+        # A through model is exportable as a content type of its own but has no list view to ask
+        self.assertIsNone(get_view_for_model(VRFDeviceAssignment, "List"))
+        self.assertEqual(job._get_non_filter_params(VRFDeviceAssignment), set(NON_FILTER_PARAMS))
+
+        class NarrowView:
+            non_filter_params = ("page",)
+
+        with mock.patch("nautobot.core.jobs.get_view_for_model", return_value=NarrowView):
+            self.assertEqual(job._get_non_filter_params(Status), set(NON_FILTER_PARAMS))
+
+
+# ===========================================================================
+# Export field defaults — "Use Current View Columns"
+# ===========================================================================
+class ExportViewColumnsTests(ImportExportJobTestCase):
+    """`use_current_view_columns` defaults the field selection to the list view's displayed columns.
+
+    That is all it does: it is a default for `export_fields`, not a mode. What gets exported and in what
+    order is the query string's business either way (`ExportScopeTests`).
+    """
+
+    # The exportable fields of `StatusTable`'s columns, in display order. `pk` and `actions` aren't
+    # data, and the `dynamic_group_count` column `BaseTable` injects for a dynamic-group-associable
+    # model is a display aggregate, so all three are absent -- see `test_columns__omits_a_count_column`.
+    ALL_STATUS_COLUMNS = ["name", "color", "content_types", "description"]
+
+    def test_columns__off_by_default(self):
+        """Left off, the view's columns have no bearing on the export: every field is exported."""
+        user = self.create_user_with_table_config("StatusTable", ["name"])
+        header = self.export_header(self.run_export(username=user.username))
+        self.assertIn("description", header)  # a field the user's own table configuration hides
+
+    def test_columns__from_user_table_config(self):
+        """The user's own table configuration for the view supplies the fields, in its column order."""
+        user = self.create_user_with_table_config("StatusTable", ["color", "name"])
+        header = self.export_header(self.run_export(username=user.username, use_current_view_columns=True))
+        self.assertEqual(header, ["color", "name"])
+
+    def test_columns__from_saved_view_table_config(self):
+        """A saved view's stored table configuration supplies the fields when that view is in use."""
+        saved_view = self.create_saved_view(
+            config={"table_config": {"StatusTable": {"columns": ["description", "name"]}}}
+        )
+        header = self.export_header(
+            self.run_export(query_string=f"saved_view={saved_view.pk}", use_current_view_columns=True)
+        )
+        self.assertEqual(header, ["description", "name"])
+
+    def test_columns__saved_view_takes_precedence_over_user_config(self):
+        """While a saved view is in use, it is what the view displays -- not the user's own configuration."""
+        user = self.create_user_with_table_config("StatusTable", ["color"])
+        saved_view = self.create_saved_view(config={"table_config": {"StatusTable": {"columns": ["description"]}}})
+        header = self.export_header(
+            self.run_export(
+                username=user.username, query_string=f"saved_view={saved_view.pk}", use_current_view_columns=True
+            )
+        )
+        self.assertEqual(header, ["description"])
+
+    def test_columns__user_config_wins_when_table_changes_pending(self):
+        """Unsaved column changes are what the user is looking at, so they win over the saved view's."""
+        user = self.create_user_with_table_config("StatusTable", ["color"])
+        saved_view = self.create_saved_view(config={"table_config": {"StatusTable": {"columns": ["description"]}}})
+        header = self.export_header(
+            self.run_export(
+                username=user.username,
+                query_string=f"saved_view={saved_view.pk}&table_changes_pending=true",
+                use_current_view_columns=True,
+            )
+        )
+        self.assertEqual(header, ["color"])
+
+    def test_columns__default_columns_when_nothing_is_configured(self):
+        """With neither a saved view nor a stored configuration, the view shows the table's defaults."""
+        header = self.export_header(self.run_export(use_current_view_columns=True))
+        self.assertEqual(header, self.ALL_STATUS_COLUMNS)
+
+    def test_columns__omits_a_count_column(self):
+        """A related-object count is an aggregate the table annotates for display, not a field.
+
+        The serializer does declare `dynamic_group_count`, but it reads that annotation -- which an
+        export does not add -- so selecting it would put a column in the file with nothing in it.
+        Reported at info level: every view has columns like this, so it is not a sign of a problem.
+        """
+        job_result = self.run_export(use_current_view_columns=True)
+        self.assertNotIn("dynamic_group_count", self.export_header(job_result))
+        self.assertJobLogEntry(job_result, "dynamic_group_count", level=LogLevelChoices.LOG_INFO)
+
+    def test_columns__explicit_fields_take_precedence(self):
+        """An explicit selection is the user having said which fields they want; the view's are a default."""
+        user = self.create_user_with_table_config("StatusTable", ["color", "name"])
+        header = self.export_header(
+            self.run_export(username=user.username, use_current_view_columns=True, export_fields="description")
+        )
+        self.assertEqual(header, ["description"])
+
+    def test_columns__applies_to_a_document_export_too(self):
+        """The default is a field selection, so it reaches the JSON/YAML document like any other."""
+        Status.objects.create(name="zzz_document_columns", color="abcdef")
+        user = self.create_user_with_table_config("StatusTable", ["name", "color"])
+        doc = self.export_document(
+            self.run_export(
+                username=user.username,
+                query_string="name=zzz_document_columns",
+                export_format="json",
+                use_current_view_columns=True,
+            )
+        )
+        self.assertEqual(doc["records"], [{"name": "zzz_document_columns", "color": "abcdef"}])
+
+    def test_columns__non_exportable_columns_are_omitted(self):
+        """Displayed columns with no exportable equivalent are reported and left out of the selection.
+
+        `ManufacturerTable` shows four related-object counts on top of the injected fifth; what remains
+        is the data. The user asked for their view, so losing a column is reported, not fatal -- unlike
+        naming one of those columns explicitly, which fails
+        (`test_select__related_object_count_fails_rather_than_exporting_nothing`).
+        """
+        Manufacturer.objects.create(name="Counted Mfr", description="has counts")
+        job_result = self.run_export(model=Manufacturer, use_current_view_columns=True)
+        self.assertEqual(self.export_header(job_result), ["name", "description"])
+        self.assertJobLogEntry(job_result, "device_type_count", level=LogLevelChoices.LOG_INFO)
+
+    def test_columns__count_column_carries_the_relation_it_counts(self):
+        """A count column exports as the relation it counts, where an export can emit that relation.
+
+        A count is an aggregate no export can carry, but `PrefixTable.vrf_count` is *about* `Prefix.vrfs`,
+        so the export carries the VRFs themselves under that name instead of dropping the column.
+        """
+        namespace, _ = Namespace.objects.get_or_create(name="Counted Relation Namespace")
+        # `rd` is half of a VRF's natural key, so it is what identifies the member in the exported cell
+        vrf = VRF.objects.create(name="Counted VRF", rd="65000:99", namespace=namespace)
+        prefix = Prefix.objects.create(
+            prefix="10.99.0.0/16", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        prefix.vrfs.add(vrf)
+        user = self.create_user_with_table_config("PrefixTable", ["prefix", "vrf_count"])
+        rows = self.export_rows(
+            self.run_export(
+                model=Prefix,
+                username=user.username,
+                query_string="prefix=10.99.0.0/16",
+                use_current_view_columns=True,
+            )
+        )
+        self.assertEqual(list(rows[0]), ["prefix", "vrfs"])
+        self.assertIn(vrf.rd, rows[0]["vrfs"])
+
+    def test_columns__custom_field_column(self):
+        """A custom-field column is exportable, and is carried across as its `cf_` reference."""
+        status = self.create_status_with_custom_fields()
+        user = self.create_user_with_table_config("StatusTable", ["name", "cf_export_cf_a"])
+        rows = self.export_rows(
+            self.run_export(username=user.username, query_string=f"name={status.name}", use_current_view_columns=True)
+        )
+        self.assertEqual(rows, [{"name": status.name, "cf_export_cf_a": "A value"}])
+
+    def test_columns__non_exportable_column_does_not_fail_the_export(self):
+        """A view showing only non-exportable columns falls back to exporting every field.
+
+        Warned about rather than merely noted: unlike losing one column among several, this means the
+        file bears no resemblance to the view that was asked for.
+        """
+        user = self.create_user_with_table_config("StatusTable", ["dynamic_group_count"])
+        job_result = self.run_export(username=user.username, use_current_view_columns=True, allow_issues=True)
+        self.assertIn("name", self.export_header(job_result))
+        self.assertJobLogEntry(job_result, "None of the displayed columns", level=LogLevelChoices.LOG_WARNING)
+
+    def test_columns__ignored_by_an_export_template(self):
+        """An Export Template renders its own output, so a field selection of any origin is irrelevant."""
+        user = self.create_user_with_table_config("StatusTable", ["name"])
+        export_template = ExportTemplate.objects.create(
+            content_type=ContentType.objects.get_for_model(Status),
+            name="Status template",
+            template_code="{% for status in queryset %}{{ status.name }},{{ status.color }}\n{% endfor %}",
+        )
+        job_result = self.run_export(
+            username=user.username, export_template=export_template.pk, use_current_view_columns=True
+        )
+        first_status = Status.objects.first()
+        self.assertIn(f"{first_status.name},{first_status.color}", self.export_text(job_result))
