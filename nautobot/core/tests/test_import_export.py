@@ -30,7 +30,6 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
-    enumerate_field_paths,
     EXCLUDED_CSV_FIELDS,
     EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
