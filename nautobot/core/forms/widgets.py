@@ -200,7 +200,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             "</div>",
             widget_id,
             reverse("export_fields_picker"),
-            self._toolbar(widget_id),
+            self._toolbar(widget_id, has_selection=bool(widget["value"])),
             self._omitted_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
@@ -208,13 +208,17 @@ class ExportFieldSelect(SelectMultipleOrderable):
             self._behavior_script(),
         )
 
-    def _toolbar(self, widget_id):
-        """The picker's own controls: for now, seeding the selection from the launching list view.
+    def _toolbar(self, widget_id, has_selection=False):
+        """The picker's controls: seeding the selection from the launching list view, and clearing it.
 
-        A button rather than the Job's `use_current_view_columns` variable, which resolves the columns at
-        run time: pressing this puts them *in* the picker, where they can be seen, reordered and pruned
-        before the export runs. The variable remains for callers with no picker in front of them -- the
-        REST API, a scheduled Job, `nautobot-server export_objects`.
+        "Match the list view" is a button rather than the Job's `use_current_view_columns` variable, which
+        resolves the columns at run time: pressing this puts them *in* the picker, where they can be seen,
+        reordered and pruned before the export runs. The variable remains for callers with no picker in
+        front of them -- the REST API, a scheduled Job, `nautobot-server export_objects`.
+
+        "Clear" is its counterpart, and the way back to exporting every field: that is what an empty
+        selection means, but reaching it by unchecking whatever the other button filled in is tedious. It
+        is disabled while there is nothing to clear, so it also reads as whether anything is selected.
         """
         return format_html(
             '<div class="d-flex justify-content-start mb-6">'
@@ -224,9 +228,13 @@ class ExportFieldSelect(SelectMultipleOrderable):
             'title="Replace the selection with the columns this type\'s list view is configured to display">'
             '<span class="mdi mdi-table-column-plus-after me-4" aria-hidden="true"></span>'
             "Match the list view</button>"
+            '<button type="button" class="btn btn-secondary btn-sm ms-6 export-fields-clear"{disabled} '
+            'title="Clear the selection, so that every field is exported again">'
+            '<span class="mdi mdi-close me-4" aria-hidden="true"></span>Clear</button>'
             "</div>",
             url=reverse("export_fields_picker"),
             wid=widget_id,
+            disabled=format_html(" disabled") if not has_selection else "",
             include=self.context_field_selector,
         )
 
@@ -287,6 +295,30 @@ class ExportFieldSelect(SelectMultipleOrderable):
             box.indeterminate =
                 !box.checked && boxRow !== null && boxesWithin(boxRow).some((inner) => inner !== box && inner.checked);
         }});
+        refreshClearButton(list);
+    }});
+
+    // Whether there is anything to clear is also whether anything is selected, so the button's state
+    // doubles as that: an empty selection is what exports every field.
+    function refreshClearButton(list) {{
+        const picker = list.closest(".nb-export-fields-picker");
+        const clear = picker ? picker.querySelector(".export-fields-clear") : null;
+        if (clear) clear.disabled = !boxesWithin(list).some((box) => box.checked);
+    }}
+
+    document.addEventListener("click", function (event) {{
+        const clear = event.target.closest(".export-fields-clear");
+        if (!clear) return;
+        const picker = clear.closest(".nb-export-fields-picker");
+        const list = picker ? picker.querySelector(LIST) : null;
+        if (!list) return;
+        // Unchecking in script raises no "change" event, so the housekeeping the change handler would
+        // have done -- the indeterminate marks, and this button's own state -- is done here.
+        boxesWithin(list).forEach((box) => {{
+            box.checked = false;
+            box.indeterminate = false;
+        }});
+        clear.disabled = true;
     }});
 
     // Collapse/expand a parent's nested columns, at any depth.
