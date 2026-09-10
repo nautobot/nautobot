@@ -71,10 +71,11 @@ into it, so the export runs with a user-ordered field list.
                 sync();
             });
             // Drag reordering doesn't fire "change", so also re-sync when a drag completes. draggable.js
-            // reorders the DOM in its own handlers (bound at page load, so they run before these), and
-            // dragend/mouseup bubble up to the list container.
-            selector.addEventListener("dragend", sync);
-            selector.addEventListener("mouseup", sync);
+            // moves the dragged row in its own "dragend" handler, which is bound on `document` and so runs
+            // *after* this one (the event bubbles from the row, through this list, up to `document`).
+            // Reading the DOM here would therefore capture the pre-drag order; defer past the current task
+            // so that the reorder has happened by the time the selection is serialized.
+            selector.addEventListener("dragend", () => setTimeout(sync, 0));
 
             // Collapse/expand a relation's nested columns (at any depth).
             selector.addEventListener("click", function (event) {
