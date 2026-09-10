@@ -538,13 +538,12 @@ def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals):
     }
 
 
-@register.inclusion_tag("buttons/job_import.html", takes_context=True)
-def job_import_button(context, content_type, list_element=False):
+@register.inclusion_tag("buttons/job_import.html")
+def job_import_button(content_type, list_element=False):
     """Display an Import Button/List Element on the page.
 
     This allows an Import Button to either be displayed on a page or within a Button Group.
     Args:
-        context (dict): current Django Template context
         content_type (str): Django.contrib.ContentType for the model.
         list_element (bool, optional): Render as a <li> element instead of a button. Defaults to False.
     """

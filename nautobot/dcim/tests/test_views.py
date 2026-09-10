@@ -987,14 +987,14 @@ class DeviceTypeTestCase(
         }
 
     def test_list_has_correct_links(self):
-        """Assert that the DeviceType list view has import/export buttons for both CSV and YAML/JSON formats."""
-        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.view_job", "extras.run_job")
-        # The export/import triggers reuse the job-modal framework's gate (view permission + enabled Job),
-        # so enable the system Jobs for the buttons to render enabled (as they are in production).
-        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
-            job_model = Job.objects.get_for_class_path(class_path)
-            job_model.enabled = True
-            job_model.save()
+        """Assert that the DeviceType list view has both import links (single-record YAML/JSON, multi-record CSV)
+        and the export trigger."""
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.view_job")
+        # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
+        # enable the system Job for the button to render enabled (as it is in production).
+        job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
+        job_model.enabled = True
+        job_model.save()
         response = self.client.get(reverse("dcim:devicetype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -1007,7 +1007,7 @@ class DeviceTypeTestCase(
             content,
         )
         self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from file (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 
@@ -1404,14 +1404,14 @@ class ModuleTypeTestCase(
         }
 
     def test_list_has_correct_links(self):
-        """Assert that the ModuleType list view has import/export buttons for both CSV and YAML/JSON formats."""
-        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.view_job", "extras.run_job")
-        # The export/import triggers reuse the job-modal framework's gate (view permission + enabled Job),
-        # so enable the system Jobs for the buttons to render enabled (as they are in production).
-        for class_path in ("nautobot.core.jobs.ExportObjectList", "nautobot.core.jobs.ImportObjects"):
-            job_model = Job.objects.get_for_class_path(class_path)
-            job_model.enabled = True
-            job_model.save()
+        """Assert that the ModuleType list view has both import links (single-record YAML/JSON, multi-record CSV)
+        and the export trigger."""
+        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.view_job")
+        # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
+        # enable the system Job for the button to render enabled (as it is in production).
+        job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
+        job_model.enabled = True
+        job_model.save()
         response = self.client.get(reverse("dcim:moduletype_list"))
         self.assertHttpStatus(response, 200)
         content = extract_page_body(response.content.decode(response.charset))
@@ -1424,7 +1424,7 @@ class ModuleTypeTestCase(
             content,
         )
         self.assertInHTML(
-            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from file (multiple records)</a>',
+            f'<a class="dropdown-item" href="{csv_import_url}"><span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV (multiple records)</a>',
             content,
         )
 

@@ -1,8 +1,8 @@
 {% comment %}
 A button (or dropdown <li>) that opens a system Job's form in the shared generic modal via HTMX.
 
-Shared by the export and import list-view buttons; the HTMX wiring itself is built once in Python by
-`_JobModalButton.build_trigger_context()`. Expected context:
+Used by the list-view export button, and reusable by any other hand-placed trigger; the HTMX wiring
+itself is built once in Python by `_JobModalButton.build_trigger_context()`. Expected context:
 
     trigger_url     - URL to hx-post to (the Job's run-by-class-path view)
     trigger_hx_vals - JSON-encoded hx-vals for that post
