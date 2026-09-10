@@ -621,6 +621,8 @@ class GetBulkQuerysetFromViewScopingTestCase(TestCase):
 
 
 class HasOverviewTestCase(TestCase):
+    """Class to test `has_overview` deciding whether a model's view can produce an overview."""
+
     class FakeViewWithoutOverviewMixin:
         object_detail_content = ObjectDetailContent(
             panels=[ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__")]
@@ -638,13 +640,16 @@ class HasOverviewTestCase(TestCase):
         self.addCleanup(patcher.stop)
 
     def test_view_without_overview_mixin(self):
+        """A view that does not inherit from `ObjectOverviewViewMixin` has no overview."""
         self.mock_get_view_for_model.return_value = self.FakeViewWithoutOverviewMixin
         self.assertFalse(has_overview(Location))
 
     def test_object_fields_panel_in_main_tab_left_half(self):
+        """The first `ObjectFieldsPanel` in the left half of the main tab is enough for an overview."""
         self.assertTrue(has_overview(Location))
 
     def test_object_fields_panel_outside_main_tab_left_half(self):
+        """The first `ObjectFieldsPanel` elsewhere, not in the left half of the main tab, does not count."""
         object_detail_content = ObjectDetailContent(
             panels=[ObjectFieldsPanel(section=SectionChoices.RIGHT_HALF, weight=100, fields="__all__")]
         )
@@ -652,6 +657,7 @@ class HasOverviewTestCase(TestCase):
             self.assertFalse(has_overview(Location))
 
     def test_main_tab_missing(self):
+        """Detail content without a main tab has no panel to build an overview from."""
         object_detail_content = ObjectDetailContent(
             panels=[ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__")]
         )
@@ -660,6 +666,7 @@ class HasOverviewTestCase(TestCase):
             self.assertFalse(has_overview(Location))
 
     def test_overview_options_set(self):
+        """Any of the explicit overview options short circuits the panel lookup."""
         for attribute, value in (
             ("overview_fields", {"name": {"key_transform": "Label"}}),
             ("overview_html", "<b>{{ object.name }}</b>"),
@@ -669,6 +676,7 @@ class HasOverviewTestCase(TestCase):
                 self.assertTrue(has_overview(Location))
 
     def test_overview_options_set_to_empty_value(self):
+        """An explicit but empty overview option opts the view out of overviews."""
         for attribute, value in (
             ("overview_fields", {}),
             ("overview_html", ""),

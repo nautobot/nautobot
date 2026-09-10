@@ -1692,6 +1692,8 @@ class ViewSetCustomActionsTestCase(TestCase):
 
 
 class ObjectOverviewViewTestCase(TestCase):
+    """Tests for the object overview endpoint rendering an object's overview row."""
+
     def setUp(self):
         super().setUp()
         self.location = Location.objects.first()
@@ -1699,6 +1701,7 @@ class ObjectOverviewViewTestCase(TestCase):
         self.add_permissions("dcim.view_location")
 
     def test_default_overview(self):
+        """With no overview options set, the overview is built from the object detail view's fields panel."""
         response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         keys = re.findall(r"<dt>(.*?)</dt>", response.content.decode(response.charset))
@@ -1708,6 +1711,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_fields(self):
+        """`overview_fields` renders the named fields with their key and value transforms applied."""
         overview_fields = {"name": {"key_transform": "Label", "value_transforms": [lambda value: "VALUE"]}}
         with mock.patch.object(LocationUIViewSet, "overview_fields", overview_fields):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
@@ -1721,6 +1725,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_html(self):
+        """`overview_html` is rendered as an inline template against the object."""
         with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
@@ -1731,6 +1736,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_template_name(self):
+        """`overview_template_name` is rendered as the named template against the object."""
         template_name = "components/panel/body_wrapper_generic_table.html"
         with mock.patch.object(LocationUIViewSet, "overview_template_name", template_name):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
@@ -1742,6 +1748,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_colspans(self):
+        """The requested colspans are rendered as an offset cell and a content cell."""
         with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
             response = self.client.get(
                 self.url, {"colspan_content": 3, "colspan_offset": 2}, headers={"HX-Request": "true"}
@@ -1754,6 +1761,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_colspan_offset_zero(self):
+        """A zero `colspan_offset` renders no offset cell at all."""
         with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
             response = self.client.get(
                 self.url, {"colspan_content": 4, "colspan_offset": 0}, headers={"HX-Request": "true"}
@@ -1766,6 +1774,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_colspans_fall_back_to_defaults(self):
+        """Invalid colspans fall back to no offset and a full-width content cell."""
         for colspans in (
             {"colspan_content": "three", "colspan_offset": "two"},
             {"colspan_content": -3, "colspan_offset": -2},
@@ -1784,6 +1793,7 @@ class ObjectOverviewViewTestCase(TestCase):
                 )
 
     def test_overview_placeholder_when_panel_declines_to_render(self):
+        """A panel whose `should_render()` is False yields the placeholder row instead."""
         panel = get_overview_panel(LocationUIViewSet.object_detail_content)
         with mock.patch.object(panel, "should_render", return_value=False):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
@@ -1795,6 +1805,7 @@ class ObjectOverviewViewTestCase(TestCase):
         )
 
     def test_overview_arguments_are_mutually_exclusive(self):
+        """Setting more than one overview option is a misconfiguration."""
         self.client.raise_request_exception = False
         with (
             mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
@@ -1805,6 +1816,7 @@ class ObjectOverviewViewTestCase(TestCase):
         self.assertIsInstance(response.exc_info[1], ImproperlyConfigured)
 
     def test_overview_bad_request_when_no_htmx(self):
+        """A non-HTMX request to the overview endpoint is rejected."""
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 400)
 
