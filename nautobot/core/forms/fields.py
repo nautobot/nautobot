@@ -956,7 +956,7 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
 
     widget = widgets.ExportFieldSelect
 
-    #: The name of the sibling form field naming the content type whose fields are offered.
+    # The name of the sibling form field naming the content type whose fields are offered.
     content_type_field_name = "content_type"
 
     def __init__(self, *args, content_type=None, **kwargs):

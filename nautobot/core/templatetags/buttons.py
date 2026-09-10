@@ -6,8 +6,6 @@ from django.db.models import CharField
 from django.urls import NoReverseMatch, reverse
 from django.utils.html import format_html, format_html_join
 
-from nautobot.core.api import utils as api_utils
-from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.templatetags.perms import can_add, can_change, can_delete
 from nautobot.core.utils import lookup
@@ -579,19 +577,13 @@ def export_button(context, content_type=None, list_element=False):
     if content_type is None:
         return {"trigger_url": None, "list_element": list_element}
 
-    # Default the export field selection to the current view's visible columns, when available.
-    default_export_fields = ""
-    table = context.get("table")
-    if table is not None and hasattr(table, "serializer_paths_for_visible_columns"):
-        try:
-            serializer_class = api_utils.get_serializer_for_model(content_type.model_class())
-            default_export_fields = ",".join(table.serializer_paths_for_visible_columns(serializer_class))
-        except SerializerNotFound:
-            pass
-
-    # The job's own fields (format, template, field selection, use_current_view) replace the previous
-    # per-format / saved-view dropdown entries; the registered ExportObjectListModalButton lets the
-    # job-result modal offer a file download once the export completes.
+    # The job's own fields (format, template, field selection) replace the previous per-format /
+    # saved-view dropdown entries; the registered ExportObjectListModalButton lets the job-result modal
+    # offer a file download once the export completes.
+    #
+    # No field selection is seeded here. The dialog opens exporting every field, and its picker's "match
+    # the list view" button fills in this view's columns on request -- resolved then, by the one helper
+    # the Job itself uses, rather than computed on every list-view render for an export nobody may run.
     return job_modal_trigger_context(
         context,
         "core.export_object_list",
@@ -599,6 +591,5 @@ def export_button(context, content_type=None, list_element=False):
         {
             "content_type": str(content_type.pk),
             "query_string": context["request"].GET.urlencode(),
-            "export_fields": default_export_fields,
         },
     )

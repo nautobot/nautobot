@@ -4,7 +4,7 @@ from urllib.parse import urljoin
 
 from django import forms
 from django.forms.models import ModelChoiceIterator
-from django.urls import get_script_prefix
+from django.urls import get_script_prefix, reverse
 from django.utils.html import format_html, format_html_join
 
 from nautobot.core import choices as core_choices
@@ -128,9 +128,18 @@ class ExportFieldSelect(SelectMultipleOrderable):
     turning a ~25ms render into many seconds. Building the HTML directly keeps it fast in every environment.
     """
 
+    # The sibling field naming the content type whose fields are offered; changing it rebuilds the picker.
+    content_type_selector = "#id_content_type"
+    # The fields whose values the "match the list view" button sends along, being what says *which* list
+    # view is meant: the content type, and the query string that view was showing.
+    context_field_selector = "#id_content_type, #id_query_string"
+
     def __init__(self, *args, parent_paths=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.parent_paths = parent_paths or {}
+        # Columns of the list view that had no exportable equivalent, reported by whoever seeded the
+        # selection from a view, so the picker can say what was left out rather than quietly dropping it.
+        self.omitted_columns = []
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
@@ -182,16 +191,58 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         widget_id = widget["attrs"].get("id") or ""
         rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
+        # Everything is wrapped in one container, addressed by id, because the whole picker is replaced at
+        # once when it has to be rebuilt server-side -- on a change of content type, or by the button
+        # below. Swapping the list alone would leave the toolbar and any hint behind it out of step.
         return format_html(
-            '<ol id="{}" class="{}">{}</ol>{}',
+            '<div id="{}-picker" class="nb-export-fields-picker" data-nb-picker-url="{}">'
+            '{}{}<ol id="{}" class="{}">{}</ol>{}'
+            "</div>",
+            widget_id,
+            reverse("export_fields_picker"),
+            self._toolbar(widget_id),
+            self._omitted_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
             rows,
             self._behavior_script(),
         )
 
-    @staticmethod
-    def _behavior_script():
+    def _toolbar(self, widget_id):
+        """The picker's own controls: for now, seeding the selection from the launching list view.
+
+        A button rather than the Job's `use_current_view_columns` variable, which resolves the columns at
+        run time: pressing this puts them *in* the picker, where they can be seen, reordered and pruned
+        before the export runs. The variable remains for callers with no picker in front of them -- the
+        REST API, a scheduled Job, `nautobot-server export_objects`.
+        """
+        return format_html(
+            '<div class="d-flex justify-content-start mb-6">'
+            '<button type="button" class="btn btn-secondary btn-sm" '
+            'hx-get="{url}" hx-target="#{wid}-picker" hx-swap="outerHTML" hx-include="{include}" '
+            'hx-vals=\'{{"use_current_view": "1"}}\' '
+            'title="Replace the selection with the columns this type\'s list view is configured to display">'
+            '<span class="mdi mdi-table-column-plus-after me-4" aria-hidden="true"></span>'
+            "Match the list view</button>"
+            "</div>",
+            url=reverse("export_fields_picker"),
+            wid=widget_id,
+            include=self.context_field_selector,
+        )
+
+    def _omitted_hint(self):
+        """What the launching view was showing that an export cannot emit, named rather than dropped."""
+        if not self.omitted_columns:
+            return ""
+        return format_html(
+            '<div class="form-text mb-6">Column{} {} {} no exportable equivalent and {} left out.</div>',
+            "" if len(self.omitted_columns) == 1 else "s",
+            format_html_join(", ", "<code>{}</code>", ((column,) for column in self.omitted_columns)),
+            "has" if len(self.omitted_columns) == 1 else "have",
+            "was" if len(self.omitted_columns) == 1 else "were",
+        )
+
+    def _behavior_script(self):
         """The tree's own client-side behavior, shipped with the markup.
 
         Delegated from `document` and guarded by a flag, so that it binds once however many times a widget
@@ -253,8 +304,31 @@ class ExportFieldSelect(SelectMultipleOrderable):
             icon.classList.toggle("mdi-chevron-up", !collapsed);
         }}
     }});
+
+    // A different content type is a different set of fields, so rebuild the picker for it -- server-side,
+    // the field graph being what it enumerates. Any selection is dropped with the type it belonged to.
+    // jQuery because Select2 raises no native event (see https://github.com/select2/select2/issues/1908),
+    // and delegated so that it survives the form being swapped into the modal.
+    function bindContentTypeRefresh() {{
+        if (!window.jQuery) return;
+        window.jQuery(document).on("change", "{content_type_selector}", function () {{
+            const picker = document.querySelector(".nb-export-fields-picker");
+            if (!picker || !window.htmx) return;
+            window.htmx.ajax("GET", picker.dataset.nbPickerUrl, {{
+                target: picker,
+                swap: "outerHTML",
+                values: {{content_type: this.value}},
+            }});
+        }});
+    }}
+    // On a full page render this script runs while the document is still parsing, *before* the scripts at
+    // the end of the body have defined jQuery -- so binding is deferred to whenever that has happened.
+    // A widget swapped in by HTMX renders after page load, where jQuery is there already.
+    if (window.jQuery) bindContentTypeRefresh();
+    else document.addEventListener("DOMContentLoaded", bindContentTypeRefresh);
 }})();
-</script>"""
+</script>""",
+            content_type_selector=self.content_type_selector,
         )
 
     def _render_node(self, node, widget_id, name, is_root):

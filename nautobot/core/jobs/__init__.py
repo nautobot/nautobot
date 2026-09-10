@@ -43,8 +43,9 @@ from nautobot.core.jobs.customfields import (
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import m2m_through_data_fields
-from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model, get_view_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
+from nautobot.core.views.utils import get_list_view_export_paths
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
     BaseValidator,
@@ -200,7 +201,7 @@ class ExportObjectList(Job):
         model=ExportTemplate,
         query_params={"content_type": "$content_type"},
         display_field="name",
-        description="Export Template to use (if unspecified, will export to CSV/YAML as specified above)",
+        description="Export Template to use (if unspecified, will export in the format selected above)",
         label="Export Template",
         default=None,
         required=False,
@@ -382,39 +383,25 @@ class ExportObjectList(Job):
     def _get_current_view_columns(self, model, query_params, saved_view):
         """The columns the launching list view is displaying, as export field paths (None = no selection).
 
-        Resolved by building the model's table the way the list view builds it — from the saved view in
-        use, else the user's own stored table configuration, else the table's default columns — so that
-        this is the same set of columns, in the same order, that the user is looking at.
-
-        Not every column is exportable — row selection and action buttons aren't data at all, and a
-        computed field or related-object count is a displayed value with no serializer field behind it —
-        so `BaseTable.serializer_paths_by_visible_column()` does the mapping and reports what it cannot
-        place. Losing a column that way is logged but does not fail the export: what was asked for is
-        the view, not those specific columns.
+        `get_list_view_export_paths()` does the resolving, shared with the UI that seeds this same
+        selection from a button, so that the two cannot disagree about what the view is showing. What is
+        left here is the reporting: a column that has no exportable equivalent is logged rather than
+        failing the export, since what was asked for is the view, not those specific columns.
         """
-        table_class = get_table_for_model(model)
-        if table_class is None:
+        export_field_paths, omitted = get_list_view_export_paths(
+            model,
+            user=self.user,
+            saved_view=saved_view,
+            table_changes_pending=query_params.get("table_changes_pending", False),
+            logger=self.logger,
+        )
+        if export_field_paths is None:
             self.logger.warning(
                 "No table class found for %s, so its list view's columns cannot be determined; "
                 "exporting all fields instead.",
                 model._meta.label_lower,
             )
             return None
-        self.logger.debug("Found table class: `%s`", table_class.__name__)
-        table = table_class(
-            model.objects.none(),
-            user=self.user,
-            saved_view=saved_view,
-            table_changes_pending=query_params.get("table_changes_pending", False),
-        )
-        serializer_class = get_serializer_for_model(model)
-        export_field_paths, omitted = [], []
-        for column, path in table.serializer_paths_by_visible_column(serializer_class).items():
-            if path is None or not self._is_exportable_path(serializer_class, path):
-                omitted.append(column)
-            elif path not in export_field_paths:
-                # Two columns can map to the same field; a selection names each field once.
-                export_field_paths.append(path)
         if omitted:
             # Info rather than a warning: every view has columns like these, so losing them is the
             # normal case rather than a sign that anything went wrong.
@@ -426,19 +413,6 @@ class ExportObjectList(Job):
             self.logger.warning("None of the displayed columns can be exported; exporting all fields instead.")
             return None
         return export_field_paths
-
-    def _is_exportable_path(self, serializer_class, path):
-        """Whether an export can actually emit this field path, for this user.
-
-        The same check an explicit selection gets, applied per path so that one unusable column is
-        dropped rather than taking the whole derived selection down with it.
-        """
-        try:
-            validate_field_paths(serializer_class, [path], user=self.user)
-        except ValueError as exc:
-            self.logger.debug("Cannot export `%s`: %s", path, exc)
-            return False
-        return True
 
     def _resolve_export_field_paths(self, model, export_fields):
         """Parse and validate the explicit field-selection string (None if no selection was given)."""

@@ -11,6 +11,7 @@ import csv
 from io import StringIO
 import json
 from pathlib import Path
+import re
 from types import SimpleNamespace
 from unittest import mock
 
@@ -1735,6 +1736,58 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         _field, paths = self.picker_paths(RackReservation)
         self.assertIn("user", paths)
         self.assertIn("user__username", paths)
+
+    def picker_view_response(self, model, **params):
+        """GET the picker endpoint for a model, as the logged-in test user."""
+        response = self.client.get(
+            reverse("export_fields_picker"),
+            data={"content_type": ContentType.objects.get_for_model(model).pk, **params},
+        )
+        self.assertHttpStatus(response, 200)
+        return response.content.decode(response.charset)
+
+    def test_select__picker_view_rebuilds_the_tree_for_a_content_type(self):
+        """The picker endpoint re-renders the tree for a content type, which is how changing type works.
+
+        The tree is enumerated server-side from the serializer, so choosing a different content type in
+        the form cannot be handled in the browser: the whole picker is fetched again and swapped in.
+        """
+        content = self.picker_view_response(Status)
+        self.assertIn("nb-export-fields-picker", content)
+        self.assertIn('name="export_fields" type="checkbox" value="name"', content)
+        self.assertNotIn(" checked", content)  # nothing selected for a type just chosen
+
+    def test_select__picker_view_matches_the_list_view(self):
+        """`use_current_view` selects the columns the list view shows, in the order it shows them.
+
+        The same `get_list_view_export_paths()` the Job's `use_current_view_columns` uses, so the button
+        and the variable cannot disagree -- the difference is only that this puts the result in front of
+        the user, to reorder or prune before running.
+        """
+        content = self.picker_view_response(Status, use_current_view="1")
+        checked = re.findall(r'value="([^"]+)" checked', content)
+        # The columns `StatusTable` displays by default; `ExportViewColumnsTests.ALL_STATUS_COLUMNS`
+        # pins the same set from the Job's side.
+        self.assertEqual(checked, ["name", "color", "content_types", "description"])
+        rows = re.findall(r'id="id_export_fields_option_([^"]+)_container"', content)
+        self.assertEqual(rows[:4], ["name", "color", "content_types", "description"])
+
+    def test_select__picker_view_names_columns_it_could_not_export(self):
+        """A displayed column with no exportable equivalent is named, rather than quietly dropped."""
+        self.add_permissions("dcim.view_devicetype", "dcim.view_manufacturer")
+        content = self.picker_view_response(Device, use_current_view="1")
+        # `primary_ip` is an annotation the table displays; there is no serializer field behind it.
+        self.assertIn("no exportable equivalent", content)
+        self.assertIn("<code>primary_ip</code>", content)
+
+    def test_select__picker_view_requires_login(self):
+        """It enumerates a model's fields, so it is for logged-in users only."""
+        self.client.logout()
+        response = self.client.get(
+            reverse("export_fields_picker"),
+            data={"content_type": ContentType.objects.get_for_model(Status).pk},
+        )
+        self.assertHttpStatus(response, 302)
 
     def test_select__modal_renders_selector(self):
         """The Job's own form renders the picker in the HTMX modal, no template of its own involved.
