@@ -24,6 +24,7 @@ from nautobot.circuits.tables import ProviderTable
 from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
+from nautobot.core.templatetags.buttons import job_export_url
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
@@ -122,8 +123,11 @@ class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn('id="add-button"', response_body)
         self.assertIn('id="actions-dropdown"', response_body)
-        self.assertIn("Export as CSV", response_body)
+        self.assertIn("Export to file", response_body)
         self.assertNotIn('id="import-button"', response_body)
+        # The export trigger opens the `ExportObjectList` Job's modal, so it renders disabled -- but still
+        # renders -- for a user who cannot view that Job, as this one cannot. Disabled means no HTMX wiring.
+        self.assertNotIn(f'hx-post="{job_export_url()}"', response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_actions_dropdown_not_rendered_when_import_only_without_add_permission(self):
