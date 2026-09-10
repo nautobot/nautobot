@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
 from django.db import connections, ProgrammingError
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils import timezone
@@ -23,6 +23,12 @@ from nautobot.core.api.utils import is_api_request, rest_api_server_error
 from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
+)
+from nautobot.core.rate_limiting.rest_calculator import (
+    classify_rest_read_request_features,
+    estimate_rest_read_request_cost,
+    READ_METHODS,
+    WRITE_METHODS,
 )
 from nautobot.core.settings_funcs import (
     ldap_auth_enabled,
@@ -475,6 +481,8 @@ class RequestMetricMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        # TODO: Ask team if we want these metrics generated for HTML requests as well?
+
         enabled_metrics = self.get_enabled_metrics()
         if not enabled_metrics:
             return self.get_response(request)
@@ -521,3 +529,96 @@ class RequestMetricMiddleware:
         if settings.REQUEST_DB_DURATION_HEADER_ENABLED:
             enabled_metrics.append(DatabaseDurationRequestMetric())
         return enabled_metrics
+
+
+class ComplexityCostRateLimiting:
+    """A middleware to instrument a complexity cost estimation in the response header for api requests
+
+    Implementation is derived from IETF HTTP API RateLimit Headers
+    https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers
+
+    Adds headers to response to indicate estimated cost of performing the request
+    `RateLimit-Policy` - The budget specification.
+    `RateLimit`        - The current budget state.
+    `X- Nautobot-Cost` - The estimated cost of the request
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # TODO: Figure out GraphQL since not rest API
+        # Only run on API calls, no HTML
+        if is_api_request(request) is False:
+            return self.get_response(request)
+
+        # ----------------------------------------------------------------------
+        #  Calculate Cost
+        # ----------------------------------------------------------------------
+        if request.method in READ_METHODS:
+            read_request_features = classify_rest_read_request_features(request)
+            request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
+        elif request.method in WRITE_METHODS:
+            # TODO: Revisit calculation for write requests
+            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
+        else:
+            return self.get_response(request)
+
+        # ----------------------------------------------------------------------
+        #  Generate Header Data
+        # ----------------------------------------------------------------------
+        quota_policy_name = "rest-complexity-cost"
+        quota = 1000
+        quota_units = "arbitrary-transaction-costs"
+        time_window = 1000
+        partition_key = ""
+
+        remaining_quota = max(0, quota - request_complexity_cost_estimate)
+        remaining_window = time_window
+
+        rate_limit_policy_data = [
+            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"q={quota}",  # total budget granted per window,
+            f'qu="{quota_units}"',  # The unit type of the metrics being measure, ietf default is request count
+            f"w={time_window}",  # Duration that quota applies
+        ]
+        rate_limit_data = [
+            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"r={remaining_quota}",  # Remaining quota
+            f"t={remaining_window}",  # Remaining window of time
+        ]
+
+        # TODO: I have no idea what the partition key is doing
+        if partition_key != "":
+            rate_limit_policy_data.append(f"pk=:{partition_key}:")
+            rate_limit_data.append(f"pk=:{partition_key}:")
+
+        rate_limit_headers = {
+            "RateLimit-Policy": ";".join(rate_limit_policy_data),
+            "RateLimit": ";".join(rate_limit_data),
+            "X-Nautobot-Cost": str(request_complexity_cost_estimate),
+        }
+
+        # --------------------
+        #  If Quota Is Hit, No Further Middleware Allowed, Terminate
+        # --------------------
+        if remaining_quota <= 0:
+            json_quota_exceeded_response = JsonResponse(
+                {"detail": "Request was throttled. The estimated complexity cost exceeds the quota."},
+                status=429,
+            )
+            json_quota_exceeded_response.headers["Retry-After"] = str(remaining_window)
+            for header_name, header_value in rate_limit_headers.items():
+                json_quota_exceeded_response.headers[header_name] = header_value
+
+            return json_quota_exceeded_response
+
+        # ----------------------------------------------------------------------
+        #  Add To Header
+        # ----------------------------------------------------------------------
+        response = self.get_response(request)
+
+        for header_name, header_value in rate_limit_headers.items():
+            response.headers[header_name] = header_value
+
+        return response

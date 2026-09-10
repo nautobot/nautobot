@@ -733,6 +733,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RequestMetricMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "nautobot.core.middleware.ComplexityCostRateLimiting",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
