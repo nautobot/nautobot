@@ -177,8 +177,8 @@ class ExportObjectList(Job):
         query_params={"can_view": True},  # not adding "has_serializer": True as it might just support export-templates
     )
     query_string = StringVar(
-        description='Filterset parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
-        label="Filterset Parameters",
+        description='Filter parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
+        label="Filter Parameters",
         default="",
         required=False,
     )
@@ -209,11 +209,11 @@ class ExportObjectList(Job):
         label="Fields to Export",
         default="",
         required=False,
-        description="Select and drag to order the fields to export, including nested references to related "
-        "objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). A field marked "
-        "<code>*</code> is one an import requires, so a selection that omits it cannot be imported back. "
-        "If nothing is selected, all fields are exported. Not applicable to Export Templates or "
-        "devicetype-library YAML exports.",
+        description="The fields to export, in the order the columns should appear, as a comma-separated "
+        "list that may reach into related objects "
+        "(e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
+        "Leave it empty to export every field. Not applicable to Export Templates or devicetype-library "
+        "YAML exports, which render their own output.",
     )
 
     class Meta:

@@ -29,7 +29,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--filter",
             default="",
-            help='Filterset parameters to apply, in URL query format, e.g. "location=ams01&status=active"',
+            help='Filter parameters to apply, in URL query format, e.g. "location=ams01&status=active"',
         )
         parser.add_argument(
             "--format",

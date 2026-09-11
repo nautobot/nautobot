@@ -126,7 +126,7 @@ while in JSON or YAML it's a list of nested objects:
 
 By default an export includes every field of the object type. **Fields to Export** (`export_fields`) lets you instead pick the specific fields you want and put them in the order you want them to appear.
 
-In the browser this is a list of checkboxes, on both the **Export to file** dialog and the Job's own form. Check a field to include it, and drag a row by its handle to move it: the order of the rows is the order of the columns. The fields of a related object are nested inside that object's row and are shown by the chevron at the right of it; a nested field moves with its parent rather than on its own. Leaving everything unchecked exports every field, as usual, and **Clear** empties the selection to get back to that. A field marked `*` is one an import requires, so a selection that omits it cannot be imported back (see [Effect on re-importing the file](#effect-on-re-importing-the-file)).
+In the browser this is a list of checkboxes, on both the **Export to file** dialog and the Job's own form. Check a field to include it, and drag a row by its handle to move it: the order of the rows is the order of the columns. The fields of a related object are nested inside that object's row and are shown by the chevron at the right of it; a nested field moves with its parent rather than on its own. Leaving everything unchecked exports every field, as usual, and **Clear** empties the selection to get back to that. A field marked `*` is one an import requires to create new records, so a selection that omits it cannot be imported back as new objects (see [Effect on re-importing the file](#effect-on-re-importing-the-file)).
 
 Selecting a related object and selecting a field inside it are mutually exclusive, since they ask for different columns: checking one clears the other. A related object whose own fields are selected, but which is not itself selected, is shown with a dash rather than a check.
 
@@ -190,7 +190,7 @@ Such a file can still be imported - you just have to say what to match on, eithe
 
 An export always covers the same objects, in the same order, as the list view it was launched from. Exporting from a filtered, sorted view therefore gives you a file of exactly the rows you were looking at, and exporting from an unfiltered view gives you every object of that type in its default order.
 
-The `Export Object List` Job expresses that view through its **Filterset Parameters** (`query_string`) input, which takes the view's URL query string:
+The `Export Object List` Job expresses that view through its **Filter Parameters** (`query_string`) input, which takes the view's URL query string:
 
 ```no-highlight
 status=active&location=ams01&sort=-name

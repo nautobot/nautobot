@@ -220,16 +220,20 @@ class ExportFieldSelect(SelectMultipleOrderable):
         """
         return format_html(
             '<div class="d-flex justify-content-start mb-6">'
-            '<button type="button" class="btn btn-secondary btn-sm" '
+            '<button type="button" class="btn btn-secondary" '
             'hx-get="{url}" hx-target="#{wid}-picker" hx-swap="outerHTML" hx-include="{include}" '
             'hx-vals=\'{{"use_current_view": "1"}}\' '
             'title="Replace the selection with the columns this type\'s list view is configured to display">'
             '<span class="mdi mdi-table-column-plus-after me-4" aria-hidden="true"></span>'
             "Match the list view</button>"
-            '<button type="button" class="btn btn-secondary btn-sm ms-6 export-fields-clear"{disabled} '
+            '<button type="button" class="btn btn-secondary ms-6 export-fields-clear"{disabled} '
             'title="Clear the selection, so that every field is exported again">'
             '<span class="mdi mdi-close me-4" aria-hidden="true"></span>Clear</button>'
-            "</div>",
+            "</div>"
+            # What the rows do and what the marker means: particular to the picker, so stated by it
+            # rather than in the variable's description, which also answers to callers that have no picker.
+            '<span class="form-text d-block mb-6">Drag to reorder. '
+            "<code>*</code> marks a field an import requires to create new records.</span>",
             url=reverse("export_fields_picker"),
             wid=widget_id,
             disabled=format_html(" disabled") if not has_selection else "",
