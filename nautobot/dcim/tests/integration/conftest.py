@@ -43,3 +43,9 @@ def created_location_tree(create_object, status_id_for):
         parent=decoy["id"],
     )
     return {"parent": parent, "children": children, "decoy": decoy, "decoy_child": decoy_child}
+
+
+@pytest.fixture
+def created_manufacturer(create_object):
+    """A manufacturer owned by this test."""
+    return create_object("dcim/manufacturers", name=unique_name())

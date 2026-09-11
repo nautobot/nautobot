@@ -612,6 +612,7 @@ It integrates with `django_tables2` and provides extensive customization options
 | `include_columns` | No | `None` | List of columns to display |
 | `exclude_columns` | No | `None` | List of columns to hide |
 | `hide_hierarchy_ui` | No | `False` | Disable tree model indentation |
+| `show_row_overviews` | No | Table's `Meta` | Include a per-row button that expands the row to reveal the object's overview |
 
 ##### Actions Configuration
 

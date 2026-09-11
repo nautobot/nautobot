@@ -32,7 +32,7 @@ from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_n
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
-from nautobot.core.views.utils import METRICS_CACHE_KEY
+from nautobot.core.views.utils import get_overview_panel, METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
@@ -1692,6 +1692,8 @@ class ViewSetCustomActionsTestCase(TestCase):
 
 
 class ObjectOverviewViewTestCase(TestCase):
+    """Tests for the object overview endpoint rendering an object's overview row."""
+
     def setUp(self):
         super().setUp()
         self.location = Location.objects.first()
@@ -1699,44 +1701,111 @@ class ObjectOverviewViewTestCase(TestCase):
         self.add_permissions("dcim.view_location")
 
     def test_default_overview(self):
+        """With no overview options set, the overview is built from the object detail view's fields panel."""
         response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
-        keys = re.findall(r"<span>(.*?):", response.content.decode(response.charset))
+        keys = re.findall(r"<dt>(.*?)</dt>", response.content.decode(response.charset))
         self.assertEqual(
             keys,
             ["Location Type", "Status", "Parent", "Tenant", "Facility", "AS Number", "Time Zone", "Description"],
         )
 
     def test_overview_fields(self):
+        """`overview_fields` renders the named fields with their key and value transforms applied."""
         overview_fields = {"name": {"key_transform": "Label", "value_transforms": [lambda value: "VALUE"]}}
         with mock.patch.object(LocationUIViewSet, "overview_fields", overview_fields):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
-            '<tr><td colspan="100"><span>Label: VALUE</span></td></tr>',
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<dl class="nb-overview-fields" style="--nb-overview-rows: 1;">'
+            '<div class="nb-overview-field nb-overview-field-column-end"><dt>Label</dt><dd>VALUE</dd></div>'
+            "</dl></td></tr>",
         )
 
     def test_overview_html(self):
+        """`overview_html` is rendered as an inline template against the object."""
         with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
-            f'<tr><td colspan="100"><b>{self.location.name}</b></td></tr>',
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+            f'<td class="p-0" colspan="100"><b>{self.location.name}</b></td></tr>',
         )
 
     def test_overview_template_name(self):
+        """`overview_template_name` is rendered as the named template against the object."""
         template_name = "components/panel/body_wrapper_generic_table.html"
         with mock.patch.object(LocationUIViewSet, "overview_template_name", template_name):
             response = self.client.get(self.url, headers={"HX-Request": "true"})
         self.assertHttpStatus(response, 200)
         self.assertHTMLEqual(
             response.content.decode(response.charset),
-            '<tr><td colspan="100"><table class="collapse show table table-hover"></table></td></tr>',
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<table class="collapse show table table-hover"></table></td></tr>',
+        )
+
+    def test_overview_colspans(self):
+        """The requested colspans are rendered as an offset cell and a content cell."""
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(
+                self.url, {"colspan_content": 3, "colspan_offset": 2}, headers={"HX-Request": "true"}
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td colspan="2"></td>'
+            f'<td class="p-0" colspan="3"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_colspan_offset_zero(self):
+        """A zero `colspan_offset` renders no offset cell at all."""
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(
+                self.url, {"colspan_content": 4, "colspan_offset": 0}, headers={"HX-Request": "true"}
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+            f'<td class="p-0" colspan="4"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_colspans_fall_back_to_defaults(self):
+        """Invalid colspans fall back to no offset and a full-width content cell."""
+        for colspans in (
+            {"colspan_content": "three", "colspan_offset": "two"},
+            {"colspan_content": -3, "colspan_offset": -2},
+            {"colspan_content": "", "colspan_offset": ""},
+        ):
+            with (
+                self.subTest(colspans=colspans),
+                mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
+            ):
+                response = self.client.get(self.url, colspans, headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+                self.assertHTMLEqual(
+                    response.content.decode(response.charset),
+                    f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+                    f'<td class="p-0" colspan="100"><b>{self.location.name}</b></td></tr>',
+                )
+
+    def test_overview_placeholder_when_panel_declines_to_render(self):
+        """A panel whose `should_render()` is False yields the placeholder row instead."""
+        panel = get_overview_panel(LocationUIViewSet.object_detail_content)
+        with mock.patch.object(panel, "should_render", return_value=False):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<p class="mb-0 px-10 py-4 text-secondary">— No details to display —</p></td></tr>',
         )
 
     def test_overview_arguments_are_mutually_exclusive(self):
+        """Setting more than one overview option is a misconfiguration."""
         self.client.raise_request_exception = False
         with (
             mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
@@ -1747,6 +1816,7 @@ class ObjectOverviewViewTestCase(TestCase):
         self.assertIsInstance(response.exc_info[1], ImproperlyConfigured)
 
     def test_overview_bad_request_when_no_htmx(self):
+        """A non-HTMX request to the overview endpoint is rejected."""
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 400)
 

@@ -403,6 +403,35 @@ def view_changes_not_saved(request, view, current_saved_view):
     return False
 
 
+def get_overview_panel(object_detail_content, context=None):
+    """Return the panel an overview is built from, or None.
+
+    Structurally, that is the first `ObjectFieldsPanel` in the left half of the main tab. Given a context, the panel
+    is returned only if its `should_render(context)` is True.
+    """
+    from nautobot.core.ui.object_detail import ObjectFieldsPanel, SectionChoices  # Avoid circular import
+
+    if object_detail_content is None:
+        return None
+
+    main_tab = next((tab for tab in object_detail_content.tabs if tab.tab_id == "main"), None)
+    if main_tab is None:
+        return None
+
+    panel = next(
+        (
+            panel
+            for panel in main_tab.panels_for_section(SectionChoices.LEFT_HALF)
+            if isinstance(panel, ObjectFieldsPanel)
+        ),
+        None,
+    )
+    if panel is not None and context is not None and not panel.should_render(context):
+        return None
+
+    return panel
+
+
 def get_overview(object_detail_content, overview_fields=None, overview_html=None, overview_template_name=None):
     """Determine what an object's overview should display, if anything.
 
@@ -428,9 +457,8 @@ def get_overview(object_detail_content, overview_fields=None, overview_html=None
         return {"template": OVERVIEW_TEMPLATE, "overview_html": render_overview_html}
 
     def resolve_overview(context):
-        from nautobot.core.ui.object_detail import ObjectFieldsPanel, SectionChoices
+        from nautobot.core.ui.object_detail import ObjectFieldsPanel  # Avoid circular import
 
-        panel = None
         if overview_fields is not None:
             # This panel is never displayed. It acts only as the field data and rendering engine, so that
             # explicitly declared fields render identically to the panel resolved below.
@@ -448,19 +476,8 @@ def get_overview(object_detail_content, overview_fields=None, overview_html=None
                     if (spec or {}).get("value_transforms")
                 },
             )
-        elif object_detail_content is not None:
-            main_tab = next((tab for tab in object_detail_content.tabs if tab.tab_id == "main"), None)
-            if main_tab is not None:
-                panel = next(
-                    (
-                        candidate
-                        for candidate in main_tab.panels_for_section(SectionChoices.LEFT_HALF)
-                        if isinstance(candidate, ObjectFieldsPanel)
-                    ),
-                    None,
-                )
-                if panel is not None and not panel.should_render(context):
-                    panel = None
+        else:
+            panel = get_overview_panel(object_detail_content, context)
 
         if panel is None:
             return None
@@ -475,6 +492,21 @@ def get_overview(object_detail_content, overview_fields=None, overview_html=None
     resolve_overview.do_not_call_in_templates = True
 
     return {"template": OVERVIEW_TEMPLATE, "overview": resolve_overview}
+
+
+def has_overview(model):
+    """Determine whether the given model's view can produce an overview, without resolving one."""
+    from nautobot.core.views.mixins import ObjectOverviewViewMixin  # Avoid circular import
+
+    view = get_view_for_model(model)
+    if view is None or not issubclass(view, ObjectOverviewViewMixin):
+        return False
+
+    for overview_attribute in (view.overview_template_name, view.overview_html, view.overview_fields):
+        if overview_attribute is not None:
+            return bool(overview_attribute)
+
+    return get_overview_panel(getattr(view, "object_detail_content", None)) is not None
 
 
 def common_detail_view_context(request, instance):

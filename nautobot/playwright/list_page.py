@@ -9,6 +9,9 @@ model:
         LIST_PATH = "/dcim/locations/"
 """
 
+import re
+from urllib.parse import urlencode
+
 from playwright.sync_api import expect
 
 from nautobot.playwright.base_page import BasePage, select2_filter_pick
@@ -38,6 +41,10 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
+    # The per-row overview toggle.
+    _OVERVIEW_TOGGLE = "button.nb-overview-toggle"
+    # Every overview fragment request, for routing and response waits.
+    _OVERVIEW_REQUEST = re.compile(r"/overview/")
 
     def __init__(self, page, base_url):
         """Fail fast on a subclass that forgot to set `LIST_PATH`."""
@@ -49,9 +56,13 @@ class ListPage(BasePage):
     # Navigation and table reads
     # -------------------------------------------------------------------------
 
-    def navigate(self):
-        """Go to the list view."""
-        self._goto(self.LIST_PATH)
+    def navigate(self, **params):
+        """Go to the list view, optionally with given query *params*, e.g. for pinning it to test-owned records."""
+        self._goto(f"{self.LIST_PATH}?{urlencode(params)}" if params else self.LIST_PATH)
+
+    def data_row(self, index=0):
+        """Locator for the data row at *index*."""
+        return self.page.locator(self._DATA_ROWS).nth(index)
 
     def get_data_row_count(self) -> int:
         """Return the number of data rows currently rendered in the table.
@@ -66,31 +77,91 @@ class ListPage(BasePage):
         expect(self.page.locator(self._DATA_ROWS)).to_have_count(expected)
 
     def get_table_column_headers(self) -> list:
-        """Text of all non-empty column headers (the checkbox column has none).
+        """Text of all column headers, empty for the columns that have none (e.g. the checkbox or overview column).
 
         Sortable headers embed a visually-hidden sort instruction ("activate to sort
         ascending") that innerText renders on its own line, so only the first line of
         each header is kept.
         """
-        headers = [text.split("\n")[0].strip() for text in self.page.locator("table thead th").all_inner_texts()]
-        return [header for header in headers if header]
+        return [text.split("\n")[0].strip() for text in self.page.locator("table thead th").all_inner_texts()]
 
     def get_column_values_by_header(self, header_name) -> list:
         """Cell values for the column whose header text is *header_name*.
 
-        The checkbox column has no header text and is filtered out of
-        `get_table_column_headers()`, so header index 0 maps to td position 2.
+        The checkbox and overview columns have no header text but keep their place in
+        `get_table_column_headers()`, so header index 0 maps to td position 1.
         Raises if the header is not present, rather than silently returning nothing.
         """
         headers = self.get_table_column_headers()
         if header_name not in headers:
             raise ValueError(f"No column headed {header_name!r} on this list view; got {headers}.")
-        # The +2 assumes exactly one unheaded column (the pk checkbox) precedes the
-        # headed ones; if a list view ever breaks that assumption, fix it here and in
-        # get_table_column_headers/_DATA_ROWS together.
-        column_position = headers.index(header_name) + 2
+        column_position = headers.index(header_name) + 1
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
+
+    # -------------------------------------------------------------------------
+    # Overview rows
+    # -------------------------------------------------------------------------
+
+    def overview_toggle(self, index=0):
+        """Locator for the overview toggle in the data row at *index*."""
+        return self.data_row(index).locator(self._OVERVIEW_TOGGLE)
+
+    def _overview_row_id(self, index=0) -> str:
+        """The `id` of the overview row for the data row at *index*, rendered or not."""
+        return self.overview_toggle(index).get_attribute("data-nb-overview-row-id", timeout=8_000)
+
+    def toggle_overview(self, expand, index=0):
+        """Click the overview toggle at *index* and wait for its row to swap in or out."""
+        self.overview_toggle(index).click()
+        row = self.page.locator(f"#{self._overview_row_id(index)}")
+        row.wait_for(state="visible" if expand else "detached", timeout=8_000)
+
+    def fail_overview_requests(self, status=500):
+        """Make every overview request fail with *status*, for testing the error path."""
+        self.page.route(self._OVERVIEW_REQUEST, lambda route: route.fulfill(status=status, body=""))
+
+    def click_overview_toggle(self, index=0):
+        """Click the toggle and wait for its overview request to get a response.
+
+        The wait proves the click sent the request. Without it, a collapsed
+        assertion afterwards passes when the click did nothing.
+        """
+        with self.page.expect_response(self._OVERVIEW_REQUEST):
+            self.overview_toggle(index).click()
+
+    def expect_overview(self, expanded, index=0):
+        """Assert (auto-retrying) that the overview row at *index* is expanded or collapsed."""
+        toggle = self.overview_toggle(index)
+        row_id = self._overview_row_id(index)
+        label = "Hide details for " if expanded else "Show details for "
+        icon = "minimize" if expanded else "maximize"
+        expect(toggle).to_have_attribute("aria-expanded", "true" if expanded else "false")
+        expect(toggle).to_have_attribute("title", re.compile(f"^{label}"))
+        expect(toggle.locator("span.visually-hidden")).to_have_text(re.compile(f"^{label}"))
+        expect(toggle.locator(f"span.mdi.mdi-window-{icon}")).to_have_count(1)
+        expect(self.page.locator(f"#{row_id}")).to_have_count(1 if expanded else 0)
+        if expanded:
+            expect(toggle).to_have_attribute("aria-controls", row_id)
+            expect(self.data_row(index).locator("xpath=following-sibling::tr[1]")).to_have_attribute("id", row_id)
+        else:
+            # `.*` matches any value, so the negated check passes only when aria-controls is absent.
+            expect(toggle).not_to_have_attribute("aria-controls", re.compile(r".*"))
+
+    def expect_overview_to_contain(self, text, index=0):
+        """Assert (auto-retrying) that the expanded overview row at *index* shows *text*."""
+        expect(self.page.locator(f"#{self._overview_row_id(index)}")).to_contain_text(text)
+
+    def expect_no_overview_toggles(self):
+        """Assert (auto-retrying) that no data row renders an overview toggle."""
+        expect(self.page.locator(f"{self._DATA_ROWS} {self._OVERVIEW_TOGGLE}")).to_have_count(0)
+
+    def expect_overview_row_spans_entire_table(self, index=0):
+        """Assert the expanded overview row's cells span every column of the table."""
+        cells = self.page.locator(f"#{self._overview_row_id(index)} td")
+        colspans = [int(cells.nth(position).get_attribute("colspan") or 1) for position in range(cells.count())]
+        columns = self.page.locator("table thead th").count()
+        assert sum(colspans) == columns, f"Overview row spans {sum(colspans)} cells, table has {columns} columns"
 
     # -------------------------------------------------------------------------
     # Filter drawer

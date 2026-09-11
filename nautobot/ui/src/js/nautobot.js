@@ -54,6 +54,7 @@ import { loadState, saveState } from './history.js';
 import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { initializeToasts, refreshMessages, watchMessages } from './messages.js';
 import { initializeModal } from './modal.js';
+import { initializeOverviews } from './overview.js';
 import { initializeSearch } from './search.js';
 import { initializeSelect2Fields, setSelect2Value } from './select2.js';
 import { initializeSidenav } from './sidenav.js';
@@ -109,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Modal
   initializeModal();
+
+  // Overview
+  initializeOverviews();
 
   // Search
   initializeSearch();

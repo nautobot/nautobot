@@ -546,7 +546,7 @@ class ViewTestCases:
             url = self._get_url("overview", instance)
             response = self.client.get(url, headers={"HX-Request": "true"})
             self.assertHttpStatus(response, 200)
-            self.assertContains(response, '<td colspan="100">')
+            self.assertContains(response, f'id="overview-{instance.pk}"')
 
     class CreateObjectViewTestCase(ModelViewTestCase):
         """
