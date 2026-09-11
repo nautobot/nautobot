@@ -8,6 +8,7 @@ import redis
 
 from nautobot.core.events import (
     deregister_event_broker,
+    event_topic_has_subscriber,
     EventBroker,
     load_event_brokers,
     publish_event,
@@ -275,3 +276,65 @@ class EventNotificationTest(TestCase):
             str(err.exception),
             "TestEventBroker Malformed Event Broker Settings: Expected `EXCLUDE` to be a 'list' or 'tuple', instead a 'str' was provided",
         )
+
+
+class EventTopicHasSubscriberTest(TestCase):
+    """`event_topic_has_subscriber()` must agree with what `publish_event()` actually delivers."""
+
+    def assertSubscriberMatchesDelivery(self, broker, topic):
+        """Assert the predicate and a real `publish_event()` agree on whether `topic` reaches `broker`."""
+        has_subscriber = event_topic_has_subscriber(topic)
+        publish_event(topic=topic, payload={})
+        self.assertEqual(has_subscriber, topic in broker.events)
+
+    def test_no_registered_brokers(self):
+        self.assertFalse(event_topic_has_subscriber("nautobot.test.event"))
+
+    def test_default_broker_accepts_every_topic(self):
+        broker = TestEventBroker()
+        register_event_broker(broker)
+        try:
+            self.assertSubscriberMatchesDelivery(broker, "nautobot.test.event")
+        finally:
+            deregister_event_broker(broker)
+
+    def test_include_topics_are_matched_as_globs(self):
+        broker = TestEventBroker(include_topics=["nautobot.update.dcim.*"])
+        register_event_broker(broker)
+        try:
+            self.assertSubscriberMatchesDelivery(broker, "nautobot.update.dcim.device")
+            self.assertSubscriberMatchesDelivery(broker, "nautobot.update.ipam.prefix")
+        finally:
+            deregister_event_broker(broker)
+
+    def test_exclude_topics_win_over_include_topics(self):
+        broker = TestEventBroker(include_topics=["*"], exclude_topics=["nautobot.update.*"])
+        register_event_broker(broker)
+        try:
+            self.assertSubscriberMatchesDelivery(broker, "nautobot.create.dcim.device")
+            self.assertSubscriberMatchesDelivery(broker, "nautobot.update.dcim.device")
+        finally:
+            deregister_event_broker(broker)
+
+    def test_any_one_matching_broker_is_enough(self):
+        uninterested = TestEventBroker(include_topics=["nautobot.create.*"])
+        interested = TestEventBroker(include_topics=["nautobot.update.*"])
+        register_event_broker(uninterested)
+        register_event_broker(interested)
+        try:
+            self.assertTrue(event_topic_has_subscriber("nautobot.update.dcim.device"))
+            publish_event(topic="nautobot.update.dcim.device", payload={})
+            self.assertNotIn("nautobot.update.dcim.device", uninterested.events)
+            self.assertIn("nautobot.update.dcim.device", interested.events)
+        finally:
+            deregister_event_broker(interested)
+            deregister_event_broker(uninterested)
+
+    def test_matching_broker_is_published_to_exactly_once(self):
+        broker = TestEventBroker()
+        register_event_broker(broker)
+        try:
+            publish_event(topic="nautobot.test.event", payload={"a": 1})
+            self.assertEqual(len(broker.events["nautobot.test.event"]), 1)
+        finally:
+            deregister_event_broker(broker)
