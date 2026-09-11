@@ -1,0 +1,1 @@
+Fixed omission of `pytest` and `playwright` Python packages from the Docker `dev` image.
