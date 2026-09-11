@@ -2,13 +2,13 @@ from django.test import override_settings, RequestFactory
 from django.urls import reverse
 
 from nautobot.core.middleware import (
-    ComplexityCostRateLimiting,
+    ComplexityCostRateLimitingMiddleware,
 )
 from nautobot.core.testing import APITestCase
 
 
-class ComplexityCostRateLimitingRestRequestExecutionMiddlewareTestCase(APITestCase):
-    """Tests `ComplexityCostRateLimiting` Middleware's plumbing.
+class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
+    """Tests `ComplexityCostRateLimitingMiddleware`'s plumbing.
 
     Makes sure that it runs, and aligns with internal settings.
     Does not validate any cost metrics. Purely focused code path traversal.
@@ -35,7 +35,7 @@ class ComplexityCostRateLimitingRestRequestExecutionMiddlewareTestCase(APITestCa
     @staticmethod
     def call_middleware(get_response):
         """Run the middleware around `get_response` and return the resulting response."""
-        return ComplexityCostRateLimiting(get_response)(RequestFactory().get("/"))
+        return ComplexityCostRateLimitingMiddleware(get_response)(RequestFactory().get("/"))
 
     def call_api(self):
         """Request a REST API endpoint as a token authenticated client and return the response."""

@@ -531,7 +531,7 @@ class RequestMetricMiddleware:
         return enabled_metrics
 
 
-class ComplexityCostRateLimiting:
+class ComplexityCostRateLimitingMiddleware:
     """A middleware to instrument a complexity cost estimation in the response header for api requests
 
     Implementation is derived from IETF HTTP API RateLimit Headers
