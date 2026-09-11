@@ -1521,6 +1521,36 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 )
                 self.assertEqual(doc["records"], [{"name": "Custom Field Status", "cf_export_cf_a": "A value"}])
 
+    def test_select__document_keys_follow_the_selection(self):
+        """A selection lays a document's keys out in its own order, as it lays out CSV's columns."""
+        self.create_status(name="zzz_key_order", color="123456")
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                document = self.export_document(
+                    self.run_export(
+                        query_string="name=zzz_key_order",
+                        export_format=export_format,
+                        export_fields="color,name",
+                    )
+                )
+                self.assertEqual(list(document["records"][0]), ["color", "name"])
+
+    def test_select__document_keys_follow_the_selection_into_a_relation(self):
+        """Down to the keys of a related object, a document nesting what CSV spells with `__`."""
+        manufacturer = Manufacturer.objects.create(name="Key Order Mfr")
+        DeviceType.objects.create(manufacturer=manufacturer, model="Key Order DT", u_height=1)
+        document = self.export_document(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Key+Order+DT",
+                export_format="json",
+                export_fields="model,manufacturer__description,manufacturer__name",
+            )
+        )
+        record = document["records"][0]
+        self.assertEqual(list(record), ["model", "manufacturer"])
+        self.assertEqual(list(record["manufacturer"]), ["description", "name"])
+
     def test_select__custom_fields_dict_in_a_document(self):
         """Naming `custom_fields` keeps the nested dict, with every custom field in it."""
         self.create_status_with_custom_fields()
@@ -1932,6 +1962,40 @@ class ExportScopeTests(ImportExportJobTestCase):
         Status.objects.create(name="zzz_sort_b", color="222222")
         rows = self.export_rows(self.run_export(query_string="name=zzz_sort_a&name=zzz_sort_b&sort=-name"))
         self.assertEqual([row["name"] for row in rows], ["zzz_sort_b", "zzz_sort_a"])
+
+    def test_scope__applies_sort_in_every_format(self):
+        """The records come out in the view's order whichever file format is asked for.
+
+        They are serialized once and handed to whichever renderer, so the order is the queryset's in
+        both -- but only CSV was ever asserted, and CSV is the one format whose renderer reorders
+        anything (`get_headers`), so the formats that do not were the ones worth pinning.
+        """
+        for name in ("zzz_fmt_1", "zzz_fmt_2", "zzz_fmt_3"):
+            Status.objects.create(name=name, color="111111")
+        query_string = "name=zzz_fmt_1&name=zzz_fmt_2&name=zzz_fmt_3&sort=-name"
+        expected = ["zzz_fmt_3", "zzz_fmt_2", "zzz_fmt_1"]
+
+        rows = self.export_rows(self.run_export(query_string=query_string))
+        self.assertEqual([row["name"] for row in rows], expected)
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                document = self.export_document(self.run_export(query_string=query_string, export_format=export_format))
+                self.assertEqual([record["name"] for record in document["records"]], expected)
+
+    def test_scope__applies_sort_to_devicetype_library_yaml(self):
+        """Including the one format that renders its own output rather than the shared record set."""
+        manufacturer = Manufacturer.objects.create(name="Fmt Order Mfr")
+        for model in ("zzz_fmt_dt_1", "zzz_fmt_dt_2"):
+            DeviceType.objects.create(manufacturer=manufacturer, model=model, u_height=1)
+        text = self.export_text(
+            self.run_export(
+                model=DeviceType,
+                query_string="manufacturer=Fmt+Order+Mfr&sort=-model",
+                export_format="devicetype_library",
+            )
+        )
+        documents = [yaml.safe_load(chunk) for chunk in text.split("---\n") if chunk.strip()]
+        self.assertEqual([document["model"] for document in documents], ["zzz_fmt_dt_2", "zzz_fmt_dt_1"])
 
     def test_scope__applies_related_field_sort(self):
         """A sort that traverses a relation is passed through, being something `order_by` supports."""

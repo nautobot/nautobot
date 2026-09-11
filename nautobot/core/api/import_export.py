@@ -144,11 +144,31 @@ def _prune_missing_references(null_prefixes, prefix, value):
     return value
 
 
+def _order_by_selection(mapping, field_order):
+    """`mapping` with its keys in `field_order`, each key taking the earliest entry it equals or nests under.
+
+    The same rule `NautobotCSVRenderer.get_headers()` orders columns by, so that a selection lays a
+    document out in the order it asked for exactly as it lays out CSV columns. Keys the selection does not
+    name -- which an unrestricted export is entirely made of -- sort last, and an empty selection leaves
+    the mapping alone rather than imposing an order of its own.
+    """
+    if not field_order:
+        return mapping
+
+    def selection_index(key):
+        for position, selected in enumerate(field_order):
+            if key == selected or key.startswith(f"{selected}__"):
+                return (position, key)
+        return (len(field_order), key)
+
+    return {key: mapping[key] for key in sorted(mapping, key=selection_index)}
+
+
 def build_document_records(serializer_data, field_order=None):
     """Reshape flat serializer records into the nested representation used by JSON/YAML exports.
 
     Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts collapse to
-    their value; url fields are dropped.
+    their value; url fields are dropped. A selection orders the keys, as it orders CSV's columns.
 
     Custom fields have two spellings, chosen by what the selection asks for: `custom_fields` (or no
     selection at all) keeps the whole dict, while individual `cf_<key>` entries are emitted as top-level
@@ -180,6 +200,10 @@ def build_document_records(serializer_data, field_order=None):
                 flattened_heads.add(head)
             reshaped[key] = value
         null_prefixes = _null_reference_prefixes(reshaped)
+        # Ordered before nesting so that the order reaches inside a relation too: `nest_flat_dict()`
+        # builds each level in the order it meets the keys, so `location__name` before `location__id`
+        # here is `name` before `id` within `location` there.
+        reshaped = _order_by_selection(reshaped, field_order)
         # Only CSV_NO_OBJECT needs mapping: it is produced by the natural-key annotation itself (for an
         # absent relation), whereas nulls already arrive as real None in this mode. CSV_NULL_TYPE is
         # deliberately not listed, so a value that is literally the string "NULL" survives intact.
@@ -193,6 +217,9 @@ def build_document_records(serializer_data, field_order=None):
             custom_fields = nested.pop("custom_fields", {})
             for entry in selected_custom_fields:
                 nested[entry] = custom_fields.get(entry.removeprefix("cf_"))
+            # Again, the custom fields having arrived after everything else: a selection that names one
+            # between two ordinary fields puts it there, as it does in CSV.
+            nested = _order_by_selection(nested, field_order)
         records.append(nested)
     return records
 
