@@ -385,8 +385,9 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
     Among the fields of one object -- the top-level rows, or the fields nested under one relation -- what
     identifies it leads (`PRIORITY_CSV_FIELDS`, as in an unordered export's columns), then the fields an
     import requires, then the rest, each of those two groups alphabetical, and `custom_fields` last with
-    its own fields nested under it. Serializer declaration order is deliberately not used: it is rarely
-    arranged with intent, so it reads as arbitrary in a list someone has to find a field in.
+    its own fields nested under it. Only the root has a required group, nothing below it being required
+    of anyone (see `required` under Returns). Serializer declaration order is deliberately not used: it is
+    rarely arranged with intent, so it reads as arbitrary in a list someone has to find a field in.
 
     This is the order the fields are *offered* in, which is only the starting point for a selection: the
     order a selection is submitted in is the order its columns come out in, and rearranging it is what the
@@ -423,7 +424,11 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         list: `{"path": str, "parent": str | None, "required": bool}` dicts. `parent` is the path this one
             nests under, which is all but the last segment except for a `cf_<key>`, whose parent is
             `custom_fields` -- the field that asks for every custom field at once. `required` is whether an
-            import would demand the field, which is what makes a selection round-trippable.
+            import would demand the field to create a record, which is what makes a selection
+            round-trippable, and which only a field of the object itself can be: an import resolves a
+            related object from what the path names (`RelatedField.to_internal_value`, which fails with
+            `does_not_exist`) rather than creating one, so what that object's own serializer requires has
+            no bearing on the file.
     """
     # `custom_fields` is offered at the root even though a flat export emits no column of that name: naming
     # it asks for every custom field of the object at once -- including any added after the selection was
@@ -464,7 +469,8 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
                 # cannot be a to-many.
                 continue
             path = f"{prefix}__{field_name}" if prefix else field_name
-            paths.append({"path": path, "parent": prefix or None, "required": field.required})
+            # Required only where it means anything: at the root, where an import creates the record.
+            paths.append({"path": path, "parent": prefix or None, "required": field.required and not prefix})
             if segments >= max_segments:
                 continue
             related_model = _traversable_relation_target(serializer, field)

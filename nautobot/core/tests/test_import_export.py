@@ -1724,6 +1724,20 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         if required_positions and optional:
             self.assertLess(max(required_positions), middle.index(optional[0]))
 
+    def test_select__only_the_object_s_own_fields_are_marked_required(self):
+        """The `*` marker is about creating a record, which is only ever the object the export is of.
+
+        An import resolves a related object from what the file names of it and fails if there is no such
+        object; it never creates one. So `manufacturer__name` being required of a *Manufacturer* says
+        nothing about a file of Device Types, and marking it would tell the reader otherwise.
+        """
+        field, _paths = self.picker_paths(DeviceType)
+        marked = {path for path, label in field.choices if label.endswith(" *")}
+        self.assertIn("manufacturer", marked)  # the Device Type's own field, which a row must carry
+        self.assertIn("model", marked)
+        self.assertFalse({path for path in marked if "__" in path}, "no nested field should be marked")
+        self.assertIn("manufacturer__name", [path for path, _label in field.choices])  # offered, just unmarked
+
     def test_select__form_accepts_a_comma_separated_selection(self):
         """A selection spelled the export's own way is read as the fields it names, and leads the rows.
 
