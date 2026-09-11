@@ -65,9 +65,6 @@
                             {% job_import_button content_type list_element=True%}
                         {% endblock import_list_element %}
                     {% endif %}
-                    {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
-                        <li class="dropdown-divider"></li>
-                    {% endif %}
                     {% if 'export' in action_buttons %}
                         {% block export_list_element %}
                             {% export_button content_type list_element=True %}

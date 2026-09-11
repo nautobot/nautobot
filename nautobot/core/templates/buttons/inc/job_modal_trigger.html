@@ -12,6 +12,7 @@ itself is built once in Python by `_JobModalButton.build_trigger_context()`. Exp
     icon            - mdi icon name, e.g. "mdi-database-export"
     label           - button text when rendered standalone
     list_label      - button text when rendered as a dropdown item
+    title           - optional tooltip, for a trigger whose label does not say enough on its own
     disabled        - user may not run this Job, or it is not enabled
     disabled_title  - tooltip explaining why it is disabled
 {% endcomment %}
@@ -22,6 +23,7 @@ itself is built once in Python by `_JobModalButton.build_trigger_context()`. Exp
         {% if disabled %}
             disabled aria-disabled="true" title="{{ disabled_title }}"
         {% else %}
+            {% if title %}title="{{ title }}"{% endif %}
             data-bs-toggle="modal" data-bs-target="#nautobot-generic-modal"
             hx-post="{{ trigger_url }}" hx-target="#modal-content-container" hx-swap="innerHTML"
             hx-vals='{{ trigger_hx_vals }}'

@@ -10,6 +10,7 @@ from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.templatetags.perms import can_add, can_change, can_delete
 from nautobot.core.utils import lookup
 from nautobot.core.views import utils as views_utils
+from nautobot.extras import models as extras_models
 from nautobot.extras.registry import registry
 
 register = template.Library()
@@ -507,7 +508,7 @@ def consolidate_detail_view_action_buttons(context):
     }
 
 
-def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals):
+def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals, render_form=True):
     """Build the context for `buttons/inc/job_modal_trigger.html` from a registered job-modal button.
 
     Delegates to `_JobModalButton.build_trigger_context()` so the run-view URL, base hx-vals, and disabled
@@ -519,6 +520,8 @@ def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals):
         button_id (str): registry key of the `_JobModalButton` this trigger opens
         list_element (bool): render as a <li> dropdown item instead of a standalone button
         extra_hx_vals (dict): job-specific hx-vals to merge on top of the button's base set
+        render_form (bool): False for a trigger that runs the Job straight away rather than opening its
+            form, `extra_hx_vals` then having to carry everything the Job needs.
     """
     button = registry["job_modal_buttons"].get(button_id)
     if button is None:
@@ -526,6 +529,7 @@ def job_modal_trigger_context(context, button_id, list_element, extra_hx_vals):
     trigger = button.build_trigger_context(
         user=getattr(context.get("request"), "user", None),
         extra_hx_vals=extra_hx_vals,
+        render_form=render_form,
     )
     return {
         "trigger_url": trigger["url"],
@@ -577,19 +581,47 @@ def export_button(context, content_type=None, list_element=False):
     if content_type is None:
         return {"trigger_url": None, "list_element": list_element}
 
-    # The job's own fields (format, template, field selection) replace the previous per-format /
-    # saved-view dropdown entries; the registered ExportObjectListModalButton lets the job-result modal
-    # offer a file download once the export completes.
+    query_string = context["request"].GET.urlencode()
+    # The job's own fields (format, field selection) replace the previous per-format dropdown entries;
+    # the registered ExportObjectListModalButton lets the job-result modal offer a file download once the
+    # export completes.
     #
     # No field selection is seeded here. The dialog opens exporting every field, and its picker's "match
     # the list view" button fills in this view's columns on request -- resolved then, by the one helper
     # the Job itself uses, rather than computed on every list-view render for an export nobody may run.
-    return job_modal_trigger_context(
+    trigger = job_modal_trigger_context(
         context,
         "core.export_object_list",
         list_element,
-        {
-            "content_type": str(content_type.pk),
-            "query_string": context["request"].GET.urlencode(),
-        },
+        {"content_type": str(content_type.pk), "query_string": query_string},
     )
+
+    # An Export Template renders its own output, so there is nothing to configure and nothing the dialog
+    # could usefully ask: each one is offered as an action that exports with it there and then. Rendering
+    # them costs a query per list view, which is why they are fetched here rather than kept in the dialog.
+    export_templates = []
+    if trigger["trigger_url"] and list_element:
+        user = getattr(context.get("request"), "user", None)
+        templates = extras_models.ExportTemplate.objects.filter(content_type=content_type)
+        if user is not None:
+            templates = templates.restrict(user, "view")
+        export_templates = [
+            {
+                "name": export_template.name,
+                "description": export_template.description,
+                **job_modal_trigger_context(
+                    context,
+                    "core.export_object_list",
+                    list_element,
+                    {
+                        "content_type": str(content_type.pk),
+                        "query_string": query_string,
+                        "export_template": str(export_template.pk),
+                    },
+                    render_form=False,
+                ),
+            }
+            for export_template in templates
+        ]
+
+    return {**trigger, "export_templates": export_templates}

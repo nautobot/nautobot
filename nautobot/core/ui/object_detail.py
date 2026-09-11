@@ -55,7 +55,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType
 from nautobot.extras.models import Job
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
@@ -2950,7 +2950,7 @@ class _JobModalButton(Button):
         """Override the default `get_link()` behavior since this button opens a modal."""
         return None
 
-    def build_trigger_context(self, user=None, obj=None, extra_hx_vals=None):
+    def build_trigger_context(self, user=None, obj=None, extra_hx_vals=None, render_form=True):
         """Compute the HTMX wiring for a trigger that opens this Job's modal.
 
         Shared by `get_extra_context` (component-rendered buttons) and the list-view `export_button`
@@ -2963,6 +2963,10 @@ class _JobModalButton(Button):
             obj: The object in context, used to resolve `initial_field_mapping` values. May be `None`.
             extra_hx_vals (dict, optional): Additional hx-vals merged on top of the base set (e.g. the
                 export/import `content_type`, `query_string`, `export_fields`).
+            render_form (bool): Whether the trigger opens the Job's form, which is the usual case. Pass
+                False for a trigger that carries every input it needs and so runs the Job straight away,
+                landing on the progress-and-result page of the modal -- what a single-click action does.
+                The Job is then run on a POST, so such a trigger must not be a bare link.
 
         Returns:
             dict: ``{"url", "hx_vals" (dict), "disabled" (bool), "disabled_title" (str)}``.
@@ -2971,7 +2975,13 @@ class _JobModalButton(Button):
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
-        hx_vals["render_job_form"] = True
+        if render_form:
+            # Omitted rather than falsified for a direct run: the run view tests this key for truthiness,
+            # where the string "False" that hx-vals would send is as true as any other.
+            hx_vals["render_job_form"] = True
+        else:
+            hx_vals["job_form_modal"] = True
+            hx_vals["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
         hx_vals["job_modal_button"] = self.button_id
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
@@ -3046,8 +3056,9 @@ class ExportObjectListModalButton(_JobModalButton):
     button_id = "core.export_object_list"
     enable_scheduling = False
     # `query_string` describes the launching view and is filled in from it, so it is plumbing rather than
-    # something to answer; it stays reachable under Advanced Settings for anyone who wants to adjust it.
-    advanced_fields = ("query_string",)
+    # something to answer. `export_template` has an action of its own per template in the same menu that
+    # opens this dialog, which exports with it directly. Both stay reachable under Advanced Settings.
+    advanced_fields = ("query_string", "export_template")
 
     def __init__(self, **kwargs):
         kwargs.setdefault("label", "Export to file")

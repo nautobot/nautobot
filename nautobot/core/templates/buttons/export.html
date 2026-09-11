@@ -1,3 +1,17 @@
 {% if trigger_url %}
     {% include "buttons/inc/job_modal_trigger.html" with button_class="btn-success" icon="mdi-database-export" label="Export to file" list_label="Export to file" %}
+    {% comment %}
+    One action per Export Template, each running the export with that template there and then -- it
+    renders its own output, so the dialog has nothing to ask about. `export_templates` is only populated
+    for the dropdown; a standalone button has nowhere to put them.
+    {% endcomment %}
+    {% if export_templates %}
+        <li>
+            <hr class="dropdown-divider">
+        </li>
+        <li class="dropdown-header fs-5">Export Templates</li>
+        {% for export_template in export_templates %}
+            {% include "buttons/inc/job_modal_trigger.html" with trigger_url=export_template.trigger_url trigger_hx_vals=export_template.trigger_hx_vals disabled=export_template.disabled disabled_title=export_template.disabled_title title=export_template.description icon="mdi-database-export" list_label=export_template.name %}
+        {% endfor %}
+    {% endif %}
 {% endif %}

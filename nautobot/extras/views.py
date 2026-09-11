@@ -2623,8 +2623,11 @@ class JobUIViewSet(NautobotUIViewSet):
             console_log=console_log,
             job_kwargs=job_class.serialize_data(job_kwargs),
         )
+        # The modal's own form submit identifies itself by id; a single-click action that runs the Job
+        # without ever showing the form says so in its hx-vals instead, and wants the same modal back.
         htmx_trigger = request.headers.get("HX-Trigger", None)
-        if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+        wants_modal = htmx_trigger == "job-form-modal" or request.POST.get("job_form_modal")
+        if self.request.headers.get("HX-Request", False) and wants_modal:
             job_modal_button_registry_id = request.POST.get("job_modal_button", "")
             job_result_key = request.POST.get("job_result_key", None)
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
