@@ -844,8 +844,8 @@ def get_list_view_export_paths(model, *, user, saved_view=None, table_changes_pe
     field or related-object count is a displayed value with no serializer field behind it. Those are
     reported rather than silently dropped, since what was asked for is the view.
 
-    Shared by the `ExportObjectList` Job and the UI that seeds its field selection, so that "the columns of
-    this view" means one and the same thing in both.
+    Used by the export field picker's "match the list view" button; the export itself takes an explicit
+    field selection, so this is resolved while someone is looking at it rather than at run time.
 
     Args:
         model: The model whose list view is in question.

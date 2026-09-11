@@ -208,13 +208,15 @@ A sort on something the database cannot order by - a column computed for display
 
 **Match the list view**, the button above the field picker, fills the selection in with the columns the list view is displaying, in the order it displays them: those of the saved view in use, if any, otherwise the ones you have configured for yourself through the table's **Configure Table** dialog, otherwise the table's default columns. Because it fills in the picker rather than the export itself, you can see what you are about to get and then reorder or prune it before running the export.
 
-**Use Current View Columns** (`use_current_view_columns`) makes that same resolution when the export runs, which is how to ask for it where there is no picker in front of you - the REST API, a scheduled Job, `nautobot-server export_objects`. It is only a default for [**Fields to Export**](#selecting-fields-to-export): naming fields explicitly takes precedence, and it has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
+The button is the whole of this feature: the export itself takes nothing but an explicit list of fields, so what it fills in is an ordinary [**Fields to Export**](#selecting-fields-to-export) selection that you can then edit. Where there is no picker in front of you - the REST API, a scheduled Job, `nautobot-server export_objects` - name the fields you want instead. That is worth preferring anyway for anything repeated or automated, since it says what the file will contain rather than depending on how somebody's table happens to be configured when the export runs.
+
+A field selection has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
 
 Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts are values assembled for display rather than fields of the record.
 
 A count column is *about* a relation, though, so where the relation itself is exportable the export carries that instead of the count: exporting a Prefix list view whose **VRFs** column shows a count of 3 gives you a `vrfs` column naming those three VRFs. Where the relation is not something an export can carry - a count of Devices in a Location, say, or of Dynamic Groups an object belongs to - the column is left out.
 
-Every column left out is accounted for, so the file never quietly disagrees with the view it came from: **Match the list view** names them beneath the button, and `use_current_view_columns` logs them on the Job Result. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, the export warns and falls back to including every field.
+Every column left out is named beneath the button, so the selection never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, nothing is filled in - which is the selection that exports every field.
 
 ## The self-describing file
 

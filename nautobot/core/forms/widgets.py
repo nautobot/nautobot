@@ -211,14 +211,12 @@ class ExportFieldSelect(SelectMultipleOrderable):
     def _toolbar(self, widget_id, has_selection=False):
         """The picker's controls: seeding the selection from the launching list view, and clearing it.
 
-        "Match the list view" is a button rather than the Job's `use_current_view_columns` variable, which
-        resolves the columns at run time: pressing this puts them *in* the picker, where they can be seen,
-        reordered and pruned before the export runs. The variable remains for callers with no picker in
-        front of them -- the REST API, a scheduled Job, `nautobot-server export_objects`.
+        "Match the list view" puts what that view is displaying *into* the picker, to be seen, reordered
+        and pruned before the export runs. It is a gesture rather than an input to the export: a caller
+        with no picker -- the REST API, a scheduled Job -- names the fields it wants instead.
 
-        "Clear" is its counterpart, and the way back to exporting every field: that is what an empty
-        selection means, but reaching it by unchecking whatever the other button filled in is tedious. It
-        is disabled while there is nothing to clear, so it also reads as whether anything is selected.
+        "Clear" is the way back to exporting every field, that being what an empty selection means. It is
+        disabled while there is nothing to clear, so it also reads as whether anything is selected.
         """
         return format_html(
             '<div class="d-flex justify-content-start mb-6">'

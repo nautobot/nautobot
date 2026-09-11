@@ -3045,10 +3045,9 @@ class ExportObjectListModalButton(_JobModalButton):
     class_path = "nautobot.core.jobs.ExportObjectList"
     button_id = "core.export_object_list"
     enable_scheduling = False
-    # `query_string` describes the launching view and is filled in for the user, and the field picker's
-    # "match the list view" button covers `use_current_view_columns` in a way that shows its result. Both
-    # stay reachable under Advanced Settings -- they are still the plain way to say either thing.
-    advanced_fields = ("query_string", "use_current_view_columns")
+    # `query_string` describes the launching view and is filled in from it, so it is plumbing rather than
+    # something to answer; it stays reachable under Advanced Settings for anyone who wants to adjust it.
+    advanced_fields = ("query_string",)
 
     def __init__(self, **kwargs):
         kwargs.setdefault("label", "Export to file")

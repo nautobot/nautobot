@@ -407,8 +407,8 @@ class ImportExportJobTestCase(TransactionTestCase):
     def create_user_with_table_config(self, table_name, columns, username="table-config-user"):
         """A superuser whose own table configuration displays exactly `columns` for the named table.
 
-        The export job reads the table configuration of the user it runs as, so a test that exercises
-        `use_current_view_columns` must run the job as this user (`run_export(username=...)`).
+        A view's columns are resolved for the requesting user, so a test that exercises "match the list
+        view" must ask for the picker as this user (`matched_columns(user=...)`).
         """
         user = User.objects.create(username=username, is_superuser=True)
         user.set_config(f"tables.{table_name}.columns", columns, commit=True)
@@ -1756,28 +1756,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn('name="export_fields" type="checkbox" value="name"', content)
         self.assertNotIn(" checked", content)  # nothing selected for a type just chosen
 
-    def test_select__picker_view_matches_the_list_view(self):
-        """`use_current_view` selects the columns the list view shows, in the order it shows them.
-
-        The same `get_list_view_export_paths()` the Job's `use_current_view_columns` uses, so the button
-        and the variable cannot disagree -- the difference is only that this puts the result in front of
-        the user, to reorder or prune before running.
-        """
-        content = self.picker_view_response(Status, use_current_view="1")
-        checked = re.findall(r'value="([^"]+)" checked', content)
-        # The columns `StatusTable` displays by default; `ExportViewColumnsTests.ALL_STATUS_COLUMNS`
-        # pins the same set from the Job's side.
-        self.assertEqual(checked, ["name", "color", "content_types", "description"])
-        rows = re.findall(r'id="id_export_fields_option_([^"]+)_container"', content)
-        self.assertEqual(rows[:4], ["name", "color", "content_types", "description"])
-
-    def test_select__picker_view_names_columns_it_could_not_export(self):
-        """A displayed column with no exportable equivalent is named, rather than quietly dropped."""
-        self.add_permissions("dcim.view_devicetype", "dcim.view_manufacturer")
-        content = self.picker_view_response(Device, use_current_view="1")
-        # `primary_ip` is an annotation the table displays; there is no serializer field behind it.
-        self.assertIn("no exportable equivalent", content)
-        self.assertIn("<code>primary_ip</code>", content)
+    # What "match the list view" resolves, and the order it comes back in, is `ExportViewColumnsTests`.
 
     def test_select__picker_view_requires_login(self):
         """It enumerates a model's fields, so it is for logged-in users only."""
@@ -2075,13 +2054,15 @@ class ExportScopeTests(ImportExportJobTestCase):
 
 
 # ===========================================================================
-# Export field defaults — "Use Current View Columns"
+# Export field defaults — "Match the list view"
 # ===========================================================================
 class ExportViewColumnsTests(ImportExportJobTestCase):
-    """`use_current_view_columns` defaults the field selection to the list view's displayed columns.
+    """The picker's "Match the list view" button fills the selection from the view's displayed columns.
 
-    That is all it does: it is a default for `export_fields`, not a mode. What gets exported and in what
-    order is the query string's business either way (`ExportScopeTests`).
+    An export takes an explicit field selection and nothing else, so this resolution happens while the
+    picker is on screen rather than when the export runs: the button asks the `export_fields_picker`
+    endpoint, which resolves the columns as the requesting user through `get_list_view_export_paths()`.
+    What is then exported, and in what order, is the selection's business (`ExportFieldSelectionTests`).
     """
 
     # The exportable fields of `StatusTable`'s columns, in display order. `pk` and `actions` aren't
@@ -2089,159 +2070,127 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
     # model is a display aggregate, so all three are absent -- see `test_columns__omits_a_count_column`.
     ALL_STATUS_COLUMNS = ["name", "color", "content_types", "description"]
 
-    def test_columns__off_by_default(self):
-        """Left off, the view's columns have no bearing on the export: every field is exported."""
-        user = self.create_user_with_table_config("StatusTable", ["name"])
-        header = self.export_header(self.run_export(username=user.username))
-        self.assertIn("description", header)  # a field the user's own table configuration hides
+    def matched_columns(self, model=Status, user=None, query_string=""):
+        """Press "Match the list view" for a model, returning (selected paths in order, rendered picker).
+
+        Resolved for `user` where one is given, the columns of a view being whatever that user has it
+        configured to show.
+        """
+        if user is not None:
+            self.client.force_login(user)
+        response = self.client.get(
+            reverse("export_fields_picker"),
+            data={
+                "content_type": ContentType.objects.get_for_model(model).pk,
+                "use_current_view": "1",
+                "query_string": query_string,
+            },
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        return re.findall(r'value="([^"]+)" checked', content), content
 
     def test_columns__from_user_table_config(self):
         """The user's own table configuration for the view supplies the fields, in its column order."""
         user = self.create_user_with_table_config("StatusTable", ["color", "name"])
-        header = self.export_header(self.run_export(username=user.username, use_current_view_columns=True))
-        self.assertEqual(header, ["color", "name"])
+        selected, _content = self.matched_columns(user=user)
+        self.assertEqual(selected, ["color", "name"])
 
     def test_columns__from_saved_view_table_config(self):
         """A saved view's stored table configuration supplies the fields when that view is in use."""
         saved_view = self.create_saved_view(
             config={"table_config": {"StatusTable": {"columns": ["description", "name"]}}}
         )
-        header = self.export_header(
-            self.run_export(query_string=f"saved_view={saved_view.pk}", use_current_view_columns=True)
-        )
-        self.assertEqual(header, ["description", "name"])
+        selected, _content = self.matched_columns(query_string=f"saved_view={saved_view.pk}")
+        self.assertEqual(selected, ["description", "name"])
 
     def test_columns__saved_view_takes_precedence_over_user_config(self):
         """While a saved view is in use, it is what the view displays -- not the user's own configuration."""
         user = self.create_user_with_table_config("StatusTable", ["color"])
         saved_view = self.create_saved_view(config={"table_config": {"StatusTable": {"columns": ["description"]}}})
-        header = self.export_header(
-            self.run_export(
-                username=user.username, query_string=f"saved_view={saved_view.pk}", use_current_view_columns=True
-            )
-        )
-        self.assertEqual(header, ["description"])
+        selected, _content = self.matched_columns(user=user, query_string=f"saved_view={saved_view.pk}")
+        self.assertEqual(selected, ["description"])
 
     def test_columns__user_config_wins_when_table_changes_pending(self):
         """Unsaved column changes are what the user is looking at, so they win over the saved view's."""
         user = self.create_user_with_table_config("StatusTable", ["color"])
         saved_view = self.create_saved_view(config={"table_config": {"StatusTable": {"columns": ["description"]}}})
-        header = self.export_header(
-            self.run_export(
-                username=user.username,
-                query_string=f"saved_view={saved_view.pk}&table_changes_pending=true",
-                use_current_view_columns=True,
-            )
+        selected, _content = self.matched_columns(
+            user=user, query_string=f"saved_view={saved_view.pk}&table_changes_pending=true"
         )
-        self.assertEqual(header, ["color"])
+        self.assertEqual(selected, ["color"])
 
     def test_columns__default_columns_when_nothing_is_configured(self):
         """With neither a saved view nor a stored configuration, the view shows the table's defaults."""
-        header = self.export_header(self.run_export(use_current_view_columns=True))
-        self.assertEqual(header, self.ALL_STATUS_COLUMNS)
+        selected, _content = self.matched_columns()
+        self.assertEqual(selected, self.ALL_STATUS_COLUMNS)
 
     def test_columns__omits_a_count_column(self):
         """A related-object count is an aggregate the table annotates for display, not a field.
 
         The serializer does declare `dynamic_group_count`, but it reads that annotation -- which an
-        export does not add -- so selecting it would put a column in the file with nothing in it.
-        Reported at info level: every view has columns like this, so it is not a sign of a problem.
+        export does not add -- so selecting it would put a column in the file with nothing in it. Named
+        in the picker rather than dropped in silence, since it is a column the view is showing.
         """
-        job_result = self.run_export(use_current_view_columns=True)
-        self.assertNotIn("dynamic_group_count", self.export_header(job_result))
-        self.assertJobLogEntry(job_result, "dynamic_group_count", level=LogLevelChoices.LOG_INFO)
-
-    def test_columns__explicit_fields_take_precedence(self):
-        """An explicit selection is the user having said which fields they want; the view's are a default."""
-        user = self.create_user_with_table_config("StatusTable", ["color", "name"])
-        header = self.export_header(
-            self.run_export(username=user.username, use_current_view_columns=True, export_fields="description")
-        )
-        self.assertEqual(header, ["description"])
-
-    def test_columns__applies_to_a_document_export_too(self):
-        """The default is a field selection, so it reaches the JSON/YAML document like any other."""
-        Status.objects.create(name="zzz_document_columns", color="abcdef")
-        user = self.create_user_with_table_config("StatusTable", ["name", "color"])
-        doc = self.export_document(
-            self.run_export(
-                username=user.username,
-                query_string="name=zzz_document_columns",
-                export_format="json",
-                use_current_view_columns=True,
-            )
-        )
-        self.assertEqual(doc["records"], [{"name": "zzz_document_columns", "color": "abcdef"}])
+        selected, content = self.matched_columns()
+        self.assertNotIn("dynamic_group_count", selected)
+        self.assertIn("dynamic_group_count", content)
+        self.assertIn("no exportable equivalent", content)
 
     def test_columns__non_exportable_columns_are_omitted(self):
         """Displayed columns with no exportable equivalent are reported and left out of the selection.
 
         `ManufacturerTable` shows four related-object counts on top of the injected fifth; what remains
-        is the data. The user asked for their view, so losing a column is reported, not fatal -- unlike
-        naming one of those columns explicitly, which fails
-        (`test_select__related_object_count_fails_rather_than_exporting_nothing`).
+        is the data. Losing one of those is reported, not fatal -- unlike naming it explicitly, which
+        fails (`test_select__related_object_count_fails_rather_than_exporting_nothing`).
         """
         Manufacturer.objects.create(name="Counted Mfr", description="has counts")
-        job_result = self.run_export(model=Manufacturer, use_current_view_columns=True)
-        self.assertEqual(self.export_header(job_result), ["name", "description"])
-        self.assertJobLogEntry(job_result, "device_type_count", level=LogLevelChoices.LOG_INFO)
+        selected, content = self.matched_columns(model=Manufacturer)
+        self.assertEqual(selected, ["name", "description"])
+        self.assertIn("device_type_count", content)
 
     def test_columns__count_column_carries_the_relation_it_counts(self):
-        """A count column exports as the relation it counts, where an export can emit that relation.
+        """A count column is carried across as the relation it counts, where an export can emit it.
 
         A count is an aggregate no export can carry, but `PrefixTable.vrf_count` is *about* `Prefix.vrfs`,
-        so the export carries the VRFs themselves under that name instead of dropping the column.
+        so the selection carries the VRFs themselves under that name instead of dropping the column.
         """
         namespace, _ = Namespace.objects.get_or_create(name="Counted Relation Namespace")
-        # `rd` is half of a VRF's natural key, so it is what identifies the member in the exported cell
         vrf = VRF.objects.create(name="Counted VRF", rd="65000:99", namespace=namespace)
         prefix = Prefix.objects.create(
             prefix="10.99.0.0/16", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
         )
         prefix.vrfs.add(vrf)
         user = self.create_user_with_table_config("PrefixTable", ["prefix", "vrf_count"])
-        rows = self.export_rows(
-            self.run_export(
-                model=Prefix,
-                username=user.username,
-                query_string="prefix=10.99.0.0/16",
-                use_current_view_columns=True,
-            )
-        )
-        self.assertEqual(list(rows[0]), ["prefix", "vrfs"])
-        self.assertIn(vrf.rd, rows[0]["vrfs"])
+        selected, _content = self.matched_columns(model=Prefix, user=user)
+        self.assertEqual(selected, ["prefix", "vrfs"])
 
     def test_columns__custom_field_column(self):
         """A custom-field column is exportable, and is carried across as its `cf_` reference."""
-        status = self.create_status_with_custom_fields()
+        self.create_status_with_custom_fields()
         user = self.create_user_with_table_config("StatusTable", ["name", "cf_export_cf_a"])
-        rows = self.export_rows(
-            self.run_export(username=user.username, query_string=f"name={status.name}", use_current_view_columns=True)
-        )
-        self.assertEqual(rows, [{"name": status.name, "cf_export_cf_a": "A value"}])
+        selected, _content = self.matched_columns(user=user)
+        self.assertEqual(selected, ["name", "cf_export_cf_a"])
 
-    def test_columns__non_exportable_column_does_not_fail_the_export(self):
-        """A view showing only non-exportable columns falls back to exporting every field.
+    def test_columns__nothing_exportable_selects_nothing(self):
+        """A view showing only non-exportable columns fills nothing in, which exports every field.
 
-        Warned about rather than merely noted: unlike losing one column among several, this means the
-        file bears no resemblance to the view that was asked for.
+        An empty selection is what "export everything" means, so there is nothing further to say: the
+        picker simply comes back with its columns named as unexportable and no box checked.
         """
         user = self.create_user_with_table_config("StatusTable", ["dynamic_group_count"])
-        job_result = self.run_export(username=user.username, use_current_view_columns=True, allow_issues=True)
-        self.assertIn("name", self.export_header(job_result))
-        self.assertJobLogEntry(job_result, "None of the displayed columns", level=LogLevelChoices.LOG_WARNING)
+        selected, content = self.matched_columns(user=user)
+        self.assertEqual(selected, [])
+        self.assertIn("dynamic_group_count", content)
 
     def test_columns__ignored_by_an_export_template(self):
-        """An Export Template renders its own output, so a field selection of any origin is irrelevant."""
-        user = self.create_user_with_table_config("StatusTable", ["name"])
+        """An Export Template renders its own output, so a field selection is irrelevant to it."""
         export_template = ExportTemplate.objects.create(
             content_type=ContentType.objects.get_for_model(Status),
             name="Status template",
             template_code="{% for status in queryset %}{{ status.name }},{{ status.color }}\n{% endfor %}",
         )
-        job_result = self.run_export(
-            username=user.username, export_template=export_template.pk, use_current_view_columns=True
-        )
+        job_result = self.run_export(export_template=export_template.pk, export_fields="name")
         first_status = Status.objects.first()
         self.assertIn(f"{first_status.name},{first_status.color}", self.export_text(job_result))
 

@@ -45,7 +45,6 @@ from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
-from nautobot.core.views.utils import get_list_view_export_paths
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
     BaseValidator,
@@ -213,17 +212,8 @@ class ExportObjectList(Job):
         description="Select and drag to order the fields to export, including nested references to related "
         "objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). A field marked "
         "<code>*</code> is one an import requires, so a selection that omits it cannot be imported back. "
-        "If nothing is selected, all fields are exported, unless <em>Use Current View Columns</em> is "
-        "selected. Not applicable to Export Templates or devicetype-library YAML exports.",
-    )
-    use_current_view_columns = BooleanVar(
-        label="Use Current View Columns",
-        default=False,
-        required=False,
-        description="If no explicit list of fields to export is given, export the columns that the "
-        "corresponding list view is currently displaying — as configured by the saved view in use, if any, "
-        "else by your own table configuration for that view. Columns that have no exportable equivalent "
-        "(row selection, action buttons, computed fields, related-object counts, and the like) are omitted.",
+        "If nothing is selected, all fields are exported. Not applicable to Export Templates or "
+        "devicetype-library YAML exports.",
     )
 
     class Meta:
@@ -379,40 +369,6 @@ class ExportObjectList(Job):
         return True
 
     # ---- RESOLVE FIELDS / MATCH (which columns, and the re-import match key) ----
-
-    def _get_current_view_columns(self, model, query_params, saved_view):
-        """The columns the launching list view is displaying, as export field paths (None = no selection).
-
-        `get_list_view_export_paths()` does the resolving, shared with the UI that seeds this same
-        selection from a button, so that the two cannot disagree about what the view is showing. What is
-        left here is the reporting: a column that has no exportable equivalent is logged rather than
-        failing the export, since what was asked for is the view, not those specific columns.
-        """
-        export_field_paths, omitted = get_list_view_export_paths(
-            model,
-            user=self.user,
-            saved_view=saved_view,
-            table_changes_pending=query_params.get("table_changes_pending", False),
-            logger=self.logger,
-        )
-        if export_field_paths is None:
-            self.logger.warning(
-                "No table class found for %s, so its list view's columns cannot be determined; "
-                "exporting all fields instead.",
-                model._meta.label_lower,
-            )
-            return None
-        if omitted:
-            # Info rather than a warning: every view has columns like these, so losing them is the
-            # normal case rather than a sign that anything went wrong.
-            self.logger.info(
-                "Omitting displayed column(s) %s, which have no exportable equivalent",
-                ", ".join(f"`{column}`" for column in omitted),
-            )
-        if not export_field_paths:
-            self.logger.warning("None of the displayed columns can be exported; exporting all fields instead.")
-            return None
-        return export_field_paths
 
     def _resolve_export_field_paths(self, model, export_fields):
         """Parse and validate the explicit field-selection string (None if no selection was given)."""
@@ -635,7 +591,6 @@ class ExportObjectList(Job):
         export_format="csv",
         export_template=None,
         export_fields="",
-        use_current_view_columns=False,
     ):  # pylint:disable=arguments-differ
         self._require_view_permission(content_type)
         model = content_type.model_class()
@@ -674,11 +629,10 @@ class ExportObjectList(Job):
             self._render_devicetype_library_yaml(queryset, filename)
             return
 
-        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else (on request) the ones the
-        # launching list view is displaying, else every field of the model.
+        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else every field of the model.
+        # Asking for "the columns of the list view" is a UI gesture rather than an input here: the export
+        # field picker fills those in as a selection, so what arrives is always an explicit list.
         export_field_paths = self._resolve_export_field_paths(model, export_fields)
-        if export_field_paths is None and use_current_view_columns:
-            export_field_paths = self._get_current_view_columns(model, query_params, saved_view)
         if export_field_paths:
             self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
         match_fields = self._get_match_fields(model, export_field_paths)

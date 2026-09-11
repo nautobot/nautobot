@@ -47,7 +47,7 @@ class ExportObjectListTest(TransactionTestCase):
     Test the ExportObjectList system job.
 
     Which objects an export covers and which fields it carries -- the query string's filters and sort
-    order, saved views, and `use_current_view_columns` -- is covered by `test_import_export`, whose
+    order, saved views, and the field selection -- is covered by `test_import_export`, whose
     `ImportExportJobTestCase` harness reads the produced file back.
     """
 
