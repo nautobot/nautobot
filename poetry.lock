@@ -1769,7 +1769,7 @@ name = "example-app"
 version = "1.0.0"
 description = "Nautobot example app that does a whole lot of nothing."
 optional = false
-python-versions = ">=3.10,<3.15"
+python-versions = ">=3.11,<3.15"
 groups = ["dev"]
 files = []
 develop = true
@@ -7307,4 +7307,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11,<3.15"
-content-hash = "2d7f5f4cf8e41428a1fe581d41713119956b831b9dd076c2131f438d7f7eb09a"
+content-hash = "312377c690dbde071172b925c44675107089a879a96942473192ddbd1317b1c9"
