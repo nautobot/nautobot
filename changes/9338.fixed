@@ -1,0 +1,1 @@
+Implemented automatic select_ and prefetch_related for API views with depth>=1.
