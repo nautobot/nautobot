@@ -1850,6 +1850,50 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertIn("nb-select-multiple-orderable-list", content)
         self.assertIn('name="export_fields" type="checkbox" value="name"', content)
 
+    def content_type_select(self, content):
+        """The rendered `content_type` field's opening tag."""
+        match = re.search(r'<select[^>]*id="id_content_type"[^>]*>', content)
+        self.assertIsNotNone(match, "content_type field not rendered")
+        return match.group(0)
+
+    def test_select__modal_fixes_the_content_type(self):
+        """Which objects are exported is what the launching list view was showing, so the modal fixes it.
+
+        Disabled rather than hidden, so it still says what is being exported. A disabled input submits
+        nothing, so the value rides in the form's `hx-vals` -- as `_schedule_type` does when scheduling
+        is off -- and the export still knows its content type when the form is submitted.
+        """
+        get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        content_type = ContentType.objects.get_for_model(Status)
+        response = self.client.post(
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ExportObjectList"}),
+            data={
+                "render_job_form": True,
+                "job_modal_button": "core.export_object_list",
+                "content_type": content_type.pk,
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("disabled", self.content_type_select(content))
+        form_hx_vals = re.search(r"hx-vals='([^']*)'", content).group(1)
+        self.assertIn("content_type", form_hx_vals)
+        self.assertIn(str(content_type.pk), form_hx_vals)
+
+    def test_select__full_page_job_form_leaves_the_content_type_editable(self):
+        """The Job's own form has no launching context behind it, so the choice is the user's to make."""
+        job_model = get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")[1]
+        self.add_permissions("extras.run_job", "extras.view_job")
+        response = self.client.get(
+            reverse("extras:job_run", kwargs={"pk": job_model.pk}),
+            data={"content_type": ContentType.objects.get_for_model(Status).pk},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertNotIn("disabled", self.content_type_select(content))
+
 
 # ===========================================================================
 # Export scope — the filters and sort order the query string describes

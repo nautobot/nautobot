@@ -2695,6 +2695,16 @@ class JobUIViewSet(NautobotUIViewSet):
             return False
         return bool(job_modal_button.enable_scheduling)
 
+    def _resolve_fixed_fields(self, request):
+        """The Job fields this modal's button says the launching context decides.
+
+        Read from the registered `_JobModalButton`, never from the request, for the same reason scheduling
+        is: what the payload claims about itself is not authority for what the form permits.
+        """
+        button_id = request.POST.get("job_modal_button", "")
+        job_modal_button = registry["job_modal_buttons"].get(button_id) if button_id else None
+        return getattr(job_modal_button, "fixed_fields", ())
+
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
@@ -2723,6 +2733,14 @@ class JobUIViewSet(NautobotUIViewSet):
             # (hx-vals would override the form field with the same name if present).
             if not enable_scheduling:
                 hx_vals_dict["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
+            # Fields the launching context decided are shown but not editable here. A disabled input
+            # submits nothing, so each one's value rides in hx-vals the same way, and only fields the
+            # trigger actually supplied are fixed -- otherwise a modal opened without one would offer a
+            # disabled, empty field that no one could fill in.
+            for field_name in self._resolve_fixed_fields(request):
+                if field_name in job_form.fields and request.POST.get(field_name):
+                    job_form.fields[field_name].disabled = True
+                    hx_vals_dict[field_name] = request.POST[field_name]
             response = render(
                 request,
                 template_name,

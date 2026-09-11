@@ -2842,6 +2842,10 @@ class _JobModalButton(Button):
 
     class_path = None
     advanced_fields = ()
+    # Fields the launching context decides, and so are not the user's to change once the modal is open.
+    # Only ever applied in the modal, and only to a field the trigger actually supplied a value for; the
+    # Job's own form leaves them editable, that form having no launching context behind it.
+    fixed_fields = ()
     initial_field_mapping = {}
     run_button_label = "Run Job Now"
     job_result_key = None
@@ -2859,6 +2863,9 @@ class _JobModalButton(Button):
             label (str): The text of this button, not including any icon.
             color (ButtonColorChoices, optional): The color (class) of this button.
             advanced_fields (tuple, optional): A tuple of job fields to only render on the Advanced Settings section of the Modal.
+            fixed_fields (tuple, optional): A tuple of job fields that the launching context decides, and
+                that the modal therefore renders as disabled. Their values are carried in the form's
+                `hx-vals` so that submitting still sends them, a disabled input submitting nothing.
             initial_field_mapping (dict, optional): Map object attributes (using dunder notation) to the Job form field for initial data.
                 For example, `{"location": "location__name"}` would pre-populate the `location` field on the
                 Job form with the value of `obj.location.name` from the object in context.
@@ -3059,6 +3066,9 @@ class ExportObjectListModalButton(_JobModalButton):
     # something to answer. `export_template` has an action of its own per template in the same menu that
     # opens this dialog, which exports with it directly. Both stay reachable under Advanced Settings.
     advanced_fields = ("query_string", "export_template")
+    # Which objects are being exported is what the list view was showing; picking a different type here
+    # would export something the user never asked about. The Job's own form still offers the choice.
+    fixed_fields = ("content_type",)
 
     def __init__(self, **kwargs):
         kwargs.setdefault("label", "Export to file")
