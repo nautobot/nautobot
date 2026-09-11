@@ -73,7 +73,7 @@ Questions? Comments? Start by perusing our [GitHub discussions](https://github.c
 
 Nautobot offers the ability to customize your setup to better align with your direct business needs. It does so through the use of various Apps that have been developed for network automation, and are designed to be used in environments where needed.
 
-There are many Apps available within the Nautobot Apps ecosystem. The below screenshots are an example of some popular ones that are currently available.
+The screenshots below are examples of some popular Apps that are currently available.
 
 ### App Screenshots
 
