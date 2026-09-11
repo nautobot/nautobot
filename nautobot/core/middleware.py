@@ -531,87 +531,6 @@ class RequestMetricMiddleware:
         return enabled_metrics
 
 
-def perform_rest_api_complexity_cost_rate_limiting(request, get_response_function):
-    # ----------------------------------------------------------------------
-    #  Calculate Cost
-    # ----------------------------------------------------------------------
-    if request.method in READ_METHODS:
-        # TODO: try/catch this
-        read_request_features = classify_rest_read_request_features(request)
-        request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
-    elif request.method in WRITE_METHODS:
-        # TODO: Revisit calculation for write requests
-        request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
-    else:
-        return get_response_function(request)
-
-    # ----------------------------------------------------------------------
-    #  Generate Header Data
-    # ----------------------------------------------------------------------
-    quota_policy_name = "rest-complexity-cost"
-    quota = 1000
-    quota_units = "arbitrary-transaction-costs"
-    time_window = 1000
-    partition_key = ""
-
-    remaining_quota = max(0, quota - request_complexity_cost_estimate)
-    remaining_window = time_window
-
-    rate_limit_policy_data = [
-        f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
-        f"q={quota}",  # total budget granted per window,
-        f'qu="{quota_units}"',  # The unit type of the metrics being measure, ietf default is request count
-        f"w={time_window}",  # Duration that quota applies
-    ]
-    rate_limit_data = [
-        f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
-        f"r={remaining_quota}",  # Remaining quota
-        f"t={remaining_window}",  # Remaining window of time
-    ]
-
-    # TODO: I have no idea what the partition key is doing
-    if partition_key != "":
-        rate_limit_policy_data.append(f"pk=:{partition_key}:")
-        rate_limit_data.append(f"pk=:{partition_key}:")
-
-    rate_limit_policy_string = ";".join(rate_limit_policy_data)
-    rate_limit_string = ";".join(rate_limit_data)
-    rate_limit_headers = {
-        "RateLimit-Policy": rate_limit_policy_string,
-        "RateLimit": rate_limit_string,
-        "X-Nautobot-Cost": str(request_complexity_cost_estimate),
-    }
-
-    # --------------------
-    #  If Quota Is Hit, No Further Middleware Allowed, Terminate
-    # --------------------
-    should_complexity_cost_calculation_enforced = settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
-    if should_complexity_cost_calculation_enforced is True and remaining_quota <= 0:
-        json_quota_exceeded_response = JsonResponse(
-            {"detail": "Request was throttled. The estimated complexity cost exceeds the quota."},
-            status=429,
-        )
-        json_quota_exceeded_response.headers["Retry-After"] = str(remaining_window)
-        for header_name, header_value in rate_limit_headers.items():
-            json_quota_exceeded_response.headers[header_name] = header_value
-
-        return json_quota_exceeded_response
-
-    # ----------------------------------------------------------------------
-    #  Add To Header
-    # ----------------------------------------------------------------------
-    response = get_response_function(request)
-
-    for header_name, header_value in rate_limit_headers.items():
-        response.headers[header_name] = header_value
-
-    return response
-
-
-def perform_graphql_complexity_cost_rate_limiting(request, get_response_function):
-    return get_response_function(request)
-
-
 class ComplexityCostRateLimiting:
     """A middleware to instrument a complexity cost estimation in the response header for api requests
 
@@ -638,10 +557,81 @@ class ComplexityCostRateLimiting:
 
         is_graphql_request = False
         if is_api_request(request) is True:
-            response = perform_rest_api_complexity_cost_rate_limiting(request, self.get_response)
+            response = self.perform_rest_api_complexity_cost_rate_limiting(request)
         elif is_graphql_request is True:
-            response = perform_graphql_complexity_cost_rate_limiting(request, self.get_response)
+            response = self.perform_graphql_complexity_cost_rate_limiting(request)
         else:
             response = self.get_response(request)
 
         return response
+
+    def perform_rest_api_complexity_cost_rate_limiting(self, request):
+        # ----------------------------------------------------------------------
+        #  Calculate Cost
+        # ----------------------------------------------------------------------
+        if request.method in READ_METHODS:
+            # TODO: try/catch this
+            read_request_features = classify_rest_read_request_features(request)
+            request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
+        elif request.method in WRITE_METHODS:
+            # TODO: Revisit calculation for write requests
+            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
+        else:
+            return self.get_response(request)
+
+        # ----------------------------------------------------------------------
+        #  Generate Header Data
+        # ----------------------------------------------------------------------
+        quota_policy_name = "rest-complexity-cost"
+        quota = 1000
+        time_window = 1000
+
+        remaining_quota = max(-1, quota - request_complexity_cost_estimate)
+        remaining_window = time_window
+
+        rate_limit_policy_data = [
+            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"q={quota}",  # total budget granted per window,
+            f"w={time_window}",  # Duration that quota applies
+        ]
+        rate_limit_data = [
+            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"r={remaining_quota}",  # Remaining quota
+            f"t={remaining_window}",  # Remaining window of time
+        ]
+
+        rate_limit_policy_string = ";".join(rate_limit_policy_data)
+        rate_limit_string = ";".join(rate_limit_data)
+        rate_limit_headers = {
+            "RateLimit-Policy": rate_limit_policy_string,
+            "RateLimit": rate_limit_string,
+            "X-Nautobot-Cost": str(request_complexity_cost_estimate),
+        }
+
+        # --------------------
+        #  If Quota Is Hit, No Further Middleware Allowed, Terminate
+        # --------------------
+        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+        if should_complexity_cost_calculation_enforced is True and remaining_quota < 0:
+            json_quota_exceeded_response = JsonResponse(
+                {"detail": "Request was throttled. The estimated complexity cost exceeds the quota."},
+                status=429,
+            )
+            json_quota_exceeded_response.headers["Retry-After"] = str(remaining_window)
+            for header_name, header_value in rate_limit_headers.items():
+                json_quota_exceeded_response.headers[header_name] = header_value
+
+            return json_quota_exceeded_response
+
+        # ----------------------------------------------------------------------
+        #  Add To Header
+        # ----------------------------------------------------------------------
+        response = self.get_response(request)
+
+        for header_name, header_value in rate_limit_headers.items():
+            response.headers[header_name] = header_value
+
+        return response
+
+    def perform_graphql_complexity_cost_rate_limiting(self, request):
+        return self.get_response(request)
