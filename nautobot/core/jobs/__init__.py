@@ -31,6 +31,7 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms.fields import ExportFieldsChoiceField
+from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import import_utils
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
@@ -164,6 +165,18 @@ class ExportFieldsStringVar(StringVar):
         # `ScriptVariable.as_field()` adds Bootstrap's `form-control` to every non-checkbox widget, which
         # styles an input box; the widget renders a list of rows and brings its own classes.
         field.widget.attrs["class"] = field.widget.attrs.get("class", "").replace(" form-control", "")
+        # A persistent HTMX swap target from `render_field`, rebuilt whenever the content type changes.
+        # Select2 raises only jQuery events, so the widget's script re-dispatches a native `change` for
+        # this trigger to hear. Set here rather than on the field class: the rebuild renders the field
+        # through `render_field` too, and would otherwise nest a second wrapper inside the first.
+        field.htmx_attrs = {
+            "id": ExportFieldSelect.WRAPPER_ID,
+            "hx-get": reverse("export_fields_picker"),
+            "hx-trigger": f"change from:{ExportFieldSelect.content_type_selector}",
+            "hx-include": ExportFieldSelect.content_type_selector,
+            "hx-target": "this",
+            "hx-swap": "innerHTML",
+        }
         return field
 
 

@@ -974,6 +974,9 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
         from nautobot.core.api.utils import get_serializer_for_model
 
         self.content_type = content_type
+        # The widget says why it is empty when it is, which differs between no content type chosen and
+        # one an export cannot serialize, so it has to know which of those it is looking at.
+        self.widget.content_type = content_type
         entries = []
         model = content_type.model_class() if content_type is not None else None
         if model is not None:

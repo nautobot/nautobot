@@ -20,7 +20,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.http import (
     FileResponse,
-    HttpResponse,
     HttpResponseBadRequest,
     HttpResponseForbidden,
     HttpResponseServerError,
@@ -624,16 +623,15 @@ class ExportFieldsPickerView(LoginRequiredMixin, View):
     """
 
     def get(self, request):
-        from nautobot.core.forms.fields import ExportFieldsChoiceField
+        from nautobot.core.jobs import ExportObjectList
         from nautobot.core.views.utils import get_list_view_export_paths
         from nautobot.extras.utils import get_saved_view_or_none
 
-        content_type_pk = request.GET.get("content_type")
+        content_type_pk = request.GET.get("content_type") or ""
         content_type = ContentType.objects.filter(pk=content_type_pk).first() if content_type_pk else None
         model = content_type.model_class() if content_type is not None else None
 
-        field = ExportFieldsChoiceField(required=False)
-        selection = field.to_python(request.GET.get("export_fields"))
+        selection = request.GET.get("export_fields", "")
         omitted = []
         if model is not None and request.GET.get("use_current_view"):
             query_params = QueryDict(request.GET.get("query_string", ""))
@@ -645,12 +643,18 @@ class ExportFieldsPickerView(LoginRequiredMixin, View):
                 table_changes_pending=query_params.get("table_changes_pending", False),
             )
             if paths:
-                selection = paths
+                selection = ",".join(paths)
 
-        field.set_content_type(content_type, selection=selection)
+        # Rendered from the Job's own form, so that the label, the help text, the offered fields and the
+        # order the selection puts them in are all the ones that form would have produced -- this replaces
+        # its rendering of the field in place.
+        job_form = ExportObjectList.as_form(data={"content_type": content_type_pk, "export_fields": selection})
+        field = job_form.fields["export_fields"]
+        # The wrapper `htmx_attrs` asks for is the element being swapped into, and it persists; emitting
+        # another one here would nest a second copy inside it on every rebuild.
+        field.htmx_attrs = None
         field.widget.omitted_columns = omitted
-        # Rendered under the name and id the Job form gives it, since this replaces that rendering in place.
-        return HttpResponse(field.widget.render("export_fields", selection, attrs={"id": "id_export_fields"}))
+        return render(request, "inc/htmx_form_field.html", {"field": job_form["export_fields"]})
 
 
 class MessagesView(AccessMixin, View):

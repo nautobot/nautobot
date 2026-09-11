@@ -39,6 +39,7 @@ from nautobot.core.api.import_export import (
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
+from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
@@ -1746,13 +1747,16 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         return response.content.decode(response.charset)
 
     def test_select__picker_view_rebuilds_the_tree_for_a_content_type(self):
-        """The picker endpoint re-renders the tree for a content type, which is how changing type works.
+        """The picker endpoint re-renders the field for a content type, which is how changing type works.
 
         The tree is enumerated server-side from the serializer, so choosing a different content type in
-        the form cannot be handled in the browser: the whole picker is fetched again and swapped in.
+        the form cannot be handled in the browser: the field is rendered again and swapped in. What comes
+        back is the *contents* of the persistent wrapper `htmx_attrs` puts around the field -- the
+        wrapper itself stays put, so a rebuild must not bring another one with it.
         """
         content = self.picker_view_response(Status)
-        self.assertIn("nb-export-fields-picker", content)
+        self.assertIn('id="id_export_fields-container"', content)
+        self.assertNotIn(f'id="{ExportFieldSelect.WRAPPER_ID}"', content)
         self.assertIn('name="export_fields" type="checkbox" value="name"', content)
         self.assertNotIn(" checked", content)  # nothing selected for a type just chosen
 

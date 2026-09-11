@@ -128,6 +128,14 @@ class ExportFieldSelect(SelectMultipleOrderable):
     turning a ~25ms render into many seconds. Building the HTML directly keeps it fast in every environment.
     """
 
+    # The element the picker is rebuilt into. `render_field` emits it around the whole field from the
+    # field's `htmx_attrs`, and it persists across swaps -- so it is what a rebuild targets, and it is
+    # where the URL to rebuild from is carried. See `ExportFieldsStringVar.as_field()`.
+    WRAPPER_ID = "nb-export-fields-picker"
+
+    # The report of what a "match the list view" could not bring over. One per picker, hence an id.
+    OMITTED_ID = "nb-export-fields-omitted"
+
     # The sibling field naming the content type whose fields are offered; changing it rebuilds the picker.
     content_type_selector = "#id_content_type"
     # The fields whose values the "match the list view" button sends along, being what says *which* list
@@ -140,6 +148,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Columns of the list view that had no exportable equivalent, reported by whoever seeded the
         # selection from a view, so the picker can say what was left out rather than quietly dropping it.
         self.omitted_columns = []
+        # The content type whose fields are offered, for the sake of saying which one has none.
+        self.content_type = None
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
@@ -181,6 +191,13 @@ class ExportFieldSelect(SelectMultipleOrderable):
         widget = context["widget"]
         options = [option for _group, subgroup, _index in widget["optgroups"] for option in subgroup]
 
+        if not options:
+            # Say why there is nothing to pick from, rather than rendering an empty list under two
+            # buttons that cannot do anything. The script still goes out: without it nothing bridges
+            # Select2's pick to the `change` that rebuilds this, and a form opened with no content type
+            # chosen -- which is how the Job's own form opens -- would never leave this state.
+            return format_html('<div class="form-text">{}</div>{}', self._empty_message(), self._behavior_script())
+
         nodes = {str(option["value"]): {"option": option, "children": []} for option in options}
         roots = []
         for path, node in nodes.items():
@@ -191,16 +208,12 @@ class ExportFieldSelect(SelectMultipleOrderable):
 
         widget_id = widget["attrs"].get("id") or ""
         rows = format_html_join("", "{}", ((self._render_node(node, widget_id, name, True),) for node in roots))
-        # Everything is wrapped in one container, addressed by id, because the whole picker is replaced at
-        # once when it has to be rebuilt server-side -- on a change of content type, or by the button
-        # below. Swapping the list alone would leave the toolbar and any hint behind it out of step.
+        # No wrapper of its own: the whole picker is replaced at once when it has to be rebuilt
+        # server-side, and the element that persists across those swaps is the one `render_field` puts
+        # around the field from `htmx_attrs` (`WRAPPER_ID`). This is that element's contents.
         return format_html(
-            '<div id="{}-picker" class="nb-export-fields-picker" data-nb-picker-url="{}">'
-            '{}{}<ol id="{}" class="{}">{}</ol>{}'
-            "</div>",
-            widget_id,
-            reverse("export_fields_picker"),
-            self._toolbar(widget_id, has_selection=bool(widget["value"])),
+            '{}{}<ol id="{}" class="{}">{}</ol>{}',
+            self._toolbar(has_selection=bool(widget["value"])),
             self._omitted_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
@@ -208,7 +221,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             self._behavior_script(),
         )
 
-    def _toolbar(self, widget_id, has_selection=False):
+    def _toolbar(self, has_selection=False):
         """The picker's controls: seeding the selection from the launching list view, and clearing it.
 
         "Match the list view" puts what that view is displaying *into* the picker, to be seen, reordered
@@ -221,7 +234,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html(
             '<div class="d-flex justify-content-start mb-6">'
             '<button type="button" class="btn btn-secondary" '
-            'hx-get="{url}" hx-target="#{wid}-picker" hx-swap="outerHTML" hx-include="{include}" '
+            'hx-get="{url}" hx-target="#{wrapper}" hx-swap="innerHTML" hx-include="{include}" '
             'hx-vals=\'{{"use_current_view": "1"}}\' '
             'title="Replace the selection with the columns this type\'s list view is configured to display">'
             '<span class="mdi mdi-table-column-plus-after me-4" aria-hidden="true"></span>'
@@ -235,17 +248,29 @@ class ExportFieldSelect(SelectMultipleOrderable):
             '<span class="form-text d-block mb-6">Drag to reorder. '
             "<code>*</code> marks a field an import requires to create new records.</span>",
             url=reverse("export_fields_picker"),
-            wid=widget_id,
+            wrapper=self.WRAPPER_ID,
             disabled=format_html(" disabled") if not has_selection else "",
             include=self.context_field_selector,
+        )
+
+    def _empty_message(self):
+        """Why there is nothing to pick from: no content type chosen, or one an export cannot serialize."""
+        if self.content_type is None:
+            return format_html("Choose a content type to see the fields you can export.")
+        return format_html(
+            "This content type has no fields an export can select. It can still be exported using an "
+            "Export Template, which renders its own output."
         )
 
     def _omitted_hint(self):
         """What the launching view was showing that an export cannot emit, named rather than dropped."""
         if not self.omitted_columns:
             return ""
+        # Addressable so that clearing the selection can take it away with it: what it reports is what a
+        # particular "match the list view" could not bring over, which says nothing once that is gone.
         return format_html(
-            '<div class="form-text mb-6">Column{} {} {} no exportable equivalent and {} left out.</div>',
+            '<div id="{}" class="form-text mb-6">Column{} {} {} no exportable equivalent and {} left out.</div>',
+            self.OMITTED_ID,
             "" if len(self.omitted_columns) == 1 else "s",
             format_html_join(", ", "<code>{}</code>", ((column,) for column in self.omitted_columns)),
             "has" if len(self.omitted_columns) == 1 else "have",
@@ -303,7 +328,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
     // Whether there is anything to clear is also whether anything is selected, so the button's state
     // doubles as that: an empty selection is what exports every field.
     function refreshClearButton(list) {{
-        const picker = list.closest(".nb-export-fields-picker");
+        const picker = list.closest("#{wrapper}");
         const clear = picker ? picker.querySelector(".export-fields-clear") : null;
         if (clear) clear.disabled = !boxesWithin(list).some((box) => box.checked);
     }}
@@ -311,7 +336,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
     document.addEventListener("click", function (event) {{
         const clear = event.target.closest(".export-fields-clear");
         if (!clear) return;
-        const picker = clear.closest(".nb-export-fields-picker");
+        const picker = clear.closest("#{wrapper}");
         const list = picker ? picker.querySelector(LIST) : null;
         if (!list) return;
         // Unchecking in script raises no "change" event, so the housekeeping the change handler would
@@ -320,6 +345,10 @@ class ExportFieldSelect(SelectMultipleOrderable):
             box.checked = false;
             box.indeterminate = false;
         }});
+        // The columns a "match the list view" could not bring over are reported against that selection,
+        // so the report goes with it. A later match renders its own afresh.
+        const omitted = picker.querySelector("#{omitted}");
+        if (omitted) omitted.remove();
         clear.disabled = true;
     }});
 
@@ -339,30 +368,26 @@ class ExportFieldSelect(SelectMultipleOrderable):
         }}
     }});
 
-    // A different content type is a different set of fields, so rebuild the picker for it -- server-side,
-    // the field graph being what it enumerates. Any selection is dropped with the type it belonged to.
-    // jQuery because Select2 raises no native event (see https://github.com/select2/select2/issues/1908),
-    // and delegated so that it survives the form being swapped into the modal.
-    function bindContentTypeRefresh() {{
+    // Select2 announces a pick with a jQuery event only, which nothing listening natively -- HTMX
+    // included -- ever sees (https://github.com/select2/select2/issues/1908). Re-dispatch it as a real
+    // `change` so the picker's own `hx-trigger` can hear it; `objectmetadata_create.html` bridges its
+    // own select the same way. Delegated, so it survives the form being swapped into the modal.
+    function bindSelect2ChangeBridge() {{
         if (!window.jQuery) return;
-        window.jQuery(document).on("change", "{content_type_selector}", function () {{
-            const picker = document.querySelector(".nb-export-fields-picker");
-            if (!picker || !window.htmx) return;
-            window.htmx.ajax("GET", picker.dataset.nbPickerUrl, {{
-                target: picker,
-                swap: "outerHTML",
-                values: {{content_type: this.value}},
-            }});
+        window.jQuery(document).on("select2:select select2:clear", "{content_type_selector}", function () {{
+            this.dispatchEvent(new Event("change", {{bubbles: true}}));
         }});
     }}
     // On a full page render this script runs while the document is still parsing, *before* the scripts at
     // the end of the body have defined jQuery -- so binding is deferred to whenever that has happened.
     // A widget swapped in by HTMX renders after page load, where jQuery is there already.
-    if (window.jQuery) bindContentTypeRefresh();
-    else document.addEventListener("DOMContentLoaded", bindContentTypeRefresh);
+    if (window.jQuery) bindSelect2ChangeBridge();
+    else document.addEventListener("DOMContentLoaded", bindSelect2ChangeBridge);
 }})();
 </script>""",
             content_type_selector=self.content_type_selector,
+            wrapper=self.WRAPPER_ID,
+            omitted=self.OMITTED_ID,
         )
 
     def _render_node(self, node, widget_id, name, is_root):
