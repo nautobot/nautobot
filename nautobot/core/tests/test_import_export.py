@@ -1712,6 +1712,44 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertTrue(form.is_valid(), form.errors)
         self.assertEqual(form.cleaned_data["export_fields"], "color,name")
 
+    def test_select__form_keeps_a_path_deeper_than_the_picker_offers(self):
+        """A hand-written path the enumeration never reaches survives the form, to be judged by the Job.
+
+        The picker stops one relation shallower than a path may legally traverse, so a `MultipleChoiceField`
+        left to itself would reject `rack__location__parent__name` as "not a valid choice" -- refusing a
+        selection the export accepts. It is offered as a row of its own too, so it can be seen and undone.
+        """
+        deep_path = "rack__location__parent__name"
+        form = ExportObjectList.as_form(
+            data={
+                "content_type": str(ContentType.objects.get_for_model(Device).pk),
+                "export_fields": f"name,{deep_path}",
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["export_fields"], f"name,{deep_path}")
+        self.assertIn(deep_path, [choice[0] for choice in form.fields["export_fields"].choices])
+
+    def test_select__picker_says_why_it_is_empty(self):
+        """With nothing to choose from, the picker says which of the two reasons it is, and stays live.
+
+        The script goes out either way: it carries the bridge from Select2's pick to the `change` that
+        rebuilds the picker, and the Job's own form opens with no content type chosen -- so without it,
+        that first pick would leave this message in place forever.
+        """
+        no_type = str(ExportObjectList.as_form(data={"content_type": ""})["export_fields"].as_widget())
+        self.assertIn("Choose a content type", no_type)
+        self.assertIn("nbExportFieldSelectBound", no_type)
+
+        # `admin.logentry` is exportable only through an Export Template, having no serializer of its own.
+        logentry = ContentType.objects.get(app_label="admin", model="logentry")
+        unserializable = str(
+            ExportObjectList.as_form(data={"content_type": str(logentry.pk)})["export_fields"].as_widget()
+        )
+        self.assertIn("no fields an export can select", unserializable)
+        self.assertNotIn("Choose a content type", unserializable)
+        self.assertIn("nbExportFieldSelectBound", unserializable)
+
     def test_select__form_offers_only_valid_paths(self):
         """Every path the picker offers passes validation, so it can never propose an unexportable column.
 

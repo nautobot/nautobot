@@ -37,7 +37,7 @@ from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy, SavedView, Status
+from nautobot.extras.models import ExportTemplate, FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -102,6 +102,54 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertIn('id="add-button"', response_body)
         self.assertNotIn('id="actions-dropdown"', response_body)
+
+    def _provider_list_body(self):
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        return extract_page_body(response.content.decode(response.charset))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_template_gets_an_action_of_its_own(self):
+        """Each Export Template is offered as an action that exports with it, without opening the dialog.
+
+        An Export Template renders its own output, so there is nothing for the dialog to ask about. The
+        trigger therefore carries every input the Job needs and must *omit* `render_job_form`: the run
+        view tests that key for truthiness, where the string "False" would be as true as any other and
+        would open the form instead of running the export.
+        """
+        self.add_permissions("extras.view_exporttemplate", "extras.view_job")
+        ExportTemplate.objects.create(
+            content_type=ContentType.objects.get_for_model(Provider),
+            name="Provider inventory",
+            description="One line per provider",
+            template_code="{% for provider in queryset %}{{ provider.name }}\n{% endfor %}",
+        )
+        body = self._provider_list_body()
+
+        self.assertIn("Export Templates", body)
+        self.assertIn("Provider inventory", body)
+        self.assertIn("One line per provider", body)  # the description becomes the entry's tooltip
+        # `job_form_modal` is what marks a trigger that runs the Job rather than opening its form; the
+        # dialog's own trigger mentions `export_template` too, that being one of its advanced fields.
+        direct_run = [hx_vals for hx_vals in re.findall(r"hx-vals='([^']+)'", body) if "job_form_modal" in hx_vals]
+        self.assertEqual(len(direct_run), 1, f"expected exactly one per-template trigger: {body}")
+        self.assertIn("export_template", direct_run[0])
+        self.assertIn("immediately", direct_run[0])
+        self.assertNotIn("render_job_form", direct_run[0])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_templates_the_user_cannot_view_are_not_offered(self):
+        """The templates offered are the ones the user may view, the menu being built for them."""
+        ExportTemplate.objects.create(
+            content_type=ContentType.objects.get_for_model(Provider),
+            name="Provider inventory",
+            template_code="{% for provider in queryset %}{{ provider.name }}\n{% endfor %}",
+        )
+        body = self._provider_list_body()
+
+        self.assertIn("Export to file", body)  # the dialog is still offered
+        self.assertNotIn("Export Templates", body)
+        self.assertNotIn("Provider inventory", body)
 
 
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
