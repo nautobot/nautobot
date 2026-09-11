@@ -24,6 +24,7 @@ from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
+from nautobot.extras.change_consumers import invalidate_change_consumers_cache
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     ButtonClassChoices,
@@ -41,11 +42,13 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     GitRepository,
     Job as JobModel,
+    JobHook,
     JobQueue as JobQueueModel,
     JobResult,
     MetadataType,
     ObjectChange,
     Relationship,
+    Webhook,
 )
 from nautobot.extras.models.approvals import (
     ApprovalWorkflow,
@@ -553,6 +556,22 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
         return
 
     _record_m2m_side_object_changes(change_context, instance, side_field_names)
+
+
+@receiver(post_save, sender=JobHook)
+@receiver(post_delete, sender=JobHook)
+@receiver(m2m_changed, sender=JobHook.content_types.through)
+@receiver(post_save, sender=Webhook)
+@receiver(post_delete, sender=Webhook)
+@receiver(m2m_changed, sender=Webhook.content_types.through)
+def invalidate_change_consumers_cache_on_hook_change(sender, action=None, **kwargs):
+    """Invalidate the cached answers of `change_has_consumers()` when a Webhook or JobHook changes."""
+    # m2m_changed fires twice per operation; only the "post_" half is worth acting on, since at "pre_"
+    # the change isn't applied yet and recomputing would just re-cache the old answer. post_save and
+    # post_delete send no `action` at all
+    if action is not None and not action.startswith("post_"):
+        return
+    invalidate_change_consumers_cache()
 
 
 #

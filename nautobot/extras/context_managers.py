@@ -8,6 +8,7 @@ from django.test.client import RequestFactory
 
 from nautobot.core.events import publish_event
 from nautobot.core.utils.otel import traced_span
+from nautobot.extras.change_consumers import get_change_event_topic
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
@@ -272,8 +273,7 @@ def web_request_context(
                 )
                 webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
 
-                # topic examples: "nautobot.change.dcim.device", "nautobot.add.ipam.ipaddress"
-                event_topic = f"nautobot.{oc.action}.{oc.changed_object_type.app_label}.{oc.changed_object_type.model}"
+                event_topic = get_change_event_topic(oc.changed_object_type, oc.action)
                 event_payload = snapshots.copy()
                 event_payload["context"] = {
                     "change_context": oc.get_change_context_display(),
