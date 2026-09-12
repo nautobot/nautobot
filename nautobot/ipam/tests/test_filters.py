@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
 from django.db.models import Q
 
 from nautobot.core.testing import FilterTestCases, TestCase
@@ -283,9 +282,9 @@ class PrefixTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFilt
         params = {"prefix_exact": "192.0.2.0/29"}
         self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
         params = {"prefix_exact": "192.0.2.1/29"}
-        with self.assertRaises(ValidationError) as exc:
-            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
-        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
+        filterset = self.filterset(params, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertIn("Enter a prefix on a subnet boundary.", filterset.errors["prefix_exact"])
 
     def test_prefix_and_descendants(self):
         pfx1 = Prefix.objects.filter(children__isnull=False).first()
@@ -878,19 +877,19 @@ class IPAddressTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyF
         ipv6_parent = self.queryset.filter(ip_version=6).first().address
 
         params = {"prefix_exact": [str(ipv4_parent)]}
-        with self.assertRaises(ValidationError) as exc:
-            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
-        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
+        filterset = self.filterset(params, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertIn("Enter a prefix on a subnet boundary.", filterset.errors["prefix_exact"])
 
         params = {"prefix_exact": [str(ipv6_parent)]}
-        with self.assertRaises(ValidationError) as exc:
-            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
-        self.assertTrue("Invalid prefix_exact value" in str(exc.exception))
+        filterset = self.filterset(params, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertIn("Enter a prefix on a subnet boundary.", filterset.errors["prefix_exact"])
 
         params = {"prefix_exact": ["10.1.1.1"]}
-        with self.assertRaises(ValidationError) as exc:
-            self.filterset(params, self.queryset).qs  # pylint: disable=expression-not-assigned
-        self.assertTrue("Invalid prefix_exact value (missing mask)" in str(exc.exception))
+        filterset = self.filterset(params, self.queryset)
+        self.assertFalse(filterset.is_valid())
+        self.assertIn("CIDR mask (e.g. /24) is required.", filterset.errors["prefix_exact"])
 
     def test_filter_address(self):
         """Check IPv4 and IPv6, with and without a mask"""
