@@ -1,0 +1,9 @@
+Fixed HTTP 500 responses for supported PostgreSQL and MySQL interface-name, IP-assignment, and rack relocation uniqueness conflicts during API saves, including bulk create and update. These conflicts now return HTTP 400 and roll back the complete operation. Other database errors retain their existing behavior.
+Fixed HTTP 500 responses for model validation failures during API saves, which now return HTTP 400.
+Fixed invalid exact MAC-address filters, including negation, returning HTTP 500 instead of HTTP 400. Preserved partial and regular-expression MAC searches, retained the free-text filter widget, and enforced EUI-48 validation.
+Fixed malformed IPv4 and IPv6 values in the IP-address `address` filter returning HTTP 500. Invalid values now produce HTTP 400 with a field validation error, including when mixed with valid addresses.
+Fixed prefix filters returning server errors or silently ignoring malformed input. Invalid prefixes and nonexistent Prefix UUIDs now produce filter validation errors.
+Fixed available-prefix and available-IP actions failing on invalid request entries, prefix lengths, or address ranges.
+Fixed zero and negative limits enumerating all available IP addresses. Zero uses the configured maximum when positive; otherwise zero and negative limits use a finite default count. Malformed limits retain their default fallback.
+Fixed malformed regular-expression filters returning server errors instead of filter validation errors in API and web requests.
+Fixed bulk component creation reporting success after a database error and committing earlier components when a later component failed form validation. Device and module component creation now roll back the complete batch on failure. Actual database errors propagate to normal error handling, including during IP-address pattern creation.

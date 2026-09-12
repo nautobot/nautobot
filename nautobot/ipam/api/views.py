@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+
 from django.conf import settings
 from django.core.cache import cache
 from django.shortcuts import get_object_or_404
@@ -5,7 +7,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 import netaddr
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.response import Response
 from rest_framework.serializers import IntegerField, ListSerializer
 
@@ -144,6 +146,18 @@ class PrefixViewSet(NautobotModelViewSet):
             )
         return response, result
 
+    @staticmethod
+    def get_allocation_requests(request):
+        """Check request entries before allocation adds generated fields to them."""
+        requested_objects = request.data if isinstance(request.data, list) else [request.data]
+        errors = [
+            {} if isinstance(obj, Mapping) else {"non_field_errors": ["Expected a dictionary of items."]}
+            for obj in requested_objects
+        ]
+        if any(errors):
+            raise ValidationError(errors if isinstance(request.data, list) else errors[0])
+        return [dict(obj) for obj in requested_objects]
+
     class LocationIncompatibleLegacyBehavior(APIException):
         status_code = 412
         default_detail = (
@@ -192,21 +206,23 @@ class PrefixViewSet(NautobotModelViewSet):
         """
         prefix = get_object_or_404(self.queryset, pk=pk)
         if request.method == "POST":
+            requested_prefixes = self.get_allocation_requests(request)
+            max_length = 32 if prefix.ip_version == 4 else 128
+            for requested_prefix in requested_prefixes:
+                if "prefix_length" not in requested_prefix:
+                    raise ValidationError({"prefix_length": "This field is required."})
+                prefix_length = requested_prefix["prefix_length"]
+                if isinstance(prefix_length, bool) or not isinstance(prefix_length, int):
+                    raise ValidationError({"prefix_length": "This field must be an integer."})
+                if not 0 <= prefix_length <= max_length:
+                    raise ValidationError({"prefix_length": f"Ensure this value is between 0 and {max_length}."})
+
             with cache.lock(
                 "nautobot.ipam.api.views.available_prefixes", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
                 available_prefixes = prefix.get_available_prefixes()
 
-                # Validate Requested Prefixes' length
-                requested_prefixes = request.data if isinstance(request.data, list) else [request.data]
                 for requested_prefix in requested_prefixes:
-                    # If the prefix_length is not an integer, return a 400 using the
-                    # serializer.is_valid(raise_exception=True) method call below
-                    if not isinstance(requested_prefix["prefix_length"], int):
-                        return Response(
-                            {"prefix_length": "This field must be an integer."},
-                            status=status.HTTP_400_BAD_REQUEST,
-                        )
                     for available_prefix in available_prefixes.iter_cidrs():
                         if requested_prefix["prefix_length"] >= available_prefix.prefixlen:
                             allocated_prefix = f"{available_prefix.network}/{requested_prefix['prefix_length']}"
@@ -252,7 +268,7 @@ class PrefixViewSet(NautobotModelViewSet):
             OpenApiParameter(
                 name="range_start",
                 location="query",
-                description="IP from which enumeration/allocation should start.",
+                description="Inclusive start address within the parent prefix, using the same IP version.",
                 type={
                     "oneOf": [
                         {"type": "string", "format": "ipv6"},
@@ -263,7 +279,7 @@ class PrefixViewSet(NautobotModelViewSet):
             OpenApiParameter(
                 name="range_end",
                 location="query",
-                description="IP from which enumeration/allocation should stop.",
+                description="Inclusive end address within the parent prefix, at or after range_start.",
                 type={
                     "oneOf": [
                         {"type": "string", "format": "ipv6"},
@@ -293,19 +309,33 @@ class PrefixViewSet(NautobotModelViewSet):
 
         By default, the number of IPs returned will be equivalent to PAGINATE_COUNT.
         An arbitrary limit (up to MAX_PAGE_SIZE, if set) may be passed, however results will not be paginated.
+        A zero limit uses MAX_PAGE_SIZE when positive; otherwise it uses the default count.
+        Negative limits use the default count. A nonpositive default count falls back to PAGINATE_COUNT_DEFAULT.
 
         This uses a Redis lock to prevent this API from being invoked in parallel, in order to avoid a race condition
         if multiple clients tried to simultaneously request allocation from the same parent prefix.
         """
         prefix = get_object_or_404(Prefix.objects.restrict(request.user), pk=pk)
 
-        default_first, default_last = netaddr.IPAddress(prefix.prefix.first), netaddr.IPAddress(prefix.prefix.last)
+        default_first = netaddr.IPAddress(prefix.prefix.first, version=prefix.ip_version)
+        default_last = netaddr.IPAddress(prefix.prefix.last, version=prefix.ip_version)
         ((error_response_start, range_start), (error_response_end, range_end)) = (
             self.get_ipaddress_param(request, "range_start", default_first),
             self.get_ipaddress_param(request, "range_end", default_last),
         )
         if response := error_response_start or error_response_end:
             return response
+
+        for name, address in (("range_start", range_start), ("range_end", range_end)):
+            if address.version != prefix.ip_version:
+                raise ValidationError({name: f"Enter an IPv{prefix.ip_version} address."})
+            if not default_first <= address <= default_last:
+                raise ValidationError({name: "The address must be within the parent prefix."})
+        if range_start > range_end:
+            raise ValidationError({"range_end": "The end address must be greater than or equal to the start address."})
+
+        if request.method == "POST":
+            requested_ips = self.get_allocation_requests(request)
 
         available_ips = prefix.get_available_ips()
         # range_start and range_end are inclusive
@@ -319,9 +349,6 @@ class PrefixViewSet(NautobotModelViewSet):
             with cache.lock(
                 "nautobot.ipam.api.views.available_ips", blocking_timeout=5, timeout=settings.REDIS_LOCK_TIMEOUT
             ):
-                # Normalize to a list of objects
-                requested_ips = request.data if isinstance(request.data, list) else [request.data]
-
                 # Determine if the requested number of IPs is available
                 if available_ips.size < len(requested_ips):
                     return Response(
@@ -357,16 +384,22 @@ class PrefixViewSet(NautobotModelViewSet):
 
         # Determine the maximum number of IPs to return
         else:
+            default_limit = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
+            if default_limit <= 0:
+                default_limit = PAGINATE_COUNT_DEFAULT
+            max_page_size = get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT)
             try:
-                limit = int(
-                    request.query_params.get(
-                        "limit", get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
-                    )
-                )
+                limit = int(request.query_params.get("limit", default_limit))
             except ValueError:
-                limit = get_settings_or_config("PAGINATE_COUNT", fallback=PAGINATE_COUNT_DEFAULT)
-            if get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT):
-                limit = min(limit, get_settings_or_config("MAX_PAGE_SIZE", fallback=MAX_PAGE_SIZE_DEFAULT))
+                limit = default_limit
+
+            # Unlike stored object lists, available IPv6 addresses must not be enumerated without a limit.
+            if limit == 0:
+                limit = max_page_size or default_limit
+            if limit < 0:
+                limit = default_limit
+            if max_page_size and max_page_size > 0:
+                limit = min(limit, max_page_size)
 
             # Calculate available IPs within the prefix
             ip_list = []
