@@ -411,7 +411,7 @@ class MACAddressField(django_forms.Field):
 
         # Validate MAC address format
         try:
-            value = EUI(value.strip())
+            value = EUI(value.strip(), version=48)
         except AddrFormatError:
             raise ValidationError(self.error_messages["invalid"], code="invalid")
 

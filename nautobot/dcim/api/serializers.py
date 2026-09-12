@@ -14,6 +14,7 @@ from nautobot.core.api import (
     TreeModelSerializerMixin,
     ValidatedModelSerializer,
 )
+from nautobot.core.api.constraints import UniqueConstraintError
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_brief_representation,
@@ -280,6 +281,18 @@ class RackGroupSerializer(TreeModelSerializerMixin, NautobotModelSerializer):
 
 
 class RackSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
+    # Relocating a rack also updates its devices in a post_save signal. Report
+    # that child-model conflict against the field the API caller can change.
+    database_constraint_errors = (
+        UniqueConstraintError(
+            model=Device,
+            fields=("location", "tenant", "name"),
+            detail={
+                "location": "A device in this rack has the same name and tenant as a device at the destination location."
+            },
+        ),
+    )
+
     type = ChoiceField(choices=RackTypeChoices, allow_blank=True, required=False)
     width = ChoiceField(choices=RackWidthChoices, required=False, help_text="Rail-to-rail width (in inches)")
     outer_unit = ChoiceField(choices=RackDimensionUnitChoices, allow_blank=True, required=False)
@@ -703,6 +716,19 @@ class InterfaceSerializer(
     PathEndpointModelSerializerMixin,
     InterfaceCommonSerializer,
 ):
+    database_constraint_errors = (
+        UniqueConstraintError(
+            model=Interface,
+            fields=("device", "name"),
+            detail={"name": "An interface with this name already exists on this device."},
+        ),
+        UniqueConstraintError(
+            model=Interface,
+            fields=("module", "name"),
+            detail={"name": "An interface with this name already exists on this module."},
+        ),
+    )
+
     type = ChoiceField(choices=InterfaceTypeChoices)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)
     mac_address = serializers.CharField(allow_blank=True, allow_null=True, required=False)
