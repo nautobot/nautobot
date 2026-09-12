@@ -1,4 +1,5 @@
 from copy import deepcopy
+from functools import partial
 import logging
 import uuid
 
@@ -19,6 +20,7 @@ from nautobot.core import constants, forms
 from nautobot.core.forms import widgets
 from nautobot.core.models import fields as core_fields
 from nautobot.core.utils import data as data_utils
+from nautobot.core.utils.regex import validate_regex
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +120,23 @@ class MACAddressFilter(django_filters.CharFilter):
 
 
 class MultiValueMACAddressFilter(django_filters.MultipleChoiceFilter):
-    # Don't use multivalue_field_factory(forms.MACAddressField) because that will reject partial substrings like
-    # "aa:" or ":01:02", which would prevent us from using filters like `mac_address__isw` to their potential.
     field_class = forms.MultiValueCharField
+
+    @property
+    def field(self):
+        field = super().field
+        # Exact lookups call the model field's MAC parser. Validate their input
+        # before constructing the query. Keep the free-text widget and leave
+        # partial and regex searches unrestricted.
+        if self.lookup_expr in {"exact", "in"} and self._validate_mac_addresses not in field.validators:
+            field.validators.append(self._validate_mac_addresses)
+        return field
+
+    @staticmethod
+    def _validate_mac_addresses(values):
+        mac_field = forms.MACAddressField()
+        for value in values:
+            mac_field.clean(value)
 
 
 class MultiValueUUIDFilter(django_filters.UUIDFilter, django_filters.MultipleChoiceFilter):
@@ -871,6 +887,16 @@ class BaseFilterSet(django_filters.FilterSet):
         super().__init__(data, queryset, request=request, prefix=prefix)
         self._is_valid = None
         self._errors = None
+
+    def get_form_class(self):
+        """Validate regex lookups with the same database engine used by the queryset."""
+        form_class = super().get_form_class()
+        for name, filter_field in self.filters.items():
+            if filter_field.lookup_expr in {"regex", "iregex"}:
+                form_class.base_fields[name].validators.append(
+                    partial(validate_regex, using=self.queryset.db, lookup_expr=filter_field.lookup_expr)
+                )
+        return form_class
 
     def is_valid(self):
         """Extend FilterSet.is_valid() to potentially enforce settings.STRICT_FILTERING."""
