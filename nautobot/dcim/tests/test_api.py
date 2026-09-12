@@ -6,7 +6,9 @@ import uuid
 from constance.test import override_config
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db import connection
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 
@@ -3423,6 +3425,37 @@ class InterfaceConnectionTest(ConnectionTestMixin, APITestCase):
                 str(self.cross_pair_granted_end_high[1].pk),
             },
         )
+
+    def test_pagination_count_uses_correlated_peer_lookup(self):
+        """Do not materialize all visible Interface IDs to deduplicate the count (#9467)."""
+        self.add_permissions(self.view_permission)
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(f"{self.url}?limit=1", **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 4)
+        self.assertEqual(len(response.data["results"]), 1)
+        count_queries = [
+            query["sql"]
+            for query in queries
+            if "COUNT(*)" in query["sql"] and connection.ops.quote_name("dcim_interface") in query["sql"]
+        ]
+        self.assertEqual(len(count_queries), 1)
+        self.assertIn("EXISTS", count_queries[0])
+        self.assertNotIn(" IN (SELECT", count_queries[0])
+
+    def test_superuser_lists_each_connection_once(self):
+        self.user.is_superuser = True
+        self.user.save()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertEqual(len(self._get_near_end_ids(response)), 4)
+        self.assertEqual(response.data["count"], 4)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["dcim.interface"])
+    def test_exempt_view_lists_each_connection_once(self):
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertEqual(len(self._get_near_end_ids(response)), 4)
+        self.assertEqual(response.data["count"], 4)
 
     def test_non_interface_far_end_excluded(self):
         """A connection to a non-Interface endpoint is skipped rather than crashing the serializer."""
