@@ -16,6 +16,7 @@ from nautobot.core.api import (
     TreeModelSerializerMixin,
     ValidatedModelSerializer,
 )
+from nautobot.core.api.constraints import UniqueConstraintError
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_nested_serializer_depth,
@@ -734,6 +735,19 @@ class InterfaceSerializer(
     PathEndpointModelSerializerMixin,
     InterfaceCommonSerializer,
 ):
+    database_constraint_errors = (
+        UniqueConstraintError(
+            model=Interface,
+            fields=("device", "name", "_device_name_scope"),
+            detail={"name": "An interface with this name already exists directly on this device."},
+        ),
+        UniqueConstraintError(
+            model=Interface,
+            fields=("module", "name"),
+            detail={"name": "An interface with this name already exists on this module."},
+        ),
+    )
+
     type = ChoiceField(choices=InterfaceTypeChoices)
     port_type = ChoiceField(choices=PortTypeChoices, allow_blank=True, required=False)
     mode = ChoiceField(choices=InterfaceModeChoices, allow_blank=True, required=False)

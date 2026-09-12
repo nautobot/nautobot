@@ -4,7 +4,7 @@ from django.core.validators import validate_ipv4_address, validate_ipv6_address
 from django.db.models import Q
 from netaddr import AddrFormatError, IPAddress, IPNetwork
 
-from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField
+from nautobot.core.forms.fields import MultiMatchModelMultipleChoiceField, MultiValueCharField
 from nautobot.core.utils.data import is_uuid
 
 #
@@ -64,6 +64,43 @@ class IPNetworkFormField(forms.Field):
             raise ValidationError("Please specify a valid IPv4 or IPv6 address.")
 
 
+class MultiValuePrefixFormField(MultiValueCharField):
+    """Validate literal prefixes and resolve Prefix UUIDs during filter form cleaning."""
+
+    def __init__(self, *args, strict=False, require_mask=False, **kwargs):
+        self.strict = strict
+        self.require_mask = require_mask
+        super().__init__(*args, **kwargs)
+
+    def to_python(self, value):
+        from nautobot.ipam.models import Prefix  # avoid circular import
+
+        prefixes = []
+        for prefix in super().to_python(value):
+            if not prefix:
+                continue
+            if is_uuid(prefix):
+                try:
+                    prefix = str(Prefix.objects.get(pk=prefix).prefix)
+                except Prefix.DoesNotExist as error:
+                    raise ValidationError(
+                        "Select a valid prefix. That prefix ID does not exist.", code="invalid_choice"
+                    ) from error
+            else:
+                try:
+                    IPNetwork(prefix)
+                except (AddrFormatError, ValueError) as error:
+                    raise ValidationError("Enter a valid IPv4 or IPv6 prefix or address.", code="invalid") from error
+            if self.require_mask and "/" not in prefix:
+                raise ValidationError("CIDR mask (e.g. /24) is required.", code="invalid")
+            if self.strict:
+                network = IPNetwork(prefix)
+                if network.ip != network.network:
+                    raise ValidationError("Enter a prefix on a subnet boundary.", code="invalid")
+            prefixes.append(prefix)
+        return prefixes
+
+
 class PrefixFilterFormField(MultiMatchModelMultipleChoiceField):
     @property
     def filter(self):
@@ -88,7 +125,12 @@ class PrefixFilterFormField(MultiMatchModelMultipleChoiceField):
                 pk_values.add(value)
                 query = Q(pk=value)
             else:
-                ipnetwork = IPNetwork(value)
+                try:
+                    ipnetwork = IPNetwork(value)
+                except (AddrFormatError, ValueError, TypeError) as error:
+                    raise ValidationError(
+                        self.error_messages["invalid_choice"], code="invalid_choice", params={"value": value}
+                    ) from error
                 query = Q(
                     network=ipnetwork.network,
                     prefix_length=ipnetwork.prefixlen,
