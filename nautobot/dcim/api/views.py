@@ -3,7 +3,7 @@ import socket
 
 from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import F
+from django.db.models import Exists, F, OuterRef
 from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404
 from django.views.decorators.clickjacking import xframe_options_sameorigin
@@ -697,7 +697,8 @@ class InterfaceConnectionViewSet(ListModelMixin, GenericViewSet):
                 # lower-PK end so it is listed once. Deduplicate only when the far end is visible as well:
                 # when it isn't, the near end is the sole candidate row for that connection and dropping it
                 # would make the connection's visibility depend on the two random UUIDs' relative ordering.
-                _path__destination_id__in=visible_interfaces.values("pk"),
+                # Look up the far end by PK instead of materializing all visible Interface IDs (#9467).
+                Exists(visible_interfaces.filter(pk=OuterRef("_path__destination_id"))),
                 pk__gt=F("_path__destination_id"),
             )
         )
