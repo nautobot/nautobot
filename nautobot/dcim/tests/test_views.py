@@ -3,6 +3,7 @@ from decimal import Decimal
 import json
 import signal
 import unittest
+from unittest import mock
 import zoneinfo
 
 from constance.test import override_config
@@ -29,6 +30,7 @@ from nautobot.core.testing import (
 from nautobot.core.testing.utils import (
     generate_random_device_asset_tag_of_specified_size,
 )
+from nautobot.core.utils.data import UtilizationData
 from nautobot.dcim.choices import (
     CableLengthUnitChoices,
     CableTypeChoices,
@@ -896,6 +898,29 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         </div>
         """
         self.assertContains(response, total_utilization_html, html=True)
+
+    def test_rack_power_phase_graphs_require_complete_attribution(self):
+        phase_utilization = self.racks[0].get_power_utilization_by_phase()
+        phase_utilization.update({leg: UtilizationData(numerator=1, denominator=100) for leg in phase_utilization})
+        phase_utilization.attribution_complete = False
+
+        with mock.patch.object(Rack, "get_power_utilization_by_phase", return_value=phase_utilization):
+            response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
+
+        self.assertHttpStatus(response, 200)
+        self.assertNotContains(response, "<strong>Phase A</strong>", html=True)
+
+    def test_rack_power_phase_graphs_show_with_complete_attribution(self):
+        phase_utilization = self.racks[0].get_power_utilization_by_phase()
+        phase_utilization.update({leg: UtilizationData(numerator=1, denominator=100) for leg in phase_utilization})
+        phase_utilization.attribution_complete = True
+
+        with mock.patch.object(Rack, "get_power_utilization_by_phase", return_value=phase_utilization):
+            response = self.client.get(reverse("dcim:rack", args=[self.racks[0].pk]))
+
+        self.assertHttpStatus(response, 200)
+        for leg in ("A", "B", "C"):
+            self.assertContains(response, f"<strong>Phase {leg}</strong>", html=True)
 
 
 class DeviceFamilyTestCase(ViewTestCases.PrimaryObjectViewTestCase):

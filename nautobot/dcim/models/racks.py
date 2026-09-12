@@ -13,7 +13,14 @@ from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.models.utils import array_to_string
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.data import UtilizationData
-from nautobot.dcim.choices import DeviceFaceChoices, RackDimensionUnitChoices, RackTypeChoices, RackWidthChoices
+from nautobot.dcim.choices import (
+    DeviceFaceChoices,
+    PowerFeedPhaseChoices,
+    PowerOutletFeedLegChoices,
+    RackDimensionUnitChoices,
+    RackTypeChoices,
+    RackWidthChoices,
+)
 from nautobot.dcim.constants import RACK_ELEVATION_LEGEND_WIDTH_DEFAULT, RACK_U_HEIGHT_DEFAULT, RACK_U_HEIGHT_MAXIMUM
 from nautobot.dcim.svg.rack_elevation import RackElevationSVG
 from nautobot.dcim.utils import power_ports_connected_to
@@ -261,6 +268,10 @@ class Rack(PrimaryModel):
     def power_utilization(self):
         return self.get_power_utilization()
 
+    @property
+    def power_utilization_by_phase(self):
+        return self.get_power_utilization_by_phase()
+
     def get_rack_units(
         self,
         user=None,
@@ -442,19 +453,88 @@ class Rack(PrimaryModel):
             return UtilizationData(numerator=0, denominator=0)
 
         pf_powerports = power_ports_connected_to(powerfeeds)
+        powerports_with_manual_draw = pf_powerports.exclude(allocated_draw__isnull=True, maximum_draw__isnull=True)
         direct_allocated_draw = int(
-            pf_powerports.aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"] or 0
+            powerports_with_manual_draw.aggregate(total=Sum(F("allocated_draw") / F("power_factor")))["total"]
+            or 0
         )
-        poweroutlets = PowerOutlet.objects.filter(power_port_id__in=pf_powerports)
-        allocated_draw_total = int(
+        poweroutlets = PowerOutlet.objects.filter(
+            power_port_id__in=pf_powerports.filter(allocated_draw__isnull=True, maximum_draw__isnull=True)
+        )
+        downstream_allocated_draw = int(
             power_ports_connected_to(poweroutlets).aggregate(total=Sum(F("allocated_draw") / F("power_factor")))[
                 "total"
             ]
             or 0
         )
-        allocated_draw_total += direct_allocated_draw
+
+        # Manual inlet draw takes precedence over downstream outlet draw, matching
+        # PowerPort.get_power_draw(), so the two sources must not be added for one inlet.
+        allocated_draw_total = direct_allocated_draw + downstream_allocated_draw
 
         return UtilizationData(numerator=allocated_draw_total, denominator=available_power_total)
+
+    def get_power_utilization_by_phase(self):
+        """Determine rack power utilization independently for each three-phase feed leg.
+
+        Only three-phase PowerFeeds participate in this calculation. The available
+        power of each feed is divided evenly across its three legs. Loads are
+        assigned to a leg exclusively through PowerOutlet.feed_leg. The returned
+        dictionary has the same leg keys as before and also exposes an
+        ``attribution_complete`` attribute. It is true only when every load was
+        attributable to a leg; it is false when an inlet has manual draw or
+        a downstream outlet has no assigned feed leg. No phase is guessed for those
+        loads, so they are omitted from the per-leg numerators.
+        """
+        utilization_by_phase = {leg: {"allocated": 0, "available": 0} for leg, _leg_name in PowerOutletFeedLegChoices}
+
+        powerfeeds = PowerFeed.objects.filter(rack=self, phase=PowerFeedPhaseChoices.PHASE_3PHASE)
+        attribution_complete = True
+
+        for available_power in powerfeeds.values_list("available_power", flat=True):
+            available_power_per_leg = available_power / 3
+            for leg, _leg_name in PowerOutletFeedLegChoices:
+                utilization_by_phase[leg]["available"] += available_power_per_leg
+
+        feed_powerports = power_ports_connected_to(powerfeeds)
+        powerports_with_manual_draw = feed_powerports.exclude(allocated_draw__isnull=True, maximum_draw__isnull=True)
+        if powerports_with_manual_draw.exists():
+            attribution_complete = False
+        poweroutlets = PowerOutlet.objects.filter(
+            power_port_id__in=feed_powerports.filter(allocated_draw__isnull=True, maximum_draw__isnull=True)
+        )
+
+        # Group all downstream draw by outlet leg in one query instead of issuing an
+        # aggregate query for every feed/leg pair. Keep the aggregate untruncated
+        # until all inlets on a leg have been combined.
+        downstream_draws = (
+            power_ports_connected_to(poweroutlets)
+            .filter(cable_termination__cable__terminations__power_outlet__in=poweroutlets)
+            .values("cable_termination__cable__terminations__power_outlet__feed_leg")
+            .annotate(total=Sum(F("allocated_draw") / F("power_factor")))
+        )
+
+        for row in downstream_draws:
+            leg = row["cable_termination__cable__terminations__power_outlet__feed_leg"]
+            if leg not in utilization_by_phase:
+                attribution_complete = False
+            else:
+                utilization_by_phase[leg]["allocated"] += row["total"] or 0
+
+        class PhaseUtilizationData(dict):
+            """Backwards-compatible leg mapping with load-attribution status."""
+
+            def __init__(self, *args, attribution_complete, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.attribution_complete = attribution_complete
+
+        return PhaseUtilizationData(
+            {
+                leg: UtilizationData(numerator=int(values["allocated"]), denominator=values["available"])
+                for leg, values in utilization_by_phase.items()
+            },
+            attribution_complete=attribution_complete,
+        )
 
 
 @extras_features(
