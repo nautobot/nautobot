@@ -1,5 +1,8 @@
 import uuid
 
+from django.core.exceptions import ValidationError
+import netaddr
+
 from nautobot.core.filters import NaturalKeyOrPKMultipleChoiceFilter
 from nautobot.ipam import formfields
 from nautobot.ipam.models import Prefix
@@ -34,5 +37,9 @@ class PrefixFilter(NaturalKeyOrPKMultipleChoiceFilter):
             return {self.field_name: v}
         except (AttributeError, TypeError, ValueError):
             # It's a prefix string
-            prefixes_queryset = Prefix.objects.net_equals(v)
+            try:
+                prefixes_queryset = Prefix.objects.net_equals(v)
+            except (netaddr.AddrFormatError, ValueError) as error:
+                # Widget choice preparation can call this before form cleaning.
+                raise ValidationError("Enter a valid IPv4 or IPv6 prefix.", code="invalid") from error
             return {f"{self.field_name}__in": prefixes_queryset.values_list("pk", flat=True)}
