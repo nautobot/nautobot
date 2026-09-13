@@ -70,6 +70,49 @@ are registered in pyproject.toml, and a misspelled mark on a test fails
 collection with `--strict-markers` in the repo's pytest config. App scoping
 is by directory (`--app dcim`), not by mark.
 
+## Writing a script instead of a test
+
+A one-off script that checks a selector or watches a page does not need pytest. The
+page objects take a Playwright `Page` and a base URL, and `log_in` in
+`nautobot.playwright.helpers` performs the same UI login the session fixture uses. It
+fills the login form and waits for the logout link, which only renders once a session
+exists. On a failed login it raises Playwright's `TimeoutError` after 15 seconds, with
+`a[href='/logout/']` in the call log.
+
+`log_in` navigates to the relative path `/login/`, so the browser context must be
+created with `base_url`. A page from `browser.new_page()` has no base URL and the
+first `goto` fails.
+
+```python
+import os
+
+from playwright.sync_api import sync_playwright
+
+from nautobot.dcim.tests.integration.pages.locations_page import LocationsPage
+from nautobot.playwright.helpers import log_in
+
+base_url = os.getenv("NAUTOBOT_PLAYWRIGHT_URL", "http://localhost:8080").rstrip("/")
+username = os.getenv("NAUTOBOT_PLAYWRIGHT_USERNAME", "admin")
+password = os.getenv("NAUTOBOT_PLAYWRIGHT_PASSWORD", "admin")
+
+with sync_playwright() as playwright:
+    browser = playwright.chromium.launch()
+    context = browser.new_context(base_url=base_url)
+    page = context.new_page()
+
+    log_in(page, username, password)
+
+    locations = LocationsPage(page, base_url)
+    locations.navigate()
+    print(f"{locations.get_data_row_count()} rows on the first page")
+
+    browser.close()
+```
+
+Run it with `poetry run python <script>` from this repository so `nautobot.playwright`
+imports. The pytest flags `--headed` and `--slowmo` do not apply outside pytest. Use
+`launch(headless=False, slow_mo=500)` instead.
+
 ## CI
 
 The CI job (`playwright-test`) starts an isolated instance, seeds it with

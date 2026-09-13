@@ -22,8 +22,9 @@ development API token.
 
 import os
 
-from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 import pytest
+
+from nautobot.playwright.helpers import log_in
 
 PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
 # The defaults below match the documented development-instance bootstrap
@@ -59,17 +60,11 @@ def auth_state_path(browser, base_url, tmp_path_factory):
     state_file = tmp_path_factory.mktemp("auth") / "session.json"
     context = browser.new_context(base_url=base_url)
     page = context.new_page()
-    page.goto(f"{base_url}/login/")
-    page.fill("input[name='username']", username)
-    page.fill("input[name='password']", password)
-    page.click("button[type='submit']")
     try:
-        # The logout link only exists once a session does. It sits in a collapsed
-        # dropdown, so wait for "attached" rather than visible.
-        page.wait_for_selector("a[href='/logout/']", state="attached", timeout=15_000)
-    except PlaywrightTimeoutError:
+        log_in(page, username, password)
+    except RuntimeError as exc:
         pytest.fail(
-            f"Playwright login failed as {username!r} against {base_url} (still on {page.url}). "
+            f"Playwright login failed against {base_url}: {exc} "
             "Check NAUTOBOT_PLAYWRIGHT_USERNAME/NAUTOBOT_PLAYWRIGHT_PASSWORD and that the instance is up."
         )
     context.storage_state(path=str(state_file))
