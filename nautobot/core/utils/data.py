@@ -155,6 +155,8 @@ def to_meters(length, unit):
         return length
     if unit == choices.CableLengthUnitChoices.UNIT_CENTIMETER:
         return length / 100
+    if unit == choices.CableLengthUnitChoices.UNIT_MILE:
+        return length * Decimal("1609.344")
     if unit == choices.CableLengthUnitChoices.UNIT_FOOT:
         return length * Decimal("0.3048")
     if unit == choices.CableLengthUnitChoices.UNIT_INCH:
