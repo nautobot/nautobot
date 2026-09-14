@@ -18,7 +18,7 @@ from nautobot.core.events import load_event_brokers
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.extras.plugins.utils import load_plugins
 
-CONFIG_TEMPLATE = os.path.join(os.path.dirname(__file__), "../templates/nautobot_config.py.j2")
+CONFIG_TEMPLATE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates/nautobot_config.py.j2")
 
 DESCRIPTION = """
 Nautobot server management utility.
@@ -236,6 +236,14 @@ def get_config_path():
 
 def main():
     """Run administrative tasks."""
+    # 4.0 TODO: Remove this workaround when moving to Django 6.0, which supports Python 3.14's "forkserver" method.
+    # https://github.com/django/django/pull/19681
+    if "test" in sys.argv:
+        import multiprocessing
+
+        if multiprocessing.get_start_method() == "forkserver":
+            multiprocessing.set_start_method("fork", force=True)
+
     # Point Django to our 'nautobot_config' pseudo-module that we'll load from the provided config path
     os.environ["DJANGO_SETTINGS_MODULE"] = "nautobot_config"
 

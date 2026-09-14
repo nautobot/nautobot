@@ -1,0 +1,1 @@
+Consolidated the duplicated `non_filter_params` declarations and `get_filter_params()` implementations in `ObjectListView`, `ObjectListViewMixin` and the `ExportObjectList` system Job into `nautobot.core.utils.requests.NON_FILTER_PARAMS` and `resolve_filter_params()`.

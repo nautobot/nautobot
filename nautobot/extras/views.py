@@ -1234,7 +1234,6 @@ class ContactAssociationUIViewSet(
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
     table_class = tables.AssociatedContactsTable
-    non_filter_params = ("export", "page", "per_page", "sort")
     object_detail_content = None
 
 
@@ -4210,6 +4209,15 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 weight=200,
                 object_field="object_data",
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+                collapsed=True,
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data v2",
+                section=SectionChoices.LEFT_HALF,
+                weight=250,
+                object_field="object_data_v2",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+                collapsed=True,
             ),
             object_detail.TextPanel(
                 label="Difference",

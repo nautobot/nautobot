@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+from contextlib import ExitStack
 import json
 import logging
 import re
@@ -6,8 +8,8 @@ from zoneinfo import ZoneInfo
 
 from django.conf import settings
 from django.contrib.auth.middleware import RemoteUserMiddleware as RemoteUserMiddleware_
-from django.db import ProgrammingError
-from django.http import Http404
+from django.db import connections, ProgrammingError
+from django.http import Http404, JsonResponse
 from django.urls import resolve
 from django.urls.exceptions import Resolver404
 from django.utils import timezone
@@ -21,6 +23,12 @@ from nautobot.core.api.utils import is_api_request, rest_api_server_error
 from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
+)
+from nautobot.core.rate_limiting.rest_calculator import (
+    classify_rest_read_request_features,
+    estimate_rest_read_request_cost,
+    READ_METHODS,
+    WRITE_METHODS,
 )
 from nautobot.core.settings_funcs import (
     ldap_auth_enabled,
@@ -364,3 +372,266 @@ class GraphQLOpenTelemetryMiddleware:
             match = _GRAPHQL_OPERATION_RE.match(stripped)
             return match.group(1).lower() if match else None
         return None
+
+
+class BaseRequestMetric(ABC):
+    """An abstract class used to track metrics for a request.
+
+    Attributes:
+        name                          - The name of the metric
+        duration_in_milliseconds      - The duration detected for this metric
+        description                   - The description of the metric
+
+    This follows a general contract established by
+    https://www.w3.org/TR/server-timing/
+    """
+
+    duration_in_milliseconds = 0.0
+
+    @property
+    @abstractmethod
+    def name(self):
+        """The metric name."""
+
+    @property
+    @abstractmethod
+    def description(self):
+        """A description of the metric."""
+
+    @abstractmethod
+    def __enter__(self):
+        pass
+
+    @abstractmethod
+    def __exit__(self, *exception_info):
+        pass
+
+
+class TotalDurationRequestMetric(BaseRequestMetric):
+    """Wall-clock duration of the entire request."""
+
+    @property
+    def name(self):
+        return "total"
+
+    @property
+    def description(self):
+        return "Total request duration"
+
+    def __enter__(self):
+        self.start_time = time.perf_counter_ns()
+        return self
+
+    def __exit__(self, *exception_info):
+        self.duration_in_milliseconds = (time.perf_counter_ns() - self.start_time) / 1_000_000
+        return False
+
+
+class DatabaseDurationRequestMetric(BaseRequestMetric):
+    """Time spent executing database queries, measured via Django's `execute_wrapper` hook."""
+
+    @property
+    def name(self):
+        return "db"
+
+    @property
+    def description(self):
+        return f"{self.query_count} database queries"
+
+    def __init__(self):
+        self.query_count = 0
+
+    def __enter__(self):
+        # Create a stack for guaranteed cleanup management with respect to each database configuration
+        self.exit_stack = ExitStack()
+        for alias in connections:
+            # connections[alias] is the Database Connection, configured in `settings.py` as `DATABASES = { ... }`
+            # Example: connections[alias] == <DatabaseWrapper vendor='postgresql' alias='default'>
+            # https://docs.djangoproject.com/en/stable/topics/db/instrumentation/#connection-execute-wrapper
+            # Create a new context and wrap existing database queries for measurement
+            self.exit_stack.enter_context(connections[alias].execute_wrapper(self))
+        return self
+
+    def __exit__(self, *exception_info):
+        self.exit_stack.close()
+        return False
+
+    def __call__(self, execute, sql, params, many, context):
+        self.start_time = time.perf_counter_ns()
+        try:
+            return execute(sql, params, many, context)
+        finally:
+            self.query_count += 1
+            self.duration_in_milliseconds += (time.perf_counter_ns() - self.start_time) / 1_000_000
+
+
+class RequestMetricMiddleware:
+    """A middleware to generate opt-in metric detection for each request
+
+    The `Server-Timing` header property is added. Its value is a comma-delimited(,) list of metrics.
+    Each metric is a semi-colon(;) delimited set of attributes that adhere to the `BaseRequestMetric` standards
+
+    Example:
+    < Server-Timing: total;dur=42.71;desc="Total request duration", db;dur=9.59;desc="5 database queries"
+
+    Implementation is derived from W3C - https://www.w3.org/TR/server-timing/
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # TODO: Ask team if we want these metrics generated for HTML requests as well?
+
+        enabled_metrics = self.get_enabled_metrics()
+        if not enabled_metrics:
+            return self.get_response(request)
+
+        # ----------------------------------------------------------------------
+        # Wrap Request Logic With Metrics
+        # ----------------------------------------------------------------------
+        with ExitStack() as exit_stack:
+            for metric in enabled_metrics:
+                exit_stack.enter_context(metric)
+            response = self.get_response(request)
+
+        # ----------------------------------------------------------------------
+        # Process Metrics
+        # ----------------------------------------------------------------------
+        server_timing_header_name = "Server-Timing"
+        server_timing_millisecond_precision = 2
+
+        header_metrics = []
+        for enabled_metric in enabled_metrics:
+            rounded_duration = round(enabled_metric.duration_in_milliseconds, server_timing_millisecond_precision)
+            enabled_metric_string = f'{enabled_metric.name};dur={rounded_duration};desc="{enabled_metric.description}"'
+            header_metrics.append(enabled_metric_string)
+
+        # ----------------------------------------------------------------------
+        # Add Metrics To Response Header
+        # ----------------------------------------------------------------------
+        # We make sure to grab existing header metrics just in case they were
+        # previously generated, and then add our new ones to the header
+        existing_metrics = response.headers.get(server_timing_header_name, "")
+        if existing_metrics:
+            header_metrics.insert(0, existing_metrics)
+
+        server_timing_header_string = ", ".join(header_metrics)
+        response.headers[server_timing_header_name] = server_timing_header_string
+
+        return response
+
+    def get_enabled_metrics(self):
+        """Retrieves all enabled metrics"""
+        enabled_metrics = []
+        if settings.REQUEST_TOTAL_DURATION_HEADER_ENABLED:
+            enabled_metrics.append(TotalDurationRequestMetric())
+        if settings.REQUEST_DB_DURATION_HEADER_ENABLED:
+            enabled_metrics.append(DatabaseDurationRequestMetric())
+        return enabled_metrics
+
+
+class ComplexityCostRateLimitingMiddleware:
+    """A middleware to instrument a complexity cost estimation in the response header for api requests
+
+    Implementation is derived from IETF HTTP API RateLimit Headers
+    https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers
+
+    When complexity cost rate limiting is enabled this middleware adds headers to the response to
+    indicate estimated cost of performing the request
+    `RateLimit-Policy` - The budget specification.
+    `RateLimit`        - The current budget state.
+    `X-Nautobot-Cost` - The estimated cost of the request
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        is_complexity_cost_calculation_enabled = (
+            settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "report"
+            or settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+        )
+        if is_complexity_cost_calculation_enabled is False:
+            return self.get_response(request)
+
+        is_graphql_request = False
+        if is_api_request(request) is True:
+            response = self.perform_rest_api_complexity_cost_rate_limiting(request)
+        elif is_graphql_request is True:
+            response = self.perform_graphql_complexity_cost_rate_limiting(request)
+        else:
+            response = self.get_response(request)
+
+        return response
+
+    def perform_rest_api_complexity_cost_rate_limiting(self, request):
+        # ----------------------------------------------------------------------
+        #  Calculate Cost
+        # ----------------------------------------------------------------------
+        if request.method in READ_METHODS:
+            # TODO: try/catch this
+            read_request_features = classify_rest_read_request_features(request)
+            request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
+        elif request.method in WRITE_METHODS:
+            # TODO: Revisit calculation for write requests
+            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
+        else:
+            return self.get_response(request)
+
+        # ----------------------------------------------------------------------
+        #  Generate Header Data
+        # ----------------------------------------------------------------------
+        quota_policy_name = "rest-complexity-cost"
+        quota = 1000
+        time_window = 1000
+
+        remaining_quota = max(-1, quota - request_complexity_cost_estimate)
+        remaining_window = time_window
+
+        rate_limit_policy_data = [
+            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"q={quota}",  # total budget granted per window,
+            f"w={time_window}",  # Duration that quota applies
+        ]
+        rate_limit_data = [
+            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"r={remaining_quota}",  # Remaining quota
+            f"t={remaining_window}",  # Remaining window of time
+        ]
+
+        rate_limit_policy_string = ";".join(rate_limit_policy_data)
+        rate_limit_string = ";".join(rate_limit_data)
+        rate_limit_headers = {
+            "RateLimit-Policy": rate_limit_policy_string,
+            "RateLimit": rate_limit_string,
+            "X-Nautobot-Cost": str(request_complexity_cost_estimate),
+        }
+
+        # --------------------
+        #  If Quota Is Hit, No Further Middleware Allowed, Terminate
+        # --------------------
+        should_complexity_cost_calculation_enforced = settings.NAUTOBOT_REST_RATE_LIMITING_MODE == "enforce"
+        if should_complexity_cost_calculation_enforced is True and remaining_quota < 0:
+            json_quota_exceeded_response = JsonResponse(
+                {"detail": "Request was throttled. The estimated complexity cost exceeds the quota."},
+                status=429,
+            )
+            json_quota_exceeded_response.headers["Retry-After"] = str(remaining_window)
+            for header_name, header_value in rate_limit_headers.items():
+                json_quota_exceeded_response.headers[header_name] = header_value
+
+            return json_quota_exceeded_response
+
+        # ----------------------------------------------------------------------
+        #  Add To Header
+        # ----------------------------------------------------------------------
+        response = self.get_response(request)
+
+        for header_name, header_value in rate_limit_headers.items():
+            response.headers[header_name] = header_value
+
+        return response
+
+    def perform_graphql_complexity_cost_rate_limiting(self, request):
+        return self.get_response(request)

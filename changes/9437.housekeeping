@@ -1,0 +1,2 @@
+Removed `docs` symlink (to `nautobot/docs`) from the repository root as it was causing Docker build failures in some environments.
+Added `**/node_modules` to `.dockerignore` to prevent unnecessarily copying locally installed modules into the Docker build environment.

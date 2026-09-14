@@ -91,11 +91,7 @@ jobs:
             exit 1
           fi
   tests-postgres:
-    # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
-    # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
-    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
-    # https://code.djangoproject.com/ticket/36531
-    name: "Unit tests (PostgreSQL and Python 3.13)"
+    name: "Unit tests (PostgreSQL and Python 3.14)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -123,15 +119,11 @@ jobs:
         with:
           poetry-install-options: "--extras=remote_storage"
           poetry-version: "2.1.4"
-          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
-          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
-          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
-          # https://code.djangoproject.com/ticket/36531
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   tests-mysql:
-    name: "Unit tests (MySQL and Python 3.10)"
+    name: "Unit tests (MySQL and Python 3.11)"
     runs-on: "ubuntu-24.04"
     env:
       INVOKE_NAUTOBOT_LOCAL: "True"
@@ -163,11 +155,11 @@ jobs:
         with:
           poetry-install-options: "--extras=mysql --extras=remote_storage"
           poetry-version: "2.1.4"
-          python-version: "3.10"
+          python-version: "3.11"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel"
   migration-tests-mysql:
-    name: "Run migrations against test dataset (MySQL and Python 3.10)"
+    name: "Run migrations against test dataset (MySQL and Python 3.11)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_mysql.tar.gz"
@@ -197,7 +189,7 @@ jobs:
         with:
           poetry-install-options: "--extras mysql"
           poetry-version: "2.1.4"
-          python-version: "3.10"
+          python-version: "3.11"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine mysql --dataset $MIGRATION_TEST_DATASET"
   migration-tests-postgres:
@@ -264,11 +256,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
-          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
-          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
-          # https://code.djangoproject.com/ticket/36531
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
         run: "NAUTOBOT_SELENIUM_HOST=`hostname -f` poetry run invoke tests --tag integration --no-keepdb"
@@ -285,10 +273,12 @@ jobs:
       - "tests-mysql"
       - "tests-postgres"
       - "ui-build-check"
+    permissions:
+      packages: "write"
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         arch: [ "amd64", "arm64" ]
         os: [ "ubuntu-24.04", "ubuntu-24.04-arm" ]
         exclude:
@@ -349,11 +339,13 @@ jobs:
       (github.ref_name == 'develop' || github.ref_name == 'next' || github.ref_name == 'ltm-1.6')
     needs:
       - "container-build"
+    permissions:
+      packages: "write"
     runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
     env:
       BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
       BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "false" # Change this to false for LTM, Pre-release versions force this to false.

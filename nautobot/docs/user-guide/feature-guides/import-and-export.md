@@ -122,11 +122,89 @@ while in JSON or YAML it's a list of nested objects:
 
 ### Selecting fields to export
 
-TODO - add documentation when this is implemented
+By default an export includes every field of the object type. In the **Export to file** dialog you can instead pick the specific fields you want and put them in the order you want them to appear. The `Export Object List` Job offers the same capability through its **Fields to Export** (`export_fields`) parameter, which takes a comma-separated list:
+
+```no-highlight
+model,manufacturer__name,u_height
+```
+
+The columns appear in exactly the order you list them, so this is also how you control column order:
+
+```csv
+# nautobot_import_version=3; model=dcim.devicetype; match_fields=manufacturer__name model
+model,manufacturer__name,u_height
+ISR4331,Cisco,1
+```
+
+Each entry is either a plain field (`model`), or a path that traverses one or more foreign keys to reach a field of a related object, joined by `__` (`manufacturer__name`, `device_type__manufacturer__name`). A single path may traverse at most three relations.
+
+Naming a related object *without* expanding it selects that object's whole natural key - the same columns an unrestricted export would have produced for it. So `model,manufacturer` gives you the same file as the example above minus `u_height`, because `manufacturer` expands to `manufacturer__name`:
+
+```csv
+model,manufacturer__name
+ISR4331,Cisco
+```
+
+Many-to-many fields, such as `tags`, can be selected like any other field, but cannot currently be traversed: `tags` is valid, `tags__name` is not. Selecting the field itself already gives you its members' natural keys, so `tags` yields the tag names; what is not yet supported is narrowing a member's representation to particular fields, such as asking for only `software_image_files__image_file_name`.
+
+#### Selecting custom fields
+
+Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once.
+
+In a CSV export both spellings produce one `cf_<key>` column per selected custom field, exactly as an unrestricted export does. In JSON and YAML exports, `custom_fields` keeps the nested dictionary, while an individual `cf_<key>` selection is emitted as a top-level key instead, since a single custom field cannot be named inside the dictionary:
+
+```yaml
+records:
+  - name: "Active"
+    cf_my_field: "a value"
+```
+
+#### Fields that cannot be selected
+
+The Job fails, with an error naming the entry at fault, rather than quietly writing a file that is missing what you asked for. This happens if a selection:
+
+- names a field the object type does not have, or a custom field that is not defined for it
+- names a field that exists only for input rather than output, such as the singular `location` field on VLANs and Prefixes - export the `locations` many-to-many field instead
+- names a value computed for display rather than stored on the object, such as the related-object counts a list view shows (`device_count`, `rack_count`, and the like) - export the related objects themselves instead
+- attempts to traverse a many-to-many field, or a field that is not a relation at all
+- traverses more than three relations in a single path
+- names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
+
+#### Effect on re-importing the file
+
+A file containing only some of an object type's fields may not contain enough information to identify the objects it describes. When the selected fields do not cover every field of the model's match key, the `match_fields` metadata is therefore omitted from the export (see [The self-describing file](#the-self-describing-file)), as in the `model,manufacturer__name` example above had `manufacturer__name` been left out.
+
+Such a file can still be imported - you just have to say what to match on, either by [specifying match fields](#match-fields) as an input to the `Import Objects` Job or by adding the metadata to the file yourself.
 
 ### Scoping the exported objects
 
-TODO - add documentation when this is implemented
+An export always covers the same objects, in the same order, as the list view it was launched from. Exporting from a filtered, sorted view therefore gives you a file of exactly the rows you were looking at, and exporting from an unfiltered view gives you every object of that type in its default order.
+
+The `Export Object List` Job expresses that view through its **Filterset Parameters** (`query_string`) input, which takes the view's URL query string:
+
+```no-highlight
+status=active&location=ams01&sort=-name
+```
+
+The filters and the sort order both apply. When the query string references a saved view (`?saved_view=<id>`), that view's own stored filters and sort order apply as well, exactly as they do when you visit it:
+
+- Its stored filters are used as long as the query string carries no filters of its own. Any filter in the query string means you changed the view's filters, and replaces the saved view's filters entirely rather than combining with them - which is what lets you widen a saved view as well as narrow it.
+- `&all_filters_removed=true` says you cleared the filters, so none apply.
+- Its stored sort order is used unless the query string carries a `sort` of its own.
+
+A sort on something the database cannot order by - a column computed for display, say - is skipped with a warning rather than failing the export.
+
+### Exporting the columns you are looking at
+
+Selecting **Use Current View Columns** (`use_current_view_columns`) defaults the exported fields to the columns the corresponding list view is currently displaying: those of the saved view in use, if any, otherwise the ones you have configured for yourself through the table's **Configure Table** dialog, otherwise the table's default columns.
+
+This is only a default for [**Fields to Export**](#selecting-fields-to-export). Naming fields explicitly takes precedence, and the option has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
+
+Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts are values assembled for display rather than fields of the record.
+
+A count column is *about* a relation, though, so where the relation itself is exportable the export carries that instead of the count: exporting a Prefix list view whose **VRFs** column shows a count of 3 gives you a `vrfs` column naming those three VRFs. Where the relation is not something an export can carry - a count of Devices in a Location, say, or of Dynamic Groups an object belongs to - the column is left out.
+
+Every column left out is logged, so the file never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, the export warns and falls back to including every field.
 
 ## The self-describing file
 

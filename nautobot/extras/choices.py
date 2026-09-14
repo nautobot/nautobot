@@ -59,6 +59,21 @@ class BannerClassChoices(ChoiceSet):
 
 
 #
+# Condition
+#
+
+
+class ConditionTypeChoices(ChoiceSet):
+    TYPE_PRESET = "preset"
+    TYPE_EXPRESSION = "expression"
+
+    CHOICES = (
+        (TYPE_PRESET, "Preset"),
+        (TYPE_EXPRESSION, "Expression"),
+    )
+
+
+#
 # Contact Association
 #
 

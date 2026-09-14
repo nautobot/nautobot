@@ -28,6 +28,12 @@ The object export/import functionality has been enhanced in several ways:
 
 For more details, refer to the [import and export documentation](../user-guide/feature-guides/import-and-export.md).
 
+### Dependencies
+
+#### Removed Python 3.10 Support
+
+As Python 3.10 is now end-of-life, Nautobot 3.3 has dropped support for Python 3.10.
+
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
