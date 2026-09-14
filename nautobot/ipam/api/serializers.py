@@ -10,7 +10,7 @@ from nautobot.core.api import (
     NautobotModelSerializer,
     ValidatedModelSerializer,
 )
-from nautobot.core.api.constraints import UniqueConstraintError
+from nautobot.core.api.constraints import UniqueConstraintExplanation
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam import constants
@@ -464,12 +464,12 @@ class VLANAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 
 class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
     database_constraint_errors = (
-        UniqueConstraintError(
+        UniqueConstraintExplanation(
             model=IPAddressToInterface,
             fields=("ip_address", "interface"),
             detail={"non_field_errors": "This IP address is already assigned to this interface."},
         ),
-        UniqueConstraintError(
+        UniqueConstraintExplanation(
             model=IPAddressToInterface,
             fields=("ip_address", "vm_interface"),
             detail={"non_field_errors": "This IP address is already assigned to this virtual machine interface."},
