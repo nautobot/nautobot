@@ -6,9 +6,12 @@ import re
 from django.db import connections, DEFAULT_DB_ALIAS, models
 from rest_framework.exceptions import ValidationError
 
+POSTGRESQL_UNIQUE_VIOLATION = "23505"
+MYSQL_DUPLICATE_ENTRY = 1062
+
 
 @dataclass(frozen=True)
-class UniqueConstraintError:
+class UniqueConstraintExplanation:
     """Describe an expected uniqueness conflict, including conflicts in related models.
 
     ``detail`` uses serializer field names, which need not belong to ``model``.
@@ -53,12 +56,12 @@ def get_constraint_error(exception, serializer, using=DEFAULT_DB_ALIAS):
     connection = connections[using]
     if connection.vendor == "postgresql":
         diag = getattr(cause, "diag", None)
-        if getattr(diag, "sqlstate", None) != "23505":
+        if getattr(diag, "sqlstate", None) != POSTGRESQL_UNIQUE_VIOLATION:
             return None
         table, constraint = diag.table_name, diag.constraint_name
     elif connection.vendor == "mysql":
         args = getattr(cause, "args", ())
-        if len(args) != 2 or args[0] != 1062 or not isinstance(args[1], str):
+        if len(args) != 2 or args[0] != MYSQL_DUPLICATE_ENTRY or not isinstance(args[1], str):
             return None
         # The duplicate value can contain quotes, newlines, or "for key" text.
         # Match the final table-qualified key, never text inside that value.

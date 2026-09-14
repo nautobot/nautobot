@@ -14,7 +14,7 @@ from nautobot.core.api import (
     TreeModelSerializerMixin,
     ValidatedModelSerializer,
 )
-from nautobot.core.api.constraints import UniqueConstraintError
+from nautobot.core.api.constraints import UniqueConstraintExplanation
 from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_brief_representation,
@@ -284,7 +284,7 @@ class RackSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     # Relocating a rack also updates its devices in a post_save signal. Report
     # that child-model conflict against the field the API caller can change.
     database_constraint_errors = (
-        UniqueConstraintError(
+        UniqueConstraintExplanation(
             model=Device,
             fields=("location", "tenant", "name"),
             detail={
@@ -717,12 +717,12 @@ class InterfaceSerializer(
     InterfaceCommonSerializer,
 ):
     database_constraint_errors = (
-        UniqueConstraintError(
+        UniqueConstraintExplanation(
             model=Interface,
             fields=("device", "name"),
             detail={"name": "An interface with this name already exists on this device."},
         ),
-        UniqueConstraintError(
+        UniqueConstraintExplanation(
             model=Interface,
             fields=("module", "name"),
             detail={"name": "An interface with this name already exists on this module."},
