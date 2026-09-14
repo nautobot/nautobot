@@ -1724,6 +1724,29 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         if required_positions and optional:
             self.assertLess(max(required_positions), middle.index(optional[0]))
 
+    def test_select__relation_rows_are_marked_as_exporting_a_natural_key(self):
+        """A row naming a related object says so, its checkbox being the one that does something else.
+
+        Everywhere else a tree of checkboxes means "everything beneath this"; here it means "the columns
+        that identify this object", which is mutually exclusive with the fields listed under it. Marked
+        at every depth, the deepest offered level included -- there a relation has nothing listed under it
+        at all, so nothing else would tell it apart from an ordinary field.
+        """
+        field, _paths = self.picker_paths(Device)
+        self.assertIn("device_type", field.widget.relation_paths)
+        self.assertIn("device_type__manufacturer", field.widget.relation_paths)
+        self.assertNotIn("name", field.widget.relation_paths)
+        self.assertNotIn("device_type__id", field.widget.relation_paths)
+        self.assertTrue(
+            [path for path in field.widget.relation_paths if path.count("__") == 2],
+            "a relation at the deepest offered level should still be marked",
+        )
+
+        rendered = str(field.widget.render("export_fields", [], attrs={"id": "id_export_fields"}))
+        # `device_type` carries both marks: required to create a Device, and exported as a natural key.
+        self.assertRegex(rendered, r'option_device_type">device_type[^<]*<span class="text-warning[^>]*>')
+        self.assertRegex(rendered, r'option_name">name[^<]*</label>')  # unmarked, being a value of its own
+
     def test_select__only_the_object_s_own_fields_are_marked_required(self):
         """The `*` marker is about creating a record, which is only ever the object the export is of.
 

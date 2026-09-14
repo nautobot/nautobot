@@ -999,6 +999,8 @@ class ExportFieldsChoiceField(django_forms.MultipleChoiceField):
 
         self.choices = self._ordered_by_selection(choices, selection, parent_paths)
         self.widget.parent_paths = parent_paths
+        # Which rows name a related object, so the widget can say what selecting one of them does.
+        self.widget.relation_paths = {entry["path"] for entry in entries if entry["relation"]}
 
     @staticmethod
     def _ordered_by_selection(choices, selection, parent_paths):

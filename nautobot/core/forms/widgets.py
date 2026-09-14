@@ -150,6 +150,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
         self.omitted_columns = []
         # The content type whose fields are offered, for the sake of saying which one has none.
         self.content_type = None
+        # The paths that name a related object rather than a value of the object being exported.
+        self.relation_paths = set()
         # Fit the standard modal form column: drop the table-config drawer's negative side margins and
         # flex-grow so the list aligns with the other fields rather than bleeding to the far left.
         # `list-unstyled` removes the <ol> numbering (the drawer only hid it via negative margins).
@@ -252,7 +254,10 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Inline text, so joined without a break: a newline here would be a space in the output.
         legend = format_html(
             '<span class="form-text d-block mb-6">'
-            "Drag to reorder. <code>*</code> marks a field an import requires to create new records."
+            "Drag to reorder. <code>*</code> marks a field an import requires to create new records. "
+            '<span class="text-warning"><span aria-hidden="true" class="mdi mdi-key-link"></span></span> '
+            "marks a related object, which exports the columns that identify it rather than the fields "
+            "listed under it."
             "</span>"
         )
         return format_html("{}{}", buttons, legend)
@@ -264,6 +269,31 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html(
             "This content type has no fields an export can select. It can still be exported using an "
             "Export Template, which renders its own output."
+        )
+
+    def _natural_key_marker(self, path):
+        """Mark a row that names a related object, selecting which exports what identifies it.
+
+        The checkbox on such a row is the one thing here that does not mean what a tree of checkboxes
+        usually means: it asks for the columns that identify the related object -- its natural key --
+        rather than for everything listed beneath it, and the two are mutually exclusive. The badge says
+        so where the checkbox is, which is where the assumption gets made.
+
+        Which columns those are is deliberately not spelled out: a natural key can span several fields
+        and several relations, and `Location`'s is computed from how deeply locations are nested at the
+        time, so any list of them would be long, particular to the deployment, and out of date the moment
+        someone nests one deeper.
+        """
+        if path not in self.relation_paths:
+            return ""
+        # The same icon the import form marks a related object with, so that the two forms say the same
+        # thing the same way; its meaning is spelled out in the legend, as it is there.
+        return format_html(
+            '<span class="text-warning ms-6" title="{}">'
+            '<span aria-hidden="true" class="mdi mdi-key-link"></span>'
+            '<span class="visually-hidden">natural key</span>'
+            "</span>",
+            "Exports the columns that identify this related object, rather than the fields listed under it",
         )
 
     def _omitted_hint(self):
@@ -409,7 +439,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         checkbox = format_html(
             '<div class="form-check flex-grow-1 my-0">'
             '<input class="form-check-input my-6" id="{wid}_option_{value}" name="{name}" type="checkbox" value="{value}"{checked}>'
-            '<label class="form-check-label py-6{pe}" for="{wid}_option_{value}">{label}</label>'
+            '<label class="form-check-label py-6{pe}" for="{wid}_option_{value}">{label}{badge}</label>'
             "</div>",
             wid=widget_id,
             value=value,
@@ -417,6 +447,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             checked=checked,
             pe="" if is_root else " pe-20",
             label=option["label"],
+            badge=self._natural_key_marker(value),
         )
         caret = (
             format_html(

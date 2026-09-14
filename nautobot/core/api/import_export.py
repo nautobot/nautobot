@@ -421,9 +421,11 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
             than the document formats.
 
     Returns:
-        list: `{"path": str, "parent": str | None, "required": bool}` dicts. `parent` is the path this one
-            nests under, which is all but the last segment except for a `cf_<key>`, whose parent is
-            `custom_fields` -- the field that asks for every custom field at once. `required` is whether an
+        list: `{"path": str, "parent": str | None, "required": bool, "relation": bool}` dicts. `parent` is
+            the path this one nests under, which is all but the last segment except for a `cf_<key>`, whose
+            parent is `custom_fields` -- the field that asks for every custom field at once. `relation` is
+            whether the path names a related object, selecting which exports the columns that identify it
+            rather than any one value. `required` is whether an
             import would demand the field to create a record, which is what makes a selection
             round-trippable, and which only a field of the object itself can be: an import resolves a
             related object from what the path names (`RelatedField.to_internal_value`, which fails with
@@ -469,12 +471,20 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
                 # cannot be a to-many.
                 continue
             path = f"{prefix}__{field_name}" if prefix else field_name
-            # Required only where it means anything: at the root, where an import creates the record.
-            paths.append({"path": path, "parent": prefix or None, "required": field.required and not prefix})
-            if segments >= max_segments:
-                continue
+            # Resolved before the depth check, not after: a relation at the deepest offered level has no
+            # fields listed under it, but selecting it still exports its natural key, and a UI has no
+            # other way to tell that from an ordinary field.
             related_model = _traversable_relation_target(serializer, field)
-            if related_model is None:
+            paths.append(
+                {
+                    "path": path,
+                    "parent": prefix or None,
+                    # Required only where it means anything: at the root, where an import creates the record.
+                    "required": field.required and not prefix,
+                    "relation": related_model is not None,
+                }
+            )
+            if segments >= max_segments or related_model is None:
                 continue
             try:
                 related_serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
@@ -495,7 +505,8 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
         # read as what they are -- the whole and its parts -- rather than as overlapping options.
         custom_field_keys = getattr(root_serializer.fields.get("custom_fields"), "custom_field_keys", ())
         paths.extend(
-            {"path": f"cf_{key}", "parent": "custom_fields", "required": False} for key in sorted(custom_field_keys)
+            {"path": f"cf_{key}", "parent": "custom_fields", "required": False, "relation": False}
+            for key in sorted(custom_field_keys)
         )
 
     return paths
