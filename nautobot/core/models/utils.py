@@ -1,5 +1,6 @@
 from itertools import count, groupby
 import json
+import logging
 import unicodedata
 from urllib.parse import quote_plus, unquote_plus
 
@@ -7,12 +8,15 @@ from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
+from django.db import models
 from django.utils.tree import Node
 import emoji
 from slugify import slugify
 
 from nautobot.core import constants
 from nautobot.core.utils.data import is_uuid
+
+logger = logging.getLogger(__name__)
 
 
 def array_to_string(array):
@@ -207,6 +211,99 @@ def serialize_object_v2(obj):
         data = serialize_object(obj)
 
     return data
+
+
+def changelog_comparable_fields(instance, update_fields=None):
+    """
+    Return the concrete fields of `instance` worth comparing to decide whether a save changed anything.
+
+    Skips fields that cannot change on an update (primary keys, parent links, database-generated fields)
+    and `auto_now` fields, which change on every save. `auto_now_add` fields stay in, since an update
+    writes whatever the instance holds. Honors `update_fields` when Django passes it.
+
+    Args:
+        instance (Model): The instance being saved.
+        update_fields (iterable, optional): Field names or attnames this save is restricted to.
+
+    Returns:
+        (list | None): The fields to compare; empty if the save writes nothing a reader would see. None if
+            no reliable comparison is possible, which the caller must treat as "something changed".
+    """
+    fields = []
+    restrict_to = set(update_fields) if update_fields is not None else None
+    for field in instance._meta.concrete_fields:
+        if field.primary_key or getattr(field.remote_field, "parent_link", False):
+            continue
+        if getattr(field, "generated", False):
+            continue
+        # By attribute rather than by name, so an App's own auto_now field is covered too.
+        if getattr(field, "auto_now", False):
+            continue
+        if restrict_to is not None and field.name not in restrict_to and field.attname not in restrict_to:
+            continue
+        if restrict_to is not None and _value_comes_from_pre_save(field):
+            return None
+        fields.append(field)
+    return fields
+
+
+def _value_comes_from_pre_save(field):
+    """
+    Whether this field's stored value is computed in `Field.pre_save()` instead of read off the instance.
+
+    Date, time and file fields override `pre_save` predictably and are handled elsewhere, so they do not count.
+
+    Returns:
+        (bool): True if the field's class overrides `pre_save` in a way we cannot predict.
+    """
+    if isinstance(field, (models.DateField, models.TimeField, models.FileField)):
+        return False
+    return type(field).pre_save is not models.Field.pre_save
+
+
+def changelog_values_unchanged(instance, stored_instance, fields, connection):
+    """
+    Whether `instance` holds the same values as `stored_instance` for every field in `fields`.
+
+    Args:
+        instance (Model): The instance being saved.
+        stored_instance (Model): The same row as the database currently holds it.
+        fields (list): Fields to compare, from `changelog_comparable_fields`.
+        connection: The database connection the save is going to, used to prepare values.
+
+    Returns:
+        (bool | None): True if nothing changed, False if something did, None if it cannot be told. The
+            caller must then assume a change, since dropping a real change record is worse than a
+            redundant one.
+    """
+    for field in fields:
+        # Read through `__dict__` rather than the descriptor, which would issue a query for a deferred
+        # field and defeat the point. A field missing on either side is simply not knowable.
+        if field.attname not in instance.__dict__ or field.attname not in stored_instance.__dict__:
+            return None
+        new_value = instance.__dict__[field.attname]
+        old_value = stored_instance.__dict__[field.attname]
+
+        # Learning an uncommitted file's stored name means calling `pre_save`, which uploads it.
+        if getattr(new_value, "_committed", True) is False:
+            return False
+
+        # `==` tolerates what the database normalizes (JSON key order, Decimal precision); preparing the
+        # values catches the reverse, an unnormalized value assigned in memory (a string date, a string UUID).
+        try:
+            if old_value == new_value:
+                continue
+            if field.get_db_prep_save(new_value, connection) == field.get_db_prep_save(old_value, connection):
+                continue
+        except Exception:
+            # Any comparison or preparation failure means we cannot tell; logged because it may be a bug.
+            logger.debug(
+                "Could not compare %s.%s, assuming it changed", instance._meta.label, field.name, exc_info=True
+            )
+            return None
+        return False
+
+    return True
 
 
 def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):

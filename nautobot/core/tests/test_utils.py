@@ -1,3 +1,4 @@
+import decimal
 import os
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.db import connection
 from django.db.models import Q
 from django.http import QueryDict
 from django.test import override_settings, tag
@@ -44,6 +46,7 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
+from nautobot.tenancy import models as tenancy_models
 
 
 class ConstructCacheKeyTest(TestCase):
@@ -1564,3 +1567,96 @@ class TestSerializeObjectV2(TestCase):
             data = models_utils.serialize_object_v2(instance)
             with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
                 NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)
+
+
+class ChangelogComparableFieldsTest(TestCase):
+    """Validate the operation of changelog_comparable_fields()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = dcim_models.Location.objects.first()
+
+    def field_names(self, **kwargs):
+        fields = models_utils.changelog_comparable_fields(self.location, **kwargs)
+        return {field.name for field in fields}
+
+    def test_excludes_pk_and_auto_now(self):
+        names = self.field_names()
+        self.assertNotIn("id", names)
+        self.assertNotIn("last_updated", names)
+        # `created` is auto_now_add, which an update writes from the instance, so it must stay comparable.
+        self.assertIn("created", names)
+        self.assertIn("name", names)
+
+    def test_update_fields_by_name(self):
+        self.assertEqual(self.field_names(update_fields=["description"]), {"description"})
+
+    def test_update_fields_by_attname(self):
+        self.assertEqual(self.field_names(update_fields=["tenant_id"]), {"tenant"})
+
+    def test_update_fields_writes_nothing_visible(self):
+        self.assertEqual(models_utils.changelog_comparable_fields(self.location, update_fields=["last_updated"]), [])
+
+    def test_update_fields_restricted_to_derived_field(self):
+        """`_name` is computed in pre_save, so its in-memory value cannot be trusted for a comparison."""
+        self.assertIsNone(models_utils.changelog_comparable_fields(self.location, update_fields=["_name"]))
+
+    def test_derived_field_without_update_fields(self):
+        """An unrestricted save compares `_name`'s source field too, so `_name` itself is no obstacle."""
+        names = self.field_names()
+        self.assertIn("_name", names)
+        self.assertIn("name", names)
+
+
+class ChangelogValuesUnchangedTest(TestCase):
+    """Validate the operation of changelog_values_unchanged()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        # A tenant is assigned so that the foreign key comparisons below have something to compare.
+        cls.location = dcim_models.Location.objects.first()
+        cls.location.tenant = tenancy_models.Tenant.objects.first()
+        cls.location.save()
+
+    def setUp(self):
+        super().setUp()
+        self.stored = dcim_models.Location.objects.get(pk=self.location.pk)
+        self.instance = dcim_models.Location.objects.get(pk=self.location.pk)
+        self.fields = models_utils.changelog_comparable_fields(self.instance)
+
+    def compare(self, instance=None):
+        return models_utils.changelog_values_unchanged(instance or self.instance, self.stored, self.fields, connection)
+
+    def test_identical_instances(self):
+        self.assertIs(self.compare(), True)
+
+    def test_changed_field(self):
+        self.instance.description = "something else"
+        self.assertIs(self.compare(), False)
+
+    def test_foreign_key_reassigned_to_same_object(self):
+        self.instance.tenant = tenancy_models.Tenant.objects.get(pk=self.stored.tenant_id)
+        self.assertIs(self.compare(), True)
+
+    def test_foreign_key_assigned_as_string(self):
+        """An unnormalized value in memory is caught by preparing both sides for the database."""
+        self.instance.tenant_id = str(self.stored.tenant_id)
+        self.assertIs(self.compare(), True)
+
+    def test_json_field_key_order(self):
+        dcim_models.Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"a": 1, "b": 2})
+        self.stored.refresh_from_db()
+        self.instance.refresh_from_db()
+        self.instance._custom_field_data = {"b": 2, "a": 1}
+        self.assertIs(self.compare(), True)
+
+    def test_decimal_precision(self):
+        dcim_models.Location.objects.filter(pk=self.location.pk).update(latitude=decimal.Decimal("1.100000"))
+        self.stored.refresh_from_db()
+        self.instance.refresh_from_db()
+        self.instance.latitude = decimal.Decimal("1.1")
+        self.assertIs(self.compare(), True)
+
+    def test_deferred_field_is_indeterminate(self):
+        deferred = dcim_models.Location.objects.only("id").get(pk=self.location.pk)
+        self.assertIsNone(self.compare(instance=deferred))

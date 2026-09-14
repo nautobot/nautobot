@@ -987,3 +987,68 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assertEqual(jobhook_changed_objects, expected_changed_objects)
         event_topics = {call.kwargs["topic"] for call in mock_publish_event.call_args_list}
         self.assertEqual(event_topics, {"nautobot.update.dcim.interface", "nautobot.update.ipam.ipaddress"})
+
+
+class ChangeLogUnchangedSaveTest(TestCase):
+    """A save that changes nothing a reader would see must not leave a change record behind."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+
+    def setUp(self):
+        super().setUp()
+        with context_managers.web_request_context(self.user):
+            self.location = Location.objects.create(
+                name="Unchanged save test",
+                location_type=self.location_type,
+                status=self.status,
+                description="initial",
+            )
+        # The create itself is always recorded.
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_unchanged_save_records_nothing(self):
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_changed_save_is_recorded(self):
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def test_update_fields_writes_nothing_visible(self):
+        with context_managers.web_request_context(self.user):
+            self.location.save(update_fields=["last_updated"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_save_reverting_a_concurrent_write_is_recorded(self):
+        """
+        The comparison is against the stored row, not the values the instance was loaded with.
+
+        Someone else moved the row after this instance was loaded; saving the instance puts the old value
+        back, which is a real edit and must be recorded.
+        """
+        Location.objects.filter(pk=self.location.pk).update(description="written by someone else")
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+        self.assertEqual(Location.objects.get(pk=self.location.pk).description, "initial")
+
+    def test_m2m_change_is_recorded(self):
+        """An m2m addition moves none of the instance's own fields, yet is a change."""
+        # TODO: m2m it's a different path, so it will be done in different scope
+        tag = Tag.objects.get_for_model(Location).first()
+        with context_managers.web_request_context(self.user):
+            self.location.tags.add(tag)
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def test_model_can_opt_out(self):
+        """A model whose stored value is not a pure function of its own fields opts out of the comparison."""
+        with mock.patch.object(Location, "changelog_skip_unchanged_saves", False, create=True):
+            with context_managers.web_request_context(self.user):
+                self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
