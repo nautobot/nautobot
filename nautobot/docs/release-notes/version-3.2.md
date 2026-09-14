@@ -294,16 +294,16 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Security in v3.2.5
 
-- [#GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/issues/GHSA-8f2w-54mq-66gg) - Fixed disclosure of API token keys and user password hashes to user-authored Jinja2 templates, such as those in Custom Links and Job Buttons, which are rendered against the viewing user's own context.
-- [#GHSA-2v7j-x3g6-qj94](https://github.com/nautobot/nautobot/issues/GHSA-2v7j-x3g6-qj94) - Fixed an incomplete fix for GHSA-p99c-c9qx-34fw where the Jinja2 template sandbox still allowed a template author to execute arbitrary read queries, reach arbitrary models, and perform certain database writes via the Django ORM.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Fixed disclosure of API token keys and user password hashes to user-authored Jinja2 templates, such as those in Custom Links and Job Buttons, which are rendered against the viewing user's own context.
+- [GHSA-2v7j-x3g6-qj94](https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94) - Fixed an incomplete fix for GHSA-p99c-c9qx-34fw where the Jinja2 template sandbox still allowed a template author to execute arbitrary read queries, reach arbitrary models, and perform certain database writes via the Django ORM.
 - [#9439](https://github.com/nautobot/nautobot/issues/9439) - Updated development npm dependency `postcss-selector-parser` to `7.1.5` to mitigate CVE-2026-9358.
 - [#9446](https://github.com/nautobot/nautobot/issues/9446) - Updated development npm dependency `fast-uri` to `3.1.7` to mitigate multiple vulnerabilities.
 - [#9480](https://github.com/nautobot/nautobot/issues/9480) - Updated development npm dependency `js-yaml` to `4.3.2` to mitigate CVE-2026-84375.
 
 ### Added in v3.2.5
 
-- [#GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/issues/GHSA-8f2w-54mq-66gg) - Added support for a `sensitive_fields` model attribute, declaring fields whose values the ORM will not return and that user-authored Jinja2 templates may not read.
-- [#GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/issues/GHSA-8f2w-54mq-66gg) - Added a `STRICT_SENSITIVE_FIELDS` settings variable, defaulting to `False`, controlling whether the ORM refuses to return those values.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added support for a `sensitive_fields` model attribute, declaring fields whose values the ORM will not return and that user-authored Jinja2 templates may not read.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added a `STRICT_SENSITIVE_FIELDS` settings variable, defaulting to `False`, controlling whether the ORM refuses to return those values.
 - [#9444](https://github.com/nautobot/nautobot/issues/9444) - Added an "Object Data v2" panel to the Change Log detail view, displaying the change's `object_data_v2`.
 - [#9444](https://github.com/nautobot/nautobot/issues/9444) - Added a `collapsed` keyword argument to `Panel` and its subclasses, to render a panel with its body initially collapsed.
 
@@ -317,7 +317,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Power Path" field when creating/editing a Power Feed.
 - [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Virtual Device Contexts" field when creating/edting a VRF.
 - [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Devices" field when creating/editing a Cluster.
-- [#9481](https://github.com/nautobot/nautobot/issues/9481) - Fixed field has_tenants, of `TenantGroupFilterForm`, being required because of a typo.
+- [#9481](https://github.com/nautobot/nautobot/issues/9481) - Fixed field `has_tenants`, of `TenantGroupFilterForm`, being required because of a typo.
 
 ### Documentation in v3.2.5
 
