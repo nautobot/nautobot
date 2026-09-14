@@ -8,7 +8,7 @@ from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
-from django.db import models
+from django.db.models import DateField, Field, FileField, TimeField
 from django.utils.tree import Node
 import emoji
 from slugify import slugify
@@ -256,9 +256,9 @@ def _value_comes_from_pre_save(field):
     Returns:
         (bool): True if the field's class overrides `pre_save` in a way we cannot predict.
     """
-    if isinstance(field, (models.DateField, models.TimeField, models.FileField)):
+    if isinstance(field, (DateField, TimeField, FileField)):
         return False
-    return type(field).pre_save is not models.Field.pre_save
+    return type(field).pre_save is not Field.pre_save
 
 
 def changelog_values_unchanged(instance, stored_instance, fields, connection):

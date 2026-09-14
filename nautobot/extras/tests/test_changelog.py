@@ -1041,9 +1041,9 @@ class ChangeLogUnchangedSaveTest(TestCase):
     def test_m2m_change_is_recorded(self):
         """An m2m addition moves none of the instance's own fields, yet is a change."""
         # TODO: m2m it's a different path, so it will be done in different scope
-        tag = Tag.objects.get_for_model(Location).first()
+        location_tag = Tag.objects.get_for_model(Location).first()
         with context_managers.web_request_context(self.user):
-            self.location.tags.add(tag)
+            self.location.tags.add(location_tag)
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
 
     def test_model_can_opt_out(self):
