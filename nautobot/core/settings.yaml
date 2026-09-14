@@ -2184,6 +2184,22 @@ properties:
     environment_variable: "NAUTOBOT_STRICT_FILTERING"
     type: "boolean"
     version_added: "1.4.0"
+  STRICT_SENSITIVE_FIELDS:
+    default: false
+    description: >-
+      If set to `True`, the ORM will refuse to return the value of any field listed in a model's
+      `sensitive_fields` declaration, such as `Token.key`, unless the caller opts in explicitly.
+    details: |-
+      Nautobot models may declare `sensitive_fields` to mark columns that hold credentials or comparable
+      secrets. When this setting is `True`, reading such a field raises `SensitiveFieldError` for values
+      loaded from the database, whether read as an attribute or projected through a query.
+
+      This setting does **not** affect user-authored Jinja2 templates (Export Templates, Computed Fields,
+      Custom Links, and so on). Those are always denied access to a sensitive field, regardless of this
+      setting.
+    environment_variable: "NAUTOBOT_STRICT_SENSITIVE_FIELDS"
+    type: "boolean"
+    version_added: "3.2.5"
   SUPPORT_MESSAGE:
     default: ""
     description: "A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs."

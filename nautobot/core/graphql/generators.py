@@ -354,6 +354,7 @@ def generate_schema_type(app_name: str, model: object) -> OptimizedNautobotObjec
     """
 
     main_attrs = {}
+    # TODO 4.0: pass `exclude` for any field in the model's `sensitive_fields` rather than `"__all__"`.
     meta_attrs = {"model": model, "fields": "__all__"}
 
     # We'll attempt to find a FilterSet corresponding to the model

@@ -107,6 +107,23 @@ Fortunately, Nautobot provides a `ForeignKeyWithAutoRelatedName` model field cla
 
 Nautobot doesn't currently have a similar class provided for `ManyToManyField`; in this case you'll probably be best, for now, to just use `related_name="%(app_label)s_%(class)s_related"` for any abstract base class's ManyToManyField if a reverse relation is desired.
 
+### Sensitive Fields
+
++++ 3.2.5
+
+A field holding a credential or a comparable secret, such as an API token or a signing key, should be declared in the model's `sensitive_fields`. The ORM then refuses to return its value unless a caller opts in explicitly, and user-authored Jinja2 templates can never read it at all.
+
+```python
+class Token(BaseModel):
+    key = models.CharField(max_length=40, unique=True)
+
+    sensitive_fields = ("key",)
+```
+
+Filtering by such a field still works, since the guarantee is that the value is never returned rather than that the column cannot be referenced. See [Sensitive Model Fields](sensitive-fields.md) for the opt-in methods, the `STRICT_SENSITIVE_FIELDS` setting, and the limitations.
+
+Note that "sensitive" here means genuinely secret. A field that is merely internal or uninteresting is better marked by the existing convention of a leading underscore in its name, which keeps it out of filter forms, serializers and detail views without involving any of this machinery.
+
 ### Slug Field
 
 +/- 2.0.0
