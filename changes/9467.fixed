@@ -1,0 +1,1 @@
+Replaced the full-table visibility subquery in the interface-connections API with a correlated lookup to improve pagination count performance.
