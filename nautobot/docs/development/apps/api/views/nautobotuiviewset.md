@@ -163,6 +163,10 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
 
 Both the HTML string and the template file are rendered with the object's page context, so `object` and `request` are available to them.
 
+### Expanding Table Rows
+
+Tables of a model whose view provides an overview render an expand button on every row, revealing that object's overview in place. A table that already expands its rows for another purpose, such as revealing child objects, declares `show_row_overviews = False` in its `Meta`, and an individual `ObjectsTablePanel` can decline them with `row_overviews_visibility=BaseTable.RowOverviewsVisibility.HIDE`.
+
 ## Excluding ViewMixins from NautobotUIViewSet
 
 For app models that do not require certain views, simply inherit directly from the `ViewMixin` classes available in `nautobot.apps.views` instead of `NautobotUIViewSet`.

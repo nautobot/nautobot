@@ -29,6 +29,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.tables import BaseTable
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -159,6 +160,33 @@ class ObjectDetailContent:
             if component.component_id == component_id:
                 return component
         return None
+
+
+def get_overview_panel(object_detail_content, context=None):
+    """Return the panel an overview is built from, or None.
+
+    Structurally, that is the first `ObjectFieldsPanel` in the left half of the main tab. Given a context, the panel
+    is returned only if its `should_render(context)` is True.
+    """
+    if object_detail_content is None:
+        return None
+
+    main_tab = next((tab for tab in object_detail_content.tabs if tab.tab_id == "main"), None)
+    if main_tab is None:
+        return None
+
+    panel = next(
+        (
+            panel
+            for panel in main_tab.panels_for_section(SectionChoices.LEFT_HALF)
+            if isinstance(panel, ObjectFieldsPanel)
+        ),
+        None,
+    )
+    if panel is not None and context is not None and not panel.should_render(context):
+        return None
+
+    return panel
 
 
 class Component:
@@ -1064,6 +1092,7 @@ class ObjectsTablePanel(Panel):
     prefetch_related_fields = ()
     related_field_name = None
     related_list_url_name = None
+    row_overviews_visibility = BaseTable.RowOverviewsVisibility.TABLE_DEFAULT
     select_related_fields = ()
     show_table_config_button = True
     tab_id = None
@@ -1105,6 +1134,9 @@ class ObjectsTablePanel(Panel):
                 (or up to `max_display_count` if provided). Defaults to True.
             show_table_config_button (bool, optional): If False, do not allow user configuration of the table.
                 Defaults to True.
+            row_overviews_visibility (BaseTable.RowOverviewsVisibility, optional): If `HIDE`, omit the per-row
+                button that expands the row to reveal the object's overview. Defaults to `TABLE_DEFAULT`, which
+                leaves the decision to the table.
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
@@ -1339,6 +1371,7 @@ class ObjectsTablePanel(Panel):
                 "hide_hierarchy_ui": self.hide_hierarchy_ui,
                 "user": request.user,
                 "configurable": self.show_table_config_button,
+                "row_overviews_visibility": self.row_overviews_visibility,
             }
             if self.extra_columns is not None:
                 table_kwargs["extra_columns"] = self.extra_columns

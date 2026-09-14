@@ -8,10 +8,14 @@ from django.test import tag
 
 from nautobot.core.models.querysets import count_related
 from nautobot.core.testing import TestCase
+from nautobot.core.ui.choices import SectionChoices
+from nautobot.core.ui.object_detail import ObjectDetailContent, ObjectFieldsPanel
+from nautobot.core.views.mixins import ObjectOverviewViewMixin
 from nautobot.core.views.utils import (
     check_filter_for_display,
     get_bulk_queryset_from_view,
     get_saved_views_for_user,
+    has_overview,
     prepare_cloned_fields,
 )
 from nautobot.dcim.filters import DeviceFilterSet
@@ -614,3 +618,69 @@ class GetBulkQuerysetFromViewScopingTestCase(TestCase):
                 action="delete",
             )
         self.assertQuerySetEqual(qs, self.visible, ordered=False)
+
+
+class HasOverviewTestCase(TestCase):
+    """Class to test `has_overview` deciding whether a model's view can produce an overview."""
+
+    class FakeViewWithoutOverviewMixin:
+        object_detail_content = ObjectDetailContent(
+            panels=[ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__")]
+        )
+
+    class FakeOverviewViewSet(ObjectOverviewViewMixin):
+        object_detail_content = ObjectDetailContent(
+            panels=[ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__")]
+        )
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch("nautobot.core.views.utils.get_view_for_model", return_value=self.FakeOverviewViewSet)
+        self.mock_get_view_for_model = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_view_without_overview_mixin(self):
+        """A view that does not inherit from `ObjectOverviewViewMixin` has no overview."""
+        self.mock_get_view_for_model.return_value = self.FakeViewWithoutOverviewMixin
+        self.assertFalse(has_overview(Location))
+
+    def test_object_fields_panel_in_main_tab_left_half(self):
+        """The first `ObjectFieldsPanel` in the left half of the main tab is enough for an overview."""
+        self.assertTrue(has_overview(Location))
+
+    def test_object_fields_panel_outside_main_tab_left_half(self):
+        """The first `ObjectFieldsPanel` elsewhere, not in the left half of the main tab, does not count."""
+        object_detail_content = ObjectDetailContent(
+            panels=[ObjectFieldsPanel(section=SectionChoices.RIGHT_HALF, weight=100, fields="__all__")]
+        )
+        with mock.patch.object(self.FakeOverviewViewSet, "object_detail_content", object_detail_content):
+            self.assertFalse(has_overview(Location))
+
+    def test_main_tab_missing(self):
+        """Detail content without a main tab has no panel to build an overview from."""
+        object_detail_content = ObjectDetailContent(
+            panels=[ObjectFieldsPanel(section=SectionChoices.LEFT_HALF, weight=100, fields="__all__")]
+        )
+        object_detail_content.tabs = [tab for tab in object_detail_content.tabs if tab.tab_id != "main"]
+        with mock.patch.object(self.FakeOverviewViewSet, "object_detail_content", object_detail_content):
+            self.assertFalse(has_overview(Location))
+
+    def test_overview_options_set(self):
+        """Any of the explicit overview options short circuits the panel lookup."""
+        for attribute, value in (
+            ("overview_fields", {"name": {"key_transform": "Label"}}),
+            ("overview_html", "<b>{{ object.name }}</b>"),
+            ("overview_template_name", "components/htmx/overview.html"),
+        ):
+            with self.subTest(attribute=attribute), mock.patch.object(self.FakeOverviewViewSet, attribute, value):
+                self.assertTrue(has_overview(Location))
+
+    def test_overview_options_set_to_empty_value(self):
+        """An explicit but empty overview option opts the view out of overviews."""
+        for attribute, value in (
+            ("overview_fields", {}),
+            ("overview_html", ""),
+            ("overview_template_name", ""),
+        ):
+            with self.subTest(attribute=attribute), mock.patch.object(self.FakeOverviewViewSet, attribute, value):
+                self.assertFalse(has_overview(Location))
