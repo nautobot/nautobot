@@ -1,4 +1,5 @@
 import contextlib
+from enum import Enum
 import itertools
 import logging
 
@@ -42,6 +43,19 @@ class BaseTable(django_tables2.Table):
     Default table for object lists.
     """
 
+    class RowOverviewsVisibility(Enum):
+        """Whether a table renders the per-row button that expands the row to reveal the object's overview.
+
+        Attributes:
+            HIDE (str): Never render the button (value: "hide").
+            SHOW (str): Always render the button (value: "show").
+            TABLE_DEFAULT (str): Leave the decision to the table's `Meta.show_row_overviews` (value: "table_default").
+        """
+
+        HIDE = "hide"
+        SHOW = "show"
+        TABLE_DEFAULT = "table_default"
+
     class Meta:
         attrs = {
             "class": "table table-hover nb-table-headings",
@@ -62,7 +76,7 @@ class BaseTable(django_tables2.Table):
         data_transform_callback=None,
         configurable=False,
         is_object_embedded_search_results=False,
-        show_row_overviews=False,
+        row_overviews_visibility=RowOverviewsVisibility.HIDE,
         **kwargs,
     ):
         """
@@ -85,9 +99,10 @@ class BaseTable(django_tables2.Table):
                 `is_object_embedded_search_results` is set to `True`.
             is_object_embedded_search_results (bool): When set to `True` disable table configuration and sorting, render
                 columns unaffected by any user configuration, with static order and visibility.
-            show_row_overviews (bool): Include a per-row button that expands the row to reveal the object's overview.
-                Defaults to `False`, opting out regardless of `Meta`. Pass `None` to defer to the table's
-                `Meta.show_row_overviews`, which tables that expand their rows to children instead set to `False`.
+            row_overviews_visibility (RowOverviewsVisibility): Whether to include a per-row button that expands the
+                row to reveal the object's overview. Defaults to `HIDE`, opting out regardless of `Meta`. Pass
+                `TABLE_DEFAULT` to defer to the table's `Meta.show_row_overviews`, which tables that expand their
+                rows to children instead set to `False`.
             **kwargs (dict, optional): Passed through to django_tables2.Table
         Warning:
             Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
@@ -151,11 +166,10 @@ class BaseTable(django_tables2.Table):
         self.configurable = configurable
         self.is_object_embedded_search_results = is_object_embedded_search_results
 
-        # `show_row_overviews` is `False` by default to prevent unexpected overview buttons. If explicitly set to
-        # `None`, however, e.g. in `NautobotHTMLRenderer.construct_table`, it defers to the table setting, which
-        # defaults to `True`.
-        if show_row_overviews is None:
+        if row_overviews_visibility is self.RowOverviewsVisibility.TABLE_DEFAULT:
             show_row_overviews = getattr(self.Meta, "show_row_overviews", True)
+        else:
+            show_row_overviews = row_overviews_visibility is self.RowOverviewsVisibility.SHOW
 
         from nautobot.core.views.utils import has_overview  # Avoid circular import through nautobot.extras.tables
 

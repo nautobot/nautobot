@@ -165,7 +165,7 @@ Both the HTML string and the template file are rendered with the object's page c
 
 ### Expanding Table Rows
 
-Tables of a model whose view provides an overview render an expand button on every row, revealing that object's overview in place. A table that already expands its rows for another purpose, such as revealing child objects, declares `show_row_overviews = False` in its `Meta`, and an individual `ObjectsTablePanel` can decline them with `show_row_overviews=False`.
+Tables of a model whose view provides an overview render an expand button on every row, revealing that object's overview in place. A table that already expands its rows for another purpose, such as revealing child objects, declares `show_row_overviews = False` in its `Meta`, and an individual `ObjectsTablePanel` can decline them with `row_overviews_visibility=BaseTable.RowOverviewsVisibility.HIDE`.
 
 ## Excluding ViewMixins from NautobotUIViewSet
 

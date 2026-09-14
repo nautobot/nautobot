@@ -318,60 +318,68 @@ class BaseTableOverviewColumnTestCase(TestCase):
         self.assertFalse(self.OptedOutOverviewTable.Meta.show_row_overviews)
 
     def test_argument_omitted(self):
-        """Omitting the `show_row_overviews` argument leaves the column out."""
+        """Omitting the `row_overviews_visibility` argument leaves the column out."""
         table = self.OverviewTable(RIR.objects.none())
         self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
 
-    def test_argument_true(self):
-        """`show_row_overviews=True` adds the column before the content columns."""
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True)
+    def test_argument_show(self):
+        """`RowOverviewsVisibility.SHOW` adds the column before the content columns."""
+        table = self.OverviewTable(RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW)
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
-    def test_argument_none_defers_to_meta(self):
-        """`show_row_overviews=None` defers to `Meta`, which opts in by default."""
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=None)
+    def test_argument_table_default_defers_to_meta(self):
+        """`RowOverviewsVisibility.TABLE_DEFAULT` defers to `Meta`, which opts in by default."""
+        table = self.OverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.TABLE_DEFAULT
+        )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
-    def test_argument_none_defers_to_meta_opting_out(self):
-        """`show_row_overviews=None` defers to `Meta`, which opts out when explicitly set to False."""
-        table = self.OptedOutOverviewTable(RIR.objects.none(), show_row_overviews=None)
+    def test_argument_table_default_defers_to_meta_opting_out(self):
+        """`RowOverviewsVisibility.TABLE_DEFAULT` defers to `Meta`, which opts out when explicitly set to False."""
+        table = self.OptedOutOverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.TABLE_DEFAULT
+        )
         self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
 
-    def test_argument_true_overrides_meta_opting_out(self):
-        """An explicit `show_row_overviews=True` overrides `Meta`, regardless of its value."""
-        table = self.OptedOutOverviewTable(RIR.objects.none(), show_row_overviews=True)
+    def test_argument_show_overrides_meta_opting_out(self):
+        """An explicit `RowOverviewsVisibility.SHOW` overrides `Meta`, regardless of its value."""
+        table = self.OptedOutOverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW
+        )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
     def test_model_without_overview(self):
         """No column is added for a model whose view cannot produce an overview."""
         self.mock_has_overview.return_value = False
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True)
+        table = self.OverviewTable(RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW)
         self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
 
     def test_object_embedded_search_results(self):
         """Object-embedded search results never get the column, whatever was requested."""
-        for show_row_overviews in (True, None):
-            with self.subTest(show_row_overviews=show_row_overviews):
+        for visibility in (BaseTable.RowOverviewsVisibility.SHOW, BaseTable.RowOverviewsVisibility.TABLE_DEFAULT):
+            with self.subTest(row_overviews_visibility=visibility):
                 table = self.OverviewTable(
                     RIR.objects.none(),
-                    show_row_overviews=show_row_overviews,
+                    row_overviews_visibility=visibility,
                     is_object_embedded_search_results=True,
                 )
                 self.assertEqual(table.visible_columns, ["name", "is_private"])
 
     def test_placed_after_visible_pk_column(self):
         """A visible `pk` column precedes the overview column and widens the colspan offset."""
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True)
+        table = self.OverviewTable(RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW)
         table.columns.show("pk")
         self.assertEqual(table.visible_columns, ["pk", "overview", "name", "is_private", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 2, "colspan_content": 3})
 
     def test_placed_first_without_pk_column(self):
         """The column comes first on a table with no `pk` column."""
-        table = self.OverviewTableWithoutPk(RIR.objects.none(), show_row_overviews=True)
+        table = self.OverviewTableWithoutPk(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW
+        )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 2})
 
@@ -379,25 +387,35 @@ class BaseTableOverviewColumnTestCase(TestCase):
         """A user's saved column configuration reorders content columns without displacing the overview column."""
         user = User.objects.create_user(username="overview-column")
         user.set_config("tables.OverviewTable.columns", ["is_private", "name"], commit=True)
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True, user=user)
+        table = self.OverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW, user=user
+        )
         self.assertEqual(table.visible_columns, ["overview", "is_private", "name", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
     def test_extra_columns(self):
         """`extra_columns` count toward the content colspan."""
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True, extra_columns=[("extra", Column())])
+        table = self.OverviewTable(
+            RIR.objects.none(),
+            row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW,
+            extra_columns=[("extra", Column())],
+        )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "extra", "actions"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 4})
 
     def test_excluded_from_configurable_columns(self):
         """The column is not offered among the user-configurable columns."""
-        table = self.OverviewTable(RIR.objects.none(), show_row_overviews=True, configurable=True)
+        table = self.OverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW, configurable=True
+        )
         self.assertNotIn("overview", [name for name, _ in table.configurable_columns])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
     def test_configurable_table_without_actions_column(self):
         """A configurable table with no `actions` column spans the extra config button cell."""
-        table = self.OverviewTableWithoutPk(RIR.objects.none(), show_row_overviews=True, configurable=True)
+        table = self.OverviewTableWithoutPk(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW, configurable=True
+        )
         self.assertEqual(table.visible_columns, ["overview", "name", "is_private"])
         self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
 
