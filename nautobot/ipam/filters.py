@@ -60,10 +60,13 @@ __all__ = (
 )
 
 
-class MultiValuePrefixFilter(MultiValueCharFilter):
-    """Validate literal prefixes and Prefix UUIDs before constructing queries."""
+class MultiValueIPNetworkFilter(MultiValueCharFilter):
+    """Supply network strings to filter methods, resolving Prefix UUIDs to network values.
 
-    field_class = formfields.MultiValuePrefixFormField
+    Literal networks need not exist in the database. Use PrefixFilter to select related Prefix objects instead.
+    """
+
+    field_class = formfields.MultiValueIPNetworkFormField
 
 
 class NamespaceFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
@@ -223,24 +226,24 @@ class PrefixFilterSet(
     RoleModelFilterSetMixin,
 ):
     parent = PrefixFilter()
-    prefix = MultiValuePrefixFilter(
+    prefix = MultiValueIPNetworkFilter(
         method="filter_prefix",
         label="Prefix",
     )
-    prefix_exact = MultiValuePrefixFilter(
+    prefix_exact = MultiValueIPNetworkFilter(
         method="filter_prefix",
         strict=True,
         label="Prefix (exact, strict)",
     )
-    within = MultiValuePrefixFilter(
+    within = MultiValueIPNetworkFilter(
         method="search_within",
         label="Within prefix",
     )
-    within_include = MultiValuePrefixFilter(
+    within_include = MultiValueIPNetworkFilter(
         method="search_within_include",
         label="Within and including prefix",
     )
-    contains = MultiValuePrefixFilter(
+    contains = MultiValueIPNetworkFilter(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
@@ -434,11 +437,11 @@ class IPAddressFilterSet(
         queryset=Prefix.objects.all(),
         label="Parent prefix",
     )
-    prefix = MultiValuePrefixFilter(
+    prefix = MultiValueIPNetworkFilter(
         method="search_by_prefix",
         label="Contained in prefix",
     )
-    prefix_exact = MultiValuePrefixFilter(
+    prefix_exact = MultiValueIPNetworkFilter(
         method="search_by_prefix",
         strict=True,
         require_mask=True,
