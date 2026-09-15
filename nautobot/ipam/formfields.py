@@ -64,8 +64,11 @@ class IPNetworkFormField(forms.Field):
             raise ValidationError("Please specify a valid IPv4 or IPv6 address.")
 
 
-class MultiValuePrefixFormField(MultiValueCharField):
-    """Validate literal prefixes and resolve Prefix UUIDs during filter form cleaning."""
+class MultiValueIPNetworkFormField(MultiValueCharField):
+    """Validate network strings and resolve Prefix UUIDs during filter form cleaning.
+
+    Return strings for network comparisons, without requiring literal networks to match stored Prefix objects.
+    """
 
     def __init__(self, *args, strict=False, require_mask=False, **kwargs):
         self.strict = strict
