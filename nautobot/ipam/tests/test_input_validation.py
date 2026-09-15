@@ -13,7 +13,7 @@ import netaddr
 from rest_framework.test import APIClient
 
 from nautobot.extras.models import Status
-from nautobot.ipam.filters import MultiValuePrefixFilter
+from nautobot.ipam.filters import MultiValueIPNetworkFilter
 from nautobot.ipam.models import IPAddress, Namespace, Prefix
 
 
@@ -76,6 +76,20 @@ class IPAMInputValidationTests(TestCase):
                 self.assertEqual(response.status_code, 200, response.content)
                 self.assertEqual({obj["id"] for obj in response.data["results"]}, {str(pk) for pk in expected})
 
+    def test_network_filter_accepts_unstored_literal(self):
+        network = "192.0.2.128/25"
+        self.assertFalse(Prefix.objects.net_equals(network).exists())
+        response = self.client.get(reverse("ipam-api:prefix-list"), {"contains": network})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual([obj["id"] for obj in response.data["results"]], [str(self.prefix.pk)])
+
+    def test_network_filter_combines_uuid_and_unstored_literal(self):
+        network = "2001:db8::/65"
+        self.assertFalse(Prefix.objects.net_equals(network).exists())
+        response = self.client.get(reverse("ipam-api:prefix-list"), {"contains": [str(self.prefix.pk), network]})
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual({obj["id"] for obj in response.data["results"]}, {str(self.prefix.pk), str(self.prefix6.pk)})
+
     def test_ip_prefix_filter_preserves_literal_and_uuid_matches(self):
         for value in ("192.0.2.0/24", str(self.prefix.pk), " 192.0.2.0/24 "):
             with self.subTest(value=value):
@@ -85,7 +99,7 @@ class IPAMInputValidationTests(TestCase):
 
     def test_prefix_field_preserves_widget_and_query_cost(self):
         class FilterForm(forms.Form):
-            prefix = MultiValuePrefixFilter().field
+            prefix = MultiValueIPNetworkFilter().field
 
         with self.assertNumQueries(0):
             self.assertEqual(FilterForm.base_fields["prefix"].clean(["192.0.2.0/24", "  "]), ["192.0.2.0/24"])
