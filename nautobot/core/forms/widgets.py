@@ -438,7 +438,8 @@ class ExportFieldSelect(SelectMultipleOrderable):
         )
         checkbox = format_html(
             '<div class="form-check flex-grow-1 my-0">'
-            '<input class="form-check-input my-6" id="{wid}_option_{value}" name="{name}" type="checkbox" value="{value}"{checked}>'
+            '<input class="form-check-input my-6{natural_key}" id="{wid}_option_{value}" name="{name}" '
+            'type="checkbox" value="{value}"{checked}>'
             '<label class="form-check-label py-6{pe}" for="{wid}_option_{value}">{label}{badge}</label>'
             "</div>",
             wid=widget_id,
@@ -448,6 +449,10 @@ class ExportFieldSelect(SelectMultipleOrderable):
             pe="" if is_root else " pe-20",
             label=option["label"],
             badge=self._natural_key_marker(value),
+            # Checking a relation asks for the columns that identify it, not for everything listed under
+            # it, so it is ticked with a key rather than a check -- see `nb-export-natural-key` in the
+            # stylesheet. The tree offers no "everything under this" selection for the usual mark to mean.
+            natural_key=" nb-export-natural-key" if value in self.relation_paths else "",
         )
         caret = (
             format_html(
