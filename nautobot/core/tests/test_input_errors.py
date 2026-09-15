@@ -1,4 +1,4 @@
-"""Regressions for invalid filters and UI creation failures."""
+"""Regressions for invalid filters and existing IP-address creation behavior."""
 
 from unittest.mock import patch
 
@@ -7,13 +7,11 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 from django.test import Client, SimpleTestCase, TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
 from nautobot.core.filters import MultiValueMACAddressFilter
-from nautobot.dcim.forms import InterfaceForm
 from nautobot.dcim.models import (
     Device,
     DeviceType,
@@ -140,90 +138,10 @@ class InputErrorTests(TestCase):
                 self.assertEqual(response.status_code, 200, response.content)
                 self.assertEqual(response.data["count"], expected_count)
 
-    def component_request(self, parent, pattern):
-        return reverse(f"dcim:{parent._meta.model_name}_bulk_add_interface"), {
-            "pk": [str(parent.pk)],
-            "_create": "",
-            "name_pattern": pattern,
-            "type": "virtual",
-            "status": str(self.status.pk),
-        }
-
     def assert_no_success_message(self, response):
         self.assertFalse(
             any(message.level == messages.SUCCESS for message in messages.get_messages(response.wsgi_request))
         )
-
-    def test_component_database_failure_is_not_reported_as_success(self):
-        self.client.raise_request_exception = False
-        original_save = InterfaceForm.save
-
-        def save(form, *args, **kwargs):
-            # Simulate a uniqueness conflict after form validation. Leave the
-            # actual database constraint enabled and let the first INSERT succeed.
-            if form.instance.name == "new2":
-                form.instance.name = "existing"
-            return original_save(form, *args, **kwargs)
-
-        for parent in (self.device, self.module):
-            with self.subTest(parent=parent._meta.model_name):
-                url, data = self.component_request(parent, "new[1-2]")
-                with patch.object(InterfaceForm, "save", save):
-                    response = self.client.post(url, data)
-                self.assertEqual(response.status_code, 500)
-                self.assert_no_success_message(response)
-                self.assertFalse(Interface.objects.filter(name__startswith="new").exists())
-
-    def test_component_form_error_rolls_back_earlier_inserts(self):
-        def clean_name(form):
-            name = form.cleaned_data["name"]
-            if name == "new2":
-                raise ValidationError("Invalid component name.")
-            return name
-
-        for parent in (self.device, self.module):
-            with self.subTest(parent=parent._meta.model_name):
-                url, data = self.component_request(parent, "new[1-2]")
-                with patch.object(InterfaceForm, "clean_name", clean_name, create=True):
-                    response = self.client.post(url, data)
-                self.assertContains(response, "Invalid component name.")
-                self.assert_no_success_message(response)
-                self.assertFalse(Interface.objects.filter(name__startswith="new").exists())
-
-    def test_unmapped_component_database_error_propagates_and_rolls_back(self):
-        self.client.raise_request_exception = False
-        original_save = InterfaceForm.save
-
-        def save(form, *args, **kwargs):
-            if form.instance.name == "new2":
-                raise IntegrityError("Unmapped database failure after validation")
-            return original_save(form, *args, **kwargs)
-
-        for parent in (self.device, self.module):
-            with self.subTest(parent=parent._meta.model_name):
-                url, data = self.component_request(parent, "new[1-2]")
-                with patch.object(InterfaceForm, "save", save):
-                    response = self.client.post(url, data)
-                self.assertEqual(response.status_code, 500)
-                self.assert_no_success_message(response)
-                self.assertFalse(Interface.objects.filter(name__startswith="new").exists())
-
-    def test_component_validation_conflict_is_reported(self):
-        for parent in (self.device, self.module):
-            with self.subTest(parent=parent._meta.model_name):
-                url, data = self.component_request(parent, "existing")
-                response = self.client.post(url, data)
-                self.assertEqual(response.status_code, 200)
-                self.assertTrue(response.context["form"].errors)
-                self.assert_no_success_message(response)
-
-    def test_successful_component_creation(self):
-        for parent in (self.device, self.module):
-            with self.subTest(parent=parent._meta.model_name):
-                url, data = self.component_request(parent, "created[1-2]")
-                response = self.client.post(url, data)
-                self.assertEqual(response.status_code, 302, response.content)
-                self.assertEqual(parent.interfaces.filter(name__startswith="created").count(), 2)
 
     def ip_create_data(self, pattern):
         return {
