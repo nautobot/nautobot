@@ -1,3 +1,4 @@
+from enum import Enum
 from itertools import count, groupby
 import json
 import logging
@@ -8,7 +9,7 @@ from django.apps import apps
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
-from django.db.models import DateField, Field, FileField, TimeField
+from django.db.models import DateField, DateTimeField, Field, FileField, TimeField
 from django.utils.tree import Node
 import emoji
 from slugify import slugify
@@ -213,11 +214,23 @@ def serialize_object_v2(obj):
     return data
 
 
+class ChangeVerdict(Enum):
+    """Outcome of comparing a save against the row the database currently holds.
+
+    `INDETERMINATE` means no verdict was possible; the caller must then treat the save as a change, since
+    dropping a real change record is worse than writing a redundant one.
+    """
+
+    UNCHANGED = "unchanged"
+    CHANGED = "changed"
+    INDETERMINATE = "indeterminate"
+
+
 def changelog_comparable_fields(instance, update_fields=None):
     """
     Return the concrete fields of `instance` worth comparing to decide whether a save changed anything.
 
-    Skips fields that cannot change on an update (primary keys, parent links, database-generated fields)
+    Skips fields that cannot change on an update (primary keys, database-generated fields)
     and `auto_now` fields, which change on every save. `auto_now_add` fields stay in, since an update
     writes whatever the instance holds. Honors `update_fields` when Django passes it.
 
@@ -226,44 +239,52 @@ def changelog_comparable_fields(instance, update_fields=None):
         update_fields (iterable, optional): Field names or attnames this save is restricted to.
 
     Returns:
-        (list | None): The fields to compare; empty if the save writes nothing a reader would see. None if
-            no reliable comparison is possible, which the caller must treat as "something changed".
+        (list[Field] | ChangeVerdict): The fields to compare; empty if the save writes nothing a reader
+            would see. `ChangeVerdict.INDETERMINATE` if no reliable comparison is possible.
     """
     fields = []
-    restrict_to = set(update_fields) if update_fields is not None else None
+    if update_fields is not None:
+        update_fields = set(update_fields)
     for field in instance._meta.concrete_fields:
-        if field.primary_key or getattr(field.remote_field, "parent_link", False):
+        if field.primary_key:
             continue
         if getattr(field, "generated", False):
             continue
         # By attribute rather than by name, so an App's own auto_now field is covered too.
         if getattr(field, "auto_now", False):
             continue
-        if restrict_to is not None and field.name not in restrict_to and field.attname not in restrict_to:
-            continue
-        if restrict_to is not None and _value_comes_from_pre_save(field):
-            return None
+        if update_fields is not None:
+            if field.name not in update_fields and field.attname not in update_fields:
+                continue
+            if _has_unpredictable_pre_save(field):
+                return ChangeVerdict.INDETERMINATE
         fields.append(field)
     return fields
 
 
-def _value_comes_from_pre_save(field):
+# Every `pre_save()` implementation whose outcome we know: Django's base, plus the date, time and file
+# overrides that are handled elsewhere. Compared by implementation rather than by field type, so that a
+# subclass introducing its own `pre_save` is caught rather than inheriting its parent's free pass.
+_PREDICTABLE_PRE_SAVE = frozenset(
+    {Field.pre_save, DateField.pre_save, DateTimeField.pre_save, TimeField.pre_save, FileField.pre_save}
+)
+
+
+def _has_unpredictable_pre_save(field):
     """
-    Whether this field's stored value is computed in `Field.pre_save()` instead of read off the instance.
+    Whether this field's class overrides `Field.pre_save()` in a way whose result we cannot predict.
 
     Date, time and file fields override `pre_save` predictably and are handled elsewhere, so they do not count.
 
     Returns:
-        (bool): True if the field's class overrides `pre_save` in a way we cannot predict.
+        (bool): True if the value this field will store cannot be read off the instance beforehand.
     """
-    if isinstance(field, (DateField, TimeField, FileField)):
-        return False
-    return type(field).pre_save is not Field.pre_save
+    return type(field).pre_save not in _PREDICTABLE_PRE_SAVE
 
 
-def changelog_values_unchanged(instance, stored_instance, fields, connection):
+def changelog_values_verdict(instance, stored_instance, fields, connection):
     """
-    Whether `instance` holds the same values as `stored_instance` for every field in `fields`.
+    Compare `instance` against `stored_instance` for every field in `fields`.
 
     Args:
         instance (Model): The instance being saved.
@@ -272,21 +293,20 @@ def changelog_values_unchanged(instance, stored_instance, fields, connection):
         connection: The database connection the save is going to, used to prepare values.
 
     Returns:
-        (bool | None): True if nothing changed, False if something did, None if it cannot be told. The
-            caller must then assume a change, since dropping a real change record is worse than a
-            redundant one.
+        (ChangeVerdict): `UNCHANGED` if every value matches, `CHANGED` if one differs, `INDETERMINATE` if
+            it cannot be told.
     """
     for field in fields:
         # Read through `__dict__` rather than the descriptor, which would issue a query for a deferred
         # field and defeat the point. A field missing on either side is simply not knowable.
         if field.attname not in instance.__dict__ or field.attname not in stored_instance.__dict__:
-            return None
+            return ChangeVerdict.INDETERMINATE
         new_value = instance.__dict__[field.attname]
         old_value = stored_instance.__dict__[field.attname]
 
         # Learning an uncommitted file's stored name means calling `pre_save`, which uploads it.
-        if getattr(new_value, "_committed", True) is False:
-            return False
+        if isinstance(field, FileField) and getattr(new_value, "_committed", True) is False:
+            return ChangeVerdict.CHANGED
 
         # `==` tolerates what the database normalizes (JSON key order, Decimal precision); preparing the
         # values catches the reverse, an unnormalized value assigned in memory (a string date, a string UUID).
@@ -300,10 +320,10 @@ def changelog_values_unchanged(instance, stored_instance, fields, connection):
             logger.debug(
                 "Could not compare %s.%s, assuming it changed", instance._meta.label, field.name, exc_info=True
             )
-            return None
-        return False
+            return ChangeVerdict.INDETERMINATE
+        return ChangeVerdict.CHANGED
 
-    return True
+    return ChangeVerdict.UNCHANGED
 
 
 def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):

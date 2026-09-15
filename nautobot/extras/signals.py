@@ -23,7 +23,7 @@ import redis.exceptions
 from nautobot.core.branching import BranchContext
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
-from nautobot.core.models.utils import changelog_comparable_fields, changelog_values_unchanged
+from nautobot.core.models.utils import changelog_comparable_fields, changelog_values_verdict, ChangeVerdict
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
 from nautobot.extras.change_consumers import invalidate_change_consumers_cache
@@ -265,8 +265,8 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, using=None, upd
     Fires before an object is created or updated.
 
     Reads the stored row once and puts it to two uses: recording whether this save changes anything (which
-    `_handle_changed_object` acts on), and caching the object's prior state so that an object updated for
-    the first time still has a "before" to diff against.
+    `_handle_changed_object` acts on), and caching the object's prior state so that an object with no
+    `ObjectChange` record yet still has a "before" to diff against.
     """
     if raw:
         return
@@ -319,7 +319,7 @@ def _record_unchanged_verdict(instance, stored_instance, using=None, update_fiel
         return
 
     fields = changelog_comparable_fields(instance, update_fields=update_fields)
-    if fields is None:
+    if fields is ChangeVerdict.INDETERMINATE:
         logger.debug(
             "Change detection for %s %s is indeterminate (update_fields %s restricts the save to a field "
             "derived in pre_save). Recording the change",
@@ -334,14 +334,14 @@ def _record_unchanged_verdict(instance, stored_instance, using=None, update_fiel
         return
 
     connection = connections[using or DEFAULT_DB_ALIAS]
-    verdict = changelog_values_unchanged(instance, stored_instance, fields, connection)
-    if verdict is None:
+    verdict = changelog_values_verdict(instance, stored_instance, fields, connection)
+    if verdict is ChangeVerdict.INDETERMINATE:
         logger.debug(
             "Change detection for %s %s is indeterminate (a field could not be compared). Recording the change",
             instance._meta.label,
             instance.pk,
         )
-    instance._change_logging_unchanged = verdict is True
+    instance._change_logging_unchanged = verdict is ChangeVerdict.UNCHANGED
 
 
 @receiver(post_save, sender=GitRepository)

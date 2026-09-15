@@ -1037,6 +1037,10 @@ class ChangeLogUnchangedSaveTest(TestCase):
             self.location.save()
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
         self.assertEqual(Location.objects.get(pk=self.location.pk).description, "initial")
+        # The record must show the value the save actually put back, not the one it displaced.
+        oc = get_changes_for_model(self.location).first()
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(oc.object_data_v2["description"], "initial")
 
     def test_m2m_change_is_recorded(self):
         """An m2m addition moves none of the instance's own fields, yet is a change."""
