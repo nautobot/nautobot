@@ -7,4 +7,3 @@ Fixed prefix filters returning server errors or silently ignoring malformed inpu
 Fixed available-prefix and available-IP actions failing on invalid request entries, prefix lengths, or address ranges.
 Fixed zero and negative limits enumerating all available IP addresses. Zero uses the configured maximum when positive; otherwise zero and negative limits use a finite default count. Malformed limits retain their default fallback.
 Fixed malformed regular-expression filters returning server errors instead of filter validation errors in API and web requests.
-Fixed bulk component creation reporting success after a database error and committing earlier components when a later component failed form validation. Device and module component creation now roll back the complete batch on failure. Database errors propagate to normal error handling.
