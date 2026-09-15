@@ -1862,14 +1862,14 @@ doc = ["Sphinx", "sphinx-rtd-theme", "sphinxcontrib-spelling"]
 
 [[package]]
 name = "faker"
-version = "40.38.0"
+version = "40.39.0"
 description = "Faker is a Python package that generates fake data for you."
 optional = false
 python-versions = ">=3.10"
 groups = ["dev"]
 files = [
-    {file = "faker-40.38.0-py3-none-any.whl", hash = "sha256:69927515d61759c8a257540b8a91891cd622ba1c24a386b62a0a777e44ba46a9"},
-    {file = "faker-40.38.0.tar.gz", hash = "sha256:72e421098664edf38478f4269a5d5a539337de5da18883ce67cb1e6bb96b0b3a"},
+    {file = "faker-40.39.0-py3-none-any.whl", hash = "sha256:c4c7ec2cddfaf602c5a8a2c960614946aa8c161250bd9d49a8846cd24d1ef028"},
+    {file = "faker-40.39.0.tar.gz", hash = "sha256:52799ad96fcf92aab2fc96a9e03869bbf1a634300f7cd91c38dbfd51f639f6fa"},
 ]
 
 [package.dependencies]
@@ -3650,15 +3650,15 @@ files = [
 
 [[package]]
 name = "ntc-templates"
-version = "9.2.0"
+version = "9.3.0"
 description = "TextFSM Templates for Network Devices, and Python wrapper for TextFSM's CliTable."
 optional = true
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "extra == \"all\" or extra == \"napalm\""
 files = [
-    {file = "ntc_templates-9.2.0-py3-none-any.whl", hash = "sha256:b94ea1221e6814e65bd5233ad6b4060e5e6ef1f6c7efec54dbae68592c0c86bd"},
-    {file = "ntc_templates-9.2.0.tar.gz", hash = "sha256:79fef745d12b6dbdc1f7c00665327790adc91fd981199b0a9adb04f4b365cd97"},
+    {file = "ntc_templates-9.3.0-py3-none-any.whl", hash = "sha256:ad607a137e68e302de041ed0e9973fa3f192d32ed44a0092219886f557be814f"},
+    {file = "ntc_templates-9.3.0.tar.gz", hash = "sha256:2045d20839b5892152637b7c22893923c9a57b6c3e92771fc976f473d0fb05e3"},
 ]
 
 [package.dependencies]
@@ -5169,14 +5169,14 @@ typing-extensions = ">=4.15.0"
 
 [[package]]
 name = "pymdown-extensions"
-version = "11.0.2"
+version = "12.0"
 description = "Extension pack for Python Markdown."
 optional = false
 python-versions = ">=3.10"
 groups = ["docs"]
 files = [
-    {file = "pymdown_extensions-11.0.2-py3-none-any.whl", hash = "sha256:259910762019732caa1dfd76f3faa62c59f191d46573e80bcb1d13c0f675bbe5"},
-    {file = "pymdown_extensions-11.0.2.tar.gz", hash = "sha256:9506fcbe66fa355a775b768084334238dd6805020ac4b92bea0c0dda6f8f223d"},
+    {file = "pymdown_extensions-12.0-py3-none-any.whl", hash = "sha256:ae9ee9bfd1c1e3d291d6f6ff1883a7ef388594905e80c0c714b9c596fd8a5cb7"},
+    {file = "pymdown_extensions-12.0.tar.gz", hash = "sha256:d00b32be02715676bfec9183371928d1db44e1cd58dbeb76c7f27d9f72682039"},
 ]
 
 [package.dependencies]
@@ -6773,15 +6773,15 @@ full = ["cerberus (==1.3.*) ; python_version >= \"3.9\"", "deepdiff (==8.6.*) ; 
 
 [[package]]
 name = "ttp-templates"
-version = "0.6.4"
+version = "0.6.5"
 description = "Template Text Parser Templates collections"
 optional = true
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 markers = "extra == \"all\" or extra == \"napalm\""
 files = [
-    {file = "ttp_templates-0.6.4-py3-none-any.whl", hash = "sha256:dfef6f532a81bd6325ab2e382ea777cb9c84b97f5ee5b60c99b4eb6c4c78efe2"},
-    {file = "ttp_templates-0.6.4.tar.gz", hash = "sha256:a615d740263618376488877bdfbd4a4c8b53d33c5738bd21187ccd384e3cf744"},
+    {file = "ttp_templates-0.6.5-py3-none-any.whl", hash = "sha256:6e9987b0ba4a3ef715d7804fe9a9f5880ff943876d06c0670d6760bdf4787f10"},
+    {file = "ttp_templates-0.6.5.tar.gz", hash = "sha256:4cdb86fe277218dd0bb102240bcfee61a2ce518178e6c1b7fe0d2bfa6ff75d95"},
 ]
 
 [package.dependencies]
