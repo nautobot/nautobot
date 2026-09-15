@@ -91,6 +91,7 @@ markdown_extensions:
       admonition_tag: "???"
   - "admonition"
   - "toc":
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
       permalink: true
   - "attr_list"
   - "markdown_data_tables":

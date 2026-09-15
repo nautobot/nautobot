@@ -1,1 +1,0 @@
-Updated development npm dependency `js-yaml` to `4.3.2` to mitigate CVE-2026-84375.

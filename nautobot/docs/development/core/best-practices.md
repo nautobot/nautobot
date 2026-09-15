@@ -221,7 +221,7 @@ class Rack(...):
 ```
 
 !!! tip
-    Before selecting `PROTECT`, ask: "If a user deletes the referenced object, what is the *least surprising* outcome?" If the honest answer is "delete the child row too" or "clear the reference and keep the row", use `CASCADE` or `SET_NULL`. Reach for `PROTECT` only when neither outcome is safe.
+    Before selecting `PROTECT`, ask: "If a user deletes the referenced object, what is the _least surprising_ outcome?" If the honest answer is "delete the child row too" or "clear the reference and keep the row", use `CASCADE` or `SET_NULL`. Reach for `PROTECT` only when neither outcome is safe.
 
 ## Getting URL Routes
 
