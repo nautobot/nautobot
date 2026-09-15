@@ -104,7 +104,7 @@ The base template for bulk object deletion is `generic/object_bulk_destroy.html`
 
 * `message_extra`: provides a way to add to the default message.
 
-**Note**: contrary to the deletion of a single object, this template does *not*
+**Note**: contrary to the deletion of a single object, this template does _not_
 provide a way to completely override the deletion message.
 
 ## Bulk Renaming
