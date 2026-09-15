@@ -8,16 +8,77 @@ import unittest
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import FieldDoesNotExist
 from django.db import connection
 from django.db.models import Q
 from django.db.models.deletion import PROTECT
 from django.test.utils import CaptureQueriesContext
 from tree_queries.models import TreeNodeForeignKey
 
+from nautobot.core.models.sensitive_fields import (
+    _ALL_SENSITIVE_FIELD_NAMES,
+    install_sensitive_fields,
+    RESOLVED_ATTR,
+    SensitiveFieldDescriptor,
+    WITHHELD_ATTR,
+)
 from nautobot.core.templatetags.helpers import bettertitle
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+@contextmanager
+def temporarily_sensitive_fields(model, *field_names):
+    """Declare `field_names` sensitive on `model` for the duration of the block, then restore.
+
+    Lets the sensitive-fields mechanism be exercised against an ordinary non-secret field, so that the
+    tests do not double as a recipe for reading a real credential.
+    """
+    original_declaration = model.__dict__.get("sensitive_fields")
+    original_resolved = model.__dict__.get(RESOLVED_ATTR)
+    original_withheld = model.__dict__.get(WITHHELD_ATTR)
+    original_registry = set(_ALL_SENSITIVE_FIELD_NAMES)
+    original_descriptors = {}
+    for field_name in field_names:
+        # A name that does not resolve to a concrete field has no descriptor to save or restore.
+        # Rejecting such a name is `install_sensitive_fields()`'s job, and this helper is used to test that.
+        try:
+            attname = model._meta.get_field(field_name).attname
+        except (AttributeError, FieldDoesNotExist):
+            continue
+        original_descriptors[attname] = model.__dict__.get(attname)
+
+    # Everything that mutates the model class happens inside the `try`, so that an `install` which rejects
+    # the declaration still leaves the class exactly as it was found.
+    try:
+        model.sensitive_fields = tuple(field_names)
+        for cached_attr in (RESOLVED_ATTR, WITHHELD_ATTR):
+            if cached_attr in model.__dict__:
+                delattr(model, cached_attr)
+        install_sensitive_fields(model)
+        yield
+    finally:
+        for attname, descriptor in original_descriptors.items():
+            if descriptor is None:
+                # Restore Django's own descriptor rather than deleting the attribute outright.
+                if isinstance(model.__dict__.get(attname), SensitiveFieldDescriptor):
+                    field = model._meta.get_field(attname)
+                    setattr(model, attname, field.descriptor_class(field))
+            else:
+                setattr(model, attname, descriptor)
+        if original_declaration is None:
+            del model.sensitive_fields
+        else:
+            model.sensitive_fields = original_declaration
+        for cached_attr, original in ((RESOLVED_ATTR, original_resolved), (WITHHELD_ATTR, original_withheld)):
+            if original is None:
+                if cached_attr in model.__dict__:
+                    delattr(model, cached_attr)
+            else:
+                setattr(model, cached_attr, original)
+        _ALL_SENSITIVE_FIELD_NAMES.clear()
+        _ALL_SENSITIVE_FIELD_NAMES.update(original_registry)
 
 
 def post_data(data):

@@ -20,7 +20,7 @@ from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
-from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
+from jinja2.exceptions import SecurityError, TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
 from nautobot.circuits.models import CircuitType
@@ -527,6 +527,33 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         self.evil_computed_field.template = "{{ obj.secrets_groups.first().get_secret_value('Generic', 'secret') }}"
         rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
         self.assertEqual(rendered_value, "")
+
+    def test_render_method_blocks_sandbox_escape_gadgets(self):
+        """Integration regression for GHSA-2v7j-x3g6-qj94: the sandbox-escape gadgets are blocked end to end.
+
+        Exercises the full ComputedField.render() path (not just render_jinja2), which swallows the
+        SecurityError and returns fallback_value, proving no DB contents are rendered.
+        """
+        fallback = "BLOCKED"
+        gadget_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Location),
+            key="sandbox_escape_gadget",
+            label="Sandbox Escape Gadget",
+            fallback_value=fallback,
+            weight=51,
+        )
+        for template in [
+            # QuerySet.extra() raw-SQL injection. Harmless `SELECT 1`: extra() is refused at attribute
+            # access before any SQL runs, so this asserts the block without being a drop-in exploit.
+            "{{ obj.status.content_types.all().extra(select={'zz': '(SELECT 1)'}).values('zz')[:1]|list }}",
+            # ContentType.model_class() pivot to an arbitrary model's unrestricted manager.
+            "{{ obj.status.content_types.all().first().model_class().objects.count() }}",
+            # ContentType.get_all_objects_for_this_type() pivot (bypasses the model-class guard).
+            "{{ obj.status.content_types.all().first().get_all_objects_for_this_type().count() }}",
+        ]:
+            with self.subTest(template=template):
+                gadget_field.template = template
+                self.assertEqual(gadget_field.render(context={"obj": self.location1}), fallback)
 
     def test_check_if_key_is_graphql_safe(self):
         """
@@ -1644,6 +1671,27 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
         ExportTemplate.objects.create(
             content_type=self.device_ct, name="Export Template 1", template_code="hello world"
         )
+
+    def test_render_blocks_sandbox_escape_gadgets(self):
+        """Integration regression for GHSA-2v7j-x3g6-qj94 via the ExportTemplate.render() path.
+
+        ExportTemplate injects a live `queryset` into the render context and propagates render errors
+        (unlike ComputedField, which swallows them), so a sandbox-escape gadget must raise.
+        """
+        for template_code in [
+            # QuerySet.extra() raw-SQL injection, reached directly off the injected queryset.
+            "{{ queryset.extra(select={'z': '(SELECT 1)'}) | list }}",
+            # Data-mutating manager method must be refused on the queryset path too.
+            "{{ queryset.update(name='pwned') }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                gadget_template = ExportTemplate(
+                    content_type=self.device_ct,
+                    name="Sandbox Escape Export Template",
+                    template_code=template_code,
+                )
+                with self.assertRaises(SecurityError):
+                    gadget_template.render(Device.objects.all())
 
     def test_name_contenttype_uniqueness(self):
         """

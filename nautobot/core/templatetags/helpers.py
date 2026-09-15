@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 import datetime
 from importlib import resources
 import json
@@ -13,6 +13,9 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
+from django.db.models import Model
+from django.db.models.manager import BaseManager
+from django.db.models.query import QuerySet
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.formats import date_format
@@ -21,6 +24,7 @@ from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django.utils.translation import gettext as _
 from django_jinja import library
+from jinja2.exceptions import SecurityError
 from markdown import markdown
 import yaml
 
@@ -28,6 +32,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import NAUTOBOT_STATIC_ASSETS, PAGINATE_COUNT_DEFAULT
+from nautobot.core.templating import DANGEROUS_TYPES
 from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -289,6 +294,19 @@ def render_yaml(value, syntax_highlight=True):
     return rendered_yaml
 
 
+def _meta_value_is_unsafe(value):
+    """Return True if a `_meta` attribute value must not be exposed to a sandboxed template."""
+    if isinstance(value, (BaseManager, QuerySet, *DANGEROUS_TYPES)):
+        return True
+    if isinstance(value, type) and issubclass(value, Model):
+        return True
+    if isinstance(value, Mapping):
+        return any(_meta_value_is_unsafe(key) or _meta_value_is_unsafe(item) for key, item in value.items())
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return any(_meta_value_is_unsafe(item) for item in value)
+    return False
+
+
 @library.filter()
 @register.filter()
 def meta(obj, attr):
@@ -303,7 +321,12 @@ def meta(obj, attr):
     Returns:
         (any): return the value of the attribute
     """
-    return getattr(obj._meta, attr, "")
+    value = getattr(obj._meta, attr, "")
+    # This filter is an escape hatch onto `_meta` for benign metadata (verbose_name, app_label, ...), and
+    # unlike normal attribute access it does not pass through the sandbox's is_safe_attribute checks.
+    if _meta_value_is_unsafe(value):
+        raise SecurityError(f"access to model _meta.{attr} is not allowed in templates")
+    return value
 
 
 @library.filter()

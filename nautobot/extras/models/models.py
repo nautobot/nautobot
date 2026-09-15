@@ -1036,6 +1036,7 @@ class Webhook(
         "included. Available context data includes: <code>event</code>, <code>model</code>, "
         "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
     )
+    # TODO 4.0: Should this be a Secret object instead?
     secret = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,

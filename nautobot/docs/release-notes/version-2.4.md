@@ -209,7 +209,7 @@ self.logger.info("Continuing...")
 
 #### Kubernetes Job Execution and Job Queue Data Model (Experimental)
 
-*Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future.*
+_Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future._
 
 When running in a Kubernetes (k8s) deployment, such as with Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), Nautobot now supports an alternative method of running Nautobot Jobs - instead of (or in addition to) running one or more Celery Workers as long-lived persistent pods, Nautobot can dispatch Nautobot Jobs to be executed as short-lived [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) pods.
 
@@ -281,6 +281,75 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v2.4.42 (2026-09-14)
+
+### Security in v2.4.42
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Fixed disclosure of API token keys and user password hashes to user-authored Jinja2 templates, such as those in Custom Links and Job Buttons, which are rendered against the viewing user's own context.
+- [GHSA-2v7j-x3g6-qj94](https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94) - Fixed an incomplete fix for GHSA-p99c-c9qx-34fw where the Jinja2 template sandbox still allowed a template author to execute arbitrary read queries, reach arbitrary models, and perform certain database writes via the Django ORM.
+
+### Added in v2.4.42
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added support for a `sensitive_fields` model attribute, declaring fields whose values the ORM will not return and that user-authored Jinja2 templates may not read.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added a `STRICT_SENSITIVE_FIELDS` settings variable, defaulting to `False`, controlling whether the ORM refuses to return those values.
+
+### Fixed in v2.4.42
+
+- [#9467](https://github.com/nautobot/nautobot/issues/9467) - Replaced the full-table visibility subquery in the interface-connections API with a correlated lookup to improve pagination count performance.
+
+### Housekeeping in v2.4.42
+
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Fixed missing permissions on GitHub workflows `ci_integration`, `release`, and `lock`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Removed obsolete GitHub workflows `build_dependency_image` and `build_dependency_image_conditional`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Updated GitHub workflow `lock` to use v6.0.2 of the `dessant/lock-threads` action.
+
+## v2.4.41 (2026-08-31)
+
+### Security in v2.4.41
+
+- [#9405](https://github.com/nautobot/nautobot/issues/9405) - Updated dependency `GitPython` to `~3.1.59` to mitigate multiple vulnerabilities.
+- [#9423](https://github.com/nautobot/nautobot/issues/9423) - Updated dependency `GitPython` to `~3.1.61` to mitigate multiple vulnerabilities.
+
+### Added in v2.4.41
+
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Added `SSO_SYNC_GROUPS` setting to restrict which groups are synced into Nautobot from the SSO group claim.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added a `/api/extras/saved-views/<uuid>/set-default/` REST API endpoint, allowing a user to set (`POST`) or clear (`DELETE`) their own default Saved View without requiring any Saved View permissions.
+- [#9394](https://github.com/nautobot/nautobot/issues/9394) - Added `NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS` environment variable support for the `EXTERNAL_AUTH_DEFAULT_GROUPS` setting.
+
+### Changed in v2.4.41
+
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed the REST API `owner` field on Saved Views to be read-only; it is now always set to the requesting user, matching the UI.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed the REST API `view` field on Saved Views to be settable only when creating a Saved View.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed Saved Views and Saved View Associations to be excluded when setting `EXEMPT_VIEW_PERMISSIONS` to the implicit all (`"*"`) value.
+- [#9394](https://github.com/nautobot/nautobot/issues/9394) - Changed SSO group sync to properly revoke group memberships and staff/superuser status when the group claim changes from non-empty to empty.
+
+### Deprecated in v2.4.41
+
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Deprecated the `/api/extras/user-saved-view-associations/` REST API endpoints in favor of `/api/extras/saved-views/<uuid>/set-default/`.
+
+### Fixed in v2.4.41
+
+- [#6887](https://github.com/nautobot/nautobot/issues/6887) - Fixed SSO group syncing to also read group attributes from SAML responses.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed the Saved View edit form to apply the same ownership and permission checks as the other Saved View operations.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed enforcement of the documented `extras.change_savedview` permission requirement for setting or clearing the global default Saved View.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed a server error when an invalid or unknown `saved_view` UUID was supplied as a query parameter on an object list view.
+
+### Documentation in v2.4.41
+
+- [#978](https://github.com/nautobot/nautobot/issues/978) - Added a warning to the SSO documentation that only a single SAML identity provider is supported at a time.
+- [#6834](https://github.com/nautobot/nautobot/issues/6834) - Fixed the Okta SAML documentation example to set `requestedAuthnContext` via `SOCIAL_AUTH_SAML_SECURITY_CONFIG` instead of the unsupported per-IdP `requested_authn_context`, `force_authn`, and `allow_unsolicited` keys.
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Added documentation on writing a custom SSO group sync function and using it in place of the built-in one.
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Clarified that enabling SSO group syncing replaces a user's entire set of group memberships on each login, including groups that were assigned manually.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added guidance to the permissions documentation explaining that no Saved View permissions are needed for users to make use of Saved Views, and that they should only be granted to users who manage Saved Views for other users.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added documentation of the REST API behavior for Saved Views.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Clarified in the Saved Views documentation that a non-shared Saved View is still visible to users holding the `extras.view_savedview` permission.
+- [#9388](https://github.com/nautobot/nautobot/issues/9388) - Added a section to the permissions guide clarifying how Object Metadata permissions are evaluated.
+- [#9389](https://github.com/nautobot/nautobot/issues/9389) - Added security notice for GHSA-x69f-q4wj-vx72.
+
+### Housekeeping in v2.4.41
+
+- [#9356](https://github.com/nautobot/nautobot/issues/9356) - Added `dependencies-check` action to `ci_pullrequest` workflow to verify dependency compatibility with existing open-source Nautobot Apps.
 
 ## v2.4.40 (2026-08-17)
 
@@ -1294,7 +1363,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Dependencies in v2.4.11
 
-- [#7444](https://github.com/nautobot/nautobot/issues/7444) - Updated dependency `celery` to permit versions up to 5.5.x and `kombu` to permit versions up to 5.5.x as well. Due to concern about potential impacts of the upgrade, we have *not* yet updated the minimum Celery and Kombu versions required by Nautobot. This minimum version will likely be raised in a future release; in the interim, please upgrade Celery and Kombu and verify their operation in your local environment as befits your risk tolerance.
+- [#7444](https://github.com/nautobot/nautobot/issues/7444) - Updated dependency `celery` to permit versions up to 5.5.x and `kombu` to permit versions up to 5.5.x as well. Due to concern about potential impacts of the upgrade, we have _not_ yet updated the minimum Celery and Kombu versions required by Nautobot. This minimum version will likely be raised in a future release; in the interim, please upgrade Celery and Kombu and verify their operation in your local environment as befits your risk tolerance.
 
 ### Documentation in v2.4.11
 
