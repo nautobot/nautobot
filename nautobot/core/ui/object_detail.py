@@ -977,6 +977,10 @@ class ObjectsTablePanel(Panel):
         ):
             body_content_table.columns.show("pk")
 
+        # Attach the request to the table even if it isn't paginated below, so that an `actions`
+        # ButtonsColumn can render return URLs that include the current path.
+        body_content_table.request = request
+
         more_queryset_count = 0
         if self.paginate:
             per_page = self.max_display_count if self.max_display_count is not None else get_paginate_count(request)

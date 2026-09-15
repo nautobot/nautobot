@@ -1513,6 +1513,21 @@ class ModuleTypeUIViewSet(
                 ModuleBayTemplate.objects.restrict(request.user, "view").filter(module_type=instance),
                 orderable=False,
             )
+            component_tables = (
+                consoleport_table,
+                consoleserverport_table,
+                powerport_table,
+                poweroutlet_table,
+                interface_table,
+                front_port_table,
+                rear_port_table,
+                modulebay_table,
+            )
+            # Attach the request to each table so that the `actions` ButtonsColumn can render
+            # `?return_url=<current path>?tab=<tab>` rather than a return URL missing its path.
+            for component_table in component_tables:
+                RequestConfig(request, paginate=False).configure(component_table)
+
             if request.user.has_perm("dcim.change_moduletype"):
                 consoleport_table.columns.show("pk")
                 consoleserverport_table.columns.show("pk")
