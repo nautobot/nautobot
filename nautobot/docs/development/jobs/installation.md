@@ -136,7 +136,7 @@ When the repo is synced, Nautobot loads the job class under the path:
 
 ## Installation as Part of an App
 
-Apps are full Python packages that can include models, views, static files *and* can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/index.md).
+Apps are full Python packages that can include models, views, static files _and_ can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/index.md).
 
 Key requirements:
 

@@ -266,7 +266,7 @@ This addition brings attention to SELinux, which is especially pertinent in envi
 
 ### Static Media Failure
 
-If you get a *Static Media Failure; \[...] static media file(s) failed to load.*, check the following:
+If you get a _Static Media Failure; \[...] static media file(s) failed to load._, check the following:
 
 - `nautobot-server collectstatic` was run during the most recent upgrade. This installs the most recent iteration of each static file into the static root path.
 - The HTTP service (e.g. NGINX) is configured to serve files from the `STATIC_ROOT` path.
