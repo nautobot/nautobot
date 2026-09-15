@@ -157,7 +157,7 @@ The `/default` authentication server can be used for testing, however, it should
 
 #### Okta - SAML
 
-See [Google SAML Prerequisites](#google-saml) for common setup.
+See [Google SAML Prerequisites](#google---saml) for common setup.
 
 Setup SAML in Okta
 
@@ -563,7 +563,7 @@ With those settings in place your users should be able to authenticate against A
 A group syncing function is provided and but needs to be configured. See [Group Syncing](#group-syncing).
 
 !!! note
-    You may need to set `UWSGI_BUFFER_SIZE` to something bigger than the default 4096 bytes in the UWSGI config if you are seeing errors like `invalid request block size` in your application logs (see [here](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size) for more information)
+    You may need to set `UWSGI_BUFFER_SIZE` to something bigger than the default 4096 bytes in the UWSGI config if you are seeing errors like `invalid request block size` in your application logs (see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size) for more information)
 
 ## Group Syncing
 

@@ -4,6 +4,78 @@ As a part of the Nautobot development team's commitment to security, we maintain
 
 <!-- pyml disable-num-lines 1000 proper-names -->
 
+## GHSA-2v7j-x3g6-qj94
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 14, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An incomplete fix for GHSA-p99c-c9qx-34fw leaves Nautobot's Jinja2 template sandbox escapable, allowing a low-privileged authenticated user to read any row and column in the Nautobot database, bypassing object permissions.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94">GHSA-2v7j-x3g6-qj94</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.42</li>
+        <li>&ge;3.0.0, &lt;3.2.5</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.42 (<a href="https://github.com/nautobot/nautobot/commit/85999650fce53a4c4f3806e80643f2f617cd933d">patch</a>)</li>
+        <li>3.2.5 (<a href="https://github.com/nautobot/nautobot/commit/b62ff3e71adf9fc9ca23d9a142d2e8e823ead2ea">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-8f2w-54mq-66gg
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 14, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A low-privileged authenticated user can harvest the cleartext REST API token of any other user, including a superuser, without ever holding permission on tokens, users, or secrets. The same mechanism discloses each affected user's password hash.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg">GHSA-8f2w-54mq-66gg</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.42</li>
+        <li>&ge;3.0.0, &lt;3.2.5</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.42 (<a href="https://github.com/nautobot/nautobot/commit/85999650fce53a4c4f3806e80643f2f617cd933d">patch</a>)</li>
+        <li>3.2.5 (<a href="https://github.com/nautobot/nautobot/commit/b62ff3e71adf9fc9ca23d9a142d2e8e823ead2ea">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## GHSA-x69f-q4wj-vx72
 
 <!-- pyml disable-next-line no-inline-html -->
