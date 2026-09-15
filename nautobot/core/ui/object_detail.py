@@ -1914,6 +1914,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         if fields == "__all__":
             # Derive the list of fields from the instance, skipping certain fields by default.
+            # TODO 4.0: also skip fields in the model's `sensitive_fields`?
             fields = []
             for field in instance._meta.get_fields():
                 if field.hidden or field.name.startswith("_"):

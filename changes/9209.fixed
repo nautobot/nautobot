@@ -1,1 +1,0 @@
-Fixed `NautobotHyperlinkedRelatedField` deriving `object_type` from the declaring model instead of the related model when the field is read-only.
