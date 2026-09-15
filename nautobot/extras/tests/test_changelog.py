@@ -40,7 +40,9 @@ from nautobot.extras.models import (
     Role,
     Status,
     Tag,
+    Webhook,
 )
+from nautobot.extras.signals import _reuse_loaded_relations, change_context_state
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -968,6 +970,13 @@ class ChangeLogM2MThroughTest(APITestCase):
     ):
         """Creating a through record dispatches job hooks, webhooks, and events for both side objects (#9270)."""
         ip_address = self.ip_addresses[0]
+        # Records are only dispatched when something is listening for them.
+        webhook = Webhook.objects.create(
+            name="Interface and IP address updates", type_update=True, payload_url="http://localhost/"
+        )
+        webhook.content_types.set(
+            [ContentType.objects.get_for_model(Interface), ContentType.objects.get_for_model(IPAddress)]
+        )
         with context_managers.web_request_context(self.user):
             IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
 
@@ -987,3 +996,179 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assertEqual(jobhook_changed_objects, expected_changed_objects)
         event_topics = {call.kwargs["topic"] for call in mock_publish_event.call_args_list}
         self.assertEqual(event_topics, {"nautobot.update.dcim.interface", "nautobot.update.ipam.ipaddress"})
+
+
+class ChangeLogUnchangedSaveTest(TestCase):
+    """A save that changes nothing a reader would see must not leave a change record behind."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+
+    def setUp(self):
+        super().setUp()
+        with context_managers.web_request_context(self.user):
+            self.location = Location.objects.create(
+                name="Unchanged save test",
+                location_type=self.location_type,
+                status=self.status,
+                description="initial",
+            )
+        # The create itself is always recorded.
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_unchanged_save_records_nothing(self):
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_changed_save_is_recorded(self):
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def test_update_fields_writes_nothing_visible(self):
+        with context_managers.web_request_context(self.user):
+            self.location.save(update_fields=["last_updated"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_save_reverting_a_concurrent_write_is_recorded(self):
+        """
+        The comparison is against the stored row, not the values the instance was loaded with.
+
+        Someone else moved the row after this instance was loaded; saving the instance puts the old value
+        back, which is a real edit and must be recorded.
+        """
+        Location.objects.filter(pk=self.location.pk).update(description="written by someone else")
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+        self.assertEqual(Location.objects.get(pk=self.location.pk).description, "initial")
+        # The record must show the value the save actually put back, not the one it displaced.
+        oc = get_changes_for_model(self.location).first()
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(oc.object_data_v2["description"], "initial")
+
+    def test_m2m_change_is_recorded(self):
+        """An m2m addition moves none of the instance's own fields, yet is a change."""
+        # TODO: m2m it's a different path, so it will be done in different scope
+        location_tag = Tag.objects.get_for_model(Location).first()
+        with context_managers.web_request_context(self.user):
+            self.location.tags.add(location_tag)
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def test_model_can_opt_out(self):
+        """A model whose stored value is not a pure function of its own fields opts out of the comparison."""
+        with mock.patch.object(Location, "changelog_skip_unchanged_saves", False, create=True):
+            with context_managers.web_request_context(self.user):
+                self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+
+class ChangeLogPrechangeCaptureTest(TestCase):
+    """The "before" state of an update is captured during the save, and only when someone will read it."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+
+    def setUp(self):
+        super().setUp()
+        self.location = Location.objects.create(
+            name="Prechange capture test",
+            location_type=self.location_type,
+            status=self.status,
+            description="initial",
+        )
+
+    def add_webhook(self):
+        webhook = Webhook.objects.create(name="Location updates", type_update=True, payload_url="http://localhost/")
+        webhook.content_types.set([ContentType.objects.get_for_model(Location)])
+        return webhook
+
+    @mock.patch("nautobot.extras.context_managers.publish_event")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(False, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_nothing_listening_means_no_dispatch(
+        self, mock_enqueue_webhooks, mock_enqueue_job_hooks, mock_publish_event
+    ):
+        """The change is still recorded, it is just not handed to anyone."""
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+        mock_enqueue_webhooks.assert_not_called()
+        mock_enqueue_job_hooks.assert_not_called()
+        mock_publish_event.assert_not_called()
+
+    def test_nothing_listening_means_no_capture(self):
+        """Serializing the stored row is wasted work when nobody will read the result."""
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+            captured = change_context_state.get().pre_object_data_v2
+            self.assertEqual(captured, {})
+
+    def test_capture_is_made_when_something_is_listening(self):
+        self.add_webhook()
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+            captured = change_context_state.get().pre_object_data_v2
+            self.assertEqual(captured[str(self.location.pk)]["description"], "initial")
+
+    def test_loaded_relations_are_reused_for_the_stored_row(self):
+        """The stored row borrows the related objects the instance already holds, saving a query each."""
+        instance = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)
+        stored = Location.objects.get(pk=self.location.pk)
+
+        _reuse_loaded_relations(instance, stored)
+
+        with self.assertNumQueries(0):
+            self.assertEqual(stored.status.pk, self.status.pk)
+            self.assertEqual(stored.location_type.pk, self.location_type.pk)
+
+    def test_relations_are_not_reused_when_this_save_changes_them(self):
+        """A foreign key the save is changing must still be read, or the snapshot would show the new value."""
+        new_status = Status.objects.get_for_model(Location).exclude(pk=self.status.pk).first()
+        instance = Location.objects.select_related("status").get(pk=self.location.pk)
+        instance.status = new_status
+        stored = Location.objects.get(pk=self.location.pk)
+
+        _reuse_loaded_relations(instance, stored)
+
+        with self.assertNumQueries(1):
+            self.assertEqual(stored.status.pk, self.status.pk)
+
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_prechange_keeps_the_previous_related_object(self, mock_enqueue_webhooks):
+        """Reusing loaded relations must not let the new value of a changed foreign key into `prechange`."""
+        self.add_webhook()
+        new_status = Status.objects.get_for_model(Location).exclude(pk=self.status.pk).first()
+
+        with context_managers.web_request_context(self.user):
+            location = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)
+            location.status = new_status
+            location.save()
+
+        snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
+        self.assertEqual(snapshots["prechange"]["status"]["id"], str(self.status.pk))
+        self.assertEqual(snapshots["postchange"]["status"]["id"], str(new_status.pk))
+
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_prechange_shows_writes_that_bypassed_change_logging(self, mock_enqueue_webhooks):
+        """The "before" is the stored row, not the state left by the previous change record."""
+        self.add_webhook()
+        Location.objects.filter(pk=self.location.pk).update(description="written outside change logging")
+
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+
+        snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
+        self.assertEqual(snapshots["prechange"]["description"], "written outside change logging")
+        self.assertEqual(snapshots["postchange"]["description"], "changed")

@@ -49,8 +49,12 @@ def build_event_payload(object_change, snapshots=None):
     """
     Assemble the payload for `object_change`.
 
+    Conditions read the v2 schema only, so `object_change` has to be a record created in this request.
+    Such a record always has `object_data_v2`. Archived records may predate that field and would give a
+    payload with no `data`.
+
     Args:
-        object_change (ObjectChange): The change to describe.
+        object_change (ObjectChange): The change to describe, created in this request.
         snapshots (dict): Optional precomputed `{"prechange": ..., "postchange": ..., "differences": ...}`.
             Computed here, with one query, when omitted.
 

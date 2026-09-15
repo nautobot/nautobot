@@ -32,6 +32,30 @@ Change records can also be accessed via the read-only GraphQL endpoint `/api/gra
 }
 ```
 
+## What Is Recorded
+
+### Saves That Change Nothing
+
++/- 3.3.0
+
+When you save an object without changing any of its fields, for example by clicking **Save** on an edit form you did not touch, or by sending an empty `PATCH` request, no change record is created. No [webhooks](webhook.md), [job hooks](jobs/jobhook.md), or [events](events.md) are triggered either. The object's `last_updated` timestamp still moves, because the row is still written to the database.
+
+Nautobot decides whether anything changed by comparing the values being saved with the values currently stored in the database. It does not compare them with the values the object had when it was loaded. This means that if someone else changed the object in the meantime and your save puts the old values back, that save is recorded as a change.
+
+Only the object's own fields take part in this comparison. Adding or removing related objects through a many-to-many relationship is always recorded, even when the end result is the same set of related objects. See [Many-to-Many Association Changes](#many-to-many-association-changes) below.
+
+### The `prechange` in Webhook and Event Payloads
+
++/- 3.3.0
+
+When an object is updated, the `prechange` snapshot in [webhook](webhook.md) and [event](events.md) payloads shows the object exactly as it was stored right before the change was written. This includes any modifications made outside of change logging, such as data migrations or bulk `update()` calls. In earlier versions the snapshot was rebuilt from the object's previous change record, which could be very old.
+
+This snapshot is only captured when a webhook, job hook, or event broker is configured for the object type, because nothing else uses it.
+
+Two places still rebuild `prechange` from the previous change record: the change log view in the UI, and `ObjectChange.get_snapshots()` when called from a [job hook](jobs/jobhook.md). After a change made outside of change logging, these may show a different `prechange` than the webhook payload did.
+
+Changes to many-to-many associations are not made by saving a field, so their `prechange` is always rebuilt from the previous change record.
+
 ## Many-to-Many Association Changes
 
 +++ 3.2.2

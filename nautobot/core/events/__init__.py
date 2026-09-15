@@ -85,6 +85,16 @@ def is_topic_match(topic, patterns):
     return any(fnmatch.fnmatch(topic, pattern) for pattern in patterns)
 
 
+def _broker_accepts(event_broker, topic):
+    """Whether the given broker's topic filters select for the given topic."""
+    return is_topic_match(topic, event_broker.include_topics) and not is_topic_match(topic, event_broker.exclude_topics)
+
+
+def event_topic_has_subscriber(topic):
+    """Whether `publish_event()` would deliver the given topic to at least one registered `EventBroker`."""
+    return any(_broker_accepts(event_broker, topic) for event_broker in _EVENT_BROKERS)
+
+
 def publish_event(*, topic, payload):
     """Publish the given event payload to the given topic via all registered `EventBroker` instances.
 
@@ -99,9 +109,7 @@ def publish_event(*, topic, payload):
             lowest common denominator for serializability.
     """
     for event_broker in _EVENT_BROKERS:
-        exclude_topics = event_broker.exclude_topics
-        include_topics = event_broker.include_topics
-        if is_topic_match(topic, include_topics) and not is_topic_match(topic, exclude_topics):
+        if _broker_accepts(event_broker, topic):
             serialized_payload = json.dumps(payload, cls=NautobotKombuJSONEncoder)
             event_broker.publish(topic=topic, payload=serialized_payload)
 
