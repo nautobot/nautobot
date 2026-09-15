@@ -73,7 +73,7 @@ def get_constraint_error(exception, serializer, using=DEFAULT_DB_ALIAS):
         return None
 
     serializer = getattr(serializer, "child", serializer)
-    for conflict in getattr(serializer, "database_constraint_explanations", ()):
-        if table == conflict.model._meta.db_table and constraint in conflict.constraint_names(connection):
-            return ValidationError({field: [message] for field, message in conflict.detail.items()}, code="unique")
+    for explanation in getattr(serializer, "database_constraint_explanations", ()):
+        if table == explanation.model._meta.db_table and constraint in explanation.constraint_names(connection):
+            return ValidationError({field: [message] for field, message in explanation.detail.items()}, code="unique")
     return None
