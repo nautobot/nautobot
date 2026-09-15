@@ -9,6 +9,10 @@ from uuid import uuid4
 from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 
+class LoginError(RuntimeError):
+    """The UI login did not produce a session within the wait."""
+
+
 def unique_name(prefix="ZZZ-test"):
     """Return a unique, sortable name for a test-owned record.
 
@@ -33,4 +37,4 @@ def log_in(page, username, password):
         # dropdown, so wait for "attached" rather than visible.
         page.wait_for_selector("a[href='/logout/']", state="attached", timeout=15_000)
     except PlaywrightTimeoutError as exc:
-        raise RuntimeError(f"Login as {username!r} did not reach a logged-in session (still on {page.url}).") from exc
+        raise LoginError(f"Login as {username!r} did not reach a logged-in session (still on {page.url}).") from exc

@@ -76,8 +76,9 @@ A one-off script that checks a selector or watches a page does not need pytest. 
 page objects take a Playwright `Page` and a base URL, and `log_in` in
 `nautobot.playwright.helpers` performs the same UI login the session fixture uses. It
 fills the login form and waits for the logout link, which only renders once a session
-exists. On a failed login it raises Playwright's `TimeoutError` after 15 seconds, with
-`a[href='/logout/']` in the call log.
+exists. On a failed login it raises `LoginError` (a `RuntimeError` subclass, also in
+`nautobot.playwright.helpers`) after 15 seconds, chained from the Playwright
+`TimeoutError` so the call log still shows the selector it waited for.
 
 `log_in` navigates to the relative path `/login/`, so the browser context must be
 created with `base_url`. A page from `browser.new_page()` has no base URL and the
@@ -111,7 +112,7 @@ with sync_playwright() as playwright:
 
 Run it with `poetry run python <script>` from this repository so `nautobot.playwright`
 imports. The pytest flags `--headed` and `--slowmo` do not apply outside pytest. Use
-`launch(headless=False, slow_mo=500)` instead.
+`playwright.chromium.launch(headless=False, slow_mo=500)` instead.
 
 ## CI
 

@@ -24,7 +24,7 @@ import os
 
 import pytest
 
-from nautobot.playwright.helpers import log_in
+from nautobot.playwright.helpers import log_in, LoginError
 
 PLAYWRIGHT_DEFAULT_URL = "http://localhost:8080"
 # The defaults below match the documented development-instance bootstrap
@@ -62,7 +62,7 @@ def auth_state_path(browser, base_url, tmp_path_factory):
     page = context.new_page()
     try:
         log_in(page, username, password)
-    except RuntimeError as exc:
+    except LoginError as exc:
         pytest.fail(
             f"Playwright login failed against {base_url}: {exc} "
             "Check NAUTOBOT_PLAYWRIGHT_USERNAME/NAUTOBOT_PLAYWRIGHT_PASSWORD and that the instance is up."
