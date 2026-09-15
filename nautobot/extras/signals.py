@@ -167,6 +167,29 @@ def _cache_obj_data_in_change_context(action, instance, stored_instance=None):
     change_context_state.set(change_context)
 
 
+def _reuse_loaded_relations(instance, stored_instance):
+    """
+    Hand the stored row the related objects the instance being saved already has in memory.
+
+    The stored row is read cold, so serializing it renders every related object with a query of its own.
+    The instance being saved usually has them loaded, because the view or serializer that produced it
+    asked for them. Where both sides point at the same related row, the object is the same and is shared.
+
+    Args:
+        instance (Model): The instance being saved, whose loaded relations are the source.
+        stored_instance (Model): The row as the database holds it, which receives them.
+    """
+    for field in stored_instance._meta.concrete_fields:
+        if not (field.many_to_one or field.one_to_one):
+            continue
+        related_id = instance.__dict__.get(field.attname)
+        if related_id is None or related_id != stored_instance.__dict__.get(field.attname):
+            continue
+        cached = field.get_cached_value(instance, default=None)
+        if cached is not None:
+            field.set_cached_value(stored_instance, cached)
+
+
 def get_user_if_authenticated(user, instance):
     """Return the user object associated with the request if the user is defined.
 
@@ -274,6 +297,8 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, using=None, upd
     stored_instance = None
     if hasattr(instance, "to_objectchange") and getattr(instance, "present_in_database", False):
         stored_instance = sender._base_manager.using(using).filter(pk=instance.pk).first()
+        if stored_instance is not None:
+            _reuse_loaded_relations(instance, stored_instance)
 
     _record_unchanged_verdict(instance, stored_instance, using=using, update_fields=update_fields)
 

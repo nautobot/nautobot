@@ -42,7 +42,7 @@ from nautobot.extras.models import (
     Tag,
     Webhook,
 )
-from nautobot.extras.signals import change_context_state
+from nautobot.extras.signals import _reuse_loaded_relations, change_context_state
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -1120,6 +1120,44 @@ class ChangeLogPrechangeCaptureTest(TestCase):
             self.location.save()
             captured = change_context_state.get().pre_object_data_v2
             self.assertEqual(captured[str(self.location.pk)]["description"], "initial")
+
+    def test_loaded_relations_are_reused_for_the_stored_row(self):
+        """The stored row borrows the related objects the instance already holds, saving a query each."""
+        instance = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)
+        stored = Location.objects.get(pk=self.location.pk)
+
+        _reuse_loaded_relations(instance, stored)
+
+        with self.assertNumQueries(0):
+            self.assertEqual(stored.status.pk, self.status.pk)
+            self.assertEqual(stored.location_type.pk, self.location_type.pk)
+
+    def test_relations_are_not_reused_when_this_save_changes_them(self):
+        """A foreign key the save is changing must still be read, or the snapshot would show the new value."""
+        new_status = Status.objects.get_for_model(Location).exclude(pk=self.status.pk).first()
+        instance = Location.objects.select_related("status").get(pk=self.location.pk)
+        instance.status = new_status
+        stored = Location.objects.get(pk=self.location.pk)
+
+        _reuse_loaded_relations(instance, stored)
+
+        with self.assertNumQueries(1):
+            self.assertEqual(stored.status.pk, self.status.pk)
+
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_prechange_keeps_the_previous_related_object(self, mock_enqueue_webhooks):
+        """Reusing loaded relations must not let the new value of a changed foreign key into `prechange`."""
+        self.add_webhook()
+        new_status = Status.objects.get_for_model(Location).exclude(pk=self.status.pk).first()
+
+        with context_managers.web_request_context(self.user):
+            location = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)
+            location.status = new_status
+            location.save()
+
+        snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
+        self.assertEqual(snapshots["prechange"]["status"]["id"], str(self.status.pk))
+        self.assertEqual(snapshots["postchange"]["status"]["id"], str(new_status.pk))
 
     @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
     def test_prechange_shows_writes_that_bypassed_change_logging(self, mock_enqueue_webhooks):
