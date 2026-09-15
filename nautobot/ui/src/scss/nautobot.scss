@@ -306,6 +306,9 @@ $form-check-input-checked-bg-color:     $form-check-input-bg;
 $form-check-input-checked-border-color: $form-check-input-checked-color;
 $form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 10 3 3 6-6'/></svg>");
 $form-check-radio-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='2' fill='#{$primary-text-emphasis}'/></svg>");
+// Nautobot's own, for a checkbox that asks for a related object's natural key rather than for everything
+// listed under it -- see `.nb-export-natural-key` below. Same colour as the check it replaces.
+$form-check-input-natural-key-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'><path fill-rule='evenodd' clip-rule='evenodd' d='M20.5303 1.46967C20.8232 1.76256 20.8232 2.23744 20.5303 2.53033L20.0607 3L22.5303 5.46967C22.8232 5.76256 22.8232 6.23744 22.5303 6.53033L19.0303 10.0303C18.853 10.2076 18.5988 10.2846 18.3529 10.2354L13.7465 9.31415L12.2803 10.7804C13.7881 12.0183 14.75 13.8968 14.75 16C14.75 19.7279 11.7279 22.75 8 22.75C4.27208 22.75 1.25 19.7279 1.25 16C1.25 12.2721 4.27208 9.25 8 9.25C9.07436 9.25 10.0901 9.501 10.9918 9.94756L12.9697 7.96967L18.4697 2.46967C18.4697 2.46962 18.4698 2.46957 18.4698 2.46952L19.4697 1.46967C19.7626 1.17678 20.2374 1.17678 20.5303 1.46967ZM15.0213 8.0394L18.2535 8.68585L20.9393 6L19 4.06066L15.0213 8.0394ZM8 10.75C5.10051 10.75 2.75 13.1005 2.75 16C2.75 18.8995 5.10051 21.25 8 21.25C10.8995 21.25 13.25 18.8995 13.25 16C13.25 13.1005 10.8995 10.75 8 10.75Z' fill='#{$primary-text-emphasis}'/></svg>");
 
 $form-check-input-indeterminate-color:        $form-check-input-checked-color;
 $form-check-input-indeterminate-bg-color:     $form-check-input-checked-bg-color;
@@ -3014,6 +3017,16 @@ pre.version, pre.version-stamp {
   .invert-in-dark-mode {
     filter: invert(1) hue-rotate(180deg);
   }
+}
+
+/*
+ * Export field picker: a checked relation asks for the columns that identify the related object -- its
+ * natural key -- and not for the fields listed under it, which a tick would be read as meaning. There is
+ * no "everything under this" selection for the tick to have meant, so the mark says what it does instead.
+ */
+.nb-export-natural-key:checked[type="checkbox"] {
+  --#{$prefix}form-check-bg-image: #{escape-svg($form-check-input-natural-key-bg-image)};
+  background-size: 76%;
 }
 
 /*

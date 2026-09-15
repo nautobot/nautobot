@@ -1,0 +1,2 @@
+Changed the "Export to file" action on object list views to open a dialog in which the export format and the fields to export can be selected, in place of the previous one-click "Export as CSV" and "Export as YAML" entries.
+Changed the "Export to file" action to be disabled, with an explanatory tooltip, for users who cannot run the "Export Object List" Job, or when that Job is disabled.
