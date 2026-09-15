@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.db import connections, DatabaseError, models, transaction
 from django.db.models.sql.query import Query
 
+POSTGRESQL_INVALID_REGULAR_EXPRESSION = "2201B"
+
 # MySQL ICU pattern errors. Generic errors, internal failures, stack overflow, and timeouts must propagate.
 MYSQL_REGEX_PATTERN_ERRORS = {
     3685,  # ER_REGEXP_ILLEGAL_ARGUMENT (includes invalid Unicode properties)
@@ -58,7 +60,7 @@ def validate_regex(values, *, using, lookup_expr):
     except DatabaseError as error:
         cause = error.__cause__
         sqlstate = getattr(cause, "sqlstate", None) or getattr(cause, "pgcode", None)
-        if (connection.vendor == "postgresql" and sqlstate == "2201B") or (
+        if (connection.vendor == "postgresql" and sqlstate == POSTGRESQL_INVALID_REGULAR_EXPRESSION) or (
             connection.vendor == "mysql" and error.args and error.args[0] in MYSQL_REGEX_PATTERN_ERRORS
         ):
             raise ValidationError("Enter a valid regular expression for this database.", code="invalid") from error

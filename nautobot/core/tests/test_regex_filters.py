@@ -150,6 +150,8 @@ class RegexFilterTests(TestCase):
             patch("nautobot.core.utils.regex.Query") as query,
         ):
             query.return_value.get_compiler.return_value.compile.return_value = ("REGEXP_LIKE(%s, %s, 'c')", ["", "["])
+            # Preserve generic/legacy regex errors (1139), lost connections (2006), ICU internal errors
+            # (3684), index/buffer errors (3686/3687), stack overflow (3698), and timeouts (3699).
             for code in MYSQL_REGEX_PATTERN_ERRORS | {1139, 2006, 3684, 3686, 3687, 3698, 3699}:
                 with self.subTest(code=code):
                     failure = DatabaseError(code, "test error")
