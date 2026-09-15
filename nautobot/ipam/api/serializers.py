@@ -463,7 +463,7 @@ class VLANAllocationSerializer(NautobotModelSerializer, TaggedModelSerializerMix
 
 
 class IPAddressToInterfaceSerializer(ValidatedModelSerializer):
-    database_constraint_errors = (
+    database_constraint_explanations = (
         UniqueConstraintExplanation(
             model=IPAddressToInterface,
             fields=("ip_address", "interface"),
