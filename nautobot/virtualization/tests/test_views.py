@@ -199,6 +199,33 @@ class VirtualMachineTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "software_version": software_versions[0].pk,
         }
 
+    def test_interfaces_panel_has_bulk_action_buttons(self):
+        """The Interfaces panel on the detail view exposes bulk rename/edit/delete buttons (#3146)."""
+        virtual_machine = VirtualMachine.objects.get(name="Virtual Machine 1")
+        VMInterface.objects.create(
+            virtual_machine=virtual_machine,
+            name="Interface 1",
+            status=Status.objects.get_for_model(VMInterface).first(),
+        )
+        bulk_urls = [
+            reverse("virtualization:vminterface_bulk_rename"),
+            reverse("virtualization:vminterface_bulk_edit"),
+            reverse("virtualization:vminterface_bulk_delete"),
+        ]
+
+        # With only view permissions, the bulk-selection checkbox column is not rendered
+        self.add_permissions("virtualization.view_virtualmachine", "virtualization.view_vminterface")
+        response = self.client.get(virtual_machine.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        self.assertNotIn('title="Toggle all"', response.content.decode(response.charset))
+
+        # With change/delete permissions, the selection checkboxes and bulk action buttons appear
+        self.add_permissions("virtualization.change_vminterface", "virtualization.delete_vminterface")
+        response = self.client.get(virtual_machine.get_absolute_url())
+        self.assertBodyContains(response, 'title="Toggle all"')
+        for url in bulk_urls:
+            self.assertBodyContains(response, url)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_local_config_context_schema_validation_pass(self):
         """
