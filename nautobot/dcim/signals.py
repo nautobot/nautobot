@@ -314,12 +314,24 @@ def handle_rack_location_change(instance, created, raw=False, **kwargs):
                 if not devices_permitted:
                     raise ValidationError(
                         {
-                            f"location {instance.location.name}": "Devices may not associate to locations of type "
+                            "location": "Devices may not associate to locations of type "
                             f'"{instance.location.location_type}"'
                         }
                     )
                 device.location = instance.location
-                device.save()
+                try:
+                    device.save()
+                except ValidationError as error:
+                    # Device.save() enforces configurable uniqueness in 3.x.
+                    # Report child failures on the Rack field that caused the move.
+                    raise ValidationError(
+                        {
+                            "location": [
+                                f"Cannot move device {device.name or device.pk}: {message}"
+                                for message in error.messages
+                            ]
+                        }
+                    ) from error
 
 
 #

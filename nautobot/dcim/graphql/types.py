@@ -166,7 +166,7 @@ class InterfaceType(OptimizedNautobotObjectType, CableTerminationMixin, PathEndp
     class Meta:
         model = Interface
         filterset_class = InterfaceFilterSet
-        exclude = ["_name"]
+        exclude = ["_name", "_device_name_scope"]
 
     # At the DB level, mac_address is null=False, but empty strings are represented as null in the ORM and REST API,
     # so for consistency, we'll keep that same representation in GraphQL.
