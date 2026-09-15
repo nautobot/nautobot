@@ -240,7 +240,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
                         hx-get="{url}" hx-target="#{wrapper}" hx-swap="innerHTML" hx-include="{include}"
                         hx-vals='{{"use_current_view": "1"}}'
                         title="Replace the selection with the columns this type's list view is configured to display"
-                ><span class="mdi mdi-table-column-plus-after me-4" aria-hidden="true"></span>Match the list view</button>
+                ><span class="mdi mdi-table-eye me-4" aria-hidden="true"></span>Match the list view</button>
                 <button type="button" class="btn btn-secondary ms-6 export-fields-clear"{disabled}
                         title="Clear the selection, so that every field is exported again"
                 ><span class="mdi mdi-close me-4" aria-hidden="true"></span>Clear</button>
@@ -254,10 +254,14 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Inline text, so joined without a break: a newline here would be a space in the output.
         legend = format_html(
             '<span class="form-text d-block mb-6">'
-            "Drag to reorder. <code>*</code> marks a field an import requires to create new records. "
-            '<span class="text-warning"><span aria-hidden="true" class="mdi mdi-key-link"></span></span> '
-            "marks a related object, which exports the columns that identify it rather than the fields "
-            "listed under it."
+            "Drag to reorder fields.<br>"
+            '"*" marks a field an import requires to create new records.<br>'
+            '"<span aria-hidden="true" class="text-warning mdi mdi-key-link"></span>'
+            '<span class="visually-hidden">natural key</span>" marks a related object, which when selected, '
+            "exports the related field(s) that identify it.<br>"
+            '"<span aria-hidden="true" class="text-info mdi mdi-chevron-down"></span>'
+            '<span class="visually-hidden">show/hide related fields</span>" expands a related object row '
+            "to select different related fields to export."
             "</span>"
         )
         return format_html("{}{}", buttons, legend)
@@ -303,7 +307,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Addressable so that clearing the selection can take it away with it: what it reports is what a
         # particular "match the list view" could not bring over, which says nothing once that is gone.
         return format_html(
-            '<div id="{}" class="form-text mb-6">Column{} {} {} no exportable equivalent and {} left out.</div>',
+            '<div id="{}" class="form-text text-warning mb-6">Table column{} {} {} no direct equivalent and {} left out.</div>',
             self.OMITTED_ID,
             "" if len(self.omitted_columns) == 1 else "s",
             format_html_join(", ", "<code>{}</code>", ((column,) for column in self.omitted_columns)),
