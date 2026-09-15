@@ -735,7 +735,7 @@ class InterfaceSerializer(
     PathEndpointModelSerializerMixin,
     InterfaceCommonSerializer,
 ):
-    database_constraint_errors = (
+    database_constraint_explanations = (
         UniqueConstraintExplanation(
             model=Interface,
             fields=("device", "name", "_device_name_scope"),
