@@ -11,7 +11,7 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
 )
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
 from django.http import HttpResponse
@@ -722,7 +722,8 @@ class BulkCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                             errors = model_form.errors.as_data()
                             if errors.get(self.pattern_target):
                                 form.add_error("pattern", errors[self.pattern_target])
-                            raise AbortTransaction()
+                            # Raise an IntegrityError to break the for loop and abort the transaction.
+                            raise IntegrityError()
 
                     # Enforce object-level permissions
                     if self.queryset.filter(pk__in=[obj.pk for obj in new_objs]).count() != len(new_objs):
@@ -737,7 +738,7 @@ class BulkCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermissionRequi
                         return redirect(request.path)
                     return redirect(self.get_return_url(request))
 
-            except AbortTransaction:
+            except IntegrityError:
                 pass
 
             except ObjectDoesNotExist:
@@ -1541,10 +1542,9 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
                                         for e in errors:
                                             err_str = ", ".join(e)
                                             form.add_error(
-                                                field if field in form.fields else None,
+                                                field,
                                                 f"{obj} {name}: {err_str}",
                                             )
-                                    raise AbortTransaction()
 
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
@@ -1552,7 +1552,7 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
                         ):
                             raise ObjectDoesNotExist
 
-                except AbortTransaction:
+                except IntegrityError:
                     pass
 
                 except ObjectDoesNotExist:
