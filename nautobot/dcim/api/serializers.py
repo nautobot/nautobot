@@ -283,7 +283,7 @@ class RackGroupSerializer(TreeModelSerializerMixin, NautobotModelSerializer):
 class RackSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
     # Relocating a rack also updates its devices in a post_save signal. Report
     # that child-model conflict against the field the API caller can change.
-    database_constraint_errors = (
+    database_constraint_explanations = (
         UniqueConstraintExplanation(
             model=Device,
             fields=("location", "tenant", "name"),
@@ -716,7 +716,7 @@ class InterfaceSerializer(
     PathEndpointModelSerializerMixin,
     InterfaceCommonSerializer,
 ):
-    database_constraint_errors = (
+    database_constraint_explanations = (
         UniqueConstraintExplanation(
             model=Interface,
             fields=("device", "name"),
