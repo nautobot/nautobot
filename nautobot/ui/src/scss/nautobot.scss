@@ -3026,6 +3026,7 @@ pre.version, pre.version-stamp {
  */
 .nb-export-natural-key:checked[type="checkbox"] {
   --#{$prefix}form-check-bg-image: #{escape-svg($form-check-input-natural-key-bg-image)};
+  background-size: 76%;
 }
 
 /*
