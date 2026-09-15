@@ -1,0 +1,2 @@
+Changed saving an object that modifies none of its fields to no longer create a change record, and to no longer trigger webhooks, job hooks, or events. The object's `last_updated` timestamp is still written.
+Changed the `prechange` snapshot in webhook and event payloads to be taken from the stored row at the time of the save, instead of being rebuilt from the object's previous change record.

@@ -207,6 +207,15 @@ class ObjectChange(SavedViewMixin, BaseModel):
         Return a dictionary with the changed object's serialized data before and after this change
         occurred and a key with a shallow diff of those dictionaries.
 
+        `pre_object_data_v2`, when given, holds the object's state captured in `pre_save` right before this
+        change. It takes precedence over the previous change record. It shows the row as it actually stood,
+        including writes that bypassed change logging, it is always in the current schema, and it costs no
+        query. Without it the previous change record is used. That is the case in the UI, in a job hook,
+        and for a many-to-many change.
+
+        `pre_object_data` is the same thing in the older schema. Nautobot no longer captures it, and it is
+        kept for callers that supply their own.
+
         Returns:
         {
             "prechange": dict(),
@@ -221,17 +230,18 @@ class ObjectChange(SavedViewMixin, BaseModel):
         postchange = None
         prior_change = None
 
-        # Populate the prechange field, create actions do not need to have a prechange field
-        if self.action != ObjectChangeActionChoices.ACTION_CREATE:
+        # Populate the prechange field. Create actions do not need one.
+        if self.action == ObjectChangeActionChoices.ACTION_UPDATE and (pre_object_data_v2 or pre_object_data):
+            prechange = pre_object_data_v2 or pre_object_data
+        elif self.action != ObjectChangeActionChoices.ACTION_CREATE:
             prior_change = self.get_prev_change(only=["object_data_v2", "object_data"])
-            # Deal with the cases where we are trying to capture an object deletion/update and there is no prior change record.
-            # This can happen when the object is first created and the changelog for that object creation action is deleted.
+            # A deletion or update can have no prior change record. That happens when the record of the
+            # object's creation was already removed from the changelog.
             if prior_change is not None:
                 prechange = prior_change.object_data_v2 or prior_change.object_data
             elif self.action == ObjectChangeActionChoices.ACTION_DELETE:
                 prechange = self.object_data_v2 or self.object_data
-            else:
-                prechange = pre_object_data_v2 or pre_object_data
+            # An update with neither a previous record nor a captured snapshot has nothing to diff against.
 
         # Populate the postchange field, delete actions do not need to have a postchange field
         if self.action != ObjectChangeActionChoices.ACTION_DELETE:
@@ -240,7 +250,9 @@ class ObjectChange(SavedViewMixin, BaseModel):
                 postchange = self.object_data
 
         if prechange and postchange:
-            if self.object_data_v2 is None or (prior_change and prior_change.object_data_v2 is None):
+            # A diff is only meaningful when both sides are the same generation. Only a prechange taken
+            # from a stored record can be out of date. A captured snapshot is always current.
+            if prior_change is not None and (self.object_data_v2 is None or prior_change.object_data_v2 is None):
                 prechange = prior_change.object_data
                 postchange = self.object_data
             diff_added = shallow_compare_dict(prechange, postchange, exclude=["last_updated"])

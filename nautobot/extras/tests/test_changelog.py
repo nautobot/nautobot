@@ -40,7 +40,9 @@ from nautobot.extras.models import (
     Role,
     Status,
     Tag,
+    Webhook,
 )
+from nautobot.extras.signals import change_context_state
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -968,6 +970,13 @@ class ChangeLogM2MThroughTest(APITestCase):
     ):
         """Creating a through record dispatches job hooks, webhooks, and events for both side objects (#9270)."""
         ip_address = self.ip_addresses[0]
+        # Records are only dispatched when something is listening for them.
+        webhook = Webhook.objects.create(
+            name="Interface and IP address updates", type_update=True, payload_url="http://localhost/"
+        )
+        webhook.content_types.set(
+            [ContentType.objects.get_for_model(Interface), ContentType.objects.get_for_model(IPAddress)]
+        )
         with context_managers.web_request_context(self.user):
             IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
 
@@ -1056,3 +1065,72 @@ class ChangeLogUnchangedSaveTest(TestCase):
             with context_managers.web_request_context(self.user):
                 self.location.save()
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+
+class ChangeLogPrechangeCaptureTest(TestCase):
+    """The "before" state of an update is captured during the save, and only when someone will read it."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+
+    def setUp(self):
+        super().setUp()
+        self.location = Location.objects.create(
+            name="Prechange capture test",
+            location_type=self.location_type,
+            status=self.status,
+            description="initial",
+        )
+
+    def add_webhook(self):
+        webhook = Webhook.objects.create(name="Location updates", type_update=True, payload_url="http://localhost/")
+        webhook.content_types.set([ContentType.objects.get_for_model(Location)])
+        return webhook
+
+    @mock.patch("nautobot.extras.context_managers.publish_event")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(False, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_nothing_listening_means_no_dispatch(
+        self, mock_enqueue_webhooks, mock_enqueue_job_hooks, mock_publish_event
+    ):
+        """The change is still recorded, it is just not handed to anyone."""
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+        mock_enqueue_webhooks.assert_not_called()
+        mock_enqueue_job_hooks.assert_not_called()
+        mock_publish_event.assert_not_called()
+
+    def test_nothing_listening_means_no_capture(self):
+        """Serializing the stored row is wasted work when nobody will read the result."""
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+            captured = change_context_state.get().pre_object_data_v2
+            self.assertEqual(captured, {})
+
+    def test_capture_is_made_when_something_is_listening(self):
+        self.add_webhook()
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+            captured = change_context_state.get().pre_object_data_v2
+            self.assertEqual(captured[str(self.location.pk)]["description"], "initial")
+
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_prechange_shows_writes_that_bypassed_change_logging(self, mock_enqueue_webhooks):
+        """The "before" is the stored row, not the state left by the previous change record."""
+        self.add_webhook()
+        Location.objects.filter(pk=self.location.pk).update(description="written outside change logging")
+
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+
+        snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
+        self.assertEqual(snapshots["prechange"]["description"], "written outside change logging")
+        self.assertEqual(snapshots["postchange"]["description"], "changed")

@@ -113,21 +113,19 @@ def prevent_delete_stage_definition_with_pending_stages(sender, instance, **kwar
 
 def _cache_obj_data_in_change_context(action, instance, stored_instance=None):
     """
-    Cache the object's state as the database currently holds it in the change context.
+    Cache the object's state as the database currently holds it, the "before" of this change, in the
+    change context. The webhook and event payloads assembled at the end of the request read it from there.
 
-    An object whose first change record is about to be written has no earlier record to diff against, so
-    its prior state has to be captured here, before the save overwrites it.
+    This only happens when something is configured to receive those payloads. The capture costs a full
+    serialization and nothing else ever reads it.
 
     Args:
         action (str): One of the `ObjectChangeActionChoices` values.
         instance (Model): The instance being saved.
         stored_instance (Model | None): The row as the database holds it, read once by the caller. None
-            means it could not be read, so there is no prior state to capture.
+            means it could not be read, in which case there is no prior state to capture.
     """
-    # We are caching the before object data in the change context so that it can be used later
     change_context = change_context_state.get()
-
-    # Do nothing if the change_contex is None
     if change_context is None:
         return
 
@@ -143,8 +141,9 @@ def _cache_obj_data_in_change_context(action, instance, stored_instance=None):
     if not instance.present_in_database:
         return
 
-    # Does this object already have changes?
-    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+    # Skip the capture unless something is listening. That means an enabled webhook, an enabled job hook,
+    # or an event broker subscribed to this topic.
+    if not change_context.has_consumers(ContentType.objects.get_for_model(instance), action):
         return
 
     if action == ObjectChangeActionChoices.ACTION_UPDATE:
@@ -161,13 +160,9 @@ def _cache_obj_data_in_change_context(action, instance, stored_instance=None):
         return
     change.request_id = uuid.uuid4()
     change.user = change_context.get_user(instance)
-    # cache the previous object data in the change context
-    if change_context.pre_object_data is None:
-        change_context.pre_object_data = {}
-    if change_context.pre_object_data_v2 is None:
-        change_context.pre_object_data_v2 = {}
-
-    change_context.pre_object_data.setdefault(str(instance.pk), change.object_data)
+    # Only the v2 form is cached. A capture always has one, so the v1 fallback in get_snapshots() could
+    # never be reached from here, and a bulk operation would hold a second copy of every object for nothing.
+    # The first capture in this request wins, so the "before" is the state at the start of the request.
     change_context.pre_object_data_v2.setdefault(str(instance.pk), change.object_data_v2)
     change_context_state.set(change_context)
 
@@ -282,8 +277,9 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, using=None, upd
 
     _record_unchanged_verdict(instance, stored_instance, using=using, update_fields=update_fields)
 
-    # Ensure that a changelog entry exists for this object that is being updated
-    if not kwargs.get("created"):
+    # Capture the "before" state of an object that is being updated, for the change record to diff against.
+    # A save that changes nothing records nothing, so there is no change for a "before" to belong to.
+    if not kwargs.get("created") and not getattr(instance, "_change_logging_unchanged", False):
         _cache_obj_data_in_change_context(
             ObjectChangeActionChoices.ACTION_UPDATE, instance, stored_instance=stored_instance
         )

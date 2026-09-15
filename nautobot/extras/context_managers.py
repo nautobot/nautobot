@@ -8,7 +8,7 @@ from django.test.client import RequestFactory
 
 from nautobot.core.events import publish_event
 from nautobot.core.utils.otel import traced_span
-from nautobot.extras.change_consumers import get_change_event_topic
+from nautobot.extras.change_consumers import change_has_consumers, get_change_event_topic
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
@@ -30,8 +30,10 @@ class ChangeContext:
         context_detail (Optional[str]): extra details about the transaction (ex: plugin name that initiated the change)
         change_id (Optional[UUID]): Object to uniquely identify the transaction. One will be generated if not supplied
 
-    The next two parameters are used as caching fields when updating an object with no previous ObjectChange instances.
-    They are used to populate the `pre_change` field of an ObjectChange snapshot in get_snapshot().
+    The next two parameters hold the state of updated objects as the database held it before the save, keyed
+    by primary key. `get_snapshots()` uses them as the `prechange` side of the diff. They are filled during
+    the save itself, and only for objects whose changes have a consumer, since nothing else reads them.
+    Only the v2 form is filled now. The v1 form stays for callers that supply their own data.
 
         pre_object_data (dict): Optional dictionary of serialized object data to be used in the object snapshot
         pre_object_data_v2 (dict): Optional dictionary of serialized object data to be used in the object snapshot
@@ -46,9 +48,9 @@ class ChangeContext:
         context=None,
         context_detail="",
         change_id=None,
-        pre_object_data={},
-        pre_object_data_v2={},
-    ):  # pylint: disable=dangerous-default-value
+        pre_object_data=None,
+        pre_object_data_v2=None,
+    ):
         self.request = request
         self.user = user
         self.reset_deferred_object_changes()
@@ -69,8 +71,29 @@ class ChangeContext:
         self.change_id = change_id
         if self.change_id is None:
             self.change_id = uuid.uuid4()
-        self.pre_object_data = pre_object_data
-        self.pre_object_data_v2 = pre_object_data_v2
+        # A fresh dict per context. A shared default would carry one request's captures into the next.
+        self.pre_object_data = {} if pre_object_data is None else pre_object_data
+        self.pre_object_data_v2 = {} if pre_object_data_v2 is None else pre_object_data_v2
+        self._consumers_by_type_and_action = {}
+
+    def has_consumers(self, content_type, action):
+        """Whether anything would act on a change with this content type and action.
+
+        `change_has_consumers()` reads Redis, and outside a web request nothing memoizes that, so a job
+        saving thousands of objects would ask for the same answer thousands of times. The answer is
+        remembered here for the life of this context, which is one request or one job.
+
+        Args:
+            content_type (ContentType): Content type of the changed object.
+            action (str): One of the `ObjectChangeActionChoices` values.
+
+        Returns:
+            (bool): True if at least one webhook, job hook, or event broker would be triggered.
+        """
+        key = (content_type.pk, action)
+        if key not in self._consumers_by_type_and_action:
+            self._consumers_by_type_and_action[key] = change_has_consumers(content_type, action)
+        return self._consumers_by_type_and_action[key]
 
     def get_user(self, instance=None):
         """Return self.user if set, otherwise return self.request.user"""
@@ -230,7 +253,7 @@ def web_request_context(
     finally:
         jobs_reloaded = False
         # In bulk operations, we are performing the same action (create/update/delete) on the same content-type.
-        # Save some repeated database queries by reusing the same evaluated querysets where applicable:
+        # Save some repeated database queries by reusing the same evaluated querysets where applicable.
         jobhook_queryset = None
         webhook_queryset = None
         last_action = None
@@ -245,6 +268,7 @@ def web_request_context(
         ) as _span:
             # enqueue jobhooks and webhooks, use change_context.change_id in case change_id was not supplied
             object_change_count = 0
+            skipped_object_change_count = 0
             for oc in (
                 ObjectChange.objects.select_related("changed_object_type", "user")
                 .filter(request_id=change_context.change_id)
@@ -252,10 +276,21 @@ def web_request_context(
                 .defer("object_data", "object_data_v2")  # avoid an "Out of sort memory" exception on MySQL
                 .iterator()
             ):
+                # Counts every record written in this request, whether or not it is dispatched below.
                 object_change_count += 1
                 if oc.action != last_action or oc.changed_object_type != last_content_type:
                     jobhook_queryset = None
                     webhook_queryset = None
+                last_action = oc.action
+                last_content_type = oc.changed_object_type
+
+                if not change_context.has_consumers(oc.changed_object_type, oc.action):
+                    # Nothing is listening for this content type and action. No enabled webhook, no job
+                    # hook, no event broker subscribed to the topic. For the same reason nothing captured
+                    # a "before" state in pre_save, so get_snapshots() below would spend a query
+                    # rebuilding one and then find nobody to send it to.
+                    skipped_object_change_count += 1
+                    continue
 
                 if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
                     # Make sure JobHooks are up to date (only once) before calling them
@@ -265,8 +300,9 @@ def web_request_context(
                     if did_reload_jobs:
                         jobs_reloaded = True
 
-                # TODO: get_snapshots() currently requires a DB query per object change processed.
-                # We need to develop a more efficient approach: https://github.com/nautobot/nautobot/issues/6303
+                # An update already had its "before" state captured in pre_save, so nothing is read here.
+                # Deletes and M2M changes have no such capture and still pay a query for get_prev_change().
+                # See https://github.com/nautobot/nautobot/issues/6303
                 snapshots = oc.get_snapshots(
                     pre_object_data.get(str(oc.changed_object_id), None) if pre_object_data else None,
                     pre_object_data_v2.get(str(oc.changed_object_id), None) if pre_object_data_v2 else None,
@@ -284,9 +320,8 @@ def web_request_context(
                 }
                 publish_event(topic=event_topic, payload=event_payload)
 
-                last_action = oc.action
-                last_content_type = oc.changed_object_type
             _span.set_attribute("nautobot.extras.changelog.object_change_count", object_change_count)
+            _span.set_attribute("nautobot.extras.changelog.skipped_object_change_count", skipped_object_change_count)
 
 
 @contextmanager
