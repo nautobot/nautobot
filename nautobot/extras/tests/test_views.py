@@ -5527,7 +5527,7 @@ class JobTestCase(
         for run_url in self.run_urls:
             response = self.client.post(run_url, data)
             self.assertHttpStatus(response, 200, msg=run_url)
-            self.assertBodyContains(response, "Unable to schedule job: Invalid schedule parameters")
+            self.assertBodyContains(response, "Unable to run or schedule job: Invalid schedule parameters")
             self.assertFalse(ScheduledJob.objects.filter(name="validation-error-test").exists(), msg=run_url)
 
     def test_run_now_missing_args(self):
