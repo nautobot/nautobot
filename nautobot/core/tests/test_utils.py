@@ -13,8 +13,9 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import connection
-from django.db.models import CharField, DateField, DateTimeField, FileField, Q, TimeField
+from django.db.models import CharField, DateField, DateTimeField, FileField, GeneratedField, Q, TimeField, Value
 from django.http import QueryDict
 from django.test import override_settings, tag
 
@@ -1625,6 +1626,14 @@ class ChangelogComparableFieldsTest(TestCase):
 
         self.assertTrue(models_utils._has_unpredictable_pre_save(SneakyDateField()))
 
+    def test_database_generated_field_is_skipped(self):
+        """A column the database computes is never written by a save, so it is not worth comparing."""
+        generated = GeneratedField(expression=Value("computed"), output_field=CharField(max_length=10), db_persist=True)
+        ordinary = CharField(max_length=10)
+        # No Nautobot model declares a GeneratedField yet, so the fields to walk are supplied here.
+        with mock.patch.object(self.location._meta, "concrete_fields", [generated, ordinary]):
+            self.assertEqual(models_utils.changelog_comparable_fields(self.location), [ordinary])
+
 
 class ChangelogValuesVerdictTest(TestCase):
     """Validate the operation of changelog_values_verdict()."""
@@ -1676,3 +1685,23 @@ class ChangelogValuesVerdictTest(TestCase):
     def test_deferred_field_is_indeterminate(self):
         deferred = dcim_models.Location.objects.only("id").get(pk=self.location.pk)
         self.assertIs(self.compare(instance=deferred), models_utils.ChangeVerdict.INDETERMINATE)
+
+    def test_comparison_failure_is_indeterminate(self):
+        """A value the database layer cannot even prepare leaves no verdict; the caller records the change."""
+        self.instance.tenant_id = "not a uuid"
+        with self.assertLogs("nautobot.core.models.utils", level="DEBUG"):
+            self.assertIs(self.compare(), models_utils.ChangeVerdict.INDETERMINATE)
+
+    def test_uncommitted_file_is_changed(self):
+        """Asking an unsaved file for its stored name would upload it, so it counts as changed unread."""
+        stored = dcim_models.DeviceType.objects.first()
+        instance = dcim_models.DeviceType.objects.get(pk=stored.pk)
+        instance.front_image = ContentFile(b"not really an image", name="front.png")
+        # Reading the attribute back is what wraps the raw file in an uncommitted `FieldFile`.
+        self.assertFalse(instance.front_image._committed)
+
+        fields = models_utils.changelog_comparable_fields(instance)
+        self.assertIs(
+            models_utils.changelog_values_verdict(instance, stored, fields, connection),
+            models_utils.ChangeVerdict.CHANGED,
+        )

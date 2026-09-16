@@ -38,11 +38,16 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     ObjectChange,
     Role,
+    StaticGroupAssociation,
     Status,
     Tag,
     Webhook,
 )
-from nautobot.extras.signals import _reuse_loaded_relations, change_context_state
+from nautobot.extras.signals import (
+    _cache_obj_data_in_change_context,
+    _reuse_loaded_relations,
+    change_context_state,
+)
 from nautobot.ipam.models import (
     IPAddress,
     IPAddressToInterface,
@@ -1066,6 +1071,18 @@ class ChangeLogUnchangedSaveTest(TestCase):
                 self.location.save()
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
 
+    def test_indeterminate_comparison_records_the_change(self):
+        """
+        `_name` is derived in `pre_save`, so a save restricted to it cannot be compared beforehand.
+
+        Dropping a real change record is worse than writing a redundant one, so the change is recorded.
+        """
+        with self.assertLogs("nautobot.extras.signals", level="DEBUG") as logs:
+            with context_managers.web_request_context(self.user):
+                self.location.save(update_fields=["_name"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+        self.assertTrue(any("is indeterminate" in line for line in logs.output))
+
 
 class ChangeLogPrechangeCaptureTest(TestCase):
     """The "before" state of an update is captured during the save, and only when someone will read it."""
@@ -1120,6 +1137,46 @@ class ChangeLogPrechangeCaptureTest(TestCase):
             self.location.save()
             captured = change_context_state.get().pre_object_data_v2
             self.assertEqual(captured[str(self.location.pk)]["description"], "initial")
+
+    def test_no_capture_when_the_stored_row_could_not_be_read(self):
+        """A row deleted by someone else between the save starting and the read has no prior state."""
+        self.add_webhook()
+        with context_managers.web_request_context(self.user):
+            _cache_obj_data_in_change_context(
+                ObjectChangeActionChoices.ACTION_UPDATE, self.location, stored_instance=None
+            )
+            self.assertEqual(change_context_state.get().pre_object_data_v2, {})
+
+    def test_no_capture_for_an_object_that_declines_change_logging(self):
+        """A `StaticGroupAssociation` cached for a dynamic group gets no change record, so it gets no "before"."""
+        group = DynamicGroup.objects.create(
+            name="Prechange capture group",
+            content_type=ContentType.objects.get_for_model(Location),
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": [self.location.name]},
+        )
+        group.update_cached_members()
+        association = StaticGroupAssociation.all_objects.filter(dynamic_group=group).first()
+        self.assertIsNotNone(association)
+        self.assertIsNone(association.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE))
+
+        webhook = Webhook.objects.create(
+            name="Static group association updates", type_update=True, payload_url="http://localhost/"
+        )
+        webhook.content_types.set([ContentType.objects.get_for_model(StaticGroupAssociation)])
+
+        with context_managers.web_request_context(self.user):
+            change_context = change_context_state.get()
+            # Something is listening, so an empty capture below can only be the model declining.
+            self.assertTrue(
+                change_context.has_consumers(
+                    ContentType.objects.get_for_model(StaticGroupAssociation),
+                    ObjectChangeActionChoices.ACTION_UPDATE,
+                )
+            )
+            association.associated_object_id = uuid.uuid4()
+            association.save()
+            self.assertEqual(change_context_state.get().pre_object_data_v2, {})
 
     def test_loaded_relations_are_reused_for_the_stored_row(self):
         """The stored row borrows the related objects the instance already holds, saving a query each."""

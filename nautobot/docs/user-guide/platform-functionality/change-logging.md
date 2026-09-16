@@ -48,11 +48,11 @@ Only the object's own fields take part in this comparison. Adding or removing re
 
 +/- 3.3.0
 
-When an object is updated, the `prechange` snapshot in [webhook](webhook.md) and [event](events.md) payloads shows the object exactly as it was stored right before the change was written. This includes any modifications made outside of change logging, such as data migrations or bulk `update()` calls. In earlier versions the snapshot was rebuilt from the object's previous change record, which could be very old.
+When an object is updated, the `prechange` snapshot in [webhook](webhook.md) and [event](events.md) payloads shows the object exactly as it was stored right before the change was written. This includes any modifications made outside of change logging, such as data migrations or bulk `update()` calls. In earlier versions the snapshot was rebuilt from the object's previous change record, which could be very old or absent entirely.
 
 This snapshot is only captured when a webhook, job hook, or event broker is configured for the object type, because nothing else uses it.
 
-Two places still rebuild `prechange` from the previous change record: the change log view in the UI, and `ObjectChange.get_snapshots()` when called from a [job hook](jobs/jobhook.md). After a change made outside of change logging, these may show a different `prechange` than the webhook payload did.
+Two places still rebuild `prechange` from the previous change record: the change log view in the UI, and `ObjectChange.get_snapshots()` when called from a [job hook](jobs/jobhook.md). After a change made outside of change logging, these may show a different `prechange` than the webhook payload did. This is a known inconsistency. The behavior may change in a future release.
 
 Changes to many-to-many associations are not made by saving a field, so their `prechange` is always rebuilt from the previous change record.
 

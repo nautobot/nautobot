@@ -1,9 +1,11 @@
 """Tests for `nautobot.extras.change_consumers`."""
 
 from collections import defaultdict
+from unittest import mock
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import tag
+import redis.exceptions
 
 from nautobot.core.events import deregister_event_broker, EventBroker, register_event_broker
 from nautobot.core.testing import TestCase
@@ -193,6 +195,25 @@ class ChangeHasConsumersTest(ChangeConsumersTestMixin, TestCase):
         self.assertHasConsumers(action=ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertHasNoConsumers(action=ObjectChangeActionChoices.ACTION_CREATE)
         self.assertHasNoConsumers(content_type=self.unsupported_ct)
+
+    def test_unreachable_cache_falls_back_to_computing_the_answer(self):
+        """The cache is an optimization; losing it must not fail the save that asked the question."""
+        with mock.patch(
+            "nautobot.extras.change_consumers.cache_get_or_set", side_effect=redis.exceptions.ConnectionError
+        ):
+            self.assertHasNoConsumers()
+            self.create_webhook()
+            self.assertHasConsumers()
+
+    #
+    # Unrecognized actions
+    #
+
+    def test_unrecognized_action_assumes_a_consumer(self):
+        """Nothing maps such an action to a hook flag, so the safe answer is that someone might be listening."""
+        with self.assertLogs("nautobot.extras.change_consumers", level="WARNING") as logs:
+            self.assertTrue(change_has_consumers(self.location_ct, "frobnicate"))
+        self.assertIn("Unrecognized change action", logs.output[0])
 
 
 @tag("unit")
