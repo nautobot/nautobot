@@ -1535,6 +1535,7 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
         pfx_status = Status.objects.get_for_model(Prefix).first()
         parent4 = Prefix.objects.create(prefix="192.168.0.0/24", status=pfx_status, namespace=cls.namespace)
         parent6 = Prefix.objects.create(prefix="2001:db8:abcd:12::/64", status=pfx_status, namespace=cls.namespace)
+        cls.parent4 = parent4
 
         # Generic `test_update_object()` will grab the first object, so we're aligning this
         # update_data with that to make sure that it has a valid parent.
@@ -1567,6 +1568,52 @@ class IPAddressTest(APIViewTestCases.APIViewTestCase):
             "description": "New description",
             "status": cls.statuses[1].pk,
         }
+
+    def test_containing_ip_address_range(self):
+        """IP responses identify a containing range without changing the parent Prefix."""
+        self.add_permissions("ipam.view_ipaddress")
+        parent = self.parent4
+        range_status = Status.objects.get_for_model(IPAddressRange).first()
+        ip_range = IPAddressRange.objects.create(
+            start_address="192.168.0.10",
+            end_address="192.168.0.20",
+            parent=parent,
+            status=range_status,
+        )
+        inside = IPAddress.objects.create(address="192.168.0.10/24", parent=parent, status=self.statuses[0])
+        outside = IPAddress.objects.create(address="192.168.0.21/24", parent=parent, status=self.statuses[0])
+
+        for ip, expected_range in ((inside, ip_range.pk), (outside, None)):
+            response = self.client.get(self._get_detail_url(ip), **self.header)
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            self.assertEqual(response.data["parent"]["id"], parent.pk)
+            containing_range = response.data["containing_ip_address_range"]
+            if expected_range is None:
+                self.assertIsNone(containing_range)
+            else:
+                self.assertEqual(containing_range["id"], expected_range)
+                self.assertEqual(containing_range["object_type"], "ipam.ipaddressrange")
+                self.assertEqual(
+                    containing_range["url"],
+                    response.wsgi_request.build_absolute_uri(
+                        reverse("ipam-api:ipaddressrange-detail", args=[expected_range])
+                    ),
+                )
+
+        response = self.client.get(f"{self._get_list_url()}?parent={parent.pk}", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        results = {result["id"]: result for result in response.data["results"]}
+        self.assertEqual(results[inside.pk]["containing_ip_address_range"]["id"], ip_range.pk)
+        self.assertIsNone(results[outside.pk]["containing_ip_address_range"])
+
+        other_namespace = Namespace.objects.create(name="Other IP range API namespace")
+        other_parent = Prefix.objects.create(
+            prefix="192.168.0.0/24", namespace=other_namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        other_ip = IPAddress.objects.create(address="192.168.0.10/24", parent=other_parent, status=self.statuses[0])
+        response = self.client.get(self._get_detail_url(other_ip), **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsNone(response.data["containing_ip_address_range"])
 
     def test_create_requires_parent_or_namespace(self):
         """Test that missing parent/namespace fields result in an error."""

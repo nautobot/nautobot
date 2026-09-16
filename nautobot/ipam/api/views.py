@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.core.cache import cache
+from django.db.models import OuterRef, Subquery
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 import netaddr
@@ -399,7 +400,18 @@ class PrefixLocationAssignmentViewSet(ModelViewSet):
 
 
 class IPAddressViewSet(NautobotModelViewSet):
-    queryset = IPAddress.objects.select_related("parent__namespace")
+    queryset = IPAddress.objects.select_related("parent__namespace").annotate(
+        _containing_ip_address_range_id=Subquery(
+            IPAddressRange.objects.filter(
+                parent_id=OuterRef("parent_id"),
+                ip_version=OuterRef("ip_version"),
+                start_host__lte=OuterRef("host"),
+                end_host__gte=OuterRef("host"),
+            )
+            .order_by()
+            .values("pk")[:1]
+        )
+    )
     serializer_class = serializers.IPAddressSerializer
     filterset_class = filters.IPAddressFilterSet
 

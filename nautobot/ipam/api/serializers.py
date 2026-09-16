@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueTogetherValidator
@@ -10,6 +11,7 @@ from nautobot.core.api import (
     NautobotModelSerializer,
     ValidatedModelSerializer,
 )
+from nautobot.core.api.utils import get_brief_representation
 from nautobot.dcim.models.locations import Location
 from nautobot.extras.api.mixins import TaggedModelSerializerMixin
 from nautobot.ipam import constants
@@ -312,6 +314,9 @@ class AvailablePrefixSerializer(serializers.Serializer):
 
 class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     address = IPFieldSerializer()
+    containing_ip_address_range = serializers.SerializerMethodField(
+        help_text="The IP Address Range containing this address, if any."
+    )
     # namespace is not a model field, so we have to specify it explicitly
     namespace = NautobotHyperlinkedRelatedField(
         view_name="ipam-api:namespace-detail", write_only=True, queryset=Namespace.objects.all(), required=False
@@ -345,6 +350,39 @@ class IPAddressSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
         self.extend_field_names(fields, "interfaces")
         self.extend_field_names(fields, "vm_interfaces")
         return fields
+
+    @extend_schema_field(
+        {
+            "type": "object",
+            "nullable": True,
+            "properties": {
+                "id": {"type": "string", "format": "uuid"},
+                "object_type": {"type": "string"},
+                "url": {"type": "string", "format": "uri"},
+            },
+        }
+    )
+    def get_containing_ip_address_range(self, instance):
+        """Return a reference to the range containing this IP address, if any."""
+        if hasattr(instance, "_containing_ip_address_range_id"):
+            range_id = instance._containing_ip_address_range_id
+        elif instance.parent_id:
+            range_id = (
+                IPAddressRange.objects.filter(
+                    parent_id=instance.parent_id,
+                    ip_version=instance.ip_version,
+                    start_host__lte=instance.host,
+                    end_host__gte=instance.host,
+                )
+                .order_by()
+                .values_list("pk", flat=True)
+                .first()
+            )
+        else:
+            range_id = None
+        if range_id is None:
+            return None
+        return get_brief_representation(IPAddressRange(pk=range_id), self.context.get("request"))
 
 
 #

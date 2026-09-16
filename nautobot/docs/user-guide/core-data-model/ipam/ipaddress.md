@@ -10,6 +10,8 @@ IP addresses are automatically arranged under their `parent` [Prefixes](prefix.m
 +++ 2.0.0 "IP Address to Prefix is now a concrete foreign-key relationship"
     Parenting of IP addresses under Prefixes is now automatically managed at the database level to greatly improve performance especially when calculating tree hierarchy and utilization. Refer to the [Prefix](prefix.md) documentation for more details about this functionality.
 
+The REST API includes a read-only `containing_ip_address_range` field. It identifies the [IP Address Range](ipaddressrange.md) containing the host address, or is `null` if there is no such range. Range membership is calculated from the address and parent Prefix.
+
 IP addresses are not directly assigned to [Namespaces](namespace.md) or [VRFs](vrf.md) in the database on an individual basis, but instead derive their namespace and VRF(s) from their parent prefix. For convenience, the Nautobot UI, REST API, and Django ORM do present a virtual `namespace` field on IP addresses, as (especially when creating a new IP address record) it is often more straightforward to specify the `namespace` of an IP address, and let Nautobot automatically determine the correct `parent` in that namespace, than to specify the `parent` directly.
 
 +/- 2.0.0 "All IP addresses must belong to a parent Prefix"
