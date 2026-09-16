@@ -119,6 +119,10 @@ if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != 
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
 
+# Whether a save that modifies none of an object's field values should be left out of the change log.
+# Set to False to record such saves anyway, as Nautobot did before 3.3.0.
+CHANGELOG_SKIP_UNCHANGED_SAVES = is_truthy(os.getenv("NAUTOBOT_CHANGELOG_SKIP_UNCHANGED_SAVES", "True"))
+
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
 CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED = is_truthy(os.getenv("NAUTOBOT_CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED", "False"))

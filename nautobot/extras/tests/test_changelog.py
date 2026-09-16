@@ -1071,6 +1071,20 @@ class ChangeLogUnchangedSaveTest(TestCase):
                 self.location.save()
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
 
+    @override_settings(CHANGELOG_SKIP_UNCHANGED_SAVES=False)
+    def test_deployment_can_opt_out(self):
+        """A deployment can keep the pre-3.3 behavior of recording every save, however little it changed."""
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    @override_settings(CHANGELOG_SKIP_UNCHANGED_SAVES=False)
+    def test_deployment_opt_out_covers_update_fields(self):
+        """The opt-out applies to every route into the comparison, not only the value check."""
+        with context_managers.web_request_context(self.user):
+            self.location.save(update_fields=["last_updated"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
     def test_indeterminate_comparison_records_the_change(self):
         """
         `_name` is derived in `pre_save`, so a save restricted to it cannot be compared beforehand.

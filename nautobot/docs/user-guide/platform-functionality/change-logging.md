@@ -44,6 +44,8 @@ Nautobot decides whether anything changed by comparing the values being saved wi
 
 Only the object's own fields take part in this comparison. Adding or removing related objects through a many-to-many relationship is always recorded, even when the end result is the same set of related objects. See [Many-to-Many Association Changes](#many-to-many-association-changes) below.
 
+If your deployment relies on the previous behavior, set [`CHANGELOG_SKIP_UNCHANGED_SAVES`](../administration/configuration/settings.md#changelog_skip_unchanged_saves) to `False` to record these saves again. This setting is provided to ease the transition and is expected to be removed in a future major release.
+
 ### The `prechange` in Webhook and Event Payloads
 
 +/- 3.3.0

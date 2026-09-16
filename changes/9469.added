@@ -1,0 +1,1 @@
+Added the `CHANGELOG_SKIP_UNCHANGED_SAVES` setting, which can be set to `False` to keep recording change records for saves that modify none of an object's field values, as Nautobot did before 3.3.0.

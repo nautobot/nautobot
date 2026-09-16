@@ -330,10 +330,13 @@ def _record_unchanged_verdict(instance, stored_instance, using=None, update_fiel
         return
     instance._change_logging_unchanged = False
 
+    # A deployment may turn the comparison off entirely to keep the pre-3.3 behavior of recording every save;
+    # a model may opt out for itself when its stored value is not a pure function of its own fields.
+    if not settings.CHANGELOG_SKIP_UNCHANGED_SAVES or not getattr(instance, "changelog_skip_unchanged_saves", True):
+        return
+
     change_context = change_context_state.get()
     if change_context is None:
-        return
-    if not getattr(instance, "changelog_skip_unchanged_saves", True):
         return
     # A brand-new object is a create, which is always recorded; so is a save racing a concurrent delete.
     if stored_instance is None:
