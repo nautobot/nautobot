@@ -19,5 +19,5 @@ def metric_animals():
     yield gauges
 
 
-metrics = [metric_example]
+metrics = [metric_animals]
 ```
