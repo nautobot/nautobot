@@ -373,6 +373,170 @@ class PowerPortTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.Base
         self.assertEqual(result["allocated"], 400)
         self.assertEqual(result["maximum"], 600)
 
+    def test_rack_get_power_utilization_by_phase(self):
+        """Rack utilization groups three-phase downstream load by PowerOutlet.feed_leg."""
+        rack = Rack.objects.create(
+            name="rack-power-utilization-3ph",
+            location=self.device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        feed = PowerFeed.objects.create(
+            name="rack-feed-3ph",
+            power_panel=self.power_panel,
+            rack=rack,
+            status=self.feed_status,
+            voltage=120,
+            amperage=20,
+            max_utilization=100,
+            phase=PowerFeedPhaseChoices.PHASE_3PHASE,
+        )
+        pdu_port = PowerPort.objects.create(device=self.device, name="rack-pdu-inlet")
+        Cable.objects.create(termination_a=pdu_port, termination_b=feed, status=self.cable_status)
+
+        self._build_outlets_with_remote_ports(
+            pdu_port,
+            [(95, 190)],
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+        )
+        self._build_outlets_with_remote_ports(
+            pdu_port,
+            [(190, 285)],
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_B,
+        )
+        self._build_outlets_with_remote_ports(
+            pdu_port,
+            [(285, 380)],
+            feed_leg=PowerOutletFeedLegChoices.FEED_LEG_C,
+        )
+
+        result = rack.get_power_utilization_by_phase()
+
+        self.assertEqual(set(result), {"A", "B", "C"})
+        self.assertTrue(result.attribution_complete)
+        # Default PowerPort power_factor is 0.95, hence 95/190/285 W -> 100/200/300 VA.
+        self.assertEqual(result["A"].numerator, 100)
+        self.assertEqual(result["B"].numerator, 200)
+        self.assertEqual(result["C"].numerator, 300)
+
+        expected_available_per_leg = feed.available_power / 3
+        self.assertEqual(result["A"].denominator, expected_available_per_leg)
+        self.assertEqual(result["B"].denominator, expected_available_per_leg)
+        self.assertEqual(result["C"].denominator, expected_available_per_leg)
+
+    def test_rack_get_power_utilization_by_phase_without_three_phase_feeds(self):
+        """A rack without three-phase feeds reports zero utilization for all legs."""
+        rack = Rack.objects.create(
+            name="rack-power-utilization-single",
+            location=self.device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        PowerFeed.objects.create(
+            name="rack-feed-single",
+            power_panel=self.power_panel,
+            rack=rack,
+            status=self.feed_status,
+            voltage=120,
+            amperage=20,
+            max_utilization=100,
+            phase=PowerFeedPhaseChoices.PHASE_SINGLE,
+        )
+
+        result = rack.get_power_utilization_by_phase()
+
+        self.assertEqual(set(result), {"A", "B", "C"})
+        for utilization in result.values():
+            self.assertEqual(utilization.numerator, 0)
+            self.assertEqual(utilization.denominator, 0)
+
+        self.assertTrue(result.attribution_complete)
+
+    def test_rack_get_power_utilization_does_not_double_count_inlet_draw(self):
+        """A manual inlet draw replaces, rather than adds to, downstream outlet draw."""
+        rack = Rack.objects.create(
+            name="rack-power-utilization-overall",
+            location=self.device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        feed = self._make_powerfeed("rack-feed-overall")
+        feed.rack = rack
+        feed.save()
+        pdu_port = PowerPort.objects.create(device=self.device, name="rack-pdu-overall", allocated_draw=190)
+        Cable.objects.create(termination_a=pdu_port, termination_b=feed, status=self.cable_status)
+        self._build_outlets_with_remote_ports(pdu_port, [(95, 190), (190, 285)])
+
+        result = rack.get_power_utilization()
+
+        # The inlet's 190 W manual draw is 200 VA. The two downstream
+        # loads must not be added because manual draw takes precedence.
+        self.assertEqual(result.numerator, 200)
+        self.assertEqual(result.denominator, feed.available_power)
+
+    def test_rack_get_power_utilization_by_phase_incomplete_for_unassigned_load(self):
+        """Unassigned downstream load is omitted and marks phase attribution incomplete."""
+        rack = Rack.objects.create(
+            name="rack-power-utilization-unassigned",
+            location=self.device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        feed = self._make_powerfeed("rack-feed-unassigned", phase=PowerFeedPhaseChoices.PHASE_3PHASE)
+        feed.rack = rack
+        feed.save()
+        pdu_port = PowerPort.objects.create(device=self.device, name="rack-pdu-unassigned")
+        Cable.objects.create(termination_a=pdu_port, termination_b=feed, status=self.cable_status)
+        self._build_outlets_with_remote_ports(pdu_port, [(95, 190)])
+
+        result = rack.get_power_utilization_by_phase()
+
+        self.assertFalse(result.attribution_complete)
+        for utilization in result.values():
+            self.assertEqual(utilization.numerator, 0)
+
+    def test_rack_get_power_utilization_by_phase_aggregates_before_truncating(self):
+        """Multiple inlets on one phase retain fractional VA until phase aggregation."""
+        rack = Rack.objects.create(
+            name="rack-power-utilization-fractions",
+            location=self.device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        for index, allocated_draw in enumerate((18, 1)):
+            feed = self._make_powerfeed(
+                f"rack-feed-fractions-{index}", phase=PowerFeedPhaseChoices.PHASE_3PHASE
+            )
+            feed.rack = rack
+            feed.save()
+            pdu_port = PowerPort.objects.create(device=self.device, name=f"rack-pdu-fractions-{index}")
+            Cable.objects.create(termination_a=pdu_port, termination_b=feed, status=self.cable_status)
+            self._build_outlets_with_remote_ports(
+                pdu_port,
+                [(allocated_draw, allocated_draw)],
+                feed_leg=PowerOutletFeedLegChoices.FEED_LEG_A,
+            )
+
+        result = rack.get_power_utilization_by_phase()
+
+        # 18 / .95 + 1 / .95 = 20 VA after the phase-level truncation;
+        # truncating each inlet first would incorrectly produce 18 VA.
+        self.assertEqual(result[PowerOutletFeedLegChoices.FEED_LEG_A].numerator, 20)
+
+    def test_rack_get_power_utilization_by_phase_incomplete_for_manual_draw(self):
+        """Manual inlet draw is omitted and marks phase attribution incomplete."""
+        rack = Rack.objects.create(
+            name="rack-power-utilization-admin",
+            location=self.device.location,
+            status=Status.objects.get_for_model(Rack).first(),
+        )
+        feed = self._make_powerfeed("rack-feed-admin", phase=PowerFeedPhaseChoices.PHASE_3PHASE)
+        feed.rack = rack
+        feed.save()
+        pdu_port = PowerPort.objects.create(device=self.device, name="rack-pdu-admin", allocated_draw=190)
+        Cable.objects.create(termination_a=pdu_port, termination_b=feed, status=self.cable_status)
+
+        result = rack.get_power_utilization_by_phase()
+
+        self.assertFalse(result.attribution_complete)
+        for utilization in result.values():
+            self.assertEqual(utilization.numerator, 0)
+
 
 class PowerOutletTestCase(ModularDeviceComponentTestCaseMixin, ModelTestCases.BaseModelTestCase):
     model = PowerOutlet
