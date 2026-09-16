@@ -259,10 +259,6 @@ tblib = "~3.2.2"
 # Time travel for testing, used in ScheduledJob tests etc.
 time-machine = "~3.4.0"
 
-# Playwright testing only; opt in with `poetry install --with playwright`
-[tool.poetry.group.playwright]
-optional = true
-
 [tool.poetry.group.playwright.dependencies]
 # Test runner for the Playwright suite (not used for the unittest-based suites)
 pytest = "~9.1.1"

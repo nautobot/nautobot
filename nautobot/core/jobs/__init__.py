@@ -40,9 +40,10 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import m2m_through_data_fields
-from nautobot.core.utils.lookup import get_filterset_for_model
-from nautobot.core.utils.requests import get_filterable_params_from_filter_params
+from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model, get_view_for_model
+from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
     BaseValidator,
@@ -186,8 +187,17 @@ class ExportObjectList(Job):
         required=False,
         description="Optional comma-separated list of fields to export, including nested references to "
         "related objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
-        "If unspecified, all fields are exported. Not applicable to Export Templates or "
-        "devicetype-library YAML exports.",
+        "If unspecified, all fields are exported, unless <em>Use Current View Columns</em> is selected. "
+        "Not applicable to Export Templates or devicetype-library YAML exports.",
+    )
+    use_current_view_columns = BooleanVar(
+        label="Use Current View Columns",
+        default=False,
+        required=False,
+        description="If no explicit list of fields to export is given, export the columns that the "
+        "corresponding list view is currently displaying — as configured by the saved view in use, if any, "
+        "else by your own table configuration for that view. Columns that have no exportable equivalent "
+        "(row selection, action buttons, computed fields, related-object counts, and the like) are omitted.",
     )
 
     class Meta:
@@ -198,22 +208,223 @@ class ExportObjectList(Job):
         soft_time_limit = 1800
         time_limit = 2000
 
-    def _get_saved_view_filter_params(self, query_params):
-        """Extract filter params from saved view if applicable."""
-        if "saved_view" in query_params and "all_filters_removed" not in query_params:
-            # Not using get_saved_view_filter_params(), as that cannot distinguish a missing Saved View from one with no filter params.
-            saved_view = get_saved_view_or_none(query_params["saved_view"])
-            if saved_view is None:
-                self.logger.warning(
-                    "Saved view %s not found; exporting without its filter parameters.", query_params["saved_view"]
-                )
-                return {}
-            saved_view_filters = saved_view.config.get("filter_params", {})
-            if len(query_params) > 1:
-                # Retain only filters also present in query_params
-                saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
-            return saved_view_filters
-        return {}
+    # ---- SHARED (resolved once, consulted by more than one phase below) ----
+
+    def _get_saved_view(self, query_params):
+        """The SavedView the launching list view was displaying, if it referenced one that still exists.
+
+        Resolved once per run and passed to each phase that consults it, since a Saved View records the
+        whole of a view's configuration: its filters, its sort order, and its table columns.
+        """
+        saved_view_pk = query_params.get("saved_view")
+        if not saved_view_pk:
+            return None
+        saved_view = get_saved_view_or_none(saved_view_pk)
+        if saved_view is None:
+            self.logger.warning("Saved view %s not found; exporting without its saved configuration.", saved_view_pk)
+        return saved_view
+
+    # ---- RESOLVE QUERYSET (what to export) ----
+
+    def _require_view_permission(self, content_type):
+        """Abort unless the user may view the requested content-type."""
+        if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
+            self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
+            raise PermissionDenied("User does not have view permissions on the requested content-type")
+
+    def _restricted_queryset(self, model):
+        """Every object of the requested type that the user may view, unfiltered and unordered.
+
+        A model whose default manager is not one of Nautobot's has no `restrict()` to call --
+        `auth.Group` and `contenttypes.ContentType` are both exportable and both plain Django models.
+        Wrapping such a model in a `RestrictedQuerySet` applies object permissions to it all the same,
+        which is what `users.api.views.GroupViewSet` does for the very same reason.
+        """
+        queryset = model.objects.all()
+        if not hasattr(queryset, "restrict"):
+            queryset = RestrictedQuerySet(model=model)
+        return queryset.restrict(self.user, "view")
+
+    def _filter_queryset(self, model, queryset, query_params, saved_view):
+        """Narrow and order the queryset per `query_params`: the view's filters, then its sort order.
+
+        These are always applied — they are how the launching list view describes what it is showing —
+        so an export covers the same records, in the same order, as that view.
+        """
+        non_filter_params = self._get_non_filter_params(model)
+        filterset_class = get_filterset_for_model(model)
+        if filterset_class is None:
+            # A few exportable models have no FilterSet at all -- `dcim.cablepath`, for one -- and so
+            # cannot be narrowed. Sorting still applies, since that needs only the model's own fields.
+            self.logger.debug("No filterset class found for `%s`", model._meta.label_lower)
+            self._require_no_filters(model, query_params, non_filter_params, saved_view)
+            return self._apply_sort(model, queryset, query_params, saved_view)
+        self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
+        filter_params = resolve_filter_params(
+            query_params,
+            non_filter_params,
+            filterset_class(),
+            # The SavedView is already in hand, so this never needs to look one up.
+            lambda: saved_view.config.get("filter_params", {}) if saved_view is not None else {},
+        )
+        self.logger.debug("Filterset params: `%s`", filter_params)
+        filterset = filterset_class(filter_params, queryset)
+        if not filterset.is_valid():
+            self.logger.error("Invalid filters were specified: %s", filterset.errors)
+            raise RunJobTaskFailed("Invalid query_string value for this content_type")
+        return self._apply_sort(model, filterset.qs, query_params, saved_view)
+
+    def _get_non_filter_params(self, model):
+        """The query parameters the launching list view uses for something other than filtering.
+
+        Anything not on this list is handed to the filterset, so it has to account for the parameters
+        that view reads for itself -- `expanded_subtree` on the Prefix and Device list views, say. Taken
+        from the view's own declaration rather than assumed, since a Job is otherwise the only consumer
+        of a query string that cannot see which view produced it.
+
+        Unioned with `NON_FILTER_PARAMS` rather than replacing it: a view that declares a narrower list
+        would otherwise have its `saved_view` parameter passed along as a filter, and unioning can only
+        ever strip more parameters, never fewer.
+        """
+        view_class = get_view_for_model(model, "List")
+        return {*NON_FILTER_PARAMS, *getattr(view_class, "non_filter_params", ())}
+
+    def _require_no_filters(self, model, query_params, non_filter_params, saved_view):
+        """Abort if filters were asked for that this model has no filterset to apply.
+
+        Exporting everything instead would hand back records the user did not ask for, with only a log
+        line to say so -- the same reason an invalid filter fails the Job rather than being dropped.
+        """
+        requested = [param for param in query_params if param not in non_filter_params and query_params[param]]
+        if saved_view is not None and saved_view.config.get("filter_params"):
+            requested.extend(saved_view.config["filter_params"])
+        if requested:
+            self.logger.error(
+                "Filters %s were specified, but %s has no filterset to apply them",
+                ", ".join(f"`{param}`" for param in sorted(set(requested))),
+                model._meta.label_lower,
+            )
+            raise RunJobTaskFailed("Filters were specified but this content_type has no filterset")
+
+    def _apply_sort(self, model, queryset, query_params, saved_view):
+        """Apply the launching view's sort order (best effort).
+
+        A `sort` parameter is the view's own sort; absent one, a saved view sorts by its stored
+        `sort_order`, which is how the view itself resolves the two (see `BaseTable.__init__`).
+
+        A sort key that `order_by()` cannot resolve is skipped with a warning rather than failing the
+        export: the view's sort is incidental to what the user asked for, and its columns include
+        table-only and computed ones that no query can order by.
+        """
+        sort_params = query_params.getlist("sort")
+        if not any(sort_params) and saved_view is not None:
+            sort_params = saved_view.config.get("sort_order", [])
+        sortable = []
+        for sort_param in (param for param in sort_params if param):
+            if self._is_sortable(model, sort_param.lstrip("-")):
+                sortable.append(sort_param)
+            else:
+                self.logger.warning("Ignoring sort on `%s`; not a sortable field for this model", sort_param)
+        if sortable:
+            queryset = queryset.order_by(*sortable)
+        return queryset
+
+    @staticmethod
+    def _is_sortable(model, field_path):
+        """Whether `order_by()` can resolve this field path, following any relations it traverses.
+
+        Every segment is checked, not just the head: `order_by()` validates lazily, at query evaluation,
+        so an unresolvable path would otherwise surface as a `FieldError` from deep inside serialization
+        rather than as a skipped sort.
+        """
+        if field_path.startswith("cf_"):
+            # Custom fields sort via a JSON-field lookup rather than a field of the model.
+            return True
+        for segment in field_path.split("__"):
+            if model is None:
+                return False  # a previous segment was not a relation, so there is nothing left to traverse
+            if segment == "pk":
+                model = None
+                continue
+            try:
+                model = model._meta.get_field(segment).related_model
+            except FieldDoesNotExist:
+                return False
+        return True
+
+    # ---- RESOLVE FIELDS / MATCH (which columns, and the re-import match key) ----
+
+    def _get_current_view_columns(self, model, query_params, saved_view):
+        """The columns the launching list view is displaying, as export field paths (None = no selection).
+
+        Resolved by building the model's table the way the list view builds it — from the saved view in
+        use, else the user's own stored table configuration, else the table's default columns — so that
+        this is the same set of columns, in the same order, that the user is looking at.
+
+        Not every column is exportable — row selection and action buttons aren't data at all, and a
+        computed field or related-object count is a displayed value with no serializer field behind it —
+        so `BaseTable.serializer_paths_by_visible_column()` does the mapping and reports what it cannot
+        place. Losing a column that way is logged but does not fail the export: what was asked for is
+        the view, not those specific columns.
+        """
+        table_class = get_table_for_model(model)
+        if table_class is None:
+            self.logger.warning(
+                "No table class found for %s, so its list view's columns cannot be determined; "
+                "exporting all fields instead.",
+                model._meta.label_lower,
+            )
+            return None
+        self.logger.debug("Found table class: `%s`", table_class.__name__)
+        table = table_class(
+            model.objects.none(),
+            user=self.user,
+            saved_view=saved_view,
+            table_changes_pending=query_params.get("table_changes_pending", False),
+        )
+        serializer_class = get_serializer_for_model(model)
+        export_field_paths, omitted = [], []
+        for column, path in table.serializer_paths_by_visible_column(serializer_class).items():
+            if path is None or not self._is_exportable_path(serializer_class, path):
+                omitted.append(column)
+            elif path not in export_field_paths:
+                # Two columns can map to the same field; a selection names each field once.
+                export_field_paths.append(path)
+        if omitted:
+            # Info rather than a warning: every view has columns like these, so losing them is the
+            # normal case rather than a sign that anything went wrong.
+            self.logger.info(
+                "Omitting displayed column(s) %s, which have no exportable equivalent",
+                ", ".join(f"`{column}`" for column in omitted),
+            )
+        if not export_field_paths:
+            self.logger.warning("None of the displayed columns can be exported; exporting all fields instead.")
+            return None
+        return export_field_paths
+
+    def _is_exportable_path(self, serializer_class, path):
+        """Whether an export can actually emit this field path, for this user.
+
+        The same check an explicit selection gets, applied per path so that one unusable column is
+        dropped rather than taking the whole derived selection down with it.
+        """
+        try:
+            validate_field_paths(serializer_class, [path], user=self.user)
+        except ValueError as exc:
+            self.logger.debug("Cannot export `%s`: %s", path, exc)
+            return False
+        return True
+
+    def _resolve_export_field_paths(self, model, export_fields):
+        """Parse and validate the explicit field-selection string (None if no selection was given)."""
+        export_field_paths = import_utils.parse_match_fields(export_fields)
+        if export_field_paths:
+            try:
+                validate_field_paths(get_serializer_for_model(model), export_field_paths, user=self.user)
+            except ValueError as exc:
+                self.logger.error("%s", exc)
+                raise RunJobTaskFailed(str(exc)) from exc
+        return export_field_paths
 
     @staticmethod
     def _get_match_fields(model, export_field_paths=None):
@@ -235,17 +446,65 @@ class ExportObjectList(Job):
                     return None
         return match_fields
 
-    def _resolve_export_field_paths(self, model, export_fields):
-        """Parse the field-selection string into validated field paths (empty = export all fields)."""
-        export_field_paths = import_utils.parse_match_fields(export_fields)
-        if export_field_paths:
-            try:
-                validate_field_paths(get_serializer_for_model(model), export_field_paths, user=self.user)
-            except ValueError as exc:
-                self.logger.error("%s", exc)
-                raise RunJobTaskFailed(str(exc)) from exc
-            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
-        return export_field_paths
+    # ---- RENDER (normalize to the requested output, then write the file) ----
+
+    @staticmethod
+    def _export_filename(model):
+        """The branded, extension-less base filename for the export."""
+        return f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
+
+    def _render_export_template(self, export_template, content_type, queryset, filename):
+        if export_template.content_type != content_type:
+            self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
+            raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
+        self.logger.info(
+            "Exporting %d objects via ExportTemplate. This may take some time.",
+            queryset.count(),
+            extra={"object": export_template},
+        )
+        try:
+            # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
+            output = export_template.render(queryset)
+        except Exception as err:
+            self.logger.error("Error when rendering ExportTemplate: %s", err)
+            raise
+        if export_template.file_extension:
+            filename += f".{export_template.file_extension}"
+        self.create_file(filename, output)
+
+    def _render_devicetype_library_yaml(self, queryset, filename):
+        # The nautobot/devicetype-library interchange format, via each model's own to_yaml(). Distinct from
+        # the generic YAML document: this one is read back by the DeviceType/ModuleType import views rather
+        # than by the ImportObjects job, so it is offered as its own export_format choice.
+        self.logger.info("Exporting %d objects to devicetype-library YAML. This may take some time.", queryset.count())
+        yaml_data = [obj.to_yaml() for obj in queryset]
+        self.create_file(filename + ".yaml", "---\n".join(yaml_data))
+
+    def _render_serialized(
+        self, export_format, model, content_type, queryset, export_field_paths, match_fields, filename
+    ):
+        """Serialize the queryset once, then write that normalized record set as CSV or a JSON/YAML document.
+
+        `records` is the single normalized structure: the flat, natural-key-flattened rows the CSV renderer
+        consumes directly and the JSON/YAML document path reshapes into nested records. The queryset stops
+        here — the format renderers only ever see `records`.
+        """
+        serializer_class = get_serializer_for_model(model)
+        self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
+        self.logger.info(
+            "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
+        )
+        is_document = export_format in ("json", "yaml")
+        records = self._get_serializer_data(
+            model, serializer_class, queryset, for_csv=not is_document, export_field_paths=export_field_paths
+        )
+        if is_document:
+            _filename, content = self._render_document(
+                export_format, content_type, records, match_fields, filename, export_field_paths
+            )
+        else:
+            _filename, content = self._render_csv(content_type, records, match_fields, filename, export_field_paths)
+        self.create_file(_filename, content)
 
     def _get_serializer_data(self, model, serializer_class, queryset, for_csv=True, export_field_paths=None):
         """Serialize the queryset with flat natural-key lookups for related fields, M2M included.
@@ -339,61 +598,6 @@ class ExportObjectList(Job):
         covered = set(getattr(through, "natural_key_field_lookups", ()))
         return [field_name for field_name in data_fields if field_name not in covered]
 
-    @staticmethod
-    def _export_filename(model):
-        """The branded, extension-less base filename for the export."""
-        return f"{settings.BRANDING_PREPENDED_FILENAME}{model._meta.verbose_name_plural.lower().replace(' ', '_')}"
-
-    def _render_export_template(self, export_template, content_type, queryset, filename):
-        if export_template.content_type != content_type:
-            self.logger.error("ExportTemplate %s doesn't apply to %s", export_template, content_type)
-            raise RunJobTaskFailed("ExportTemplate ContentType mismatch")
-        self.logger.info(
-            "Exporting %d objects via ExportTemplate. This may take some time.",
-            queryset.count(),
-            extra={"object": export_template},
-        )
-        try:
-            # export_template.render() consumes the whole queryset, so we don't have any way to do a progress bar.
-            output = export_template.render(queryset)
-        except Exception as err:
-            self.logger.error("Error when rendering ExportTemplate: %s", err)
-            raise
-        if export_template.file_extension:
-            filename += f".{export_template.file_extension}"
-        self.create_file(filename, output)
-
-    def _render_devicetype_library_yaml(self, queryset, filename):
-        # The nautobot/devicetype-library interchange format, via each model's own to_yaml(). Distinct from
-        # the generic YAML document: this one is read back by the DeviceType/ModuleType import views rather
-        # than by the ImportObjects job, so it is offered as its own export_format choice.
-        self.logger.info("Exporting %d objects to devicetype-library YAML. This may take some time.", queryset.count())
-        yaml_data = [obj.to_yaml() for obj in queryset]
-        self.create_file(filename + ".yaml", "---\n".join(yaml_data))
-
-    def _render_serialized(
-        self, export_format, model, content_type, queryset, export_field_paths, match_fields, filename
-    ):
-        """Serialize the queryset once, then write that normalized record set as CSV or a JSON/YAML document.
-
-        `records` is the single normalized structure: the flat, natural-key-flattened rows the CSV renderer
-        consumes directly and the JSON/YAML document path reshapes into nested records. The queryset stops
-        here — the format renderers only ever see `records`.
-        """
-        serializer_class = get_serializer_for_model(model)
-        self.logger.debug("Found serializer class: `%s`", serializer_class.__name__)
-        self.logger.info(
-            "Exporting %d objects to %s. This may take some time.", queryset.count(), export_format.upper()
-        )
-        is_document = export_format in ("json", "yaml")
-        records = self._get_serializer_data(
-            model, serializer_class, queryset, for_csv=not is_document, export_field_paths=export_field_paths
-        )
-        if is_document:
-            self._render_document(export_format, content_type, records, match_fields, filename, export_field_paths)
-        else:
-            self._render_csv(content_type, records, match_fields, filename, export_field_paths)
-
     def _render_document(self, export_format, content_type, records, match_fields, filename, export_field_paths):
         # Generic JSON/YAML export. The document format itself lives in nautobot.core.api.import_export,
         # shared with the parsers that read it back, so writer and reader stay in lock-step.
@@ -403,12 +607,12 @@ class ExportObjectList(Job):
             match_fields=match_fields,
         )
         if export_format == "json":
-            self.create_file(filename + ".json", json.dumps(document, indent=2, default=str))
+            return (filename + ".json", json.dumps(document, indent=2, default=str))
         else:
             # Round-trip through JSON first to reduce DRF's ReturnDict/OrderedDict and other
             # non-primitive values to plain types that yaml.safe_dump can represent.
             plain_document = json.loads(json.dumps(document, default=str))
-            self.create_file(filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
+            return (filename + ".yaml", yaml.safe_dump(plain_document, sort_keys=False))
 
     def _render_csv(self, content_type, records, match_fields, filename, export_field_paths):
         # Generic CSV export
@@ -422,46 +626,35 @@ class ExportObjectList(Job):
         )
         # Explicitly add UTF-8 BOM to the data so that Excel will understand non-ASCII characters correctly...
         csv_data = codecs.BOM_UTF8 + renderer.render(records, renderer_context=renderer_context).encode("utf-8")
-        self.create_file(filename + ".csv", csv_data)
+        return (filename + ".csv", csv_data)
 
-    def run(self, *, content_type, query_string="", export_format="csv", export_template=None, export_fields=""):  # pylint:disable=arguments-differ
-        if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
-            self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
-            raise PermissionDenied("User does not have view permissions on the requested content-type")
-
+    def run(
+        self,
+        *,
+        content_type,
+        query_string="",
+        export_format="csv",
+        export_template=None,
+        export_fields="",
+        use_current_view_columns=False,
+    ):  # pylint:disable=arguments-differ
+        self._require_view_permission(content_type)
         model = content_type.model_class()
-
-        # Start with all objects of the requested type
-        queryset = model.objects.all()
-        # Enforce user permissions
-        queryset = queryset.restrict(self.user, "view")
-
-        # Filter the queryset based on the provided query_string
-        filterset_class = get_filterset_for_model(model)
-        self.logger.debug("Found filterset class: `%s`", filterset_class.__name__)
-        # TODO: ideally the ObjectListView should strip its non_filter_params (which may vary by view!)
-        #       such that they never are even seen here.
+        if model is None:
+            self.logger.error(
+                'Could not find the "%s.%s" data model. Perhaps an app is uninstalled?',
+                content_type.app_label,
+                content_type.model,
+            )
+            raise RunJobTaskFailed("Model not found")
         query_params = QueryDict(query_string)
         self.logger.debug("Parsed query_params: `%s`", query_params.dict())
-        default_non_filter_params = (
-            "all_filters_removed",
-            "export",
-            "page",
-            "per_page",
-            "saved_view",
-            "sort",
-            "table_changes_pending",
-        )
-        filter_params = self._get_saved_view_filter_params(query_params)
-        filter_params.update(
-            get_filterable_params_from_filter_params(query_params, default_non_filter_params, filterset_class())
-        )
-        self.logger.debug("Filterset params: `%s`", filter_params)
-        filterset = filterset_class(filter_params, queryset)
-        if not filterset.is_valid():
-            self.logger.error("Invalid filters were specified: %s", filterset.errors)
-            raise RunJobTaskFailed("Invalid query_string value for this content_type")
-        queryset = filterset.qs
+        saved_view = self._get_saved_view(query_params)
+
+        # RESOLVE QUERYSET — which records, in what order: whatever the query string says the launching
+        # list view was showing. An empty query string is therefore a full export in the model's own order.
+        queryset = self._restricted_queryset(model)
+        queryset = self._filter_queryset(model, queryset, query_params, saved_view)
 
         filename = self._export_filename(model)
 
@@ -482,9 +675,16 @@ class ExportObjectList(Job):
             self._render_devicetype_library_yaml(queryset, filename)
             return
 
-        # CSV and JSON/YAML share one normalized serialization, written per-format.
+        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else (on request) the ones the
+        # launching list view is displaying, else every field of the model.
         export_field_paths = self._resolve_export_field_paths(model, export_fields)
+        if export_field_paths is None and use_current_view_columns:
+            export_field_paths = self._get_current_view_columns(model, query_params, saved_view)
+        if export_field_paths:
+            self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
         match_fields = self._get_match_fields(model, export_field_paths)
+
+        # RENDER — CSV and JSON/YAML share one normalized serialization, written per-format
         self._render_serialized(
             export_format, model, content_type, queryset, export_field_paths, match_fields, filename
         )

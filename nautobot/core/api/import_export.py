@@ -200,6 +200,26 @@ def _model_field_for(serializer, field):
         return None
 
 
+def _needs_a_queryset_annotation(serializer, field):
+    """Whether `field` reads an instance attribute that the model does not itself provide.
+
+    Such a field renders only where something has annotated the queryset to put the attribute there: the
+    related-object counts a list view shows (`device_count`, `rack_count`, ...) are `annotate()` calls
+    made by the API viewset that serves them, or by the table that displays them. An export builds its
+    own queryset and annotates nothing, so DRF finds no attribute to read and skips the field -- which,
+    for a field named in a selection, would leave the file silently missing a requested column.
+
+    A field sourced from `"*"` reads the whole object rather than an attribute of it (`display`,
+    `object_type`, `natural_slug`), and so is never in this position.
+    """
+    if not field.source_attrs:
+        return False
+    if _model_field_for(serializer, field) is not None:
+        return False
+    model = getattr(getattr(serializer, "Meta", None), "model", None)
+    return model is not None and not hasattr(model, field.source_attrs[0])
+
+
 def _traversable_relation_target(serializer, field):
     """The model that `field` traverses to, or None if a `__` path cannot continue through it.
 
@@ -225,7 +245,9 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
     Validate a list of `__`-separated field-selection paths against a serializer's field graph.
 
     A path's head must be a readable field of the serializer *as an export instantiates it* (or a `cf_<key>`
-    custom-field reference). Each additional segment must traverse a single-valued relation of the model --
+    custom-field reference), and must be one an export can actually emit -- not write-only, and not
+    dependent on a queryset annotation an export does not make (see `_needs_a_queryset_annotation`). Each
+    additional segment must traverse a single-valued relation of the model --
     see `_traversable_relation_target` -- and is then resolved against the related model's serializer.
     Traversal into a to-many relation is not supported; see `_traversable_relation_target`.
     Paths that reach a related model without a known serializer are accepted and left to the database
@@ -285,6 +307,10 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
                     #   now only so the Job fails cleanly instead of raising `FieldDoesNotExist` from deep
                     #   inside the query construction.
                     errors.append(f'"{path}": "{part}" cannot yet be selected through a relation')
+                elif _needs_a_queryset_annotation(serializer, field):
+                    # Rejected for the same reason as a write-only field: DRF skips it rather than
+                    # raising, so the file would come out missing a column that was asked for by name.
+                    errors.append(f'"{path}": "{part}" is computed for display only and cannot be exported')
                 break
             if isinstance(field, serializers.ManyRelatedField):
                 errors.append(f'"{path}": cannot traverse into many-to-many field "{part}"')

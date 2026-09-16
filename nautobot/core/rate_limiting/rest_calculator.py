@@ -66,6 +66,7 @@ INDEXABLE_LOOKUPS = frozenset(
 )
 
 READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
+WRITE_METHODS = frozenset({"DELETE", "PATCH", "POST", "PUT"})
 
 
 def calculate_records_per_page(requested_records_per_page):
@@ -102,7 +103,13 @@ class RestReadRequestFeatures:
 
 
 def classify_rest_read_request_features(request):
-    """Take a `request` object and returns a `RestReadRequestFeatures` object"""
+    """Processes a request to identify Nautobot API product features being used.
+
+    Args:
+        request (WSGI Request): a WSGI request to the API
+    Returns:
+        RestReadRequestFeatures: object
+    """
     query_parameters = request.GET
 
     # TODO: Revisit for upper bounds
@@ -140,8 +147,15 @@ def classify_rest_read_request_features(request):
 
 
 def estimate_rest_read_request_cost(rest_read_request_features):
-    """Using a RestReadRequestFeatures object, provide an estimate for what the cost"""
+    """Using a RestReadRequestFeatures object, provide an estimate for what the cost
 
+    Args:
+        rest_read_request_features (RestReadRequestFeatures): a preprocessed RestReadRequestFeatures
+            that indicates specific expected Nautobot API requests
+
+    Returns:
+        float: A number representing the complexity cost of the operation
+    """
     total_request_cost = 0
 
     total_request_cost += settings.NAUTOBOT_REST_RATE_LIMITING_READ_COST
