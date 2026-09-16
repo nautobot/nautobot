@@ -2322,7 +2322,7 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         selected, content = self.matched_columns()
         self.assertNotIn("dynamic_group_count", selected)
         self.assertIn("dynamic_group_count", content)
-        self.assertIn("no exportable equivalent", content)
+        self.assertIn("no direct equivalent", content)
 
     def test_columns__non_exportable_columns_are_omitted(self):
         """Displayed columns with no exportable equivalent are reported and left out of the selection.
@@ -2335,6 +2335,7 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         selected, content = self.matched_columns(model=Manufacturer)
         self.assertEqual(selected, ["name", "description"])
         self.assertIn("device_type_count", content)
+        self.assertIn("no direct equivalent", content)
 
     def test_columns__count_column_carries_the_relation_it_counts(self):
         """A count column is carried across as the relation it counts, where an export can emit it.
