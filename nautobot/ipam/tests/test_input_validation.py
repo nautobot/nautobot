@@ -97,16 +97,25 @@ class IPAMInputValidationTests(TestCase):
                 self.assertEqual({obj["id"] for obj in response.data["results"]}, {str(pk) for pk in expected})
 
     def test_network_filter_accepts_unstored_literal(self):
+        other_namespace = Namespace.objects.create(name="Other network filter namespace")
+        Prefix.objects.create(prefix="192.0.2.0/24", namespace=other_namespace, status=self.status)
         network = "192.0.2.128/25"
-        self.assertFalse(Prefix.objects.net_equals(network).exists())
-        response = self.client.get(reverse("ipam-api:prefix-list"), {"contains": network})
+        self.assertFalse(Prefix.objects.filter(namespace=self.namespace).net_equals(network).exists())
+        response = self.client.get(
+            reverse("ipam-api:prefix-list"), {"contains": network, "namespace": str(self.namespace.pk)}
+        )
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual([obj["id"] for obj in response.data["results"]], [str(self.prefix.pk)])
 
     def test_network_filter_combines_uuid_and_unstored_literal(self):
+        other_namespace = Namespace.objects.create(name="Other network filter namespace")
+        Prefix.objects.create(prefix="2001:db8::/64", namespace=other_namespace, status=self.status)
         network = "2001:db8::/65"
-        self.assertFalse(Prefix.objects.net_equals(network).exists())
-        response = self.client.get(reverse("ipam-api:prefix-list"), {"contains": [str(self.prefix.pk), network]})
+        self.assertFalse(Prefix.objects.filter(namespace=self.namespace).net_equals(network).exists())
+        response = self.client.get(
+            reverse("ipam-api:prefix-list"),
+            {"contains": [str(self.prefix.pk), network], "namespace": str(self.namespace.pk)},
+        )
         self.assertEqual(response.status_code, 200, response.content)
         self.assertEqual({obj["id"] for obj in response.data["results"]}, {str(self.prefix.pk), str(self.prefix6.pk)})
 
