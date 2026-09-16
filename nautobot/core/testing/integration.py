@@ -118,9 +118,9 @@ class ObjectsListMixin:
         """
         self.click_button("#add-button")
 
-    def click_table_link(self, row=1, column=2):
-        """By default, tries to click column next to checkbox to go to the details page."""
-        self.browser.find_by_xpath(f'//*[@id="object_list_form"]//tbody/tr[{row}]/td[{column}]/a').click()
+    def click_table_link(self, row=1, column=1):
+        """By default, tries to click first linked column to go to the details page."""
+        self.browser.find_by_xpath(f'//*[@id="object_list_form"]//tbody/tr[{row}]/td[a][{column}]/a').click()
 
     @property
     def objects_list_visible_items(self):
