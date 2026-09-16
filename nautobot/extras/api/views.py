@@ -1232,14 +1232,9 @@ class JobResultViewSet(
 
     @action(detail=True, permission_classes=[JobLogEntryPermission])
     def logs(self, request, pk=None):
-        # Note: we need `get_object_or_404(self.queryset, ...)` rather than `self.get_object()`, as in NotesViewSetMixin.
-        # `self.get_object()` calls `check_object_permissions()`, which rebuilds the required permissions from
-        # `JobLogEntryPermission.perms_map` and resolves them against the JobResult instance. The
-        # `extras.view_joblogentry` entry names a different model, so `ObjectPermissionBackend.has_perm()` raises
-        # `ValueError: Invalid permission extras.view_joblogentry for model JobResult`, which is not converted to
-        # an API response by DRF's exception handler and therefore surfaces as an HTTP 500.
-        # `self.queryset` is already restricted to viewable JobResults by `restrict_queryset()`, which applies the
-        # same object-level constraints, so skipping that check loses nothing.
+        # `get_object_or_404()` and not `self.get_object()` because object-level check of the latter resolves every entry in
+        # `perms_map` against the JobResult, so `extras.view_joblogentry` would raise ValueError (HTTP 500).
+        # `self.queryset` is already restricted to viewable JobResults by `restrict_queryset()`, so nothing is lost.
         job_result = get_object_or_404(self.queryset, pk=pk)
         logs = job_result.job_log_entries.restrict(request.user, "view")
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
