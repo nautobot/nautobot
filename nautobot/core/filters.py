@@ -1063,6 +1063,7 @@ class BaseFilterSet(django_filters.FilterSet):
         filters = super().get_filters()
 
         # Remove any filters that may have been auto-generated from private model attributes
+        # TODO 4.0: also drop filters auto-generated for a field in the model's `sensitive_fields`?
         for filter_name in list(filters.keys()):
             if filter_name.startswith("_"):
                 del filters[filter_name]
