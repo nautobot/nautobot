@@ -1,1 +1,1 @@
-Fixed a Nautobot API permission bypass where /job-results/{id}/logs/ ignored the absence of view_joblogentry permission, leaking job log entries. Cf. NTC-6715
+Fixed a Nautobot API permission bypass where /job-results/{id}/logs/ ignored the absence of view_joblogentry permission, leaking job log entries.
