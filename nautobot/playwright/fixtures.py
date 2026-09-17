@@ -80,7 +80,15 @@ def browser_context_args(browser_context_args, base_url, auth_state_path):
     flags such as `--headed`, `--slowmo`, `--screenshot`, and `--tracing` keep
     working with no extra wiring.
     """
-    return {**browser_context_args, "base_url": base_url, "storage_state": str(auth_state_path)}
+    # The development config reads this header and keeps django-debug-toolbar off the page.
+    # Its expanded panel covers the right edge of every list view, filter button included.
+    headers = {**browser_context_args.get("extra_http_headers", {}), "X-Disable-Debug-Toolbar": "1"}
+    return {
+        **browser_context_args,
+        "base_url": base_url,
+        "storage_state": str(auth_state_path),
+        "extra_http_headers": headers,
+    }
 
 
 @pytest.fixture
