@@ -1,15 +1,25 @@
 {% load ui_framework %}
-<tr>
-    <td colspan="100">
+<tr class="nb-overview-row" id="overview-{{ object.pk }}">
+    {% if colspan_offset %}<td colspan="{{ colspan_offset }}"></td>{% endif %}
+    <td class="p-0" colspan="{{ colspan_content }}">
         {% if overview_template_name %}
             {% include overview_template_name %}
         {% elif overview_html %}
             {% resolve_overview overview_html as html %}{{ html }}
         {% else %}
             {% resolve_overview overview as overview_data %}
-            {% for key, value in overview_data %}
-                <span>{{ key }}: {{ value }}</span>
-            {% endfor %}
+            {% if overview_data.fields %}
+                <dl class="nb-overview-fields" style="--nb-overview-rows: {{ overview_data.rows }};">
+                    {% for key, value in overview_data.fields %}
+                        <div class="nb-overview-field{% if forloop.counter|divisibleby:overview_data.rows %} nb-overview-field-column-end{% endif %}">
+                            <dt>{{ key }}</dt>
+                            <dd>{{ value }}</dd>
+                        </div>
+                    {% endfor %}
+                </dl>
+            {% else %}
+                <p class="mb-0 px-10 py-4 text-secondary">— No details to display —</p>
+            {% endif %}
         {% endif %}
     </td>
 </tr>

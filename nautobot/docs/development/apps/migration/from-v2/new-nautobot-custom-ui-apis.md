@@ -11,7 +11,7 @@ Here's a list of what's changed:
 | v2.x                                  | v3.0                                                                                              |
 |---------------------------------------|---------------------------------------------------------------------------------------------------|
 | `accordion-toggle`                    | `nb-collapse-toggle`                                                                              |
-| `accordion-toggle-all`                | *removed*, refer to [Toggle All Groups (Collapse All Groups / Expand All Groups)](#toggle-all-groups-collapse-all-groups-expand-all-groups) |
+| `accordion-toggle-all`                | *removed*, refer to [Toggle All Groups](#toggle-all-groups-collapse-all-groups--expand-all-groups) |
 | `banner-bottom`                       | `nb-banner-bottom`                                                                                |
 | `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                         |
 | `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
@@ -328,7 +328,7 @@ In place of legacy `filter-container` and `filter-selection`, Nautobot 3.0 intro
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
 
 !!! note
-    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes-helpers-and-utilities) in another migration guide.
+    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes--helpers-and-utilities) in another migration guide.
 
 | Class                     | Style                              |
 |---------------------------|------------------------------------|

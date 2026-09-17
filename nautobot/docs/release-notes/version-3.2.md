@@ -290,6 +290,47 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.5 (2026-09-14)
+
+### Security in v3.2.5
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Fixed disclosure of API token keys and user password hashes to user-authored Jinja2 templates, such as those in Custom Links and Job Buttons, which are rendered against the viewing user's own context.
+- [GHSA-2v7j-x3g6-qj94](https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94) - Fixed an incomplete fix for GHSA-p99c-c9qx-34fw where the Jinja2 template sandbox still allowed a template author to execute arbitrary read queries, reach arbitrary models, and perform certain database writes via the Django ORM.
+- [#9439](https://github.com/nautobot/nautobot/issues/9439) - Updated development npm dependency `postcss-selector-parser` to `7.1.5` to mitigate CVE-2026-9358.
+- [#9446](https://github.com/nautobot/nautobot/issues/9446) - Updated development npm dependency `fast-uri` to `3.1.7` to mitigate multiple vulnerabilities.
+- [#9480](https://github.com/nautobot/nautobot/issues/9480) - Updated development npm dependency `js-yaml` to `4.3.2` to mitigate CVE-2026-84375.
+
+### Added in v3.2.5
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added support for a `sensitive_fields` model attribute, declaring fields whose values the ORM will not return and that user-authored Jinja2 templates may not read.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added a `STRICT_SENSITIVE_FIELDS` settings variable, defaulting to `False`, controlling whether the ORM refuses to return those values.
+- [#9444](https://github.com/nautobot/nautobot/issues/9444) - Added an "Object Data v2" panel to the Change Log detail view, displaying the change's `object_data_v2`.
+- [#9444](https://github.com/nautobot/nautobot/issues/9444) - Added a `collapsed` keyword argument to `Panel` and its subclasses, to render a panel with its body initially collapsed.
+
+### Changed in v3.2.5
+
+- [#9444](https://github.com/nautobot/nautobot/issues/9444) - The "Object Data" panel on the Change Log detail view is now initially collapsed.
+
+### Fixed in v3.2.5
+
+- [#9209](https://github.com/nautobot/nautobot/issues/9209) - Fixed `NautobotHyperlinkedRelatedField` deriving `object_type` from the declaring model instead of the related model when the field is read-only.
+- [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Power Path" field when creating/editing a Power Feed.
+- [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Virtual Device Contexts" field when creating/edting a VRF.
+- [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Devices" field when creating/editing a Cluster.
+- [#9481](https://github.com/nautobot/nautobot/issues/9481) - Fixed field `has_tenants`, of `TenantGroupFilterForm`, being required because of a typo.
+
+### Documentation in v3.2.5
+
+- [#9460](https://github.com/nautobot/nautobot/issues/9460) - Refreshed the project README and documentation landing page to describe Nautobot as the open source Network Source of Truth and Network Automation Platform, and to introduce Nautobot Apps and commercial editions.
+
+### Housekeeping in v3.2.5
+
+- [#9437](https://github.com/nautobot/nautobot/issues/9437) - Removed `docs` symlink (to `nautobot/docs`) from the repository root as it was causing Docker build failures in some environments.
+- [#9437](https://github.com/nautobot/nautobot/issues/9437) - Added `**/node_modules` to `.dockerignore` to prevent unnecessarily copying locally installed modules into the Docker build environment.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Fixed missing permissions on GitHub workflows `ci_integration`, `release`, and `lock`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Removed obsolete GitHub workflows `build_dependency_image` and `build_dependency_image_conditional`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Updated GitHub workflow `lock` to use v6.0.2 of the `dessant/lock-threads` action.
+
 ## v3.2.4 (2026-08-31)
 
 ### Security in v3.2.4
