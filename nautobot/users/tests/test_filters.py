@@ -200,10 +200,10 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
     queryset = Token.objects.all()
     filterset = TokenFilterSet
 
-    generic_filter_tests = (
-        ["description"],
-        ["key"],
-    )
+    # `key` is excluded from `generic_filter_tests` since its test values use `.values()`,
+    # which are disallowed for sensitive fields when `STRICT_SENSITIVE_FIELDS` is enabled.
+    # Key filtering is still tested in `test_key` below.
+    generic_filter_tests = (["description"],)
 
     @classmethod
     def setUpTestData(cls):
@@ -234,6 +234,14 @@ class TokenTestCase(FilterTestCases.FilterTestCase):
             Token(user=users[2], key=Token.generate_key(), expires=past_date, write_enabled=False),
         )
         Token.objects.bulk_create(tokens)
+
+    def test_key(self):
+        # Filtering by key must keep working even though the value is never returned: API token
+        # authentication looks a token up this way.
+        key = Token.generate_key()
+        Token.objects.create(user=User.objects.create(username="KeyFilterUser"), key=key)
+        params = {"key": [key]}
+        self.assertEqual(self.filterset(params, self.queryset).qs.count(), 1)
 
     def test_expires(self):
         params = {"expires": ["3000-01-01 00:00:00"]}
