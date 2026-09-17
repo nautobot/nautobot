@@ -2386,41 +2386,168 @@ class CustomLinkRenderingTestCase(TestCase):
 
     user_permissions = ["dcim.view_location"]
 
-    def test_view_object_with_custom_link(self):
+    DROPDOWN_TRIGGER = (
+        '<button type="button" class="btn btn-{button_class} dropdown-toggle" data-bs-toggle="dropdown">'
+        '<span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>{text}'
+        '<span aria-hidden="true" class="mdi mdi-chevron-down ms-4"></span>'
+        "</button>"
+    )
+    DROPDOWN_DIVIDER = '<li><hr class="dropdown-divider"></li>'
+    DROPDOWN_GROUP_HEADER = (
+        '<li><h6 class="dropdown-header">'
+        '<span aria-hidden="true" class="mdi mdi-folder-outline me-4"></span>{text}'
+        "</h6></li>"
+    )
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.content_type = ContentType.objects.get_for_model(Location)
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        cls.location = Location(name="Test Location", location_type=location_type, status=status)
+        cls.location.save()
+
+    def test_view_object_with_single_custom_link(self):
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name="Test",
             text="FOO {{ obj.name }} BAR",
             target_url="http://example.com/?location={{ obj.name }}",
-            new_window=False,
+            new_window=True,
         )
         customlink.save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f"FOO {location.name} BAR", content, content)
+        self.assertIn(f"FOO {self.location.name} BAR", content, content)
+        self.assertInHTML(
+            f'<a href="http://example.com/?location={self.location.name}" target="_blank" class="btn btn-secondary">'
+            f'<span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>FOO {self.location.name} BAR</a>',
+            content,
+        )
+
+    def test_view_object_with_single_grouped_custom_link(self):
+        customlink = CustomLink(
+            content_type=self.content_type,
+            name="Test",
+            text="Link 1",
+            target_url="http://example.com/1",
+            group_name="Group 1",
+            button_class="primary",
+            new_window=False,
+        )
+        customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="primary", text="Group 1"), content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
+
+    def test_view_object_with_single_custom_link_group(self):
+        for index, button_class in enumerate(["primary", "danger"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                group_name="Group 1",
+                button_class=button_class,
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="primary", text="Group 1"), content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/2">Link 2</a></li>', content)
+
+    def test_view_object_with_multiple_custom_links(self):
+        for index, button_class in enumerate(["primary", "default"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                button_class=button_class,
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="secondary", text="Links"), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item text-primary" href="http://example.com/1">Link 1</a></li>', content
+        )
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/2">Link 2</a></li>', content)
+
+    def test_view_object_with_multiple_custom_link_groups(self):
+        for index, button_class in enumerate(["primary", "default"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                group_name=f"Group {index}",
+                button_class=button_class,
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="secondary", text="Links"), content)
+        self.assertInHTML(self.DROPDOWN_GROUP_HEADER.format(text="Group 1"), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item ps-24 text-primary" href="http://example.com/1">Link 1</a></li>', content
+        )
+        self.assertInHTML(self.DROPDOWN_DIVIDER + self.DROPDOWN_GROUP_HEADER.format(text="Group 2"), content)
+        self.assertInHTML(self.DROPDOWN_DIVIDER, content, count=1)
+        self.assertInHTML('<li><a class="dropdown-item ps-24" href="http://example.com/2">Link 2</a></li>', content)
+
+    def test_view_object_with_grouped_and_ungrouped_custom_links(self):
+        for index, group_name in enumerate(["", "Group 1"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                group_name=group_name,
+                button_class="danger",
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="secondary", text="Links"), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item text-danger" href="http://example.com/1">Link 1</a></li>', content
+        )
+        self.assertInHTML(self.DROPDOWN_DIVIDER + self.DROPDOWN_GROUP_HEADER.format(text="Group 1"), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item ps-24 text-danger" href="http://example.com/2">Link 2</a></li>', content
+        )
 
     def test_view_object_with_unsafe_custom_link_text(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name="Test",
             text='<script>alert("Hello world!")</script>',
             target_url="http://example.com/?location=None",
             new_window=False,
         )
         customlink.validated_save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
@@ -2430,19 +2557,15 @@ class CustomLinkRenderingTestCase(TestCase):
     def test_view_object_with_unsafe_custom_link_url(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name="Test",
             text="Hello",
             target_url='"><script>alert("Hello world!")</script><a href="',
             new_window=False,
         )
         customlink.validated_save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
@@ -2452,19 +2575,15 @@ class CustomLinkRenderingTestCase(TestCase):
     def test_view_object_with_unsafe_custom_link_name(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name='<script>alert("Hello World")</script>',
             text="Hello",
             target_url="http://example.com/?location={{ obj.name ",  # intentionally bad jinja2 to trigger error case
             new_window=False,
         )
         customlink.validated_save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
