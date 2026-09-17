@@ -1,0 +1,1 @@
+Fixed App `metrics.py` modules being imported, and their metric functions being evaluated during `nautobot-server migrate` and `post_upgrade`, even when `METRICS_ENABLED` is `False`.
