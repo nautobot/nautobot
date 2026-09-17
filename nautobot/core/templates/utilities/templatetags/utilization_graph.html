@@ -1,7 +1,16 @@
+{% comment %}
+The figure is centered on the whole track (the `.progress span` rule absolutely centers it), so it
+lines up down the column whatever the fill is. A second copy, hidden from screen readers, is clipped
+to the filled part and sits on top of the first, which is what keeps the digits legible where the
+fill runs under them. Its width is the track measured against the bar (100/utilization of it), which
+is what lands it exactly on top.
+{% endcomment %}
 <div {% if utilization_count and total_count %}title="Used: {{ utilization_count }}&#13;Count: {{ total_count }}" {% endif %}class="progress text-center">
-    {% if utilization < 30 %}<span>{{ utilization }}%</span>{% endif %}
+    <span>{{ utilization }}%</span>
     <div class="progress-bar bg-{% if utilization >= danger_threshold %}danger{% elif utilization >= warning_threshold %}warning{% else %}success{% endif %}"
-         role="progressbar" aria-valuenow="{{ utilization }}" aria-valuemin="0" aria-valuemax="100" style="width: {% if utilization > 100 %}100{% else %}{{ utilization }}{% endif %}%">
-        {% if utilization >= 30 %}{{ utilization }}%{% endif %}
+         role="progressbar" aria-valuenow="{{ utilization }}" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: {% if utilization > 100 %}100{% else %}{{ utilization }}{% endif %}%">
+        {% if utilization > 0 %}
+            <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / {% if utilization > 100 %}100{% else %}{{ utilization }}{% endif %})">{{ utilization }}%</span>
+        {% endif %}
     </div>
 </div>
