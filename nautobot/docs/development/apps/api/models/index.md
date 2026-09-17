@@ -37,6 +37,11 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 +/- 2.3.0 "Replacement of DynamicGroupMixin with DynamicGroupsModelMixin"
     In previous Nautobot releases, a model could opt in to support of Dynamic Groups by including the `DynamicGroupMixin` mixin class. This class is now deprecated, and models should use the newly added `DynamicGroupsModelMixin` mixin class in its place.
 
++++ 2.4.41 "Support for sensitive fields on all models"
+    A `BaseModel` subclass can declare fields holding credentials or comparable secrets in the class attribute `sensitive_fields`. The ORM then refuses to return those values unless a caller opts in explicitly, and user-authored Jinja2 templates can never read them. Filtering by such a field still works. See [Sensitive Model Fields](../../../core/sensitive-fields.md) for the opt-in methods and the limitations.
+
+    The ORM-side enforcement is governed by [`STRICT_SENSITIVE_FIELDS`](../../../../user-guide/administration/configuration/settings.md#strict_sensitive_fields), which defaults to `False` so that existing code reading such a field keeps working, and is expected to default to `True` in a future major release. Denial of template access is **not** governed by that setting and always applies. An App that declares `sensitive_fields` should therefore not assume the ORM enforcement is active on a given deployment, and should move its own reads to the opt-in methods now so that it keeps working when the default changes.
+
 Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python

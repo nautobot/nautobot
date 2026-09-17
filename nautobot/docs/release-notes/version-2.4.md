@@ -209,7 +209,7 @@ self.logger.info("Continuing...")
 
 #### Kubernetes Job Execution and Job Queue Data Model (Experimental)
 
-*Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future.*
+_Please note that this functionality is considered Experimental in the v2.4.0 release and is subject to change in the future._
 
 When running in a Kubernetes (k8s) deployment, such as with Nautobot's [Helm chart](https://docs.nautobot.com/projects/helm-charts/en/stable/), Nautobot now supports an alternative method of running Nautobot Jobs - instead of (or in addition to) running one or more Celery Workers as long-lived persistent pods, Nautobot can dispatch Nautobot Jobs to be executed as short-lived [Kubernetes Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/) pods.
 
@@ -281,6 +281,28 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 <!-- pyml disable-num-lines 2 blanks-around-headers -->
 
 <!-- towncrier release notes start -->
+
+## v2.4.42 (2026-09-14)
+
+### Security in v2.4.42
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Fixed disclosure of API token keys and user password hashes to user-authored Jinja2 templates, such as those in Custom Links and Job Buttons, which are rendered against the viewing user's own context.
+- [GHSA-2v7j-x3g6-qj94](https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94) - Fixed an incomplete fix for GHSA-p99c-c9qx-34fw where the Jinja2 template sandbox still allowed a template author to execute arbitrary read queries, reach arbitrary models, and perform certain database writes via the Django ORM.
+
+### Added in v2.4.42
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added support for a `sensitive_fields` model attribute, declaring fields whose values the ORM will not return and that user-authored Jinja2 templates may not read.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added a `STRICT_SENSITIVE_FIELDS` settings variable, defaulting to `False`, controlling whether the ORM refuses to return those values.
+
+### Fixed in v2.4.42
+
+- [#9467](https://github.com/nautobot/nautobot/issues/9467) - Replaced the full-table visibility subquery in the interface-connections API with a correlated lookup to improve pagination count performance.
+
+### Housekeeping in v2.4.42
+
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Fixed missing permissions on GitHub workflows `ci_integration`, `release`, and `lock`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Removed obsolete GitHub workflows `build_dependency_image` and `build_dependency_image_conditional`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Updated GitHub workflow `lock` to use v6.0.2 of the `dessant/lock-threads` action.
 
 ## v2.4.41 (2026-08-31)
 
@@ -1341,7 +1363,7 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Dependencies in v2.4.11
 
-- [#7444](https://github.com/nautobot/nautobot/issues/7444) - Updated dependency `celery` to permit versions up to 5.5.x and `kombu` to permit versions up to 5.5.x as well. Due to concern about potential impacts of the upgrade, we have *not* yet updated the minimum Celery and Kombu versions required by Nautobot. This minimum version will likely be raised in a future release; in the interim, please upgrade Celery and Kombu and verify their operation in your local environment as befits your risk tolerance.
+- [#7444](https://github.com/nautobot/nautobot/issues/7444) - Updated dependency `celery` to permit versions up to 5.5.x and `kombu` to permit versions up to 5.5.x as well. Due to concern about potential impacts of the upgrade, we have _not_ yet updated the minimum Celery and Kombu versions required by Nautobot. This minimum version will likely be raised in a future release; in the interim, please upgrade Celery and Kombu and verify their operation in your local environment as befits your risk tolerance.
 
 ### Documentation in v2.4.11
 

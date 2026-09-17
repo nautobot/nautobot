@@ -202,7 +202,7 @@ Draft a [new release](https://github.com/nautobot/nautobot/releases/new) with th
 * **Tag:** Current version (e.g. `v1.0.0`)
 
 !!! warning
-    You will need to create a new release tag locally **before** you draft the new release. To create a new release tag, follow the steps outlined [here](#create-a-new-release-tag).
+    You will need to create a new release tag locally **before** you draft the new release. To [create a new release tag](#create-a-new-release-tag), follow the steps outlined.
 
 * **Target:** `main`
 * **Title:** Version and date (e.g. `v1.0.0 - 2021-06-01`)

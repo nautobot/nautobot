@@ -41,7 +41,7 @@ The hierarchy of prefixes and their constituent [IP addresses](ipaddress.md) is 
     * Prefix 10.1.1.0/24 (with `parent` 10.0.0.0/8)
         * IP address 10.1.1.1/24 (with `parent` 10.1.1.0/24)
 
-Note that in Nautobot, all IP addresses *must* have a parent prefix; "orphaned" IP addresses are not permitted.
+Note that in Nautobot, all IP addresses _must_ have a parent prefix; "orphaned" IP addresses are not permitted.
 
 In most cases, you will not need to ever explicitly specify the `parent` value yourself, as specifying the `namespace` is generally more user-friendly and will result in the `parent` being automatically determined and updated as needed by Nautobot.
 
@@ -62,13 +62,13 @@ When editing a Prefix and changing its `prefix` value (`network`, `prefix_length
 
 +/- 2.4.17 "Cascading `namespace` updates"
 
-Additionally, when changing a Prefix's `namespace`, not only the specified Prefix record, but *also all of its descendant Prefix records* will be moved into the new Namespace. This is in service of the "principle of least surprise", because IP Address records do not have their own individual Namespaces but instead derive their namespace from their `parent` Prefixes, and it would be surprising to most users if only IPs directly under a given Prefix were brought along, while IPs under a nested subnet Prefix were left behind in the original Namespace.
+Additionally, when changing a Prefix's `namespace`, not only the specified Prefix record, but _also all of its descendant Prefix records_ will be moved into the new Namespace. This is in service of the "principle of least surprise", because IP Address records do not have their own individual Namespaces but instead derive their namespace from their `parent` Prefixes, and it would be surprising to most users if only IPs directly under a given Prefix were brought along, while IPs under a nested subnet Prefix were left behind in the original Namespace.
 
 ??? warning "Uniqueness violations when changing Namespace"
     Because Prefix and IP Address uniqueness is enforced per-Namespace, if the target Namespace already contains existing Prefix and/or IP Address records, moving a Prefix and its descendants into that Namespace may result in data "collision" and violations of the uniqueness constraint. Nautobot will detect such a scenario and prevent the change.
 
 ??? warning "VRFs are specific to a Namespace"
-    Because VRFs are specific to a Namespace, moving a Prefix *that's associated to one or more VRFs* into a different Namespace is blocked by Nautobot, and will result in a validation error with a message about needing to disassociate the Prefix (and its descendants) from VRFs before changing the Namespace. The workflow you'd need to follow here would be:
+    Because VRFs are specific to a Namespace, moving a Prefix _that's associated to one or more VRFs_ into a different Namespace is blocked by Nautobot, and will result in a validation error with a message about needing to disassociate the Prefix (and its descendants) from VRFs before changing the Namespace. The workflow you'd need to follow here would be:
 
     1. Disassociate the Prefix and its descendant Prefixes from any and all VRFs in the initial Namespace.
     2. Move the Prefix (and implicitly its descendants) into the target Namespace.
