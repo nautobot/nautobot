@@ -1,10 +1,4 @@
-{% comment %}
-The figure is centered on the whole track (the `.progress span` rule absolutely centers it), so it
-lines up down the column whatever the fill is. A second copy, hidden from screen readers, is clipped
-to the filled part and sits on top of the first, which is what keeps the digits legible where the
-fill runs under them. Its width is the track measured against the bar (100/utilization of it), which
-is what lands it exactly on top.
-{% endcomment %}
+{% comment %}Label centered on the whole track, plus a copy clipped to the fill so the digits stay legible over it.{% endcomment %}
 <div {% if utilization_count and total_count %}title="Used: {{ utilization_count }}&#13;Count: {{ total_count }}" {% endif %}class="progress text-center">
     <span>{{ utilization }}%</span>
     <div class="progress-bar bg-{% if utilization >= danger_threshold %}danger{% elif utilization >= warning_threshold %}warning{% else %}success{% endif %}"
