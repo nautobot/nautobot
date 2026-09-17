@@ -289,6 +289,11 @@ def _handle_changed_object_pre_save(sender, instance, raw=False, using=None, upd
     if raw:
         return
 
+    # Both uses of the stored row below need a change context, so without one (nbshell, a management
+    # command, app code outside a request or job) the read would be pure overhead.
+    if change_context_state.get() is None:
+        return
+
     # Read once here and handed to both callees below, which each used to fetch the row themselves.
     # `_base_manager`, not `objects`, because a default manager may hide rows (`StaticGroupAssociation`
     # hides associations of non-static groups, which made the old `objects.get()` raise `DoesNotExist`).

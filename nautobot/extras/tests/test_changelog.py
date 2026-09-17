@@ -1192,6 +1192,14 @@ class ChangeLogPrechangeCaptureTest(TestCase):
             association.save()
             self.assertEqual(change_context_state.get().pre_object_data_v2, {})
 
+    @mock.patch("nautobot.extras.signals._reuse_loaded_relations")
+    def test_stored_row_is_not_read_without_a_change_context(self, mock_reuse_loaded_relations):
+        """Outside a request or job both users of the stored row return immediately, so it must not be read."""
+        self.location.description = "changed"
+        self.location.save()
+        # `_reuse_loaded_relations()` runs only on a row that was read, so not calling it means no read.
+        mock_reuse_loaded_relations.assert_not_called()
+
     def test_loaded_relations_are_reused_for_the_stored_row(self):
         """The stored row borrows the related objects the instance already holds, saving a query each."""
         instance = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)

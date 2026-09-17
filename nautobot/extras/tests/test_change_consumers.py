@@ -171,6 +171,16 @@ class ChangeHasConsumersTest(ChangeConsumersTestMixin, TestCase):
         finally:
             deregister_event_broker(broker)
 
+    def test_broker_registered_after_a_false_answer_was_cached_is_a_consumer(self):
+        """A cached answer outlives the process that computed it; a broker added later must still count."""
+        self.assertHasNoConsumers()
+        broker = CollectingEventBroker(include_topics=["*"])
+        register_event_broker(broker)
+        try:
+            self.assertHasConsumers()
+        finally:
+            deregister_event_broker(broker)
+
     def test_broker_is_checked_without_touching_the_database(self):
         broker = CollectingEventBroker(include_topics=["*"])
         register_event_broker(broker)
@@ -195,6 +205,16 @@ class ChangeHasConsumersTest(ChangeConsumersTestMixin, TestCase):
         self.assertHasConsumers(action=ObjectChangeActionChoices.ACTION_UPDATE)
         self.assertHasNoConsumers(action=ObjectChangeActionChoices.ACTION_CREATE)
         self.assertHasNoConsumers(content_type=self.unsupported_ct)
+
+    def test_cached_answer_expires(self):
+        """An invalidation can be lost; a bounded TTL keeps that a delay rather than a permanent outage."""
+        with mock.patch(
+            "nautobot.extras.change_consumers.cache_get_or_set", return_value=(False, False)
+        ) as mock_cache_get_or_set:
+            self.assertHasNoConsumers()
+        timeout = mock_cache_get_or_set.call_args.kwargs["timeout"]
+        self.assertIsNotNone(timeout)
+        self.assertGreater(timeout, 0)
 
     def test_unreachable_cache_falls_back_to_computing_the_answer(self):
         """The cache is an optimization; losing it must not fail the save that asked the question."""
