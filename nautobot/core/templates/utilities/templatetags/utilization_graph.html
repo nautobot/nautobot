@@ -1,6 +1,6 @@
 {% comment %}Label centered on the whole track, plus a copy clipped to the fill so the digits stay legible over it.{% endcomment %}
 <div {% if utilization_count and total_count %}title="Used: {{ utilization_count }}&#13;Count: {{ total_count }}" {% endif %}class="progress text-center">
-    <span>{{ utilization }}%</span>
+    {% if utilization is not None %}<span>{{ utilization }}%</span>{% endif %}
     <div class="progress-bar bg-{% if utilization >= danger_threshold %}danger{% elif utilization >= warning_threshold %}warning{% else %}success{% endif %}"
          role="progressbar" aria-valuenow="{{ utilization }}" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: {% if utilization > 100 %}100{% else %}{{ utilization }}{% endif %}%">
         {% if utilization > 0 %}
