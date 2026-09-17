@@ -1,3 +1,5 @@
+import datetime
+import decimal
 import os
 import sys
 import tempfile
@@ -11,7 +13,9 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.core.files.base import ContentFile
+from django.db import connection
+from django.db.models import CharField, DateField, DateTimeField, FileField, GeneratedField, Q, TimeField, Value
 from django.http import QueryDict
 from django.test import override_settings, tag
 
@@ -44,6 +48,7 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
+from nautobot.tenancy import models as tenancy_models
 
 
 class ConstructCacheKeyTest(TestCase):
@@ -1598,3 +1603,139 @@ class TestSerializeObjectV2(TestCase):
             data = models_utils.serialize_object_v2(instance)
             with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
                 NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)
+
+
+class ChangelogComparableFieldsTest(TestCase):
+    """Validate the operation of changelog_comparable_fields()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location = dcim_models.Location.objects.first()
+
+    def changelog_comparable_field_names(self, **kwargs):
+        fields = models_utils.changelog_comparable_fields(self.location, **kwargs)
+        return {field.name for field in fields}
+
+    def test_excludes_pk_and_auto_now(self):
+        names = self.changelog_comparable_field_names()
+        self.assertNotIn("id", names)
+        self.assertNotIn("last_updated", names)
+        # `created` is auto_now_add, which an update writes from the instance, so it must stay comparable.
+        self.assertIn("created", names)
+        self.assertIn("name", names)
+
+    def test_update_fields_by_name(self):
+        self.assertEqual(self.changelog_comparable_field_names(update_fields=["description"]), {"description"})
+
+    def test_update_fields_by_attname(self):
+        self.assertEqual(self.changelog_comparable_field_names(update_fields=["tenant_id"]), {"tenant"})
+
+    def test_update_fields_writes_nothing_visible(self):
+        self.assertEqual(models_utils.changelog_comparable_fields(self.location, update_fields=["last_updated"]), [])
+
+    def test_update_fields_restricted_to_derived_field(self):
+        """`_name` is computed in pre_save, so its in-memory value cannot be trusted for a comparison."""
+        self.assertIs(
+            models_utils.changelog_comparable_fields(self.location, update_fields=["_name"]),
+            models_utils.ChangeVerdict.INDETERMINATE,
+        )
+
+    def test_derived_field_without_update_fields(self):
+        """An unrestricted save compares `_name`'s source field too, so `_name` itself is no obstacle."""
+        names = self.changelog_comparable_field_names()
+        self.assertIn("_name", names)
+        self.assertIn("name", names)
+
+    def test_stock_fields_have_predictable_pre_save(self):
+        for field_class in (CharField, DateField, DateTimeField, TimeField, FileField):
+            with self.subTest(field_class=field_class.__name__):
+                self.assertFalse(models_utils._has_unpredictable_pre_save(field_class()))
+
+    def test_subclass_of_a_predictable_field_with_custom_pre_save(self):
+        """A subclass of an excluded field type must not inherit its parent's free pass."""
+
+        class SneakyDateField(DateField):
+            def pre_save(self, model_instance, add):
+                return datetime.date.today()
+
+        self.assertTrue(models_utils._has_unpredictable_pre_save(SneakyDateField()))
+
+    def test_database_generated_field_is_skipped(self):
+        """A column the database computes is never written by a save, so it is not worth comparing."""
+        generated = GeneratedField(expression=Value("computed"), output_field=CharField(max_length=10), db_persist=True)
+        ordinary = CharField(max_length=10)
+        # No Nautobot model declares a GeneratedField yet, so the fields to walk are supplied here.
+        with mock.patch.object(self.location._meta, "concrete_fields", [generated, ordinary]):
+            self.assertEqual(models_utils.changelog_comparable_fields(self.location), [ordinary])
+
+
+class ChangelogValuesVerdictTest(TestCase):
+    """Validate the operation of changelog_values_verdict()."""
+
+    @classmethod
+    def setUpTestData(cls):
+        # A tenant is assigned so that the foreign key comparisons below have something to compare.
+        cls.location = dcim_models.Location.objects.first()
+        cls.location.tenant = tenancy_models.Tenant.objects.first()
+        cls.location.save()
+
+    def setUp(self):
+        super().setUp()
+        self.stored = dcim_models.Location.objects.get(pk=self.location.pk)
+        self.instance = dcim_models.Location.objects.get(pk=self.location.pk)
+        self.fields = models_utils.changelog_comparable_fields(self.instance)
+
+    def compare(self, instance=None):
+        return models_utils.changelog_values_verdict(instance or self.instance, self.stored, self.fields, connection)
+
+    def test_identical_instances(self):
+        self.assertIs(self.compare(), models_utils.ChangeVerdict.UNCHANGED)
+
+    def test_changed_field(self):
+        self.instance.description = "something else"
+        self.assertIs(self.compare(), models_utils.ChangeVerdict.CHANGED)
+
+    def test_foreign_key_reassigned_to_same_object(self):
+        self.instance.tenant = tenancy_models.Tenant.objects.get(pk=self.stored.tenant_id)
+        self.assertIs(self.compare(), models_utils.ChangeVerdict.UNCHANGED)
+
+    def test_foreign_key_assigned_as_string(self):
+        """An unnormalized value in memory is caught by preparing both sides for the database."""
+        self.instance.tenant_id = str(self.stored.tenant_id)
+        self.assertIs(self.compare(), models_utils.ChangeVerdict.UNCHANGED)
+
+    def test_json_field_key_order(self):
+        dcim_models.Location.objects.filter(pk=self.location.pk).update(_custom_field_data={"a": 1, "b": 2})
+        self.stored.refresh_from_db()
+        self.instance._custom_field_data = {"b": 2, "a": 1}
+        self.assertIs(self.compare(), models_utils.ChangeVerdict.UNCHANGED)
+
+    def test_decimal_precision(self):
+        dcim_models.Location.objects.filter(pk=self.location.pk).update(latitude=decimal.Decimal("1.100000"))
+        self.stored.refresh_from_db()
+        self.instance.latitude = decimal.Decimal("1.1")
+        self.assertIs(self.compare(), models_utils.ChangeVerdict.UNCHANGED)
+
+    def test_deferred_field_is_indeterminate(self):
+        deferred = dcim_models.Location.objects.only("id").get(pk=self.location.pk)
+        self.assertIs(self.compare(instance=deferred), models_utils.ChangeVerdict.INDETERMINATE)
+
+    def test_comparison_failure_is_indeterminate(self):
+        """A value the database layer cannot even prepare leaves no verdict; the caller records the change."""
+        self.instance.tenant_id = "not a uuid"
+        with self.assertLogs("nautobot.core.models.utils", level="DEBUG"):
+            self.assertIs(self.compare(), models_utils.ChangeVerdict.INDETERMINATE)
+
+    def test_uncommitted_file_is_changed(self):
+        """Asking an unsaved file for its stored name would upload it, so it counts as changed unread."""
+        stored = dcim_models.DeviceType.objects.first()
+        instance = dcim_models.DeviceType.objects.get(pk=stored.pk)
+        instance.front_image = ContentFile(b"not really an image", name="front.png")
+        # Reading the attribute back is what wraps the raw file in an uncommitted `FieldFile`.
+        self.assertFalse(instance.front_image._committed)
+
+        fields = models_utils.changelog_comparable_fields(instance)
+        self.assertIs(
+            models_utils.changelog_values_verdict(instance, stored, fields, connection),
+            models_utils.ChangeVerdict.CHANGED,
+        )

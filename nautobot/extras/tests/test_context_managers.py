@@ -21,6 +21,7 @@ from nautobot.dcim.models import (
 )
 from nautobot.extras.choices import ObjectChangeActionChoices, ObjectChangeEventContextChoices
 from nautobot.extras.context_managers import (
+    ChangeContext,
     deferred_change_logging_for_bulk_operation,
     web_request_context,
 )
@@ -63,6 +64,14 @@ class WebRequestContextTestCase(TestCase):
             with web_request_context("a string is not a user object"):
                 pass
 
+    def test_captured_object_data_is_not_shared_between_contexts(self):
+        """A shared default would carry one request's captures into every later request in the process."""
+        first = ChangeContext(user=self.user, context=ObjectChangeEventContextChoices.CONTEXT_ORM)
+        second = ChangeContext(user=self.user, context=ObjectChangeEventContextChoices.CONTEXT_ORM)
+        first.pre_object_data_v2["a-primary-key"] = {"description": "captured by the first context"}
+        self.assertEqual(second.pre_object_data_v2, {})
+        self.assertEqual(second.pre_object_data, {})
+
     def test_change_log_created(self):
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
@@ -82,6 +91,14 @@ class WebRequestContextTestCase(TestCase):
         """Test that a create followed by a delete is logged as two changes"""
         location_type = LocationType.objects.get(name="Campus")
         location_status = Status.objects.get_for_model(Location).first()
+        # Records are only dispatched when something is listening for them.
+        webhook = Webhook.objects.create(
+            name="Location create and delete",
+            type_create=True,
+            type_delete=True,
+            payload_url="http://localhost/",
+        )
+        webhook.content_types.set([ContentType.objects.get_for_model(Location)])
         with web_request_context(self.user):
             location = Location(name="Test Location 1", location_type=location_type, status=location_status)
             location.save()

@@ -543,6 +543,24 @@ properties:
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
+  CHANGELOG_SKIP_UNCHANGED_SAVES:
+    default: true
+    description: >-
+      If `True`, saving an object without modifying any of its field values does not create a change record
+      and does not trigger webhooks, job hooks, or events. Set this to `False` to record such saves anyway,
+      as Nautobot did before 3.3.0.
+    details: |-
+      The object's `last_updated` timestamp is written either way; only the change record is affected.
+
+      !!! warning
+          This setting exists to give deployments time to adapt to the 3.3.0 behavior change. It is expected to be removed
+          in a future major release, so it should not be relied on indefinitely.
+
+      An individual model can opt out of the comparison regardless of this setting by declaring
+      `changelog_skip_unchanged_saves = False`.
+    environment_variable: "NAUTOBOT_CHANGELOG_SKIP_UNCHANGED_SAVES"
+    type: "boolean"
+    version_added: "3.3.0"
   CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
     default: false
     description: >-
