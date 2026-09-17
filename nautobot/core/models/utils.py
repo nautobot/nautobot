@@ -256,6 +256,10 @@ def changelog_comparable_fields(instance, update_fields=None):
         if update_fields is not None:
             if field.name not in update_fields and field.attname not in update_fields:
                 continue
+            # A field computed in `pre_save()` (`NaturalOrderingField` derives `_name` from `name`) holds a
+            # value we cannot predict, since Django calls `pre_save()` after the signal that gets us here.
+            # An unrestricted save is safe regardless, because the field it derives from is compared too;
+            # `update_fields` can leave that source out, and then nothing reliable is left to compare.
             if _has_unpredictable_pre_save(field):
                 return ChangeVerdict.INDETERMINATE
         fields.append(field)
@@ -289,7 +293,7 @@ def changelog_values_verdict(instance, stored_instance, fields, connection):
     Args:
         instance (Model): The instance being saved.
         stored_instance (Model): The same row as the database currently holds it.
-        fields (list): Fields to compare, from `changelog_comparable_fields`.
+        fields (list[Field]): Fields to compare, from `changelog_comparable_fields`.
         connection: The database connection the save is going to, used to prepare values.
 
     Returns:
@@ -298,7 +302,9 @@ def changelog_values_verdict(instance, stored_instance, fields, connection):
     """
     for field in fields:
         # Read through `__dict__` rather than the descriptor, which would issue a query for a deferred
-        # field and defeat the point. A field missing on either side is simply not knowable.
+        # field and defeat the point. A field missing on either side is simply not knowable. `attname`
+        # only: that is the key Django stores the column value under; `field.name` is a descriptor and
+        # never a `__dict__` key.
         if field.attname not in instance.__dict__ or field.attname not in stored_instance.__dict__:
             return ChangeVerdict.INDETERMINATE
         new_value = instance.__dict__[field.attname]

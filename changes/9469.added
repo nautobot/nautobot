@@ -1,1 +1,2 @@
 Added the `CHANGELOG_SKIP_UNCHANGED_SAVES` setting, which can be set to `False` to keep recording change records for saves that modify none of an object's field values, as Nautobot did before 3.3.0.
+Exposed `event_topic_has_subscriber()` in `nautobot.apps.events`, which reports whether any registered event broker would receive a given topic, so that an App can skip building a payload that nothing would consume.

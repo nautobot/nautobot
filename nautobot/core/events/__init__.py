@@ -119,6 +119,7 @@ __all__ = (
     "RedisEventBroker",
     "SyslogEventBroker",
     "deregister_event_broker",
+    "event_topic_has_subscriber",
     "publish_event",
     "register_event_broker",
 )
