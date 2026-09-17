@@ -68,7 +68,7 @@ def change_has_consumers(content_type, action):
             lambda: _compute_change_has_consumers(content_type, action),
             # Bounded, not indefinite: an invalidation can be lost to a race or a rolled-back transaction,
             # and a permanent stale `False` would silence a live webhook.
-            timeout=settings.CACHES["default"]["TIMEOUT"],
+            timeout=settings.CACHES["default"].get("TIMEOUT", 300),
         )
     except redis.exceptions.ConnectionError:
         # The cache is an optimization, not a source of truth, so don't fail the save that triggered this.
