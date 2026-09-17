@@ -175,7 +175,7 @@ IPNetwork('1.1.1.1/30')
 !!! note
     If you use a `mask_length` other than `/32` (IPv4) or `/128` (IPv6) it **must** be included in your lookups
 
-This field *cannot be used in **nested** filter expressions*:
+This field _cannot be used in **nested** filter expressions_:
 
 ```python
 >>> Device.objects.filter(primary_ip4__address="1.1.1.1")
@@ -191,7 +191,7 @@ The IP (host) component of the address is now stored in the `host` field.
 '1.1.1.1'
 ```
 
-This field *can* be used in nested filter expressions, for example:
+This field _can_ be used in nested filter expressions, for example:
 
 ```python
 >>> Device.objects.filter(primary_ip4__host="1.1.1.1")
@@ -300,12 +300,12 @@ In Nautobot 1.2.0 and later, both model manager methods and custom lookup expres
 !!! note
     Nautobot did not mimic the support of non-subnets for the `net_in` query to avoid mistakes and confusion caused by an IP address being mistaken for a /32 as an example.
 
-##### net_mask_length
+##### `net_mask_length`
 
-*Returns target addresses matching the source address prefix length.*
+_Returns target addresses matching the source address prefix length._
 
 !!! note
-    The NetBox filter net_mask_length should use the `prefix_length` field for filtering.
+    The NetBox filter `net_mask_length` should be replaced by the `prefix_length` or `mask_length` fields for filtering as appropriate.
 
 NetBox:
 
