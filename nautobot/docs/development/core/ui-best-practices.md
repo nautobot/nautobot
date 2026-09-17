@@ -200,3 +200,126 @@ As of Nautobot 3.0, any jQuery usage is deprecated. There are other libraries st
 ## Previewing the theme
 
 When `settings.DEBUG` is set to `True`, an authenticated Nautobot user can access the URL `/theme-preview/` to retrieve a templated view that showcases many of the different Nautobot UI elements. While not necessarily comprehensive, this view is designed to provide an overview of the current theme more conveniently than clicking around to various specific pages in the UI. Feel free to add more example content into this view as needed.
+
+## Accessibility
+
+Nautobot targets [WCAG 2.2 Level AA](https://www.w3.org/TR/WCAG22/). The conventions below are the ones core already
+follows; new UI code and Nautobot App code should follow them too.
+
+### Automated checking
+
+Two linters enforce a subset of this automatically, so run them before opening a PR:
+
+- `invoke djlint` includes `H013` ("img tag should have an alt attribute") and `H016` ("missing title tag"). Do not add
+  either to the ignore list in `pyproject.toml`.
+- Integration tests can assert against [axe-core](https://github.com/dequelabs/axe-core) via
+  `SeleniumTestCase.assertNoAccessibilityViolations()`, which scans the page currently loaded in the browser against the
+  WCAG 2.2 A and AA rule tags (which include everything carried forward from 2.0 and 2.1):
+
+    ```python
+    def test_my_view(self):
+        self.browser.visit(f"{self.live_server_url}/plugins/my-app/things/")
+        self.assertTrue(self.browser.is_element_present_by_tag("main", wait_time=10))
+        self.assertNoAccessibilityViolations()
+    ```
+
+    It gates on findings at every impact level, because impact describes how badly a violation affects a user rather
+    than how important the success criterion is. Pass `context` to scan only part of the page, or `exclude` to leave
+    part of it out. `nautobot/core/tests/integration/test_accessibility.py` covers the shared page templates.
+
+    One rule is currently switched off: `color-contrast` (WCAG 1.4.3). The theme fails it in a handful of places, and
+    correcting that means retuning palette tokens, which is a deferred product decision. Contrast is therefore not
+    checked automatically anywhere. See `AXE_DISABLED_RULES` in `nautobot/core/testing/integration.py`, and pass
+    `disabled_rules=()` to scan with it on.
+
+Also read axe-core's `incomplete` results, which are checks it could not decide rather than passes. They are not gated
+on -- they need a human -- but they are where a real defect hides when it produces no violation. A label overflowing its
+container reports only as "background color could not be determined", because contrast is indeterminate for whatever
+part of an element falls outside the ancestor painting its background.
+
+The assertion above does not report them; it fails on violations alone. Read them from a scan by hand, below. There is
+no `axe` in the browser console to call directly -- axe-core is a build-time dependency and is not bundled into the app,
+which is why the test helper injects it into the page itself.
+
+Neither linter is a substitute for keyboard-testing a new component: tab through it, operate it with Enter, Space,
+the arrow keys and Escape, and confirm focus is always visible and never trapped.
+
+### Scanning by hand
+
+Browser extensions such as [Accessibility Insights](https://accessibilityinsights.io/) or axe DevTools inspect the live
+DOM, which the automated tests deliberately cannot substitute for -- they catch anything a runtime class or a piece of
+JavaScript introduces after render.
+
+Do it against a server with `DEBUG` off, or expect noise that is not yours. The development environment runs with
+`DEBUG = True`, which enables Django Debug Toolbar, and the toolbar injects a `#djDebugRoot` element that reports a
+`color-contrast` finding on its own collapsed handle. It is a false positive twice over: the handle measures 5.27:1 in
+light mode and 7.01:1 in dark once its `opacity: 0.6` is composited (18.33:1 as declared), and the toolbar is a dev-only
+dependency that is never installed for a Nautobot user. `assertNoAccessibilityViolations()` excludes it via
+`AXE_EXCLUDE_SELECTORS`; a browser extension will not, so set `NAUTOBOT_DEBUG=False` for the run.
+
+That exclusion list is for third-party developer tooling only. Reach for it when something injected into the page is not
+part of what Nautobot ships -- never to quiet a finding in our own markup.
+
+### Accessible names
+
+Every interactive element needs a name. An icon on its own is not a name, and neither is a tooltip -- `title` and
+`data-bs-title` are unreliable and are not exposed consistently.
+
+For an icon-only control, hide the icon and add visually hidden text:
+
+```html
+<button class="btn btn-primary" type="button">
+    <span aria-hidden="true" class="mdi mdi-plus-thick"></span>
+    <span class="visually-hidden">Add a new device</span>
+</button>
+```
+
+Mark every purely decorative `mdi` glyph `aria-hidden="true"` so it is not announced alongside adjacent text. Decorative
+images take `alt=""` -- an empty `alt`, not a missing one, and not `role="presentation"` alongside `alt` text, since the
+two contradict each other.
+
+### Hiding things
+
+The two mechanisms are not interchangeable:
+
+- `visually-hidden` hides content visually **but keeps it in the accessibility tree and the tab order**. Use it for text
+  that should be announced but not seen.
+- `d-none`, the `hidden` attribute and `visibility: hidden` remove content from both. Use these to hide UI that should be
+  unavailable.
+
+Using `visually-hidden` to hide a control leaves keyboard users tabbing into something they cannot see.
+
+### Forms
+
+Every field needs a label associated with `for="{{ field.id_for_label }}"`. When the design calls for no *visible*
+label, emit a visually hidden one rather than none.
+
+Django already emits `required`, `aria-invalid="true"` on error, and
+`aria-describedby="<auto_id>_helptext <auto_id>_error"` on the widget. Custom form templates must render the matching
+`id="{{ field.auto_id }}_helptext"` and `id="{{ field.auto_id }}_error"` attributes, otherwise the reference dangles and
+neither the help text nor the errors are announced. Prefer `{% render_field %}`, which handles this.
+
+### Tables
+
+`th` elements need `scope="col"`. Sortable columns need `aria-sort` reflecting the current state, since a sort arrow icon
+alone conveys nothing non-visually. Tables need an accessible name; `inc/table.html` supplies a visually hidden
+`<caption>`, overridable with a `table_caption` context variable.
+
+### Dialogs
+
+A modal needs `role="dialog"`, `aria-modal="true"` and `aria-labelledby` pointing at its title's `id`. For a dialog whose
+content is swapped in by HTMX, keep the title's `id` fixed so it always matches the dialog's `aria-labelledby` -- see the
+`components/htmx/object_embedded_*` partials, whose headings carry the `id` that `#embedded_action_modal` points at.
+
+### Colour
+
+When a colour is user-supplied, derive its text colour with the `fgcolor` template filter, which picks black or white by
+actual WCAG contrast ratio.
+
+Colour must never be the only signal. Text-coloured links inside a block of prose also need an underline (WCAG 1.4.1).
+
+### Dynamic content
+
+Content that appears without a page load is not announced unless it lands in a live region. `#header_messages` is a
+persistent `aria-live="polite"` region, so anything appended to it is announced. For a component that updates in place,
+add a `role="status"` element, as the paginator does for its "Showing X-Y of Z" range.

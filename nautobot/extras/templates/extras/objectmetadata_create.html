@@ -1,0 +1,86 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+        <div class="card-body">
+            {% for field in form.visible_fields %}
+                {% render_field field %}
+            {% endfor %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script type="text/javascript">
+        // Build the value-widget request path from the currently selected metadata_type.
+        // The widget is a *detail* action on MetadataTypeUIViewSet, so the pk lives in the URL
+        // path. We assemble it from the pk-less list URL (`data-value-widget-base`) plus the live
+        // selection: <base>/<pk>/value-widget/. With no metadata_type selected there is no detail
+        // URL, so we clear the widget and cancel the request.
+        window.objectMetadataValueWidgetConfigRequest = (wrapper, event) => {
+            const metadataTypeSelect = document.getElementById("id_metadata_type");
+            const metadataTypeId = metadataTypeSelect ? metadataTypeSelect.value : "";
+            if (!metadataTypeId) {
+                wrapper.innerHTML = "";
+                event.preventDefault();
+                return;
+            }
+            event.detail.path = wrapper.dataset.valueWidgetBase + encodeURIComponent(metadataTypeId) + "/value-widget/";
+        };
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const dataTypes = {{ metadata_type_data_types|default:"{}"|safe }};
+            const contactTeamDataType = "{{ contact_team_data_type }}";
+            const metadataTypeSelect = document.getElementById("id_metadata_type");
+            const contactField = document.getElementById("id_contact-container");
+            const teamField = document.getElementById("id_team-container");
+            const valueField = document.getElementById("nb-objectmetadata-value-field");
+
+            const clearInput = (containerEl) => {
+                if (!containerEl) return;
+                containerEl.querySelectorAll("input, textarea").forEach((el) => {
+                    if (el.type === "hidden" && el.name.startsWith("csrf")) return;
+                    el.value = "";
+                });
+                // Every select in contact/team/value wrappers is Select2-initialized; clear via
+                // the shared helper so the rendered chip updates and select2:clear fires.
+                // Pass [] (not null) to sidestep a null.length error inside setSelect2Value.
+                containerEl.querySelectorAll("select").forEach((el) => {
+                    window.nb.select2.setSelect2Value(el, []);
+                });
+            };
+
+            const updateFieldVisibility = () => {
+                if (!metadataTypeSelect) return;
+                const dataType = dataTypes[metadataTypeSelect.value];
+                const isContactTeam = dataType === contactTeamDataType;
+                if (contactField) contactField.classList.toggle("d-none", !isContactTeam);
+                if (teamField) teamField.classList.toggle("d-none", !isContactTeam);
+                if (valueField) valueField.classList.toggle("d-none", isContactTeam);
+                if (isContactTeam) {
+                    clearInput(valueField);
+                } else {
+                    clearInput(contactField);
+                    clearInput(teamField);
+                }
+            };
+
+            if (metadataTypeSelect) {
+                if (window.jQuery) {
+                    window.jQuery(metadataTypeSelect).on(
+                        "select2:select select2:clear",
+                        () => {
+                            metadataTypeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                        },
+                    );
+                }
+                metadataTypeSelect.addEventListener("change", updateFieldVisibility);
+                updateFieldVisibility();
+            }
+        });
+    </script>
+{% endblock javascript %}

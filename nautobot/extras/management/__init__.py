@@ -33,6 +33,7 @@ STATUS_CHOICESET_MAP = {
     "dcim.VirtualDeviceContext": dcim_choices.VirtualDeviceContextStatusChoices,
     "extras.ContactAssociation": extras_choices.ContactAssociationStatusChoices,
     "ipam.IPAddress": ipam_choices.IPAddressStatusChoices,
+    "ipam.IPAddressRange": ipam_choices.IPAddressRangeStatusChoices,
     "ipam.Prefix": ipam_choices.PrefixStatusChoices,
     "ipam.VLAN": ipam_choices.VLANStatusChoices,
     "ipam.VRF": ipam_choices.VRFStatusChoices,
@@ -106,6 +107,7 @@ STATUS_DESCRIPTION_MAP = {
 ROLE_CHOICESET_MAP = {
     "extras.ContactAssociation": extras_choices.ContactAssociationRoleChoices,
     "vpn.VPNTunnelEndpoint": vpn_choices.VPNTunnelEndpointRoleChoices,
+    "ipam.IPAddressRange": ipam_choices.IPAddressRangeRoleChoices,
 }
 
 # Map of role name -> default hex_color used when importing color choices in `export_roles_from_choiceset()`.
@@ -118,6 +120,12 @@ ROLE_COLOR_MAP = {
     "Hub": ColorChoices.COLOR_DARK_GREEN,
     "Spoke": ColorChoices.COLOR_LIGHT_GREEN,
     "Peer": ColorChoices.COLOR_ORANGE,
+    # IPAddressRange roles
+    "DHCP": ColorChoices.COLOR_BLUE,
+    "Firewall Object": ColorChoices.COLOR_RED,
+    "NAT Pool": ColorChoices.COLOR_ORANGE,
+    "Load Balancer Pool": ColorChoices.COLOR_GREEN,
+    "Reserved": ColorChoices.COLOR_GREY,
 }
 
 # Map of role name -> description used when importing role choices in `export_roles_from_choiceset()`.
@@ -129,6 +137,12 @@ ROLE_DESCRIPTION_MAP = {
     "Hub": "Unit plays a Hub role",
     "Spoke": "Unit plays a Spoke role",
     "Peer": "Unit plays a Peer role",
+    # IPAddressRange roles
+    "DHCP": "IP Address Range used as a DHCP scope",
+    "Firewall Object": "IP Address Range representing a firewall address object",
+    "NAT Pool": "IP Address Range used as a NAT pool",
+    "Load Balancer Pool": "IP Address Range used as a load balancer pool",
+    "Reserved": "IP Address Range reserved for a specific purpose",
 }
 
 
@@ -220,7 +234,7 @@ def export_metadata_from_choiceset(choiceset, color_map=None, description_map=No
 
 def _create_custom_role_or_status_instances(
     app_config=None,  # unused
-    verbosity=2,
+    verbosity=None,
     interactive=True,
     using=DEFAULT_DB_ALIAS,  # unused
     apps=global_apps,
@@ -237,14 +251,16 @@ def _create_custom_role_or_status_instances(
         models (dict): A list of model contenttype strings e.g. models=["circuits.Circuit", "dcim.Cable", "dcim.Device","dcim.PowerFeed"]
         metadatamodel (str): "role" or "status"
     """
+    if verbosity is None:
+        if "test" in sys.argv:
+            # Do not print output during unit testing migrations
+            verbosity = 1
+        else:
+            verbosity = 2
 
     # Only print a newline if we have verbosity!
     if verbosity > 0:
         print("\n", end="")
-
-    if "test" in sys.argv:
-        # Do not print output during unit testing migrations
-        verbosity = 1
 
     choiceset_map = {}
     if metadatamodel.lower() == "role":
@@ -323,7 +339,7 @@ def _create_custom_role_or_status_instances(
 def _clear_custom_role_or_status_instances(
     apps=global_apps,
     schema_editor=None,
-    verbosity=2,
+    verbosity=None,
     models=None,
     metadatamodel=None,
     clear_all_model_statuses=True,
@@ -336,9 +352,12 @@ def _clear_custom_role_or_status_instances(
         metadatamodel (str): "role" or "status"
         clear_all_model_statuses (bool): Set it to True will clear all statuses for this model. Set it to False will only clear default statuses for this model.
     """
-    if "test" in sys.argv:
-        # Do not print output during unit testing migrations
-        verbosity = 1
+    if verbosity is None:
+        if "test" in sys.argv:
+            # Do not print output during unit testing migrations
+            verbosity = 1
+        else:
+            verbosity = 2
 
     choiceset_map = {}
     if metadatamodel.lower() == "role":

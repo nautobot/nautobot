@@ -3,15 +3,20 @@
 
 {% if request.user.is_authenticated %}
     {% with is_apple_os=request.META.HTTP_USER_AGENT|split:'Mac OS X'|length|divisibleby:'2' %}
-        <form action="{% url 'search' %}" class="col-4 text-center" id="header_search" method="get" role="search">
+        <form action="{% url 'search' %}" class="col-4 text-center" data-nb-live-search-path="{% url 'live_search' %}" id="header_search" method="get" role="search">
             <label class="position-relative w-100">
+                <span aria-hidden="true" class="visually-hidden" tabindex="-1">{% comment %}Focus placeholder for keyboard navigation{% endcomment %}</span>
                 <input
+                    aria-label="Search"
                     aria-placeholder="Press {% if is_apple_os %}⌘{% else %}Ctrl+{% endif %}K to search"
+                    autocomplete="off"
                     class="form-control nb-text-transparent"
                     name="q"
+                    role="searchbox"
                     type="search"
                     value="{{ request.GET.q }}"
                 />
+                <span aria-hidden="true" class="visually-hidden" tabindex="-1">{% comment %}Focus placeholder for keyboard navigation{% endcomment %}</span>
                 <span class="align-items-center d-inline-flex gap-6 overflow-hidden px-12 py-6 pe-none position-absolute start-0 top-0 user-select-none w-100">
                     <span aria-hidden="true" class="mdi mdi-magnify text-secondary d-inline-flex"></span>
                     {% spaceless %}
@@ -43,10 +48,12 @@
                             {{ request.GET.q }}
                         {% endif %}
                     </span>
-                    <a class="align-items-center d-inline-flex ms-auto pe-auto"
+                    {% searchable_fields_for_content_type content_type as searchable_fields %}
+                    <a class="align-items-center d-inline-flex me-n2 ms-auto my-n1 pe-auto px-2 py-1" aria-label="Search help"
                        href="{% static 'docs/user-guide/platform-functionality/user-interface/search.html' %}"
                        target="_blank"
                        rel="noopener"
+                       {% if searchable_fields %}data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Searchable fields: {{ searchable_fields|join:', ' }}"{% endif %}
                     >
                         <span aria-hidden="true" class="mdi mdi-help-circle-outline text-secondary"></span>
                     </a>

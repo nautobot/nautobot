@@ -1,0 +1,6 @@
+{% if target or text is not None %}
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover{% if size %} btn-{{ size }}{% endif %}{% if css_class %} {{ css_class }}{% endif %}"{% if target %} data-clipboard-target="{{ target }}"{% endif %}{% if text is not None %} data-clipboard-text="{{ text }}"{% endif %}>
+        <span aria-hidden="true" class="mdi mdi-content-copy"></span>
+        <span class="visually-hidden">{{ label }}</span>
+    </button>
+{% endif %}

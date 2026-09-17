@@ -105,7 +105,7 @@ The workflow with the **highest weight value** that matches the object’s const
     - Weight: **10**
 
 Result:
-If the object under review is the *Bulk Delete Objects Scheduled Job*, Workflow A applies (weight 20 wins).
+If the object under review is the _Bulk Delete Objects Scheduled Job_, Workflow A applies (weight 20 wins).
 For all other scheduled jobs, Workflow B applies (weight 10).
 
 ### ApprovalWorkflowStageDefinition
@@ -240,7 +240,7 @@ There are 2 ways to check the state of a workflow, depending on whether user is 
 
     </div>
 
-##### Check State as Workflow Architect**
+##### Check State as Workflow Architect
 
 <!-- pyml disable-num-lines 38 no-inline-html -->
 1. Go to `Approvals > Approval Workflow Definition`
@@ -352,6 +352,20 @@ http://nautobot/api/extras/approval-workflow-stages/?pending_my_approvals=false
 
 If the parameter is omitted, all stages are returned regardless of approval status.
 
+#### View Stage Responses
+
+Responses (approvals, denials, and comments) are not a separately routable resource. They are returned as read-only nested data on the approval workflow
+stage, and are only included for users who hold the `extras.view_approvalworkflowstageresponse` permission (subject to any object-level constraints).
+
+```no-highlight
+curl -X GET \
+-H "Authorization: Token $TOKEN" \
+-H "Accept: application/json; version=3.0; indent=4" \
+http://nautobot/api/extras/approval-workflow-stages/$APPROVAL_WORKFLOW_STAGE_ID/
+```
+
+The `responses` field in the returned stage contains the list of responses the user is permitted to see.
+
 #### Cancel Workflow
 
 ```no-highlight
@@ -410,7 +424,7 @@ Responsible for designing, managing, and configuring approval workflow definitio
 
 Approval actions are controlled not only by permissions but also by **approver group membership** defined in each workflow definition:
 
-- Each **Approval Workflow Stage Definition** specifies an **Approver Group** (user group authorized to act on that stage, how to create user group via the admin UI check [here](users/groups.md)).
+- Each **Approval Workflow Stage Definition** specifies an **Approver Group** (user group authorized to act on that stage, see [how to create a user group via the admin UI](users/groups.md)).
 - A user must belong to the stage’s approver group or be a super user to:
     - See the stage in the **My Approvals** tab.
     - Perform approval or denial actions.

@@ -16,8 +16,13 @@
             {% with field_value=job_form.initial.custom_job_data|default:field.initial %}
                 <label class="col-lg-3 col-form-label nb-required" for="id_custom_job_data">{{ field.label }}</label>
                 <div class="col-lg-9">
-                    <textarea class="form-control" id="id_custom_job_data" name="custom_job_data">{{ field_value }}</textarea>
-                    <span class="form-text">{{ field.help_text|safe }}</span>
+                    {# This textarea is hand-written rather than rendered from the bound field, so Django does not #}
+                    {# emit `aria-describedby` for it and the association has to be made explicitly. #}
+                    <textarea aria-describedby="id_custom_job_data_helptext"
+                              class="form-control"
+                              id="id_custom_job_data"
+                              name="custom_job_data">{{ field_value }}</textarea>
+                    <span class="form-text" id="id_custom_job_data_helptext">{{ field.help_text|safe }}</span>
                 </div>
             {% endwith %}
         {% endwith %}

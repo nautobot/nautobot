@@ -55,7 +55,7 @@ from .views import AnimalViewSet
 
 
 router = routers.DefaultRouter()
-router.register('animals', AnimalViewSet)
+router.register("animals", AnimalViewSet)
 urlpatterns = router.urls
 ```
 

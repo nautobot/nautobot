@@ -11,7 +11,7 @@ Here's a list of what's changed:
 | v2.x                                  | v3.0                                                                                              |
 |---------------------------------------|---------------------------------------------------------------------------------------------------|
 | `accordion-toggle`                    | `nb-collapse-toggle`                                                                              |
-| `accordion-toggle-all`                | *removed*, refer to [Toggle All Groups (Collapse All Groups / Expand All Groups)](#toggle-all-groups-collapse-all-groups-expand-all-groups) |
+| `accordion-toggle-all`                | *removed*, refer to [Toggle All Groups](#toggle-all-groups-collapse-all-groups--expand-all-groups) |
 | `banner-bottom`                       | `nb-banner-bottom`                                                                                |
 | `btn-inline`                          | `nb-btn-inline-hover`, refer to [Hover Copy Buttons](#hover-copy-buttons)                         |
 | `hover_copy`                          | *removed*, refer to [Hover Copy Buttons](#hover-copy-buttons)                                     |
@@ -228,12 +228,35 @@ After:
 ```html
 <span>
     <span id="uuid_copy">{{ object.id }}</span>
-    <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
+    <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#uuid_copy">
         <span aria-hidden="true" class="mdi mdi-content-copy"></span>
         <span class="visually-hidden">Copy</span>
     </button>
 </span>
 ```
+
+### Reusable `copy_button` template tag
+
++++ 3.2.0
+
+Rather than hand-writing the markup above, use the reusable `copy_button` template tag from the `buttons` template tag library. It renders the canonical hover-copy button markup for you, and the global ClipboardJS handler (initialized once in `nautobot.js`) automatically wires up the copy behavior and a transient "Copied!" feedback tooltip — no per-page `new ClipboardJS(...)` initialization is required.
+
+Provide exactly one of `target` (a CSS selector of the element whose text content to copy) or `text` (a literal string to copy):
+
+```html
+{% load buttons %}
+
+<!-- Copy the text content of another element -->
+<span>
+    <span id="uuid_copy">{{ object.id }}</span>
+    {% copy_button target="#uuid_copy" %}
+</span>
+
+<!-- Copy a literal value -->
+{% copy_button text=object.name label="Copy name" %}
+```
+
+The tag also accepts `label` (accessible label, defaults to `"Copy"`), `size` (Bootstrap-style suffix such as `"sm"`, applied as `btn-{size}`), and `css_class` (extra CSS classes).
 
 ## Toggle All Groups (Collapse All Groups / Expand All Groups)
 
@@ -305,7 +328,7 @@ In place of legacy `filter-container` and `filter-selection`, Nautobot 3.0 intro
 Nautobot extends Bootstrap utilities with its own subset of CSS classes, properties and values.
 
 !!! note
-    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes-helpers-and-utilities) in another migration guide.
+    We elaborate more on [Bootstrap v5.x Helpers and Utilities](./upgrading-from-bootstrap-v3-to-v5.md#helper-classes--helpers-and-utilities) in another migration guide.
 
 | Class                     | Style                              |
 |---------------------------|------------------------------------|

@@ -107,6 +107,7 @@ For example, maybe we want our app to make use of a Relationship allowing each L
 
 from nautobot.extras.choices import RelationshipTypeChoices
 
+
 def create_location_to_animal_relationship(sender, apps, **kwargs):
     """Create a Location-to-Animal Relationship if it doesn't already exist."""
     # Use apps.get_model to look up Nautobot core models
@@ -139,12 +140,14 @@ from nautobot.apps import nautobot_database_ready, NautobotAppConfig
 
 from .signals import create_location_to_animal_relationship
 
+
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
 
     def ready(self):
         super().ready()
         nautobot_database_ready.connect(create_location_to_animal_relationship, sender=self)
+
 
 config = AnimalSoundsConfig
 ```
@@ -172,6 +175,7 @@ status_content_type_mapping = {
     "your_nautobot_app.custom_model_b": ["Active", "Down", "Failed"],
 }
 
+
 def add_content_types_to_default_statuses(apps, schema_editor):
     """Adds additional content types to default statuses."""
     Status = apps.get_model("extras.Status")
@@ -180,9 +184,8 @@ def add_content_types_to_default_statuses(apps, schema_editor):
         model_class = apps.get_model(model)
         for status in statuses:
             status_record, _ = Status.objects.get_or_create(name=status)
-            status_record.content_types.add(
-                ContentType.objects.get_for_model(model_class)
-            )
+            status_record.content_types.add(ContentType.objects.get_for_model(model_class))
+
 
 def remove_content_types_from_default_statuses(apps, schema_editor):
     """Removes additional content types from default statuses."""
@@ -192,9 +195,8 @@ def remove_content_types_from_default_statuses(apps, schema_editor):
         model_class = apps.get_model(model)
         for status in statuses:
             status_record, _ = Status.objects.get_or_create(name=status)
-            status_record.content_types.remove(
-                ContentType.objects.get_for_model(model_class)
-            )
+            status_record.content_types.remove(ContentType.objects.get_for_model(model_class))
+
 
 class Migration(migrations.Migration):
     dependencies = [

@@ -153,6 +153,7 @@ The `AssertNoRepeatedQueries` context manager (available from `nautobot.core.tes
 ```python
 from nautobot.core.testing import AssertNoRepeatedQueries
 
+
 class MyTest(TestCase):
     def test_no_n_plus_one(self):
         with AssertNoRepeatedQueries(self, threshold=10):

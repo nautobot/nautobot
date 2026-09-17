@@ -19,7 +19,6 @@
 Statistics and related objects
 
 ```python
-
 StatsPanel(
     weight=100,
     section=SectionChoices.RIGHT_HALF,
@@ -34,7 +33,6 @@ calculated by `count_related(Device, "device_type")` filtered by given `filter_n
 ---
 
 ```python
-
 # Custom fields grouping
 GroupedKeyValueTablePanel(
     weight=200,

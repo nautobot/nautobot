@@ -101,9 +101,9 @@ class InstalledAppsTable(tables.Table):
         return [name for name, column in self.columns.items() if column.visible]
 
     def render_package_name(self, value):
-        return format_html(f"<code>{value}</code>")
+        return format_html("<code>{}</code>", value)
 
     def render_author_email(self, value):
         if value:
-            return format_html(f'<a href="mailto:{value}">{value}</a>')
+            return format_html('<a href="mailto:{}">{}</a>', value, value)
         return value

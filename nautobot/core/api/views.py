@@ -233,6 +233,9 @@ class ModelViewSetMixin:
             except ValueError:
                 self.logger.warning("The depth parameter must be an integer between 0 and 10")
 
+            if depth < 0 or depth > 10:
+                raise ParseError("The depth parameter must be an integer between 0 and 10")
+
             context["depth"] = depth
         else:
             # Use depth=0 in all write type requests.
@@ -278,6 +281,21 @@ class ModelViewSetMixin:
                     continue
                 if isinstance(model_field, ForeignKey):
                     select_fields.append(field_instance.source)
+
+        # Prefetch deeper relations needed for this object's natural key (e.g. for `natural_slug`) to avoid N+1 queries.
+        try:
+            natural_key_field_lookups = model.natural_key_field_lookups
+        except AttributeError:
+            natural_key_field_lookups = []
+        natural_key_prefetch_fields = set()
+        for lookup in natural_key_field_lookups:
+            if "__" in lookup:
+                prefix, _ = lookup.rsplit("__", 1)
+                # Single-level FKs are already covered by select_fields above.
+                if prefix not in select_fields:
+                    natural_key_prefetch_fields.add(prefix)
+        # Add to prefetch_fields rather than select_fields to prevent unnecessary query expansion.
+        prefetch_fields.extend(sorted(natural_key_prefetch_fields))
 
         if select_fields:
             queryset = maybe_select_related(queryset, select_fields)

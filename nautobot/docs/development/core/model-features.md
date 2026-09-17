@@ -34,7 +34,7 @@ def populate_model_features_registry():
             "field_names": ["source_for_associations", "destination_for_associations"],
             "field_attributes": {"related_model": RelationshipAssociation},
         },
-       ...
+        ...,
     ]
 ```
 

@@ -276,6 +276,11 @@ class Location(TreeModel, PrimaryModel):
     def clean(self):
         super().clean()
 
+        # Django calls `clean()` even when a required field failed field-level validation, and everything below
+        # dereferences `location_type`. `clean_fields()` already reports it as missing, so there is nothing to add here.
+        if self.location_type_id is None:
+            return
+
         # Prevent changing location type as that would require a whole bunch of cascading logic checks,
         # e.g. what if the new type doesn't allow all of the associated objects that the old type did?
         if self.present_in_database:

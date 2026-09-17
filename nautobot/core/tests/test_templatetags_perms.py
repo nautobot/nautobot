@@ -4,8 +4,8 @@ from django.test import TestCase
 from django.utils.timezone import now
 
 from nautobot.core.templatetags import perms
-from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType
-from nautobot.extras.models import Job, ScheduledJob
+from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobResultStatusChoices
+from nautobot.extras.models import Job, JobResult, ScheduledJob
 from nautobot.extras.models.approvals import ApprovalWorkflow, ApprovalWorkflowDefinition
 
 User = get_user_model()
@@ -40,6 +40,20 @@ class NautobotTemplatetagsPermsTest(TestCase):
             object_under_review_object_id=self.scheduledjob.pk,
             current_state=ApprovalWorkflowStateChoices.PENDING,
         )
+
+        self.finished_result = JobResult.objects.create(
+            name="Finished JobResult",
+            job_model=self.job_model,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_SUCCESS,
+        )
+        self.running_result = JobResult.objects.create(
+            name="Running JobResult",
+            job_model=self.job_model,
+            user=self.user,
+            status=JobResultStatusChoices.STATUS_STARTED,
+        )
+        self.jobresult_ct = ContentType.objects.get_for_model(JobResult)
 
     def test_can_cancel_as_submitter_and_active(self):
         """Owner of active workflow can cancel"""
@@ -85,3 +99,27 @@ class NautobotTemplatetagsPermsTest(TestCase):
         """Unsupported instance type raises NotImplementedError"""
         with self.assertRaises(NotImplementedError):
             perms.can_cancel(self.user, object())
+
+    def test_cannot_delete_unready_result_even_with_permission(self):
+        """A running/pending JobResult is never deletable, regardless of permissions."""
+        self.assertFalse(perms.can_delete(self.superuser, self.running_result))
+
+    def test_superuser_cannot_delete_unready_result(self):
+        """State veto applies to superusers too, not just as a permission gate."""
+        self.assertFalse(perms.can_delete(self.superuser, self.running_result))
+
+    def test_can_delete_finished_result_as_superuser(self):
+        """A finished JobResult is deletable by a superuser."""
+        self.assertTrue(perms.can_delete(self.superuser, self.finished_result))
+
+    def test_can_delete_finished_result_with_permission(self):
+        """A user with delete permission can delete a finished JobResult."""
+        self.assertTrue(perms.can_delete(self.superuser, self.finished_result))
+
+    def test_cannot_delete_finished_result_without_permission(self):
+        """Deletable state is necessary but not sufficient — permission still applies."""
+        self.assertFalse(perms.can_delete(self.user, self.finished_result))
+
+    def test_can_delete_falls_through_for_models_without_is_deletable(self):
+        """A model without _is_deletable is gated by permission only, not state-vetoed."""
+        self.assertTrue(perms.can_delete(self.superuser, self.job_model))

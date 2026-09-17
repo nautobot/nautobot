@@ -1,0 +1,5 @@
+{% extends 'generic/object_bulk_destroy.html' %}
+
+{% block message_extra %}
+    <p class="text-center text-danger"><span class="mdi mdi-alert"></span> This will also delete all child inventory items of those listed.</p>
+{% endblock %}

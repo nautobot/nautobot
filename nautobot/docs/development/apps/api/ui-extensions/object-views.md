@@ -64,6 +64,7 @@ class CircuitContent(TemplateExtension):
         ),
     )
 
+
 template_extensions = [CircuitContent]
 ```
 
@@ -127,6 +128,7 @@ For example:
 ```python title="example_app/template_content.py"
 class DeviceExtraTabs(TemplateExtension):
     """Template extension to add extra tabs to the Device detail view."""
+
     model = "dcim.device"
 
     def detail_tabs(self):
@@ -163,6 +165,7 @@ Here's a basic example of a tab's view. Note that while you're free to *add* add
 from nautobot.apps.utils import get_detail_view_components_context_for_model
 from nautobot.apps.views import ObjectView
 from nautobot.dcim.models import Device
+
 
 class DeviceDetailAppTabOne(ObjectView):
     """

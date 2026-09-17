@@ -9,6 +9,7 @@ The `AssertNoRepeatedQueries` context manager helps detect N+1 query patterns in
 ```python
 from nautobot.apps.testing import AssertNoRepeatedQueries
 
+
 class MyTestCase(TestCase):
     def test_list_view_no_n_plus_one(self):
         with AssertNoRepeatedQueries(self, threshold=10):

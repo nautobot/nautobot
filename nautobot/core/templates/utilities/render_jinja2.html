@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load buttons %}
 {% load form_helpers %}
 {% load helpers %}
 {% load static %}
@@ -49,10 +50,7 @@
                 <div class="card">
                     <div class="card-header">
                         <strong>Rendered Template</strong>
-                        <button type="button" class="btn btn-secondary opacity-100 nb-btn-inline-hover copy-rendered-template" data-clipboard-target="#rendered_template">
-                            <span aria-hidden="true" class="mdi mdi-content-copy"></span>
-                            <span class="visually-hidden">Copy</span>
-                        </button>
+                        {% copy_button target="#rendered_template" css_class="opacity-100" %}
                     </div>
                     <div class="card-body">
                         <textarea readonly="readonly" cols="40" rows="23" class="form-control" placeholder="Rendered Template" id="rendered_template"></textarea>
@@ -66,7 +64,6 @@
 {% block javascript %}
     {{ block.super }}
     <script>
-        new ClipboardJS('.copy-rendered-template');
         const sanitize = function(string) {
             return string.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         };

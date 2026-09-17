@@ -176,8 +176,8 @@ To make it work, you would simply specify `EXTRA_INSTALLED_APPS` instead:
 
 ```python
 EXTRA_INSTALLED_APPS = [
-    'health_check',
-    ...
+    "health_check",
+    ...,
 ]
 ```
 

@@ -199,3 +199,29 @@ class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):
         queryset = models.VPNTermination.objects.all()
         filtered_qs = filters.VPNTerminationFilterSet({"q": self.vpns[0].name}, queryset).qs
         self.assertTrue(filtered_qs.filter(vpn=self.vpns[0]).exists())
+
+
+class VPNProfilePhase1PolicyAssignmentFilterTestCase(FilterTestCases.FilterTestCase):
+    """VPNProfilePhase1PolicyAssignmentFilterSet Test Case."""
+
+    queryset = models.VPNProfilePhase1PolicyAssignment.objects.all()
+    filterset = filters.VPNProfilePhase1PolicyAssignmentFilterSet
+    generic_filter_tests = (
+        ("vpn_profile", "vpn_profile__id"),
+        ("vpn_profile", "vpn_profile__name"),
+        ("vpn_phase1_policy", "vpn_phase1_policy__id"),
+        ("vpn_phase1_policy", "vpn_phase1_policy__name"),
+    )
+
+
+class VPNProfilePhase2PolicyAssignmentFilterTestCase(FilterTestCases.FilterTestCase):
+    """VPNProfilePhase2PolicyAssignmentFilterSet Test Case."""
+
+    queryset = models.VPNProfilePhase2PolicyAssignment.objects.all()
+    filterset = filters.VPNProfilePhase2PolicyAssignmentFilterSet
+    generic_filter_tests = (
+        ("vpn_profile", "vpn_profile__id"),
+        ("vpn_profile", "vpn_profile__name"),
+        ("vpn_phase2_policy", "vpn_phase2_policy__id"),
+        ("vpn_phase2_policy", "vpn_phase2_policy__name"),
+    )

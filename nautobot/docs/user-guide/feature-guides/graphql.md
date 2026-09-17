@@ -311,10 +311,7 @@ query {
   }
 }
 """
-nb = pynautobot.api(
-    url="http://localhost",
-    token="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-)
+nb = pynautobot.api(url="http://localhost", token="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 gql = nb.graphql.query(query=query)
 
 print(json.dumps(gql.json, indent=2))
@@ -343,10 +340,7 @@ query ($location_name: String!) {
   }
 }
 """
-nb = pynautobot.api(
-    url="http://localhost",
-    token="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-)
+nb = pynautobot.api(url="http://localhost", token="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 gql = nb.graphql.query(query=query, variables=variables)
 
 print(json.dumps(gql.json, indent=2))

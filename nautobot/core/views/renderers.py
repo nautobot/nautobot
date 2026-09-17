@@ -2,7 +2,6 @@ import logging
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.template import engines, loader
 from django.urls import resolve
@@ -30,8 +29,8 @@ from nautobot.core.views.utils import (
     get_saved_views_for_user,
     view_changes_not_saved,
 )
-from nautobot.extras.models import SavedView
 from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.utils import get_saved_view_or_none
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -88,12 +87,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 permissions = kwargs.get("permissions", {})
                 self.saved_view = None
                 if saved_view_pk is not None:
-                    try:
-                        # We are not using .restrict(request.user, "view") here
-                        # User should be able to see any saved view that he has the list view access to.
-                        self.saved_view = SavedView.objects.get(pk=saved_view_pk)
-                    except ObjectDoesNotExist:
-                        pass
+                    self.saved_view = get_saved_view_or_none(saved_view_pk)
                 if view.request.GET.getlist("sort") or (
                     self.saved_view is not None and self.saved_view.config.get("sort_order")
                 ):

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from djlint.lint import get_line
+from djlint.lint import get_line  # pylint: disable=no-name-in-module
 import regex as re
 
 if TYPE_CHECKING:

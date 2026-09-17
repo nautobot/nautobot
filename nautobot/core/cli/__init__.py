@@ -49,6 +49,7 @@ def _preprocess_settings(settings_module, config_path):
     - Set up 'job_logs' database mirror
     - Load plugins based on settings_module.PLUGINS (may affect INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
     - Load event brokers based on settings_module.EVENT_BROKERS
+    - Surface OTEL trace/span IDs in the default LOGGING when OpenTelemetry log correlation is enabled
     """
     settings_module.SETTINGS_PATH = config_path
 
@@ -110,6 +111,25 @@ def _preprocess_settings(settings_module, config_path):
     #
 
     load_event_brokers(settings_module.EVENT_BROKERS)
+
+    #
+    # OpenTelemetry log correlation
+    #
+
+    # Surface the OTEL trace/span IDs in the default console logs when correlation is enabled. Done here
+    # -- after the config is fully loaded, before django.setup() applies dictConfig -- so it honors the
+    # *resolved* settings (which may be overridden in nautobot_config.py), not just the env-var defaults
+    # baked into LOGGING at settings-import time. The helper itself no-ops unless LOGGING is still the
+    # exact dict Nautobot ships, so any operator customization of LOGGING is left alone; likewise a no-op
+    # for the TESTING config.
+    if (
+        not getattr(settings_module, "TESTING", False)
+        and getattr(settings_module, "OTEL_PYTHON_DJANGO_INSTRUMENT", False)
+        and getattr(settings_module, "OTEL_PYTHON_LOG_CORRELATION", False)
+    ):
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        enable_otel_log_correlation(settings_module.LOGGING)
 
 
 def load_settings(config_path):
@@ -277,6 +297,36 @@ def main():
 
     # If we get here, it's a regular Django management command - so load in the nautobot_config.py then hand off
     load_settings(args.config_path)
+
+    # Read the flag from the loaded nautobot_config module (registered in sys.modules by load_settings)
+    # rather than nautobot.core.settings, so an OTEL_PYTHON_DJANGO_INSTRUMENT override in nautobot_config.py
+    # is honored, not just the env-var default.
+    nautobot_config = sys.modules["nautobot_config"]
+    if nautobot_config.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        from nautobot.core.cli.opentelemetry import install_exporters, instrument
+
+        instrument()
+
+        # instrument() installs the auto-instrumentors + tracer provider but NOT the OTLP exporters,
+        # because the OTLP gRPC channel is not fork-safe (grpc's C-core would be inherited broken by
+        # forked workers -> SIGSEGV). The forking servers install their exporters per process AFTER
+        # fork, via their own hooks:
+        #   - `start` (uWSGI): the postfork hook in nautobot.core.wsgi.
+        #   - `celery`: the worker builds them post-fork via the `worker_process_init` handler, and the
+        #     (non-forking) beat scheduler in-process via the `beat_init` handler -- both in
+        #     nautobot.core.celery. (`celery <subcommand>` is always launched with `celery` as the
+        #     Django subcommand, so its own subcommand/flags never reach this check.)
+        # Every other command is single-process, so install the exporters here where in-process channel
+        # creation is safe. Only do so when we are positively sure NO forking command is present:
+        # checking membership anywhere in unparsed_args (rather than parsing out "the" subcommand) is
+        # robust against value-bearing options preceding it (e.g. `--verbosity 2 start`), which would
+        # otherwise be misread as the command and wrongly install pre-fork. The trade-off -- a command
+        # taking a literal "start"/"celery" argument value would over-skip its in-process exporter -- is
+        # safe: a missed export is far better than a SIGSEGV.
+        _FORKING_COMMANDS = {"start", "celery"}
+        if not _FORKING_COMMANDS.intersection(unparsed_args):
+            install_exporters(config=nautobot_config)
+
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 

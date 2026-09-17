@@ -1,0 +1,8 @@
+{% extends 'generic/object_list.html' %}
+{% load helpers %}
+
+{% block buttons %}
+    <a class="btn btn-primary" href="{% url 'plugins:example_app:examplemodel_list' %}?number__lt=0" id="archived-objects-button">
+        <span aria-hidden="true" class="mdi mdi-archive"></span> Archived Objects (Number < 0)
+    </a>
+{% endblock buttons %}

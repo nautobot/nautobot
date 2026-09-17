@@ -1,5 +1,4 @@
 from django.contrib.contenttypes.models import ContentType
-from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema_field
 from rest_framework.fields import Field
 
@@ -36,7 +35,19 @@ class CustomFieldDefaultValues:
         return value
 
 
-@extend_schema_field(OpenApiTypes.OBJECT)
+@extend_schema_field(
+    {
+        "type": "object",
+        "description": (
+            "Custom field data for this object, keyed by each applicable Custom Field's `key`. "
+            "Value types vary with the custom field's type (text, integer, boolean, date, URL, "
+            "JSON, select, multi-select); undefined values are `null`. On write, the payload is "
+            "merged with existing values (PATCH-style: keys omitted from the payload are left "
+            "untouched), and keys that do not correspond to a defined custom field are ignored."
+        ),
+        "additionalProperties": {"nullable": True},
+    }
+)
 class CustomFieldsDataField(Field):
     @property
     def custom_field_keys(self):

@@ -1,5 +1,5 @@
 import logging
-from typing import ClassVar, Optional, Type, Union
+from typing import ClassVar, Optional, Type
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -62,7 +62,12 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
+from nautobot.extras.utils import (
+    bulk_delete_with_bulk_change_logging,
+    get_base_template,
+    get_saved_view_filter_params,
+    remove_prefix_from_cf_key,
+)
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -265,7 +270,7 @@ class UIComponentsMixin:
     view_titles: ClassVar[Optional[Titles]] = None
 
     @classmethod
-    def get_view_titles(cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
+    def get_view_titles(cls, model: str | Type[Model] | Model | None = None, view_type: str = "List") -> Titles:
         """
         Resolve and return the `Titles` component instance.
 
@@ -288,9 +293,7 @@ class UIComponentsMixin:
         return cls._resolve_component("view_titles", Titles, model, view_type)
 
     @classmethod
-    def get_breadcrumbs(
-        cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
-    ) -> Breadcrumbs:
+    def get_breadcrumbs(cls, model: str | Type[Model] | Model | None = None, view_type: str = "List") -> Breadcrumbs:
         """
         Resolve and return the `Breadcrumbs` component instance.
 
@@ -316,10 +319,10 @@ class UIComponentsMixin:
     def _resolve_component(
         cls,
         attr_name: str,
-        default_cls: Type[Union[Breadcrumbs, Titles]],
-        model: Union[None, str, Type[Model], Model] = None,
+        default_cls: Type[Breadcrumbs | Titles],
+        model: str | Type[Model] | Model | None = None,
         view_type: str = "List",
-    ) -> Union[Breadcrumbs, Titles]:
+    ) -> Breadcrumbs | Titles:
         """
         Resolve a UI component by name.
 
@@ -330,7 +333,7 @@ class UIComponentsMixin:
         Args:
             attr_name (str): Attribute to resolve (e.g., "breadcrumbs").
             default_cls: Default Breadcrumbs/Title class to instantiate if not found.
-            model (Union[None, str, Type[Model], Model]): Django model (class/instance/dotted string) to locate a related view class.
+            model (str | Type[Model] | Model | None): Django model (class/instance/dotted string) to locate a related view class.
             view_type (str): View type for lookup (e.g., "List", or empty to resolve like "DeviceView").
         Returns:
             Breadcrumbs/Title instance.
@@ -348,9 +351,9 @@ class UIComponentsMixin:
 
     @staticmethod
     def _instantiate_if_needed(
-        attr: Union[None, Type[Union[Breadcrumbs, Titles]], Breadcrumbs, Titles],
-        default_cls: Type[Union[Breadcrumbs, Titles]],
-    ) -> Union[Breadcrumbs, Titles]:
+        attr: Type[Breadcrumbs | Titles] | Breadcrumbs | Titles | None,
+        default_cls: Type[Breadcrumbs | Titles],
+    ) -> Breadcrumbs | Titles:
         """
         Normalize a value into a component instance.
 
@@ -412,7 +415,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         Resolve the named permissions for a given model (or instance) and a list of actions (e.g. view or add).
 
         Args:
-            model (Union[type(Model), Model]): A model or instance
+            model (type(Model) | Model): A model or instance
             actions (List[str]): A list of actions to perform on the model
         """
         model_permissions = []
@@ -656,7 +659,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
             self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
         )
         if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
+            return get_saved_view_filter_params(params.get("saved_view"))
         return filter_params
 
     def get_queryset(self):
@@ -1066,13 +1069,14 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
                 msg = format_html(
-                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
+                    '{} <a href="{}">{}</a>{}',
                     msg,
                     obj.get_absolute_url(),
                     obj,
+                    self.extra_message(**self.extra_message_context(obj)),
                 )
             except AttributeError:
-                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
+                msg = format_html("{} {}{}", msg, obj, self.extra_message(**self.extra_message_context(obj)))
             messages.success(request, msg)
             if self.request.headers.get("HX-Request", False):
                 self.success_url = reverse(lookup.get_route_for_model(obj, "detail", api=True), args=[obj.pk])
@@ -1178,7 +1182,7 @@ class BulkEditAndBulkDeleteModelMixin:
             scheduled_job = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                **BulkDeleteObjects.serialize_data(job_kwargs),
+                job_kwargs=BulkDeleteObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
                 messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -1189,7 +1193,7 @@ class BulkEditAndBulkDeleteModelMixin:
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            **BulkDeleteObjects.serialize_data(job_kwargs),
+            job_kwargs=BulkDeleteObjects.serialize_data(job_kwargs),
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
@@ -1213,7 +1217,7 @@ class BulkEditAndBulkDeleteModelMixin:
             scheduled_job = ScheduledJob.create_schedule(
                 job_model,
                 request.user,
-                **BulkEditObjects.serialize_data(job_kwargs),
+                job_kwargs=BulkEditObjects.serialize_data(job_kwargs),
             )
             if scheduled_job.has_approval_workflow_definition():
                 messages.success(request, f"Job '{scheduled_job.name}' successfully submitted for approval")
@@ -1224,7 +1228,7 @@ class BulkEditAndBulkDeleteModelMixin:
         job_result = JobResult.enqueue_job(
             job_model,
             request.user,
-            **BulkEditObjects.serialize_data(job_kwargs),
+            job_kwargs=BulkEditObjects.serialize_data(job_kwargs),
         )
         return redirect("extras:jobresult", pk=job_result.pk)
 
@@ -1737,7 +1741,7 @@ class ObjectBulkRenameViewMixin(NautobotViewSetMixin):
     def _render_form_response(self, request, form, selected_objects):
         return Response(
             {
-                "template": self.bulk_rename_template_name,
+                "template": self.get_template_name(),
                 "form": form,
                 "obj_type_plural": self.get_queryset().model._meta.verbose_name_plural,
                 "selected_objects": selected_objects,

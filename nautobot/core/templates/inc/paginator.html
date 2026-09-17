@@ -12,7 +12,11 @@
      {% endif %}
 >
     {% if page %}
-        <div class="nb-paginator-info">
+        {% comment %}
+        `role="status"` makes this a polite live region, so that paging through a list with HTMX -- which replaces this
+        element rather than reloading the page -- announces the new range instead of changing silently.
+        {% endcomment %}
+        <div class="nb-paginator-info" role="status">
             Showing {{ page.start_index }}-{{ page.end_index }} of {{ page.paginator.count }}
         </div>
         {% if not exclude_controls %}
@@ -28,8 +32,13 @@
                     {% endfor %}
                 {% endif %}
             {% endfor %}
+            {% comment %}
+            The visible "per page" text after this select is not associated with it, so without `aria-label` the control
+            is announced with no name at all.
+            {% endcomment %}
             <select name="per_page"
                     id="per_page"
+                    aria-label="Items per page"
                     class="form-select"
                     {% if htmx_enabled|default:False %}
                         hx-trigger="change"

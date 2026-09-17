@@ -9,6 +9,7 @@ import uuid
 
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -73,6 +74,70 @@ class GetReturnURLMixinTestCase(TestCase):
         self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
 
 
+class ObjectListViewActionButtonsTestCase(TestCase):
+    """Tests for rendering of the add/import/export action buttons on object list views."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("circuits.view_provider", "circuits.add_provider")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_rendered_with_default_action_buttons(self):
+        """With the default `("add", "import", "export")` action buttons, the dropdown caret is rendered."""
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_not_rendered_when_add_only(self):
+        """With `action_buttons = ("add",)`, there are no dropdown menu entries, so no caret should render."""
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("add",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertIn('id="add-button"', response_body)
+        self.assertNotIn('id="actions-dropdown"', response_body)
+
+
+class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
+    """Tests for the action buttons on object list views when the user lacks the `add` permission."""
+
+    def setUp(self):
+        super().setUp()
+        # Grant only the view permission; intentionally not covered in `ObjectListViewActionButtonsTestCase`.
+        self.add_permissions("circuits.view_provider")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_rendered_but_import_not_without_add_permission(self):
+        """
+        Without the `add` permission but with the default action buttons, `export` (which does not require `add`)
+        renders inside the dropdown, while `import` (which requires `add`) does not.
+        """
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertIn('id="actions-dropdown"', response_body)
+        self.assertIn("Export as CSV", response_body)
+        self.assertNotIn('id="import-button"', response_body)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_actions_dropdown_not_rendered_when_import_only_without_add_permission(self):
+        """
+        With `action_buttons = ("import",)` and no `add` permission, `import` cannot render (it requires `add`) and
+        there is no `export`, so no dropdown caret should render.
+        """
+        with mock.patch.object(ProviderUIViewSet, "action_buttons", ("import",)):
+            response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        response_body = extract_page_body(response.content.decode(response.charset))
+        self.assertNotIn('id="add-button"', response_body)
+        self.assertNotIn('id="actions-dropdown"', response_body)
+        self.assertNotIn('id="import-button"', response_body)
+
+
 class HomeViewTestCase(TestCase):
     def test_home(self):
         url = reverse("home")
@@ -116,7 +181,7 @@ class HomeViewTestCase(TestCase):
 
         # Search bar in header
         header_search_bar_pattern = re.compile(
-            '<header.*<form action="/search/" class="col-4 text-center" id="header_search" method="get" role="search">.*</form>.*</header>'
+            '<header.*<form action="/search/" class="col-4 text-center" data-nb-live-search-path="/live-search/" id="header_search" method="get" role="search">.*</form>.*</header>'
         )
         header_search_bar_result = header_search_bar_pattern.search(
             response.content.decode(response.charset).replace("\n", "")
@@ -181,6 +246,52 @@ class HomeViewTestCase(TestCase):
             self.client.logout()
             response = self.client.get(reverse("login"))
         self.assertNotIn("Welcome to Nautobot!", response.content.decode(response.charset))
+
+    def test_homepage_layout_panels_empty(self):
+        """
+        Validate that homepage layout panels render empty when user has no required permissions.
+        """
+        url = reverse("home")
+        response = self.client.get(url)
+        self.assertBodyContains(
+            response,
+            """
+                <div
+                    id="draggable-homepage-panels"
+                    class="row nb-draggable-container"
+                    data-nb-draggable-flow="column"
+                    hx-ext="json-enc"
+                    hx-swap="none"
+                    hx-vals="javascript:{homepage_layout:{panels:window.nb.homepage.serializePanels()}}"
+                >
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-0 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-1 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-0 order-xl-0"></div>
+                    <div class="col-md-6 col-xl-4 col-xxl-3 ms-auto nb-panel-group order-md-1 order-xl-0"></div>
+                </div>
+            """,
+            html=True,
+        )
+
+    def test_homepage_layout_panels_filtered_by_user_permissions(self):
+        """
+        Validate that homepage layout panels render only those panels which user is permitted to view.
+        """
+        self.add_permissions("dcim.view_device", "dcim.view_location", "ipam.view_prefix", "ipam.view_ipaddress")
+
+        url = reverse("home")
+        response = self.client.get(url)
+
+        def assertBodyContains(html):
+            return self.assertBodyContains(response, html, html=True)
+
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
 
 
 class AppDocsViewTestCase(TestCase):
@@ -389,7 +500,9 @@ class SearchContentTypeView(TestCase):
         response = self.client.get(
             reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
         )
-        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        self.assertBodyContains(
+            response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True
+        )
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
@@ -410,6 +523,117 @@ class SearchContentTypeView(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class LiveSearchViewTestCase(TestCase):
+    """Unit tests for the LiveSearchView."""
+
+    @classmethod
+    def setUpTestData(cls):
+        location_type = LocationType.objects.first()
+        status = Status.objects.first()
+        cls.locations = [
+            Location.objects.create(name=f"Location #{i}", location_type=location_type, status=status)
+            for i in range(0, 20)
+        ]
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("dcim.view_location")
+
+    def test_get_unauthenticated_redirects(self):
+        """Unauthenticated access redirects to the login page."""
+        self.client.logout()
+        url = reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "test"})
+        response = self.client.get(url)
+        expected_params = urllib.parse.urlencode({"next": url})
+        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+
+    def test_live_search_results(self):
+        """GET with ?q renders table with no more than 10 matching search results, with "More..." button."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(response, '<table class="table nb-table-headings">')  # Confirm that table is rendered.
+        # Expect only the first 10 matching results to be displayed.
+        for location in self.locations[:10]:
+            self.assertContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # Even when there are more matches, there should no more than 10 results displayed at once.
+        for location in self.locations[10:]:
+            self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # In case when there are more results than just the 10 displayed, expect "More..." button to be rendered.
+        self.assertContains(
+            response,
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%23">More...</a>',
+            html=True,
+        )
+
+    def test_live_search_single_result(self):
+        """GET with a very specific ?q renders table with a single matching result, without "More..." button."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "location #0"}),
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(response, '<table class="table nb-table-headings">')  # Confirm that table is rendered.
+        # Expect only the single matching result to be displayed.
+        for location in self.locations[:1]:
+            self.assertContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # Make sure all other non-matching results are not displayed.
+        for location in self.locations[1:]:
+            self.assertNotContains(response, f'<a href="{location.get_absolute_url()}">{location.name}</a>', html=True)
+        # In case when there are no more results than those displayed, expect "More..." button not to be rendered.
+        self.assertNotContains(
+            response,
+            '<a class="nb-search-list-group-item text-secondary" href="/dcim/locations/?q=location+%230">More...</a>',
+            html=True,
+        )
+
+    def test_live_search_empty(self):
+        """GET with ?q with no matches response is empty."""
+        response = self.client.get(
+            reverse(
+                "live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "non existent location"}
+            ),
+            headers={"HX-Request": "true"},
+        )
+        self.assertContains(response, "No locations found")
+
+    def test_live_search_bad_request_when_no_htmx(self):
+        """Non-HTMX requests are not supported."""
+        response = self.client.get(
+            reverse("live_search", kwargs={"path": reverse("dcim:location_list")[1:]}, query={"q": "test"})
+        )
+        self.assertEqual(response.text, "Endpoint in question supports only HTMX-made requests.")
+        self.assertEqual(response.status_code, 400)
+
+    def test_live_search_bad_request_when_no_path(self):
+        """List view `path` is required."""
+        response = self.client.get(reverse("live_search"))
+        self.assertEqual(response.text, "List view `path` is missing in the requested URL.")
+        self.assertEqual(response.status_code, 400)
+
+
+class ViewportMetaTestCase(TestCase):
+    """
+    The viewport meta tag must not disable zooming (WCAG 1.4.4 Resize Text).
+
+    This is asserted here, rather than left to the axe-core integration tests, because it is a single-line regression
+    that is easy to reintroduce -- `user-scalable=no` is a common workaround for iOS Safari auto-zooming focused inputs --
+    and because a unit test runs on every suite rather than only when Selenium is available.
+    """
+
+    def test_viewport_permits_zoom(self):
+        response = self.client.get(reverse("home"))
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+
+        match = re.search(r'<meta name="viewport" content="([^"]*)"', body)
+        self.assertIsNotNone(match, "No viewport meta tag found")
+        content = match.group(1)
+
+        self.assertNotIn("user-scalable=no", content.replace(" ", ""))
+        self.assertNotIn("maximum-scale", content, "maximum-scale caps zoom and fails WCAG 1.4.4")
+
+
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
         """Unauthenticated access redirects to the login page."""
@@ -421,7 +645,9 @@ class MessagesViewTestCase(TestCase):
     def test_empty(self):
         """When there are no messages queued, response contains an empty header_messages container."""
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
 
     def test_messages(self):
         """When there are messages queued, response contains them in the header_messages container."""
@@ -435,7 +661,7 @@ class MessagesViewTestCase(TestCase):
         self.assertBodyContains(
             response,
             """
-                <div id="header_messages">
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
                     <div class="alert alert-info alert-dismissable" role="alert">
                         <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
                         Test info message
@@ -471,7 +697,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -490,7 +716,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" class="form-control nb-text-transparent" name="q" type="search" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -883,6 +1109,26 @@ class TableConfigDrawerTestCase(TestCase):
         self.assertNotEqual(new_order, self.saved_order)
         self.assertEqual(new_order, custom_order)
         self.assertEqual(selected_columns, table.visible_columns)
+
+    def test_filter_column_saved_view_as_other_user(self):
+        """
+        Assert that a Saved View's column order applies to a user who does not own it and has no permissions.
+
+        A Saved View is resolved from `?saved_view=` by UUID alone everywhere else, including the columns and
+        column order of the rendered table, so the table config form must resolve it the same way.
+        """
+        other_user = get_user_model().objects.create_user(username="table-config-other-user")
+        table = ProviderTable(Provider.objects.all(), user=other_user, saved_view=self.saved_view)
+        request = RequestFactory().get("/circuits/providers/", data={"saved_view": self.saved_view.pk})
+        request.id = uuid.uuid4()
+        request.user = other_user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, self.saved_order)
+        self.assertEqual(self.custom_visible_columns, table.visible_columns)
 
 
 class NavAppsUITestCase(TestCase):
@@ -1318,7 +1564,7 @@ class TestObjectDetailView(TestCase):
         name_copy = f"""
         <span>
             <span id="_value_name">{self.provider.name}</span>
-            <button class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
+            <button type="button" class="btn btn-secondary nb-btn-inline-hover" data-clipboard-target="#_value_name">
                 <span aria-hidden="true" class="mdi mdi-content-copy"></span>
                 <span class="visually-hidden">Copy</span>
             </button>

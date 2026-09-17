@@ -54,10 +54,10 @@ changes                 nautobot
 
 ### About Remote Repos
 
-Git refers to remote repositories as *remotes*. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
+Git refers to remote repositories as _remotes_. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
 
-* `origin` - The default remote name used to refer to *your fork of Nautobot*
-* `upstream` - The main remote used to refer to the *official Nautobot repository*
+* `origin` - The default remote name used to refer to _your fork of Nautobot_
+* `upstream` - The main remote used to refer to the _official Nautobot repository_
 
 ### Setting up your Remotes
 
@@ -241,7 +241,7 @@ Additional useful commands for the development environment:
     * You can add `-f` or `--follow` to follow the logs in real time.
     * You can add `-t N` or `--tail N` to specify the number of previous lines to show.
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
-* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke cli [-s servicename] [-c command]` - Launches a `bash` shell (or runs the specified `command`) inside the specified service container (if no servicename is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename] [-s servicename]` - Stops all containers (or specific containers/services) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
@@ -303,7 +303,7 @@ brew install hadolint
 
 #### Creating a Python Virtual Environment
 
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or _virtualenv_) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
 
 For Nautobot development, we have selected Poetry, which will transparently create a virtualenv for you, automatically install all dependencies required for Nautobot to operate, and will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot from here on out.
 
@@ -802,7 +802,7 @@ will render as:
     The custom `mkdocs` plugin was added.
 
 !!! caution
-    While you *can* use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
+    While you _can_ use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
 
 ### Writing Documentation
 

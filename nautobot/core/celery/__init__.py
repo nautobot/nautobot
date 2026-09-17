@@ -8,15 +8,14 @@ import sys
 from celery import bootsteps, Celery, shared_task, signals
 from celery.app.log import TaskFormatter
 from celery.utils.log import get_logger
+from celery.worker.state import revoked as canceled_tasks
 from django.apps import apps
 from django.conf import settings
 from django.db.utils import OperationalError, ProgrammingError
-from django.utils.functional import SimpleLazyObject
 from kombu.serialization import register
 from prometheus_client import CollectorRegistry, multiprocess, start_http_server
 
 from nautobot import add_failure_logger, add_success_logger
-from nautobot.core.branching import BranchContext
 from nautobot.core.celery.control import discard_git_repository, refresh_git_repository  # noqa: F401  # unused-import
 from nautobot.core.celery.encoders import NautobotKombuJSONEncoder
 from nautobot.core.celery.log import NautobotDatabaseHandler
@@ -43,6 +42,105 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+
+def _get_celery_queue_items(queue_name):
+    """Return the task IDs of all messages currently sitting in a Celery broker queue.
+
+    Uses Celery's own broker connection (rather than connecting directly to Redis)
+    and reads the raw queue contents via `LRANGE`. Each message is a JSON-encoded
+    Celery envelope; the task ID lives at `headers.id`.
+
+    Args:
+        queue_name: The name of the broker queue to read.
+
+    Returns:
+        A list of task ID strings, in queue order (head to tail).
+    """
+    with app.connection_for_read() as conn:
+        with conn.channel() as channel:
+            # kombu's redis transport exposes the live redis-py client for this channel
+            client = channel.client
+            raw_tasks = client.lrange(queue_name, 0, -1)
+
+    decoded = []
+    for raw in raw_tasks:
+        # channel.client does NOT decode_responses, so raw is bytes
+        task = json.loads(raw)
+        decoded.append(task["headers"]["id"])
+    return decoded
+
+
+@signals.worker_process_init.connect
+def install_otel_exporters(sender=None, **kwargs):
+    """Create the OpenTelemetry OTLP exporters in each forked Celery worker child.
+
+    Celery's prefork pool forks child worker processes after `instrument()` has already run in the
+    parent. The OTLP gRPC exporter's channel spins up fork-unsafe C-core threads/fds at construction,
+    so a channel built in the parent is inherited broken by children and segfaults on export.
+    `instrument()` therefore defers exporter creation; this handler installs the exporters per child
+    on `worker_process_init` (fired inside each forked child). `install_exporters()` is idempotent.
+
+    Connected via the `worker_process_init` signal; not intended to be called directly.
+    """
+    if not settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        return
+    from nautobot.core.cli.opentelemetry import install_exporters
+
+    install_exporters()
+
+
+@signals.beat_init.connect
+def install_otel_exporters_beat(sender=None, **kwargs):
+    """Create the OpenTelemetry OTLP exporters in the Celery beat scheduler process.
+
+    Unlike `worker`, `beat` is a single, non-forking process, so `worker_process_init` never fires
+    for it and the CLI entrypoint deliberately skips in-process exporter creation for every `celery`
+    subcommand (it cannot tell `beat` from `worker` without exporting pre-fork in the worker case).
+    Without this handler `instrument()` would run but no exporter would ever be attached, silently
+    dropping all of beat's telemetry. `beat_init` fires in beat's own process where in-process gRPC
+    channel creation is safe (nothing forks after it). `install_exporters()` is idempotent.
+
+    Connected via the `beat_init` signal; not intended to be called directly.
+    """
+    if not settings.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        return
+    from nautobot.core.cli.opentelemetry import install_exporters
+
+    install_exporters()
+
+
+@signals.worker_ready.connect
+def load_canceled_on_start(sender=None, **kwargs):
+    """Re-apply the in-memory canceled set when a Celery worker boots.
+
+    Celery's canceled set lives in worker memory (`celery.worker.state.revoked`)
+    and is lost on restart. If a job was marked REVOKED in the DB while the
+    worker was down, the message could still be sitting in the broker queue
+    and would be picked up and executed on next start.
+
+    This handler runs once per worker on `worker_ready`: it reads every queue
+    the worker is consuming, finds messages whose `JobResult` is already in
+    REVOKED status, and adds those task IDs back to the in-memory canceled
+    set so Celery skips them when it dequeues them.
+
+    Connected via the `worker_ready` signal; not intended to be called directly.
+    """
+
+    from nautobot.extras.jobs import JobResult
+
+    queue_names = [q.name for q in sender.task_consumer.queues]
+    all_ids = []
+    for qname in queue_names:
+        all_ids.extend(_get_celery_queue_items(qname))
+
+    ids = JobResult.objects.filter(
+        status="REVOKED",
+        id__in=all_ids,
+    ).values_list("id", flat=True)
+
+    for tid in ids:
+        canceled_tasks.add(str(tid))
 
 
 @signals.import_modules.connect
@@ -210,29 +308,6 @@ def setup_prometheus(**kwargs):
         logger.warning("Cannot export Prometheus metrics from worker, no available ports in range.")
 
 
-def nautobot_kombu_json_loads_hook(data):
-    """
-    In concert with the NautobotKombuJSONEncoder json encoder, this object hook method decodes
-    objects that implement the `__nautobot_type__` interface via the `nautobot_deserialize()` class method.
-    """
-    if "__nautobot_type__" in data:
-        qual_name = data.pop("__nautobot_type__")
-        branch_name = data.pop("__nautobot_branch__", None)
-        logger.debug("Performing nautobot deserialization for type %s", qual_name)
-        cls = import_string_optional(qual_name)  # fully qualified dotted import path
-        if cls:
-
-            def get_object():
-                with BranchContext(branch_name=branch_name, autocommit=False):
-                    return cls.objects.get(id=data["id"])
-
-            return SimpleLazyObject(get_object)
-        else:
-            raise TypeError(f"Unable to import {qual_name} during nautobot deserialization")
-    else:
-        return data
-
-
 # Encoder function
 def _dumps(obj):
     return json.dumps(obj, cls=NautobotKombuJSONEncoder, ensure_ascii=False)
@@ -240,7 +315,7 @@ def _dumps(obj):
 
 # Decoder function
 def _loads(obj):
-    return json.loads(obj, object_hook=nautobot_kombu_json_loads_hook)
+    return json.loads(obj)
 
 
 # Register the custom serialization type
@@ -288,7 +363,7 @@ def worker_shutdown(**_):
 
 
 class LivenessProbe(bootsteps.StartStopStep):
-    requires = {"celery.worker.components:Timer"}
+    requires = {"celery.worker.consumer.connection:Connection"}
 
     def __init__(self, parent, **kwargs):
         self.requests = []
@@ -313,4 +388,4 @@ class LivenessProbe(bootsteps.StartStopStep):
         self.WORKER_HEARTBEAT_FILE.touch(exist_ok=True)
 
 
-app.steps["worker"].add(LivenessProbe)
+app.steps["consumer"].add(LivenessProbe)

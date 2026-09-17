@@ -29,6 +29,7 @@ There are four ways that `TableExtension` can be used to modify a table.
 import django_tables2 as tables
 from nautobot.apps.tables import TableExtension
 
+
 class DeviceTableExtension(TableExtension):
     """TableExtension for dcim.Device model."""
 

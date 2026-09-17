@@ -1,10 +1,12 @@
 import csv
 import io
+from unittest.mock import patch
 
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, RequestFactory, TestCase
 from django.urls import reverse
 
+from nautobot.core.api import serializers as core_api_serializers
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
 from nautobot.dcim.api.serializers import DeviceSerializer
 from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
@@ -260,6 +262,22 @@ class CSVParsingRelatedTestCase(TestCase):
             serializer_data.pop("created")
             serializer_data.pop("last_updated")
             self.assertDictEqual(expected_data, dict(serializer_data))
+
+    @override_settings(ALLOWED_HOSTS=["*"])
+    def test_csv_export_chunked_natural_key_queries_produce_same_result(self):
+        """Verify `natural_keys_values` is correctly calculated regardless of the CSV_NATURAL_KEY_QUERY_CHUNK value."""
+        request = RequestFactory().get(reverse("dcim-api:device-list"), ACCEPT="text/csv")
+        setattr(request, "accepted_media_type", ["text/csv"])
+
+        # Baseline: one big query (chunk size large enough to fit every lookup).
+        with patch.object(core_api_serializers, "CSV_NATURAL_KEY_QUERY_CHUNK", 1000):
+            baseline = DeviceSerializer(instance=self.device, context={"request": request}).natural_keys_values
+
+        # Chunked: many small queries, exercising the per-pk dict merge path.
+        with patch.object(core_api_serializers, "CSV_NATURAL_KEY_QUERY_CHUNK", 3):
+            chunked = DeviceSerializer(instance=self.device, context={"request": request}).natural_keys_values
+
+        self.assertEqual(baseline, chunked)
 
     @override_settings(ALLOWED_HOSTS=["*"])
     def test_round_trip_export_import(self):

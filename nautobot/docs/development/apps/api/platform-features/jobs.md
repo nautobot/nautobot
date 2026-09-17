@@ -9,16 +9,13 @@ By default, for each app, Nautobot looks for an iterable named `jobs` within a `
 from nautobot.apps.jobs import Job, register_jobs
 
 
-class CreateDevices(Job):
-    ...
+class CreateDevices(Job): ...
 
 
-class DeviceConnectionsReport(Job):
-    ...
+class DeviceConnectionsReport(Job): ...
 
 
-class DeviceIPsReport(Job):
-    ...
+class DeviceIPsReport(Job): ...
 
 
 jobs = [CreateDevices, DeviceConnectionsReport, DeviceIPsReport]

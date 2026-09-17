@@ -36,3 +36,7 @@ in:DeviceTypes  # Missing space between words
 
 !!! tip
     To find the correct model name, navigate to the model in the UI and observe its spelling.
+
+## Which Fields Are Searchable?
+
+The fields matched by each model's search bar are documented on the [Searchable Fields by Model](searchable-fields.md) page. When you enter a term in a model's list view search bar, Nautobot matches it against all of that model's searchable fields at once and returns any object matching at least one of them. Most fields use a case-insensitive partial match; see the linked page for the exact fields per model.

@@ -23,6 +23,8 @@ import yaml from 'highlight.js/lib/languages/yaml';
 import htmx from 'htmx.org';
 window.htmx = htmx;
 
+import 'htmx-ext-json-enc';
+
 hljs.registerLanguage('graphql', graphql);
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('xml', xml);
@@ -42,12 +44,14 @@ window._ = { get }; // eslint-disable-line id-length
 import 'select2';
 
 import { initializeCheckboxes } from './checkbox.js';
+import { initializeClipboard } from './clipboard.js';
 import { initializeCollapseToggleAll } from './collapse.js';
 import { initializeDraggable } from './draggable.js';
 import { initializeDrawers } from './drawer.js';
 import { getEchartsOptionsThemeOverrides } from './echarts.js';
 import { getFieldAutoId, initializeFormEvents, observeFormStickyFooters } from './form.js';
 import { loadState, saveState } from './history.js';
+import { initializeHtmxButtonSpinner } from './htmx-button-spinner.js';
 import { refreshMessages } from './messages.js';
 import { initializeModal } from './modal.js';
 import { initializeSearch } from './search.js';
@@ -77,6 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Checkbox
   window.nb.checkbox = { initializeCheckboxes };
 
+  // Clipboard (copy-to-clipboard buttons)
+  initializeClipboard();
+
   // Collapse
   initializeCollapseToggleAll();
 
@@ -92,6 +99,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Form
   // TODO(norbert-mieczkowski-codilime): for htmx SPA-like behavior, re-initialize sticky footers like tabs below.
   observeFormStickyFooters();
+
+  // HTMX button spinner
+  initializeHtmxButtonSpinner();
 
   // Messages
   window.nb.messages = { refreshMessages };

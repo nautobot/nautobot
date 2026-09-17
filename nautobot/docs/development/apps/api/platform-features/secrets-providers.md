@@ -36,9 +36,10 @@ class ConstantValueSecretsProvider(SecretsProvider):
         """
         User-friendly form for specifying the required parameters of this provider.
         """
+
         constant = forms.CharField(
             required=True,
-            help_text="Constant secret value. <strong>DO NOT USE FOR REAL DATA</strong>"
+            help_text="Constant secret value. <strong>DO NOT USE FOR REAL DATA</strong>",
         )
 
     @classmethod

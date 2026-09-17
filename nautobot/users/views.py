@@ -1,6 +1,7 @@
 from http import HTTPStatus
 import logging
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import (
     BACKEND_SESSION_KEY,
@@ -18,9 +19,12 @@ from django.utils.timezone import get_default_timezone_name
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import View
 
+from nautobot.core.choices import NautobotEditionChoices
+from nautobot.core.constants import NAUTOBOT_EDITION_URLS
 from nautobot.core.events import publish_event
 from nautobot.core.forms import ConfirmationForm
 from nautobot.core.ui.titles import Titles
+from nautobot.core.utils.config import get_nautobot_edition
 from nautobot.core.views.generic import GenericView
 from nautobot.users.utils import serialize_user_without_config_and_views
 
@@ -52,6 +56,12 @@ class LoginView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
 
+    def show_edition_badge(self, edition):
+        """Show the edition badge only for a commercial edition with no custom branding logo overriding the stock logo."""
+        has_custom_logo = bool(settings.BRANDING_FILEPATHS.get("logo"))
+        is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
+        return is_commercial_edition and not has_custom_logo
+
     def get(self, request):
         form = LoginForm(request)
 
@@ -59,12 +69,20 @@ class LoginView(View):
             logger = logging.getLogger("nautobot.auth.login")
             return self.redirect_to_next(request, logger)
 
+        edition = get_nautobot_edition()
+        edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
+        is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
+
         return render(
             request,
             self.template_name,
             {
                 "form": form,
                 "title": "Login",
+                "nautobot_edition": edition_display,
+                "is_commercial_edition": is_commercial_edition,
+                "edition_url": NAUTOBOT_EDITION_URLS.get(edition, "https://nautobot.com"),
+                "show_edition_badge": self.show_edition_badge(edition),
             },
         )
 
@@ -87,12 +105,20 @@ class LoginView(View):
         else:
             logger.debug("Login form validation failed")
 
+        edition = get_nautobot_edition()
+        edition_display = NautobotEditionChoices.as_dict().get(edition, edition)
+        is_commercial_edition = edition in NautobotEditionChoices.COMMERCIAL_EDITIONS
+
         return render(
             request,
             self.template_name,
             {
                 "form": form,
                 "title": "Login",
+                "nautobot_edition": edition_display,
+                "is_commercial_edition": is_commercial_edition,
+                "edition_url": NAUTOBOT_EDITION_URLS.get(edition, "https://nautobot.com"),
+                "show_edition_badge": self.show_edition_badge(edition),
             },
         )
 
@@ -322,7 +348,7 @@ class TokenListView(GenericView):
     view_titles = Titles(titles={"*": "API Tokens"})
 
     def get(self, request):
-        tokens = Token.objects.filter(user=request.user)
+        tokens = Token.objects.with_sensitive_fields("key").filter(user=request.user)
 
         return render(
             request,
@@ -342,7 +368,10 @@ class TokenEditView(GenericView):
         if pk is not None:
             if not request.user.has_perm("users.change_token"):
                 return HttpResponseForbidden()
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
+            token = get_object_or_404(
+                Token.objects.with_sensitive_fields("key").filter(user=request.user),
+                pk=pk,
+            )
         else:
             if not request.user.has_perm("users.add_token"):
                 return HttpResponseForbidden()
@@ -364,7 +393,10 @@ class TokenEditView(GenericView):
 
     def post(self, request, pk=None):
         if pk is not None:
-            token = get_object_or_404(Token.objects.filter(user=request.user), pk=pk)
+            token = get_object_or_404(
+                Token.objects.with_sensitive_fields("key").filter(user=request.user),
+                pk=pk,
+            )
             form = TokenForm(request.POST, instance=token)
         else:
             token = Token()

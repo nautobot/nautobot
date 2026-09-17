@@ -1,10 +1,19 @@
-<div class="modal fade" id="{{ name }}_modal" tabindex="-1" role="dialog">
+{% comment %}
+`aria-labelledby` is only emitted when there is a title to point at; pointing it at a missing element would leave the
+dialog with no accessible name at all, which is worse than leaving it off.
+{% endcomment %}
+<div class="modal fade"
+     id="{{ name }}_modal"
+     tabindex="-1"
+     role="dialog"
+     aria-modal="true"
+     {% if title %}aria-labelledby="{{ name }}_modal_title"{% endif %}>
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             {% if title %}
                 <div class="modal-header">
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    <h4 class="modal-title">{{ title }}</h4>
+                    <h2 class="modal-title" id="{{ name }}_modal_title">{{ title }}</h2>
                 </div>
             {% endif %}
             <div class="modal-body">

@@ -139,7 +139,7 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
     Now you have the name and the namespace of the Kubernetes service, you have all the information you need to configure this url correctly.
 
     !!! note "How to Use Kubernetes Jobs"
-        Consult the documentation from the official [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/minikube-dev-environment-for-k8s-jobs.md). Once you have the correct environment setup, executing a Kubernetes job is as simple as assigning a [job queue](./jobqueue.md) with type "Kubernetes" and running the job on it. The following steps apply to both single and multiple Kubernetes job queues.
+        Consult the documentation from the official [Kubernetes page](https://kubernetes.io/docs/home/) and learn how to set up a simple Kubernetes cluster with pods running Nautobot containers in your own development environment from this [doc](../../../development/core/running-jobs-locally-kubernetes.md). Once you have the correct environment setup, executing a Kubernetes job is as simple as assigning a [job queue](./jobqueue.md) with type "Kubernetes" and running the job on it. The following steps apply to both single and multiple Kubernetes job queues.
 
     **Configure a New Job Queue of Type Kubernetes**
 
@@ -339,4 +339,4 @@ So if you have any concerns with running Celery workers in your Kubernetes deplo
     - `/etc/nautobot/job-queues/default-k8s/` — no `manifest.json`: this queue uses the manifest from `NAUTOBOT_KUBERNETES_JOB_MANIFEST`.
     - `/etc/nautobot/job-queues/high-mem-k8s/manifest.json` — present: this queue uses this file for its Job manifest (e.g. with higher memory/CPU requests).
 
-    Consult the [official Kubernetes documentation](https://kubernetes.io/docs/home/) and the [minikube development guide](../../../development/core/minikube-dev-environment-for-k8s-jobs.md) for setting up a cluster. Creating and using multiple Kubernetes job queues in the UI or API is the same as for a single queue; create additional Job Queues with type "Kubernetes", assign them to jobs as needed, and run jobs on the desired queue.
+    Consult the [official Kubernetes documentation](https://kubernetes.io/docs/home/) and the [minikube development guide](../../../development/core/running-jobs-locally-kubernetes.md) for setting up a cluster. Creating and using multiple Kubernetes job queues in the UI or API is the same as for a single queue; create additional Job Queues with type "Kubernetes", assign them to jobs as needed, and run jobs on the desired queue.

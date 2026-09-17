@@ -54,6 +54,6 @@ Example of ORM creation:
 Tag.objects.get_or_create(
     name="Cisco-3650CX",
     description="Device tag for Cisco 3650CX series",
-    color="2196f3"
+    color="2196f3",
 )
 ```

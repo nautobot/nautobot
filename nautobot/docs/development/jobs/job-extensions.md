@@ -18,10 +18,11 @@ These are Jobs that subclass the `nautobot.apps.jobs.JobButtonReceiver` class. J
 
 All `JobButtonReceiver` subclasses must implement `receive_job_button(self, obj)`, where `obj` is the instance of the model where the button was pressed.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example "Example Job Button Receiver"
     ```py
     from nautobot.apps.jobs import JobButtonReceiver, register_jobs
+
 
     class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
         class Meta:
@@ -44,11 +45,12 @@ You can support multiple object types in a single Job by checking the object typ
 !!! tip "Checking Permissions"
     You can use `self.user.has_perm()` to restrict logic based on the object or user's role.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import JobButtonReceiver, register_jobs
     from nautobot.dcim.models import Device, Location
+
 
     class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         class Meta:
@@ -96,11 +98,15 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
 !!! important "No recursive JobHookReceivers"
     To prevent negatively impacting system performance through an infinite loop, a change that was made by a `JobHookReceiver` Job will not trigger another `JobHookReceiver` Job to run.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+!!! important "Run permission is required to trigger a Job Hook"
+    A Job Hook is only dispatched if the user responsible for the triggering change has permission to run the target Job (the `run` action, e.g. via `extras.run_job` or an equivalent object permission). Changes made by a user without that permission will not trigger the Job Hook.
+
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example "Example Job Hook Receiver"
     ```py
     from nautobot.apps.jobs import JobHookReceiver, register_jobs
     from nautobot.extras.choices import ObjectChangeActionChoices
+
 
     class ExampleJobHookReceiver(JobHookReceiver):
         def receive_job_hook(self, change, action, changed_object):
@@ -110,7 +116,7 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
 
             # log diff output
             snapshots = change.get_snapshots()
-            self.logger.info("DIFF: %s", snapshots['differences'])
+            self.logger.info("DIFF: %s", snapshots["differences"])
 
             # validate changes to serial field
             if "serial" in snapshots["differences"]["added"]:
@@ -129,6 +135,7 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
         def validate_serial(self, serial):
             # add business logic to validate serial
             return False
+
 
     register_jobs(ExampleJobHookReceiver)
     ```

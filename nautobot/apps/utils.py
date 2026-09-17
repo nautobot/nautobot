@@ -53,6 +53,7 @@ from nautobot.core.utils.lookup import (
     get_view_titles_for_model,
 )
 from nautobot.core.utils.migrations import migrate_content_type_references_to_new_model
+from nautobot.core.utils.otel import traced_span
 from nautobot.core.utils.permissions import (
     get_permission_for_model,
     permission_is_exempt,
@@ -175,5 +176,6 @@ __all__ = (
     "swap_status_initials",
     "task_queues_as_choices",
     "to_meters",
+    "traced_span",
     "validate_jinja2",
 )

@@ -3,9 +3,8 @@
 
 <h1 class="d-flex fs-2 gap-8 lh-sm py-6">
     <img
-        alt="Nautobot chevron"
+        alt=""
         class="align-self-start flex-grow-0 flex-shrink-0 my-n4"
-        role="presentation"
         src="{% static 'img/nautobot_chevron.svg' %}"
         style="width: 1.5rem;"
     />
@@ -18,6 +17,6 @@
             </button>
         </span>
     {% else %}
-        {{ title }}
+        {{ title }}{% saved_view_title %}
     {% endif %}
 </h1>

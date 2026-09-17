@@ -11,6 +11,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
+from nautobot.core.exceptions import SensitiveFieldError
 from nautobot.core.models import BaseManager, BaseModel, CompositeKeyQuerySetMixin
 from nautobot.core.models.fields import JSONArrayField
 from nautobot.core.utils.data import flatten_dict
@@ -69,6 +70,14 @@ class User(BaseModel, AbstractUser):
     documentation_static_path = "docs/development/core/user-preferences.html"
     objects = UserManager()
     is_metadata_associable_model = False
+    # The password hash is offline-crackable, so user-authored templates must never reach it and it must
+    # not be projected out of a query.
+    sensitive_fields = ("password",)
+    # It is kept on the instance rather than withheld, because Django reads `self.password` directly when
+    # verifying a password and when validating a session on every request. Withholding it would cost a
+    # re-fetch per request and buy nothing: the disclosure route being closed here is the template one,
+    # which is refused whether or not the value is present on the object.
+    sensitive_fields_kept_on_instance = ("password",)
 
     class Meta:
         db_table = "auth_user"
@@ -248,16 +257,20 @@ class Token(BaseModel):
     documentation_static_path = "docs/user-guide/platform-functionality/users/token.html"
     natural_key_field_names = ["pk"]  # default would be `["key"]`, which is obviously not ideal!
     is_metadata_associable_model = False
+    sensitive_fields = ("key",)
 
     class Meta:
         ordering = ["created"]
 
     def __str__(self):
         # Only display the last 24 bits of the token to avoid accidental exposure.
-        return f"{self.key[-6:]} ({self.user})"
+        try:
+            return f"{self.key[-6:]} ({self.user})"
+        except SensitiveFieldError:
+            return f"Token {self.pk} ({self.user})"
 
     def save(self, *args, **kwargs):
-        if not self.key:
+        if not self.present_in_database and not self.__dict__.get("key"):
             self.key = self.generate_key()
         return super().save(*args, **kwargs)
 

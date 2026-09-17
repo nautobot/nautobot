@@ -17,6 +17,9 @@ class VPNFactoryTestCase(testing.TestCase):
             status = Status.objects.get(name="Active")
             status.content_types.add(content_type)
 
+    def setUp(self):
+        models.VPN.objects.all().delete()
+
     def test_vpn_factory_can_populate_overlay_fields(self):
         """VPNFactory can populate the new overlay-related fields."""
         vpn = factory.VPNFactory.create(has_service_type=True, has_status=True, has_extra_attributes=True)

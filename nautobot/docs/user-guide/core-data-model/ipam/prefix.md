@@ -44,7 +44,7 @@ The hierarchy of prefixes and their constituent [IP addresses](ipaddress.md) is 
     * Prefix 10.1.1.0/24 (with `parent` 10.0.0.0/8)
         * IP address 10.1.1.1/24 (with `parent` 10.1.1.0/24)
 
-Note that in Nautobot, all IP addresses *must* have a parent prefix; "orphaned" IP addresses are not permitted.
+Note that in Nautobot, all IP addresses _must_ have a parent prefix; "orphaned" IP addresses are not permitted.
 
 In most cases, you will not need to ever explicitly specify the `parent` value yourself, as specifying the `namespace` is generally more user-friendly and will result in the `parent` being automatically determined and updated as needed by Nautobot.
 
@@ -54,10 +54,10 @@ The default (unfiltered) Prefix list view (`/ipam/prefixes/`) includes display e
 
 +++ 3.1.0 "Added exemptions for specific filters"
 
-There are a small set of filters which, when applied individually or in combination, *do not* remove the hierarchy display, because these filters preserve the hierarchy and ordering of the filtered set of Prefixes. Examples of such filters include `ip_version`, `namespace`, and `max_depth`. The "default filters" described in the next section, for much the same reasons, also do not remove indentation when in effect.
+There are a small set of filters which, when applied individually or in combination, _do not_ remove the hierarchy display, because these filters preserve the hierarchy and ordering of the filtered set of Prefixes. Examples of such filters include `ip_version`, `namespace`, and `max_depth`. The "default filters" described in the next section, for much the same reasons, also do not remove indentation when in effect.
 
 !!! tip
-    The hierarchy-preserving filters only preserve the hierarchy display if they are the *only* filter(s) applied to the view. Adding search, sorting, or any additional filters will still hide the hierarchy as normal. In other words:
+    The hierarchy-preserving filters only preserve the hierarchy display if they are the _only_ filter(s) applied to the view. Adding search, sorting, or any additional filters will still hide the hierarchy as normal. In other words:
 
     * `/ipam/prefixes/?ip_version=4&namespace=Global` -- hierarchy shown
     * `/ipam/prefixes/?ip_version=4&sort=status` -- hierarchy hidden due to sorting
@@ -96,13 +96,13 @@ When editing a Prefix and changing its `prefix` value (`network`, `prefix_length
 
 +/- 2.4.17 "Cascading `namespace` updates"
 
-Additionally, when changing a Prefix's `namespace`, not only the specified Prefix record, but *also all of its descendant Prefix records* will be moved into the new Namespace. This is in service of the "principle of least surprise", because IP Address records do not have their own individual Namespaces but instead derive their namespace from their `parent` Prefixes, and it would be surprising to most users if only IPs directly under a given Prefix were brought along, while IPs under a nested subnet Prefix were left behind in the original Namespace.
+Additionally, when changing a Prefix's `namespace`, not only the specified Prefix record, but _also all of its descendant Prefix records_ will be moved into the new Namespace. This is in service of the "principle of least surprise", because IP Address records do not have their own individual Namespaces but instead derive their namespace from their `parent` Prefixes, and it would be surprising to most users if only IPs directly under a given Prefix were brought along, while IPs under a nested subnet Prefix were left behind in the original Namespace.
 
 ??? warning "Uniqueness violations when changing Namespace"
     Because Prefix and IP Address uniqueness is enforced per-Namespace, if the target Namespace already contains existing Prefix and/or IP Address records, moving a Prefix and its descendants into that Namespace may result in data "collision" and violations of the uniqueness constraint. Nautobot will detect such a scenario and prevent the change.
 
 ??? warning "VRFs are specific to a Namespace"
-    Because VRFs are specific to a Namespace, moving a Prefix *that's associated to one or more VRFs* into a different Namespace is blocked by Nautobot, and will result in a validation error with a message about needing to disassociate the Prefix (and its descendants) from VRFs before changing the Namespace. The workflow you'd need to follow here would be:
+    Because VRFs are specific to a Namespace, moving a Prefix _that's associated to one or more VRFs_ into a different Namespace is blocked by Nautobot, and will result in a validation error with a message about needing to disassociate the Prefix (and its descendants) from VRFs before changing the Namespace. The workflow you'd need to follow here would be:
 
     1. Disassociate the Prefix and its descendant Prefixes from any and all VRFs in the initial Namespace.
     2. Move the Prefix (and implicitly its descendants) into the target Namespace.
@@ -144,3 +144,11 @@ If a prefix's `type` is set to "Pool", Nautobot will treat this prefix as a rang
 * If the prefix `type` is "Network":
     * The utilization is calculated as the sum of the total address space of all child prefixes plus the total number of child IP addresses not covered by a child prefix.
     * For IPv4 networks larger than /31, if neither the first (network) or last (broadcast) address is occupied by either a pool or an IP address, they are subtracted from the total size of the prefix.
+
+### Pool Prefixes vs. IP Address Ranges
+
++++ 3.2.0
+    A "Pool" Prefix and an [IP Address Range](ipaddressrange.md) can both represent a span of addresses used as a unit, such as a DHCP scope or NAT pool, and their roles partially overlap. The key difference is alignment:
+
+    * A `Pool Prefix` is still a Prefix, so it must align to a CIDR boundary (for example `10.0.0.0/26`). Use a Pool when the span you want to represent happens to be a valid subnet and you want it tracked as part of the Prefix hierarchy.
+    * An `IP Address Range` is defined by an arbitrary start and end address (for example `10.0.0.50–10.0.0.200`) and does **not** need to align to a CIDR boundary. Use an IP Address Range when the span you want to represent is not a clean subnet.

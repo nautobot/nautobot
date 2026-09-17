@@ -159,8 +159,15 @@ class NautobotCSVRenderer(BaseRenderer):
                 if value and isinstance(value[0], dict) and ("value" in value[0]) and ("label" in value[0]):
                     # Multiple enum types
                     value = [v["value"] for v in value]
-                # The below makes for better UX than `json.dump()` for most current cases.
-                value = ",".join([str(v) if v is not None else "" for v in value])
+                if value and isinstance(value[0], dict):
+                    # Generic list-of-dicts (e.g. a JSONField containing structured data such as
+                    # `CableType.mapping`) — render as JSON so the CSV → POST round-trip via the
+                    # parser's `json.loads` produces an identical list. The comma-of-reprs
+                    # fallback below would emit Python repr (single quotes), which doesn't parse.
+                    value = json.dumps(value)
+                else:
+                    # The below makes for better UX than `json.dump()` for most current cases.
+                    value = ",".join([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):
                 value = str(value)
 

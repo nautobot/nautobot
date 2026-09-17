@@ -1,23 +1,23 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <ul class="nav nav-tabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <a href="{% url 'user:profile' %}" class="nav-link{% if active_tab == "profile" %} active{% endif %}">Profile</a>
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a href="{% url 'user:profile' %}" class="nav-link{% if active_tab == "profile" %} active{% endif %}"{% if active_tab == "profile" %} aria-current="page"{% endif %}>Profile</a>
         </li>
-        <li class="nav-item" role="presentation">
-            <a href="{% url 'user:preferences' %}" class="nav-link{% if active_tab == "preferences" %} active{% endif %}">Preferences</a>
+        <li class="nav-item">
+            <a href="{% url 'user:preferences' %}" class="nav-link{% if active_tab == "preferences" %} active{% endif %}"{% if active_tab == "preferences" %} aria-current="page"{% endif %}>Preferences</a>
         </li>
         {% if is_django_auth_user %}
-            <li class="nav-item" role="presentation">
-                <a href="{% url 'user:change_password' %}" class="nav-link{% if active_tab == "change_password" %} active{% endif %}">Change Password</a>
+            <li class="nav-item">
+                <a href="{% url 'user:change_password' %}" class="nav-link{% if active_tab == "change_password" %} active{% endif %}"{% if active_tab == "change_password" %} aria-current="page"{% endif %}>Change Password</a>
             </li>
         {% endif %}
-        <li class="nav-item" role="presentation">
-            <a href="{% url 'user:token_list' %}" class="nav-link{% if active_tab == "api_tokens" %} active{% endif %}">API Tokens</a>
+        <li class="nav-item">
+            <a href="{% url 'user:token_list' %}" class="nav-link{% if active_tab == "api_tokens" %} active{% endif %}"{% if active_tab == "api_tokens" %} aria-current="page"{% endif %}>API Tokens</a>
         </li>
-        <li class="nav-item" role="presentation">
-            <a href="{% url 'user:advanced_settings_edit' %}" class="nav-link{% if active_tab == "advanced_settings" %} active{% endif %}">Advanced Settings</a>
+        <li class="nav-item">
+            <a href="{% url 'user:advanced_settings_edit' %}" class="nav-link{% if active_tab == "advanced_settings" %} active{% endif %}"{% if active_tab == "advanced_settings" %} aria-current="page"{% endif %}>Advanced Settings</a>
         </li>
     </ul>
 {% endblock %}

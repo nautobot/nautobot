@@ -38,8 +38,9 @@ class DeviceFilterSet(
         label="Manufacturer (name or ID)",
     )
 
+
 # Usage
-filtered_qs = DeviceFilter({'manufacturer': 'Cisco'}, queryset=Device.objects.all()).qs
+filtered_qs = DeviceFilter({"manufacturer": "Cisco"}, queryset=Device.objects.all()).qs
 ```
 
 - **QuerySet**: Represents a database query built from a model; provides methods to construct and execute queries.

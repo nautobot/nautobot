@@ -28,6 +28,7 @@ from nautobot.extras.choices import (
     CustomFieldTypeChoices,
     DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
+    JobCancelTypeChoices,
     JobExecutionType,
     JobQueueTypeChoices,
     JobResultStatusChoices,
@@ -1500,6 +1501,63 @@ class JobResultFilterSetTestCase(FilterTestCases.FilterTestCase):
                 self.queryset.filter(scheduled_job__in=scheduled_jobs).distinct(),
             )
 
+    def test_cancel_type(self):
+        user = UserFactory.create()
+        job = self.jobs[0]
+
+        # "terminated"
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            cancel_type=JobCancelTypeChoices.TYPE_TERMINATED,
+            date_canceled=now(),
+        )
+        # "reaped"
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            cancel_type=JobCancelTypeChoices.TYPE_REAPED,
+            date_canceled=now(),
+        )
+        # "abandoned"
+        JobResult.objects.create(
+            job_model=job,
+            name=job.class_path,
+            user=user,
+            status=JobResultStatusChoices.STATUS_REVOKED,
+            cancel_type=JobCancelTypeChoices.TYPE_ABANDONED,
+            date_canceled=now(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cancel_type": ["terminated"]}, self.queryset).qs,
+            self.queryset.filter(cancel_type=JobCancelTypeChoices.TYPE_TERMINATED).distinct(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cancel_type": ["reaped"]}, self.queryset).qs,
+            self.queryset.filter(cancel_type=JobCancelTypeChoices.TYPE_REAPED).distinct(),
+        )
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cancel_type": ["abandoned"]}, self.queryset).qs,
+            self.queryset.filter(cancel_type=JobCancelTypeChoices.TYPE_ABANDONED).distinct(),
+        )
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"cancel_type": ["terminated", "reaped", "abandoned"]}, self.queryset).qs,
+            self.queryset.filter(status=JobResultStatusChoices.STATUS_REVOKED).distinct(),
+        )
+
+        self.assertQuerySetEqual(
+            self.filterset({"cancel_type": []}, self.queryset).qs,
+            self.queryset.all(),
+            ordered=False,
+        )
+
 
 class JobHookFilterSetTestCase(FilterTestCases.FilterTestCase):
     queryset = JobHook.objects.all()
@@ -1651,6 +1709,7 @@ class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("total_run_count",),
         ("time_zone",),
         ("state",),
+        ("approval_state", "associated_approval_workflows__current_state"),
     ]
 
     @classmethod
@@ -1710,6 +1769,23 @@ class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
             last_run_at=datetime(2024, 12, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
         )
 
+        # Give two of the three scheduled jobs an approval workflow, each in a distinct state, so that the
+        # `approval_state` filter has enough varied data for `get_filterset_test_values()` to work with.
+        scheduled_job_ct = ContentType.objects.get_for_model(ScheduledJob)
+        approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Scheduled Job Filter Approval Workflow", model_content_type=scheduled_job_ct
+        )
+        for scheduled_job, state in [
+            (cls.scheduled_jobs[0], ApprovalWorkflowStateChoices.APPROVED),
+            (cls.scheduled_jobs[1], ApprovalWorkflowStateChoices.DENIED),
+        ]:
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=approval_workflow_definition,
+                object_under_review_content_type=scheduled_job_ct,
+                object_under_review_object_id=scheduled_job.pk,
+                current_state=state,
+            )
+
     def test_enabled(self):
         params = {"enabled": True}
         self.assertQuerySetEqualAndNotEmpty(
@@ -1749,6 +1825,12 @@ class MetadataTypeTestCase(FilterTestCases.FilterTestCase):
         mdts = self.queryset.filter(content_types=device_ct).filter(content_types=rack_ct).distinct()
         params = {"content_types": ["dcim.device", "dcim.rack"]}
         self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, mdts)
+
+    def test_content_type_id(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        expected = self.queryset.filter(content_types=device_ct).distinct()
+        params = {"content_type_id": device_ct.pk}
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
 class ObjectChangeTestCase(FilterTestCases.FilterTestCase):

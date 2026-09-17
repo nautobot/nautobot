@@ -25,7 +25,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["normal_console"],
-            "level": "INFO"
+            "level": "INFO",
         },
         "nautobot": {
             "handlers": ["normal_console"],

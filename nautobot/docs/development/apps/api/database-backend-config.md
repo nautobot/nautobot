@@ -8,12 +8,13 @@ Apps can define settings that will be stored in the Database Backend through [Dj
 # __init__.py
 from nautobot.apps import ConstanceConfigItem, NautobotAppConfig
 
+
 class AnimalSoundsConfig(NautobotAppConfig):
     # ...
     constance_config = {
-        'DOG_SOUND': ConstanceConfigItem(default='woof', help_text='Dog sound'),
-        'CAT_SOUND': ConstanceConfigItem(default='meow', help_text='Cat sound'),
-        'fox_sound': ConstanceConfigItem(default=123, help_text='Fox sound', field_type=int),
+        "DOG_SOUND": ConstanceConfigItem(default="woof", help_text="Dog sound"),
+        "CAT_SOUND": ConstanceConfigItem(default="meow", help_text="Cat sound"),
+        "fox_sound": ConstanceConfigItem(default=123, help_text="Fox sound", field_type=int),
     }
 ```
 

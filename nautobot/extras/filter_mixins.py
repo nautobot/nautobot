@@ -8,7 +8,7 @@ from django_filters.utils import verbose_lookup_expr
 
 from nautobot.core.constants import (
     FILTER_CHAR_BASED_LOOKUP_MAP,
-    FILTER_NEGATION_LOOKUP_MAP,
+    FILTER_CONTAINS_NEGATION_LOOKUP_MAP,
     FILTER_NUMERIC_BASED_LOOKUP_MAP,
 )
 from nautobot.core.filters import (
@@ -85,14 +85,19 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
             # Determine filter class for this CustomField type, default to CustomFieldCharFilter
             new_filter_name = cf.add_prefix_to_cf_key()
             filter_class = custom_field_filter_classes.get(cf.type, CustomFieldCharFilter)
-            new_filter = filter_class(field_name=cf.key, custom_field=cf)
+            # Build the widget once and reuse it below instead of each filter independently calling
+            # `cf.to_form_field()`, which redundantly re-reads the cached `cf.choices` each time.
+            widget = cf.to_form_field(set_initial=False, enforce_required=False).widget
+            new_filter = filter_class(field_name=cf.key, custom_field=cf, widget=widget)
             new_filter.label = f"{cf.label}"
             # Create base filter (cf_customfieldname)
             self.filters[new_filter_name] = new_filter
 
             # Create extra lookup expression filters (cf_customfieldname__lookup_expr)
             self.filters.update(
-                self._generate_custom_field_lookup_expression_filters(filter_name=new_filter_name, custom_field=cf)
+                self._generate_custom_field_lookup_expression_filters(
+                    filter_name=new_filter_name, custom_field=cf, widget=widget
+                )
             )
 
     @staticmethod
@@ -108,18 +113,22 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
         ):
             return FILTER_NUMERIC_BASED_LOOKUP_MAP
         elif issubclass(filter_type, CustomFieldMultiSelectFilter):
-            return FILTER_NEGATION_LOOKUP_MAP
+            # Multi-select values are JSON lists; negation must invert the `contains` lookup used by the base
+            # filter, as excluding on `exact` compares the whole list against a single value and matches nothing.
+            return FILTER_CONTAINS_NEGATION_LOOKUP_MAP
         else:
             return FILTER_CHAR_BASED_LOOKUP_MAP
 
     # TODO 2.0: Transition CustomField filters to nautobot.core.filters.MultiValue* filters and
     # leverage BaseFilterSet to add dynamic lookup expression filters. Remove CustomField.filter_logic field
     @classmethod
-    def _generate_custom_field_lookup_expression_filters(cls, filter_name, custom_field):
+    def _generate_custom_field_lookup_expression_filters(cls, filter_name, custom_field, widget=None):
         """
         For specific filter types, new filters are created based on defined lookup expressions in
         the form `<field_name>__<lookup_expr>`. Copied from nautobot.core.filters.BaseFilterSet
         and updated to work with custom fields.
+
+        `widget`, if provided, is reused across all generated filters instead of each one rebuilding it.
         """
         magic_filters = {}
         custom_field_type_to_filter_map = {
@@ -159,6 +168,7 @@ class CustomFieldModelFilterSetMixin(django_filters.FilterSet):
                 custom_field=custom_field,
                 label=label,
                 exclude=lookup_name.startswith("n"),
+                widget=widget,
             )
 
             magic_filters[new_filter_name] = new_filter
@@ -282,6 +292,10 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
             # Check for invalid_relationship unit test
             if choice_model:
                 self.filters[field_name] = RelationshipFilter(
+                    # `field_name` here is a synthetic "cr_<key>__<side>" name rather than a real model field path,
+                    # so `distinct` can't be auto-derived; an object can have multiple associations on this side
+                    # exactly when it can have multiple peers.
+                    distinct=relationship.has_many(peer_side),
                     relationship=relationship,
                     side=side,
                     field_name=field_name,

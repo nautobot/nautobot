@@ -20,7 +20,7 @@ from nautobot.dcim.constants import (
     POWERFEED_MAX_UTILIZATION_DEFAULT,
     POWERFEED_VOLTAGE_DEFAULT,
 )
-from nautobot.dcim.models.device_components import PowerPort
+from nautobot.dcim.models.device_components import CableTerminationManager, PowerPort
 from nautobot.extras.models import StatusField
 from nautobot.extras.utils import extras_features
 
@@ -116,6 +116,8 @@ class PowerFeed(PrimaryModel, PathEndpoint, CableTermination):
     """
     An electrical circuit delivered from a PowerPanel.
     """
+
+    objects = CableTerminationManager()
 
     power_panel = models.ForeignKey(
         to="PowerPanel",

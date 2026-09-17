@@ -1,0 +1,8 @@
+{% comment %}
+Bypass block (WCAG 2.4.1) allowing keyboard and screen reader users to jump straight to the page content instead of
+tabbing through the whole sidenav on every page load. Must be rendered as the very first focusable element in `<body>`.
+
+The `#main-content` target is the `<main>` element, which carries `tabindex="-1"` so that it can receive programmatic
+focus when this link is activated.
+{% endcomment %}
+<a class="visually-hidden-focusable nb-skip-link" href="#main-content">Skip to main content</a>

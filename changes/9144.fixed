@@ -1,1 +1,0 @@
-Fixed the CustomField `description` field no longer being rendered as Markdown on the Custom Field detail view.

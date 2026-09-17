@@ -1,6 +1,7 @@
 import collections
 import contextlib
 import copy
+import functools
 import hashlib
 import hmac
 import json
@@ -14,9 +15,10 @@ from django.apps import apps
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.validators import ValidationError
 from django.db import transaction
-from django.db.models import Model, Q
+from django.db.models import ForeignKey, ManyToManyField, Model, Q
 from django.db.models.deletion import Collector
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils.deconstruct import deconstructible
@@ -154,6 +156,61 @@ def change_logged_models_queryset():
             # cache is explicitly invalidated by nautobot.extras.signals.post_migrate_clear_content_type_caches
             cache.set(cache_key, queryset, timeout=None)
     return queryset
+
+
+@functools.cache
+def get_explicit_m2m_through_side_field_names():
+    """Map each explicitly-declared M2M "through" model class to the names of its "side" foreign key fields.
+
+    A "side" field is a foreign key on the through model that constitutes one end of the many-to-many
+    relation(s) the through model implements. Extra foreign keys on the through model that are not declared
+    as a side of any `ManyToManyField` (e.g. `ControllerManagedDeviceGroupWirelessNetworkAssignment.vlan`)
+    are not included. A through model may implement several M2M relations (e.g. `VRFDeviceAssignment` serves
+    `VRF.devices`, `VRF.virtual_machines`, and `VRF.virtual_device_contexts`), in which case the union of all
+    of their side field names is returned; sides not participating in a given row are simply null.
+
+    Cache is cleared by the post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+
+    Returns:
+        dict: `{through_model_class: (side_field_name, ...)}`
+    """
+    mapping = {}
+    for model in apps.get_models():
+        for field in model._meta.local_many_to_many:
+            # TaggableManager (TagsField) also appears in local_many_to_many but is not a ManyToManyField;
+            # its taggit through model (TaggedItem) uses a GenericForeignKey and must not be included here.
+            if not isinstance(field, ManyToManyField):
+                continue
+            through = field.remote_field.through
+            if through is None or through._meta.auto_created:
+                continue
+            side_field_names = set()
+            for side_field_name in (field.m2m_field_name(), field.m2m_reverse_field_name()):
+                side_field = through._meta.get_field(side_field_name)
+                if isinstance(side_field, ForeignKey):
+                    side_field_names.add(side_field_name)
+            mapping.setdefault(through, set()).update(side_field_names)
+    return {through: tuple(sorted(sides)) for through, sides in mapping.items()}
+
+
+@functools.cache
+def get_change_logged_m2m_through_side_field_names():
+    """Like `get_explicit_m2m_through_side_field_names`, but only through models subject to association change logging.
+
+    Through models may opt out of the automatic change logging of their side objects by setting the class
+    attribute `is_m2m_change_logged = False` (e.g. `UserSavedViewAssociation`, which records per-user
+    preferences rather than shared data).
+
+    Cache is cleared by the post_migrate signal (nautobot.extras.signals.post_migrate_clear_content_type_caches).
+
+    Returns:
+        dict: `{through_model_class: (side_field_name, ...)}`
+    """
+    return {
+        through: side_field_names
+        for through, side_field_names in get_explicit_m2m_through_side_field_names().items()
+        if getattr(through, "is_m2m_change_logged", True)
+    }
 
 
 @deconstructible
@@ -674,6 +731,43 @@ def refresh_job_model_from_job_class(job_model_class, job_class, job_queue_class
     return (job_model, created)
 
 
+def build_kubernetes_api_client():
+    """Build an authenticated ApiClient using the in-cluster service account.
+
+    When settings.KUBERNETES_VERIFY_SSL is False, TLS verification is disabled and
+    the CA cert path is ignored. This is intended for local development only. See
+    the comment in settings.py for the security implications.
+
+    Returns:
+        A configured kubernetes.client.ApiClient. The returned object is itself a
+        context manager (its __exit__ calls self.close()), so callers should use:
+
+            with build_kubernetes_api_client() as api_client:
+                ...
+    """
+    configuration = kubernetes.client.Configuration()
+    configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
+    if settings.KUBERNETES_VERIFY_SSL:
+        configuration.ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
+    else:  # pragma: no cover
+        if not settings.DEBUG:
+            raise ImproperlyConfigured("KUBERNETES_VERIFY_SSL=False is only permitted when DEBUG=True. ")
+        logger.warning(
+            "TLS verification is DISABLED for the Kubernetes API connection to %s. "
+            "This exposes the service account token attacks and must not be "
+            "used in production. Set _NAUTOBOT_KUBERNETES_VERIFY_SSL_INTERNAL=True to re-enable.",
+            configuration.host,
+        )
+        configuration.verify_ssl = False
+    pod_token = settings.KUBERNETES_TOKEN_PATH
+    with open(pod_token, "r", encoding="utf-8") as token_file:
+        token = token_file.read().strip()
+    # configure API Key authorization: BearerToken
+    configuration.api_key_prefix["BearerToken"] = "Bearer"
+    configuration.api_key["BearerToken"] = token
+    return kubernetes.client.ApiClient(configuration)
+
+
 def get_kubernetes_job_manifest(queue_name):
     """Retrieve the job manifest for the given job queue name.
 
@@ -732,8 +826,6 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
     pod_manifest = get_kubernetes_job_manifest(queue_name)
     if not pod_manifest:
         raise KubernetesJobManifestError("Unable to retrieve a kubernetes job manifest.")
-    pod_ssl_ca_cert = settings.KUBERNETES_SSL_CA_CERT_PATH
-    pod_token = settings.KUBERNETES_TOKEN_PATH
 
     if not getattr(job_result.job_model, "has_sensitive_variables", False):
         job_result.task_kwargs = job_kwargs
@@ -753,15 +845,7 @@ def run_kubernetes_job_and_return_job_result(job_result, job_kwargs):
 
     def create_kubernetes_job():
         """Create and read the Kubernetes job after the transaction commits."""
-        configuration = kubernetes.client.Configuration()
-        configuration.host = settings.KUBERNETES_DEFAULT_SERVICE_ADDRESS
-        configuration.ssl_ca_cert = pod_ssl_ca_cert
-        with open(pod_token, "r", encoding="utf-8") as token_file:
-            token = token_file.read().strip()
-        # configure API Key authorization: BearerToken
-        configuration.api_key_prefix["authorization"] = "Bearer"
-        configuration.api_key["authorization"] = token
-        with kubernetes.client.ApiClient(configuration) as api_client:
+        with build_kubernetes_api_client() as api_client:
             api_instance = kubernetes.client.BatchV1Api(api_client)
             job_result.log(f"Creating job pod {pod_name} in namespace {pod_namespace}")
             api_instance.create_namespaced_job(body=pod_manifest, namespace=pod_namespace)
@@ -1056,6 +1140,50 @@ def fixup_filterset_query_params(param_dict, view_name, non_filter_params):
         except FilterSetFieldNotFound:
             pass
     return param_dict
+
+
+def get_saved_view_or_none(pk, *, view=None):
+    """
+    Return the SavedView with the given primary key, or None if there is no such SavedView.
+
+    Saved Views are looked up by UUID alone, ignoring owner, sharing, and view restrictions. A user should be
+    able to use any Saved View that they have the list view access to. This makes Saved View links privately
+    shareable, which is an undocumented but allowed side effect that may change in the future. Every part of a
+    Saved View's configuration is resolved this way, so that a user following such a link gets the whole view.
+
+    Returns None instead of raising, as `pk` generally comes straight from a user-supplied `?saved_view=` query
+    parameter and may be stale or malformed. Callers are responsible for deciding what to do in that case.
+
+    Args:
+        pk (Union[uuid.UUID, str]): Primary key of the desired SavedView.
+        view (Optional[str]): If given, additionally require this SavedView to be for the named list view,
+            "dcim:location_list" for example.
+    """
+    from nautobot.extras.models import SavedView
+
+    queryset = SavedView.objects.all()
+    if view is not None:
+        queryset = queryset.filter(view=view)
+    try:
+        return queryset.get(pk=pk)
+    except (SavedView.DoesNotExist, ValidationError):
+        # ValidationError covers a malformed (non-UUID) `pk`.
+        return None
+
+
+def get_saved_view_filter_params(pk):
+    """
+    Return the `filter_params` from the config of the given SavedView, or an empty dict if unavailable.
+
+    See `get_saved_view_or_none()` for the lookup semantics.
+
+    Args:
+        pk (Union[uuid.UUID, str]): Primary key of the desired SavedView.
+    """
+    saved_view = get_saved_view_or_none(pk)
+    if saved_view is None:
+        return {}
+    return saved_view.config.get("filter_params", {})
 
 
 def get_pending_approval_workflow_stages(user, queryset):

@@ -32,7 +32,7 @@ For example, to register additional `INSTALLED_APPS`, you would simply specify t
 
 ```python
 EXTRA_INSTALLED_APPS = [
-    'foo.bar',
+    "foo.bar",
 ]
 ```
 
@@ -61,7 +61,7 @@ can specify additional apps with ease.  Similarly, additional `MIDDLEWARE` can b
 {% elif default is mapping and default != {} %}
 
 ```python
-{{ default|pprint }}
+{{default | pprint}}
 ```
 
 {% else %}`{{ default }}`

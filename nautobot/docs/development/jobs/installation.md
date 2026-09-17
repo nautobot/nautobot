@@ -44,12 +44,14 @@ In `device_jobs.py`:
 ```python
 from nautobot.apps.jobs import Job, register_jobs
 
+
 class CleanupDevices(Job):
     class Meta:
         name = "Cleanup Obsolete Devices"
 
     def run(self):
         self.logger.info("Cleaning old device entries")
+
 
 register_jobs(CleanupDevices)
 ```
@@ -85,12 +87,14 @@ In `sync_devices.py`:
 ```python
 from nautobot.apps.jobs import Job, register_jobs
 
+
 class SyncDevices(Job):
     class Meta:
         name = "Sync Devices from CMDB"
 
     def run(self):
         self.logger.info("Running external sync...")
+
 
 register_jobs(SyncDevices)
 ```
@@ -161,6 +165,7 @@ In `apps.py`:
 
 ```python
 from nautobot.apps.apps import NautobotAppConfig
+
 
 class MyAppConfig(NautobotAppConfig):
     name = "my_app"

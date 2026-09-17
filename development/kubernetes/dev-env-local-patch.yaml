@@ -1,0 +1,14 @@
+# Local-development patch for the dev-env ConfigMap.
+#
+# Applied via `kubectl patch` (NOT `kubectl apply`, which would replace the
+# entire data block):
+#
+#   kubectl apply -f development/kubernetes/dev-env-configmap.yaml
+#   kubectl patch configmap dev-env --patch-file development/kubernetes/dev-env-local-patch.yaml
+#
+# Overrides only the host entries that differ between the all-in-cluster
+# setup and the "Compose-on-host + jobs-in-cluster" local development setup
+# documented in docs/development/jobs/job-k8s-locally.md.
+data:
+  NAUTOBOT_DB_HOST: host.docker.internal
+  NAUTOBOT_REDIS_HOST: host.docker.internal

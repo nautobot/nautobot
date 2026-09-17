@@ -1,0 +1,962 @@
+circuits:
+  app_name: Circuits
+  models:
+  - fields:
+    - cid
+    - circuit_terminations__description
+    - circuit_terminations__pp_info
+    - circuit_terminations__xconnect_id
+    - comments
+    - description
+    - id
+    name: Circuit
+  - fields:
+    - circuit__cid
+    - description
+    - id
+    - pp_info
+    - xconnect_id
+    name: Circuit Termination
+  - fields:
+    - id
+    - name
+    name: Circuit Type
+  - fields:
+    - account
+    - admin_contact
+    - comments
+    - id
+    - name
+    - noc_contact
+    name: Provider
+  - fields:
+    - comments
+    - description
+    - id
+    - name
+    name: Provider Network
+cloud:
+  app_name: Cloud
+  models:
+  - fields:
+    - account_number
+    - description
+    - id
+    - name
+    - provider__name
+    name: Cloud Account
+  - fields:
+    - cloud_account__description
+    - cloud_account__name
+    - cloud_resource_type__description
+    - cloud_resource_type__name
+    - description
+    - id
+    - name
+    - parent__description
+    - parent__name
+    name: Cloud Network
+  - fields:
+    - cloud_network__description
+    - cloud_network__name
+    - id
+    name: Cloud Network Prefix Assignment
+  - fields:
+    - description
+    - id
+    - name
+    - provider__name
+    name: Cloud Resource Type
+  - fields:
+    - cloud_account__description
+    - cloud_account__name
+    - cloud_networks__description
+    - cloud_networks__name
+    - cloud_resource_type__description
+    - cloud_resource_type__name
+    - description
+    - id
+    - name
+    name: Cloud Service
+  - fields:
+    - cloud_network__cloud_account__description
+    - cloud_network__cloud_account__name
+    - cloud_network__cloud_resource_type__description
+    - cloud_network__cloud_resource_type__name
+    - cloud_network__description
+    - cloud_network__name
+    - cloud_service__cloud_account__description
+    - cloud_service__cloud_account__name
+    - cloud_service__cloud_resource_type__description
+    - cloud_service__cloud_resource_type__name
+    - cloud_service__description
+    - cloud_service__name
+    - id
+    name: Cloud Service Network Assignment
+data_validation:
+  app_name: Data Validation Engine
+  models:
+  - fields:
+    - compliance_class_name
+    - content_type__app_label
+    - content_type__model
+    - id
+    - message
+    - object_id
+    name: Data Compliance
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - error_message
+    - field
+    - id
+    - name
+    name: Min Max Validation Rule
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - error_message
+    - field
+    - id
+    - name
+    - regular_expression
+    name: Regular Expression Validation Rule
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - error_message
+    - field
+    - id
+    - name
+    name: Required Validation Rule
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - error_message
+    - field
+    - id
+    - name
+    name: Unique Validation Rule
+dcim:
+  app_name: DCIM
+  models:
+  - fields:
+    - id
+    - label
+    name: Cable
+  - fields:
+    - cable__label
+    - id
+    name: Cable To Cable Termination
+  - fields:
+    - description
+    - id
+    - manufacturer__name
+    - name
+    - part_number
+    name: Cable Type
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Console Port
+  - fields:
+    - id
+    - name
+    name: Console Port Template
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Console Server Port
+  - fields:
+    - id
+    - name
+    name: Console Server Port Template
+  - fields:
+    - description
+    - id
+    - name
+    name: Controller
+  - fields:
+    - id
+    - name
+    name: Controller Managed Device Group
+  - fields:
+    - asset_tag
+    - comments
+    - device_type__device_family__name
+    - device_type__manufacturer__name
+    - id
+    - inventory_items__serial
+    - name
+    - serial
+    name: Device
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Device Bay
+  - fields:
+    - id
+    - name
+    name: Device Bay Template
+  - fields:
+    - cluster__name
+    - device__asset_tag
+    - device__name
+    - device__serial
+    - id
+    name: Device Cluster Assignment
+  - fields:
+    - id
+    - name
+    name: Device Family
+  - fields:
+    - comments
+    - id
+    - name
+    name: Device Redundancy Group
+  - fields:
+    - comments
+    - device_family__name
+    - id
+    - manufacturer__name
+    - model
+    - part_number
+    name: Device Type
+  - fields:
+    - device_type__model
+    - id
+    - software_image_file__image_file_name
+    name: Device Type To Software Image File Mapping
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Front Port
+  - fields:
+    - id
+    - name
+    name: Front Port Template
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Interface
+  - fields:
+    - id
+    - name
+    name: Interface Redundancy Group
+  - fields:
+    - id
+    - interface__name
+    - interface_redundancy_group__name
+    name: Interface Redundancy Group Association
+  - fields:
+    - id
+    - name
+    name: Interface Template
+  - fields:
+    - id
+    - interface__name
+    - virtual_device_context__name
+    name: Interface Vdc Assignment
+  - fields:
+    - asset_tag
+    - description
+    - id
+    - name
+    - part_id
+    - serial
+    name: Inventory Item
+  - fields:
+    - asn
+    - comments
+    - contact_email
+    - contact_name
+    - contact_phone
+    - description
+    - facility
+    - id
+    - name
+    - physical_address
+    - shipping_address
+    name: Location
+  - fields:
+    - id
+    - name
+    name: Location Type
+  - fields:
+    - id
+    - name
+    name: Manufacturer
+  - fields:
+    - asset_tag
+    - id
+    - module_type__manufacturer__name
+    - module_type__model
+    - parent_module_bay__name
+    - parent_module_bay__parent_device__name
+    - parent_module_bay__parent_module__module_type__manufacturer__name
+    - parent_module_bay__position
+    - serial
+    name: Module
+  - fields:
+    - id
+    - name
+    - parent_device__name
+    - parent_module__module_type__manufacturer__name
+    - parent_module__module_type__model
+    - position
+    name: Module Bay
+  - fields:
+    - device_type__manufacturer__name
+    - device_type__model
+    - id
+    - module_type__manufacturer__name
+    - module_type__model
+    - name
+    - position
+    name: Module Bay Template
+  - fields:
+    - description
+    - id
+    - module_types__manufacturer__name
+    - module_types__model
+    - name
+    name: Module Family
+  - fields:
+    - comments
+    - id
+    - manufacturer__name
+    - model
+    - part_number
+    name: Module Type
+  - fields:
+    - id
+    - name
+    name: Platform
+  - fields:
+    - comments
+    - id
+    - name
+    name: Power Feed
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Power Outlet
+  - fields:
+    - id
+    - name
+    name: Power Outlet Template
+  - fields:
+    - id
+    - name
+    name: Power Panel
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Power Port
+  - fields:
+    - id
+    - name
+    name: Power Port Template
+  - fields:
+    - asset_tag
+    - comments
+    - facility_id
+    - id
+    - name
+    - serial
+    name: Rack
+  - fields:
+    - id
+    - name
+    name: Rack Group
+  - fields:
+    - description
+    - id
+    - rack__facility_id
+    - rack__name
+    - user__username
+    name: Rack Reservation
+  - fields:
+    - description
+    - id
+    - label
+    - name
+    name: Rear Port
+  - fields:
+    - id
+    - name
+    name: Rear Port Template
+  - fields:
+    - id
+    - image_file_name
+    - software_version__alias
+    - software_version__platform__name
+    - software_version__version
+    name: Software Image File
+  - fields:
+    - alias
+    - id
+    - platform__name
+    - version
+    name: Software Version
+  - fields:
+    - domain
+    - id
+    - members__name
+    - name
+    name: Virtual Chassis
+  - fields:
+    - device__name
+    - id
+    - name
+    - tenant__name
+    name: Virtual Device Context
+extras:
+  app_name: Extras
+  models:
+  - fields:
+    - id
+    - object_under_review_content_type__app_label
+    - object_under_review_content_type__model
+    name: Approval Workflow
+  - fields:
+    - id
+    - model_content_type__app_label
+    - model_content_type__model
+    - name
+    name: Approval Workflow Definition
+  - fields:
+    - approval_workflow__approval_workflow_definition__name
+    - approval_workflow_stage_definition__name
+    - id
+    name: Approval Workflow Stage
+  - fields:
+    - denial_message
+    - id
+    - min_approvers
+    - name
+    - sequence
+    name: Approval Workflow Stage Definition
+  - fields:
+    - comments
+    - id
+    - state
+    name: Approval Workflow Stage Response
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - description
+    - fallback_value
+    - grouping
+    - id
+    - label
+    - template
+    name: Computed Field
+  - fields:
+    - data
+    - description
+    - id
+    - name
+    name: Config Context
+  - fields:
+    - data_schema
+    - description
+    - id
+    - name
+    name: Config Context Schema
+  - fields:
+    - email
+    - id
+    - name
+    - phone
+    name: Contact
+  - fields:
+    - contact__name
+    - id
+    - team__name
+    name: Contact Association
+  - fields:
+    - description
+    - grouping
+    - id
+    - label
+    name: Custom Field
+  - fields:
+    - id
+    - value
+    name: Custom Field Choice
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - id
+    - name
+    - target_url
+    - text
+    name: Custom Link
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - description
+    - id
+    - name
+    name: Dynamic Group
+  - fields:
+    - group__name
+    - id
+    - operator
+    - parent_group__name
+    name: Dynamic Group Membership
+  - fields:
+    - content_type__app_label
+    - content_type__model
+    - description
+    - id
+    - name
+    - owner_content_type__app_label
+    - owner_content_type__model
+    name: Export Template
+  - fields:
+    - id
+    - name
+    - remote_url
+    name: External Integration
+  - fields:
+    - id
+    - job_result__job_model__name
+    - name
+    name: File Proxy
+  - fields:
+    - branch
+    - id
+    - name
+    - remote_url
+    name: Git Repository
+  - fields:
+    - id
+    - name
+    - query
+    name: GraphQL Query
+  - fields:
+    - id
+    - name
+    name: Image Attachment
+  - fields:
+    - description
+    - grouping
+    - id
+    - name
+    name: Job
+  - fields:
+    - id
+    - job__name
+    - name
+    - text
+    name: Job Button
+  - fields:
+    - id
+    - name
+    name: Job Hook
+  - fields:
+    - grouping
+    - id
+    - log_level
+    - message
+    name: Job Log Entry
+  - fields:
+    - description
+    - id
+    - name
+    - queue_type
+    - tenant__name
+    name: Job Queue
+  - fields:
+    - id
+    - job__description
+    - job__grouping
+    - job__name
+    - job_queue__description
+    - job_queue__name
+    - job_queue__queue_type
+    name: Job Queue Assignment
+  - fields:
+    - id
+    - job_model__name
+    - name
+    - scheduled_job__name
+    - user__username
+    name: Job Result
+  - fields:
+    - id
+    - value
+    name: Metadata Choice
+  - fields:
+    - description
+    - id
+    - name
+    name: Metadata Type
+  - fields:
+    - assigned_object_id
+    - id
+    - note
+    - user_name
+    name: Note
+  - fields:
+    - id
+    - object_repr
+    - user_name
+    name: Object Change
+  - fields:
+    - _value
+    - contact__name
+    - id
+    - metadata_type__name
+    - team__name
+    name: Object Metadata
+  - fields:
+    - description
+    - id
+    - label
+    name: Relationship
+  - fields:
+    - id
+    - relationship__key
+    - relationship__label
+    name: Relationship Association
+  - fields:
+    - content_types__model
+    - id
+    - name
+    name: Role
+  - fields:
+    - id
+    - name
+    - owner__username
+    name: Saved View
+  - fields:
+    - description
+    - id
+    - name
+    - task
+    name: Scheduled Job
+  - fields:
+    - id
+    - name
+    name: Secret
+  - fields:
+    - id
+    - name
+    name: Secrets Group
+  - fields:
+    - id
+    - secret__name
+    - secrets_group__name
+    name: Secrets Group Association
+  - fields:
+    - associated_object_type__app_label
+    - associated_object_type__model
+    - dynamic_group__description
+    - dynamic_group__name
+    - id
+    name: Static Group Association
+  - fields:
+    - content_types__model
+    - id
+    - name
+    name: Status
+  - fields:
+    - content_types__model
+    - id
+    - name
+    name: Tag
+  - fields:
+    - email
+    - id
+    - name
+    - phone
+    name: Team
+  - fields:
+    - id
+    - saved_view__name
+    - user__username
+    - view_name
+    name: User Saved View Association
+  - fields:
+    - additional_headers
+    - body_template
+    - id
+    - name
+    - payload_url
+    name: Webhook
+ipam:
+  app_name: IPAM
+  models:
+  - fields:
+    - id
+    - interface__name
+    - vm_interface__name
+    name: IP Address Assignment
+  - fields:
+    - description
+    - id
+    - name
+    name: IP Address Range
+  - fields:
+    - id
+    - name
+    name: Namespace
+  - fields:
+    - id
+    - location__name
+    name: Prefix Location Assignment
+  - fields:
+    - id
+    - name
+    name: RIR
+  - fields:
+    - description
+    - id
+    - name
+    name: Route Target
+  - fields:
+    - description
+    - id
+    - name
+    name: Service
+  - fields:
+    - description
+    - id
+    - name
+    - vid
+    name: VLAN
+  - fields:
+    - id
+    - name
+    name: VLAN Group
+  - fields:
+    - id
+    - location__name
+    - vlan__vid
+    name: Vlan Location Assignment
+  - fields:
+    - description
+    - id
+    - name
+    - rd
+    name: VRF
+  - fields:
+    - device__name
+    - id
+    - name
+    - rd
+    - virtual_device_context__name
+    - virtual_machine__name
+    - vrf__name
+    name: VRF-device Assignment
+  - fields:
+    - id
+    - vrf__name
+    name: VRF-prefix Assignment
+load_balancers:
+  app_name: Load Balancers
+  models:
+  - fields:
+    - certificate_file_path
+    - certificate_type
+    - chain_file_path
+    - cipher
+    - id
+    - key_file_path
+    - name
+    name: Certificate Profile
+  - fields:
+    - health_check_type
+    - id
+    - interval
+    - name
+    - port
+    - retry
+    - timeout
+    name: Health Check Monitor
+  - fields:
+    - id
+    - name
+    name: Load Balancer Pool
+  - fields:
+    - id
+    - ip_address__host
+    - label
+    - load_balancer_pool__name
+    - port
+    name: Load Balancer Pool Member
+  - fields:
+    - certificate_profile__name
+    - id
+    - load_balancer_pool_member__label
+    name: Load Balancer Pool Member Certificate Profile Assignment
+  - fields:
+    - device__name
+    - id
+    - load_balancer_pool__name
+    - name
+    - port
+    name: Virtual Server
+  - fields:
+    - certificate_profile__name
+    - id
+    - virtual_server__name
+    name: Virtual Server Certificate Profile Assignment
+tenancy:
+  app_name: Tenancy
+  models:
+  - fields:
+    - comments
+    - description
+    - id
+    - name
+    name: Tenant
+  - fields:
+    - id
+    - name
+    name: Tenant Group
+users:
+  app_name: Users
+  models:
+  - fields:
+    - id
+    - name
+    name: Permission
+  - fields:
+    - description
+    - id
+    name: Token
+  - fields:
+    - email
+    - first_name
+    - id
+    - last_name
+    - username
+    name: User
+virtualization:
+  app_name: Virtualization
+  models:
+  - fields:
+    - comments
+    - id
+    - name
+    name: Cluster
+  - fields:
+    - id
+    - name
+    name: Cluster Group
+  - fields:
+    - id
+    - name
+    name: Cluster Type
+  - fields:
+    - comments
+    - id
+    - name
+    name: Virtual Machine
+  - fields:
+    - id
+    - name
+    name: VM Interface
+vpn:
+  app_name: VPNs
+  models:
+  - fields:
+    - description
+    - id
+    - name
+    - vpn_id
+    name: VPN
+  - fields:
+    - description
+    - id
+    - name
+    name: VPN Phase 1 Policy
+  - fields:
+    - description
+    - id
+    - name
+    name: VPN Phase 2 Policy
+  - fields:
+    - description
+    - id
+    - name
+    name: VPN Profile
+  - fields:
+    - id
+    - vpn_phase1_policy__name
+    - vpn_profile__name
+    name: Vpn Profile Phase1 Policy Assignment
+  - fields:
+    - id
+    - vpn_phase2_policy__name
+    - vpn_profile__name
+    name: Vpn Profile Phase2 Policy Assignment
+  - fields:
+    - id
+    - interface__name
+    - vlan__name
+    - vm_interface__name
+    - vpn__name
+    name: VPN Termination
+  - fields:
+    - description
+    - id
+    - tunnel_id
+    - vpn__name
+    - vpn_profile__name
+    name: VPN Tunnel
+  - fields:
+    - device__name
+    - id
+    - source_fqdn
+    - source_interface__name
+    name: VPN Tunnel Endpoint
+wireless:
+  app_name: Wireless
+  models:
+  - fields:
+    - controller_managed_device_group__name
+    - id
+    - radio_profile__name
+    name: Controller Managed Device Group Radio Profile Assignment
+  - fields:
+    - controller_managed_device_group__name
+    - id
+    - wireless_network__name
+    name: Controller Managed Device Group Wireless Network Assignment
+  - fields:
+    - frequency
+    - id
+    - name
+    - regulatory_domain
+    name: Radio Profile
+  - fields:
+    - id
+    - mcs_index
+    - rate
+    - standard
+    name: Supported Data Rate
+  - fields:
+    - description
+    - id
+    - name
+    - ssid
+    name: Wireless Network

@@ -24,7 +24,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         modal_xpath = "//div[@id='embedded_action_modal']"
         self.assertTrue(
             self.browser.is_element_present_by_xpath(
-                f"{modal_xpath}//h4[normalize-space()='Add a new tenant']", wait_time=10
+                f"{modal_xpath}//h2[normalize-space()='Add a new tenant']", wait_time=10
             )
         )
 
@@ -69,7 +69,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         modal_xpath = "//div[@id='embedded_action_modal']"
         self.assertTrue(
             self.browser.is_element_present_by_xpath(
-                f"{modal_xpath}//h4[normalize-space()='Add a new dynamic group']", wait_time=10
+                f"{modal_xpath}//h2[normalize-space()='Add a new dynamic group']", wait_time=10
             )
         )
 
@@ -95,7 +95,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         modal_xpath = "//div[@id='embedded_action_modal']"
         self.assertTrue(
             self.browser.is_element_present_by_xpath(
-                f"{modal_xpath}//h4[normalize-space()='Search tenants']", wait_time=10
+                f"{modal_xpath}//h2[normalize-space()='Search tenants']", wait_time=10
             )
         )
 
@@ -140,7 +140,7 @@ class ObjectEditTestCase(SeleniumTestCase):
         modal_xpath = "//div[@id='embedded_action_modal']"
         self.assertTrue(
             self.browser.is_element_present_by_xpath(
-                f"{modal_xpath}//h4[normalize-space()='Search dynamic groups']", wait_time=10
+                f"{modal_xpath}//h2[normalize-space()='Search dynamic groups']", wait_time=10
             )
         )
 

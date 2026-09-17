@@ -25,8 +25,6 @@ In this example, we're migrating an existing view (the detail view for the `Secr
 #### `Secret` Before
 
 ```python title="nautobot/extras/views.py"
-...
-
 class SecretListView(generic.ObjectListView):
     queryset = Secret.objects.all()
     filterset = filters.SecretFilterSet
@@ -64,8 +62,6 @@ class SecretBulkDeleteView(generic.BulkDeleteView):
     queryset = Secret.objects.all()
     filterset = filters.SecretFilterSet
     table = tables.SecretTable
-
-...
 ```
 
 1. Note the repetition of information such as `queryset` across each distinct view class here. Reducing this repetition is one of the key benefits of moving to use `NautobotUIViewSet`.
@@ -170,8 +166,6 @@ class SecretBulkDeleteView(generic.BulkDeleteView):
 #### `Secret` After
 
 ```python title="nautobot/extras/views.py"
-...
-
 class SecretUIViewSet(
     ObjectDetailViewMixin,
     ObjectListViewMixin,
@@ -228,8 +222,6 @@ class SecretUIViewSet(
         if self.action == "retrieve":
             ctx["parameters"] = instance.parameters
         return ctx
-
-...
 ```
 
 1. The existing Secret views didn't provide a bulk-edit view, probably because there aren't many (any?) Secret attributes that make sense to bulk-edit. We're preserving that behavior here by using the individual view Mixin classes instead of the single NautobotUIViewSet class as we otherwise might.
@@ -328,7 +320,6 @@ Screenshot of migrated view:
 2. `Add cluster` button needed to be added manually in HTML code.
 
 ```python title="nautobot/virtualization/views.py"
-
 class ClusterTypeView(generic.ObjectView):
     queryset = ClusterType.objects.all()
 
@@ -358,7 +349,6 @@ File `nautobot/virtualization/templates/virtualization/clustertype.html` can be 
 `ClusterTypeView` after changes:
 
 ```python title="nautobot/virtualization/views.py"
-
 class ClusterTypeView(generic.ObjectView):
     queryset = ClusterType.objects.all()
 

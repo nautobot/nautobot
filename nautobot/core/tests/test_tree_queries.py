@@ -183,6 +183,7 @@ class TreeModelCachedDescendantsPKsTests(TestCase):
         new_parent = (
             Location.objects.filter(location_type=old_parent.location_type)
             .exclude(pk__in=[old_parent.pk, loc.pk])
+            .exclude(pk__in=old_parent.descendants().values_list("pk", flat=True))
             .first()
         )
         self.assertIsNotNone(new_parent)

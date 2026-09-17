@@ -196,6 +196,9 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         "description": "New description",
     }
 
+    def _get_queryset(self):
+        return Token.objects.with_sensitive_fields("key")
+
     def setUp(self):
         super().setUp()
 
@@ -262,8 +265,7 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn("key", response.data)
         self.assertEqual(len(response.data["key"]), 40)
-        token = Token.objects.get(user=self.basic_auth_user_granted)
-        self.assertEqual(token.key, response.data["key"])
+        self.assertTrue(Token.objects.filter(user=self.basic_auth_user_granted, key=response.data["key"]).exists())
 
     def test_create_token_basic_authentication_permissionless_user(self):
         """

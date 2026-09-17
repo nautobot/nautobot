@@ -38,6 +38,7 @@ from nautobot.extras.api.mixins import (
     TaggedModelSerializerMixin,
 )
 from nautobot.extras.choices import (
+    ComputedFieldTypeChoices,
     CustomFieldFilterLogicChoices,
     CustomFieldTypeChoices,
     JobExecutionType,
@@ -102,6 +103,7 @@ from nautobot.extras.utils import (
     RoleModelsQuery,
     TaggableClassesQuery,
 )
+from nautobot.users.api.serializers import UserSerializer
 
 from .fields import MultipleChoiceJSONField
 
@@ -164,25 +166,56 @@ class ApprovalWorkflowSerializer(NautobotModelSerializer):
         fields = "__all__"
 
 
-class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
-    """ApprovalWorkflowStage Serializer."""
-
-    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
-
-    class Meta:
-        """Meta attributes."""
-
-        model = ApprovalWorkflowStage
-        fields = "__all__"
-
-
 class ApprovalWorkflowStageResponseSerializer(ValidatedModelSerializer):
-    """ApprovalWorkflowStageResponse Serializer."""
+    """Nested read representer for ApprovalWorkflowStageResponse; not exposed as its own endpoint."""
+
+    user = serializers.SerializerMethodField()
+
+    @extend_schema_field(UserSerializer)
+    def get_user(self, obj):
+        if obj.user is None:
+            return None
+        try:
+            depth = get_nested_serializer_depth(self)
+            return return_nested_serializer_data_based_on_depth(self, depth, obj, obj.user, "user")
+        except SerializerNotFound:
+            return None
 
     class Meta:
         """Meta attributes."""
 
         model = ApprovalWorkflowStageResponse
+        fields = [
+            "id",
+            "user",
+            "comments",
+            "state",
+            "last_updated",
+        ]
+        read_only_fields = ["user", "state"]
+
+
+class ApprovalWorkflowStageSerializer(NautobotModelSerializer):
+    """ApprovalWorkflowStage Serializer."""
+
+    decision_date = serializers.DateTimeField(read_only=True, allow_null=True)
+    responses = serializers.SerializerMethodField(read_only=True)
+
+    @extend_schema_field(ApprovalWorkflowStageResponseSerializer(many=True))
+    def get_responses(self, obj):
+        """Read-only nested responses, filtered by `view` permission like the UI panel."""
+        request = self.context.get("request")
+        if request is None:
+            return None
+        queryset = ApprovalWorkflowStageResponse.objects.filter(approval_workflow_stage=obj).restrict(
+            request.user, "view"
+        )
+        return ApprovalWorkflowStageResponseSerializer(queryset, many=True, context=self.context).data
+
+    class Meta:
+        """Meta attributes."""
+
+        model = ApprovalWorkflowStage
         fields = "__all__"
 
 
@@ -195,6 +228,7 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
     content_type = ContentTypeField(
         queryset=ContentType.objects.filter(FeatureQuery("custom_fields").get_query()).order_by("app_label", "model"),
     )
+    output_type = ChoiceField(choices=ComputedFieldTypeChoices, required=False)
 
     class Meta:
         model = ComputedField
@@ -441,6 +475,39 @@ class SavedViewSerializer(ValidatedModelSerializer):
     class Meta:
         model = SavedView
         fields = "__all__"
+        extra_kwargs = {"owner": {"read_only": True}}
+
+    def to_internal_value(self, data):
+        ret = super().to_internal_value(data)
+        request = self.context.get("request", None)
+        user = getattr(request, "user", None)
+        # `owner` is read-only, so DRF drops it; supply it here on creation.
+        if self.instance is None and user is not None and user.is_authenticated:
+            ret["owner"] = user
+        return ret
+
+    def validate_view(self, value):
+        if self.instance is not None and value != self.instance.view:
+            raise serializers.ValidationError(
+                "The `view` of an existing saved view cannot be changed; create a new saved view instead."
+            )
+        return value
+
+    def validate_is_global_default(self, value):
+        """Require extras.change_savedview to change the global default, which affects every user."""
+        request = self.context.get("request", None)
+        user = getattr(request, "user", None)
+        if user is None:
+            # No request to check permissions against, as when a Job or data migration uses this serializer directly.
+            return value
+        current = self.instance.is_global_default if self.instance is not None else False
+        # Compare against the current value so that re-submitting an unchanged flag (as a PUT or the UI edit
+        # form always does) does not require the permission.
+        if value != current and not user.has_perms(["extras.change_savedview"]):
+            raise serializers.ValidationError(
+                "You do not have the required permission to change the global default Saved View."
+            )
+        return value
 
 
 class UserSavedViewAssociationSerializer(ValidatedModelSerializer):
@@ -641,7 +708,7 @@ class ImageAttachmentSerializer(ValidatedModelSerializer):
 
 class JobSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):
     # task_queues and task_queues_override are added to maintain backward compatibility with versions pre v2.4.
-    task_queues = serializers.JSONField(read_only=True, required=False)
+    task_queues = serializers.ListField(child=serializers.CharField(), read_only=True, required=False)
     task_queues_override = serializers.BooleanField(read_only=True, required=False)
 
     class Meta:
@@ -733,6 +800,20 @@ class JobRunResponseSerializer(serializers.Serializer):
 
     schedule = ScheduledJobSerializer(read_only=True, required=False)
     job_result = JobResultSerializer(read_only=True, required=False)
+
+
+class JobResultCancelPreviewSerializer(serializers.Serializer):
+    """Describes what a cancel action would do, returned by GET on the cancel endpoint."""
+
+    message = serializers.CharField(help_text="Confirmation prompt to display to the user.")
+    job_status = serializers.ChoiceField(
+        choices=["RUNNING", "NOT RUNNING", "UNKNOWN", *JobResultStatusChoices.ALL_STATES],
+        help_text=("For unready jobs: RUNNING, NOT RUNNING, or UNKNOWN. For ready jobs: the terminal state."),
+    )
+    irreversible = serializers.CharField(
+        required=False, help_text="Warning that the action cannot be undone. Omitted when the job is already finished."
+    )
+    timestamp = serializers.DateTimeField(help_text="Server time when this preview was generated.")
 
 
 #
@@ -943,6 +1024,11 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
     )
     assigned_object = serializers.SerializerMethodField()
     value = ObjectMetadataValueJSONField(allow_null=True, required=False)
+    scoped_fields = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text="List of scoped fields, only direct fields on the model",
+    )
 
     class Meta:
         model = ObjectMetadata
@@ -973,7 +1059,7 @@ class ObjectMetadataSerializer(ValidatedModelSerializer):
 #
 
 
-class NoteSerializer(BaseModelSerializer):
+class NoteSerializer(ValidatedModelSerializer):
     assigned_object_type = ContentTypeField(queryset=ContentType.objects.all())
     assigned_object = serializers.SerializerMethodField()
 

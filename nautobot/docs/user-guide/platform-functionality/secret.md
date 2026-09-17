@@ -48,6 +48,9 @@ In some cases you may have a collection of closely related secrets values that a
 
 Secrets are of course closely linked to security, and as such they pose a number of unique concerns that are worth discussing.
 
+!!! danger
+    Treat the ability to create or edit Secrets as a high-privilege capability. The built-in Secrets providers can read any environment variable in the Nautobot process environment and/or any file readable by the `nautobot` user, and any user or process that can execute code within Nautobot may be able to retrieve Secret values. Limit who can define Secrets, and only install Apps, Jobs, and related integrations that you trust.
+
 ### Leakage of Secret Values
 
 By design, the UI, REST API, and GraphQL do **not** provide access to retrieve or report the actual value of any given Secret, as these values are only meant for use *within* Nautobot itself.
@@ -70,12 +73,12 @@ What does this mean in practice?
 
 ### Using Object Permissions with Secrets
 
-!!! tip
-    In practice you will likely want to carefully restrict which users are allowed to define and edit Secrets, and may want to use object permissions to further restrict which specific Secrets they are allowed to utilize.
+In practice you should tightly limit which users may define and edit Secrets. Where appropriate, use object permissions to further restrict which Secrets a user may utilize, and prefer granting only the minimum actions needed (for example, allowing use of existing Secrets without granting create/edit).
 
-The two default Secrets providers potentially allow a user to define and use a Secret corresponding to any environment variable in the Nautobot execution context and/or any file readable by the `nautobot` user. For many users and use cases, you will not want to grant this much power to define and access arbitrary secrets; fortunately Nautobot's built-in permissions model is granular enough to allow for more specifically tailored access grants.
+!!! warning
+    Object-permission constraints on Secret `parameters` (such as restricting `path` or `variable`) are helpful guardrails for legitimate use, but they are **not** a hard security boundary. Because provider parameters support [Jinja2 templating](#templated-secret-parameters), a user who can define Secrets may still retrieve values other than those the constraints appear to allow.
 
-For example, to restrict a specific user to only be able to work with Secrets that use the `environment-variable` Secrets provider, and specifically only to access those environment variables whose names begin with `NAPALM_`, you could define a Permission with a specific constraint like:
+Nautobot's built-in permissions model is granular enough to allow more specifically tailored access grants as an additional layer of control. For example, to restrict a specific user to only be able to work with Secrets that use the `environment-variable` Secrets provider, and specifically only to access those environment variables whose names begin with `NAPALM_`, you could define a Permission with a specific constraint like:
 
 ```json
 {
@@ -84,12 +87,12 @@ For example, to restrict a specific user to only be able to work with Secrets th
 }
 ```
 
-Or for a Permission to work with Secrets that use `text-file`, but only files located in `/opt/nautobot/secrets/`, you could use the following constraint:
+Or for a Permission to work with Secrets that use `text-file`, but only a specific file such as `/opt/nautobot/secrets/device_password.txt`, you could use the following constraint:
 
 ```json
 {
     "provider": "text-file",
-    "parameters__path__startswith": "/opt/nautobot/secrets/"
+    "parameters__path": "/opt/nautobot/secrets/device_password.txt"
 }
 ```
 

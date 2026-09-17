@@ -1,2 +1,0 @@
-Changed removing a VRF from a Device or VirtualMachine to raise an error if that VRF is still attached to one of the interfaces.
-Changed attaching a VRF to a VM interface via API/ORM to raise an error if the parent Virtual Machine does not have that VRF assigned.

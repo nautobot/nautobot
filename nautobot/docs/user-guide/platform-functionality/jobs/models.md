@@ -14,6 +14,7 @@ For any given Job record, most of its fields are populated initially from data d
 Records of this type store the following data as read-only (not modifiable via the UI or REST API):
 
 * The source of the job (local installation, Git repository, App)
+* The version of the source code providing the job (`source_version`) — the Nautobot version for system Jobs, the App version for App-provided Jobs, or the Git commit hash for Jobs provided by a Git repository
 * The name of the module containing the Job class
 * The name of the Job class
 * Whether the job class is installed presently
