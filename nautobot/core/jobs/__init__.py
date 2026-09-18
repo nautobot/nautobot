@@ -185,7 +185,7 @@ class ExportFieldsStringVar(StringVar):
 
 
 class ExportObjectList(Job):
-    """System Job to export a list of objects via CSV or ExportTemplate."""
+    """System Job to export a list of objects to CSV/JSON/YAML or using an ExportTemplate."""
 
     content_type = ObjectVar(
         model=ContentType,
@@ -235,7 +235,7 @@ class ExportObjectList(Job):
 
     class Meta:
         name = "Export Object List"
-        description = "Export a list of objects to CSV or YAML, or render a specified Export Template."
+        description = "Export a list of objects to CSV/JSON/YAML, or render a specified Export Template."
         has_sensitive_variables = False
         # Exporting large querysets may take substantial processing time
         soft_time_limit = 1800
@@ -661,7 +661,7 @@ class ExportObjectList(Job):
 
 
 class ImportObjects(Job):
-    """System Job to import CSV data to create a set of objects."""
+    """System Job to import CSV/JSON/YAML data to create a set of objects."""
 
     content_type = ObjectVar(
         model=ContentType,
@@ -690,7 +690,7 @@ class ImportObjects(Job):
 
     class Meta:
         name = "Import Objects"
-        description = "Import objects from CSV-formatted data."
+        description = "Import objects from CSV, JSON, or YAML data."
         has_sensitive_variables = False
         # Importing large files may take substantial processing time
         soft_time_limit = 1800
