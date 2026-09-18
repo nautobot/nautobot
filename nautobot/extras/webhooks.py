@@ -196,11 +196,7 @@ def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None):
 
     # Retrieve any applicable Webhooks
     content_type = object_change.changed_object_type
-    action_flag = {
-        ObjectChangeActionChoices.ACTION_CREATE: "type_create",
-        ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
-        ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-    }[object_change.action]
+    action_flag = ObjectChangeActionChoices.HOOK_FLAGS[object_change.action]
     if webhook_queryset is None:
         webhook_queryset = Webhook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 

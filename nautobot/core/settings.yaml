@@ -543,6 +543,24 @@ properties:
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
+  CHANGELOG_SKIP_UNCHANGED_SAVES:
+    default: true
+    description: >-
+      If `True`, saving an object without modifying any of its field values does not create a change record
+      and does not trigger webhooks, job hooks, or events. Set this to `False` to record such saves anyway,
+      as Nautobot did before 3.3.0.
+    details: |-
+      The object's `last_updated` timestamp is written either way; only the change record is affected.
+
+      !!! warning
+          This setting exists to give deployments time to adapt to the 3.3.0 behavior change. It is expected to be removed
+          in a future major release, so it should not be relied on indefinitely.
+
+      An individual model can opt out of the comparison regardless of this setting by declaring
+      `changelog_skip_unchanged_saves = False`.
+    environment_variable: "NAUTOBOT_CHANGELOG_SKIP_UNCHANGED_SAVES"
+    type: "boolean"
+    version_added: "3.3.0"
   CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
     default: false
     description: >-
@@ -2395,6 +2413,22 @@ properties:
     environment_variable: "NAUTOBOT_STRICT_FILTERING"
     type: "boolean"
     version_added: "1.4.0"
+  STRICT_SENSITIVE_FIELDS:
+    default: false
+    description: >-
+      If set to `True`, the ORM will refuse to return the value of any field listed in a model's
+      `sensitive_fields` declaration, such as `Token.key`, unless the caller opts in explicitly.
+    details: |-
+      Nautobot models may declare `sensitive_fields` to mark columns that hold credentials or comparable
+      secrets. When this setting is `True`, reading such a field raises `SensitiveFieldError` for values
+      loaded from the database, whether read as an attribute or projected through a query.
+
+      This setting does **not** affect user-authored Jinja2 templates (Export Templates, Computed Fields,
+      Custom Links, and so on). Those are always denied access to a sensitive field, regardless of this
+      setting.
+    environment_variable: "NAUTOBOT_STRICT_SENSITIVE_FIELDS"
+    type: "boolean"
+    version_added: "3.2.5"
   SUPPORT_MESSAGE:
     default: ""
     description: "A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs."

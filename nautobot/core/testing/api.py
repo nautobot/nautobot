@@ -1121,17 +1121,17 @@ class APIViewTestCases:
             obj_perm.save()
 
             # Send empty PATCH request
+            changes_before = lookup.get_changes_for_model(instance).count()
             response = self.client.patch(url, {}, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             serialized_object = response.json()
             strip_serialized_object(serialized_object)
             self.assertEqual(initial_serialized_object, serialized_object)
 
-            # Verify ObjectChange creation -- yes, even though nothing actually changed
-            # TODO: This may change (hah) at some point -- see https://github.com/nautobot/nautobot/issues/3321
+            # An empty PATCH changes nothing a reader would see, so it adds no ObjectChange.
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(objectchanges[0].action, extras_choices.ObjectChangeActionChoices.ACTION_UPDATE)
+                self.assertEqual(objectchanges.count(), changes_before)
                 objectchanges.delete()
 
             # Verify that a PATCH with some data updates that data correctly.
