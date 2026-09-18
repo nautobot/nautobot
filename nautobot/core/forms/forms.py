@@ -91,6 +91,11 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
             nautobot_widgets.ClearableFileInput,
             nautobot_widgets.SelectMultipleOrderable,
+            # Listed in its own right because the check below is by exact class rather than by subclass.
+            # TODO: `isinstance` would express the intent better, but would newly exempt Django's
+            #   `ClearableFileInput` -- the default widget of every `FileField`, `FileVar` included -- which
+            #   Bootstrap 5 styles *via* `form-control`. Worth doing, with a look over the file inputs.
+            nautobot_widgets.ExportFieldSelect,
         ]
 
         for field in self.fields.values():

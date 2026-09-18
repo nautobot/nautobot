@@ -818,3 +818,70 @@ def get_bulk_queryset_from_view(
     # This should be unreachable code.
     log.debug("No valid operation found to generate bulk queryset.")
     raise RuntimeError("No valid operation found to generate bulk queryset.")
+
+
+def _is_exportable_path(serializer_class, path, *, user, logger=None):  # pylint: disable=redefined-outer-name
+    """Whether an export can actually emit this field path, for this user.
+
+    The same check an explicit selection gets, applied per path so that one unusable column is dropped
+    rather than taking a whole derived selection down with it.
+    """
+    from nautobot.core.api.import_export import validate_field_paths
+
+    try:
+        validate_field_paths(serializer_class, [path], user=user)
+    except ValueError as exc:
+        if logger is not None:
+            logger.debug("Cannot export `%s`: %s", path, exc)
+        return False
+    return True
+
+
+def get_list_view_export_paths(model, *, user, saved_view=None, table_changes_pending=False, logger=None):  # pylint: disable=redefined-outer-name
+    """The columns a model's list view is displaying, as export field paths.
+
+    The table is built the way the list view builds it -- from the saved view in use, else the user's own
+    stored table configuration, else the table's default columns -- so this is the same set of columns, in
+    the same order, that the user is looking at.
+
+    Not every column is exportable: row selection and action buttons are not data at all, and a computed
+    field or related-object count is a displayed value with no serializer field behind it. Those are
+    reported rather than silently dropped, since what was asked for is the view.
+
+    Used by the export field picker's "match the list view" button; the export itself takes an explicit
+    field selection, so this is resolved while someone is looking at it rather than at run time.
+
+    Args:
+        model: The model whose list view is in question.
+        user: The user whose table configuration and permissions apply.
+        saved_view (SavedView, optional): The saved view the list view is displaying, if any.
+        table_changes_pending (bool): Whether the list view has unsaved table configuration changes.
+        logger (Logger, optional): Where to record, at debug level, each path that cannot be exported.
+
+    Returns:
+        tuple: `(paths, omitted)` -- the exportable field paths in the order the view shows them, and the
+            names of the columns with no exportable equivalent. `paths` is None if the model has no table
+            class at all, and empty if none of its columns can be exported.
+    """
+    from nautobot.core.api.utils import get_serializer_for_model
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    table_class = get_table_for_model(model)
+    if table_class is None:
+        return None, []
+
+    table = table_class(
+        model.objects.none(),
+        user=user,
+        saved_view=saved_view,
+        table_changes_pending=table_changes_pending,
+    )
+    serializer_class = get_serializer_for_model(model)
+    paths, omitted = [], []
+    for column, path in table.serializer_paths_by_visible_column(serializer_class).items():
+        if path is None or not _is_exportable_path(serializer_class, path, user=user, logger=logger):
+            omitted.append(column)
+        elif path not in paths:
+            # Two columns can map to the same field; a selection names each field once.
+            paths.append(path)
+    return paths, omitted
