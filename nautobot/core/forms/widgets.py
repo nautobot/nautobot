@@ -241,7 +241,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             <div class="d-flex justify-content-start mb-6">
                 <button type="button" class="btn btn-secondary"
                         hx-get="{url}" hx-target="#{wrapper}" hx-swap="innerHTML" hx-include="{include}"
-                        hx-params="not query_string,job_modal_button,job_form_modal,job_result_key,run_button_label,refresh_on_close_if_done,advanced_fields,_schedule_type"
+                        hx-params="not job_modal_button,job_form_modal,job_result_key,run_button_label,refresh_on_close_if_done,advanced_fields,_schedule_type"
                         hx-vals='{{"use_current_view": "1", "content_type": "{content_type}"}}'
                         title="Replace the selection with the columns this type's list view is configured to display"
                 ><span class="mdi mdi-table-eye me-4" aria-hidden="true"></span>Match the list view</button>
