@@ -21,6 +21,7 @@ from nautobot.extras.conditions.presets import (
     register_condition_preset,
     USER_IS,
 )
+from nautobot.extras.conditions.rows import ConditionRow
 from nautobot.extras.registry import registry
 
 
@@ -286,11 +287,18 @@ class BuiltinCatalogTest(RegistryIsolationMixin, TestCase):
         with self.assertRaises(AttributeError):
             FIELD_TRANSITION.source = "true"
 
+    def test_every_shipped_example_is_a_valid_row(self):
+        """The catalog serves these as worked rows, so each has to survive the validation a save runs."""
+        register_builtin_condition_presets()
+        for preset in BUILTIN_CONDITION_PRESETS:
+            with self.subTest(preset=preset.key):
+                ConditionRow.from_dict(preset.as_dict()["example"]).clean()
+
     def test_schema_serialization_shape(self):
         """The catalog endpoint and the form read this shape; external tooling builds rules from it."""
         as_dict = FIELD_COMPARE.as_dict()
-        self.assertEqual(set(as_dict), {"key", "label", "description", "parameters_schema"})
-        operator_schema, value_schema = as_dict["parameters_schema"][1], as_dict["parameters_schema"][2]
+        self.assertEqual(set(as_dict), {"preset", "label", "description", "parameters", "example"})
+        operator_schema, value_schema = as_dict["parameters"][1], as_dict["parameters"][2]
         self.assertEqual(operator_schema["kind"], "choice")
         self.assertEqual(operator_schema["choices"][0], {"value": "=", "label": "= (equals)"})
         self.assertTrue(value_schema["multiple"])

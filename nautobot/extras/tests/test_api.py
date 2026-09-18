@@ -1275,6 +1275,61 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+class ConditionPresetsTest(APITestCase):
+    """The catalog a client reads to build condition rows, for whichever action carries them."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("extras-api:condition-preset-list")
+
+    def test_catalog_is_served(self):
+        response = self.client.get(self.url, **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(
+            [preset["preset"] for preset in response.data],
+            ["field_changed", "field_compare", "field_transition", "user_is"],
+        )
+
+    def test_catalog_describes_each_parameter(self):
+        """Without the parameter schema a client cannot tell what to fill in, or with what."""
+        response = self.client.get(self.url, **self.header)
+
+        field_compare = next(preset for preset in response.data if preset["preset"] == "field_compare")
+        self.assertEqual(
+            [parameter["name"] for parameter in field_compare["parameters"]],
+            ["field", "operator", "value"],
+        )
+        operator = field_compare["parameters"][1]
+        self.assertEqual(operator["kind"], "choice")
+        self.assertTrue(operator["required"])
+        self.assertIn("gt", [choice["value"] for choice in operator["choices"]])
+
+    def test_catalog_carries_a_worked_example_per_preset(self):
+        """The parameter schema says what goes in `values`; the example says what wraps it."""
+        response = self.client.get(self.url, **self.header)
+
+        for preset in response.data:
+            with self.subTest(preset=preset["preset"]):
+                self.assertEqual(preset["example"]["type"], "preset")
+                self.assertEqual(preset["example"]["preset"], preset["preset"])
+                self.assertEqual(
+                    set(preset["example"]["values"]),
+                    {parameter["name"] for parameter in preset["parameters"]},
+                )
+
+    def test_catalog_is_not_paginated(self):
+        """The catalog is a registry rather than a queryset, so it comes back as a plain list."""
+        response = self.client.get(self.url, **self.header)
+
+        self.assertIsInstance(response.data, list)
+
+    def test_catalog_needs_only_authentication(self):
+        """It describes what this installation can do, not any object, so no model permission gates it."""
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+        self.assertHttpStatus(self.client.get(self.url), status.HTTP_403_FORBIDDEN)
+
+
 class ContentTypeTest(APITestCase):
     """
     ContentTypeViewSet does not have permission checks,

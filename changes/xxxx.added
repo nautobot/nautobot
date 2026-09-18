@@ -1,1 +1,2 @@
 Added a `conditions` field to webhooks and job hooks.
+Added a condition preset catalog endpoint at `/api/extras/condition-presets/`, so a client building condition rows reads the available presets and their parameters.

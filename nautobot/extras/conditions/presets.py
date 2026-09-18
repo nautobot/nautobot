@@ -12,6 +12,7 @@ There is no negated variant of any preset; negation is the condition row's `nega
 
 from dataclasses import dataclass
 
+from nautobot.extras.choices import ConditionTypeChoices
 from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.operators import FIELD_OPERATORS
 from nautobot.extras.registry import registry
@@ -19,7 +20,7 @@ from nautobot.extras.registry import registry
 # Parameter kinds. `FIELD` names a field on the watched model, which lets the form offer a picker;
 # `VALUE` is a value to compare against, whose widget and canonical type the form derives from the
 # chosen field's kind; `CHOICE` is one of a fixed set of values the parameter itself declares.
-PARAM_KIND_FIELD = "field"
+PARAM_KIND_FIELD = "model_field"
 PARAM_KIND_VALUE = "value"
 PARAM_KIND_CHOICE = "choice"
 
@@ -90,15 +91,18 @@ class PresetParameter:
                 )
 
     def as_dict(self):
-        return {
+        """The catalog entry for this parameter. `choices` is left out unless this parameter declares some."""
+        described = {
             "name": self.name,
             "label": self.label,
             "kind": self.kind,
             "required": self.required,
             "multiple": self.multiple,
             "help_text": self.help_text,
-            "choices": [{"value": value, "label": label} for value, label in self.choices],
         }
+        if self.choices:
+            described["choices"] = [{"value": value, "label": label} for value, label in self.choices]
+        return described
 
 
 @dataclass(frozen=True)
@@ -112,23 +116,33 @@ class ConditionPreset:
     # payload keys, this preset's `param_*` variables, and `field_value` / `field_matches`.
     source: str
     parameters: tuple[PresetParameter, ...] = ()
+    # One worked set of `values`. The catalog wraps it into a complete row, which is the only place a
+    # reader sees how a row is put together - the parameter list only covers what goes inside `values`.
+    example_values: dict | None = None
 
     def __post_init__(self):
         if not self.key.isidentifier():
             raise ValueError(f"Preset key `{self.key}` must be a valid identifier.")
 
-    @property
-    def parameters_schema(self):
-        """JSON-serializable description of this preset's parameters, for the API and the form."""
-        return [parameter.as_dict() for parameter in self.parameters]
-
     def as_dict(self):
-        return {
-            "key": self.key,
+        """
+        The catalog entry for this preset.
+
+        A condition row refers to it by the `preset` key here, and fills `values` using each parameter's `name`.
+        """
+        described = {
+            "preset": self.key,
             "label": self.label,
             "description": self.description,
-            "parameters_schema": self.parameters_schema,
+            "parameters": [parameter.as_dict() for parameter in self.parameters],
         }
+        if self.example_values is not None:
+            described["example"] = {
+                "type": ConditionTypeChoices.TYPE_PRESET,
+                "preset": self.key,
+                "values": dict(self.example_values),
+            }
+        return described
 
     def clean_values(self, values):
         """
@@ -241,6 +255,7 @@ FIELD_TRANSITION = ConditionPreset(
         PresetParameter(name="from", label="From", help_text="Value the field must have had before the change."),
         PresetParameter(name="to", label="To", help_text="Value the field must have after the change."),
     ),
+    example_values={"field": "status.name", "from": "Staged", "to": "Active"},
 )
 
 FIELD_CHANGED = ConditionPreset(
@@ -255,6 +270,7 @@ FIELD_CHANGED = ConditionPreset(
         " and field_value(snapshots.prechange, param_field) != field_value(snapshots.postchange, param_field)"
     ),
     parameters=(PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD, help_text="Field to watch."),),
+    example_values={"field": "status"},
 )
 
 FIELD_COMPARE = ConditionPreset(
@@ -283,6 +299,7 @@ FIELD_COMPARE = ConditionPreset(
             help_text="Value to compare against. A set of values for `in`, and for `=` on a many-valued field.",
         ),
     ),
+    example_values={"field": "mtu", "operator": "gt", "value": 9000},
 )
 
 USER_IS = ConditionPreset(
@@ -296,6 +313,7 @@ USER_IS = ConditionPreset(
     parameters=(
         PresetParameter(name="username", label="Username", help_text="Username that must have made the change."),
     ),
+    example_values={"username": "nautobot-automation"},
 )
 
 BUILTIN_CONDITION_PRESETS = (
