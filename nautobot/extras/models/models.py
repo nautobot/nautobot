@@ -33,6 +33,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import (
+    ConditionsMixin,
     ContactMixin,
     DataComplianceModelMixin,
     DynamicGroupsModelMixin,
@@ -982,6 +983,7 @@ class UserSavedViewAssociation(BaseModel):
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,
+    ConditionsMixin,
     ContactMixin,
     DynamicGroupsModelMixin,
     NotesMixin,

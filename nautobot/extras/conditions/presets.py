@@ -12,8 +12,7 @@ There is no negated variant of any preset; negation is the condition row's `nega
 
 from dataclasses import dataclass
 
-from django.core.exceptions import ValidationError
-
+from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.operators import FIELD_OPERATORS
 from nautobot.extras.registry import registry
 
@@ -28,13 +27,10 @@ PARAM_KIND_CHOICE = "choice"
 PARAM_CONTEXT_PREFIX = "param_"
 
 
-class ConditionPresetError(ValidationError):
+class ConditionPresetError(ConditionValidationError):
     """Stored values do not fit a preset. `params` names the preset and, where one is at fault, the parameter."""
 
     code = "condition_preset"
-
-    def __init__(self, message, **params):
-        super().__init__(message, code=self.code, params=params)
 
 
 @dataclass(frozen=True)
@@ -165,8 +161,10 @@ class ConditionPreset:
             try:
                 parameter.clean(values.get(parameter.name))
             except ConditionPresetError as error:
+                # `messages`, not `message`: it renders `message % params`, so the text comes back
+                # with any `%` single and this error's constructor doubles it exactly once.
                 raise ConditionPresetError(
-                    f"Preset `{self.key}`: {error.message}", **error.params, preset=self.key
+                    f"Preset `{self.key}`: {' '.join(error.messages)}", **error.params, preset=self.key
                 ) from error
 
     def context_variables(self, values):

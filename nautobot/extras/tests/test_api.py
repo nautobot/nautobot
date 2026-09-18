@@ -3670,6 +3670,24 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
             job_hook.save()
             job_hook.content_types.set([obj_type])
 
+    def test_create_with_conditions(self):
+        """The same field is writable on job hooks; `WebhookTest` covers how it behaves."""
+        # `view_job` as well: the serializer resolves the `job` reference through a permission-restricted queryset.
+        self.add_permissions("extras.add_jobhook", "extras.view_job")
+        conditions = [{"type": "expression", "source": "data.name", "negate": False}]
+        data = {
+            "name": "JobHookConditions",
+            "content_types": ["dcim.consoleport"],
+            "type_create": True,
+            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
+            "enabled": False,
+            "conditions": conditions,
+        }
+
+        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(JobHook.objects.get(name="JobHookConditions").conditions, conditions)
+
     def test_validate_post(self):
         """POST a job hook with values that duplicate another job hook"""
 
@@ -6561,6 +6579,79 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         for webhook in cls.webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
+
+    conditions = [
+        {
+            "type": "preset",
+            "preset": "field_compare",
+            "values": {"field": "mtu", "operator": "gt", "value": 9000},
+            "negate": False,
+        },
+        {"type": "expression", "source": "data.name", "negate": True},
+    ]
+
+    def _webhook_data(self, name, **kwargs):
+        return {
+            "content_types": ["dcim.consoleport"],
+            "name": name,
+            "type_create": True,
+            "payload_url": f"http://example.com/{name}",
+            "http_method": "POST",
+            "http_content_type": "application/json",
+            "ssl_verification": True,
+            **kwargs,
+        }
+
+    def test_create_with_conditions(self):
+        """`conditions` is writable, and is returned and stored exactly as it was sent."""
+        self.add_permissions("extras.add_webhook")
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-conditions", conditions=self.conditions),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["conditions"], self.conditions)
+        self.assertEqual(Webhook.objects.get(name="api-test-conditions").conditions, self.conditions)
+
+    def test_create_without_conditions_stores_an_empty_list(self):
+        """Leaving the field out means the webhook fires on every change of its object types."""
+        self.add_permissions("extras.add_webhook")
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-no-conditions"),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(Webhook.objects.get(name="api-test-no-conditions").conditions, [])
+
+    def test_create_with_a_bad_condition_is_refused_and_the_error_points_at_the_row(self):
+        self.add_permissions("extras.add_webhook")
+        conditions = [self.conditions[0], {"type": "preset", "preset": "no_such_preset"}]
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-bad-condition", conditions=conditions),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Condition 2: ", str(response.data["conditions"][0]))
+        self.assertIn("no_such_preset", str(response.data["conditions"][0]))
+        self.assertFalse(Webhook.objects.filter(name="api-test-bad-condition").exists())
+
+    def test_patching_another_field_leaves_conditions_alone(self):
+        """A PATCH that never mentions `conditions` must not clear what is already stored."""
+        self.add_permissions("extras.change_webhook")
+        webhook = self.webhooks[0]
+        webhook.conditions = self.conditions
+        webhook.save()
+
+        response = self.client.patch(self._get_detail_url(webhook), {"enabled": False}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        webhook.refresh_from_db()
+        self.assertEqual(webhook.conditions, self.conditions)
 
     def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
         """
