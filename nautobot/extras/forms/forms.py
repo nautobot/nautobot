@@ -1761,6 +1761,7 @@ class JobHookForm(BootstrapMixin, forms.ModelForm):
             "type_create",
             "type_update",
             "type_delete",
+            "conditions",
         )
 
     def clean(self):
@@ -2880,6 +2881,7 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
             "type_create",
             "type_update",
             "type_delete",
+            "conditions",
             "payload_url",
             "http_method",
             "http_content_type",

@@ -236,6 +236,40 @@ class ComputedFieldSerializer(ValidatedModelSerializer, NotesSerializerMixin):
 
 
 #
+# Condition presets
+#
+
+
+class ConditionPresetParameterChoiceSerializer(serializers.Serializer):
+    """One value a `choice` preset parameter accepts."""
+
+    value = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+
+
+class ConditionPresetParameterSerializer(serializers.Serializer):
+    """One parameter a condition preset takes from the user."""
+
+    name = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+    kind = serializers.CharField(read_only=True)
+    required = serializers.BooleanField(read_only=True)
+    multiple = serializers.BooleanField(read_only=True)
+    help_text = serializers.CharField(read_only=True)
+    choices = ConditionPresetParameterChoiceSerializer(many=True, read_only=True, required=False)
+
+
+class ConditionPresetSerializer(serializers.Serializer):
+    """Serializer used for responses from the condition preset catalog endpoint."""
+
+    preset = serializers.CharField(read_only=True)
+    label = serializers.CharField(read_only=True)
+    description = serializers.CharField(read_only=True)
+    parameters = ConditionPresetParameterSerializer(many=True, read_only=True)
+    example = serializers.JSONField(read_only=True, required=False)
+
+
+#
 # Config contexts
 #
 

@@ -5,20 +5,19 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
-from django.core.exceptions import ValidationError
-
 from nautobot.extras.choices import ConditionTypeChoices
+from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.expressions import compile_condition, ConditionError
 from nautobot.extras.conditions.presets import ConditionPreset, get_condition_preset
 
 
-class ConditionRowError(ValidationError):
-    """A stored condition row is malformed. `params["key"]` names the row key at fault."""
+class ConditionRowError(ConditionValidationError):
+    """A stored condition row is incorrectly formed. `params["key"]` names the row key at fault."""
 
     code = "condition_row"
 
     def __init__(self, message, key):
-        super().__init__(message, code=self.code, params={"key": key})
+        super().__init__(message, key=key)
 
 
 @dataclass(frozen=True)
@@ -96,9 +95,8 @@ class ExpressionRow(ConditionRow):
             raise ConditionRowError("An expression row needs a non-empty `source`.", key="source")
         for delimiter in ("{{", "{%"):
             if delimiter in source:
-                # Django interpolates `message % params`, so the `%` in `{%` has to be doubled.
                 raise ConditionRowError(
-                    f"A condition is a bare expression, not a template: remove the `{delimiter.replace('%', '%%')}`.",
+                    f"A condition is a bare expression, not a template: remove the `{delimiter}`.",
                     key="source",
                 )
         return cls(source=source, negate=negate)

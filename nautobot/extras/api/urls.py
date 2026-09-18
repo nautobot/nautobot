@@ -13,6 +13,9 @@ router.register("approval-workflow-stages", views.ApprovalWorkflowStageViewSet)
 # Computed Fields
 router.register("computed-fields", views.ComputedFieldViewSet)
 
+# Condition presets
+router.register("condition-presets", views.ConditionPresetsViewSet, basename="condition-preset")
+
 # Config contexts
 router.register("config-contexts", views.ConfigContextViewSet)
 
