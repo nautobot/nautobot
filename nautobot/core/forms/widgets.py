@@ -233,12 +233,16 @@ class ExportFieldSelect(SelectMultipleOrderable):
         "Clear" is the way back to exporting every field, that being what an empty selection means. It is
         disabled while there is nothing to clear, so it also reads as whether anything is selected.
         """
+        # The `hx-params="not ...."` blocks inheriting the named hx-vals from the enclosing form.
+        # This is needed because `hx-vals` inheritance is not affected by `htmx.config.disableInheritance = true` in
+        # HTMX 2.0 -- see https://github.com/bigskysoftware/htmx/issues/1119
         buttons = format_html(
             """
             <div class="d-flex justify-content-start mb-6">
                 <button type="button" class="btn btn-secondary"
                         hx-get="{url}" hx-target="#{wrapper}" hx-swap="innerHTML" hx-include="{include}"
-                        hx-vals='{{"use_current_view": "1"}}'
+                        hx-params="not query_string,job_modal_button,job_form_modal,job_result_key,run_button_label,refresh_on_close_if_done,advanced_fields,_schedule_type"
+                        hx-vals='{{"use_current_view": "1", "content_type": "{content_type}"}}'
                         title="Replace the selection with the columns this type's list view is configured to display"
                 ><span class="mdi mdi-table-eye me-4" aria-hidden="true"></span>Match the list view</button>
                 <button type="button" class="btn btn-secondary ms-6 export-fields-clear"{disabled}
@@ -250,6 +254,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
             wrapper=self.WRAPPER_ID,
             disabled=format_html(" disabled") if not has_selection else "",
             include=self.context_field_selector,
+            content_type=self.content_type.pk,
         )
         # Inline text, so joined without a break: a newline here would be a space in the output.
         legend = format_html(
