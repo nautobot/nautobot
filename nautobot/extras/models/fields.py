@@ -3,6 +3,7 @@
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
+from nautobot.core.forms import fields
 from nautobot.extras.conditions.validation import validate_conditions
 
 
@@ -24,6 +25,10 @@ class ConditionsField(models.JSONField):
             "of the selected object type(s) passes."
         )
         super().__init__(*args, **kwargs)
+
+    def formfield(self, **kwargs):
+        """Render with `core.forms.fields.JSONField`, which shows an empty value as empty, not as `null`."""
+        return super().formfield(**{"form_class": fields.JSONField, **kwargs})  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
     def validate(self, value, model_instance):
         """
