@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection
 from django.test import TestCase
@@ -26,9 +27,15 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPanel,
     PowerPort,
+    Rack,
     RearPort,
 )
-from nautobot.dcim.tables import ConsoleConnectionTable, InterfaceConnectionTable, PowerConnectionTable
+from nautobot.dcim.tables import (
+    ConsoleConnectionTable,
+    InterfaceConnectionTable,
+    LocationTable,
+    PowerConnectionTable,
+)
 from nautobot.dcim.tables.devices import DeviceModuleInterfaceTable, InterfaceTable
 from nautobot.dcim.tables.devicetypes import InterfaceTemplateTable
 from nautobot.dcim.views import (
@@ -608,3 +615,99 @@ class ConnectionTableTestCase(TestCase):
             Cable.objects.create(termination_a=near, termination_b=far, status=self.connected)
 
         self._assert_render_has_no_n_plus_one(InterfaceConnectionTable, InterfaceConnectionsListView.base_queryset())
+
+
+class LocationCountColumnTestCase(TestCase):
+    """Render tests for the Devices / Racks count columns on `LocationTable`.
+
+    These columns are not in `default_columns`, and `BaseTable` only annotates the count onto the
+    queryset for columns that are *visible*. The table is therefore instantiated with a user whose
+    table config enables them, which is what the list view does, so these tests fail if either the
+    column definitions or that annotation regress.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(username="location-count-columns")
+        cls.user.set_config(
+            "tables.LocationTable.columns",
+            ["name", "device_count", "rack_count"],
+            commit=True,
+        )
+
+        location_status = Status.objects.get_for_model(Location).first()
+        cls.location_type = LocationType.objects.create(name="Count Column Location Type")
+        cls.location_type.content_types.set(
+            [
+                ContentType.objects.get_for_model(Device),
+                ContentType.objects.get_for_model(Rack),
+            ]
+        )
+
+        cls.location_many = Location.objects.create(
+            name="Count Column Many", location_type=cls.location_type, status=location_status
+        )
+        cls.location_one = Location.objects.create(
+            name="Count Column One", location_type=cls.location_type, status=location_status
+        )
+        cls.location_none = Location.objects.create(
+            name="Count Column None", location_type=cls.location_type, status=location_status
+        )
+
+        manufacturer = Manufacturer.objects.create(name="Count Column Manufacturer")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Count Column Device Type")
+        device_role = Role.objects.get_for_model(Device).first()
+        device_status = Status.objects.get_for_model(Device).first()
+        rack_status = Status.objects.get_for_model(Rack).first()
+
+        for index in range(2):
+            Device.objects.create(
+                name=f"count-column-device-{index}",
+                device_type=device_type,
+                role=device_role,
+                status=device_status,
+                location=cls.location_many,
+            )
+            Rack.objects.create(
+                name=f"count-column-rack-{index}",
+                status=rack_status,
+                location=cls.location_many,
+            )
+
+        cls.only_device = Device.objects.create(
+            name="count-column-lonely-device",
+            device_type=device_type,
+            role=device_role,
+            status=device_status,
+            location=cls.location_one,
+        )
+
+    def _row_for(self, location) -> BoundRow:
+        """Bound row for `location`, with the count columns made visible via the user's table config."""
+        table = LocationTable(Location.objects.filter(pk=location.pk), user=self.user)
+        return table.rows[0]
+
+    def test_counts_are_rendered_and_linked(self):
+        row = self._row_for(self.location_many)
+
+        device_cell = row.get_cell("device_count")
+        self.assertIn(">2<", device_cell)
+        self.assertIn(f"{reverse('dcim:device_list')}?location={self.location_many.pk}", device_cell)
+
+        rack_cell = row.get_cell("rack_count")
+        self.assertIn(">2<", rack_cell)
+        self.assertIn(f"{reverse('dcim:rack_list')}?location={self.location_many.pk}", rack_cell)
+
+    def test_single_related_object_is_rendered_instead_of_a_count(self):
+        """`LinkedCountColumn` renders the object itself when exactly one related object exists."""
+        row = self._row_for(self.location_one)
+
+        device_cell = row.get_cell("device_count")
+        self.assertIn(self.only_device.name, device_cell)
+        self.assertIn(self.only_device.get_absolute_url(), device_cell)
+
+    def test_locations_without_related_objects_render_the_column_default(self):
+        row = self._row_for(self.location_none)
+
+        self.assertNotIn(reverse("dcim:device_list"), row.get_cell("device_count"))
+        self.assertNotIn(reverse("dcim:rack_list"), row.get_cell("rack_count"))

@@ -5,6 +5,7 @@ from nautobot.core.tables import (
     BooleanColumn,
     ButtonsColumn,
     ContentTypesColumn,
+    LinkedCountColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -57,6 +58,16 @@ class LocationTable(StatusTableMixin, BaseTable):
     location_type = tables.Column(linkify=True)
     parent = tables.Column(linkify=True)
     tenant = TenantColumn()
+    device_count = LinkedCountColumn(
+        viewname="dcim:device_list",
+        url_params={"location": "pk"},
+        verbose_name="Devices",
+    )
+    rack_count = LinkedCountColumn(
+        viewname="dcim:rack_list",
+        url_params={"location": "pk"},
+        verbose_name="Racks",
+    )
     tags = TagColumn(url_name="dcim:location_list")
     actions = ButtonsColumn(Location)
 
@@ -80,6 +91,8 @@ class LocationTable(StatusTableMixin, BaseTable):
             "contact_name",
             "contact_phone",
             "contact_email",
+            "device_count",
+            "rack_count",
             "tags",
             "actions",
         )
