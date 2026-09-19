@@ -55,6 +55,11 @@ invoke playwright --marker behavioral        # output-correctness tests only
 invoke playwright --marker "not behavioral"  # fast structural pass
 ```
 
+Every browser context sends the `X-Disable-Debug-Toolbar` request header, which the
+development configuration reads to keep `django-debug-toolbar` off the page. Without it the
+toolbar's expanded panel covers the filter button on list views and clicks time out. A
+page opened in your own browser still shows the toolbar.
+
 `invoke playwright` runs pytest with `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` and enables
 only the intended plugins explicitly (`-p playwright -p base_url`). Nothing runs in
 the test process unless it was named. Traces and screenshots are captured for failed
