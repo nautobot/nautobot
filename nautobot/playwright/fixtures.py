@@ -34,8 +34,7 @@ PLAYWRIGHT_DEFAULT_USERNAME = "admin"
 PLAYWRIGHT_DEFAULT_PASSWORD = "admin"  # noqa: S105
 PLAYWRIGHT_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
 
-# The development config reads this header and keeps django-debug-toolbar off the page.
-# Its expanded panel covers the right edge of every list view, filter button included.
+# Sent on every browser context; the development config reads it and leaves the debug toolbar off.
 DISABLE_DEBUG_TOOLBAR_HEADERS = {"X-Disable-Debug-Toolbar": "1"}
 
 

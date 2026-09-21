@@ -26,13 +26,9 @@ data:
             INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
         if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
             MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
-        # By default the toolbar only displays when the request is coming from one of INTERNAL_IPS.
-        # For the Docker dev environment, we don't know in advance what that IP may be, so override to skip that check.
-        # Show the debug toolbar unless the client opted out (e.g. Playwright, curl, load tests) via the
-        # X-Disable-Debug-Toolbar request header. It can also be disabled by setting
-        # NAUTOBOT_SHOW_DJDT_TOOLBAR in the environment to a falsy value. Enabled by default.
-        # The header name is relied on by nautobot.playwright and app test suites built on it.
-        # Parsed once here so an unrecognised value fails at startup, not inside the middleware on every request.
+        # Skip the INTERNAL_IPS check; the Docker dev IP is not known in advance.
+        # Show the toolbar unless the request carries X-Disable-Debug-Toolbar (nautobot.playwright sends it)
+        # or NAUTOBOT_SHOW_DJDT_TOOLBAR is falsy. Parsed once so a bad value fails at startup.
         _show_djdt_toolbar = is_truthy(os.getenv("NAUTOBOT_SHOW_DJDT_TOOLBAR", "true"))
         DEBUG_TOOLBAR_CONFIG = {
             "SHOW_TOOLBAR_CALLBACK": lambda request: (
