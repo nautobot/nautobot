@@ -729,7 +729,7 @@ $s2bs5-clear-hover-bg:  transparent escape-svg($s2bs5-clear-icon) center / $s2bs
       transform: none;
 
       &:hover {
-        background: var(--#{$prefix}secondary-border-subtle);
+        background: var(--#{$prefix}border-color);
       }
     }
   }
