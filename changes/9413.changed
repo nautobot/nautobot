@@ -1,0 +1,1 @@
+Changed `User.set_config()` and `User.clear_config()` to do nothing while `MAINTENANCE_MODE` is enabled, so user preferences are not saved in that mode.
