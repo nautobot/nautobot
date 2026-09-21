@@ -34,6 +34,10 @@ PLAYWRIGHT_DEFAULT_USERNAME = "admin"
 PLAYWRIGHT_DEFAULT_PASSWORD = "admin"  # noqa: S105
 PLAYWRIGHT_DEFAULT_API_TOKEN = "0123456789abcdef0123456789abcdef01234567"  # noqa: S105
 
+# The development config reads this header and keeps django-debug-toolbar off the page.
+# Its expanded panel covers the right edge of every list view, filter button included.
+DISABLE_DEBUG_TOOLBAR_HEADERS = {"X-Disable-Debug-Toolbar": "1"}
+
 
 @pytest.fixture(scope="session")
 def base_url(pytestconfig):
@@ -58,7 +62,7 @@ def auth_state_path(browser, base_url, tmp_path_factory):
     username = os.getenv("NAUTOBOT_PLAYWRIGHT_USERNAME", PLAYWRIGHT_DEFAULT_USERNAME)
     password = os.getenv("NAUTOBOT_PLAYWRIGHT_PASSWORD", PLAYWRIGHT_DEFAULT_PASSWORD)
     state_file = tmp_path_factory.mktemp("auth") / "session.json"
-    context = browser.new_context(base_url=base_url)
+    context = browser.new_context(base_url=base_url, extra_http_headers=DISABLE_DEBUG_TOOLBAR_HEADERS)
     page = context.new_page()
     try:
         log_in(page, username, password)
@@ -80,9 +84,7 @@ def browser_context_args(browser_context_args, base_url, auth_state_path):
     flags such as `--headed`, `--slowmo`, `--screenshot`, and `--tracing` keep
     working with no extra wiring.
     """
-    # The development config reads this header and keeps django-debug-toolbar off the page.
-    # Its expanded panel covers the right edge of every list view, filter button included.
-    headers = {**browser_context_args.get("extra_http_headers", {}), "X-Disable-Debug-Toolbar": "1"}
+    headers = {**browser_context_args.get("extra_http_headers", {}), **DISABLE_DEBUG_TOOLBAR_HEADERS}
     return {
         **browser_context_args,
         "base_url": base_url,

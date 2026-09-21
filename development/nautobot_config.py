@@ -29,10 +29,11 @@ if DEBUG:
     # X-Disable-Debug-Toolbar request header. It can also be disabled by setting
     # NAUTOBOT_SHOW_DJDT_TOOLBAR in the environment to a falsy value. Enabled by default.
     # The header name is relied on by nautobot.playwright and app test suites built on it.
+    # Parsed once here so an unrecognised value fails at startup, not inside the middleware on every request.
+    _show_djdt_toolbar = is_truthy(os.getenv("NAUTOBOT_SHOW_DJDT_TOOLBAR", "true"))
     DEBUG_TOOLBAR_CONFIG = {
         "SHOW_TOOLBAR_CALLBACK": lambda request: (
-            not request.headers.get("X-Disable-Debug-Toolbar")
-            and is_truthy(os.getenv("NAUTOBOT_SHOW_DJDT_TOOLBAR", "true"))
+            _show_djdt_toolbar and not request.headers.get("X-Disable-Debug-Toolbar")
         ),
     }
 
