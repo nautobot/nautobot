@@ -65,9 +65,6 @@
                             {% job_import_button content_type list_element=True%}
                         {% endblock import_list_element %}
                     {% endif %}
-                    {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
-                        <li class="dropdown-divider"></li>
-                    {% endif %}
                     {% if 'export' in action_buttons %}
                         {% block export_list_element %}
                             {% export_button content_type list_element=True %}
@@ -192,6 +189,8 @@
         {% saved_view_modal request.GET.urlencode list_url model request %}
     {% endif %}
     {% dynamic_group_assignment_modal request=request content_type=content_type %}
+    {# Shared modal shell used by the HTMX job-modal framework (e.g. the Export job form). #}
+    {% include 'inc/generic_modal.html' %}
 {% endblock %}
 
 {% block drawer %}

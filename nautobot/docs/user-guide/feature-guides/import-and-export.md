@@ -11,7 +11,9 @@ These actions are backed by the built-in system Jobs `Export Object List` and `I
 
 ## Exporting
 
-From any supported object list view, choose **Export to file** from the **Actions** menu. A modal dialog will open, allowing you to choose the export file format, optionally pick and order the object fields ("id", "name", etc.) to include or exclude from the export, optionally apply filtering/sorting criteria to scope the export's content. When the Job finishes, you will be presented with the option to download the resulting file.
+From any supported object list view, choose **Export to file** from the **Actions** menu. A modal dialog will open, allowing you to choose the export file format, optionally pick and order the object fields ("id", "name", etc.) to include or exclude from the export, and optionally apply filtering/sorting criteria to scope the export's content. When the Job finishes, you will be presented with the option to download the resulting file.
+
+The same inputs are available on the `Export Object List` Job's own form, if you would rather start from **Jobs** than from a list view.
 
 ### Choosing an export format
 
@@ -122,7 +124,13 @@ while in JSON or YAML it's a list of nested objects:
 
 ### Selecting fields to export
 
-By default an export includes every field of the object type. In the **Export to file** dialog you can instead pick the specific fields you want and put them in the order you want them to appear. The `Export Object List` Job offers the same capability through its **Fields to Export** (`export_fields`) parameter, which takes a comma-separated list:
+By default an export includes every field of the object type. **Fields to Export** (`export_fields`) lets you instead pick the specific fields you want and put them in the order you want them to appear.
+
+In the browser this is a list of checkboxes, on both the **Export to file** dialog and the Job's own form. Check a field to include it, and drag a row by its handle to move it: the order of the rows is the order of the columns. The fields of a related object are nested inside that object's row and are shown by the chevron at the right of it; a nested field moves with its parent rather than on its own. Leaving everything unchecked exports every field, as usual, and **Clear** empties the selection to get back to that. A field marked `*` is one an import requires to create new records, so a selection that omits it cannot be imported back as new objects (see [Effect on re-importing the file](#effect-on-re-importing-the-file)). Only the object's own fields are ever marked: an import looks a related object up by what you exported of it rather than creating one, so what *that* object would require to be created has no bearing on your file.
+
+Selecting a related object and selecting a field inside it are mutually exclusive, since they ask for different columns: checking one clears the other. A related object whose own fields are selected, but which is not itself selected, is shown with a dash rather than a check.
+
+Everywhere else - the REST API, a scheduled Job, or `nautobot-server export_objects` - the same parameter takes a comma-separated list:
 
 ```no-highlight
 model,manufacturer__name,u_height
@@ -149,7 +157,7 @@ Many-to-many fields, such as `tags`, can be selected like any other field, but c
 
 #### Selecting custom fields
 
-Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once.
+Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once. In the picker the individual custom fields are nested inside **custom_fields**, which is the last row of the list, since selecting it asks for everything the individual entries ask for one at a time - and keeps asking for it as custom fields are added later.
 
 In a CSV export both spellings produce one `cf_<key>` column per selected custom field, exactly as an unrestricted export does. In JSON and YAML exports, `custom_fields` keeps the nested dictionary, while an individual `cf_<key>` selection is emitted as a top-level key instead, since a single custom field cannot be named inside the dictionary:
 
@@ -170,6 +178,8 @@ The Job fails, with an error naming the entry at fault, rather than quietly writ
 - traverses more than three relations in a single path
 - names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
 
+The picker does not pre-empt these rules; it offers the field graph of the object type as the data model defines it. Two differences follow. It lists one relation less deep than a path may traverse, so a deeper path is available by typing it even though no checkbox offers it. And it does not hide the fields of a related model you lack permission for, so selecting one fails when the export runs, with the error above, rather than silently going missing from the list.
+
 #### Effect on re-importing the file
 
 A file containing only some of an object type's fields may not contain enough information to identify the objects it describes. When the selected fields do not cover every field of the model's match key, the `match_fields` metadata is therefore omitted from the export (see [The self-describing file](#the-self-describing-file)), as in the `model,manufacturer__name` example above had `manufacturer__name` been left out.
@@ -180,7 +190,7 @@ Such a file can still be imported - you just have to say what to match on, eithe
 
 An export always covers the same objects, in the same order, as the list view it was launched from. Exporting from a filtered, sorted view therefore gives you a file of exactly the rows you were looking at, and exporting from an unfiltered view gives you every object of that type in its default order.
 
-The `Export Object List` Job expresses that view through its **Filterset Parameters** (`query_string`) input, which takes the view's URL query string:
+The `Export Object List` Job expresses that view through its **Filter Parameters** (`query_string`) input, which takes the view's URL query string:
 
 ```no-highlight
 status=active&location=ams01&sort=-name
@@ -196,15 +206,17 @@ A sort on something the database cannot order by - a column computed for display
 
 ### Exporting the columns you are looking at
 
-Selecting **Use Current View Columns** (`use_current_view_columns`) defaults the exported fields to the columns the corresponding list view is currently displaying: those of the saved view in use, if any, otherwise the ones you have configured for yourself through the table's **Configure Table** dialog, otherwise the table's default columns.
+**Match the list view**, the button above the field picker, fills the selection in with the columns the list view is displaying, in the order it displays them: those of the saved view in use, if any, otherwise the ones you have configured for yourself through the table's **Configure Table** dialog, otherwise the table's default columns. Because it fills in the picker rather than the export itself, you can see what you are about to get and then reorder or prune it before running the export.
 
-This is only a default for [**Fields to Export**](#selecting-fields-to-export). Naming fields explicitly takes precedence, and the option has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
+The button is the whole of this feature: the export itself takes nothing but an explicit list of fields, so what it fills in is an ordinary [**Fields to Export**](#selecting-fields-to-export) selection that you can then edit. Where there is no picker in front of you - the REST API, a scheduled Job, `nautobot-server export_objects` - name the fields you want instead. That is worth preferring anyway for anything repeated or automated, since it says what the file will contain rather than depending on how somebody's table happens to be configured when the export runs.
+
+A field selection has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
 
 Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts are values assembled for display rather than fields of the record.
 
 A count column is *about* a relation, though, so where the relation itself is exportable the export carries that instead of the count: exporting a Prefix list view whose **VRFs** column shows a count of 3 gives you a `vrfs` column naming those three VRFs. Where the relation is not something an export can carry - a count of Devices in a Location, say, or of Dynamic Groups an object belongs to - the column is left out.
 
-Every column left out is logged, so the file never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, the export warns and falls back to including every field.
+Every column left out is named beneath the button, so the selection never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, nothing is filled in - which is the selection that exports every field.
 
 ## The self-describing file
 

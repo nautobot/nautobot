@@ -599,6 +599,33 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 - `min_prefix_length` - Minimum length of the mask
 - `max_prefix_length` - Maximum length of the mask
 
+### Variables That Depend on Another Variable
+
++++ 3.3.0
+
+A variable's form field is built from the Job class before any input exists, so a field whose choices depend on *what another variable is set to* cannot populate them itself. If a form field defines a `configure_for_form(form, name)` method, the Job form calls it once the form has been assembled, passing itself and the name the field has in it. That is the point at which the sibling variable's value is readable.
+
+Read the sibling from `form.data` when the form is bound (the user has submitted something) and from `form.initial` when it is not (the form is being rendered for the first time), remembering that a bound form's keys may carry a prefix:
+
+```python
+from django import forms
+
+
+class SiteFieldsField(forms.MultipleChoiceField):
+    def configure_for_form(self, form, name):
+        location = None
+        if form.is_bound:
+            location = form.data.get(form.add_prefix("location"))
+        if not location:
+            location = form.initial.get("location")
+        self.choices = choices_for_location(location) if location else []
+```
+
+Two limits are worth knowing before relying on this:
+
+- **The form has no request, and so no user.** `BaseJob.as_form()` is given only data, files and initial. Anything that depends on who is asking - object permissions, a user's saved preferences - cannot be resolved here, and belongs in a view instead.
+- **Rebuilding the field after the form is on screen is your own job.** `configure_for_form()` runs when the form is built, so changing the sibling variable in the browser does not by itself rebuild anything. Nautobot's own export field picker handles this by fetching the field again from a small view and swapping it into place; see `ExportFieldsChoiceField` and `ExportFieldsPickerView`.
+
 ## Special Methods
 
 Special methods allow you to manage the execution lifecycle of a Job, providing hooks to run code at critical points such as initialization, successful execution, or error handling. Implementing these methods can improve robustness, debugging, and reliability of Jobs.
