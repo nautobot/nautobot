@@ -1,0 +1,1 @@
+Fixed an HTTP 500 error when viewing pages that save a user preference, such as the home page, while `MAINTENANCE_MODE` is enabled and the database is read-only.

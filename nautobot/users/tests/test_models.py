@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import date, timedelta
 from unittest import mock
 
@@ -125,6 +126,28 @@ class UserConfigTest(ModelTestCases.BaseModelTestCase):
 
         # Clear a non-existing value; should fail silently
         self.user.clear_config("invalid")
+
+    def test_config_writes_are_skipped_in_maintenance_mode(self):
+        """While MAINTENANCE_MODE is enabled the database may be read-only, so config writes must not happen."""
+        self.user.set_config("maintenance.existing", 101, commit=True)
+        self.assertEqual(
+            self.user.get_config("maintenance.existing"),
+            101,
+            "the key this test relies on was not created, so the cases below would prove nothing",
+        )
+        unchanged = deepcopy(self.user.config_data)
+
+        for description, write in (
+            ("overwrite an existing key", lambda: self.user.set_config("maintenance.existing", 999, commit=True)),
+            ("add a new key", lambda: self.user.set_config("maintenance.added", 1, commit=True)),
+            ("clear an existing key", lambda: self.user.clear_config("maintenance.existing", commit=True)),
+        ):
+            with self.subTest(description):
+                with override_settings(MAINTENANCE_MODE=True):
+                    write()
+                self.assertEqual(self.user.config_data, unchanged, "config_data was modified in memory")
+                self.user.refresh_from_db()
+                self.assertEqual(self.user.config_data, unchanged, "config_data was written to the database")
 
 
 @override_settings(PLUGINS=["nautobot_version_control"])
