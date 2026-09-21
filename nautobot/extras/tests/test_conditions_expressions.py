@@ -2,7 +2,7 @@
 
 from django.test import SimpleTestCase, tag
 
-from nautobot.extras.conditions.expressions import compile_condition, ConditionError
+from nautobot.extras.conditions.expressions import _environment, compile_condition, ConditionError
 
 
 @tag("unit")
@@ -44,3 +44,7 @@ class CompileConditionTest(SimpleTestCase):
             with self.subTest(length=len(source)):
                 with self.assertRaises(ConditionError):
                     compile_condition(source)
+
+    def test_the_optimizer_stays_off(self):
+        """Turning it back on changes no result, which is exactly why the setting needs a test."""
+        self.assertFalse(_environment().optimized)

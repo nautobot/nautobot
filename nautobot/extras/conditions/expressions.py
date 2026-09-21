@@ -39,9 +39,13 @@ def _environment():
     Filters, tests and globals are Nautobot's, so an expression sees what a webhook template sees.
     `ChainableUndefined` makes a missing value anywhere in a dotted lookup (`snapshots.postchange.status`
     on a delete) falsy rather than an error.
+
+    The optimizer is off: it evaluates literal arithmetic while compiling, so a short source could
+    allocate a great deal of memory just by being saved. Folding only pre-computes a subexpression, so
+    leaving it out changes nothing about what an expression evaluates to.
     """
     nautobot_environment = engines["jinja"].env
-    environment = ConditionEnvironment(undefined=ChainableUndefined)
+    environment = ConditionEnvironment(undefined=ChainableUndefined, optimized=False)
     environment.filters.update(nautobot_environment.filters)
     environment.tests.update(nautobot_environment.tests)
     environment.globals.update(nautobot_environment.globals)
