@@ -162,7 +162,7 @@ class ConditionPreset:
             raise ConditionPresetError(f"Preset `{self.key}` values must be a mapping.", preset=self.key)
 
         known = {parameter.name for parameter in self.parameters}
-        unknown = sorted(set(values) - known)
+        unknown = sorted(str(name) for name in set(values) - known)
         if unknown:
             raise ConditionPresetError(
                 f"Preset `{self.key}` does not accept parameter(s): {', '.join(unknown)}. "

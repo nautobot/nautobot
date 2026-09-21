@@ -62,10 +62,14 @@ def compile_condition(source):
         (callable): `compiled(**context)` evaluates the expression and returns its value.
 
     Raises:
-        ConditionError: If the source is not a valid Jinja2 expression. Failed compilations are not
-            cached, so a corrected source compiles fresh.
+        ConditionError: If the source is not a valid Jinja2 expression, or is too deeply nested for
+            the parser. Failed compilations are not cached, so a corrected source compiles fresh.
     """
     try:
         return _environment().compile_expression(source, undefined_to_none=False)
     except TemplateSyntaxError as error:
         raise ConditionError(f"Invalid condition expression: {error}") from error
+    except RecursionError as error:
+        # Jinja2 parses by recursive descent, so nesting or sheer length exhausts the stack on a source
+        # short enough to arrive in one request.
+        raise ConditionError("Condition expression is too long or too deeply nested to compile.") from error

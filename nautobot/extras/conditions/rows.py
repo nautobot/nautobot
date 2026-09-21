@@ -55,7 +55,8 @@ class ConditionRow(ABC):
     @classmethod
     def _common_fields(cls, row):
         """Check the keys a row of this type may carry and return its `negate`."""
-        unknown = sorted(set(row) - cls._allowed_keys)
+        # `str()` because a row built in Python, unlike one parsed from JSON, can be keyed by anything.
+        unknown = sorted(str(key) for key in set(row) - cls._allowed_keys)
         if unknown:
             raise ConditionRowError(f"Condition row does not accept key(s): {', '.join(unknown)}.", key=unknown[0])
         negate = row.get("negate", False)
@@ -130,15 +131,19 @@ class PresetRow(ConditionRow):
     @classmethod
     def from_dict(cls, row):
         negate = cls._common_fields(row)
-        preset = get_condition_preset(row.get("preset"))
+        key = row.get("preset")
+        # Checked before the lookup: the registry is a dict, so an unhashable key raises rather than misses.
+        if not isinstance(key, str) or not key.strip():
+            raise ConditionRowError("A preset row needs a non-empty `preset`.", key="preset")
+        preset = get_condition_preset(key)
         if preset is None:
-            raise ConditionRowError(f"Unknown condition preset `{row.get('preset')}`.", key="preset")
+            raise ConditionRowError(f"Unknown condition preset `{key}`.", key="preset")
         values = row.get("values")
         if values is None:
             values = {}
         if not isinstance(values, dict):
             raise ConditionRowError(f"`values` must be a mapping, not {type(values).__name__}.", key="values")
-        unknown = sorted(set(values) - {parameter.name for parameter in preset.parameters})
+        unknown = sorted(str(name) for name in set(values) - {parameter.name for parameter in preset.parameters})
         if unknown:
             raise ConditionRowError(
                 f"Preset `{preset.key}` does not accept value(s): {', '.join(unknown)}.", key="values"

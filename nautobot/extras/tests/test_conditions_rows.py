@@ -96,7 +96,20 @@ class ExpressionShapeTest(RowsTestCase):
 class PresetShapeTest(RowsTestCase):
     def test_unknown_preset_rejected(self):
         self.assertRowError({"type": "preset", "preset": "no_such"}, "preset", "Unknown condition preset `no_such`")
-        self.assertRowError({"type": "preset"}, "preset", "Unknown condition preset `None`")
+        self.assertRowError({"type": "preset"}, "preset", "needs a non-empty `preset`")
+
+    def test_keys_that_are_not_strings_are_named_rather_than_crashing(self):
+        """A row built in Python, unlike one parsed from JSON, can be keyed by anything."""
+        self.assertRowError({"type": "expression", "source": "data.name", 5: 1}, "5", "does not accept key(s)")
+        self.assertRowError(
+            {"type": "preset", "preset": "field_compare", "values": {5: 1, "b": 2}}, "values", "does not accept value"
+        )
+
+    def test_preset_must_be_a_non_empty_string(self):
+        """A dict lookup raises on an unhashable key, so the type is checked before the registry is asked."""
+        for preset in (None, "", "   ", 5, [], {}, ["field_compare"]):
+            with self.subTest(preset=preset):
+                self.assertRowError({"type": "preset", "preset": preset}, "preset", "needs a non-empty `preset`")
 
     def test_values_must_be_a_mapping(self):
         self.assertRowError({**PRESET, "values": ["mtu"]}, "values", "`values` must be a mapping")

@@ -37,3 +37,10 @@ class CompileConditionTest(SimpleTestCase):
             with self.assertRaises(ConditionError):
                 compile_condition("data.mtu >")
         self.assertEqual(compile_condition.cache_info().misses, misses_before + 2)
+
+    def test_a_source_too_deep_for_the_parser_is_a_condition_error(self):
+        """Jinja2 parses by recursive descent, and a short string can still exhaust the stack."""
+        for source in ("(" * 200 + "1" + ")" * 200, "1" + "+1" * 50000):
+            with self.subTest(length=len(source)):
+                with self.assertRaises(ConditionError):
+                    compile_condition(source)
