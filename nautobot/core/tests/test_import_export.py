@@ -1,7 +1,8 @@
-"""Tests for the CSV/JSON/YAML export format and the `ExportObjectList` job that writes it.
+"""Tests for the CSV/JSON/YAML import/export format and the `ExportObjectList` / `ImportObjects` jobs.
 
-Job-backed tests subclass `ImportExportJobTestCase`, which supplies `run_export()` plus helpers to read
-the produced file back (`export_text` / `export_lines` / `export_rows` / `export_document`).
+Job-backed tests subclass `ImportExportJobTestCase`, which supplies `run_export()` and `run_import()`
+plus helpers to read the produced file back (`export_text` / `export_lines` / `export_rows` /
+`export_document`).
 
 The serializer-level natural-key machinery this builds on is tested in `test_csv.py`; the job's
 permission, saved-view and export-template behavior is in `test_jobs.ExportObjectListTest`.
@@ -72,6 +73,8 @@ from nautobot.dcim.models import (
 from nautobot.extras.api.serializers import ObjectChangeSerializer, StatusSerializer
 from nautobot.extras.choices import CustomFieldTypeChoices, JobResultStatusChoices, LogLevelChoices
 from nautobot.extras.models import (
+    Contact,
+    ContactAssociation,
     CustomField,
     ExportTemplate,
     FileProxy,
@@ -395,7 +398,7 @@ class DirectiveRowTests(SimpleTestCase):
 
 
 class ImportExportJobTestCase(TransactionTestCase):
-    """Shared fixtures + the setup→run→assert cadence for the ExportObjectList job."""
+    """Shared fixtures + the setup→run→assert cadence for the ExportObjectList and ImportObjects jobs."""
 
     databases = ("default", "job_logs")
 
@@ -552,6 +555,12 @@ class ImportExportJobTestCase(TransactionTestCase):
     def run_import(
         self, csv_data=None, *, model=Status, expected_status=JobResultStatusChoices.STATUS_SUCCESS, **kwargs
     ):
+        """Run ImportObjects and assert its status.
+
+        Unlike `run_export`, this does *not* assert the absence of warnings: several import paths log a
+        warning as part of their expected behavior (rollback, "no objects were created"), so a test that
+        cares asserts `assertNoIssues()` itself.
+        """
         if csv_data is not None:
             kwargs["csv_data"] = csv_data
         job_result = create_job_result_and_run_job(
@@ -2520,3 +2529,218 @@ class ImportAdapterTests(ImportExportJobTestCase):
         yaml_data = "\n".join(["- name: test_yaml_bare_status", "  color: '334455'", "  content_types: [dcim.device]"])
         self.run_import(yaml_data, import_format="yaml")
         self.assertTrue(Status.objects.filter(name="test_yaml_bare_status", color="334455").exists())
+
+    def test_adapter_import__bom_with_related_objects(self):
+        """A utf-8-with-BOM file whose columns include FK references imports successfully (#5812, #5985).
+
+        The BOM has to be stripped before the *header* row is read, or `serial` comes back as
+        `﻿serial` and every row silently loses its first column.
+        """
+        status = Status.objects.get(name="Active")
+        manufacturer = Manufacturer.objects.create(name="BOM Cisco Manufacturer")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="BOM Cisco CSR1000v", u_height=0)
+        location_type = LocationType.objects.create(name="BOM Location Type")
+        location_type.content_types.set([ContentType.objects.get_for_model(Device)])
+        location = Location.objects.create(
+            name="BOM Device Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        role = Role.objects.create(name="BOM Device Role")
+        role.content_types.set([ContentType.objects.get_for_model(Device)])
+        content = "\n".join(
+            [
+                "serial,asset_tag,device_type,location,status,name,role",
+                f"1021C4,CA211,{device_type.pk},{location.pk},{status.pk},Test-AC-01,{role}",
+                f"1021C5,CA212,{device_type.pk},{location.pk},{status.pk},Test-AC-02,{role}",
+            ]
+        ).encode("utf-8-sig")
+        csv_file = FileProxy.objects.create(name="test.csv", file=ContentFile(content, name="test.csv"))
+        job_result = self.run_import(model=Device, csv_file=csv_file.id)
+        self.assertNoIssues(job_result)
+        self.assertEqual(Device.objects.get(name="Test-AC-01").serial, "1021C4")
+        self.assertEqual(Device.objects.get(name="Test-AC-02").serial, "1021C5")
+
+
+# ===========================================================================
+# Layer 3 — the ImportObjects job itself (input, permissions, rollback, relations)
+# ===========================================================================
+STATUS_CSV_DATA = "\n".join(
+    [
+        "name,color,content_types",
+        "test_status1,111111,dcim.device",
+        'test_status2,222222,"dcim.device,dcim.location"',
+        "test_status3,333333,dcim.device",
+        "test_status4,444444,dcim.device",
+    ]
+)
+
+
+class ImportInputTests(ImportExportJobTestCase):
+    """What the job accepts as input, before any format-specific handling."""
+
+    def test_import_input__no_data(self):
+        """Either csv_data or csv_file must be provided."""
+        self.run_import(expected_status=JobResultStatusChoices.STATUS_FAILURE)
+
+    def test_import_input__creates_all_rows(self):
+        """A superuser importing valid data creates every record, with nothing logged above INFO."""
+        job_result = self.run_import(STATUS_CSV_DATA)
+        self.assertNoIssues(job_result)
+        self.assertEqual(4, Status.objects.filter(name__startswith="test_status").count())
+
+
+class ImportPermissionTests(ImportExportJobTestCase):
+    """The job enforces the user's `add` permission, both at the content-type and per-object level."""
+
+    def test_import_permission__content_type_denied(self):
+        """A user without `add` permission on the content-type imports nothing."""
+        job_result = self.run_import(
+            STATUS_CSV_DATA,
+            # otherwise run_job_for_testing defaults to a superuser account
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        log_error = JobLogEntry.objects.get(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_error.message, f'User "{self.user}" does not have permission to create status objects')
+        self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
+
+    def test_import_permission__object_constraints_applied_per_row(self):
+        """Rows the user's object-level constraint excludes are rejected individually, by row number."""
+        obj_perm = ObjectPermission(
+            name="Test permission",
+            constraints={"color__in": ["111111", "222222"]},
+            actions=["add"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+
+        job_result = self.run_import(
+            STATUS_CSV_DATA,
+            username=self.user.username,
+            # so that the rows the constraint permits survive the rows it rejects
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+
+        log_successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        self.assertEqual(log_successes[0].message, 'Row 1: Created record "test_status1"')
+        self.assertTrue(Status.objects.filter(name="test_status1").exists())
+        self.assertEqual(log_successes[1].message, 'Row 2: Created record "test_status2"')
+        self.assertTrue(Status.objects.filter(name="test_status2").exists())
+
+        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(
+            log_errors[0].message,
+            f'Row 3: User "{self.user}" does not have permission to create an object with these attributes',
+        )
+        self.assertFalse(Status.objects.filter(name="test_status3").exists())
+        self.assertEqual(
+            log_errors[1].message,
+            f'Row 4: User "{self.user}" does not have permission to create an object with these attributes',
+        )
+        self.assertFalse(Status.objects.filter(name="test_status4").exists())
+        self.assertEqual(log_successes[2].message, "Created 2 status object(s) from 4 row(s) of data")
+
+
+class ImportRollbackTests(ImportExportJobTestCase):
+    """`roll_back_if_error` decides whether one bad row discards the whole import."""
+
+    @property
+    def csv_data_with_bad_row(self):
+        """STATUS_CSV_DATA with an invalid-color row inserted as the first data row."""
+        rows = STATUS_CSV_DATA.split("\n")
+        rows.insert(1, "test_status0,notacolor,dcim.device")
+        return "\n".join(rows)
+
+    def test_import_rollback__enabled_discards_every_row(self):
+        """With rollback on, rows that individually succeeded are still rolled back."""
+        job_result = self.run_import(
+            self.csv_data_with_bad_row,
+            roll_back_if_error=True,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        log_info = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        for idx, status_name in enumerate(("test_status1", "test_status2", "test_status3", "test_status4")):
+            self.assertIn(f'Created record "{status_name}"', log_info[idx].message)
+            self.assertFalse(Status.objects.filter(name=status_name).exists())
+
+        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+
+        log_warning = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_WARNING)
+        self.assertEqual(log_warning[0].message, "Rolling back all 4 records.")
+        self.assertEqual(log_warning[1].message, "No status objects were created")
+
+    def test_import_rollback__disabled_keeps_the_good_rows(self):
+        """With rollback off, the bad row is reported and every other row is still imported."""
+        job_result = self.run_import(
+            self.csv_data_with_bad_row,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        log_errors = JobLogEntry.objects.filter(job_result=job_result, log_level=LogLevelChoices.LOG_ERROR)
+        self.assertEqual(log_errors[0].message, "Row 1: `color`: `Enter a valid hexadecimal RGB color code.`")
+        self.assertFalse(Status.objects.filter(name="test_status0").exists())
+
+        log_successes = JobLogEntry.objects.filter(
+            job_result=job_result, log_level=LogLevelChoices.LOG_INFO, message__icontains="created"
+        )
+        for idx, status_name in enumerate(("test_status1", "test_status2", "test_status3", "test_status4")):
+            self.assertEqual(log_successes[idx].message, f'Row {idx + 2}: Created record "{status_name}"')
+            self.assertTrue(Status.objects.filter(name=status_name).exists())
+        self.assertEqual(log_successes[4].message, "Created 4 status object(s) from 5 row(s) of data")
+
+
+class ImportRelatedObjectTests(ImportExportJobTestCase):
+    """Imports that resolve foreign keys against objects created by an earlier import."""
+
+    def test_import_related__contact_assignment_chain(self):
+        """A LocationType → Location → Contact → Role → ContactAssociation chain imports end to end.
+
+        ContactAssociation is the interesting one: it resolves a generic FK (`associated_object_type`
+        plus `associated_object_id`) alongside three ordinary natural-key FKs.
+        """
+        self.run_import("\n".join(["name", "ContactAssignmentImportTestLocationType"]), model=LocationType)
+        self.assertEqual(1, LocationType.objects.filter(name="ContactAssignmentImportTestLocationType").count())
+
+        self.run_import(
+            "\n".join(
+                [
+                    "location_type__name,name,status__name",
+                    "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation1,Active",
+                    "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation2,Active",
+                ]
+            ),
+            model=Location,
+        )
+        locations = Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType")
+        self.assertEqual(2, locations.count())
+
+        self.run_import(
+            "\n".join(["name,email", "Bob-ContactAssignmentImportTestLocation,bob@example.com"]), model=Contact
+        )
+        self.assertEqual(1, Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count())
+
+        self.run_import(
+            "\n".join(["name,content_types", "ContactAssignmentImportTestLocation-On Site,extras.contactassociation"]),
+            model=Role,
+        )
+        self.assertEqual(1, Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count())
+
+        associations = ["associated_object_id,associated_object_type,status__name,role__name,contact__name"]
+        associations.extend(
+            f"{location.pk},dcim.location,Active,"
+            f"ContactAssignmentImportTestLocation-On Site,Bob-ContactAssignmentImportTestLocation"
+            for location in locations
+        )
+        self.run_import("\n".join(associations), model=ContactAssociation)
+        self.assertEqual(
+            2,
+            ContactAssociation.objects.filter(contact__name="Bob-ContactAssignmentImportTestLocation").count(),
+        )

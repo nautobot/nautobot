@@ -741,7 +741,7 @@ class ImportObjects(Job):
                         self.logger.error("Row %d: `%s`: `%s`", row, field, err)
         return new_objs, validation_failed
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False, import_format="auto"):  # pylint:disable=arguments-differ
+    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=True, import_format="auto"):  # pylint:disable=arguments-differ
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
