@@ -6,6 +6,11 @@ from django.db import models
 from nautobot.core.forms import fields
 from nautobot.extras.conditions.validation import validate_conditions
 
+CONDITIONS_HELP_TEXT = (
+    "An ordered list of condition rows, all of which must pass. An empty list means every change "
+    "of the selected object type(s) passes."
+)
+
 
 class ConditionsField(models.JSONField):
     """
@@ -17,18 +22,16 @@ class ConditionsField(models.JSONField):
     description = "An ordered list of condition rows, all of which must pass"
 
     def __init__(self, *args, **kwargs):
-        kwargs["default"] = list
-        kwargs["blank"] = True
-        kwargs["encoder"] = DjangoJSONEncoder
-        kwargs["help_text"] = (
-            "An ordered list of condition rows, all of which must pass. An empty list means every change "
-            "of the selected object type(s) passes."
-        )
+        kwargs.setdefault("default", list)
+        kwargs.setdefault("blank", True)
+        kwargs.setdefault("encoder", DjangoJSONEncoder)
+        kwargs.setdefault("help_text", CONDITIONS_HELP_TEXT)
         super().__init__(*args, **kwargs)
 
     def formfield(self, **kwargs):
         """Render with `core.forms.fields.JSONField`, which shows an empty value as empty, not as `null`."""
-        return super().formfield(**{"form_class": fields.JSONField, **kwargs})  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
+        kwargs.setdefault("form_class", fields.JSONField)
+        return super().formfield(**kwargs)  # pylint: disable=no-member # https://github.com/pylint-dev/pylint-django/issues/477
 
     def validate(self, value, model_instance):
         """

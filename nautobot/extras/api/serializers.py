@@ -96,6 +96,7 @@ from nautobot.extras.models import (
     UserSavedViewAssociation,
     Webhook,
 )
+from nautobot.extras.models.fields import CONDITIONS_HELP_TEXT
 from nautobot.extras.models.mixins import NotesMixin
 from nautobot.extras.utils import (
     ChangeLoggedModelsQuery,
@@ -267,6 +268,41 @@ class ConditionPresetSerializer(serializers.Serializer):
     description = serializers.CharField(read_only=True)
     parameters = ConditionPresetParameterSerializer(many=True, read_only=True)
     example = serializers.JSONField(read_only=True, required=False)
+
+
+#
+# Conditions
+#
+
+
+CONDITION_ROW_SCHEMA = {
+    "oneOf": [
+        {
+            "type": "object",
+            "required": ["type", "preset"],
+            "properties": {
+                "type": {"type": "string", "enum": ["preset"]},
+                "preset": {"type": "string", "description": "A `preset` key from `/api/extras/condition-presets/`."},
+                "values": {"type": "object", "description": "One entry per parameter the preset declares."},
+                "negate": {"type": "boolean", "default": False},
+            },
+        },
+        {
+            "type": "object",
+            "required": ["type", "source"],
+            "properties": {
+                "type": {"type": "string", "enum": ["expression"]},
+                "source": {"type": "string", "description": "A bare Jinja2 expression, not a template."},
+                "negate": {"type": "boolean", "default": False},
+            },
+        },
+    ],
+}
+
+
+@extend_schema_field({"type": "array", "items": CONDITION_ROW_SCHEMA})
+class ConditionsSerializerField(serializers.JSONField):
+    """Describes the stored rows for the schema. The model field is what validates them."""
 
 
 #
@@ -894,6 +930,7 @@ class JobHookSerializer(NautobotModelSerializer):
         queryset=ChangeLoggedModelsQuery().as_queryset(),
         many=True,
     )
+    conditions = ConditionsSerializerField(required=False, help_text=CONDITIONS_HELP_TEXT)
 
     class Meta:
         model = JobHook
@@ -1340,6 +1377,7 @@ class WebhookSerializer(ValidatedModelSerializer, NotesSerializerMixin):
         queryset=ContentType.objects.filter(FeatureQuery("webhooks").get_query()).order_by("app_label", "model"),
         many=True,
     )
+    conditions = ConditionsSerializerField(required=False, help_text=CONDITIONS_HELP_TEXT)
 
     class Meta:
         model = Webhook

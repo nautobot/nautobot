@@ -34,7 +34,8 @@ class FieldOnBothHooksTest(SimpleTestCase):
         self.assertEqual(JobHook().conditions, [])
 
 
-class WebhookConditionsTestCase(TestCase):
+@tag("unit")
+class ConditionsFieldTest(TestCase):
     """The field's own behaviour, exercised through one carrier; `FieldOnBothHooksTest` covers the other."""
 
     def setUp(self):
@@ -44,9 +45,6 @@ class WebhookConditionsTestCase(TestCase):
     def webhook(self, name, **kwargs):
         return Webhook(name=name, type_create=True, payload_url="https://example.com/hooks/abc", **kwargs)
 
-
-@tag("unit")
-class NormalisationTest(WebhookConditionsTestCase):
     def test_every_way_of_saying_no_conditions_is_stored_as_a_list(self):
         """`clean_fields()` skips a blank field, so `pre_save()` is what keeps the column to one shape."""
         for index, value in enumerate((None, "", {}, (), [])):
@@ -62,9 +60,6 @@ class NormalisationTest(WebhookConditionsTestCase):
         webhook.refresh_from_db()
         self.assertEqual(webhook.conditions, [PRESET, EXPRESSION])
 
-
-@tag("unit")
-class ValidationTest(WebhookConditionsTestCase):
     def test_good_rows_are_accepted(self):
         self.webhook("webhook-good", conditions=[PRESET, EXPRESSION]).validated_save()
 

@@ -116,8 +116,6 @@ class ConditionPreset:
     # payload keys, this preset's `param_*` variables, and `field_value` / `field_matches`.
     source: str
     parameters: tuple[PresetParameter, ...] = ()
-    # One worked set of `values`. The catalog wraps it into a complete row, which is the only place a
-    # reader sees how a row is put together - the parameter list only covers what goes inside `values`.
     example_values: dict | None = None
 
     def __post_init__(self):

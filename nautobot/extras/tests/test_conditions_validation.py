@@ -17,7 +17,8 @@ BAD_PRESET = {"type": "preset", "preset": "field_compare", "values": {"field": "
 MIXED_ROWS = [BAD_EXPRESSION, EXPRESSION, BAD_PRESET]
 
 
-class ValidationTestCase(SimpleTestCase):
+@tag("unit")
+class ValidateConditionsTest(SimpleTestCase):
     """`SimpleTestCase`: validating a row compiles its expression, which needs Django's Jinja engine."""
 
     def setUp(self):
@@ -30,9 +31,6 @@ class ValidationTestCase(SimpleTestCase):
             validate_conditions(value)
         return caught.exception
 
-
-@tag("unit")
-class ListOfRowsTest(ValidationTestCase):
     def test_a_list_of_good_rows_passes(self):
         self.assertIsNone(validate_conditions([EXPRESSION, PRESET]))
 
@@ -49,43 +47,27 @@ class ListOfRowsTest(ValidationTestCase):
                 self.assertEqual(error.code, ConditionValidationError.code)
                 self.assertIn(f"not {type_name}", error.messages[0])
 
-
-@tag("unit")
-class ErrorReportingTest(ValidationTestCase):
     def test_every_bad_row_is_reported_in_one_pass(self):
         """Both bad rows come back from one call, so they are fixed in one pass rather than one save each."""
-        self.assertEqual(len(self.assertRefused(MIXED_ROWS).messages), 2)
-
-    def test_numbers_count_rows_from_one(self):
-        messages = self.assertRefused(MIXED_ROWS).messages
+        error = self.assertRefused(MIXED_ROWS)
+        messages = error.messages
+        self.assertEqual(len(messages), 2)
         self.assertTrue(messages[0].startswith("Condition 1: "), messages[0])
         self.assertTrue(messages[1].startswith("Condition 3: "), messages[1])
+        self.assertEqual([problem.params["index"] for problem in error.error_list], [0, 2])
 
-    def test_index_counts_from_zero(self):
-        problems = self.assertRefused(MIXED_ROWS).error_list
-        self.assertEqual([problem.params["index"] for problem in problems], [0, 2])
-
-    def test_each_problem_keeps_its_original_code(self):
-        problems = self.assertRefused([BAD_EXPRESSION, BAD_PRESET]).error_list
-        self.assertEqual([problem.code for problem in problems], [ConditionRowError.code, ConditionPresetError.code])
-
-    def test_a_rows_own_params_survive_renumbering(self):
+    def test_each_problem_keeps_its_own_code_and_params(self):
         """`index` is added to what the row said about itself, rather than replacing it."""
         expression_problem, preset_problem = self.assertRefused([BAD_EXPRESSION, BAD_PRESET]).error_list
+        self.assertEqual(expression_problem.code, ConditionRowError.code)
         self.assertEqual(expression_problem.params["key"], "source")
+        self.assertEqual(preset_problem.code, ConditionPresetError.code)
         self.assertEqual(preset_problem.params["preset"], "field_compare")
         self.assertEqual(preset_problem.params["parameter"], "operator")
 
-
-@tag("unit")
-class PercentSignTest(ValidationTestCase):
-    """A message can quote what the user wrote, and Django renders these errors as `message % params`.
-
-    Reading `.messages` is the whole point of each assertion here: an unescaped `%` raises there rather
-    than in the code under test, so a person would meet it while being shown their own mistake.
-    """
-
     def test_a_jinja_error_naming_a_percent_renders(self):
+        """Reading `.messages` is the point: Django renders these as `message % params`, so an unescaped
+        `%` raises there, while a person is being shown their own mistake."""
         error = self.assertRefused([{"type": "expression", "source": "data.mtu > % 9000"}])
         self.assertIn("unexpected '%'", error.messages[0])
 

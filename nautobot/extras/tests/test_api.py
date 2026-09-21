@@ -1283,9 +1283,11 @@ class ConditionPresetsTest(APITestCase):
         self.url = reverse("extras-api:condition-preset-list")
 
     def test_catalog_is_served(self):
+        """The catalog is a registry rather than a queryset, so it comes back as a plain list, in key order."""
         response = self.client.get(self.url, **self.header)
 
         self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
         self.assertEqual(
             [preset["preset"] for preset in response.data],
             ["field_changed", "field_compare", "field_transition", "user_is"],
@@ -1317,12 +1319,6 @@ class ConditionPresetsTest(APITestCase):
                     set(preset["example"]["values"]),
                     {parameter["name"] for parameter in preset["parameters"]},
                 )
-
-    def test_catalog_is_not_paginated(self):
-        """The catalog is a registry rather than a queryset, so it comes back as a plain list."""
-        response = self.client.get(self.url, **self.header)
-
-        self.assertIsInstance(response.data, list)
 
     def test_catalog_needs_only_authentication(self):
         """It describes what this installation can do, not any object, so no model permission gates it."""
@@ -3682,6 +3678,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
                 "type_delete": True,
                 "job": jhr_log.pk,
                 "enabled": False,
+                "conditions": [{"type": "expression", "source": "data.name", "negate": False}],
             },
             {
                 "name": "JobHook5",
@@ -3704,6 +3701,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
                 job=jhr_log,
                 type_create=True,
                 type_delete=True,
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
             ),
             JobHook(
                 name="JobHook2",
@@ -3724,24 +3722,6 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
         for job_hook in cls.job_hooks:
             job_hook.save()
             job_hook.content_types.set([obj_type])
-
-    def test_create_with_conditions(self):
-        """The same field is writable on job hooks; `WebhookTest` covers how it behaves."""
-        # `view_job` as well: the serializer resolves the `job` reference through a permission-restricted queryset.
-        self.add_permissions("extras.add_jobhook", "extras.view_job")
-        conditions = [{"type": "expression", "source": "data.name", "negate": False}]
-        data = {
-            "name": "JobHookConditions",
-            "content_types": ["dcim.consoleport"],
-            "type_create": True,
-            "job": Job.objects.get(job_class_name="TestJobHookReceiverLog").pk,
-            "enabled": False,
-            "conditions": conditions,
-        }
-
-        response = self.client.post(self._get_list_url(), data, format="json", **self.header)
-        self.assertHttpStatus(response, status.HTTP_201_CREATED)
-        self.assertEqual(JobHook.objects.get(name="JobHookConditions").conditions, conditions)
 
     def test_validate_post(self):
         """POST a job hook with values that duplicate another job hook"""
@@ -6578,6 +6558,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
+            "conditions": [{"type": "expression", "source": "data.name", "negate": False}],
         },
         {
             "content_types": ["dcim.consoleport"],
@@ -6610,6 +6591,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
             ),
             Webhook(
                 name="api-test-2",
@@ -6646,14 +6628,16 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
     ]
 
     def _webhook_data(self, name, **kwargs):
+        """A creation payload shaped like `create_data`, with a name and URL of its own.
+
+        `check_for_conflicts()` keys on content type, URL and action, so two webhooks built here would
+        otherwise refuse each other over something that has nothing to do with conditions.
+        """
         return {
-            "content_types": ["dcim.consoleport"],
+            **self.create_data[0],
             "name": name,
-            "type_create": True,
             "payload_url": f"http://example.com/{name}",
-            "http_method": "POST",
-            "http_content_type": "application/json",
-            "ssl_verification": True,
+            "conditions": [],
             **kwargs,
         }
 

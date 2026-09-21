@@ -132,7 +132,6 @@ class PresetRow(ConditionRow):
     def from_dict(cls, row):
         negate = cls._common_fields(row)
         key = row.get("preset")
-        # Checked before the lookup: the registry is a dict, so an unhashable key raises rather than misses.
         if not isinstance(key, str) or not key.strip():
             raise ConditionRowError("A preset row needs a non-empty `preset`.", key="preset")
         preset = get_condition_preset(key)

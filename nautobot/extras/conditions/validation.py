@@ -15,11 +15,10 @@ from nautobot.extras.conditions.rows import ConditionRow
 
 def _numbered(index, error):
     """
-    Restate one row's errors as numbered ones, keeping enough to find the row again.
+    Restate one row's errors with its number.
 
-    `params` carries the row's `index` alongside whatever the original error said about itself (`key`,
-    `preset`, `parameter`), so a caller can point at the field at fault rather than only print a
-    sentence. The original `code` is kept, so which layer refused the row survives the renumbering.
+    `code` and `params` are carried over so a caller can still point at the field at fault rather than
+    only print a sentence.
     """
     params = dict(getattr(error, "params", None) or {})
     return [
@@ -37,15 +36,13 @@ def validate_conditions(value):
     """
     Check that every row in `value` could be stored and run.
 
-    Every bad row is reported, so three incorrectly formed rows are fixed in one pass rather than one
-    save per row.
-
     Args:
         value: The submitted conditions.
 
     Raises:
-        ValidationError: If `value` is not a list, or any row is incorrectly formed. Each message is
-            numbered and carries `params["index"]`.
+        ValidationError: If `value` is not a list, or any row is incorrectly formed. Messages count rows
+            from one, the way a person reads them; `params["index"]` is the row's position in the list,
+            for a caller that has to find it again.
     """
     if not isinstance(value, list):
         raise ConditionValidationError(f"Conditions must be a list of condition rows, not {type(value).__name__}.")

@@ -4,9 +4,9 @@ A row is a preset from the catalog with values filled in, or a raw Jinja2 expres
 the rows and the payload of a change and returns a `Verdict`. Nothing here knows which model or action
 owns the rows.
 
-Modules, in dependency order: `errors` (the one exception type), `operators` (comparisons), `payload`
-(the frozen picture of a change), `presets` (the catalog), `expressions` (compiling Jinja2), `rows`
-(the stored shape), `validation` (a whole stored list), `check`.
+Modules, each using only the ones before it: `errors` (the one exception type), `operators`
+(comparisons), `payload` (the frozen picture of a change), `presets` (the catalog), `expressions`
+(compiling Jinja2), `rows` (the stored shape), `validation` (a whole stored list), `check`.
 """
 
 from nautobot.extras.conditions.check import check, check_row, RowVerdict, Verdict
