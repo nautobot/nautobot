@@ -196,7 +196,7 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
         self.assertIn(self.nautobot_cost_header_name, first_response.headers)
 
         self.assertIsNotNone(throttled_response)
-        self.assertIsNotNone(throttled_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
+        self.assertEqual(throttled_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         self.assertIn(self.rate_limit_policy_header_name, throttled_response.headers)
         self.assertIn(self.rate_limit_header_name, throttled_response.headers)
         self.assertIn(self.nautobot_cost_header_name, throttled_response.headers)
