@@ -1617,7 +1617,7 @@ properties:
     environment_variable: "NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
-      "NAUTOBOT_RATE_LIMITING_LIMIT": "#nautobot_rate_limiting_limit"
+      "NAUTOBOT_REST_RATE_LIMITING_QUOTA": "#nautobot_rest_rate_limiting_quota"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
@@ -1635,56 +1635,6 @@ properties:
       `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
     environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
     version_added: "3.2.0"
-  NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG:
-    default: false
-    description: >-
-      Log each API request's assigned cost alongside its measured execution time, so that the cost
-      weights can be regressed offline.
-    environment_variable: "NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG"
-    type: "boolean"
-    version_added: "3.3.0"
-  NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE:
-    default: 1.0
-    description: "Per-request sampling probability, from `0.0` to `1.0`, for the calibration log."
-    environment_variable: "NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE"
-    maximum: 1.0
-    minimum: 0.0
-    see_also:
-      "NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG": "#nautobot_rate_limiting_calibration_log"
-    type: "number"
-    version_added: "3.3.0"
-  NAUTOBOT_RATE_LIMITING_LIMIT:
-    default: 1000
-    description: >-
-      The cost budget granted to each API token per window, in cost points.
-    details: |-
-      In `"enforce"` mode, a token is denied once its already-recorded consumption for the current
-      window reaches this value.
-
-      !!! note
-          This is a budget of *cost points*, not a count of requests or of returned objects. It is
-          unrelated to the REST API's `limit` query parameter, despite the environment variable
-          being named `NAUTOBOT_RATE_LIMITING_RECORDS_LIMIT`.
-    environment_variable: "NAUTOBOT_RATE_LIMITING_RECORDS_LIMIT"
-    minimum: 0
-    see_also:
-      "NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS": "#nautobot_rate_limiting_window_seconds"
-    type: "integer"
-    version_added: "3.3.0"
-  NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS:
-    default: 60.0
-    description: >-
-      The length in seconds of each API token's budget window.
-    details: |-
-      The window is anchored to the token's first request rather than to a wall-clock boundary, so
-      each token's window expires — and its budget resets — one `WINDOW_SECONDS` interval after that
-      first request.
-    environment_variable: "NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS"
-    minimum: 0
-    see_also:
-      "NAUTOBOT_RATE_LIMITING_LIMIT": "#nautobot_rate_limiting_limit"
-    type: "number"
-    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER:
     default: 3.0
     description: >-
@@ -1742,7 +1692,7 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_MODE"
     see_also:
-      "NAUTOBOT_RATE_LIMITING_LIMIT": "#nautobot_rate_limiting_limit"
+      "NAUTOBOT_REST_RATE_LIMITING_QUOTA": "#nautobot_rest_rate_limiting_quota"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST:
@@ -1758,6 +1708,26 @@ properties:
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_QUOTA:
+    default: 1000
+    description: >-
+      The complexity cost budget granted to each API token per window, in cost points.
+    details: |-
+      In `"enforce"` mode, a token is denied once its recorded consumption for the current window
+      exceeds this value.
+
+      !!! note
+          This is a budget of *cost points*, not a count of requests or of returned objects. It is
+          unrelated to the REST API's `limit` query parameter.
+
+      Size this against the cost settings: with the defaults an unfiltered list request costs `4`,
+      so a quota of `1000` permits roughly 250 such requests per window.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_QUOTA"
+    minimum: 0
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS": "#nautobot_rest_rate_limiting_window_seconds"
+    type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_READ_COST:
     default: 1.0
@@ -1788,6 +1758,20 @@ properties:
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS:
+    default: 5
+    description: >-
+      The length in seconds of each API token's complexity cost budget window.
+    details: |-
+      Windows are fixed and anchored to wall-clock multiples of this value rather than to a token's
+      first request, so every token's budget resets at the same instant. A token can therefore spend
+      a full quota at the end of one window and another at the start of the next.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS"
+    minimum: 1
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_QUOTA": "#nautobot_rest_rate_limiting_quota"
+    type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_WRITE_COST:
     default: 3.0
