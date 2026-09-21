@@ -1,1 +1,0 @@
-Added `NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS` environment variable support for the `EXTERNAL_AUTH_DEFAULT_GROUPS` setting.

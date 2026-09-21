@@ -1,0 +1,1 @@
+Updated development dependency `pymarkdownlnt` to `~0.9.40`, added configuration for some of its new rules, and updated documentation Markdown as needed to conform to those rules.

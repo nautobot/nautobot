@@ -290,6 +290,113 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.5 (2026-09-14)
+
+### Security in v3.2.5
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Fixed disclosure of API token keys and user password hashes to user-authored Jinja2 templates, such as those in Custom Links and Job Buttons, which are rendered against the viewing user's own context.
+- [GHSA-2v7j-x3g6-qj94](https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94) - Fixed an incomplete fix for GHSA-p99c-c9qx-34fw where the Jinja2 template sandbox still allowed a template author to execute arbitrary read queries, reach arbitrary models, and perform certain database writes via the Django ORM.
+- [#9439](https://github.com/nautobot/nautobot/issues/9439) - Updated development npm dependency `postcss-selector-parser` to `7.1.5` to mitigate CVE-2026-9358.
+- [#9446](https://github.com/nautobot/nautobot/issues/9446) - Updated development npm dependency `fast-uri` to `3.1.7` to mitigate multiple vulnerabilities.
+- [#9480](https://github.com/nautobot/nautobot/issues/9480) - Updated development npm dependency `js-yaml` to `4.3.2` to mitigate CVE-2026-84375.
+
+### Added in v3.2.5
+
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added support for a `sensitive_fields` model attribute, declaring fields whose values the ORM will not return and that user-authored Jinja2 templates may not read.
+- [GHSA-8f2w-54mq-66gg](https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg) - Added a `STRICT_SENSITIVE_FIELDS` settings variable, defaulting to `False`, controlling whether the ORM refuses to return those values.
+- [#9444](https://github.com/nautobot/nautobot/issues/9444) - Added an "Object Data v2" panel to the Change Log detail view, displaying the change's `object_data_v2`.
+- [#9444](https://github.com/nautobot/nautobot/issues/9444) - Added a `collapsed` keyword argument to `Panel` and its subclasses, to render a panel with its body initially collapsed.
+
+### Changed in v3.2.5
+
+- [#9444](https://github.com/nautobot/nautobot/issues/9444) - The "Object Data" panel on the Change Log detail view is now initially collapsed.
+
+### Fixed in v3.2.5
+
+- [#9209](https://github.com/nautobot/nautobot/issues/9209) - Fixed `NautobotHyperlinkedRelatedField` deriving `object_type` from the declaring model instead of the related model when the field is read-only.
+- [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Power Path" field when creating/editing a Power Feed.
+- [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Virtual Device Contexts" field when creating/edting a VRF.
+- [#9459](https://github.com/nautobot/nautobot/issues/9459) - Fixed missing "Devices" field when creating/editing a Cluster.
+- [#9481](https://github.com/nautobot/nautobot/issues/9481) - Fixed field `has_tenants`, of `TenantGroupFilterForm`, being required because of a typo.
+
+### Documentation in v3.2.5
+
+- [#9460](https://github.com/nautobot/nautobot/issues/9460) - Refreshed the project README and documentation landing page to describe Nautobot as the open source Network Source of Truth and Network Automation Platform, and to introduce Nautobot Apps and commercial editions.
+
+### Housekeeping in v3.2.5
+
+- [#9437](https://github.com/nautobot/nautobot/issues/9437) - Removed `docs` symlink (to `nautobot/docs`) from the repository root as it was causing Docker build failures in some environments.
+- [#9437](https://github.com/nautobot/nautobot/issues/9437) - Added `**/node_modules` to `.dockerignore` to prevent unnecessarily copying locally installed modules into the Docker build environment.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Fixed missing permissions on GitHub workflows `ci_integration`, `release`, and `lock`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Removed obsolete GitHub workflows `build_dependency_image` and `build_dependency_image_conditional`.
+- [#9449](https://github.com/nautobot/nautobot/issues/9449) - Updated GitHub workflow `lock` to use v6.0.2 of the `dessant/lock-threads` action.
+
+## v3.2.4 (2026-08-31)
+
+### Security in v3.2.4
+
+- [#9404](https://github.com/nautobot/nautobot/issues/9404) - Updated dependency `gitpython` to `>=3.1.59,<3.2` to mitigate multiple vulnerabilities.
+- [#9422](https://github.com/nautobot/nautobot/issues/9422) - Updated dependency `gitpython` to `>=3.1.61,<3.2` to mitigate multiple vulnerabilities.
+
+### Added in v3.2.4
+
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Added `SSO_SYNC_GROUPS` setting to restrict which groups are synced into Nautobot from the SSO group claim.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added a `/api/extras/saved-views/<uuid>/set-default/` REST API endpoint, allowing a user to set (`POST`) or clear (`DELETE`) their own default Saved View without requiring any Saved View permissions.
+- [#9394](https://github.com/nautobot/nautobot/issues/9394) - Added `NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS` environment variable support for the `EXTERNAL_AUTH_DEFAULT_GROUPS` setting.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Added `nautobot.apps.filters.AutoDistinctFilterMixin`, `nautobot.apps.filters.BooleanFilter`, and `nautobot.apps.filters.MultipleChoiceFilter`.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Added a `test_filters_distinct` test to `nautobot.apps.testing.FilterTestCases.FilterTestCase`, asserting that each filter applies `.distinct()` if and only if it traverses a to-many relation. App FilterSet test cases inherit this test automatically but it will currently report as skipped for apps outside Nautobot core so as to not break current app CI.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Added a `q` (search) filter to the `CableToCableTermination`, `UserSavedViewAssociation`, `VirtualServerCertificateProfileAssignment`, and `LoadBalancerPoolMemberCertificateProfileAssignment` REST API and UI filtersets.
+
+### Changed in v3.2.4
+
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed the REST API `owner` field on Saved Views to be read-only; it is now always set to the requesting user, matching the UI.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed the REST API `view` field on Saved Views to be settable only when creating a Saved View.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Changed Saved Views and Saved View Associations to be excluded when setting `EXEMPT_VIEW_PERMISSIONS` to the implicit all (`"*"`) value.
+- [#9394](https://github.com/nautobot/nautobot/issues/9394) - Changed SSO group sync to properly revoke group memberships and staff/superuser status when the group claim changes from non-empty to empty.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Changed Nautobot's `MultiValue<type>Filter`, `MultipleChoiceFilter`, `ModelMultipleChoiceFilter`, and derived filter classes to automatically derive their `distinct` flag from the filter's field path, rather than always defaulting to `distinct=True`.
+
+### Deprecated in v3.2.4
+
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Deprecated the `/api/extras/user-saved-view-associations/` REST API endpoints in favor of `/api/extras/saved-views/<uuid>/set-default/`.
+
+### Fixed in v3.2.4
+
+- [#8807](https://github.com/nautobot/nautobot/issues/8807) - Fixed the browser tab title on saved view list pages showing the saved view name twice, and displaying raw HTML tags when there were unsaved changes.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed the Saved View edit form to apply the same ownership and permission checks as the other Saved View operations.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed enforcement of the documented `extras.change_savedview` permission requirement for setting or clearing the global default Saved View.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed a server error when an invalid or unknown `saved_view` UUID was supplied as a query parameter on an object list view.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Fixed the table configuration form not taking its column ordering from the applied Saved View, inconsistently with the columns of the rendered table.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Fixed a number of model filters that traverse a to-many relation, such as `CircuitFilterSet.provider_network` and `TenantGroupFilterSet.children`, returning duplicate objects.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Fixed `<field>__isnull=False` filters returning duplicate objects when the field is a many-to-many, reverse foreign key, or generic relation, such as `?tags__isnull=False`.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Improved the performance of many UI/REST/GraphQL filters by no longer applying an unnecessary `.distinct()` to the filtered query.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Fixed `LoadBalancerPoolMemberCertificateProfileAssignmentFilterSet.load_balancer_pool_member` raising a `FieldError` when given a non-UUID value, as `LoadBalancerPoolMember` has no `name` field to match against.
+
+### Dependencies in v3.2.4
+
+- [#9406](https://github.com/nautobot/nautobot/issues/9406) - Updated dependency `django-silk` to `>=5.5.2,<5.6`.
+- [#9406](https://github.com/nautobot/nautobot/issues/9406) - Updated dependency `nh3` to `>=0.3.7,<0.4`.
+
+### Documentation in v3.2.4
+
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Added documentation on writing a custom SSO group sync function and using it in place of the built-in one.
+- [#7553](https://github.com/nautobot/nautobot/issues/7553) - Clarified that enabling SSO group syncing replaces a user's entire set of group memberships on each login, including groups that were assigned manually.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added guidance to the permissions documentation explaining that no Saved View permissions are needed for users to make use of Saved Views, and that they should only be granted to users who manage Saved Views for other users.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Added documentation of the REST API behavior for Saved Views.
+- [#9381](https://github.com/nautobot/nautobot/issues/9381) - Clarified in the Saved Views documentation that a non-shared Saved View is still visible to users holding the `extras.view_savedview` permission.
+- [#9389](https://github.com/nautobot/nautobot/issues/9389) - Added security notice for GHSA-x69f-q4wj-vx72.
+- [#9403](https://github.com/nautobot/nautobot/issues/9403) - Updated 3.2 release note documentation to include `pylint-nautobot` helper command.
+- [#9419](https://github.com/nautobot/nautobot/issues/9419) - Added guidance to the development best practices documentation regarding the `distinct` flag on filterset filters.
+
+### Housekeeping in v3.2.4
+
+- [#9356](https://github.com/nautobot/nautobot/issues/9356) - Added `dependencies-check` action to `ci_pullrequest` workflow to verify dependency compatibility with existing open-source Nautobot Apps.
+- [#9406](https://github.com/nautobot/nautobot/issues/9406) - Updated development dependency `mkdocstrings-python` to `~2.0.7`.
+- [#9406](https://github.com/nautobot/nautobot/issues/9406) - Updated development dependency `djlint` to `~1.44.2`.
+- [#9406](https://github.com/nautobot/nautobot/issues/9406) - Updated development dependency `pylint` to `~4.0.7`.
+- [#9406](https://github.com/nautobot/nautobot/issues/9406) - Updated development dependency `ruff` to `~0.16.4`.
+- [#9422](https://github.com/nautobot/nautobot/issues/9422) - Updated development dependency `ruff` to `~0.16.5`.
+- [#9426](https://github.com/nautobot/nautobot/issues/9426) - Added Open Telemetry observability docker compose example to invoke.yml.example file.
+
 ## v3.2.3 (2026-08-17)
 
 ### Security in v3.2.3
@@ -648,7 +755,7 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 - [#9019](https://github.com/nautobot/nautobot/issues/9019) - Added writability to the `terminations` field on the `Cable` REST API serializer. POST and PATCH on `/api/dcim/cables/` now accept a `terminations` object keyed by side (`a`/`b`) then 1-indexed connector number; each slot value is either `{"object_type": "<app.model>", "id": "<uuid>"}` to plug in (or replace) that connector's termination, or `null` to delete the existing row at that connector. Sides and connectors omitted from the payload are left untouched (PATCH-style merge semantics, with explicit `null` as the delete sentinel). The entire payload is applied in a single transaction; per-row validation is delegated to `CableToCableTerminationSerializer` so model-level errors come back as 400.
 - [#9051](https://github.com/nautobot/nautobot/issues/9051) - Added `nautobot-server create_breakout_demo_data` command.
 - [#9065](https://github.com/nautobot/nautobot/issues/9065) - Added the `IPAddressRange` model to represent a contiguous span of IP addresses within a parent Prefix, without creating individual IPAddress records for each address.
-- [#9078](https://github.com/nautobot/nautobot/issues/9078) - Reworked the "Connection" panel on `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, `PowerOutlet`, `FrontPort`, `RearPort`, `CircuitTermination`, and `PowerFeed` detail views to show *all* cable peers and *all* connected endpoints of a multi-termination ("breakout") cable rather than only the first. Each line shows a type icon and the resolved-path reachability where applicable.
+- [#9078](https://github.com/nautobot/nautobot/issues/9078) - Reworked the "Connection" panel on `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, `PowerOutlet`, `FrontPort`, `RearPort`, `CircuitTermination`, and `PowerFeed` detail views to show _all_ cable peers and _all_ connected endpoints of a multi-termination ("breakout") cable rather than only the first. Each line shows a type icon and the resolved-path reachability where applicable.
 - [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added per-type `<Type> Endpoints` panels to the `Interface`, `ConsolePort`, `ConsoleServerPort`, `PowerPort`, and `PowerOutlet` detail views, listing the details of every connected endpoint grouped by type.
 - [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added a reusable `nautobot.apps.ui.ConnectionPanel` UI component that renders a `CableTermination`'s cable, cable peers, and connected endpoints as a detail panel.
 - [#9078](https://github.com/nautobot/nautobot/issues/9078) - Added a reusable `nautobot.apps.ui.ConnectedEndpointsPanel` UI component, and used it to add per-type connected-endpoint tables to the `CircuitTermination` detail view.

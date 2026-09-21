@@ -1,7 +1,6 @@
-import django_filters
-
 from nautobot.circuits.models import Circuit
 from nautobot.core.filters import (
+    ModelMultipleChoiceFilter,
     NameSearchFilterSet,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
@@ -67,7 +66,7 @@ class TenantFilterSet(NautobotFilterSet):
         label="Tenant group (name or ID)",
         to_field_name="name",
     )
-    circuits = django_filters.ModelMultipleChoiceFilter(
+    circuits = ModelMultipleChoiceFilter(
         queryset=Circuit.objects.all(),
         label="Circuits (ID)",
     )
@@ -93,7 +92,7 @@ class TenantFilterSet(NautobotFilterSet):
         field_name="devices",
         label="Has devices",
     )
-    ip_addresses = django_filters.ModelMultipleChoiceFilter(
+    ip_addresses = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
         label="IP addresses (ID)",
     )
@@ -116,7 +115,7 @@ class TenantFilterSet(NautobotFilterSet):
         field_name="prefixes",
         label="Has prefixes",
     )
-    rack_reservations = django_filters.ModelMultipleChoiceFilter(
+    rack_reservations = ModelMultipleChoiceFilter(
         queryset=RackReservation.objects.all(),
         label="Rack reservations (ID)",
     )
@@ -151,7 +150,7 @@ class TenantFilterSet(NautobotFilterSet):
         field_name="virtual_machines",
         label="Has virtual machines",
     )
-    vlans = django_filters.ModelMultipleChoiceFilter(
+    vlans = ModelMultipleChoiceFilter(
         queryset=VLAN.objects.all(),
         label="VLANs (ID)",
     )

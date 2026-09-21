@@ -72,7 +72,7 @@ else:
     t = Token.objects.filter(user=u)
     if t:
         t = t[0]
-        if t.key != '${NAUTOBOT_SUPERUSER_API_TOKEN}':
+        if not Token.objects.filter(pk=t.pk, key='${NAUTOBOT_SUPERUSER_API_TOKEN}').exists():
             t.key = '${NAUTOBOT_SUPERUSER_API_TOKEN}'
             t.save()
 END

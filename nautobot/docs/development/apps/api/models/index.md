@@ -41,6 +41,11 @@ For more advanced usage, you may want to instead inherit from one of Nautobot's 
 +++ 3.0.0 "Support for Data Compliance on OrganizationalModel and PrimaryModel"
     Support for Data Compliance was added to `OrganizationalModel` and `PrimaryModel` through the `DataComplianceModelMixin` mixin class. Models can opt out of this feature by setting the class attribute `is_data_compliance_model = False`. This primarily controls whether the Data Compliance tab appears in the model's detail view. The feature works in conjunction with the `ObjectDataComplianceViewMixin` and its associated HTML template, which is generally used with `NautobotUIViewSet`.
 
++++ 3.2.5 "Support for sensitive fields on all models"
+    A `BaseModel` subclass can declare fields holding credentials or comparable secrets in the class attribute `sensitive_fields`. The ORM then refuses to return those values unless a caller opts in explicitly, and user-authored Jinja2 templates can never read them. Filtering by such a field still works. See [Sensitive Model Fields](../../../core/sensitive-fields.md) for the opt-in methods and the limitations.
+
+    The ORM-side enforcement is governed by [`STRICT_SENSITIVE_FIELDS`](../../../../user-guide/administration/configuration/settings.md#strict_sensitive_fields), which defaults to `False` so that existing code reading such a field keeps working, and is expected to default to `True` in a future major release. Denial of template access is **not** governed by that setting and always applies. An App that declares `sensitive_fields` should therefore not assume the ORM enforcement is active on a given deployment, and should move its own reads to the opt-in methods now so that it keeps working when the default changes.
+
 Below is an example `models.py` file containing a basic model with two character fields:
 
 ```python

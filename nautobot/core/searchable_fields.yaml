@@ -145,6 +145,10 @@ dcim:
     - label
     name: Cable
   - fields:
+    - cable__label
+    - id
+    name: Cable To Cable Termination
+  - fields:
     - description
     - id
     - manufacturer__name
@@ -685,6 +689,12 @@ extras:
     - phone
     name: Team
   - fields:
+    - id
+    - saved_view__name
+    - user__username
+    - view_name
+    name: User Saved View Association
+  - fields:
     - additional_headers
     - body_template
     - id
@@ -793,12 +803,22 @@ load_balancers:
     - port
     name: Load Balancer Pool Member
   - fields:
+    - certificate_profile__name
+    - id
+    - load_balancer_pool_member__label
+    name: Load Balancer Pool Member Certificate Profile Assignment
+  - fields:
     - device__name
     - id
     - load_balancer_pool__name
     - name
     - port
     name: Virtual Server
+  - fields:
+    - certificate_profile__name
+    - id
+    - virtual_server__name
+    name: Virtual Server Certificate Profile Assignment
 tenancy:
   app_name: Tenancy
   models:

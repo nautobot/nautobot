@@ -386,6 +386,10 @@ FILTERS_NULL_CHOICE_VALUE = "null"
 
 STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
 
+# Whether the ORM refuses to return the value of a field listed in a model's `sensitive_fields`.
+# TODO 4.0: change the default to True.
+STRICT_SENSITIVE_FIELDS = is_truthy(os.getenv("NAUTOBOT_STRICT_SENSITIVE_FIELDS", "False"))
+
 #
 # Django REST framework (API)
 #

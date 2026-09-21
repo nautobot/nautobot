@@ -11,10 +11,11 @@
 !poetry.lock
 !pyproject.toml
 !README.md
-!docs
 !mkdocs.yml
 !package.json
 !package-lock.json
 
 # Add specific exclusions
 **/__pycache__
+# Installed in the image by `npm ci`; including the host's copy only bloats the context
+**/node_modules

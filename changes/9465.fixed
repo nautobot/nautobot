@@ -1,0 +1,1 @@
+Fixed `ValueError` when saving a cable with a length unit of miles.

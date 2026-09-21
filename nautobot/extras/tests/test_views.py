@@ -7075,6 +7075,11 @@ class ObjectChangeTestCase(TestCase):
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Both the `object_data` and `object_data_v2` panels are rendered, initially collapsed.
+        for label, body_id in (("OBJECT DATA", "object-data"), ("OBJECT DATA V2", "object-data-v2")):
+            self.assertIn(label, content)
+            self.assertIn(f'<div class="collapse" id="{body_id}">', content)
 
 
 class ObjectMetadataTestCase(

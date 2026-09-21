@@ -1709,6 +1709,7 @@ class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
         ("total_run_count",),
         ("time_zone",),
         ("state",),
+        ("approval_state", "associated_approval_workflows__current_state"),
     ]
 
     @classmethod
@@ -1767,6 +1768,23 @@ class ScheduledJobFilterSetTestCase(FilterTestCases.FilterTestCase):
         ScheduledJob.objects.filter(pk=cls.scheduled_jobs[2].pk).update(
             last_run_at=datetime(2024, 12, 1, 0, 0, 0, tzinfo=ZoneInfo("UTC"))
         )
+
+        # Give two of the three scheduled jobs an approval workflow, each in a distinct state, so that the
+        # `approval_state` filter has enough varied data for `get_filterset_test_values()` to work with.
+        scheduled_job_ct = ContentType.objects.get_for_model(ScheduledJob)
+        approval_workflow_definition = ApprovalWorkflowDefinition.objects.create(
+            name="Scheduled Job Filter Approval Workflow", model_content_type=scheduled_job_ct
+        )
+        for scheduled_job, state in [
+            (cls.scheduled_jobs[0], ApprovalWorkflowStateChoices.APPROVED),
+            (cls.scheduled_jobs[1], ApprovalWorkflowStateChoices.DENIED),
+        ]:
+            ApprovalWorkflow.objects.create(
+                approval_workflow_definition=approval_workflow_definition,
+                object_under_review_content_type=scheduled_job_ct,
+                object_under_review_object_id=scheduled_job.pk,
+                current_state=state,
+            )
 
     def test_enabled(self):
         params = {"enabled": True}

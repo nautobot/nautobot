@@ -1,7 +1,9 @@
 """Filterset base classes and mixins for app implementation."""
 
 from nautobot.core.filters import (
+    AutoDistinctFilterMixin,
     BaseFilterSet,
+    BooleanFilter,
     ContentTypeChoiceFilter,
     ContentTypeFilter,
     ContentTypeFilterMixin,
@@ -9,6 +11,7 @@ from nautobot.core.filters import (
     MACAddressFilter,
     MappedPredicatesFilterMixin,
     ModelMultipleChoiceFilter,
+    MultipleChoiceFilter,
     multivalue_field_factory,
     MultiValueBigNumberFilter,
     MultiValueCharFilter,
@@ -46,7 +49,9 @@ from nautobot.ipam.filter_mixins import PrefixFilter
 from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 
 __all__ = (
+    "AutoDistinctFilterMixin",
     "BaseFilterSet",
+    "BooleanFilter",
     "ConfigContextRoleFilter",
     "ContentTypeChoiceFilter",
     "ContentTypeFilter",
@@ -69,6 +74,7 @@ __all__ = (
     "MultiValueNumberFilter",
     "MultiValueTimeFilter",
     "MultiValueUUIDFilter",
+    "MultipleChoiceFilter",
     "NameSearchFilterSet",
     "NaturalKeyOrPKMultipleChoiceFilter",
     "NautobotFilterSet",

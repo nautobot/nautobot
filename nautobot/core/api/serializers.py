@@ -416,6 +416,7 @@ class BaseModelSerializer(OptInFieldsMixin, serializers.HyperlinkedModelSerializ
 
         def filter_field(field):
             # Eliminate all field names that start with "_" as those fields are not user-facing
+            # TODO 4.0: also eliminate fields in the model's `sensitive_fields`?
             if field.startswith("_"):
                 return False
             # These are expensive to look up, so we have decided not to include them on nested serializers.

@@ -8,6 +8,7 @@ from nautobot.core.filters import (
     BaseFilterSet,
     ContentTypeMultipleChoiceFilter,
     ModelMultipleChoiceFilter,
+    MultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueMACAddressFilter,
     MultiValueNumberFilter,
@@ -310,7 +311,7 @@ class LocationFilterSet(NautobotFilterSet, StatusModelFilterSetMixin, TenancyMod
         queryset=Cluster.objects.all(),
         to_field_name="name",
     )
-    time_zone = django_filters.MultipleChoiceFilter(
+    time_zone = MultipleChoiceFilter(
         choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
         label="Time zone",
         null_value="",
@@ -473,8 +474,8 @@ class RackFilterSet(
         to_field_name="name",
         label="Rack group (name or ID)",
     )
-    type = django_filters.MultipleChoiceFilter(choices=RackTypeChoices)
-    width = django_filters.MultipleChoiceFilter(choices=RackWidthChoices)
+    type = MultipleChoiceFilter(choices=RackTypeChoices)
+    width = MultipleChoiceFilter(choices=RackWidthChoices)
     serial = MultiValueCharFilter(lookup_expr="iexact", label="Serial Number")
     has_devices = RelatedMembershipBooleanFilter(
         field_name="devices",
@@ -1017,7 +1018,7 @@ class ConsolePortFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
+    type = MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
     class Meta:
         model = ConsolePort
@@ -1030,7 +1031,7 @@ class ConsoleServerPortFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
+    type = MultipleChoiceFilter(choices=ConsolePortTypeChoices, null_value=None)
 
     class Meta:
         model = ConsoleServerPort
@@ -1043,7 +1044,7 @@ class PowerPortFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
+    type = MultipleChoiceFilter(choices=PowerPortTypeChoices, null_value=None)
     # TODO: solve https://github.com/nautobot/nautobot/issues/2875 to use this filter correctly
     power_outlets = NaturalKeyOrPKMultipleChoiceFilter(
         prefers_id=True,
@@ -1067,7 +1068,7 @@ class PowerOutletFilterSet(
     PathEndpointModelFilterSetMixin,
     BaseFilterSet,
 ):
-    type = django_filters.MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
+    type = MultipleChoiceFilter(choices=PowerOutletTypeChoices, null_value=None)
 
     class Meta:
         model = PowerOutlet
@@ -1172,9 +1173,9 @@ class InterfaceFilterSet(
     mac_address = MultiValueMACAddressFilter()
     vlan_id = django_filters.CharFilter(method="filter_vlan_id", label="Assigned VLAN")
     vlan = django_filters.NumberFilter(method="filter_vlan", label="Assigned VID")
-    type = django_filters.MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
-    port_type = django_filters.MultipleChoiceFilter(choices=PortTypeChoices, null_value=None)
-    duplex = django_filters.MultipleChoiceFilter(choices=InterfaceDuplexChoices, null_value=None)
+    type = MultipleChoiceFilter(choices=InterfaceTypeChoices, null_value=None)
+    port_type = MultipleChoiceFilter(choices=PortTypeChoices, null_value=None)
+    duplex = MultipleChoiceFilter(choices=InterfaceDuplexChoices, null_value=None)
     speed = MultiValueNumberFilter(lookup_expr="exact", choices=InterfaceSpeedChoices)
     interface_redundancy_groups = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=InterfaceRedundancyGroup.objects.all(),
@@ -1503,6 +1504,9 @@ class CableTypeFilterSet(NautobotFilterSet):
 class CableToCableTerminationFilterSet(NautobotFilterSet):
     """FilterSet for the cable→termination join model."""
 
+    # `cable_end` is a single-character choice and `connector` is an integer, so neither is usefully searchable;
+    # the cable's label is the only free-text field reachable from this model.
+    q = SearchFilter(filter_predicates={"cable__label": "icontains"})
     cable = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Cable.objects.all(),
         to_field_name="pk",
@@ -1529,16 +1533,16 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         method="filter_is_disconnected",
         label="Is disconnected (missing one or both side terminations)",
     )
-    type = django_filters.MultipleChoiceFilter(choices=CableTypeChoices)
+    type = MultipleChoiceFilter(choices=CableTypeChoices)
     color = MultiValueCharFilter()
-    device_id = django_filters.ModelMultipleChoiceFilter(
+    device_id = ModelMultipleChoiceFilter(
         queryset=Device.objects.all(),
         method="filter_device_id",
         field_name="terminations",
         label="Device (ID)",
     )
     device = extend_schema_field({"type": "string"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Device.objects.all(),
             to_field_name="name",
             method="filter_device",
@@ -1547,7 +1551,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         )
     )
     rack_id = extend_schema_field({"type": "string", "format": "uuid"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Rack.objects.all(),
             method="filter_device",
             field_name="device__rack",
@@ -1555,7 +1559,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         )
     )
     rack = extend_schema_field({"type": "string"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Rack.objects.all(),
             to_field_name="name",
             method="filter_device",
@@ -1564,7 +1568,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         )
     )
     location_id = extend_schema_field({"type": "string", "format": "uuid"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Location.objects.all(),
             method="filter_device",
             field_name="device__location",
@@ -1572,7 +1576,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         )
     )
     location = extend_schema_field({"type": "string"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Location.objects.all(),
             to_field_name="name",
             method="filter_device",
@@ -1581,7 +1585,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         )
     )
     tenant_id = extend_schema_field({"type": "string", "format": "uuid"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Tenant.objects.all(),
             method="filter_device",
             field_name="device__tenant",
@@ -1589,7 +1593,7 @@ class CableFilterSet(NautobotFilterSet, StatusModelFilterSetMixin):
         )
     )
     tenant = extend_schema_field({"type": "string"})(
-        django_filters.ModelMultipleChoiceFilter(
+        ModelMultipleChoiceFilter(
             queryset=Tenant.objects.all(),
             to_field_name="name",
             method="filter_device",
@@ -2174,7 +2178,7 @@ class ControllerFilterSet(
         queryset=ExternalIntegration.objects.all(),
         to_field_name="name",
     )
-    capabilities = django_filters.MultipleChoiceFilter(
+    capabilities = MultipleChoiceFilter(
         choices=ControllerCapabilitiesChoices,
         null_value=None,
         lookup_expr="icontains",
@@ -2211,7 +2215,7 @@ class ControllerManagedDeviceGroupFilterSet(
             "name": "icontains",
         }
     )
-    capabilities = django_filters.MultipleChoiceFilter(
+    capabilities = MultipleChoiceFilter(
         choices=ControllerCapabilitiesChoices,
         null_value=None,
         lookup_expr="icontains",
