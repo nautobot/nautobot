@@ -1604,12 +1604,9 @@ properties:
     details: |-
       | Value | Behavior |
       |---|---|
-      | `"off"` | Requests are neither costed nor limited. |
-      | `"report"` | Each request's cost is calculated and recorded, but no request is ever denied. |
-      | `"enforce"` | As `"report"`, and additionally denies requests from a token that has exhausted its budget for the current window. |
-
-      REST and GraphQL requests are metered independently, each against its own mode, but they draw
-      on the same per-token budget.
+      | `"off"` | Requests are neither charged or limited. |
+      | `"report"` | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | `"enforce"` | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted. |
     enum:
     - "off"
     - "report"
@@ -1681,11 +1678,14 @@ properties:
       | Value | Behavior |
       |---|---|
       | `"off"` | Requests are neither costed nor limited. |
-      | `"report"` | Each request's cost is calculated and recorded, but no request is ever denied. |
-      | `"enforce"` | As `"report"`, and additionally denies requests from a token that has exhausted its budget for the current window. |
+      | `"report"` | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | `"enforce"` | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted. |
 
-      Use `"report"` to observe what a given budget *would* have rejected before switching to
-      `"enforce"`.
+      Only `"enforce"` consumes budget. In `"report"` mode the `RateLimit` header always reports a
+      full budget, so it shows the per-request cost but not what `"enforce"` would have rejected.
+
+      Requests without an `Authorization` header are never charged. If Redis is unreachable the
+      limiter fails open: the request is served and a full budget is reported.
     enum:
     - "off"
     - "report"
@@ -1701,7 +1701,7 @@ properties:
       Cost added for each request a client would need to issue in order to page through the entire
       result set.
     details: |-
-      The number of requests is `ceil(total_records ÷ records_per_page)`, with a floor of `1`, where
+      The number of requests is `ceil(record_count ÷ records_per_page)`, with a floor of `1`, where
       `records_per_page` is the page size the paginator will actually serve for the request. A larger
       `limit` therefore implies fewer requests and a lower cost.
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST"
@@ -1743,7 +1743,7 @@ properties:
       5. Multiply by `COMPUTED_FIELDS_MULTIPLIER` when `include=computed_fields` is requested.
       6. Multiply by `CSV_MULTIPLIER` when `format=csv` is requested.
 
-      The result is rounded to two decimal places and charged against the token's budget.
+      The result is rounded up to a whole number and charged against the token's budget.
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_READ_COST"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
@@ -1764,9 +1764,9 @@ properties:
     description: >-
       The length in seconds of each API token's complexity cost budget window.
     details: |-
-      Windows are fixed and anchored to wall-clock multiples of this value rather than to a token's
-      first request, so every token's budget resets at the same instant. A token can therefore spend
-      a full quota at the end of one window and another at the start of the next.
+      A token's window opens on its first charged request and closes after the specified window time.
+      Then the budget resets. Windows are per token and are not aligned to a wall clock, so
+      tokens reset in different intervals. Charges made during a window do not extend it.
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS"
     minimum: 1
     see_also:
