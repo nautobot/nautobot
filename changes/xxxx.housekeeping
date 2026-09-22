@@ -1,0 +1,1 @@
+Excluded the `meraki` extra of `nautobot-app-chatops` from the `dependencies-check` CI job, as its `meraki` version constraint is incompatible with the one required by `nautobot-app-ssot`.
