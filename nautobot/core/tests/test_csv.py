@@ -19,6 +19,8 @@ from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platfor
 from nautobot.dcim.models.locations import Location
 from nautobot.dcim.models.racks import Rack
 from nautobot.extras.api.serializers import StatusSerializer
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models.customfields import CustomField
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag
@@ -979,3 +981,37 @@ class CSVM2MRepresentationTestCase(TestCase):
             set(new_device.software_image_files.values_list("pk", flat=True)),
             {image_file.pk for image_file in self.image_files},
         )
+
+
+class CSVCustomFieldCellTestCase(TestCase):
+    """How a `cf_<key>` column is read back.
+
+    These columns are lifted out before `nest_flat_dict` runs so that a custom field whose key contains
+    `__` is not split into a subtree; the null handling below is applied separately to keep that lift from
+    changing anything else.
+    """
+
+    def setUp(self):
+        for key in ("plain", "with__underscores"):
+            custom_field = CustomField.objects.create(
+                type=CustomFieldTypeChoices.TYPE_TEXT, label=f"CSV CF {key}", key=key
+            )
+            custom_field.content_types.set([ContentType.objects.get_for_model(Status)])
+
+    def _parse(self, csv_text):
+        return NautobotCSVParser().parse(
+            io.BytesIO(csv_text.encode("utf-8")),
+            parser_context={"request": None, "serializer_class": StatusSerializer},
+        )
+
+    def test_empty_cell_becomes_null(self):
+        """What the renderer writes for a null custom field, and for an empty-string one."""
+        self.assertIsNone(self._parse("name,cf_plain\ntest_status,")[0]["custom_fields"]["plain"])
+
+    def test_null_sentinel_becomes_null(self):
+        """Longstanding behavior, incidental though its origin is; see `row_elements_to_data`."""
+        self.assertIsNone(self._parse(f"name,cf_plain\ntest_status,{CSV_NULL_TYPE}")[0]["custom_fields"]["plain"])
+
+    def test_key_containing_a_double_underscore(self):
+        data = self._parse("name,cf_with__underscores\ntest_status,value")
+        self.assertEqual(data[0]["custom_fields"], {"with__underscores": "value"})

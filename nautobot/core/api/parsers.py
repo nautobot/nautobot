@@ -60,6 +60,19 @@ def validate_import_version(value):
     return version
 
 
+def custom_field_keys_for(serializer):
+    """The custom-field keys defined for this serializer's model, or `()` if it has no custom fields.
+
+    Read through the serializer's own `custom_fields` field rather than `CustomField.objects`, as
+    `validate_field_paths()` does and for the same two reasons: `nautobot.core` need not reach into
+    `nautobot.extras`, and a model with no custom fields has no such serializer field, hence no keys.
+
+    Resolve it once per file rather than per record: it is a cache round-trip
+    (`CustomField.objects.keys_for_model`), which is cheap once and not cheap ten thousand times.
+    """
+    return getattr(serializer.fields.get("custom_fields"), "custom_field_keys", ())
+
+
 def get_serializer_from_parser_context(parser_context):
     """Resolve the serializer class from a DRF parser_context and instantiate it at depth 0."""
     try:
@@ -178,16 +191,32 @@ class NautobotCSVParser(BaseParser):
     @staticmethod
     def validate_field_names(field_names, serializer):
         """
-        Confirm that every provided field name (or the head of every `__` lookup path) is a serializer field.
+        Confirm that every provided field name is one this content-type's serializer can accept.
+
+        The head of a `__` lookup path must be a serializer field. A `cf_<key>` column must name a custom
+        field defined for this model: `CustomFieldsDataField.to_internal_value` silently discards keys that
+        do not, so without this check a typo in a custom-field column is a quiet data loss rather than an
+        error. A `cf_` name is deliberately not split on `__`, a custom field's key being allowed to
+        contain one.
 
         Raises:
             ParseError: naming every unrecognized field, if any.
         """
-        heads = {field_name.split("__", 1)[0] for field_name in field_names if field_name}
-        unknown = sorted(head for head in heads if not head.startswith("cf_") and head not in serializer.fields)
+        custom_field_keys = custom_field_keys_for(serializer)
+        unknown = set()
+        for field_name in field_names:
+            if not field_name:
+                # An unnamed column, left to `row_elements_to_data` to report against the row and column
+                # it occurs at; naming it here would only produce an empty entry in the message below.
+                continue
+            if field_name.startswith("cf_"):
+                if field_name.removeprefix("cf_") not in custom_field_keys:
+                    unknown.add(field_name)
+            elif field_name.split("__", 1)[0] not in serializer.fields:
+                unknown.add(field_name.split("__", 1)[0])
         if unknown:
             raise ParseError(
-                f"Unrecognized field(s) in import data: {', '.join(unknown)}. "
+                f"Unrecognized field(s) in import data: {', '.join(sorted(unknown))}. "
                 "Fields must be field names of the serializer for this content-type."
             )
 
@@ -346,19 +375,24 @@ class NautobotCSVParser(BaseParser):
         """
         data = {}
         valid_row_data = self._remove_object_not_found_values(row)
-        fields_value_mapping = nest_flat_dict(valid_row_data, CSV_NULL_SENTINELS)
+        # `cf_` columns are lifted out before nesting, as `record_to_data` does for JSON/YAML: a custom
+        # field's key may itself contain `__`, which `nest_flat_dict` would otherwise split into a subtree.
+        custom_fields = {key: value for key, value in valid_row_data.items() if key.startswith("cf_")}
+        fields_value_mapping = nest_flat_dict(
+            {key: value for key, value in valid_row_data.items() if not key.startswith("cf_")},
+            CSV_NULL_SENTINELS,
+        )
+        for key, value in custom_fields.items():
+            # The same nulls `nest_flat_dict` mapped when these keys still went through it, so that lifting
+            # them out changes only the `__` splitting.
+            data.setdefault("custom_fields", {})[key.removeprefix("cf_")] = (
+                None if value == "" or value in CSV_NULL_SENTINELS else value
+            )
         for column, key in enumerate(fields_value_mapping.keys(), start=1):
             if not key:
                 raise ParseError(f"Row {counter}: Column {column}: missing/empty header for this column")
 
             value = fields_value_mapping[key]
-            if key.startswith("cf_"):
-                # Custom field
-                if value == "":
-                    value = None
-                data.setdefault("custom_fields", {})[key[3:]] = value
-                continue
-
             serializer_field = serializer.fields.get(key, None)
             if serializer_field is None:
                 # The REST API normally just ignores any columns the serializer doesn't understand
@@ -471,7 +505,7 @@ class ImportDocumentParserMixin:
             raise ParseError('The "records" value of an import document must be a list')
         return metadata, records
 
-    def record_to_data(self, counter, record, serializer, strict=True):
+    def record_to_data(self, counter, record, serializer, strict=True, custom_field_keys=None):
         """
         Normalize a single record into a dict suitable for consumption by the serializer.
 
@@ -486,12 +520,22 @@ class ImportDocumentParserMixin:
         """
         if not isinstance(record, dict):
             raise ParseError(f"Record {counter}: expected a mapping of field names to values")
+        if custom_field_keys is None:
+            custom_field_keys = custom_field_keys_for(serializer)
+        unknown = []
         # `cf_` keys are lifted out before nesting: a custom field's key may itself contain `__` (explicitly
         # set, never auto-slugified), which `nest_flat_dict` would otherwise split into a subtree.
-        custom_fields = {key[3:]: value for key, value in record.items() if key.startswith("cf_")}
+        custom_fields = {}
+        for key, value in record.items():
+            if key.startswith("cf_"):
+                # An undefined key would be dropped by `CustomFieldsDataField.to_internal_value` without
+                # comment, so in strict mode it is reported rather than silently losing the column
+                if key.removeprefix("cf_") in custom_field_keys:
+                    custom_fields[key.removeprefix("cf_")] = value
+                else:
+                    unknown.append(key)
         record = nest_flat_dict({key: value for key, value in record.items() if not key.startswith("cf_")})
         data = {}
-        unknown = []
         for key, value in record.items():
             serializer_field = serializer.fields.get(key)
             if serializer_field is None:
@@ -521,8 +565,9 @@ class ImportDocumentParserMixin:
             # Absent means lenient, as it does for CSV: the REST API sets no such key and has always
             # ignored fields it does not recognize. The `ImportObjects` Job opts in explicitly.
             strict = parser_context.get("strict_fields", False)
+            custom_field_keys = custom_field_keys_for(serializer)
             return [
-                self.record_to_data(counter, record, serializer, strict=strict)
+                self.record_to_data(counter, record, serializer, strict=strict, custom_field_keys=custom_field_keys)
                 for counter, record in enumerate(records, start=1)
             ]
         except ParseError:

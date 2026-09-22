@@ -2557,6 +2557,13 @@ class RecordToDataTests(TestCase):
 
     def setUp(self):
         self.parser = NautobotJSONImportParser()
+        # `my__key` is the point of one test below: a custom field's key may contain `__`, which the
+        # auto-slugified default never produces but an explicitly-set key may.
+        for key in ("my__key", "a", "b"):
+            custom_field = CustomField.objects.create(
+                type=CustomFieldTypeChoices.TYPE_TEXT, label=f"Record CF {key}", key=key
+            )
+            custom_field.content_types.set([ContentType.objects.get_for_model(Status)])
         self.serializer = StatusSerializer(context={"request": None, "depth": 0})
 
     def to_data(self, record, **kwargs):
@@ -2589,7 +2596,16 @@ class RecordToDataTests(TestCase):
             self.to_data({"name": "x", "no_such_field": 1})
         self.assertNotIn("no_such_field", self.to_data({"name": "x", "no_such_field": 1}, strict=False))
 
+    def test_record__unknown_custom_field_is_rejected_when_strict(self):
+        """`CustomFieldsDataField` discards an undefined key silently, so strict mode has to catch it."""
+        with self.assertRaisesRegex(ParseError, "cf_no_such_custom_field"):
+            self.to_data({"name": "x", "cf_no_such_custom_field": 1})
+        self.assertEqual(
+            self.to_data({"name": "x", "cf_no_such_custom_field": 1}, strict=False).get("custom_fields", {}), {}
+        )
+
     def test_record__read_only_fields_are_dropped(self):
+        """Read-only fields are accepted and ignored, never an error - an export is full of them."""
         self.assertNotIn("display", self.to_data({"name": "x", "display": "ignored"}))
 
 
@@ -2651,6 +2667,59 @@ class ImportAdapterTests(ImportExportJobTestCase):
         csv_file = FileProxy.objects.create(name="latin1.csv", file=ContentFile(content, name="latin1.csv"))
         job_result = self.run_import(csv_file=csv_file.id, expected_status=JobResultStatusChoices.STATUS_FAILURE)
         self.assertJobLogEntry(job_result, "Unable to decode", level=LogLevelChoices.LOG_ERROR)
+
+
+class ImportStrictFieldsTests(ImportExportJobTestCase):
+    """The Job opts into strict field checking, so an unrecognized column or key fails the import.
+
+    The parsers themselves default to lenient, which is what the REST API and the UI's bulk-import
+    helper have always done; only `ImportObjects` asks for strictness.
+    """
+
+    def test_strict_fields__csv_unknown_column(self):
+        job_result = self.run_import(
+            "\n".join(["name,color,content_types,nonexistent", "test_strict_status,111111,dcim.device,x"]),
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "nonexistent", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_strict_status").exists())
+
+    def test_strict_fields__yaml_unknown_key(self):
+        job_result = self.run_import(
+            "\n".join(
+                [
+                    "- name: test_strict_status",
+                    "  color: '111111'",
+                    "  content_types: [dcim.device]",
+                    "  nonexistent: x",
+                ]
+            ),
+            import_format="yaml",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "nonexistent", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_strict_status").exists())
+
+    def test_strict_fields__csv_unknown_custom_field(self):
+        """A typo'd `cf_` column is data loss rather than an error without this check."""
+        job_result = self.run_import(
+            "\n".join(["name,color,content_types,cf_nope", "test_strict_status,111111,dcim.device,x"]),
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "cf_nope", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_strict_status").exists())
+
+    def test_strict_fields__read_only_columns_are_accepted(self):
+        """An export carries `id`, `display`, `created`, ... so strict mode must not choke on them."""
+        self.run_import(
+            "\n".join(
+                [
+                    "name,color,content_types,display,created,last_updated,object_type,natural_slug",
+                    "test_strict_status,111111,dcim.device,ignored,,,,",
+                ]
+            )
+        )
+        self.assertTrue(Status.objects.filter(name="test_strict_status").exists())
 
 
 # ===========================================================================
