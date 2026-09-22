@@ -1,0 +1,1 @@
+Updated dependency `gitpython` to `>=3.1.62,<3.2` to mitigate GHSA-59cr-6r3x-644w.

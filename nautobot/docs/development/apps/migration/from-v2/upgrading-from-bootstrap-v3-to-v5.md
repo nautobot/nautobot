@@ -111,16 +111,16 @@ One major difference between Bootstrap v3 and v5 is that [Helper classes](https:
 | `text-muted`        | `text-secondary`                                                                                                           |
 | `text-left`         | `text-start`                                                                                                               |
 | `text-right`        | `text-end`                                                                                                                 |
-| `close`             | `btn-close` *(technically speaking, close button is a component now, not a helper or utility)*                             |
-| `caret`             | *removed, use an icon from icon library instead*                                                                           |
+| `close`             | `btn-close` _(technically speaking, close button is a component now, not a helper or utility)_                             |
+| `caret`             | _removed, use an icon from icon library instead_                                                                           |
 | `pull-left`         | `float-start`                                                                                                              |
 | `pull-right`        | `float-end`                                                                                                                |
-| `center-block`      | `d-block mx-auto` *(consider using flexbox for content centering)*                                                         |
+| `center-block`      | `d-block mx-auto` _(consider using flexbox for content centering)_                                                         |
 | `show`              | `d-block`                                                                                                                  |
 | `hidden`            | `d-none`                                                                                                                   |
 | `sr-only`           | `visually-hidden`                                                                                                          |
 | `sr-only-focusable` | `visually-hidden-focusable` **(must not be used in combination with the `visually-hidden` class)**                         |
-| `text-hide`         | *removed, as per Bootstrap v5.0 documentation: "it’s an antiquated method for hiding text that shouldn’t be used anymore"* |
+| `text-hide`         | _removed, as per Bootstrap v5.0 documentation: "it’s an antiquated method for hiding text that shouldn’t be used anymore"_ |
 
 It is highly encouraged to at least briefly familiarize with Bootstrap v5.x documentation on Helpers and Utilities and the array of possibilities they provide, because in many cases they can relieve developers from the burden of writing custom CSS code. At the same time, mind that not all default Bootstrap maps can be treated as source of truth, there are several Nautobot overwrites which, most notably, include [spacing](#spacing-ie-margins-and-paddings).
 
@@ -223,8 +223,8 @@ In general you may want to migrate to defining your breadcrumbs [in the Python v
 
 ### Buttons
 
-- `btn-default` is replaced by `btn-secondary`. *Nautobot will keep supporting `btn-default` class, nevertheless it is recommended to replace old `btn-default` class name with `btn-secondary`.*
-- `btn-xs` (extra small) is removed; use `btn-sm` as the smallest size. *Similarly to `btn-default` and `btn-secondary`, Nautobot will keep supporting `btn-xs` class but despite its name, it looks and behaves exactly the same as `btn-sm`.*
+- `btn-default` is replaced by `btn-secondary`. _Nautobot will keep supporting `btn-default` class, nevertheless it is recommended to replace old `btn-default` class name with `btn-secondary`._
+- `btn-xs` (extra small) is removed; use `btn-sm` as the smallest size. _Similarly to `btn-default` and `btn-secondary`, Nautobot will keep supporting `btn-xs` class but despite its name, it looks and behaves exactly the same as `btn-sm`._
 - `close` is replaced by `btn-close` as mentioned above in [Helper classes / Helpers and Utilities](#helper-classes--helpers-and-utilities).
 
 === "Bootstrap v3"
@@ -249,7 +249,7 @@ See more details in the Bootstrap v5.x documentation about [columns](https://get
 2. Replace `col-<breakpoint>-offset-<amount>` with `offset-<breakpoint>-<amount>`.
 
 !!! note "Generally increase column breakpoints by one stage when migrating"
-    A subtle change between Bootstrap v3 and v5 columns, in addition to the removal of `xs`, is that the other grid breakpoints have generally changed. For example, in v3, a `col-sm-4` would apply to windows up to 768px in size, but in v5, `col-sm-4` applies only up to 576px in size while `col-md-4` applies to windows between 577px and 768px. The net result of this change is that *in general* you will want to adjust all size-specific column definitions "up" one size increment, so `col-sm-*` becomes `col-md-*`, `col-md-*` becomes `col-lg-*`, etc.
+    A subtle change between Bootstrap v3 and v5 columns, in addition to the removal of `xs`, is that the other grid breakpoints have generally changed. For example, in v3, a `col-sm-4` would apply to windows up to 768px in size, but in v5, `col-sm-4` applies only up to 576px in size while `col-md-4` applies to windows between 577px and 768px. The net result of this change is that _in general_ you will want to adjust all size-specific column definitions "up" one size increment, so `col-sm-*` becomes `col-md-*`, `col-md-*` becomes `col-lg-*`, etc.
 
     That said, you may also want to refer to the Bootstrap v5 docs linked above to see if you can simplify your HTML/CSS classes to achieve the desired results more simply with the new grid features in Bootstrap v5.
 

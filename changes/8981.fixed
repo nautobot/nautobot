@@ -1,0 +1,1 @@
+Fixed dropdown (Select2) fields not hiding when their "Set null" checkbox is checked on bulk-edit forms.

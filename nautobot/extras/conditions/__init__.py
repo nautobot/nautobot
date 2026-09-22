@@ -4,11 +4,13 @@ A row is a preset from the catalog with values filled in, or a raw Jinja2 expres
 the rows and the payload of a change and returns a `Verdict`. Nothing here knows which model or action
 owns the rows.
 
-Modules, in dependency order: `operators` (comparisons), `payload` (the frozen picture of a change),
-`presets` (the catalog), `expressions` (compiling Jinja2), `rows` (the stored shape), `check`.
+Modules, each using only the ones before it: `errors` (the one exception type), `operators`
+(comparisons), `payload` (the frozen picture of a change), `presets` (the catalog), `expressions`
+(compiling Jinja2), `rows` (the stored shape), `validation` (a whole stored list), `check`.
 """
 
 from nautobot.extras.conditions.check import check, check_row, RowVerdict, Verdict
+from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.expressions import compile_condition, ConditionError
 from nautobot.extras.conditions.operators import (
     field_matches,
@@ -34,6 +36,7 @@ from nautobot.extras.conditions.presets import (
     register_condition_preset,
 )
 from nautobot.extras.conditions.rows import ConditionRow, ConditionRowError, ExpressionRow, PresetRow
+from nautobot.extras.conditions.validation import validate_conditions
 
 __all__ = (
     "FIELD_OPERATORS",
@@ -50,6 +53,7 @@ __all__ = (
     "ConditionPresetError",
     "ConditionRow",
     "ConditionRowError",
+    "ConditionValidationError",
     "ExpressionRow",
     "PresetParameter",
     "PresetRow",
@@ -66,4 +70,5 @@ __all__ = (
     "operators_for_kind",
     "register_condition_preset",
     "takes_a_set",
+    "validate_conditions",
 )
