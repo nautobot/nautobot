@@ -113,14 +113,26 @@ class WebRequestContextTestCase(TestCase):
         self.assertEqual(oc_list[1].action, ObjectChangeActionChoices.ACTION_DELETE)
         mock_enqueue_job_hooks.assert_has_calls(
             [
-                mock.call(oc_list[0], may_reload_jobs=True, jobhook_queryset=None),
-                mock.call(oc_list[1], may_reload_jobs=False, jobhook_queryset=None),
+                mock.call(
+                    oc_list[0],
+                    may_reload_jobs=True,
+                    jobhook_queryset=None,
+                    snapshots=oc_list[0].get_snapshots(),
+                    gate=mock.ANY,
+                ),
+                mock.call(
+                    oc_list[1],
+                    may_reload_jobs=False,
+                    jobhook_queryset=None,
+                    snapshots=oc_list[1].get_snapshots(),
+                    gate=mock.ANY,
+                ),
             ],
         )
         mock_enqueue_webhooks.assert_has_calls(
             [
-                mock.call(oc_list[0], snapshots=oc_list[0].get_snapshots(), webhook_queryset=None),
-                mock.call(oc_list[1], snapshots=oc_list[1].get_snapshots(), webhook_queryset=None),
+                mock.call(oc_list[0], snapshots=oc_list[0].get_snapshots(), webhook_queryset=None, gate=mock.ANY),
+                mock.call(oc_list[1], snapshots=oc_list[1].get_snapshots(), webhook_queryset=None, gate=mock.ANY),
             ]
         )
 

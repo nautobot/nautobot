@@ -1654,6 +1654,45 @@ class JobHookTest(TestCase):
 
         self.assertFalse(mock_enqueue_job.called)
 
+    def _condition_job_hook(self, conditions):
+        """Put `conditions` on the job hook `setUp` created."""
+        job_hook = models.JobHook.objects.get(name="JobHookTest")
+        job_hook.conditions = conditions
+        job_hook.save()
+
+    def _create_location(self, name):
+        status = models.Status.objects.get_for_model(Location).first()
+        with web_request_context(user=self.user):
+            Location.objects.create(name=name, location_type=self.location_type, status=status)
+
+    @mock.patch.object(models.JobResult, "enqueue_job")
+    def test_enqueue_job_hook_enqueues_when_the_conditions_pass(self, mock_enqueue_job):
+        self.add_permissions("extras.run_job")
+        self._condition_job_hook([{"type": "expression", "source": "data.name == 'Conditioned Location'"}])
+
+        self._create_location("Conditioned Location")
+
+        mock_enqueue_job.assert_called_once()
+
+    @mock.patch.object(models.JobResult, "enqueue_job")
+    def test_enqueue_job_hook_stays_quiet_when_the_conditions_do_not_pass(self, mock_enqueue_job):
+        self.add_permissions("extras.run_job")
+        self._condition_job_hook([{"type": "expression", "source": "data.name == 'somewhere else'"}])
+
+        self._create_location("Conditioned Location")
+
+        mock_enqueue_job.assert_not_called()
+
+    @mock.patch("nautobot.extras.jobs.get_jobs")
+    def test_job_code_is_not_reloaded_when_no_conditions_pass(self, mock_get_jobs):
+        """A reload reads every job module on disk, and nothing here is about to be run."""
+        self.add_permissions("extras.run_job")
+        self._condition_job_hook([{"type": "expression", "source": "data.name == 'somewhere else'"}])
+
+        self._create_location("Conditioned Location")
+
+        mock_get_jobs.assert_not_called()
+
 
 class JobHookTransactionTest(TransactionTestCase):  # TODO: BaseModelTestCase mixin?
     """
