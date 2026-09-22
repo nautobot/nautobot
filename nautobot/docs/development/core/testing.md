@@ -39,7 +39,7 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
 | Migration   | `django_test_migrations.contrib.unittest_case.MigratorTestCase` | `nautobot/APP/tests/migration/test_*.py`   | `invoke tests --tag migration_test` |
 
 !!! note
-    The Selenium tests keep their historical `integration` *tag* (hence
+    The Selenium tests keep their historical `integration` _tag_ (hence
     `invoke tests --tag integration`) even though their files now live under
     `tests/selenium/`; the `tests/integration/` directories now hold the Playwright
     tests, which pytest selects by path, not by tag.

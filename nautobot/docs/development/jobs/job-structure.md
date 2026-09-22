@@ -603,7 +603,7 @@ An IPv4 or IPv6 network with a mask. Returns a `netaddr.IPNetwork` object. Two a
 
 +++ 3.3.0
 
-A variable's form field is built from the Job class before any input exists, so a field whose choices depend on *what another variable is set to* cannot populate them itself. If a form field defines a `configure_for_form(form, name)` method, the Job form calls it once the form has been assembled, passing itself and the name the field has in it. That is the point at which the sibling variable's value is readable.
+A variable's form field is built from the Job class before any input exists, so a field whose choices depend on _what another variable is set to_ cannot populate them itself. If a form field defines a `configure_for_form(form, name)` method, the Job form calls it once the form has been assembled, passing itself and the name the field has in it. That is the point at which the sibling variable's value is readable.
 
 Read the sibling from `form.data` when the form is bound (the user has submitted something) and from `form.initial` when it is not (the form is being rendered for the first time), remembering that a bound form's keys may carry a prefix:
 

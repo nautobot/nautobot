@@ -125,7 +125,7 @@ The CI job (`playwright-test`) starts an isolated instance, seeds it with
 `nautobot-server generate_test_data` (`TEST_FACTORY_SEED`), and runs the same
 `invoke playwright` command. Tests create the specific records they assert on over
 the REST API and delete them on teardown. The seed is run to provide a realistically
-populated instance *around* those records, so narrowing and exclusion assertions are
+populated instance _around_ those records, so narrowing and exclusion assertions are
 meaningful rather than trivially true. On failure the job uploads the Playwright
 traces and screenshots as a build artifact and prints the server log.
 
