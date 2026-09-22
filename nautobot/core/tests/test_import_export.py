@@ -2675,6 +2675,117 @@ class ImportAdapterTests(ImportExportJobTestCase):
         self.assertJobLogEntry(job_result, "Unable to decode", level=LogLevelChoices.LOG_ERROR)
 
 
+class ImportDocumentRoundTripTests(ImportExportJobTestCase):
+    """What an export writes, an import reads back.
+
+    A `DeviceType` rather than a `Status`, so that the record carries a related object -- `manufacturer`
+    is written nested (`{"manufacturer": {"name": ...}}`) and has to resolve back to the same object.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.manufacturer = Manufacturer.objects.create(name="Round Trip Mfr")
+        self.device_type = DeviceType.objects.create(manufacturer=self.manufacturer, model="Round Trip DT", u_height=1)
+        # Kept separately: `delete()` clears the pk on the in-memory instance
+        self.original_pk = self.device_type.pk
+
+    def _export_then_delete(self, export_format):
+        """The exported document, with the object it describes removed so the import can restore it."""
+        document = self.export_document(
+            self.run_export(model=DeviceType, query_string="model=Round+Trip+DT", export_format=export_format)
+        )
+        self.device_type.delete()
+        return document
+
+    def assertRestored(self):
+        """The object is back, with the identity and the relation the file carried."""
+        restored = DeviceType.objects.get(model="Round Trip DT")
+        self.assertEqual(restored.pk, self.original_pk)
+        self.assertEqual(restored.manufacturer, self.manufacturer)
+        self.assertEqual(restored.u_height, 1)
+
+    def test_round_trip__json(self):
+        """The content type is deliberately not given: the exported document declares it."""
+        document = self._export_then_delete("json")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs", "ImportObjects", csv_data=json.dumps(document), import_format="json"
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertRestored()
+
+    def test_round_trip__yaml(self):
+        document = self._export_then_delete("yaml")
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs", "ImportObjects", csv_data=yaml.safe_dump(document), import_format="yaml"
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertRestored()
+
+    def test_round_trip__format_is_auto_detected(self):
+        """An exported document re-imports without being told what it is."""
+        document = self._export_then_delete("json")
+        job_result = create_job_result_and_run_job("nautobot.core.jobs", "ImportObjects", csv_data=json.dumps(document))
+        self.assertJobResultStatus(job_result)
+        self.assertRestored()
+
+
+class ImportDocumentRecordShapeTests(ImportExportJobTestCase):
+    """The record spellings a document accepts, end to end through the Job."""
+
+    def setUp(self):
+        super().setUp()
+        self.manufacturer = Manufacturer.objects.create(name="Shape Mfr")
+
+    def test_shape__nested_related_object(self):
+        self.run_import(
+            json.dumps([{"model": "Shape Nested", "manufacturer": {"name": "Shape Mfr"}, "u_height": 1}]),
+            model=DeviceType,
+            import_format="json",
+        )
+        self.assertEqual(DeviceType.objects.get(model="Shape Nested").manufacturer, self.manufacturer)
+
+    def test_shape__flat_lookup(self):
+        """Documents also accept CSV's flattened spelling, which the docs offer as a convenience."""
+        self.run_import(
+            json.dumps([{"model": "Shape Flat", "manufacturer__name": "Shape Mfr", "u_height": 1}]),
+            model=DeviceType,
+            import_format="json",
+        )
+        self.assertEqual(DeviceType.objects.get(model="Shape Flat").manufacturer, self.manufacturer)
+
+    def test_shape__bare_json_list(self):
+        """A bare list of records, with no document wrapped around it."""
+        self.run_import(
+            json.dumps([{"name": "test_json_bare_status", "color": "445566", "content_types": ["dcim.device"]}]),
+            import_format="json",
+        )
+        self.assertTrue(Status.objects.filter(name="test_json_bare_status", color="445566").exists())
+
+    def test_shape__custom_fields(self):
+        """`cf_<key>` entries and a whole `custom_fields` dict both reach the object."""
+        custom_field = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Shape CF", key="shape_cf"
+        )
+        custom_field.content_types.set([ContentType.objects.get_for_model(DeviceType)])
+        self.run_import(
+            json.dumps(
+                [
+                    {"model": "Shape CF Flat", "manufacturer__name": "Shape Mfr", "u_height": 1, "cf_shape_cf": "a"},
+                    {
+                        "model": "Shape CF Dict",
+                        "manufacturer__name": "Shape Mfr",
+                        "u_height": 1,
+                        "custom_fields": {"shape_cf": "b"},
+                    },
+                ]
+            ),
+            model=DeviceType,
+            import_format="json",
+        )
+        self.assertEqual(DeviceType.objects.get(model="Shape CF Flat")._custom_field_data["shape_cf"], "a")
+        self.assertEqual(DeviceType.objects.get(model="Shape CF Dict")._custom_field_data["shape_cf"], "b")
+
+
 class ImportStrictFieldsTests(ImportExportJobTestCase):
     """The Job opts into strict field checking, so an unrecognized column or key fails the import.
 
