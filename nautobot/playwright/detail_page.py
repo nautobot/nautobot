@@ -1,0 +1,134 @@
+"""Shared page object for Nautobot object detail views.
+
+The UI component framework builds every detail view (device, location, prefix, ...) from
+the same pieces: one heading, the standard action buttons, and a set of panels that all
+render the same card markup. That shared behavior lives here, so a markup change is a
+single edit. Subclasses set `DETAIL_PATH` and `VERBOSE_NAME` and add only what is
+specific to their model:
+
+    class DeviceDetailPage(DetailPage):
+        DETAIL_PATH = "/dcim/devices/{pk}/"
+        VERBOSE_NAME = "Device"
+"""
+
+import re
+
+from playwright.sync_api import expect
+
+from nautobot.playwright.base_page import BasePage
+
+
+class DetailPage(BasePage):
+    """Shared detail-view behavior: navigation, the heading, the Edit button, and panels."""
+
+    DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
+    # REQUIRED in subclass, e.g. "Device". Core labels the Edit button "Edit <verbose name>".
+    VERBOSE_NAME = ""
+
+    # The heading's own span. The surrounding h1 also holds the copy-to-clipboard button,
+    # whose label would otherwise be read as part of the object's name.
+    _HEADING = "#page-title #copy_title"
+    _EDIT_BUTTON = "#edit-button"
+    # One strong element per panel header, holding that panel's title.
+    _PANEL_TITLE = ".card > .card-header strong"
+    # The card a panel title belongs to. The predicate matches a whole class name, so it
+    # stops at `card` rather than at the `card-header` in between.
+    _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
+    # A component with `deferred_render` set ships a placeholder card with a spinner in
+    # its body and fetches its own body with a second request to the same URL, carrying
+    # the component's id. The spinner lives inside the placeholder, so it is gone once
+    # the body has swapped in.
+    _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
+    _DEFERRED_COMPONENT_REQUEST = re.compile(r"[?&]component_id=")
+
+    def __init__(self, page, base_url):
+        """Fail fast on a subclass that forgot to set `DETAIL_PATH` or `VERBOSE_NAME`."""
+        if not self.DETAIL_PATH:
+            raise ValueError(f"{type(self).__name__} must set DETAIL_PATH (e.g. '/dcim/devices/{{pk}}/').")
+        if not self.VERBOSE_NAME:
+            raise ValueError(f"{type(self).__name__} must set VERBOSE_NAME (e.g. 'Device').")
+        super().__init__(page, base_url)
+
+    # -------------------------------------------------------------------------
+    # Navigation, heading and standard buttons
+    # -------------------------------------------------------------------------
+
+    def navigate(self, pk):
+        """Go to the detail view of the object with primary key *pk*."""
+        self._goto(self.DETAIL_PATH.format(pk=pk))
+
+    def expect_heading(self, name):
+        """Assert (auto-retrying) that the page heading is *name*."""
+        expect(self.page.locator(self._HEADING)).to_have_text(name)
+
+    def expect_edit_button(self):
+        """Assert (auto-retrying) that this model's Edit button is rendered.
+
+        The label names the model ("Edit Device"), so this asserts the button belongs to
+        the view under test and not to some other object rendered on the page.
+        """
+        expect(self.page.locator(self._EDIT_BUTTON)).to_contain_text(f"Edit {self.VERBOSE_NAME}")
+
+    # -------------------------------------------------------------------------
+    # Panels
+    # -------------------------------------------------------------------------
+
+    def panel(self, title):
+        """Locator for the panel card titled *title*.
+
+        The title is matched without regard to case. A panel's own label is uppercased
+        when it is rendered ("MANAGEMENT"), while a table panel's title keeps the case it
+        was declared with ("Assigned VRFs"), and a caller should not have to know which
+        kind of panel it is asking for.
+        """
+        heading = self.page.locator(self._PANEL_TITLE).filter(
+            has_text=re.compile(rf"^\s*{re.escape(title)}\s*$", re.IGNORECASE)
+        )
+        return heading.locator(self._ENCLOSING_CARD)
+
+    def expect_panel(self, title):
+        """Assert (auto-retrying) that exactly one panel on the page is titled *title*."""
+        expect(self.panel(title)).to_have_count(1)
+
+    def expect_no_panel(self, title):
+        """Assert (auto-retrying) that no panel on the page is titled *title*."""
+        expect(self.panel(title)).to_have_count(0)
+
+    def expect_panel_to_contain(self, title, text):
+        """Assert (auto-retrying) that the panel titled *title* shows *text*.
+
+        Scoped to the one card. A page-wide text search says nothing about which panel
+        produced the match, and a detail view renders many panels with similar wording.
+        """
+        expect(self.panel(title)).to_contain_text(text)
+
+    def expect_panel_field(self, title, key, value):
+        """Assert (auto-retrying) that the row keyed *key* in panel *title* shows *value*.
+
+        Key-value panels render one row per field, key cell then value cell. The value
+        cell also carries a copy-to-clipboard button, and a related object is rendered by
+        its full display text, so the assertion is containment rather than equality.
+        """
+        row = self.panel(title).locator("tr").filter(has=self.page.locator(f"td:first-child:text-is({key!r})"))
+        expect(row.locator("td").nth(1)).to_contain_text(value)
+
+    # -------------------------------------------------------------------------
+    # Deferred components
+    # -------------------------------------------------------------------------
+
+    def fail_deferred_components(self, status=500):
+        """Make every deferred component's follow-up request fail, leaving its placeholder unresolved."""
+        self.page.route(self._DEFERRED_COMPONENT_REQUEST, lambda route: route.fulfill(status=status, body=""))
+
+    def allow_deferred_components(self):
+        """Stop failing deferred components' follow-up requests."""
+        self.page.unroute(self._DEFERRED_COMPONENT_REQUEST)
+
+    def expect_deferred_placeholder_count(self, expected):
+        """Assert (auto-retrying) that *expected* deferred components are still showing a placeholder.
+
+        Counted by presence, not visibility: htmx keeps `.htmx-indicator` transparent
+        except while its own request is in flight, so a placeholder waiting on a response
+        that never came is in the DOM but reads as not visible.
+        """
+        expect(self.page.locator(self._PLACEHOLDER_SPINNER)).to_have_count(expected)

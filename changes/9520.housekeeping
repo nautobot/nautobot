@@ -1,0 +1,1 @@
+Replaced the Device detail Selenium tests with Playwright tests covering headings, action buttons, panels, values, empty states, and deferred Power Utilization rendering. Added a shared DetailPage page object for common detail-view behavior.
