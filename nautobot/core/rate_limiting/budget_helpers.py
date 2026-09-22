@@ -1,11 +1,10 @@
 import hashlib
-import math
 
-from django.core.cache import cache
+from django_redis import get_redis_connection
 import redis.exceptions
 
 CREDENTIAL_DIGEST_LENGTH = 16
-TOKEN_BUCKET_SCHEME = "user_token"  # noqa: S105 - Not sensitive data
+NO_EXPIRY_SET = -1
 
 
 def hash_user_identifier(user_identifier):
@@ -17,39 +16,26 @@ def hash_user_identifier(user_identifier):
     return truncated_hexdigest
 
 
-def get_user_rate_limit_bucket_id(user_token, window):
+def get_rate_limit_bucket_id(user_token):
     hashed_user_identifier = hash_user_identifier(user_token)
-    user_rate_limit_bucket_id = f"{TOKEN_BUCKET_SCHEME}:{hashed_user_identifier}:{window}"
+    user_rate_limit_bucket_id = f"user_token:{hashed_user_identifier}"
 
     return user_rate_limit_bucket_id
 
 
-def get_time_window(current_time, window_duration):
-    time_window_id = int(current_time // window_duration)
-
-    return time_window_id
-
-
-def get_seconds_remaining_in_window(current_time, window_duration):
-    elapsed_seconds_in_window = current_time % window_duration
-    remaining_seconds_in_window = window_duration - elapsed_seconds_in_window
-    whole_remaining_seconds = math.ceil(remaining_seconds_in_window)
-    floored_remaining_seconds = max(1, whole_remaining_seconds)
-
-    return floored_remaining_seconds
-
-
 def charge_bucket(bucket_id, cost, timeout):
     try:
-        cache.incr(bucket_id, cost, ignore_key_check=True)
-        cache.touch(bucket_id, timeout)
-        return None
-    except redis.exceptions.RedisError:
-        return None
+        connection = get_redis_connection("default")
 
+        pipeline = connection.pipeline()
+        pipeline.incrby(bucket_id, cost)
+        pipeline.ttl(bucket_id)
+        consumed_budget, remaining_timeout = pipeline.execute()
 
-def get_current_bucket(bucket_id):
-    try:
-        return cache.get(bucket_id, 0)
+        if remaining_timeout == NO_EXPIRY_SET:
+            connection.expire(bucket_id, timeout)
+            remaining_timeout = timeout
+
+        return consumed_budget, remaining_timeout
     except redis.exceptions.RedisError:
-        return None
+        return None, None

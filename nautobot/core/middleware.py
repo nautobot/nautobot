@@ -26,13 +26,7 @@ from nautobot.core.authentication import (
     assign_groups_to_user,
     assign_permissions_to_user,
 )
-from nautobot.core.rate_limiting.budget_helpers import (
-    charge_bucket,
-    get_current_bucket,
-    get_seconds_remaining_in_window,
-    get_time_window,
-    get_user_rate_limit_bucket_id,
-)
+from nautobot.core.rate_limiting.budget_helpers import charge_bucket, get_rate_limit_bucket_id
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
     estimate_rest_read_request_cost,
@@ -600,20 +594,21 @@ class ComplexityCostRateLimitingMiddleware:
         # ----------------------------------------------------------------------
         quota = settings.NAUTOBOT_REST_RATE_LIMITING_QUOTA
         rate_limiting_window_in_seconds = settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS
-        current_time = time.time()
-        current_window = get_time_window(current_time, rate_limiting_window_in_seconds)
-
-        bucket_ttl_window_multiple = 2
-        bucket_timeout = rate_limiting_window_in_seconds * bucket_ttl_window_multiple
 
         consumed_quota = 0
+        remaining_window_time = rate_limiting_window_in_seconds
+
         if user_token is not None and should_complexity_cost_calculation_enforced is True:
-            user_rate_limit_bucket_id = get_user_rate_limit_bucket_id(user_token, current_window)
-            charge_bucket(user_rate_limit_bucket_id, request_complexity_cost_estimate, bucket_timeout)
-            consumed_quota = get_current_bucket(user_rate_limit_bucket_id)
+            rate_limit_bucket_id = get_rate_limit_bucket_id(user_token)
+            consumed_quota, remaining_window_time = charge_bucket(
+                rate_limit_bucket_id,
+                request_complexity_cost_estimate,
+                rate_limiting_window_in_seconds,
+            )
 
         if consumed_quota is None:
             consumed_quota = 0
+            remaining_window_time = rate_limiting_window_in_seconds
 
         # ----------------------------------------------------------------------
         #  Generate Header Data
@@ -622,7 +617,7 @@ class ComplexityCostRateLimitingMiddleware:
 
         remaining_quota = quota - consumed_quota
         advertised_remaining_quota = max(0, remaining_quota)
-        remaining_window_time = get_seconds_remaining_in_window(current_time, rate_limiting_window_in_seconds)
+        advertised_remaining_window_time = max(1, remaining_window_time)
 
         rate_limit_policy_data = [
             f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
@@ -632,7 +627,7 @@ class ComplexityCostRateLimitingMiddleware:
         rate_limit_data = [
             f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applie
             f"r={advertised_remaining_quota}",  # Remaining quota
-            f"t={remaining_window_time}",  # Remaining window of time
+            f"t={advertised_remaining_window_time}",  # Remaining window of time
         ]
 
         rate_limit_policy_string = ";".join(rate_limit_policy_data)
@@ -654,7 +649,7 @@ class ComplexityCostRateLimitingMiddleware:
                 {"detail": "Request was throttled. The estimated complexity cost exceeds the quota."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
-            response.headers["Retry-After"] = str(remaining_window_time)
+            response.headers["Retry-After"] = str(advertised_remaining_window_time)
         else:
             response = self.get_response(request)
 

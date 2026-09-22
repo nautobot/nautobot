@@ -268,11 +268,9 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(NAUTOBOT_REST_RATE_LIMITING_MODE="enforce")
     def test_unreachable_caching_service_reports_a_full_budget(self):
-        with (
-            patch(
-                "nautobot.core.rate_limiting.budget_helpers.cache.incr", side_effect=redis.exceptions.ConnectionError
-            ),
-            patch("nautobot.core.rate_limiting.budget_helpers.cache.get", side_effect=redis.exceptions.ConnectionError),
+        with patch(
+            "nautobot.core.rate_limiting.budget_helpers.get_redis_connection",
+            side_effect=redis.exceptions.ConnectionError,
         ):
             api_response = self.call_api()
 
