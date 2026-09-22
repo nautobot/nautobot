@@ -4,6 +4,10 @@ Shared fixtures, including creation and teardown (create_object, status_id_for, 
 are provided by nautobot.playwright.fixtures, registered in the repo-root conftest. Run
 `pytest --fixtures` to list them.
 Fixtures here decide which objects a DCIM test starts from.
+
+A fixture another fixture consumes is defined as `<name>_fixture` and registered under
+its bare name. The consuming signature then names the fixture without shadowing a
+function in this module.
 """
 
 import pytest
@@ -51,8 +55,8 @@ def created_manufacturer(create_object):
     return create_object("dcim/manufacturers", name=unique_name())
 
 
-@pytest.fixture
-def device_status(api, status_id_for):
+@pytest.fixture(name="device_status")
+def device_status_fixture(api, status_id_for):
     """The Status record a device fixture assigns, as the REST API returns it.
 
     `status_id_for` caches only the id, and a device's own API representation names its
@@ -65,8 +69,8 @@ def device_status(api, status_id_for):
     return response.json()
 
 
-@pytest.fixture
-def created_device(create_object, status_id_for, device_status):
+@pytest.fixture(name="created_device")
+def created_device_fixture(create_object, status_id_for, device_status):
     """A device owned by this test, with the location, device type and role it needs.
 
     Every prerequisite is created here rather than discovered, so a detail-page assertion
@@ -84,7 +88,12 @@ def created_device(create_object, status_id_for, device_status):
         status=status_id_for("dcim.location"),
     )
     manufacturer = create_object("dcim/manufacturers", name=f"{unique}-manufacturer")
-    device_type = create_object("dcim/device-types", model=f"{unique}-model", manufacturer=manufacturer["id"])
+    device_type = create_object(
+        "dcim/device-types",
+        model=f"{unique}-model",
+        manufacturer=manufacturer["id"],
+        part_number=f"{unique}-part",
+    )
     role = create_object("extras/roles", name=f"{unique}-role", content_types=["dcim.device"])
     device = create_object(
         "dcim/devices",
