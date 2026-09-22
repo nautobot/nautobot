@@ -9,6 +9,7 @@
         </div>
         <div class="card-body">
             {% render_field job_form.content_type %}
+            {% render_field job_form.match_fields %}
             {% render_field job_form.roll_back_if_error %}
         </div>
     </div>
@@ -29,6 +30,7 @@
                     {% render_field job_form.csv_data %}
                 </div>
             </div>
+            {% render_field job_form.import_format %}
             <div id="csv-fields-info" class="alert alert-info" role="alert" style="display: none">
                 <p>
                     <span class="text-success"><span aria-hidden="true" class="mdi mdi-check-bold"></span></span>

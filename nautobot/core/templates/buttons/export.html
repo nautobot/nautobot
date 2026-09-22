@@ -9,7 +9,7 @@
         <li>
             <hr class="dropdown-divider">
         </li>
-        <li><h6 class="dropdown-header">Export Templates<h6></li>
+        <li><h6 class="dropdown-header">Export Templates</h6></li>
         {% for export_template in export_templates %}
             {% include "buttons/inc/job_modal_trigger.html" with trigger_url=export_template.trigger_url trigger_hx_vals=export_template.trigger_hx_vals disabled=export_template.disabled disabled_title=export_template.disabled_title title=export_template.description icon="mdi-database-export" list_label=export_template.name %}
         {% endfor %}

@@ -680,6 +680,15 @@ class ImportObjects(Job):
         required=False,
         description="Format of the import data; auto-detected from the file extension or content if not specified.",
     )
+    match_fields = StringVar(
+        label="Match Fields",
+        default="",
+        required=False,
+        description="The field(s) to match records in the file against existing objects, as a comma-separated "
+        "list (e.g. <code>name,serial</code>), overriding any <code>match_fields</code> the file itself "
+        "declares. <strong>Not yet implemented</strong>: the value is accepted and recorded, but every "
+        "import currently creates new objects regardless.",
+    )
     roll_back_if_error = BooleanVar(
         label="Rollback Changes on Failure",
         required=False,
@@ -742,7 +751,16 @@ class ImportObjects(Job):
                         self.logger.error("Row %d: `%s`: `%s`", row, field, err)
         return new_objs, validation_failed
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=True, import_format="auto"):  # pylint:disable=arguments-differ
+    def run(  # pylint:disable=arguments-differ
+        self,
+        *,
+        content_type,
+        csv_data=None,
+        csv_file=None,
+        roll_back_if_error=True,
+        import_format="auto",
+        match_fields="",
+    ):
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
