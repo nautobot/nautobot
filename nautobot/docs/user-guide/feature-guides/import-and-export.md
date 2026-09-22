@@ -248,9 +248,46 @@ records:
 
 ## Importing
 
-TODO - add documentation when this is implemented
+Importing is the "Import Objects" Job, reached from the **Import from File** button on any object-list view, and it accepts CSV, JSON and YAML alike. Supply the data either by uploading a file or by pasting it into the text box.
+
++/- 3.3.0
+    Previous versions could import CSV only.
+
+### Choosing an import format
+
+The **Format** field defaults to auto-detection, which is almost always what you want: an uploaded file is recognized by its `.csv`, `.json`, `.yaml` or `.yml` extension, and pasted text by its first line of content — `{` or `[` for JSON, a `-` list item or a `key:` mapping for YAML, anything else for CSV. Set the field explicitly when a file's extension does not match what is in it.
+
+### Which objects are imported
+
+A file [exported by Nautobot](#the-self-describing-file) declares its own `model`, so you can leave **Content Type** empty and let the file say what it contains. If you do set it and the file declares a different model, the import is refused rather than being read as the wrong type — the usual cause is having picked up the wrong file.
+
+A file that declares no `model` — one you wrote yourself, say — needs the content type set explicitly.
+
+### Which fields are accepted
+
+Every column or key must be a field of that content type's REST API serializer, spelled exactly as an export writes it. Related objects may be given as a UUID or by natural key (`status__name`), and custom fields as `cf_<key>` columns. Anything unrecognized fails the import rather than being ignored, so that a mistyped field name is not silently dropped.
+
+Fields Nautobot generates rather than stores — `id`, `display`, `created`, `last_updated`, `object_type`, `natural_slug` and the like — are accepted and ignored, so a file exported from Nautobot re-imports without needing to be trimmed first.
+
+### If a row fails
+
+**Rollback Changes on Failure** is enabled by default: if any row fails validation, the entire import is rolled back and nothing is created. Every failing row is still reported, so one run tells you everything that needs fixing. Disable it to keep the rows that succeeded and import the rest later.
+
+### From the command line
+
+`nautobot-server import_objects` runs the same Job locally, which is useful for development and scripted testing:
+
+```no-highlight
+nautobot-server import_objects ./statuses.yaml --username admin
+nautobot-server import_objects ./devices.csv --username admin --content-type dcim.device --no-rollback
+```
+
+As in the UI, `--content-type` may be omitted for a file that declares its own model.
 
 ### Match fields
+
+!!! warning "Not yet implemented"
+    Match fields are accepted as an input but nothing acts on them yet, so every import currently creates new objects. The rest of this section describes the intended behavior.
 
 All Nautobot data models define their default match fields, which are either a "natural key" (field or set of fields that uniquely identify an object, for example a Status's `name` field), or if no unique natural key is possible, simply use the object's `id` as its match field. This default set of match fields is added to the exported file as metadata, as described [above](#the-self-describing-file).
 

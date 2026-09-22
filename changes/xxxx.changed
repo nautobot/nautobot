@@ -1,0 +1,2 @@
+Changed the `Import Objects` system Job to reject data containing unrecognized fields, including unrecognized `cf_<key>` custom fields, rather than silently ignoring them. Fields that Nautobot generates rather than stores, such as `id` and `last_updated`, continue to be accepted and ignored so that an exported file re-imports unchanged.
+Changed the object-list "Import" button to read "Import from File", the Job now accepting more than CSV.

@@ -101,6 +101,8 @@ class NautobotCSVParser(BaseParser):
         IMPORT_DOCUMENT_MODEL_KEY,
         IMPORT_DOCUMENT_MATCH_FIELDS_KEY,
     )
+    # Directives taking exactly one value, and so having no use for a continuation segment
+    SINGLE_VALUE_IMPORT_DIRECTIVES = (IMPORT_DOCUMENT_VERSION_KEY, IMPORT_DOCUMENT_MODEL_KEY)
 
     @staticmethod
     def split_list_cell(value):
@@ -148,7 +150,7 @@ class NautobotCSVParser(BaseParser):
                         f"supported directives are: {', '.join(cls.SUPPORTED_IMPORT_DIRECTIVES)}"
                     )
                 directives[current_key] = [v for v in re.split(r"[\s,]+", value.strip()) if v]
-            elif current_key is not None:
+            elif current_key is not None and current_key not in cls.SINGLE_VALUE_IMPORT_DIRECTIVES:
                 # A continuation of the previous directive's values, e.g. `match_fields=name;serial`
                 directives[current_key].extend(v for v in re.split(r"[\s,]+", segment) if v)
             else:
@@ -157,7 +159,7 @@ class NautobotCSVParser(BaseParser):
         for key, values in directives.items():
             if not values:
                 raise ParseError(f'No value(s) specified for import directive "{key}"')
-            if key in [IMPORT_DOCUMENT_VERSION_KEY, IMPORT_DOCUMENT_MODEL_KEY]:
+            if key in cls.SINGLE_VALUE_IMPORT_DIRECTIVES:
                 if len(values) > 1:
                     raise ParseError(f'Expected a single value for import directive "{key}"')
                 directives[key] = values[0]

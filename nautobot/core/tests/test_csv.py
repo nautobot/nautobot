@@ -805,6 +805,9 @@ class CSVImportDirectiveTestCase(TestCase):
         with self.assertRaisesRegex(ParseError, "Malformed import directive"):
             self.parser_class.parse_directive_cell("# nautobot_import_version")
         with self.assertRaisesRegex(ParseError, "Expected a single value"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=3; model=a.b c.d")
+        # A segment with no `=` after a single-valued directive is malformed, not a continuation of it
+        with self.assertRaisesRegex(ParseError, "Malformed import directive"):
             self.parser_class.parse_directive_cell("# nautobot_import_version=3; name serial")
         with self.assertRaisesRegex(ParseError, "Unsupported nautobot_import_version"):
             self.parser_class.parse_directive_cell("# nautobot_import_version=999; model=extras.status")
