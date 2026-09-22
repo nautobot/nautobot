@@ -421,6 +421,61 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
+    def test_interface_tag_changes(self):
+        """Tag updates must persist matching snapshots and diffs, including an empty tag list."""
+        tags = [Tag.objects.create(name=name) for name in ("Interface tag A", "Interface tag B")]
+        for tag_obj in tags:
+            tag_obj.content_types.add(ContentType.objects.get_for_model(Interface))
+        self.add_permissions(
+            "dcim.add_interface", "dcim.change_interface", "dcim.view_device", "extras.view_status", "extras.view_tag"
+        )
+        payload = {
+            "device": str(Device.objects.first().pk),
+            "name": "vlan150",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": str(Status.objects.get_for_model(Interface).first().pk),
+            "tags": [str(tag_obj.pk) for tag_obj in tags],
+        }
+        response = self.client.post(reverse("dcim-api:interface-list"), payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        interface = Interface.objects.get(pk=response.data["id"])
+        url = reverse("dcim-api:interface-detail", kwargs={"pk": interface.pk})
+
+        for label, data, expected_tags in (
+            ("omit tags", {"description": "Updated description"}, tags),
+            ("remove one tag", {"tags": [str(tags[1].pk)]}, tags[1:]),
+            ("clear final tag", {"tags": []}, []),
+            ("add two tags", {"tags": payload["tags"]}, tags),
+            ("clear multiple tags", {"tags": []}, []),
+            ("clear untagged interface", {"tags": []}, []),
+        ):
+            with self.subTest(operation=label):
+                previous_tags = get_changes_for_model(interface).first().object_data_v2["tags"]
+                change_count = get_changes_for_model(interface).count()
+                response = self.client.patch(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                interface.refresh_from_db()
+                self.assertCountEqual(interface.tags.all(), expected_tags)
+                self.assertCountEqual(
+                    [str(tag_data["id"]) for tag_data in response.data["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                changes = get_changes_for_model(interface)
+                self.assertEqual(changes.count(), change_count + 1)
+                change = changes.first()
+                self.assertCountEqual(change.object_data["tags"], [tag_obj.name for tag_obj in expected_tags])
+                self.assertCountEqual(
+                    [tag_data["id"] for tag_data in change.object_data_v2["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                differences = change.get_snapshots()["differences"]
+                if previous_tags != change.object_data_v2["tags"]:
+                    self.assertEqual(differences["removed"]["tags"], previous_tags)
+                    self.assertEqual(differences["added"]["tags"], change.object_data_v2["tags"])
+                else:
+                    self.assertNotIn("tags", differences["removed"])
+                    self.assertNotIn("tags", differences["added"])
+
     def test_delete_object(self):
         location_type = LocationType.objects.get(name="Campus")
         location = Location(
@@ -590,6 +645,53 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
         self.assertEqual(
             len(snapshots["differences"]["added"]["content_types"]),
             ContentType.objects.filter(app_label="dcim").count(),
+        )
+
+    def test_clear_tags(self):
+        """Clearing tags directly must record the resulting empty relationship."""
+        location = Location.objects.filter(location_type__name="Campus").first()
+        tags = list(Tag.objects.get_for_model(Location)[:2])
+        with context_managers.web_request_context(self.user):
+            location.tags.set(tags)
+            location.save()
+        previous_change = get_changes_for_model(location).first()
+        change_count = get_changes_for_model(location).count()
+
+        with context_managers.web_request_context(self.user):
+            location.tags.clear()
+
+        self.assertFalse(location.tags.exists())
+        changes = get_changes_for_model(location)
+        self.assertEqual(changes.count(), change_count + 1)
+        change = changes.first()
+        self.assertEqual(change.object_data["tags"], [])
+        self.assertEqual(change.object_data_v2["tags"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {"removed": {"tags": previous_change.object_data_v2["tags"]}, "added": {"tags": []}},
+        )
+        self.assertEqual(Tag.objects.filter(pk__in=[tag_obj.pk for tag_obj in tags]).count(), len(tags))
+
+    def test_clear_m2m_fields(self):
+        """Clearing a standard M2M field must refresh its changelog snapshot too."""
+        with context_managers.web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test clear locationtype")
+            location_type.content_types.set(ContentType.objects.filter(app_label="dcim"))
+        previous_change = get_changes_for_model(location_type).first()
+
+        with context_managers.web_request_context(self.user):
+            location_type.content_types.clear()
+
+        changes = get_changes_for_model(location_type)
+        self.assertEqual(changes.count(), 2)
+        change = changes.first()
+        self.assertEqual(change.object_data_v2["content_types"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {
+                "removed": {"content_types": previous_change.object_data_v2["content_types"]},
+                "added": {"content_types": []},
+            },
         )
 
     def test_opt_out(self):
