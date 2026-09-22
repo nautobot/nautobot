@@ -163,6 +163,7 @@ def to_meters(length, unit):
         return length * Decimal("0.3048") * 12
     raise ValueError(f"Unknown unit {unit}. Must be 'km', 'm', 'cm', 'mi', 'ft', or 'in'.")
 
+
 def to_int_or_none(value):
     """
     Coerce `value` to an int, returning None if it isn't coercible.

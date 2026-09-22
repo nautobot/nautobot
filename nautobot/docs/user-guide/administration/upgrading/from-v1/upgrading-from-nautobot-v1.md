@@ -452,7 +452,6 @@ The Job `name` field has been changed to a unique field and the `name` + `groupi
         class Meta:
             name = "Sample job"
 
-
     class NautobotJob2(Job):
         class Meta:
             name = "Sample job"
@@ -512,7 +511,6 @@ With the removal of the atomic transaction, the `commit` flag has been removed. 
 <!-- pyml disable-num-lines 8 no-multiple-blanks,proper-names -->
     ```py
     from nautobot.extras.jobs import DryRunVar, Job
-
 
     class ExampleJob(Job):
         dryrun = DryRunVar()

@@ -23,7 +23,6 @@ All `JobButtonReceiver` subclasses must implement `receive_job_button(self, obj)
     ```py
     from nautobot.apps.jobs import JobButtonReceiver, register_jobs
 
-
     class ExampleSimpleJobButtonReceiver(JobButtonReceiver):
         class Meta:
             name = "Example Simple Job Button Receiver"
@@ -50,7 +49,6 @@ You can support multiple object types in a single Job by checking the object typ
     ```py
     from nautobot.apps.jobs import JobButtonReceiver, register_jobs
     from nautobot.dcim.models import Device, Location
-
 
     class ExampleComplexJobButtonReceiver(JobButtonReceiver):
         class Meta:
@@ -106,7 +104,6 @@ Use Job Hooks to enforce policy, run audits, or trigger external actions in resp
     ```py
     from nautobot.apps.jobs import JobHookReceiver, register_jobs
     from nautobot.extras.choices import ObjectChangeActionChoices
-
 
     class ExampleJobHookReceiver(JobHookReceiver):
         def receive_job_hook(self, change, action, changed_object):
