@@ -1,6 +1,6 @@
 # The Search Bar
 
-The exercises in the prior sections in this *Getting Started Guide* walked you through how to **navigate** to the proper objects.
+The exercises in the prior sections of this _Getting Started Guide_ walked you through how to **navigate** to the proper objects.
 
 You can also use the Search Bar to find desired objects with either partial or complete alpha/numeric characters or exact UUID.
 
@@ -23,9 +23,9 @@ This example shows the result of clicking on the **IP Address** object (4).
     * This takes you to a search results page
 2. In the drop-down selector to the right, select `Devices`
 3. Search results for Devices with `edge` in the name
-4. *Tenants* for each Device (if applicable)
-5. *Device Type* for each Device
-6. *Location* for each Device
+4. _Tenants_ for each Device (if applicable)
+5. _Device Type_ for each Device
+6. _Location_ for each Device
 
 Clicking on any of the links for the results takes you to the main page for that object. For example:
 

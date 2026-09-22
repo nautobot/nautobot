@@ -2,7 +2,7 @@
 
 +++ 3.3.0
 
-A condition narrows *which changes* a Webhook or Job Hook reacts to. Without conditions, an action fires for every change to every object of its selected types. With conditions, it fires only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
+A condition narrows _which changes_ a Webhook or Job Hook reacts to. Without conditions, an action fires for every change to every object of its selected types. With conditions, it fires only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
 
 Conditions are a list of rows. Every row must pass for the action to fire; an empty list passes. Each row is either a **preset** chosen from a catalog and filled in, or a **raw expression** written in Jinja2. Either kind can be negated.
 

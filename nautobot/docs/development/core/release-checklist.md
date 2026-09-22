@@ -23,7 +23,7 @@ This document is intended for Nautobot maintainers and covers the steps to perfo
 
 Nautobot's required Python packages are tracked in two files: `pyproject.toml` and `poetry.lock`. `pyproject.toml` specifies the ranges of versions of each direct Nautobot dependency that can be included when preparing a production installation of Nautobot (e.g. via `pip install nautobot`), while `poetry.lock` serves two distinct but important purposes:
 
-1. Specify the exact versions of all Nautobot dependencies (direct and indirect) that are installed in a Nautobot *developer* environment (`poetry install`)
+1. Specify the exact versions of all Nautobot dependencies (direct and indirect) that are installed in a Nautobot _developer_ environment (`poetry install`)
 2. Specify the exact versions of all Nautobot dependencies (direct and indirect) that are installed in the Nautobot Docker images (including both developer and final targets).
 
 Note that you should never manually edit `poetry.lock`; instead, you will typically update it (and often `pyproject.toml` as well) via the `poetry` CLI command.
@@ -61,7 +61,7 @@ Add the release notes (`docs/release-notes/X.Y.md`) to the table of contents wit
 
 Follow the [install instructions](../../user-guide/administration/installation/nautobot.md) to perform a new production installation of Nautobot.
 
-The goal of this step is to walk through the entire install process *as documented* to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
+The goal of this step is to walk through the entire install process _as documented_ to make sure nothing there needs to be changed or updated, to catch any errors or omissions in the documentation, and to ensure that it is current with each release.
 
 !!! tip
     Fire up `mkdocs serve --livereload` in your development environment to start the documentation server! This allows you to view the documentation locally and automatically rebuilds the documents as you make changes.
@@ -253,7 +253,7 @@ Once you have verified that all of the above is correct, publish the release and
     ```
 
     !!! warning
-        You should *not* include `docker-compose.dev.yml` in this test scenario!
+        You should _not_ include `docker-compose.dev.yml` in this test scenario!
 
     Push the images to GitHub Container Registry and Docker Hub
 

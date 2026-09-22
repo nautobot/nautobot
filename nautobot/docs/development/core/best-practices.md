@@ -306,6 +306,14 @@ Using dotted notation:
 "dcim:device_list"
 ```
 
+## HTTP Method Semantics
+
+HTTP `GET` handlers must not perform database writes. Nautobot must be able to serve read traffic against a database that refuses writes, such as while `MAINTENANCE_MODE` is enabled or when reads are served from a replica. `GET` is also a safe method by definition, so browser prefetching, monitoring probes, and automation clients polling the REST API all issue `GET` requests on the assumption that nothing changes; a write makes each of those a state change, and multiplies write load on the primary.
+
+If a view needs to persist something it computes while rendering, have the client send it back in a subsequent `PATCH` or `POST` rather than writing it during the `GET`.
+
+That said, some existing handlers still follow the older pattern of saving a user preference during a `GET`: the job list view persists the chosen display (`list` or `tiles`), and the config context views persist the chosen format (`json` or `yaml`), each taken from a query parameter.
+
 ## REST API Best Practices
 
 - Generally the field names on a REST API serializer should correspond directly to the field names on the model, subject to the best practices described above.
