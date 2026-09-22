@@ -928,6 +928,40 @@ class ChangeLogM2MThroughTest(APITestCase):
             self.assert_single_update_change(self.prefix, change_id)
             self.assert_single_update_change(locations[1], change_id)
 
+    def test_clear_interface_ip_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate interface/IP changes."""
+        ip_addresses = self.ip_addresses[:2]
+        self.interface.ip_addresses.set(ip_addresses)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.interface.ip_addresses.clear()
+
+        self.assertFalse(self.interface.ip_addresses.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.interface, change_id)
+        self.assertEqual(change.object_data_v2["ip_addresses"], [])
+        for ip_address in ip_addresses:
+            self.assertFalse(ip_address.interfaces.filter(pk=self.interface.pk).exists())
+            self.assert_single_update_change(ip_address, change_id)
+
+    def test_clear_prefix_location_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate prefix/location changes."""
+        locations = list(self.locations[:2])
+        self.prefix.locations.set(locations)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.prefix.locations.clear()
+
+        self.assertFalse(self.prefix.locations.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.prefix, change_id)
+        self.assertEqual(change.object_data_v2["locations"], [])
+        for location in locations:
+            self.assertFalse(location.prefixes.filter(pk=self.prefix.pk).exists())
+            self.assert_single_update_change(location, change_id)
+
     def test_orm_auto_created_m2m_remains_one_sided(self):
         route_target = RouteTarget.objects.create(name="65000:99999")
         vrf = VRF.objects.create(name="Change Log M2M Test VRF", namespace=self.prefix.namespace)
