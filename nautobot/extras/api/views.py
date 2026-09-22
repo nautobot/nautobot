@@ -16,6 +16,7 @@ from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, Valida
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.parsers import NautobotCSVParser
@@ -38,6 +39,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
 )
+from nautobot.extras.conditions.presets import get_condition_presets
 from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
@@ -162,6 +164,28 @@ class ComputedFieldViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = ComputedField.objects.all()
     serializer_class = serializers.ComputedFieldSerializer
     filterset_class = filters.ComputedFieldFilterSet
+
+
+#
+# Condition presets
+#
+
+
+class ConditionPresetsViewSet(NautobotAPIVersionMixin, ViewSet):
+    """The condition presets this installation offers."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={"200": serializers.ConditionPresetSerializer(many=True)})
+    def list(self, request):
+        """
+        Get the condition presets available for use in a `conditions` field.
+
+        Apps can register presets, so the catalog is not fixed even within one Nautobot version: a client
+        that builds condition rows reads it from here instead of keeping a copy that falls out of date.
+        """
+        catalog = [preset.as_dict() for preset in get_condition_presets()]
+        return Response(serializers.ConditionPresetSerializer(catalog, many=True).data)
 
 
 #

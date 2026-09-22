@@ -1275,6 +1275,57 @@ class ConfigContextSchemaTest(APIViewTestCases.APIViewTestCase):
         )
 
 
+class ConditionPresetsTest(APITestCase):
+    """The catalog a client reads to build condition rows, for whichever action carries them."""
+
+    def setUp(self):
+        super().setUp()
+        self.url = reverse("extras-api:condition-preset-list")
+
+    def test_catalog_is_served(self):
+        """The catalog is a registry rather than a queryset, so it comes back as a plain list, in key order."""
+        response = self.client.get(self.url, **self.header)
+
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(
+            [preset["preset"] for preset in response.data],
+            ["field_changed", "field_compare", "field_transition", "user_is"],
+        )
+
+    def test_catalog_describes_each_parameter(self):
+        """Without the parameter schema a client cannot tell what to fill in, or with what."""
+        response = self.client.get(self.url, **self.header)
+
+        field_compare = next(preset for preset in response.data if preset["preset"] == "field_compare")
+        self.assertEqual(
+            [parameter["name"] for parameter in field_compare["parameters"]],
+            ["field", "operator", "value"],
+        )
+        operator = field_compare["parameters"][1]
+        self.assertEqual(operator["kind"], "choice")
+        self.assertTrue(operator["required"])
+        self.assertIn("gt", [choice["value"] for choice in operator["choices"]])
+
+    def test_catalog_carries_a_worked_example_per_preset(self):
+        """The parameter schema says what goes in `values`; the example says what wraps it."""
+        response = self.client.get(self.url, **self.header)
+
+        for preset in response.data:
+            with self.subTest(preset=preset["preset"]):
+                self.assertEqual(preset["example"]["type"], "preset")
+                self.assertEqual(preset["example"]["preset"], preset["preset"])
+                self.assertEqual(
+                    set(preset["example"]["values"]),
+                    {parameter["name"] for parameter in preset["parameters"]},
+                )
+
+    def test_catalog_needs_only_authentication(self):
+        """It describes what this installation can do, not any object, so no model permission gates it."""
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+        self.assertHttpStatus(self.client.get(self.url), status.HTTP_403_FORBIDDEN)
+
+
 class ContentTypeTest(APITestCase):
     """
     ContentTypeViewSet does not have permission checks,
@@ -3627,6 +3678,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
                 "type_delete": True,
                 "job": jhr_log.pk,
                 "enabled": False,
+                "conditions": [{"type": "expression", "source": "data.name", "negate": False}],
             },
             {
                 "name": "JobHook5",
@@ -3649,6 +3701,7 @@ class JobHookTest(APIViewTestCases.APIViewTestCase):
                 job=jhr_log,
                 type_create=True,
                 type_delete=True,
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
             ),
             JobHook(
                 name="JobHook2",
@@ -6529,6 +6582,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
             "http_method": "POST",
             "http_content_type": "application/json",
             "ssl_verification": True,
+            "conditions": [{"type": "expression", "source": "data.name", "negate": False}],
         },
         {
             "content_types": ["dcim.consoleport"],
@@ -6561,6 +6615,7 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
                 http_method="POST",
                 http_content_type="application/json",
                 ssl_verification=True,
+                conditions=[{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}],
             ),
             Webhook(
                 name="api-test-2",
@@ -6585,6 +6640,81 @@ class WebhookTest(APIViewTestCases.APIViewTestCase):
         for webhook in cls.webhooks:
             webhook.save()
             webhook.content_types.set([obj_type])
+
+    conditions = [
+        {
+            "type": "preset",
+            "preset": "field_compare",
+            "values": {"field": "mtu", "operator": "gt", "value": 9000},
+            "negate": False,
+        },
+        {"type": "expression", "source": "data.name", "negate": True},
+    ]
+
+    def _webhook_data(self, name, **kwargs):
+        """A creation payload shaped like `create_data`, with a name and URL of its own.
+
+        `check_for_conflicts()` keys on content type, URL and action, so two webhooks built here would
+        otherwise refuse each other over something that has nothing to do with conditions.
+        """
+        return {
+            **self.create_data[0],
+            "name": name,
+            "payload_url": f"http://example.com/{name}",
+            "conditions": [],
+            **kwargs,
+        }
+
+    def test_create_with_conditions(self):
+        """`conditions` is writable, and is returned and stored exactly as it was sent."""
+        self.add_permissions("extras.add_webhook")
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-conditions", conditions=self.conditions),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["conditions"], self.conditions)
+        self.assertEqual(Webhook.objects.get(name="api-test-conditions").conditions, self.conditions)
+
+    def test_create_without_conditions_stores_an_empty_list(self):
+        """Leaving the field out means the webhook fires on every change of its object types."""
+        self.add_permissions("extras.add_webhook")
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-no-conditions"),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        self.assertEqual(Webhook.objects.get(name="api-test-no-conditions").conditions, [])
+
+    def test_create_with_a_bad_condition_is_refused_and_the_error_points_at_the_row(self):
+        self.add_permissions("extras.add_webhook")
+        conditions = [self.conditions[0], {"type": "preset", "preset": "no_such_preset"}]
+        response = self.client.post(
+            self._get_list_url(),
+            self._webhook_data("api-test-bad-condition", conditions=conditions),
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Condition 2: ", str(response.data["conditions"][0]))
+        self.assertIn("no_such_preset", str(response.data["conditions"][0]))
+        self.assertFalse(Webhook.objects.filter(name="api-test-bad-condition").exists())
+
+    def test_patching_another_field_leaves_conditions_alone(self):
+        """A PATCH that never mentions `conditions` must not clear what is already stored."""
+        self.add_permissions("extras.change_webhook")
+        webhook = self.webhooks[0]
+        webhook.conditions = self.conditions
+        webhook.save()
+
+        response = self.client.patch(self._get_detail_url(webhook), {"enabled": False}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        webhook.refresh_from_db()
+        self.assertEqual(webhook.conditions, self.conditions)
 
     def test_create_webhooks_with_diff_content_type_same_url_same_action(self):
         """
