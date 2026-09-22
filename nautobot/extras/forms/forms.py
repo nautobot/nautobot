@@ -1424,6 +1424,16 @@ class JobForm(BootstrapMixin, forms.Form):
 
     # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A Job variable's form field is built before any data exists (`BaseJob.as_form_class`), so a field
+        # whose choices depend on what another variable of the same Job is set to cannot populate them
+        # itself. Any field defining `configure_for_form()` is handed the assembled form to read that from.
+        for name, field in self.fields.items():
+            configure_for_form = getattr(field, "configure_for_form", None)
+            if configure_for_form is not None:
+                configure_for_form(self, name)
+
 
 class JobEditForm(NautobotModelForm):
     job_queues = DynamicModelMultipleChoiceField(

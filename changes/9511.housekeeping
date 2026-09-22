@@ -1,0 +1,1 @@
+Changed Playwright browser contexts to send the `X-Disable-Debug-Toolbar` header, and the development configuration to keep django-debug-toolbar off pages that carry it or when `NAUTOBOT_SHOW_DJDT_TOOLBAR` is set to a falsy value.

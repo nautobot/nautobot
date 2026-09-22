@@ -6229,6 +6229,31 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertIn(str(result.pk), content)
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_modal_requested_by_payload(self, _):
+        """A caller that never opened the form can still ask for the modal, by saying so in the payload.
+
+        The modal's own submit identifies itself by the id of the form making the request. A single-click
+        action -- an Export Template row in a list view's menu, say -- carries every input the Job needs
+        and so posts from a button of its own, which no `HX-Trigger` would identify; it sets
+        `job_form_modal` instead, and wants the same progress-and-result modal back.
+        """
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url,
+                data={**self.data_run_immediately, "job_form_modal": True},
+                headers={"HX-Request": "true"},
+            )
+
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
+            result = JobResult.objects.latest()
+            self.assertIn(str(result.pk), content)
+            self.assertIn("Job Status", content)  # the result modal, not a redirect or the form
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_job_form_modal_scheduling_resolved_from_registered_button(self):
         """The schedule form is rendered based on the registered _JobModalButton, never the POST payload."""

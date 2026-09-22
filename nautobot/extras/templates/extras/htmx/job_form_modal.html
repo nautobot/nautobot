@@ -118,7 +118,13 @@
 
                 const form = container.querySelector('#job-form-modal');
                 if (form) {
-                    form.addEventListener('htmx:beforeSend', () => {
+                    form.addEventListener('htmx:beforeSend', (event) => {
+                        // Only the form's own submission puts the footer into its pending state. This event
+                        // bubbles, so a control *within* the form that issues its own request -- the export
+                        // field picker's buttons, say -- would otherwise replace the footer with
+                        // "Enqueuing..." without anything having been enqueued. `detail.elt` is the element
+                        // actually making the request, which for a form submission is the form itself.
+                        if (event.detail?.elt !== form) return;
                         const modalFooter = container.querySelector('.modal-footer');
                         if (!modalFooter) return;
                         const newRunButton = document.createElement('button');

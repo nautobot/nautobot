@@ -32,6 +32,17 @@ IMPORT_DOCUMENT_RECORDS_KEY = "records"
 # Serializer fields that describe the API representation rather than the object, and so are omitted.
 EXCLUDED_DOCUMENT_FIELDS = ("url", "notes_url")
 
+# Serializer fields a flat (CSV) export does not emit as columns of their own: the two above, plus the three
+# that hold a collection of other data rather than a value of the object. `custom_fields` is replaced by a
+# `cf_<key>` column per custom field (`NautobotCSVRenderer.get_headers`), while `computed_fields` and
+# `relationships` have no flat spelling at all.
+EXCLUDED_CSV_FIELDS = (*EXCLUDED_DOCUMENT_FIELDS, "computed_fields", "custom_fields", "relationships")
+
+# The fields that identify an object rather than describe it, in the order they should lead: a flat export
+# puts these columns first whatever the serializer's own order (`NautobotCSVRenderer.get_headers`), and the
+# export field picker lists them first for the same reason -- they are what someone looks for first.
+PRIORITY_CSV_FIELDS = ("name", "display", "composite_key", "id")
+
 # Maximum number of relations one export field-selection path may traverse (`a__b__c__d` = 3).
 #
 # This counts only the hops *named in the path*. A path that ends at a relation is expanded to that
@@ -133,11 +144,31 @@ def _prune_missing_references(null_prefixes, prefix, value):
     return value
 
 
+def _order_by_selection(mapping, field_order):
+    """`mapping` with its keys in `field_order`, each key taking the earliest entry it equals or nests under.
+
+    The same rule `NautobotCSVRenderer.get_headers()` orders columns by, so that a selection lays a
+    document out in the order it asked for exactly as it lays out CSV columns. Keys the selection does not
+    name -- which an unrestricted export is entirely made of -- sort last, and an empty selection leaves
+    the mapping alone rather than imposing an order of its own.
+    """
+    if not field_order:
+        return mapping
+
+    def selection_index(key):
+        for position, selected in enumerate(field_order):
+            if key == selected or key.startswith(f"{selected}__"):
+                return (position, key)
+        return (len(field_order), key)
+
+    return {key: mapping[key] for key in sorted(mapping, key=selection_index)}
+
+
 def build_document_records(serializer_data, field_order=None):
     """Reshape flat serializer records into the nested representation used by JSON/YAML exports.
 
     Flattened natural-key lookups (`location__name`) nest under their parent key; enum dicts collapse to
-    their value; url fields are dropped.
+    their value; url fields are dropped. A selection orders the keys, as it orders CSV's columns.
 
     Custom fields have two spellings, chosen by what the selection asks for: `custom_fields` (or no
     selection at all) keeps the whole dict, while individual `cf_<key>` entries are emitted as top-level
@@ -169,6 +200,10 @@ def build_document_records(serializer_data, field_order=None):
                 flattened_heads.add(head)
             reshaped[key] = value
         null_prefixes = _null_reference_prefixes(reshaped)
+        # Ordered before nesting so that the order reaches inside a relation too: `nest_flat_dict()`
+        # builds each level in the order it meets the keys, so `location__name` before `location__id`
+        # here is `name` before `id` within `location` there.
+        reshaped = _order_by_selection(reshaped, field_order)
         # Only CSV_NO_OBJECT needs mapping: it is produced by the natural-key annotation itself (for an
         # absent relation), whereas nulls already arrive as real None in this mode. CSV_NULL_TYPE is
         # deliberately not listed, so a value that is literally the string "NULL" survives intact.
@@ -182,6 +217,9 @@ def build_document_records(serializer_data, field_order=None):
             custom_fields = nested.pop("custom_fields", {})
             for entry in selected_custom_fields:
                 nested[entry] = custom_fields.get(entry.removeprefix("cf_"))
+            # Again, the custom fields having arrived after everything else: a selection that names one
+            # between two ordinary fields puts it there, as it does in CSV.
+            nested = _order_by_selection(nested, field_order)
         records.append(nested)
     return records
 
@@ -338,3 +376,137 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
                 break
     if errors:
         raise ValueError(f"Invalid field selection: {'; '.join(errors)}")
+
+
+def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEPTH, for_csv=True):
+    """
+    Every field path a selection may name for this serializer, in an order meant to be read by a person.
+
+    Among the fields of one object -- the top-level rows, or the fields nested under one relation -- what
+    identifies it leads (`PRIORITY_CSV_FIELDS`, as in an unordered export's columns), then the fields an
+    import requires, then the rest, each of those two groups alphabetical, and `custom_fields` last with
+    its own fields nested under it. Only the root has a required group, nothing below it being required
+    of anyone (see `required` under Returns). Serializer declaration order is deliberately not used: it is
+    rarely arranged with intent, so it reads as arbitrary in a list someone has to find a field in.
+
+    This is the order the fields are *offered* in, which is only the starting point for a selection: the
+    order a selection is submitted in is the order its columns come out in, and rearranging it is what the
+    picker is for.
+
+    The counterpart to `validate_field_paths()`, and for the shape of a path its subset: what is offered
+    here validates, so a UI built on it cannot propose a column the export would reject or silently drop.
+    Where the two differ on shape, this is the stricter one:
+
+    * The fields that hold a collection of other data (`EXCLUDED_CSV_FIELDS`) are left out below the root,
+      `custom_fields` included -- it is reachable as a model field (`_custom_field_data`) through a
+      relation, but a column of raw JSON is not a useful thing to offer.
+    * A to-many field is not offered through a relation. One flat lookup cannot express a value per member,
+      so the query would multiply rows; selecting it at the root is fine, where its members render as a
+      joined list.
+
+    Permissions are deliberately *not* consulted: this enumerates what the data model allows, and
+    `validate_field_paths()` remains the single authority on what a given user may select -- it refuses a
+    path into a model the user cannot view, with a message naming the permission. Gating here instead would
+    mean a picker that renders differently per user and a second place for the rule to be wrong, in exchange
+    for hiding a path the run would reject anyway.
+
+    `max_segments` bounds the segments a path may have, rather than the relations it traverses as
+    `EXPORT_FIELD_MAX_DEPTH` does, so the default enumerates one relation less deep than a hand-written
+    selection may name. The field graph fans out fast enough that the last level is mostly noise.
+
+    Args:
+        serializer_class: The serializer of the model being exported.
+        max_segments (int): Longest path to enumerate, counted in `__`-separated segments.
+        for_csv (bool): Whether the paths are for a flat (CSV) export, which has fewer emittable fields
+            than the document formats.
+
+    Returns:
+        list: `{"path": str, "parent": str | None, "required": bool, "relation": bool}` dicts. `parent` is
+            the path this one nests under, which is all but the last segment except for a `cf_<key>`, whose
+            parent is `custom_fields` -- the field that asks for every custom field at once. `relation` is
+            whether the path names a related object, selecting which exports the columns that identify it
+            rather than any one value. `required` is whether an
+            import would demand the field to create a record, which is what makes a selection
+            round-trippable, and which only a field of the object itself can be: an import resolves a
+            related object from what the path names (`RelatedField.to_internal_value`, which fails with
+            `does_not_exist`) rather than creating one, so what that object's own serializer requires has
+            no bearing on the file.
+    """
+    # `custom_fields` is offered at the root even though a flat export emits no column of that name: naming
+    # it asks for every custom field of the object at once -- including any added after the selection was
+    # made -- which the individual `cf_<key>` entries cannot express, and it is how a document export spells
+    # the whole nested dict. Reached through a relation there is no such expansion, only a lookup returning
+    # the raw JSON of `_custom_field_data`, so there it stays unoffered along with the other containers.
+    excluded_below_root = EXCLUDED_CSV_FIELDS
+    excluded_at_root = tuple(
+        name for name in (EXCLUDED_CSV_FIELDS if for_csv else EXCLUDED_DOCUMENT_FIELDS) if name != "custom_fields"
+    )
+    paths = []
+
+    def _sort_key(field_name, field):
+        if field_name in PRIORITY_CSV_FIELDS:
+            # What identifies the object, ahead of everything and in their own order.
+            return (0, PRIORITY_CSV_FIELDS.index(field_name), "")
+        if field_name == "custom_fields":
+            # Last, with its own fields nested under it: whatever this model happens to have been given,
+            # rather than part of its shape.
+            return (3, 0, field_name)
+        return (1 if field.required else 2, 0, field_name)
+
+    def _ordered_fields(serializer):
+        """This object's fields, in the order a person reads them; see this function's docstring."""
+        return sorted(serializer.fields.items(), key=lambda item: _sort_key(*item))
+
+    def _walk(prefix, serializer, segments):
+        for field_name, field in _ordered_fields(serializer):
+            if field_name in (excluded_below_root if prefix else excluded_at_root):
+                continue
+            if field.write_only or _needs_a_queryset_annotation(serializer, field):
+                # Not emitted at all, and so not selectable; `validate_field_paths()` explains both.
+                continue
+            if prefix and (
+                _model_field_for(serializer, field) is None or isinstance(field, serializers.ManyRelatedField)
+            ):
+                # Past the head a segment becomes a database lookup, which reaches model columns only, and
+                # cannot be a to-many.
+                continue
+            path = f"{prefix}__{field_name}" if prefix else field_name
+            # Resolved before the depth check, not after: a relation at the deepest offered level has no
+            # fields listed under it, but selecting it still exports its natural key, and a UI has no
+            # other way to tell that from an ordinary field.
+            related_model = _traversable_relation_target(serializer, field)
+            paths.append(
+                {
+                    "path": path,
+                    "parent": prefix or None,
+                    # Required only where it means anything: at the root, where an import creates the record.
+                    "required": field.required and not prefix,
+                    "relation": related_model is not None,
+                }
+            )
+            if segments >= max_segments or related_model is None:
+                continue
+            try:
+                related_serializer = get_serializer_for_model(related_model)(context={"request": None, "depth": 0})
+            except SerializerNotFound:
+                # No serializer to enumerate. A hand-written path into it is still accepted, so this
+                # narrows what is offered rather than what is possible.
+                continue
+            _walk(path, related_serializer, segments + 1)
+
+    # Instantiated as `validate_field_paths()` does, and for the same reason: the field set enumerated here
+    # has to be the one the export will actually emit.
+    root_serializer = serializer_class(context={"request": None, "depth": 0}, exporting=True)
+    _walk("", root_serializer, 1)
+
+    if for_csv:
+        # One column per custom field, which is how CSV spells a single one; last, as `get_headers()` orders
+        # them. Nested under `custom_fields`, which asks for all of them at once, so that the two spellings
+        # read as what they are -- the whole and its parts -- rather than as overlapping options.
+        custom_field_keys = getattr(root_serializer.fields.get("custom_fields"), "custom_field_keys", ())
+        paths.extend(
+            {"path": f"cf_{key}", "parent": "custom_fields", "required": False, "relation": False}
+            for key in sorted(custom_field_keys)
+        )
+
+    return paths

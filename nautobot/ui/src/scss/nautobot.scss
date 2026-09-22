@@ -306,6 +306,9 @@ $form-check-input-checked-bg-color:     $form-check-input-bg;
 $form-check-input-checked-border-color: $form-check-input-checked-color;
 $form-check-input-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'><path fill='none' stroke='#{$primary-text-emphasis}' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 10 3 3 6-6'/></svg>");
 $form-check-radio-checked-bg-image:     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'><circle r='2' fill='#{$primary-text-emphasis}'/></svg>");
+// Nautobot's own, for a checkbox that asks for a related object's natural key rather than for everything
+// listed under it -- see `.nb-export-natural-key` below. Same colour as the check it replaces.
+$form-check-input-natural-key-bg-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'><ellipse stroke='#{$primary-text-emphasis}' stroke-width='1.5' cx='5' cy='10' rx='3.37' ry='3.37'/><path stroke='#{$primary-text-emphasis}' stroke-width='1.5' d='M 8.5,10 H 19'/><path stroke='#{$primary-text-emphasis}' stroke-width='1.5' d='m 16.75,10 v 3'/><path stroke='#{$primary-text-emphasis}' stroke-width='1.5' d='m 13.75,10 v 3'/></svg>");
 
 $form-check-input-indeterminate-color:        $form-check-input-checked-color;
 $form-check-input-indeterminate-bg-color:     $form-check-input-checked-bg-color;
@@ -1131,8 +1134,8 @@ $nb-overview-fields-columns-min-width: 40rem;
      * Other color filters cheat sheet, all apply to base icon color of `$white-0: #ffffff;`:
      * - $gray-1: #dedede;
      *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(348%) contrast(100%);
-     * - $gray-1-dark: #2f2f2f;
-     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(74%) contrast(100%);
+     * - $gray-1-dark: #3f3f3f;
+     *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(99%) contrast(100%);
      * - $gray-2: #b0b0b0;
      *   filter: invert(75%) sepia(0%) saturate(0%) hue-rotate(360deg) brightness(276%) contrast(100%);
      * - $gray-2-dark: #828282;
@@ -2202,7 +2205,7 @@ body {
 
     &:has(> :focus-visible), /* CSS has `:focus-within` pseudo-class available but it works similar to `:focus` rather than `:focus-visible` */
     &:hover {
-      background-color: $navy-2;
+      background-color: $navy-15;
 
       > .nb-sidenav-favorite,
       > .nb-sidenav-favorite-drag-handle {
@@ -3085,6 +3088,15 @@ pre.version, pre.version-stamp {
   .invert-in-dark-mode {
     filter: invert(1) hue-rotate(180deg);
   }
+}
+
+/*
+ * Export field picker: a checked relation asks for the columns that identify the related object -- its
+ * natural key -- and not for the fields listed under it, which a tick would be read as meaning. There is
+ * no "everything under this" selection for the tick to have meant, so the mark says what it does instead.
+ */
+.nb-export-natural-key:checked[type="checkbox"] {
+  --#{$prefix}form-check-bg-image: #{escape-svg($form-check-input-natural-key-bg-image)};
 }
 
 /*

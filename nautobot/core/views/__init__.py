@@ -24,6 +24,7 @@ from django.http import (
     HttpResponseForbidden,
     HttpResponseServerError,
     JsonResponse,
+    QueryDict,
 )
 from django.shortcuts import get_object_or_404, render
 from django.template import loader, RequestContext, Template
@@ -601,6 +602,59 @@ class LiveSearchView(AccessMixin, View):
             )
 
         return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+
+
+class ExportFieldsPickerView(LoginRequiredMixin, View):
+    """Re-render the `ExportObjectList` Job's field picker for a content type.
+
+    The picker is a form field (`ExportFieldsChoiceField`), so the Job's own form renders it wherever that
+    form appears. This view is for the two things that change it after the form is on screen: choosing a
+    different content type, whose field graph has to be rebuilt, and the "use the columns of the list view
+    I came from" button.
+
+    That button is why this is a view rather than something the form could do for itself: resolving what a
+    list view is displaying takes the *requesting user*, whose own table configuration decides it, and a
+    Django form is never given one -- `BaseJob.as_form()` receives only data, files and initial. A view
+    has the request.
+
+    Enumerating a content type's field names needs no permission of its own (they are in the REST API
+    schema, and `validate_field_paths()` gates what may actually be exported at run time), but resolving a
+    view's columns is done as the requesting user, so it reflects their configuration and no one else's.
+    """
+
+    def get(self, request):
+        from nautobot.core.jobs import ExportObjectList
+        from nautobot.core.views.utils import get_list_view_export_paths
+        from nautobot.extras.utils import get_saved_view_or_none
+
+        content_type_pk = request.GET.get("content_type") or ""
+        content_type = ContentType.objects.filter(pk=content_type_pk).first() if content_type_pk else None
+        model = content_type.model_class() if content_type is not None else None
+
+        selection = request.GET.get("export_fields", "")
+        omitted = []
+        if model is not None and request.GET.get("use_current_view"):
+            query_params = QueryDict(request.GET.get("query_string", ""))
+            saved_view = get_saved_view_or_none(query_params["saved_view"]) if "saved_view" in query_params else None
+            paths, omitted = get_list_view_export_paths(
+                model,
+                user=request.user,
+                saved_view=saved_view,
+                table_changes_pending=query_params.get("table_changes_pending", False),
+            )
+            if paths:
+                selection = ",".join(paths)
+
+        # Rendered from the Job's own form, so that the label, the help text, the offered fields and the
+        # order the selection puts them in are all the ones that form would have produced -- this replaces
+        # its rendering of the field in place.
+        job_form = ExportObjectList.as_form(data={"content_type": content_type_pk, "export_fields": selection})
+        field = job_form.fields["export_fields"]
+        # The wrapper `htmx_attrs` asks for is the element being swapped into, and it persists; emitting
+        # another one here would nest a second copy inside it on every rebuild.
+        field.htmx_attrs = None
+        field.widget.omitted_columns = omitted
+        return render(request, "inc/htmx_form_field.html", {"field": job_form["export_fields"]})
 
 
 class MessagesView(AccessMixin, View):
