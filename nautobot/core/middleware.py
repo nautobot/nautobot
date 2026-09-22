@@ -593,7 +593,7 @@ class ComplexityCostRateLimitingMiddleware:
         #  Spend The Caller's Budget
         # ----------------------------------------------------------------------
         rate_limit_budget = settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET
-        rate_limiting_window_in_seconds = settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS
+        rate_limiting_window_in_seconds = settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS
 
         consumed_budget = 0
         remaining_window_time_in_seconds = rate_limiting_window_in_seconds
@@ -642,9 +642,9 @@ class ComplexityCostRateLimitingMiddleware:
         # --------------------
         #  If Budget Is Hit, No Further Middleware Allowed, Terminate
         # --------------------
-        # Bucket was already charged, but need to know if we had budget before charge
-        # So we use subtract the cost of this request from the current amount of our budget used
-        # To look at where we were at the beginning of this request
+        # Bucket was already charged, but need to know if we had available budget before charge
+        # So we subtract the cost of this request from the consumed budget to see where we were
+        # at the beginning of this request
         consumed_budget_before_this_request = consumed_budget - request_complexity_cost_estimate
         has_budget_been_fully_exhausted = consumed_budget_before_this_request >= rate_limit_budget
 
