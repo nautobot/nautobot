@@ -351,13 +351,15 @@ class CustomLink(
     group_name = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
-        help_text="Links with the same group will appear as a dropdown menu",
+        help_text="Links with the same group will appear together in a dropdown menu",
     )
     button_class = models.CharField(
         max_length=30,
         choices=ButtonClassChoices,
         default=ButtonClassChoices.CLASS_DEFAULT,
-        help_text="The class of the first link in a group will be used for the dropdown button",
+        help_text="The class of the standalone link button, or of the link's entry in a combined dropdown menu. "
+        "When only a single group applies to an object, the class of its first link will be used for the "
+        "dropdown button.",
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")
 

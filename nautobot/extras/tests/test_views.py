@@ -113,6 +113,13 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
+from nautobot.extras.templatetags.custom_links import (
+    DISABLED_DROPDOWN_LINK,
+    DISABLED_LINK_BUTTON,
+    DROPDOWN_DIVIDER,
+    DROPDOWN_GROUP,
+    DROPDOWN_TRIGGER,
+)
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
@@ -2386,19 +2393,6 @@ class CustomLinkRenderingTestCase(TestCase):
 
     user_permissions = ["dcim.view_location"]
 
-    DROPDOWN_TRIGGER = (
-        '<button type="button" class="btn btn-{button_class} dropdown-toggle" data-bs-toggle="dropdown">'
-        '<span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>{text}'
-        '<span aria-hidden="true" class="mdi mdi-chevron-down ms-4"></span>'
-        "</button>"
-    )
-    DROPDOWN_DIVIDER = '<li><hr class="dropdown-divider"></li>'
-    DROPDOWN_GROUP_HEADER = (
-        '<li><h6 class="dropdown-header">'
-        '<span aria-hidden="true" class="mdi mdi-folder-outline me-4"></span>{text}'
-        "</h6></li>"
-    )
-
     @classmethod
     def setUpTestData(cls):
         cls.content_type = ContentType.objects.get_for_model(Location)
@@ -2442,7 +2436,7 @@ class CustomLinkRenderingTestCase(TestCase):
         response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="primary", text="Group 1"), content)
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="primary", text="Group 1"), content)
         self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
 
     def test_view_object_with_single_custom_link_group(self):
@@ -2461,7 +2455,7 @@ class CustomLinkRenderingTestCase(TestCase):
         response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="primary", text="Group 1"), content)
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="primary", text="Group 1"), content)
         self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
         self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/2">Link 2</a></li>', content)
 
@@ -2480,7 +2474,7 @@ class CustomLinkRenderingTestCase(TestCase):
         response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="secondary", text="Links"), content)
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
         self.assertInHTML(
             '<li><a class="dropdown-item text-primary" href="http://example.com/1">Link 1</a></li>', content
         )
@@ -2502,13 +2496,13 @@ class CustomLinkRenderingTestCase(TestCase):
         response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="secondary", text="Links"), content)
-        self.assertInHTML(self.DROPDOWN_GROUP_HEADER.format(text="Group 1"), content)
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
+        self.assertInHTML(DROPDOWN_GROUP.format(text="Group 1", links=""), content)
         self.assertInHTML(
             '<li><a class="dropdown-item ps-24 text-primary" href="http://example.com/1">Link 1</a></li>', content
         )
-        self.assertInHTML(self.DROPDOWN_DIVIDER + self.DROPDOWN_GROUP_HEADER.format(text="Group 2"), content)
-        self.assertInHTML(self.DROPDOWN_DIVIDER, content, count=1)
+        self.assertInHTML(DROPDOWN_DIVIDER + DROPDOWN_GROUP.format(text="Group 2", links=""), content)
+        self.assertInHTML(DROPDOWN_DIVIDER, content, count=1)
         self.assertInHTML('<li><a class="dropdown-item ps-24" href="http://example.com/2">Link 2</a></li>', content)
 
     def test_view_object_with_grouped_and_ungrouped_custom_links(self):
@@ -2527,14 +2521,47 @@ class CustomLinkRenderingTestCase(TestCase):
         response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertInHTML(self.DROPDOWN_TRIGGER.format(button_class="secondary", text="Links"), content)
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
         self.assertInHTML(
             '<li><a class="dropdown-item text-danger" href="http://example.com/1">Link 1</a></li>', content
         )
-        self.assertInHTML(self.DROPDOWN_DIVIDER + self.DROPDOWN_GROUP_HEADER.format(text="Group 1"), content)
+        self.assertInHTML(DROPDOWN_DIVIDER + DROPDOWN_GROUP.format(text="Group 1", links=""), content)
         self.assertInHTML(
             '<li><a class="dropdown-item ps-24 text-danger" href="http://example.com/2">Link 2</a></li>', content
         )
+
+    def test_view_object_with_single_failing_custom_link(self):
+        customlink = CustomLink(
+            content_type=self.content_type,
+            name="Test",
+            text="{{ 1 / 0 }}",
+            target_url="http://example.com/",
+            new_window=False,
+        )
+        customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DISABLED_LINK_BUTTON.format(css_class="", title="division by zero", text="Test"), content)
+
+    def test_view_object_with_multiple_custom_links_one_failing(self):
+        for index, text in enumerate(["Link 1", "{{ 1 / 0 }}"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=text,
+                target_url=f"http://example.com/{index}",
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
+        self.assertInHTML(DISABLED_DROPDOWN_LINK.format(css_class="", title="division by zero", text="Test 2"), content)
 
     def test_view_object_with_unsafe_custom_link_text(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""

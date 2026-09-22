@@ -4,20 +4,26 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
 from nautobot.core.utils.data import render_jinja2
+from nautobot.extras.choices import ButtonClassChoices
 from nautobot.extras.models import CustomLink
 
 register = template.Library()
 
+DISABLED_DROPDOWN_LINK = '<li><a aria-disabled="true" class="disabled dropdown-item{css_class}" title="{title}"><span class="text-secondary"><span aria-hidden="true" class="mdi mdi-alert me-4"></span>{text}</span></a></li>\n'
+DISABLED_LINK_BUTTON = '<a aria-disabled="true" class="btn btn-secondary disabled{css_class}" title="{title}"><span aria-hidden="true" class="mdi mdi-alert me-4"></span>{text}</a>\n'
 DROPDOWN_DIVIDER = '<li><hr class="dropdown-divider"></li>\n'
 DROPDOWN_GROUP = '<li><h6 class="dropdown-header"><span aria-hidden="true" class="mdi mdi-folder-outline me-4"></span>{text}</h6></li>\n{links}\n'
 DROPDOWN_LINK = '<li><a class="dropdown-item{css_class}" href="{href}"{target}>{text}</a></li>\n'
-GROUP_BUTTON = """
+DROPDOWN_TRIGGER = """
+    <button type="button" class="btn btn-{css_class} dropdown-toggle" data-bs-toggle="dropdown">
+        <span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>{text}<span aria-hidden="true" class="mdi mdi-chevron-down ms-4"></span>
+    </button>
+"""
+DROPDOWN = f"""
     <div class="dropdown d-inline-flex align-middle">
-        <button type="button" class="btn btn-{css_class} dropdown-toggle" data-bs-toggle="dropdown">
-            <span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>{text}<span aria-hidden="true" class="mdi mdi-chevron-down ms-4"></span>
-        </button>
+        {DROPDOWN_TRIGGER}
         <ul class="dropdown-menu float-end">
-            {links}
+            {{links}}
         </ul>
     </div>
 """
@@ -67,9 +73,12 @@ def custom_links(context, obj):
             if not is_single_link_or_group and grouped:
                 # Links grouped within a unified dropdown are subject to additional indentation.
                 css_class += " ps-24"
-            if not is_single_link_or_group and cl.button_class_css_class not in ("secondary", "link"):
-                # `secondary` is the default case in which it is better to use standard black instead of gray text,
-                # and `text-link` class does not exist.
+            if not is_single_link_or_group and cl.button_class not in (
+                ButtonClassChoices.CLASS_DEFAULT,
+                ButtonClassChoices.CLASS_LINK,
+            ):
+                # `CLASS_DEFAULT` (`secondary`) is the default case in which it is better to use standard black instead
+                # of gray text, and `text-link` class, interpolated from `CLASS_LINK`, simply does not exist.
                 css_class += f" text-{cl.button_class_css_class}"
             format_kwargs = {
                 "css_class": css_class,
@@ -85,9 +94,9 @@ def custom_links(context, obj):
                 "text": text,
             }
             if is_single_link_or_group and not grouped:
-                format_template = '<a aria-disabled="true" class="btn btn-secondary disabled{css_class}" title="{title}"><span aria-hidden="true" class="mdi mdi-alert me-4"></span>{text}</a>\n'
+                format_template = DISABLED_LINK_BUTTON
             else:
-                format_template = '<li><a aria-disabled="true" class="disabled dropdown-item{css_class}" title="{title}"><span class="text-secondary"><span aria-hidden="true" class="mdi mdi-alert me-4"></span>{text}</span></a></li>\n'
+                format_template = DISABLED_DROPDOWN_LINK
 
         return format_html(format_template, **format_kwargs)
 
@@ -114,7 +123,7 @@ def custom_links(context, obj):
         for resolved_link in group_links:
             links_rendered += render_custom_link(resolved_link, grouped=True)
 
-        format_template = GROUP_BUTTON if is_single_link_or_group else DROPDOWN_GROUP
+        format_template = DROPDOWN if is_single_link_or_group else DROPDOWN_GROUP
         format_kwargs = {
             "css_class": group_links[0][0].button_class_css_class,
             "links": links_rendered,
@@ -127,7 +136,7 @@ def custom_links(context, obj):
 
     if not is_single_link_or_group:
         format_kwargs = {"css_class": "secondary", "links": template_code, "text": "Links"}
-        format_template = GROUP_BUTTON
+        format_template = DROPDOWN
         template_code = format_html(format_template, **format_kwargs)
 
     return template_code
