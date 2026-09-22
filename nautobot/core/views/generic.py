@@ -1627,13 +1627,15 @@ class BulkComponentCreateView(UIComponentsMixin, GetReturnURLMixin, ObjectPermis
                                             else:
                                                 form.add_error(field, f"{obj} {name}: {err_str}")
 
+                                    raise AbortTransaction()
+
                         # Enforce object-level permissions
                         if self.queryset.filter(pk__in=[obj.pk for obj in new_components]).count() != len(
                             new_components
                         ):
                             raise ObjectDoesNotExist
 
-                except IntegrityError:
+                except AbortTransaction:
                     pass
 
                 except ObjectDoesNotExist:
