@@ -2,6 +2,9 @@
 
 import re
 
+# A YAML block-mapping key at the start of a line: `records:`, `model: dcim.device`.
+_YAML_MAPPING_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\s*:(\s|$)")
+
 
 def parse_match_fields(value):
     """
@@ -30,9 +33,17 @@ def detect_import_format(filename=None, text=None):
         return "yaml"
     if lowered.endswith(".csv"):
         return "csv"
-    head = (text or "").lstrip()[:200]
-    if head.startswith(("{", "[")):
-        return "json"
-    if head.startswith(("---", "%YAML")) or "nautobot_import_version:" in head:
-        return "yaml"
+
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            # A blank line, a YAML comment, or a CSV file's leading Nautobot directive row. None of the
+            # three identifies a format, so the question is settled by the first line of real content --
+            # which for a directive-carrying CSV is its header row.
+            continue
+        if line.startswith(("{", "[")):
+            return "json"
+        if line.startswith(("---", "%YAML", "- ")) or _YAML_MAPPING_RE.match(line):
+            return "yaml"
+        break
     return "csv"

@@ -14,9 +14,9 @@ from nautobot.core.api.import_export import (
     IMPORT_DOCUMENT_MATCH_FIELDS_KEY,
     IMPORT_DOCUMENT_MODEL_KEY,
     IMPORT_DOCUMENT_RECORDS_KEY,
-    IMPORT_DOCUMENT_VERSION,
     IMPORT_DOCUMENT_VERSION_KEY,
     nest_flat_dict,
+    SUPPORTED_IMPORT_DOCUMENT_VERSIONS,
 )
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS
 
@@ -33,6 +33,31 @@ def read_import_text(stream, parser_context):
     if isinstance(text, bytes):
         text = text.decode(parser_context.get("encoding", "UTF-8"))
     return text.removeprefix("\ufeff")
+
+
+def validate_import_version(value):
+    """Coerce a declared document version to an int and confirm this Nautobot can read it.
+
+    Shared by both parsers so that a version means the same thing however it was spelled: CSV writes it
+    bare in a directive cell, YAML may quote it, and JSON may do either.
+
+    Returns:
+        (int): The declared version, or None if the file declared none -- which is not an error, those
+            files predating the key itself.
+
+    Raises:
+        ParseError: if the version is not an integer, or is one this Nautobot does not read.
+    """
+    if value is None:
+        return None
+    try:
+        version = int(value)
+    except (TypeError, ValueError):
+        raise ParseError(f'Invalid {IMPORT_DOCUMENT_VERSION_KEY} "{value}"; expected an integer')
+    if version not in SUPPORTED_IMPORT_DOCUMENT_VERSIONS:
+        supported = ", ".join(str(supported) for supported in SUPPORTED_IMPORT_DOCUMENT_VERSIONS)
+        raise ParseError(f'Unsupported {IMPORT_DOCUMENT_VERSION_KEY} "{value}"; this Nautobot reads {supported}')
+    return version
 
 
 def get_serializer_from_parser_context(parser_context):
@@ -124,7 +149,7 @@ class NautobotCSVParser(BaseParser):
                     raise ParseError(f'Expected a single value for import directive "{key}"')
                 directives[key] = values[0]
                 if key == IMPORT_DOCUMENT_VERSION_KEY:
-                    directives[key] = int(directives[key])
+                    directives[key] = validate_import_version(directives[key])
 
         return directives
 
@@ -415,8 +440,6 @@ class ImportDocumentParserMixin:
     `parser_context["import_directives"]`, as `NautobotCSVParser` surfaces its directive row.
     """
 
-    SUPPORTED_DOCUMENT_VERSIONS = (IMPORT_DOCUMENT_VERSION,)
-
     def load(self, text):
         """Deserialize the raw text into Python data; implemented per format."""
         raise NotImplementedError
@@ -435,10 +458,9 @@ class ImportDocumentParserMixin:
                     f'Import data is a mapping but has no "{IMPORT_DOCUMENT_RECORDS_KEY}" key; '
                     "expected an import document"
                 )
-            version = payload.get(IMPORT_DOCUMENT_VERSION_KEY)
-            if version is not None and version not in cls.SUPPORTED_DOCUMENT_VERSIONS:
-                raise ParseError(f'Unsupported {IMPORT_DOCUMENT_VERSION_KEY} document version "{version}"')
             metadata = {key: value for key, value in payload.items() if key != IMPORT_DOCUMENT_RECORDS_KEY}
+            if IMPORT_DOCUMENT_VERSION_KEY in metadata:
+                metadata[IMPORT_DOCUMENT_VERSION_KEY] = validate_import_version(metadata[IMPORT_DOCUMENT_VERSION_KEY])
             records = payload[IMPORT_DOCUMENT_RECORDS_KEY]
         elif isinstance(payload, list):
             metadata = {}
@@ -496,7 +518,9 @@ class ImportDocumentParserMixin:
             if metadata:
                 parser_context.setdefault("import_directives", {}).update(metadata)
 
-            strict = parser_context.get("strict_fields", True)
+            # Absent means lenient, as it does for CSV: the REST API sets no such key and has always
+            # ignored fields it does not recognize. The `ImportObjects` Job opts in explicitly.
+            strict = parser_context.get("strict_fields", False)
             return [
                 self.record_to_data(counter, record, serializer, strict=strict)
                 for counter, record in enumerate(records, start=1)

@@ -39,7 +39,12 @@ from nautobot.core.api.import_export import (
     nest_flat_dict,
     validate_field_paths,
 )
-from nautobot.core.api.parsers import ImportDocumentParserMixin, NautobotCSVParser, NautobotJSONImportParser
+from nautobot.core.api.parsers import (
+    ImportDocumentParserMixin,
+    NautobotCSVParser,
+    NautobotJSONImportParser,
+    validate_import_version,
+)
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
@@ -2504,9 +2509,47 @@ class DetectImportFormatTests(SimpleTestCase):
         self.assertEqual(detect_import_format(text="---\nname: x"), "yaml")
         self.assertEqual(detect_import_format(text="nautobot_import_version: 3\nrecords: []"), "yaml")
 
+    def test_core_detect__bare_yaml_list(self):
+        """A bare YAML sequence of records carries none of the document markers."""
+        self.assertEqual(detect_import_format(text="- name: x\n  color: '111111'"), "yaml")
+
+    def test_core_detect__yaml_mapping_without_a_version_key(self):
+        self.assertEqual(detect_import_format(text="model: extras.status\nrecords:\n  - name: x"), "yaml")
+
+    def test_core_detect__leading_comments_are_skipped(self):
+        """A YAML comment doesn't hide the content behind it; a CSV directive row doesn't look like one."""
+        self.assertEqual(detect_import_format(text="# a comment\n\n- name: x"), "yaml")
+        self.assertEqual(
+            detect_import_format(
+                text=f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status\nname,color\nx,111111"
+            ),
+            "csv",
+        )
+
     def test_core_detect__default_csv(self):
         self.assertEqual(detect_import_format(text="name,color\nx,111111"), "csv")
         self.assertEqual(detect_import_format(), "csv")
+
+
+class ImportVersionTests(SimpleTestCase):
+    """`validate_import_version` is the one place a declared version is coerced and checked."""
+
+    def test_core_version__absent_is_accepted(self):
+        """Files written before the version key existed declare none, and are read on faith."""
+        self.assertIsNone(validate_import_version(None))
+
+    def test_core_version__coerces_a_string(self):
+        """YAML and JSON may quote the version; CSV always yields a string. All mean the same int."""
+        self.assertEqual(validate_import_version(str(IMPORT_DOCUMENT_VERSION)), IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(validate_import_version(IMPORT_DOCUMENT_VERSION), IMPORT_DOCUMENT_VERSION)
+
+    def test_core_version__rejects_unsupported(self):
+        with self.assertRaisesRegex(ParseError, "Unsupported"):
+            validate_import_version(999)
+
+    def test_core_version__rejects_non_integer(self):
+        with self.assertRaisesRegex(ParseError, "expected an integer"):
+            validate_import_version("three")
 
 
 class RecordToDataTests(TestCase):

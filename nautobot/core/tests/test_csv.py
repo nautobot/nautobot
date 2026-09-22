@@ -804,6 +804,10 @@ class CSVImportDirectiveTestCase(TestCase):
             self.parser_class.parse_directive_cell("# nautobot_import_version")
         with self.assertRaisesRegex(ParseError, "Expected a single value"):
             self.parser_class.parse_directive_cell("# nautobot_import_version=3; name serial")
+        with self.assertRaisesRegex(ParseError, "Unsupported nautobot_import_version"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=999; model=extras.status")
+        with self.assertRaisesRegex(ParseError, "expected an integer"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=three")
 
     def test_parse_consumes_directive_rows(self):
         """Leading directive rows are consumed into parser_context and the data parses normally."""

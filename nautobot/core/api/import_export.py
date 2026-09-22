@@ -25,6 +25,9 @@ from nautobot.core.utils.permissions import permission_is_exempt
 # which declared a version, so a file with no version key is either version 1 or 2.
 IMPORT_DOCUMENT_VERSION = 3
 IMPORT_DOCUMENT_VERSION_KEY = "nautobot_import_version"
+# The versions an import will read. A file declaring no version at all is accepted rather than assumed to
+# be unreadable, per the lineage described above.
+SUPPORTED_IMPORT_DOCUMENT_VERSIONS = (IMPORT_DOCUMENT_VERSION,)
 IMPORT_DOCUMENT_MODEL_KEY = "model"
 IMPORT_DOCUMENT_MATCH_FIELDS_KEY = "match_fields"
 IMPORT_DOCUMENT_RECORDS_KEY = "records"
