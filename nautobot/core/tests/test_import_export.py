@@ -951,7 +951,7 @@ class ValidateFieldPathsTests(TestCase):
         """An opt-in M2M field is nameable, because validation instantiates the serializer as an export does.
 
         `software_image_files` is absent from a REST-mode `DeviceTypeSerializer` and only becomes readable
-        under `exporting=True` -- but the export emits it by default (`test_adapter_export__m2m_composite_members`),
+        under `for_import_export=True` -- but the export emits it by default (`test_adapter_export__m2m_composite_members`),
         so a selection has to be able to name it.
         """
         self.assertNotIn("software_image_files", DeviceTypeSerializer(context={"request": None, "depth": 0}).fields)
@@ -960,7 +960,7 @@ class ValidateFieldPathsTests(TestCase):
     def test_validate__field_that_export_mode_drops_is_rejected(self):
         """The converse: a field the export cannot emit is refused even though REST has it.
 
-        `CableSerializer.terminations` is replaced by the typed accessors under `exporting=True`, so there
+        `CableSerializer.terminations` is replaced by the typed accessors under `for_import_export=True`, so there
         would be no such column in the file.
         """
         self.assertIn("terminations", CableSerializer(context={"request": None, "depth": 0}).fields)
@@ -1141,7 +1141,7 @@ class ValidateFieldPathsTests(TestCase):
         Accepted, it would produce a file with no `password` column and no warning that one was dropped --
         or, as the only selection, a file with no columns at all.
         """
-        serializer = UserSerializer(context={"request": None, "depth": 0}, exporting=True)
+        serializer = UserSerializer(context={"request": None, "depth": 0}, for_import_export=True)
         self.assertIn("password", serializer.fields)
         self.assertNotIn("password", [field.field_name for field in serializer._readable_fields])
         self.assertPathsInvalid(
@@ -1158,7 +1158,7 @@ class ValidateFieldPathsTests(TestCase):
         the field -- accepted, this would produce a file with no `device_type_count` column and no
         indication that one was dropped.
         """
-        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True)
+        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, for_import_export=True)
         self.assertIn("device_type_count", serializer.fields)
         self.assertFalse(hasattr(Manufacturer, "device_type_count"))
         self.assertPathsInvalid(
@@ -1175,7 +1175,7 @@ class ValidateFieldPathsTests(TestCase):
         The counterpart to the test above: `display` and friends have no model field behind them either,
         but they read the whole object rather than an attribute of it.
         """
-        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True)
+        serializer = ManufacturerSerializer(context={"request": None, "depth": 0}, for_import_export=True)
         for field_name in ("display", "object_type", "natural_slug"):
             with self.subTest(field=field_name):
                 self.assertEqual(serializer.fields[field_name].source, "*")
@@ -1194,7 +1194,9 @@ class ValidateFieldPathsTests(TestCase):
         serializer field would happily validate `termination_a_type__app_label` against
         `ContentTypeSerializer`, even though the lookup the export emits for it has nothing to resolve.
         """
-        field = CableSerializer(context={"request": None, "depth": 0}, exporting=True).fields["termination_a_type"]
+        field = CableSerializer(context={"request": None, "depth": 0}, for_import_export=True).fields[
+            "termination_a_type"
+        ]
         self.assertFalse(field.write_only)
         self.assertIsNotNone(field.queryset)  # a target is available, but not from the model
         with self.assertRaises(FieldDoesNotExist):
@@ -1440,7 +1442,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
     def test_select__export_only_m2m_column(self):
         """An opt-in M2M column can be named explicitly, not just inherited from the default field set.
 
-        `software_image_files` is only readable under `exporting=True`, which is why validation has to
+        `software_image_files` is only readable under `for_import_export=True`, which is why validation has to
         instantiate the serializer the same way the export does.
         """
         software_image_files = self.create_device_type_with_software_image_files()
@@ -1709,7 +1711,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 self.assertNotIn(field_name, paths)
 
     def test_select__form_offers_opt_in_m2m_fields(self):
-        """A field readable only in export mode (`exporting=True`) is offered, being one an export emits."""
+        """A field readable only in export mode (`for_import_export=True`) is offered, being one an export emits."""
         _form, paths = self.picker_paths(DeviceType)
         self.assertIn("software_image_files", paths)
 

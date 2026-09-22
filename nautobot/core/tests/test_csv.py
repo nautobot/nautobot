@@ -486,7 +486,7 @@ TestDevice7,{self.device.device_type.pk},{self.device.location.pk},{self.device.
             # flattened natural-key lookups in a single column rather than as comma-separated values.
             device5.software_image_files.set(software_image_files[:2])
             exported = DeviceSerializer(
-                instance=device5, context={"request": None, "depth": 0}, exporting=True, force_csv=True
+                instance=device5, context={"request": None, "depth": 0}, for_import_export=True, force_csv=True
             ).data
             exported_row = next(iter(csv.DictReader(io.StringIO(NautobotCSVRenderer().render([exported])))))
             self.assertEqual(
@@ -525,7 +525,7 @@ class NaturalKeyLookupValuesTest(SimpleTestCase):
     """`_get_natural_key_lookups_value_for_field` maps raw lookup values to their export representations."""
 
     def _values(self, natural_key_field_instance, field_name="location", for_csv=True):
-        serializer = DeviceSerializer(context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv)
+        serializer = DeviceSerializer(context={"request": None, "depth": 0}, for_import_export=True, force_csv=for_csv)
         return serializer._get_natural_key_lookups_value_for_field(field_name, natural_key_field_instance)
 
     def test_none_becomes_the_null_sentinel_for_csv(self):
@@ -564,9 +564,9 @@ class M2MNaturalKeyValuesTest(TestCase):
     """
 
     def _values(self, instance, field_name, for_csv=True):
-        # `exporting` is what makes the non-default M2M fields readable here.
+        # `for_import_export` is what makes the non-default M2M fields readable here.
         serializer = get_serializer_for_model(type(instance))(
-            context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv
+            context={"request": None, "depth": 0}, for_import_export=True, force_csv=for_csv
         )
         return serializer._get_m2m_natural_key_values(instance, serializer.fields[field_name])
 
@@ -681,10 +681,10 @@ class M2MNaturalKeyValuesTest(TestCase):
 
 
 class ExportingWidensM2MFieldsTest(TestCase):
-    """`exporting=True` exposes every M2M field; a REST request, in any format, keeps the default subset.
+    """`for_import_export=True` exposes every M2M field; a REST request, in any format, keeps the default subset.
 
     An export file has to carry every M2M field to be re-importable, so `_include_all_m2m_by_default`
-    returns `self._exporting`. A REST response keeps `DEFAULT_M2M_FIELDS` plus `Meta.default_m2m_fields`
+    returns `self._for_import_export`. A REST response keeps `DEFAULT_M2M_FIELDS` plus `Meta.default_m2m_fields`
     for performance and backwards compatibility -- which is why the Job's CSV has columns that the same
     model's `?format=csv` response does not.
     """
@@ -693,31 +693,31 @@ class ExportingWidensM2MFieldsTest(TestCase):
         self.vrf = VRF.objects.create(name="Exporting M2M VRF", namespace=Namespace.objects.first())
         self.vrf.import_targets.add(RouteTarget.objects.create(name="65000:501"))
 
-    def _data(self, *, exporting=False, exclude_m2m=None):
+    def _data(self, *, for_import_export=False, exclude_m2m=None):
         context = {"request": None, "depth": 0}
         if exclude_m2m is not None:
             context["exclude_m2m"] = exclude_m2m
         serializer = get_serializer_for_model(VRF)(
-            instance=self.vrf, context=context, exporting=exporting, force_csv=True
+            instance=self.vrf, context=context, for_import_export=for_import_export, force_csv=True
         )
         return serializer.data
 
     def test_export_includes_a_non_default_m2m(self):
         """`import_targets` is not one of the DEFAULT_M2M_FIELDS, so only the export mode carries it."""
-        self.assertEqual(self._data(exporting=True)["import_targets"], ["65000:501"])
+        self.assertEqual(self._data(for_import_export=True)["import_targets"], ["65000:501"])
 
     def test_rest_omits_a_non_default_m2m(self):
         """Absent, not merely empty -- there is no column for a reader to round-trip."""
         self.assertNotIn("import_targets", self._data())
 
     def test_default_m2m_fields_are_in_both(self):
-        for exporting in (True, False):
-            with self.subTest(exporting=exporting):
-                self.assertIn("tags", self._data(exporting=exporting))
+        for for_import_export in (True, False):
+            with self.subTest(for_import_export=for_import_export):
+                self.assertIn("tags", self._data(for_import_export=for_import_export))
 
-    def test_explicit_exclude_m2m_wins_over_exporting(self):
+    def test_explicit_exclude_m2m_wins_over_for_import_export(self):
         """`exclude_m2m` is an instruction rather than a default, so it overrides the export widening."""
-        self.assertNotIn("import_targets", self._data(exporting=True, exclude_m2m=True))
+        self.assertNotIn("import_targets", self._data(for_import_export=True, exclude_m2m=True))
 
     def test_explicit_include_m2m_widens_a_rest_request(self):
         """The same escape hatch in reverse: `exclude_m2m=false` opts a REST response into every M2M."""
@@ -740,7 +740,7 @@ class M2MContentTypeValuesTest(TestCase):
 
     def _representation(self, for_csv=True):
         serializer = get_serializer_for_model(Status)(
-            instance=self.status, context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv
+            instance=self.status, context={"request": None, "depth": 0}, for_import_export=True, force_csv=for_csv
         )
         return serializer.data["content_types"]
 
@@ -763,7 +763,7 @@ class M2MContentTypeValuesTest(TestCase):
         """Why `to_representation` excludes `ContentTypeField`: routing it through the natural-key M2M path
         falls back to the pk, and a ContentType pk is an install-specific integer that no import can resolve.
         """
-        serializer = get_serializer_for_model(Status)(context={"request": None, "depth": 0}, exporting=True)
+        serializer = get_serializer_for_model(Status)(context={"request": None, "depth": 0}, for_import_export=True)
         self.assertEqual(
             sorted(serializer._get_m2m_natural_key_values(self.status, serializer.fields["content_types"])),
             sorted(str(content_type.pk) for content_type in self.status.content_types.all()),

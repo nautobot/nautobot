@@ -185,7 +185,7 @@ class NaturalKeyRepresentationMixin:
 
     `BaseModelSerializer` mixes this in and calls these helpers from its DRF override points
     (`__init__` priming, `get_field_names` field filtering, `to_representation`); the methods here assume
-    the host serializer provides `Meta`, `context`, `instance`, `self._force_csv` and `self._exporting`.
+    the host serializer provides `Meta`, `context`, `instance`, `self._force_csv` and `self._for_import_export`.
     """
 
     natural_keys_values = None
@@ -199,7 +199,7 @@ class NaturalKeyRepresentationMixin:
 
     def _use_natural_keys(self):
         """Return True if relations should be represented by flattened natural keys (CSV or JSON/YAML)."""
-        return self._exporting or self._is_csv_request()
+        return self._for_import_export or self._is_csv_request()
 
     def _resolve_lookup_field(self, lookup_field):
         """Get the model field that a `__`-separated natural-key lookup ultimately refers to.
@@ -458,23 +458,24 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
     # composite_key = serializers.SerializerMethodField()  # TODO: Revisit if we reintroduce composite keys
     natural_slug = serializers.SerializerMethodField()
 
-    def __init__(self, *args, force_csv=False, exporting=False, **kwargs):
+    def __init__(self, *args, force_csv=False, for_import_export=False, **kwargs):
         """
         Instantiate a BaseModelSerializer.
 
         The two kwargs below are independent; the `ExportObjectList` job sets both for CSV and only
-        `exporting` for the JSON/YAML documents.
+        `for_import_export` for the JSON/YAML documents.
 
         The force_csv kwarg allows you to force _is_csv_request() to evaluate True without passing a Request object,
         which is necessary to be able to export appropriately structured CSV from a Job that doesn't have a Request.
         Because CSV can only carry strings, it also selects the coercions the documents skip (`None` becomes
         `CSV_NULL_TYPE`, scalar-keyed M2M members are comma-joined).
 
-        The exporting kwarg marks the output as a file rather than a REST response, which is what makes every
-        M2M field visible (see `_include_all_m2m_by_default()`) rather than just the default subset present in REST.
+        The for_import_export kwarg marks this as the import/export file representation rather than a REST
+        response, which is what makes every M2M field visible (see `_include_all_m2m_by_default()`) rather than
+        just the default subset a REST response carries.
         """
         self._force_csv = force_csv
-        self._exporting = exporting
+        self._for_import_export = for_import_export
 
         super().__init__(*args, **kwargs)
         # If it is not a Nested Serializer, we should set the depth argument to whatever is in the request's context
@@ -497,7 +498,7 @@ class BaseModelSerializer(OptInFieldsMixin, NaturalKeyRepresentationMixin, seria
 
     def _include_all_m2m_by_default(self):
         """Widen `OptInFieldsMixin`'s default: an export file must carry every M2M field to be re-importable."""
-        return self._exporting
+        return self._for_import_export
 
     @property
     def is_nested(self):

@@ -519,12 +519,12 @@ class ExportObjectList(Job):
             queryset = queryset.prefetch_related(*m2m_prefetches)
 
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
-        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
+        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `for_import_export`
         # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
         context = {"request": None}
         if export_field_paths:
             context["export_fields"] = export_field_paths
-        serializer = serializer_class(queryset, many=True, context=context, exporting=True, force_csv=for_csv)
+        serializer = serializer_class(queryset, many=True, context=context, for_import_export=True, force_csv=for_csv)
         self._log_lossy_m2m_fields(model, serializer.child.fields)
         return serializer.data
 

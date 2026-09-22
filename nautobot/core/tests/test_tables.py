@@ -639,7 +639,7 @@ class SerializerPathsForVisibleColumnsTestCase(TestCase):
         column = table.columns["device_type_count"].column
         self.assertIsInstance(column, LinkedCountColumn)
         self.assertEqual(column.counted_relation(Manufacturer), "device_types")
-        serializer_fields = ManufacturerSerializer(context={"request": None, "depth": 0}, exporting=True).fields
+        serializer_fields = ManufacturerSerializer(context={"request": None, "depth": 0}, for_import_export=True).fields
         self.assertIn("device_type_count", serializer_fields)
         self.assertNotIn("device_types", serializer_fields)
         self.assertIsNone(table.serializer_paths_by_visible_column(ManufacturerSerializer)["device_type_count"])

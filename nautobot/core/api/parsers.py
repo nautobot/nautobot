@@ -96,7 +96,7 @@ def custom_field_keys_for(serializer):
 def get_serializer_from_parser_context(parser_context):
     """Resolve the serializer class from a DRF parser_context and instantiate it at depth 0.
 
-    Instantiated with `exporting=True`, which is what makes every M2M field visible rather than the default
+    Instantiated with `for_import_export=True`, which is what makes every M2M field visible rather than the default
     REST subset (`BaseModelSerializer._include_all_m2m_by_default`). A reader has the same need as the
     writer: a field an export emits has to be one an import recognizes, or a file Nautobot wrote is
     rejected as containing unknown fields. This instance is only ever introspected -- the field a name
@@ -115,7 +115,9 @@ def get_serializer_from_parser_context(parser_context):
     if serializer_class is None:
         raise ParseError("Serializer class for this parser_context is None, unable to proceed")
 
-    return serializer_class(context={"request": parser_context.get("request", None), "depth": 0}, exporting=True)
+    return serializer_class(
+        context={"request": parser_context.get("request", None), "depth": 0}, for_import_export=True
+    )
 
 
 class NautobotCSVParser(BaseParser):
