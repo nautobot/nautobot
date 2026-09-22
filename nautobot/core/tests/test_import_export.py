@@ -2594,7 +2594,13 @@ class RecordToDataTests(TestCase):
     def test_record__unknown_field_is_rejected_when_strict(self):
         with self.assertRaisesRegex(ParseError, "no_such_field"):
             self.to_data({"name": "x", "no_such_field": 1})
-        self.assertNotIn("no_such_field", self.to_data({"name": "x", "no_such_field": 1}, strict=False))
+
+    def test_record__unknown_field_is_logged_when_lenient(self):
+        """Dropped silently would defeat the point; CSV logs an unrecognized column for the same reason."""
+        with self.assertLogs("nautobot.core.api.parsers", level="DEBUG") as logs:
+            data = self.to_data({"name": "x", "no_such_field": 1}, strict=False)
+        self.assertNotIn("no_such_field", data)
+        self.assertIn("no_such_field", "\n".join(logs.output))
 
     def test_record__unknown_custom_field_is_rejected_when_strict(self):
         """`CustomFieldsDataField` discards an undefined key silently, so strict mode has to catch it."""
