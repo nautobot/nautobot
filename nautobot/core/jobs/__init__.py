@@ -22,6 +22,7 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    IMPORT_DOCUMENT_MODEL_KEY,
     validate_field_paths,
 )
 from nautobot.core.api.parsers import (
@@ -769,8 +770,12 @@ class ImportObjects(Job):
             raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
         if csv_file:
             raw = csv_file.read()
-            text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
             filename = getattr(csv_file, "name", "")
+            try:
+                text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
+            except UnicodeDecodeError as exc:
+                self.logger.error("Unable to decode `%s` as UTF-8: `%s`", filename or "the uploaded file", exc)
+                raise RunJobTaskFailed("Import file is not valid UTF-8") from exc
         else:
             text = csv_data
             filename = ""
@@ -788,7 +793,7 @@ class ImportObjects(Job):
             data = parser_class().parse(stream=BytesIO(text.encode("utf-8")), parser_context=parser_context)
 
             # A file-carried model declaration must agree with the requested content-type
-            import_model = parser_context.get("import_model")
+            import_model = parser_context.get("import_directives", {}).get(IMPORT_DOCUMENT_MODEL_KEY)
             if import_model and import_model.lower() != f"{content_type.app_label}.{content_type.model}":
                 self.logger.error(
                     'The file declares model "%s" but this import was requested for "%s.%s"',

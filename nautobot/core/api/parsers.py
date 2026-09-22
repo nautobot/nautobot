@@ -404,7 +404,7 @@ class ImportDocumentParserMixin:
     Files may be wrapped in a metadata document carrying their own import intent
     (following the `kubectl apply` model):
 
-        nautobot_import: "1"
+        nautobot_import_version: 3
         model: dcim.device
         match_fields: [name, serial]
         records:
@@ -412,7 +412,7 @@ class ImportDocumentParserMixin:
             ...
 
     or may be a bare list of records. Document metadata is surfaced to the caller out-of-band via
-    `parser_context["import_directives"]` (match_fields) and `parser_context["import_model"]`.
+    `parser_context["import_directives"]`, as `NautobotCSVParser` surfaces its directive row.
     """
 
     SUPPORTED_DOCUMENT_VERSIONS = (IMPORT_DOCUMENT_VERSION,)
@@ -456,16 +456,21 @@ class ImportDocumentParserMixin:
         Accepts both nested representations (`{"location": {"name": ...}}`) and flat `__` lookups
         (`{"location__name": ...}`); values are already typed, so this is mostly unknown-field
         rejection and `cf_` custom-field normalization.
+
+        Note that CSV's null sentinels are deliberately *not* honored here. JSON and YAML express null
+        natively, and `build_document_records()` writes a real `None`, so treating the strings "NULL" and
+        "NoObject" as null would only destroy values that happen to read that way -- the export side takes
+        the same care for the same reason.
         """
         if not isinstance(record, dict):
             raise ParseError(f"Record {counter}: expected a mapping of field names to values")
-        record = nest_flat_dict(record, CSV_NULL_SENTINELS)
+        # `cf_` keys are lifted out before nesting: a custom field's key may itself contain `__` (explicitly
+        # set, never auto-slugified), which `nest_flat_dict` would otherwise split into a subtree.
+        custom_fields = {key[3:]: value for key, value in record.items() if key.startswith("cf_")}
+        record = nest_flat_dict({key: value for key, value in record.items() if not key.startswith("cf_")})
         data = {}
         unknown = []
         for key, value in record.items():
-            if key.startswith("cf_"):
-                data.setdefault("custom_fields", {})[key[3:]] = value
-                continue
             serializer_field = serializer.fields.get(key)
             if serializer_field is None:
                 unknown.append(key)
@@ -473,6 +478,10 @@ class ImportDocumentParserMixin:
             if serializer_field.read_only and key != "id":
                 continue
             data[key] = value
+        if custom_fields:
+            # Applied over any whole-dict `custom_fields` the record also carried, rather than instead of
+            # it: `cf_<key>` names one field, so it is the more specific of the two spellings.
+            data.setdefault("custom_fields", {}).update(custom_fields)
         if unknown and strict:
             raise ParseError(f"Record {counter}: unrecognized field(s): {', '.join(sorted(unknown))}")
         return data
@@ -484,13 +493,8 @@ class ImportDocumentParserMixin:
         try:
             payload = self.load(read_import_text(stream, parser_context))
             metadata, records = self.unwrap_document(payload)
-            if metadata.get(IMPORT_DOCUMENT_MATCH_FIELDS_KEY):
-                match_fields = metadata[IMPORT_DOCUMENT_MATCH_FIELDS_KEY]
-                if isinstance(match_fields, str):
-                    match_fields = match_fields.split()
-                parser_context.setdefault("import_directives", {})["match_fields"] = list(match_fields)
-            if metadata.get(IMPORT_DOCUMENT_MODEL_KEY):
-                parser_context["import_model"] = metadata[IMPORT_DOCUMENT_MODEL_KEY]
+            if metadata:
+                parser_context.setdefault("import_directives", {}).update(metadata)
 
             strict = parser_context.get("strict_fields", True)
             return [

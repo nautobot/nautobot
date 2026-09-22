@@ -39,7 +39,7 @@ from nautobot.core.api.import_export import (
     nest_flat_dict,
     validate_field_paths,
 )
-from nautobot.core.api.parsers import ImportDocumentParserMixin, NautobotCSVParser
+from nautobot.core.api.parsers import ImportDocumentParserMixin, NautobotCSVParser, NautobotJSONImportParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
@@ -2509,6 +2509,47 @@ class DetectImportFormatTests(SimpleTestCase):
         self.assertEqual(detect_import_format(), "csv")
 
 
+class RecordToDataTests(TestCase):
+    """`ImportDocumentParserMixin.record_to_data` normalizes one JSON/YAML record for the serializer."""
+
+    def setUp(self):
+        self.parser = NautobotJSONImportParser()
+        self.serializer = StatusSerializer(context={"request": None, "depth": 0})
+
+    def to_data(self, record, **kwargs):
+        return self.parser.record_to_data(1, record, self.serializer, **kwargs)
+
+    def test_record__flat_lookups_are_nested(self):
+        data = self.to_data({"name": "x", "color": "111111"})
+        self.assertEqual(data, {"name": "x", "color": "111111"})
+
+    def test_record__csv_null_sentinels_are_left_alone(self):
+        """JSON/YAML express null natively, so these are ordinary strings and must survive intact."""
+        data = self.to_data({"name": CSV_NULL_TYPE, "color": CSV_NO_OBJECT})
+        self.assertEqual(data["name"], CSV_NULL_TYPE)
+        self.assertEqual(data["color"], CSV_NO_OBJECT)
+
+    def test_record__explicit_null_is_preserved(self):
+        self.assertIsNone(self.to_data({"name": None})["name"])
+
+    def test_record__custom_field_key_containing_a_double_underscore(self):
+        """A `cf_` key is lifted out before nesting, so a custom field whose key contains `__` survives."""
+        data = self.to_data({"name": "x", "cf_my__key": "value"})
+        self.assertEqual(data["custom_fields"], {"my__key": "value"})
+
+    def test_record__cf_entries_apply_over_a_whole_custom_fields_dict(self):
+        data = self.to_data({"name": "x", "custom_fields": {"a": 1, "b": 2}, "cf_b": 99})
+        self.assertEqual(data["custom_fields"], {"a": 1, "b": 99})
+
+    def test_record__unknown_field_is_rejected_when_strict(self):
+        with self.assertRaisesRegex(ParseError, "no_such_field"):
+            self.to_data({"name": "x", "no_such_field": 1})
+        self.assertNotIn("no_such_field", self.to_data({"name": "x", "no_such_field": 1}, strict=False))
+
+    def test_record__read_only_fields_are_dropped(self):
+        self.assertNotIn("display", self.to_data({"name": "x", "display": "ignored"}))
+
+
 # ===========================================================================
 # Layer 2 — import format adapters (create)
 # ===========================================================================
@@ -2560,6 +2601,66 @@ class ImportAdapterTests(ImportExportJobTestCase):
         self.assertNoIssues(job_result)
         self.assertEqual(Device.objects.get(name="Test-AC-01").serial, "1021C4")
         self.assertEqual(Device.objects.get(name="Test-AC-02").serial, "1021C5")
+
+    def test_adapter_import__undecodable_file_is_reported(self):
+        """A file that isn't UTF-8 fails the Job with a logged error, not an unhandled traceback."""
+        content = "name,color\ncaf\xe9,111111".encode("latin-1")
+        csv_file = FileProxy.objects.create(name="latin1.csv", file=ContentFile(content, name="latin1.csv"))
+        job_result = self.run_import(csv_file=csv_file.id, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobLogEntry(job_result, "Unable to decode", level=LogLevelChoices.LOG_ERROR)
+
+
+# ===========================================================================
+# Import — the model directive, in both formats
+# ===========================================================================
+class ImportModelDirectiveTests(ImportExportJobTestCase):
+    """A file declaring a `model` must agree with the content-type the import was requested for."""
+
+    YAML_RECORDS = [
+        "records:",
+        "  - name: test_model_directive_status",
+        "    color: '556677'",
+        "    content_types: [dcim.device]",
+    ]
+
+    def test_model_directive__csv_mismatch_is_refused(self):
+        job_result = self.run_import(
+            "\n".join(
+                [
+                    f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.device",
+                    "name,color",
+                    "test_model_directive_status,556677",
+                ]
+            ),
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, 'declares model "dcim.device"', level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_model_directive_status").exists())
+
+    def test_model_directive__csv_match_is_accepted(self):
+        self.run_import(
+            "\n".join(
+                [
+                    f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=extras.status",
+                    "name,color,content_types",
+                    "test_model_directive_status,556677,dcim.device",
+                ]
+            )
+        )
+        self.assertTrue(Status.objects.filter(name="test_model_directive_status").exists())
+
+    def test_model_directive__yaml_mismatch_is_refused(self):
+        job_result = self.run_import(
+            "\n".join(["model: dcim.device", *self.YAML_RECORDS]),
+            import_format="yaml",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, 'declares model "dcim.device"', level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_model_directive_status").exists())
+
+    def test_model_directive__yaml_match_is_accepted(self):
+        self.run_import("\n".join(["model: extras.status", *self.YAML_RECORDS]), import_format="yaml")
+        self.assertTrue(Status.objects.filter(name="test_model_directive_status").exists())
 
 
 # ===========================================================================
