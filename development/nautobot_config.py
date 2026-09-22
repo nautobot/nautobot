@@ -23,9 +23,15 @@ if DEBUG:
         INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
     if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
         MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
-    # By default the toolbar only displays when the request is coming from one of INTERNAL_IPS.
-    # For the Docker dev environment, we don't know in advance what that IP may be, so override to skip that check
-    DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG}
+    # Skip the INTERNAL_IPS check; the Docker dev IP is not known in advance.
+    # Show the toolbar unless the request carries X-Disable-Debug-Toolbar (nautobot.playwright sends it)
+    # or NAUTOBOT_SHOW_DJDT_TOOLBAR is falsy. Parsed once so a bad value fails at startup.
+    _show_djdt_toolbar = is_truthy(os.getenv("NAUTOBOT_SHOW_DJDT_TOOLBAR", "true"))
+    DEBUG_TOOLBAR_CONFIG = {
+        "SHOW_TOOLBAR_CALLBACK": lambda request: (
+            _show_djdt_toolbar and not request.headers.get("X-Disable-Debug-Toolbar")
+        ),
+    }
 
 # Do *not* send anonymized install metrics when post_upgrade or send_installation_metrics management commands are run
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "False"))
