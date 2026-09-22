@@ -860,8 +860,8 @@ class JobViewSetBase(
             ]:
                 if key in instance.field_attrs:
                     entry[key] = instance.field_attrs[key]
-            if "initial" in instance.field_attrs:
-                entry["default"] = instance.field_attrs["initial"]
+            if instance.default is not None:
+                entry["default"] = instance.default
             if "queryset" in instance.field_attrs:
                 content_type = ContentType.objects.get_for_model(instance.field_attrs["queryset"].model)
                 entry["model"] = f"{content_type.app_label}.{content_type.model}"

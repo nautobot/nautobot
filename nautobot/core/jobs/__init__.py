@@ -666,8 +666,10 @@ class ImportObjects(Job):
 
     content_type = ObjectVar(
         model=ContentType,
-        description="Type of objects to import",
+        description="Type of objects to import; defaults to the model the data declares for itself, "
+        "as every file Nautobot exports does",
         query_params={"can_add": True, "has_serializer": True},
+        required=False,
     )
     # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
     # but accept CSV, JSON, or YAML data (see import_format).
@@ -754,13 +756,43 @@ class ImportObjects(Job):
     def run(  # pylint:disable=arguments-differ
         self,
         *,
-        content_type,
+        content_type=None,
         csv_data=None,
         csv_file=None,
         roll_back_if_error=True,
         import_format="auto",
         match_fields="",
     ):
+        # Read the data first: a file that declares its own model is allowed to supply the content-type.
+        if not csv_data and not csv_file:
+            raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
+        if csv_file:
+            raw = csv_file.read()
+            filename = getattr(csv_file, "name", "")
+            try:
+                text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
+            except UnicodeDecodeError as exc:
+                self.logger.error("Unable to decode `%s` as UTF-8: `%s`", filename or "the uploaded file", exc)
+                raise RunJobTaskFailed("Import file is not valid UTF-8") from exc
+        else:
+            text = csv_data
+            filename = ""
+
+        if not import_format or import_format == "auto":
+            import_format = import_utils.detect_import_format(filename, text)
+        parser_class = self.IMPORT_PARSERS.get(import_format)
+        if parser_class is None:
+            raise RunJobTaskFailed(f'Unsupported import format "{import_format}"')
+        self.logger.info("Importing data as %s", import_format.upper())
+
+        if content_type is None:
+            declared_model = import_utils.peek_import_model(text, import_format) or ""
+            app_label, _, model_name = declared_model.lower().partition(".")
+            content_type = ContentType.objects.filter(app_label=app_label, model=model_name).first()
+            if content_type is None:
+                self.logger.error('No content-type given, and the data declares no usable model ("%s")', declared_model)
+                raise RunJobTaskFailed("Unable to determine the content-type to import this data as")
+
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -783,27 +815,6 @@ class ImportObjects(Job):
             )
             raise
         queryset = model.objects.restrict(self.user, "add")
-
-        if not csv_data and not csv_file:
-            raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
-        if csv_file:
-            raw = csv_file.read()
-            filename = getattr(csv_file, "name", "")
-            try:
-                text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
-            except UnicodeDecodeError as exc:
-                self.logger.error("Unable to decode `%s` as UTF-8: `%s`", filename or "the uploaded file", exc)
-                raise RunJobTaskFailed("Import file is not valid UTF-8") from exc
-        else:
-            text = csv_data
-            filename = ""
-
-        if not import_format or import_format == "auto":
-            import_format = import_utils.detect_import_format(filename, text)
-        parser_class = self.IMPORT_PARSERS.get(import_format)
-        if parser_class is None:
-            raise RunJobTaskFailed(f'Unsupported import format "{import_format}"')
-        self.logger.info("Importing data as %s", import_format.upper())
 
         new_objs = []
         try:

@@ -2774,6 +2774,28 @@ class ImportModelDirectiveTests(ImportExportJobTestCase):
         self.run_import("\n".join(["model: extras.status", *self.YAML_RECORDS]), import_format="yaml")
         self.assertTrue(Status.objects.filter(name="test_model_directive_status").exists())
 
+    def test_model_directive__supplies_an_omitted_content_type(self):
+        """With no content-type given, the model the data declares is what it is imported as."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            csv_data="\n".join(["model: extras.status", *self.YAML_RECORDS]),
+            import_format="yaml",
+        )
+        self.assertJobResultStatus(job_result)
+        self.assertTrue(Status.objects.filter(name="test_model_directive_status").exists())
+
+    def test_model_directive__absent_with_no_content_type_is_refused(self):
+        """Neither side supplies one, so there is nothing to import the data as."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            csv_data="\n".join(self.YAML_RECORDS),
+            import_format="yaml",
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobLogEntry(job_result, "declares no usable model", level=LogLevelChoices.LOG_ERROR)
+
 
 # ===========================================================================
 # Layer 3 — the ImportObjects job itself (input, permissions, rollback, relations)
