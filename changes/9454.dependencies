@@ -1,0 +1,2 @@
+Updated dependency `psycopg2-binary` to `>=2.9.13,<2.10`.
+Updated dependency `regex` to `>=2026.9.10`.

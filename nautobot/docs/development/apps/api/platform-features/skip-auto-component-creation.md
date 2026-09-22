@@ -43,7 +43,7 @@ The context manager:
 The context manager affects only the call from `Device.save()` / `Module.save()`. If an app calls `device.create_components()` directly, that explicit invocation is still honoured — `SkipAutoComponentCreation` gates the automatic call from inside `save()`, not the method itself.
 
 !!! warning "Thread-based parallelization"
-    Suppression is stored in a `contextvars.ContextVar`, which is **not** inherited by a separately spawned `threading.Thread` — each new thread starts from the default (unsuppressed). If you fan creation out across a thread pool (for example `concurrent.futures.ThreadPoolExecutor`), entering `with SkipAutoComponentCreation():` on the dispatching thread will **not** suppress component creation in the worker threads. In that case, enter the context manager *inside* each worker, or copy the calling context into the worker with `contextvars.copy_context()`. Asyncio-task and Celery-task scoping are unaffected.
+    Suppression is stored in a `contextvars.ContextVar`, which is **not** inherited by a separately spawned `threading.Thread` — each new thread starts from the default (unsuppressed). If you fan creation out across a thread pool (for example `concurrent.futures.ThreadPoolExecutor`), entering `with SkipAutoComponentCreation():` on the dispatching thread will **not** suppress component creation in the worker threads. In that case, enter the context manager _inside_ each worker, or copy the calling context into the worker with `contextvars.copy_context()`. Asyncio-task and Celery-task scoping are unaffected.
 
 ## Introspection
 

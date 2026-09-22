@@ -13,7 +13,7 @@ The below sub-sections describe some key changes that deployers should be aware 
 
 #### Migration from RQ to Celery
 
-Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now *deprecated*, as Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
+Prior to version 1.1.0, Nautobot utilized RQ as the primary background task worker. As of Nautobot 1.1.0, RQ is now _deprecated_, as Celery has been introduced to eventually replace RQ for executing background tasks within Nautobot. All Nautobot **core** usage of RQ has been migrated to use Celery.
 
 RQ support for custom tasks was not removed in order to give App authors time to migrate, however, to continue to utilize advanced Nautobot features such as Git repository synchronization, webhooks, jobs, etc. you must migrate your `nautobot-worker` deployment from RQ to Celery.
 
@@ -93,7 +93,7 @@ As with all dependencies, we would recommend that you follow usual industry best
 
 Nautobot v1.1.0 and later can optionally support the following:
 
-> *Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL.*
+> _Nautobot v1.1.0 added support for MySQL 8.0 as a database backend as an alternative to PostgreSQL._
 
 | Dependency | Minimum Version |
 | ---------- | --------------- |
