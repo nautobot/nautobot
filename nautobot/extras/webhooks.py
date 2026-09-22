@@ -185,7 +185,7 @@ def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None, gate=
         object_change (ObjectChange): The change that may trigger Webhooks to be sent.
         snapshots (list): The before/after data snapshots corresponding to the object_change.
         webhook_queryset (QuerySet): Previously retrieved set of Webhooks to potentially send.
-        gate (ConditionGate): The dispatch run's gate, if the caller holds one; otherwise one of this call's own.
+        gate (ConditionGate): Defaults to a new `ConditionGate()`.
 
     Returns:
         webhook_queryset (QuerySet): for reuse when processing multiple ObjectChange with the same content-type+action.

@@ -22,7 +22,7 @@ class ConditionRowError(ConditionValidationError):
 
 @dataclass(frozen=True)
 class ConditionRow(ABC):
-    """One stored condition. Subclasses know how to resolve themselves; `check` decides what passes."""
+    """One stored condition. Subclasses know how to resolve themselves; `check_conditions` decides what passes."""
 
     negate: bool  # inverts the row's result
     _allowed_keys: ClassVar[frozenset[str]] = frozenset()
@@ -70,7 +70,7 @@ class ConditionRow(ABC):
 
     @abstractmethod
     def resolve(self):
-        """Return `(source, context_variables)` for `check`. Subclasses override."""
+        """Return `(source, context_variables)` for `check_conditions`. Subclasses override."""
 
     @abstractmethod
     def to_dict(self):

@@ -1468,7 +1468,7 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         may_reload_jobs (bool): Whether to reload JobHook source code from disk to guarantee up-to-date code.
         jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
         snapshots (dict): The before/after data snapshots corresponding to the object_change.
-        gate (ConditionGate): The dispatch run's gate, if the caller holds one; otherwise one of this call's own.
+        gate (ConditionGate): Defaults to a new `ConditionGate()`.
 
     Returns:
         result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered

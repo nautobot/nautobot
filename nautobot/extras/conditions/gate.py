@@ -2,14 +2,18 @@
 
 import logging
 
-from nautobot.extras.conditions.check import check
+from nautobot.extras.conditions.check import check_conditions
 from nautobot.extras.conditions.payload import build_event_payload
 
 logger = logging.getLogger(__name__)
 
 
 class ConditionGate:
-    """Whether each action's conditions accept the change being dispatched."""
+    """Whether each action's conditions accept the change being dispatched.
+
+    A gate remembers which broken conditions it has already reported, so a caller that reuses one across
+    many changes logs a fault once rather than once per changed object.
+    """
 
     def __init__(self):
         self._reported = set()
@@ -40,10 +44,9 @@ class ConditionGate:
             return True
 
         try:
-            verdict = check(action.conditions, payload)
+            verdict = check_conditions(action.conditions, payload)
         except Exception as error:
-            # Only a validated save stores a list of rows; anything else in the column arrives here,
-            # and a misconfigured action must not take the save down with it.
+            # A misconfigured action must not fail the save that triggered it.
             self._report(action, None, f"{type(error).__name__}: {error}")
             return False
 
