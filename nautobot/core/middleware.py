@@ -592,42 +592,42 @@ class ComplexityCostRateLimitingMiddleware:
         # ----------------------------------------------------------------------
         #  Spend The Caller's Budget
         # ----------------------------------------------------------------------
-        quota = settings.NAUTOBOT_REST_RATE_LIMITING_QUOTA
+        rate_limit_budget = settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET
         rate_limiting_window_in_seconds = settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS
 
-        consumed_quota = 0
-        remaining_window_time = rate_limiting_window_in_seconds
+        consumed_budget = 0
+        remaining_window_time_in_seconds = rate_limiting_window_in_seconds
 
         if user_token is not None and should_complexity_cost_calculation_enforced is True:
             rate_limit_bucket_id = get_rate_limit_bucket_id(user_token)
-            consumed_quota, remaining_window_time = charge_bucket(
+            consumed_budget, remaining_window_time_in_seconds = charge_bucket(
                 rate_limit_bucket_id,
                 request_complexity_cost_estimate,
                 rate_limiting_window_in_seconds,
             )
 
-        if consumed_quota is None:
-            consumed_quota = 0
-            remaining_window_time = rate_limiting_window_in_seconds
+        if consumed_budget is None:
+            consumed_budget = 0
+            remaining_window_time_in_seconds = rate_limiting_window_in_seconds
 
         # ----------------------------------------------------------------------
         #  Generate Header Data
         # ----------------------------------------------------------------------
-        quota_policy_name = "rest-complexity-cost"
+        budget_policy_name = "rest-complexity-cost"
 
-        remaining_quota = quota - consumed_quota
-        advertised_remaining_quota = max(0, remaining_quota)
-        advertised_remaining_window_time = max(1, remaining_window_time)
+        remaining_budget = rate_limit_budget - consumed_budget
+        advertised_remaining_budget = max(0, remaining_budget)
+        advertised_remaining_window_time_in_seconds = max(1, remaining_window_time_in_seconds)
 
         rate_limit_policy_data = [
-            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
-            f"q={quota}",  # Total budget granted per window
-            f"w={rate_limiting_window_in_seconds}",  # Duration that quota applies
+            f'"{budget_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
+            f"q={rate_limit_budget}",  # Total budget granted per window
+            f"w={rate_limiting_window_in_seconds}",  # Duration that budget applies
         ]
         rate_limit_data = [
-            f'"{quota_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applie
-            f"r={advertised_remaining_quota}",  # Remaining quota
-            f"t={advertised_remaining_window_time}",  # Remaining window of time
+            f'"{budget_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applie
+            f"r={advertised_remaining_budget}",  # Remaining budget
+            f"t={advertised_remaining_window_time_in_seconds}",  # Remaining window of time
         ]
 
         rate_limit_policy_string = ";".join(rate_limit_policy_data)
@@ -640,16 +640,20 @@ class ComplexityCostRateLimitingMiddleware:
         }
 
         # --------------------
-        #  If Quota Is Hit, No Further Middleware Allowed, Terminate
+        #  If Budget Is Hit, No Further Middleware Allowed, Terminate
         # --------------------
-        is_over_quota = remaining_quota < 0
+        # Bucket was already charged, but need to know if we had budget before charge
+        # So we use subtract the cost of this request from the current amount of our budget used
+        # To look at where we were at the beginning of this request
+        consumed_budget_before_this_request = consumed_budget - request_complexity_cost_estimate
+        has_budget_been_fully_exhausted = consumed_budget_before_this_request >= rate_limit_budget
 
-        if should_complexity_cost_calculation_enforced is True and is_over_quota is True:
+        if should_complexity_cost_calculation_enforced is True and has_budget_been_fully_exhausted is True:
             response = JsonResponse(
-                {"detail": "Request was throttled. The estimated complexity cost exceeds the quota."},
+                {"detail": "Request was throttled. The estimated complexity cost exceeds the budget."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
-            response.headers["Retry-After"] = str(advertised_remaining_window_time)
+            response.headers["Retry-After"] = str(advertised_remaining_window_time_in_seconds)
         else:
             response = self.get_response(request)
 

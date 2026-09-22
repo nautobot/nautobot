@@ -1614,7 +1614,7 @@ properties:
     environment_variable: "NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
-      "NAUTOBOT_REST_RATE_LIMITING_QUOTA": "#nautobot_rest_rate_limiting_quota"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#NAUTOBOT_REST_RATE_LIMITING_BUDGET"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
@@ -1692,7 +1692,7 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_MODE"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_QUOTA": "#nautobot_rest_rate_limiting_quota"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#NAUTOBOT_REST_RATE_LIMITING_BUDGET"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST:
@@ -1709,7 +1709,7 @@ properties:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_QUOTA:
+  NAUTOBOT_REST_RATE_LIMITING_BUDGET:
     default: 1000
     description: >-
       The complexity cost budget granted to each API token per window, in cost points.
@@ -1722,8 +1722,8 @@ properties:
           unrelated to the REST API's `limit` query parameter.
 
       Size this against the cost settings: with the defaults an unfiltered list request costs `4`,
-      so a quota of `1000` permits roughly 250 such requests per window.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_QUOTA"
+      so a budget of `1000` permits roughly 250 such requests per window.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_BUDGET"
     minimum: 0
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS": "#nautobot_rest_rate_limiting_window_seconds"
@@ -1770,7 +1770,7 @@ properties:
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WINDOW_SECONDS"
     minimum: 1
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_QUOTA": "#nautobot_rest_rate_limiting_quota"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#NAUTOBOT_REST_RATE_LIMITING_BUDGET"
     type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_WRITE_COST:
