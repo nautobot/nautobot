@@ -19,25 +19,38 @@ from nautobot.playwright.base_page import BasePage
 
 
 class DetailPage(BasePage):
-    """Shared detail-view behavior: navigation, the heading, the Edit button, and panels."""
+    """Shared detail-view behavior: navigation, the heading, the Edit button, and panels.
+
+    `VERBOSE_NAME` names the model, which core uses to label the Edit button
+    "Edit <verbose name>".
+
+    The selectors, which are not obvious from their values:
+
+    - `_HEADING` is the heading's own span, not the surrounding h1. The h1 also holds the
+      copy-to-clipboard button, whose label would come back as part of the object's name.
+    - `_PANEL_TITLE` is the single `strong` in a panel header, holding that panel's title.
+      Titles are matched without regard to case: a panel's own label is uppercased when it
+      is rendered ("MANAGEMENT"), while a table panel's title keeps the case it was
+      declared with ("Assigned VRFs").
+    - `_ENCLOSING_CARD` walks from a panel title to the card that owns it. Its predicate
+      matches a whole class name because a `contains` match stops at the `card-header` in
+      between and returns the header.
+    - `_PLACEHOLDER_SPINNER` and `_DEFERRED_COMPONENT_REQUEST` are the two halves of
+      deferred rendering. A component with `deferred_render` set ships a placeholder card
+      with a spinner in its body, then fetches its real body with a second request to the
+      same URL carrying the component's id. The spinner lives inside the placeholder, so
+      it is gone once that body has swapped in. Count it by presence rather than
+      visibility, since htmx keeps `.htmx-indicator` transparent except while its own
+      request is in flight.
+    """
 
     DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
-    # REQUIRED in subclass, e.g. "Device". Core labels the Edit button "Edit <verbose name>".
-    VERBOSE_NAME = ""
+    VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device"
 
-    # The heading's own span. The surrounding h1 also holds the copy-to-clipboard button,
-    # whose label would otherwise be read as part of the object's name.
     _HEADING = "#page-title #copy_title"
     _EDIT_BUTTON = "#edit-button"
-    # One strong element per panel header, holding that panel's title.
     _PANEL_TITLE = ".card > .card-header strong"
-    # The card a panel title belongs to. The predicate matches a whole class name, so it
-    # stops at `card` rather than at the `card-header` in between.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
-    # A component with `deferred_render` set ships a placeholder card with a spinner in
-    # its body and fetches its own body with a second request to the same URL, carrying
-    # the component's id. The spinner lives inside the placeholder, so it is gone once
-    # the body has swapped in.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
     _DEFERRED_COMPONENT_REQUEST = re.compile(r"[?&]component_id=")
 
@@ -62,11 +75,7 @@ class DetailPage(BasePage):
         expect(self.page.locator(self._HEADING)).to_have_text(name)
 
     def expect_edit_button(self):
-        """Assert (auto-retrying) that this model's Edit button is rendered.
-
-        The label names the model ("Edit Device"), so this asserts the button belongs to
-        the view under test and not to some other object rendered on the page.
-        """
+        """Assert (auto-retrying) that this model's Edit button is rendered."""
         expect(self.page.locator(self._EDIT_BUTTON)).to_contain_text(f"Edit {self.VERBOSE_NAME}")
 
     # -------------------------------------------------------------------------
@@ -74,13 +83,7 @@ class DetailPage(BasePage):
     # -------------------------------------------------------------------------
 
     def panel(self, title):
-        """Locator for the panel card titled *title*.
-
-        The title is matched without regard to case. A panel's own label is uppercased
-        when it is rendered ("MANAGEMENT"), while a table panel's title keeps the case it
-        was declared with ("Assigned VRFs"), and a caller should not have to know which
-        kind of panel it is asking for.
-        """
+        """Locator for the panel card titled *title*, matched without regard to case."""
         heading = self.page.locator(self._PANEL_TITLE).filter(
             has_text=re.compile(rf"^\s*{re.escape(title)}\s*$", re.IGNORECASE)
         )
@@ -95,20 +98,11 @@ class DetailPage(BasePage):
         expect(self.panel(title)).to_have_count(0)
 
     def expect_panel_to_contain(self, title, text):
-        """Assert (auto-retrying) that the panel titled *title* shows *text*.
-
-        Scoped to the one card. A page-wide text search says nothing about which panel
-        produced the match, and a detail view renders many panels with similar wording.
-        """
+        """Assert (auto-retrying) that the panel titled *title* shows *text*, scoped to that one card."""
         expect(self.panel(title)).to_contain_text(text)
 
     def expect_panel_field(self, title, key, value):
-        """Assert (auto-retrying) that the row keyed *key* in panel *title* shows *value*.
-
-        Key-value panels render one row per field, key cell then value cell. The value
-        cell also carries a copy-to-clipboard button, and a related object is rendered by
-        its full display text, so the assertion is containment rather than equality.
-        """
+        """Assert (auto-retrying) that the row keyed *key* in panel *title* contains *value*."""
         row = self.panel(title).locator("tr").filter(has=self.page.locator(f"td:first-child:text-is({key!r})"))
         expect(row.locator("td").nth(1)).to_contain_text(value)
 
@@ -125,10 +119,5 @@ class DetailPage(BasePage):
         self.page.unroute(self._DEFERRED_COMPONENT_REQUEST)
 
     def expect_deferred_placeholder_count(self, expected):
-        """Assert (auto-retrying) that *expected* deferred components are still showing a placeholder.
-
-        Counted by presence, not visibility: htmx keeps `.htmx-indicator` transparent
-        except while its own request is in flight, so a placeholder waiting on a response
-        that never came is in the DOM but reads as not visible.
-        """
+        """Assert (auto-retrying) that *expected* deferred components are still showing a placeholder."""
         expect(self.page.locator(self._PLACEHOLDER_SPINNER)).to_have_count(expected)
