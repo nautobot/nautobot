@@ -2623,8 +2623,11 @@ class JobUIViewSet(NautobotUIViewSet):
             console_log=console_log,
             job_kwargs=job_class.serialize_data(job_kwargs),
         )
+        # The modal's own form submit identifies itself by id; a single-click action that runs the Job
+        # without ever showing the form says so in its hx-vals instead, and wants the same modal back.
         htmx_trigger = request.headers.get("HX-Trigger", None)
-        if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+        wants_modal = htmx_trigger == "job-form-modal" or request.POST.get("job_form_modal")
+        if self.request.headers.get("HX-Request", False) and wants_modal:
             job_modal_button_registry_id = request.POST.get("job_modal_button", "")
             job_result_key = request.POST.get("job_result_key", None)
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
@@ -2692,6 +2695,16 @@ class JobUIViewSet(NautobotUIViewSet):
             return False
         return bool(job_modal_button.enable_scheduling)
 
+    def _resolve_fixed_fields(self, request):
+        """The Job fields this modal's button says the launching context decides.
+
+        Read from the registered `_JobModalButton`, never from the request, for the same reason scheduling
+        is: what the payload claims about itself is not authority for what the form permits.
+        """
+        button_id = request.POST.get("job_modal_button", "")
+        job_modal_button = registry["job_modal_buttons"].get(button_id) if button_id else None
+        return getattr(job_modal_button, "fixed_fields", ())
+
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
@@ -2720,6 +2733,14 @@ class JobUIViewSet(NautobotUIViewSet):
             # (hx-vals would override the form field with the same name if present).
             if not enable_scheduling:
                 hx_vals_dict["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
+            # Fields the launching context decided are shown but not editable here. A disabled input
+            # submits nothing, so each one's value rides in hx-vals the same way, and only fields the
+            # trigger actually supplied are fixed -- otherwise a modal opened without one would offer a
+            # disabled, empty field that no one could fill in.
+            for field_name in self._resolve_fixed_fields(request):
+                if field_name in job_form.fields and request.POST.get(field_name):
+                    job_form.fields[field_name].disabled = True
+                    hx_vals_dict[field_name] = request.POST[field_name]
             response = render(
                 request,
                 template_name,
@@ -3514,6 +3535,20 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+def file_proxy_download_url(file_proxy):
+    """
+    Build the download URL for a single FileProxy, respecting the configured job-files storage backend.
+
+    Returns an empty string if the FileProxy has no underlying file.
+    """
+    if not file_proxy or not file_proxy.file:
+        return ""
+    # Pick URL depending on storage backend
+    if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
+        return f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
+    return file_proxy.file.url
+
+
 def render_jobresult_files(files_manager):
     """
     Render job result files as an HTML <ul> list with download links.
@@ -3530,14 +3565,9 @@ def render_jobresult_files(files_manager):
 
     links = []
     for file_proxy in files_manager.all():
-        if not file_proxy.file:
+        href = file_proxy_download_url(file_proxy)
+        if not href:
             continue
-
-        # Pick URL depending on storage backend
-        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
-            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
-        else:
-            href = file_proxy.file.url
 
         links.append(
             format_html(

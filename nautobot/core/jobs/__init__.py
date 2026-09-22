@@ -30,6 +30,8 @@ from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
+from nautobot.core.forms.fields import ExportFieldsChoiceField
+from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import import_utils
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
@@ -42,7 +44,7 @@ from nautobot.core.jobs.customfields import (
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.utils import m2m_through_data_fields
-from nautobot.core.utils.lookup import get_filterset_for_model, get_table_for_model, get_view_for_model
+from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
 from nautobot.data_validation import models
 from nautobot.data_validation.custom_validators import (
@@ -143,6 +145,41 @@ class GitRepositoryDryRun(Job):
             self.logger.info(f"Repository dry run completed in {job_result.duration}")
 
 
+class ExportFieldsStringVar(StringVar):
+    """The `export_fields` variable of `ExportObjectList`, rendered as an orderable tree of field paths.
+
+    A `StringVar` because its value *is* the comma-separated string the export takes, however it was
+    chosen: that is what a caller sends, and it is what the REST API reports as this variable's type, the
+    class name being all the API has to go on. Only the rendering is specialized, by
+    `ExportFieldsChoiceField`; `min_length`, `max_length` and `regex` have no meaning here.
+
+    Kept to this module rather than offered alongside `StringVar` and friends, since what it enumerates is
+    the field graph of whatever content type a *sibling* variable names -- particular to this Job, rather
+    than a general shape a Job variable might take.
+    """
+
+    form_field = ExportFieldsChoiceField
+
+    def as_field(self):
+        field = super().as_field()
+        # `ScriptVariable.as_field()` adds Bootstrap's `form-control` to every non-checkbox widget, which
+        # styles an input box; the widget renders a list of rows and brings its own classes.
+        field.widget.attrs["class"] = field.widget.attrs.get("class", "").replace(" form-control", "")
+        # A persistent HTMX swap target from `render_field`, rebuilt whenever the content type changes.
+        # Select2 raises only jQuery events, so the widget's script re-dispatches a native `change` for
+        # this trigger to hear. Set here rather than on the field class: the rebuild renders the field
+        # through `render_field` too, and would otherwise nest a second wrapper inside the first.
+        field.htmx_attrs = {
+            "id": ExportFieldSelect.WRAPPER_ID,
+            "hx-get": reverse("export_fields_picker"),
+            "hx-trigger": f"change from:{ExportFieldSelect.content_type_selector}",
+            "hx-include": ExportFieldSelect.content_type_selector,
+            "hx-target": "this",
+            "hx-swap": "innerHTML",
+        }
+        return field
+
+
 class ExportObjectList(Job):
     """System Job to export a list of objects via CSV or ExportTemplate."""
 
@@ -153,8 +190,8 @@ class ExportObjectList(Job):
         query_params={"can_view": True},  # not adding "has_serializer": True as it might just support export-templates
     )
     query_string = StringVar(
-        description='Filterset parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
-        label="Filterset Parameters",
+        description='Filter parameters to apply, in URL query parameter format e.g. "name=test&status=Active"',
+        label="Filter Parameters",
         default="",
         required=False,
     )
@@ -176,28 +213,20 @@ class ExportObjectList(Job):
         model=ExportTemplate,
         query_params={"content_type": "$content_type"},
         display_field="name",
-        description="Export Template to use (if unspecified, will export to CSV/YAML as specified above)",
+        description="Export Template to use (if unspecified, will export in the format selected above)",
         label="Export Template",
         default=None,
         required=False,
     )
-    export_fields = StringVar(
+    export_fields = ExportFieldsStringVar(
         label="Fields to Export",
         default="",
         required=False,
-        description="Optional comma-separated list of fields to export, including nested references to "
-        "related objects (e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
-        "If unspecified, all fields are exported, unless <em>Use Current View Columns</em> is selected. "
-        "Not applicable to Export Templates or devicetype-library YAML exports.",
-    )
-    use_current_view_columns = BooleanVar(
-        label="Use Current View Columns",
-        default=False,
-        required=False,
-        description="If no explicit list of fields to export is given, export the columns that the "
-        "corresponding list view is currently displaying — as configured by the saved view in use, if any, "
-        "else by your own table configuration for that view. Columns that have no exportable equivalent "
-        "(row selection, action buttons, computed fields, related-object counts, and the like) are omitted.",
+        description="The fields to export, in the order the columns should appear, as a comma-separated "
+        "list that may reach into related objects "
+        "(e.g. <code>name,status__name,device_type__manufacturer__name</code>). "
+        "Leave it empty to export every field. Not applicable to Export Templates or devicetype-library "
+        "YAML exports, which render their own output.",
     )
 
     class Meta:
@@ -353,67 +382,6 @@ class ExportObjectList(Job):
         return True
 
     # ---- RESOLVE FIELDS / MATCH (which columns, and the re-import match key) ----
-
-    def _get_current_view_columns(self, model, query_params, saved_view):
-        """The columns the launching list view is displaying, as export field paths (None = no selection).
-
-        Resolved by building the model's table the way the list view builds it — from the saved view in
-        use, else the user's own stored table configuration, else the table's default columns — so that
-        this is the same set of columns, in the same order, that the user is looking at.
-
-        Not every column is exportable — row selection and action buttons aren't data at all, and a
-        computed field or related-object count is a displayed value with no serializer field behind it —
-        so `BaseTable.serializer_paths_by_visible_column()` does the mapping and reports what it cannot
-        place. Losing a column that way is logged but does not fail the export: what was asked for is
-        the view, not those specific columns.
-        """
-        table_class = get_table_for_model(model)
-        if table_class is None:
-            self.logger.warning(
-                "No table class found for %s, so its list view's columns cannot be determined; "
-                "exporting all fields instead.",
-                model._meta.label_lower,
-            )
-            return None
-        self.logger.debug("Found table class: `%s`", table_class.__name__)
-        table = table_class(
-            model.objects.none(),
-            user=self.user,
-            saved_view=saved_view,
-            table_changes_pending=query_params.get("table_changes_pending", False),
-        )
-        serializer_class = get_serializer_for_model(model)
-        export_field_paths, omitted = [], []
-        for column, path in table.serializer_paths_by_visible_column(serializer_class).items():
-            if path is None or not self._is_exportable_path(serializer_class, path):
-                omitted.append(column)
-            elif path not in export_field_paths:
-                # Two columns can map to the same field; a selection names each field once.
-                export_field_paths.append(path)
-        if omitted:
-            # Info rather than a warning: every view has columns like these, so losing them is the
-            # normal case rather than a sign that anything went wrong.
-            self.logger.info(
-                "Omitting displayed column(s) %s, which have no exportable equivalent",
-                ", ".join(f"`{column}`" for column in omitted),
-            )
-        if not export_field_paths:
-            self.logger.warning("None of the displayed columns can be exported; exporting all fields instead.")
-            return None
-        return export_field_paths
-
-    def _is_exportable_path(self, serializer_class, path):
-        """Whether an export can actually emit this field path, for this user.
-
-        The same check an explicit selection gets, applied per path so that one unusable column is
-        dropped rather than taking the whole derived selection down with it.
-        """
-        try:
-            validate_field_paths(serializer_class, [path], user=self.user)
-        except ValueError as exc:
-            self.logger.debug("Cannot export `%s`: %s", path, exc)
-            return False
-        return True
 
     def _resolve_export_field_paths(self, model, export_fields):
         """Parse and validate the explicit field-selection string (None if no selection was given)."""
@@ -636,7 +604,6 @@ class ExportObjectList(Job):
         export_format="csv",
         export_template=None,
         export_fields="",
-        use_current_view_columns=False,
     ):  # pylint:disable=arguments-differ
         self._require_view_permission(content_type)
         model = content_type.model_class()
@@ -675,11 +642,10 @@ class ExportObjectList(Job):
             self._render_devicetype_library_yaml(queryset, filename)
             return
 
-        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else (on request) the ones the
-        # launching list view is displaying, else every field of the model.
+        # RESOLVE FIELDS / MATCH — which columns: an explicit selection, else every field of the model.
+        # Asking for "the columns of the list view" is a UI gesture rather than an input here: the export
+        # field picker fills those in as a selection, so what arrives is always an explicit list.
         export_field_paths = self._resolve_export_field_paths(model, export_fields)
-        if export_field_paths is None and use_current_view_columns:
-            export_field_paths = self._get_current_view_columns(model, query_params, saved_view)
         if export_field_paths:
             self.logger.info("Exporting selected fields: %s", ", ".join(export_field_paths))
         match_fields = self._get_match_fields(model, export_field_paths)

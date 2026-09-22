@@ -1483,11 +1483,7 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
 
     # Retrieve any applicable job hooks
     if jobhook_queryset is None:
-        action_flag = {
-            ObjectChangeActionChoices.ACTION_CREATE: "type_create",
-            ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
-            ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-        }[object_change.action]
+        action_flag = ObjectChangeActionChoices.HOOK_FLAGS[object_change.action]
         jobhook_queryset = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
     if not jobhook_queryset:  # not .exists() as we *want* to populate the queryset cache

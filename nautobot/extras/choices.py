@@ -495,6 +495,13 @@ class ObjectChangeActionChoices(ChoiceSet):
         ACTION_DELETE: "danger",
     }
 
+    # Name of the boolean field on Webhook/JobHook that opts a hook in to each action.
+    HOOK_FLAGS = {
+        ACTION_CREATE: "type_create",
+        ACTION_UPDATE: "type_update",
+        ACTION_DELETE: "type_delete",
+    }
+
 
 class ObjectChangeEventContextChoices(ChoiceSet):
     CONTEXT_WEB = "web"

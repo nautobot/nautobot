@@ -11,14 +11,15 @@ import csv
 from io import StringIO
 import json
 from pathlib import Path
+import re
 from types import SimpleNamespace
-from unittest import mock, skip
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
-from django.test import SimpleTestCase, tag, TestCase
+from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
 import yaml
@@ -29,6 +30,7 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    EXCLUDED_CSV_FIELDS,
     EXPORT_FIELD_MAX_DEPTH,
     IMPORT_DOCUMENT_VERSION,
     nest_flat_dict,
@@ -37,6 +39,7 @@ from nautobot.core.api.import_export import (
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
+from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
@@ -405,8 +408,8 @@ class ImportExportJobTestCase(TransactionTestCase):
     def create_user_with_table_config(self, table_name, columns, username="table-config-user"):
         """A superuser whose own table configuration displays exactly `columns` for the named table.
 
-        The export job reads the table configuration of the user it runs as, so a test that exercises
-        `use_current_view_columns` must run the job as this user (`run_export(username=...)`).
+        A view's columns are resolved for the requesting user, so a test that exercises "match the list
+        view" must ask for the picker as this user (`matched_columns(user=...)`).
         """
         user = User.objects.create(username=username, is_superuser=True)
         user.set_config(f"tables.{table_name}.columns", columns, commit=True)
@@ -1518,6 +1521,36 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 )
                 self.assertEqual(doc["records"], [{"name": "Custom Field Status", "cf_export_cf_a": "A value"}])
 
+    def test_select__document_keys_follow_the_selection(self):
+        """A selection lays a document's keys out in its own order, as it lays out CSV's columns."""
+        self.create_status(name="zzz_key_order", color="123456")
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                document = self.export_document(
+                    self.run_export(
+                        query_string="name=zzz_key_order",
+                        export_format=export_format,
+                        export_fields="color,name",
+                    )
+                )
+                self.assertEqual(list(document["records"][0]), ["color", "name"])
+
+    def test_select__document_keys_follow_the_selection_into_a_relation(self):
+        """Down to the keys of a related object, a document nesting what CSV spells with `__`."""
+        manufacturer = Manufacturer.objects.create(name="Key Order Mfr")
+        DeviceType.objects.create(manufacturer=manufacturer, model="Key Order DT", u_height=1)
+        document = self.export_document(
+            self.run_export(
+                model=DeviceType,
+                query_string="model=Key+Order+DT",
+                export_format="json",
+                export_fields="model,manufacturer__description,manufacturer__name",
+            )
+        )
+        record = document["records"][0]
+        self.assertEqual(list(record), ["model", "manufacturer"])
+        self.assertEqual(list(record["manufacturer"]), ["description", "name"])
+
     def test_select__custom_fields_dict_in_a_document(self):
         """Naming `custom_fields` keeps the nested dict, with every custom field in it."""
         self.create_status_with_custom_fields()
@@ -1603,26 +1636,253 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertJobLogEntry(job_result, "is write-only and cannot be exported", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(job_result.files.exists())
 
-    @skip("Enable in X5: needs ExportFieldsForm (export UI)")
-    def test_select__form_expands_single_fk_relations(self):
-        """ExportFieldsForm offers a flat, orderable list including single-FK relations expanded one level."""
-        from nautobot.core.forms import ExportFieldsForm  # TODO # pylint: disable=no-name-in-module
+    def picker_field(self, model):
+        """The Job's `export_fields` form field, configured for `model` as the rendered form configures it."""
+        job_form = ExportObjectList.as_form(data={"content_type": str(ContentType.objects.get_for_model(model).pk)})
+        return job_form.fields["export_fields"]
 
-        form = ExportFieldsForm(content_type=ContentType.objects.get_for_model(Device), initial_fields=["name"])
-        paths = [choice[0] for choice in form.fields["export_fields"].choices]
+    def picker_paths(self, model):
+        """The field paths the picker offers for a model, in the order it offers them."""
+        field = self.picker_field(model)
+        return field, [choice[0] for choice in field.choices]
+
+    def test_select__form_expands_single_fk_relations(self):
+        """The picker offers an orderable tree including single-FK relations expanded one level."""
+        field, paths = self.picker_paths(Device)
         self.assertIn("name", paths)
         self.assertIn("device_type__manufacturer", paths)
         self.assertIn("status__name", paths)
         self.assertFalse([path for path in paths if path.startswith("tags__")])
-        self.assertEqual(form.fields["export_fields"].initial, ["name"])
-        rendered = str(form["export_fields"].as_widget())
+        rendered = str(field.widget.render("export_fields", ["name"], attrs={"id": "id_export_fields"}))
         self.assertIn("export-field-caret", rendered)
         self.assertIn("export-nested", rendered)
         self.assertIn('value="device_type__manufacturer"', rendered)
 
-    @skip("Enable in X5: needs the export job-form modal template + modal button")
+    def test_select__form_offers_what_an_export_emits(self):
+        """The picker enumerates the *export's* field set: the read-only fields a default export emits are
+        selectable, and the fields that have no flat spelling are not offered at all.
+
+        Built from the import form's field list instead, as it once was, the picker could not offer any
+        read-only field -- `id` and `display` among them -- so an untouched selection would have produced a
+        narrower file than exporting with no selection at all.
+        """
+        _form, paths = self.picker_paths(Status)
+        for field_name in ("id", "display", "object_type", "natural_slug", "created", "last_updated"):
+            with self.subTest(field_name=field_name):
+                self.assertIn(field_name, paths)
+        for field_name in EXCLUDED_CSV_FIELDS:
+            if field_name == "custom_fields":
+                continue  # Offered at the root; see `test_select__form_offers_custom_fields_as_a_whole`
+            with self.subTest(field_name=field_name):
+                self.assertNotIn(field_name, paths)
+
+    def test_select__form_offers_opt_in_m2m_fields(self):
+        """A field readable only in export mode (`exporting=True`) is offered, being one an export emits."""
+        _form, paths = self.picker_paths(DeviceType)
+        self.assertIn("software_image_files", paths)
+
+    def test_select__form_offers_each_custom_field(self):
+        """Custom fields are offered one `cf_<key>` at a time, which is how a flat export spells them."""
+        self.create_status_with_custom_fields()
+        _form, paths = self.picker_paths(Status)
+        self.assertIn("cf_export_cf_a", paths)
+        self.assertIn("cf_export_cf_b", paths)
+
+    def test_select__form_offers_custom_fields_as_a_whole(self):
+        """`custom_fields` is offered too, being the only way to ask for all of them at once.
+
+        A selection of individual `cf_<key>` entries goes stale as soon as a custom field is added;
+        `custom_fields` does not, and it is what a document export spells the nested dict with. Offered at
+        the root only -- through a relation the same name would be a lookup returning raw JSON.
+        """
+        self.create_status_with_custom_fields()
+        field, paths = self.picker_paths(Status)
+        self.assertIn("custom_fields", paths)
+        # The individual fields nest under it, so the two spellings read as the whole and its parts.
+        self.assertEqual(field.widget.parent_paths["cf_export_cf_a"], "custom_fields")
+
+        _field, device_paths = self.picker_paths(Device)
+        self.assertFalse([path for path in device_paths if path.endswith("__custom_fields")])
+
+    def test_select__form_orders_fields_for_reading(self):
+        """What identifies the object leads, then what an import requires, then the rest alphabetically.
+
+        Serializer declaration order is not used: it is rarely arranged with intent. `custom_fields` goes
+        last, being whatever this model happens to have been given rather than part of its shape.
+        """
+        field, paths = self.picker_paths(Status)
+        parents = field.widget.parent_paths
+        roots = [path for path in paths if parents.get(path) is None]
+        self.assertEqual(roots[:3], ["name", "display", "id"])
+        self.assertEqual(roots[-1], "custom_fields")
+
+        required = {path for path, label in field.choices if label.endswith(" *")}
+        middle = roots[3:-1]
+        optional = [path for path in middle if path not in required]
+        self.assertEqual(optional, sorted(optional))
+        required_positions = [index for index, path in enumerate(middle) if path in required]
+        if required_positions and optional:
+            self.assertLess(max(required_positions), middle.index(optional[0]))
+
+    def test_select__relation_rows_are_marked_as_exporting_a_natural_key(self):
+        """A row naming a related object says so, its checkbox being the one that does something else.
+
+        Everywhere else a tree of checkboxes means "everything beneath this"; here it means "the columns
+        that identify this object", which is mutually exclusive with the fields listed under it. Marked
+        at every depth, the deepest offered level included -- there a relation has nothing listed under it
+        at all, so nothing else would tell it apart from an ordinary field.
+        """
+        field, _paths = self.picker_paths(Device)
+        self.assertIn("device_type", field.widget.relation_paths)
+        self.assertIn("device_type__manufacturer", field.widget.relation_paths)
+        self.assertNotIn("name", field.widget.relation_paths)
+        self.assertNotIn("device_type__id", field.widget.relation_paths)
+        self.assertTrue(
+            [path for path in field.widget.relation_paths if path.count("__") == 2],
+            "a relation at the deepest offered level should still be marked",
+        )
+
+        rendered = str(field.widget.render("export_fields", [], attrs={"id": "id_export_fields"}))
+        # `device_type` carries both marks: required to create a Device, and exported as a natural key.
+        self.assertRegex(rendered, r'option_device_type">device_type[^<]*<span class="text-warning[^>]*>')
+        self.assertRegex(rendered, r'option_name">name[^<]*</label>')  # unmarked, being a value of its own
+
+    def test_select__only_the_object_s_own_fields_are_marked_required(self):
+        """The `*` marker is about creating a record, which is only ever the object the export is of.
+
+        An import resolves a related object from what the file names of it and fails if there is no such
+        object; it never creates one. So `manufacturer__name` being required of a *Manufacturer* says
+        nothing about a file of Device Types, and marking it would tell the reader otherwise.
+        """
+        field, _paths = self.picker_paths(DeviceType)
+        marked = {path for path, label in field.choices if label.endswith(" *")}
+        self.assertIn("manufacturer", marked)  # the Device Type's own field, which a row must carry
+        self.assertIn("model", marked)
+        self.assertFalse({path for path in marked if "__" in path}, "no nested field should be marked")
+        self.assertIn("manufacturer__name", [path for path, _label in field.choices])  # offered, just unmarked
+
+    def test_select__form_accepts_a_comma_separated_selection(self):
+        """A selection spelled the export's own way is read as the fields it names, and leads the rows.
+
+        Everything but a browser sends it as one comma-separated string -- the list view's modal through
+        `hx-vals`, a URL query through `normalize_querydict()`, the REST API and the management command
+        directly -- and it arrives as a single-element list holding the whole string. Left unsplit it
+        matched no field at all: the picker grew a row named after the entire selection, and checked none.
+        """
+        content_type = ContentType.objects.get_for_model(Status)
+        form = ExportObjectList.as_form(data={"content_type": str(content_type.pk), "export_fields": "color,name"})
+        field = form.fields["export_fields"]
+        paths = [choice[0] for choice in field.choices]
+        self.assertFalse([path for path in paths if "," in path])
+        self.assertEqual(paths[:2], ["color", "name"])
+        self.assertEqual(form["export_fields"].value(), ["color", "name"])
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["export_fields"], "color,name")
+
+    def test_select__form_keeps_a_path_deeper_than_the_picker_offers(self):
+        """A hand-written path the enumeration never reaches survives the form, to be judged by the Job.
+
+        The picker stops one relation shallower than a path may legally traverse, so a `MultipleChoiceField`
+        left to itself would reject `rack__location__parent__name` as "not a valid choice" -- refusing a
+        selection the export accepts. It is offered as a row of its own too, so it can be seen and undone.
+        """
+        deep_path = "rack__location__parent__name"
+        form = ExportObjectList.as_form(
+            data={
+                "content_type": str(ContentType.objects.get_for_model(Device).pk),
+                "export_fields": f"name,{deep_path}",
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["export_fields"], f"name,{deep_path}")
+        self.assertIn(deep_path, [choice[0] for choice in form.fields["export_fields"].choices])
+
+    def test_select__picker_says_why_it_is_empty(self):
+        """With nothing to choose from, the picker says which of the two reasons it is, and stays live.
+
+        The script goes out either way: it carries the bridge from Select2's pick to the `change` that
+        rebuilds the picker, and the Job's own form opens with no content type chosen -- so without it,
+        that first pick would leave this message in place forever.
+        """
+        no_type = str(ExportObjectList.as_form(data={"content_type": ""})["export_fields"].as_widget())
+        self.assertIn("Choose a content type", no_type)
+        self.assertIn("nbExportFieldSelectBound", no_type)
+
+        # `admin.logentry` is exportable only through an Export Template, having no serializer of its own.
+        logentry = ContentType.objects.get(app_label="admin", model="logentry")
+        unserializable = str(
+            ExportObjectList.as_form(data={"content_type": str(logentry.pk)})["export_fields"].as_widget()
+        )
+        self.assertIn("no fields an export can select", unserializable)
+        self.assertNotIn("Choose a content type", unserializable)
+        self.assertIn("nbExportFieldSelectBound", unserializable)
+
+    def test_select__form_offers_only_valid_paths(self):
+        """Every path the picker offers passes validation, so it can never propose an unexportable column.
+
+        The invariant that makes the picker trustworthy: what `enumerate_field_paths()` offers is a subset
+        of the path shapes `validate_field_paths()` accepts, asserted over a wide model rather than by
+        inspection. Validated as a superuser, permissions being the one thing the enumeration leaves to
+        validation rather than mirroring.
+        """
+        user = User.objects.create(username="export-picker-invariant-user", is_superuser=True)
+        _field, paths = self.picker_paths(Device)
+        validate_field_paths(DeviceSerializer, paths, user=user)  # raises ValueError if any path is invalid
+
+    def test_select__form_enumeration_is_permission_blind(self):
+        """The picker offers the whole field graph; a user's permissions are the run's business, not its.
+
+        Gating here would make the picker render differently per user, and put the permission rule in a
+        second place -- while `validate_field_paths()` refuses the same path at run time with a message
+        naming the permission (`test_perm__selection_cannot_name_fields_of_an_unviewable_relation`).
+        """
+        limited_user = self.create_rack_reservation_and_limited_user()
+        self.assertFalse(limited_user.has_perm("users.view_user"))
+        _field, paths = self.picker_paths(RackReservation)
+        self.assertIn("user", paths)
+        self.assertIn("user__username", paths)
+
+    def picker_view_response(self, model, **params):
+        """GET the picker endpoint for a model, as the logged-in test user."""
+        response = self.client.get(
+            reverse("export_fields_picker"),
+            data={"content_type": ContentType.objects.get_for_model(model).pk, **params},
+        )
+        self.assertHttpStatus(response, 200)
+        return response.content.decode(response.charset)
+
+    def test_select__picker_view_rebuilds_the_tree_for_a_content_type(self):
+        """The picker endpoint re-renders the field for a content type, which is how changing type works.
+
+        The tree is enumerated server-side from the serializer, so choosing a different content type in
+        the form cannot be handled in the browser: the field is rendered again and swapped in. What comes
+        back is the *contents* of the persistent wrapper `htmx_attrs` puts around the field -- the
+        wrapper itself stays put, so a rebuild must not bring another one with it.
+        """
+        content = self.picker_view_response(Status)
+        self.assertIn('id="id_export_fields-container"', content)
+        self.assertNotIn(f'id="{ExportFieldSelect.WRAPPER_ID}"', content)
+        self.assertIn('name="export_fields" type="checkbox" value="name"', content)
+        self.assertNotIn(" checked", content)  # nothing selected for a type just chosen
+
+    # What "match the list view" resolves, and the order it comes back in, is `ExportViewColumnsTests`.
+
+    def test_select__picker_view_requires_login(self):
+        """It enumerates a model's fields, so it is for logged-in users only."""
+        self.client.logout()
+        response = self.client.get(
+            reverse("export_fields_picker"),
+            data={"content_type": ContentType.objects.get_for_model(Status).pk},
+        )
+        self.assertHttpStatus(response, 302)
+
     def test_select__modal_renders_selector(self):
-        """The ExportObjectList job form renders via the custom modal template with the orderable selector."""
+        """The Job's own form renders the picker in the HTMX modal, no template of its own involved.
+
+        The picker is the `export_fields` variable's form field, so it comes with the Job form wherever
+        that is rendered; the checkboxes carry the variable's own name, and a browser submits them in
+        document order, which is how a dragged order reaches the export.
+        """
         get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")  # ensure the job model is enabled
         self.add_permissions("extras.run_job")
         response = self.client.post(
@@ -1637,14 +1897,69 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         )
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
-        self.assertIn("export-fields-selector", content)
         self.assertIn("nb-select-multiple-orderable-list", content)
-        self.assertIn('value="name"', content)
         self.assertInHTML(
-            '<input class="form-check-input my-6" id="id_export_selector-export_fields_option_name" '
-            'name="export_selector-export_fields" type="checkbox" value="name" checked>',
+            '<input class="form-check-input my-6" id="id_export_fields_option_name" '
+            'name="export_fields" type="checkbox" value="name" checked>',
             content,
         )
+
+    def test_select__full_page_job_form_renders_selector(self):
+        """And in the full-page Job view, which is the same form rendered by a different view."""
+        job_model = get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")[1]
+        self.add_permissions("extras.run_job", "extras.view_job")
+        response = self.client.get(
+            reverse("extras:job_run", kwargs={"pk": job_model.pk}),
+            data={"content_type": ContentType.objects.get_for_model(Status).pk},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("nb-select-multiple-orderable-list", content)
+        self.assertIn('name="export_fields" type="checkbox" value="name"', content)
+
+    def content_type_select(self, content):
+        """The rendered `content_type` field's opening tag."""
+        match = re.search(r'<select[^>]*id="id_content_type"[^>]*>', content)
+        self.assertIsNotNone(match, "content_type field not rendered")
+        return match.group(0)
+
+    def test_select__modal_fixes_the_content_type(self):
+        """Which objects are exported is what the launching list view was showing, so the modal fixes it.
+
+        Disabled rather than hidden, so it still says what is being exported. A disabled input submits
+        nothing, so the value rides in the form's `hx-vals` -- as `_schedule_type` does when scheduling
+        is off -- and the export still knows its content type when the form is submitted.
+        """
+        get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")  # ensure the job model is enabled
+        self.add_permissions("extras.run_job")
+        content_type = ContentType.objects.get_for_model(Status)
+        response = self.client.post(
+            reverse("extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ExportObjectList"}),
+            data={
+                "render_job_form": True,
+                "job_modal_button": "core.export_object_list",
+                "content_type": content_type.pk,
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn("disabled", self.content_type_select(content))
+        form_hx_vals = re.search(r"hx-vals='([^']*)'", content).group(1)
+        self.assertIn("content_type", form_hx_vals)
+        self.assertIn(str(content_type.pk), form_hx_vals)
+
+    def test_select__full_page_job_form_leaves_the_content_type_editable(self):
+        """The Job's own form has no launching context behind it, so the choice is the user's to make."""
+        job_model = get_job_class_and_model("nautobot.core.jobs", "ExportObjectList")[1]
+        self.add_permissions("extras.run_job", "extras.view_job")
+        response = self.client.get(
+            reverse("extras:job_run", kwargs={"pk": job_model.pk}),
+            data={"content_type": ContentType.objects.get_for_model(Status).pk},
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertNotIn("disabled", self.content_type_select(content))
 
 
 # ===========================================================================
@@ -1684,6 +1999,40 @@ class ExportScopeTests(ImportExportJobTestCase):
         Status.objects.create(name="zzz_sort_b", color="222222")
         rows = self.export_rows(self.run_export(query_string="name=zzz_sort_a&name=zzz_sort_b&sort=-name"))
         self.assertEqual([row["name"] for row in rows], ["zzz_sort_b", "zzz_sort_a"])
+
+    def test_scope__applies_sort_in_every_format(self):
+        """The records come out in the view's order whichever file format is asked for.
+
+        They are serialized once and handed to whichever renderer, so the order is the queryset's in
+        both -- but only CSV was ever asserted, and CSV is the one format whose renderer reorders
+        anything (`get_headers`), so the formats that do not were the ones worth pinning.
+        """
+        for name in ("zzz_fmt_1", "zzz_fmt_2", "zzz_fmt_3"):
+            Status.objects.create(name=name, color="111111")
+        query_string = "name=zzz_fmt_1&name=zzz_fmt_2&name=zzz_fmt_3&sort=-name"
+        expected = ["zzz_fmt_3", "zzz_fmt_2", "zzz_fmt_1"]
+
+        rows = self.export_rows(self.run_export(query_string=query_string))
+        self.assertEqual([row["name"] for row in rows], expected)
+        for export_format in ("json", "yaml"):
+            with self.subTest(export_format=export_format):
+                document = self.export_document(self.run_export(query_string=query_string, export_format=export_format))
+                self.assertEqual([record["name"] for record in document["records"]], expected)
+
+    def test_scope__applies_sort_to_devicetype_library_yaml(self):
+        """Including the one format that renders its own output rather than the shared record set."""
+        manufacturer = Manufacturer.objects.create(name="Fmt Order Mfr")
+        for model in ("zzz_fmt_dt_1", "zzz_fmt_dt_2"):
+            DeviceType.objects.create(manufacturer=manufacturer, model=model, u_height=1)
+        text = self.export_text(
+            self.run_export(
+                model=DeviceType,
+                query_string="manufacturer=Fmt+Order+Mfr&sort=-model",
+                export_format="devicetype_library",
+            )
+        )
+        documents = [yaml.safe_load(chunk) for chunk in text.split("---\n") if chunk.strip()]
+        self.assertEqual([document["model"] for document in documents], ["zzz_fmt_dt_2", "zzz_fmt_dt_1"])
 
     def test_scope__applies_related_field_sort(self):
         """A sort that traverses a relation is passed through, being something `order_by` supports."""
@@ -1892,13 +2241,15 @@ class ExportScopeTests(ImportExportJobTestCase):
 
 
 # ===========================================================================
-# Export field defaults — "Use Current View Columns"
+# Export field defaults — "Match the list view"
 # ===========================================================================
 class ExportViewColumnsTests(ImportExportJobTestCase):
-    """`use_current_view_columns` defaults the field selection to the list view's displayed columns.
+    """The picker's "Match the list view" button fills the selection from the view's displayed columns.
 
-    That is all it does: it is a default for `export_fields`, not a mode. What gets exported and in what
-    order is the query string's business either way (`ExportScopeTests`).
+    An export takes an explicit field selection and nothing else, so this resolution happens while the
+    picker is on screen rather than when the export runs: the button asks the `export_fields_picker`
+    endpoint, which resolves the columns as the requesting user through `get_list_view_export_paths()`.
+    What is then exported, and in what order, is the selection's business (`ExportFieldSelectionTests`).
     """
 
     # The exportable fields of `StatusTable`'s columns, in display order. `pk` and `actions` aren't
@@ -1906,158 +2257,162 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
     # model is a display aggregate, so all three are absent -- see `test_columns__omits_a_count_column`.
     ALL_STATUS_COLUMNS = ["name", "color", "content_types", "description"]
 
-    def test_columns__off_by_default(self):
-        """Left off, the view's columns have no bearing on the export: every field is exported."""
-        user = self.create_user_with_table_config("StatusTable", ["name"])
-        header = self.export_header(self.run_export(username=user.username))
-        self.assertIn("description", header)  # a field the user's own table configuration hides
+    def matched_columns(self, model=Status, user=None, query_string=""):
+        """Press "Match the list view" for a model, returning (selected paths in order, rendered picker).
+
+        Resolved for `user` where one is given, the columns of a view being whatever that user has it
+        configured to show.
+        """
+        if user is not None:
+            self.client.force_login(user)
+        response = self.client.get(
+            reverse("export_fields_picker"),
+            data={
+                "content_type": ContentType.objects.get_for_model(model).pk,
+                "use_current_view": "1",
+                "query_string": query_string,
+            },
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        return re.findall(r'value="([^"]+)" checked', content), content
 
     def test_columns__from_user_table_config(self):
         """The user's own table configuration for the view supplies the fields, in its column order."""
         user = self.create_user_with_table_config("StatusTable", ["color", "name"])
-        header = self.export_header(self.run_export(username=user.username, use_current_view_columns=True))
-        self.assertEqual(header, ["color", "name"])
+        selected, _content = self.matched_columns(user=user)
+        self.assertEqual(selected, ["color", "name"])
 
     def test_columns__from_saved_view_table_config(self):
         """A saved view's stored table configuration supplies the fields when that view is in use."""
         saved_view = self.create_saved_view(
             config={"table_config": {"StatusTable": {"columns": ["description", "name"]}}}
         )
-        header = self.export_header(
-            self.run_export(query_string=f"saved_view={saved_view.pk}", use_current_view_columns=True)
-        )
-        self.assertEqual(header, ["description", "name"])
+        selected, _content = self.matched_columns(query_string=f"saved_view={saved_view.pk}")
+        self.assertEqual(selected, ["description", "name"])
 
     def test_columns__saved_view_takes_precedence_over_user_config(self):
         """While a saved view is in use, it is what the view displays -- not the user's own configuration."""
         user = self.create_user_with_table_config("StatusTable", ["color"])
         saved_view = self.create_saved_view(config={"table_config": {"StatusTable": {"columns": ["description"]}}})
-        header = self.export_header(
-            self.run_export(
-                username=user.username, query_string=f"saved_view={saved_view.pk}", use_current_view_columns=True
-            )
-        )
-        self.assertEqual(header, ["description"])
+        selected, _content = self.matched_columns(user=user, query_string=f"saved_view={saved_view.pk}")
+        self.assertEqual(selected, ["description"])
 
     def test_columns__user_config_wins_when_table_changes_pending(self):
         """Unsaved column changes are what the user is looking at, so they win over the saved view's."""
         user = self.create_user_with_table_config("StatusTable", ["color"])
         saved_view = self.create_saved_view(config={"table_config": {"StatusTable": {"columns": ["description"]}}})
-        header = self.export_header(
-            self.run_export(
-                username=user.username,
-                query_string=f"saved_view={saved_view.pk}&table_changes_pending=true",
-                use_current_view_columns=True,
-            )
+        selected, _content = self.matched_columns(
+            user=user, query_string=f"saved_view={saved_view.pk}&table_changes_pending=true"
         )
-        self.assertEqual(header, ["color"])
+        self.assertEqual(selected, ["color"])
 
     def test_columns__default_columns_when_nothing_is_configured(self):
         """With neither a saved view nor a stored configuration, the view shows the table's defaults."""
-        header = self.export_header(self.run_export(use_current_view_columns=True))
-        self.assertEqual(header, self.ALL_STATUS_COLUMNS)
+        selected, _content = self.matched_columns()
+        self.assertEqual(selected, self.ALL_STATUS_COLUMNS)
 
     def test_columns__omits_a_count_column(self):
         """A related-object count is an aggregate the table annotates for display, not a field.
 
         The serializer does declare `dynamic_group_count`, but it reads that annotation -- which an
-        export does not add -- so selecting it would put a column in the file with nothing in it.
-        Reported at info level: every view has columns like this, so it is not a sign of a problem.
+        export does not add -- so selecting it would put a column in the file with nothing in it. Named
+        in the picker rather than dropped in silence, since it is a column the view is showing.
         """
-        job_result = self.run_export(use_current_view_columns=True)
-        self.assertNotIn("dynamic_group_count", self.export_header(job_result))
-        self.assertJobLogEntry(job_result, "dynamic_group_count", level=LogLevelChoices.LOG_INFO)
-
-    def test_columns__explicit_fields_take_precedence(self):
-        """An explicit selection is the user having said which fields they want; the view's are a default."""
-        user = self.create_user_with_table_config("StatusTable", ["color", "name"])
-        header = self.export_header(
-            self.run_export(username=user.username, use_current_view_columns=True, export_fields="description")
-        )
-        self.assertEqual(header, ["description"])
-
-    def test_columns__applies_to_a_document_export_too(self):
-        """The default is a field selection, so it reaches the JSON/YAML document like any other."""
-        Status.objects.create(name="zzz_document_columns", color="abcdef")
-        user = self.create_user_with_table_config("StatusTable", ["name", "color"])
-        doc = self.export_document(
-            self.run_export(
-                username=user.username,
-                query_string="name=zzz_document_columns",
-                export_format="json",
-                use_current_view_columns=True,
-            )
-        )
-        self.assertEqual(doc["records"], [{"name": "zzz_document_columns", "color": "abcdef"}])
+        selected, content = self.matched_columns()
+        self.assertNotIn("dynamic_group_count", selected)
+        self.assertIn("dynamic_group_count", content)
+        self.assertIn("no direct equivalent", content)
 
     def test_columns__non_exportable_columns_are_omitted(self):
         """Displayed columns with no exportable equivalent are reported and left out of the selection.
 
         `ManufacturerTable` shows four related-object counts on top of the injected fifth; what remains
-        is the data. The user asked for their view, so losing a column is reported, not fatal -- unlike
-        naming one of those columns explicitly, which fails
-        (`test_select__related_object_count_fails_rather_than_exporting_nothing`).
+        is the data. Losing one of those is reported, not fatal -- unlike naming it explicitly, which
+        fails (`test_select__related_object_count_fails_rather_than_exporting_nothing`).
         """
         Manufacturer.objects.create(name="Counted Mfr", description="has counts")
-        job_result = self.run_export(model=Manufacturer, use_current_view_columns=True)
-        self.assertEqual(self.export_header(job_result), ["name", "description"])
-        self.assertJobLogEntry(job_result, "device_type_count", level=LogLevelChoices.LOG_INFO)
+        selected, content = self.matched_columns(model=Manufacturer)
+        self.assertEqual(selected, ["name", "description"])
+        self.assertIn("device_type_count", content)
+        self.assertIn("no direct equivalent", content)
 
     def test_columns__count_column_carries_the_relation_it_counts(self):
-        """A count column exports as the relation it counts, where an export can emit that relation.
+        """A count column is carried across as the relation it counts, where an export can emit it.
 
         A count is an aggregate no export can carry, but `PrefixTable.vrf_count` is *about* `Prefix.vrfs`,
-        so the export carries the VRFs themselves under that name instead of dropping the column.
+        so the selection carries the VRFs themselves under that name instead of dropping the column.
         """
         namespace, _ = Namespace.objects.get_or_create(name="Counted Relation Namespace")
-        # `rd` is half of a VRF's natural key, so it is what identifies the member in the exported cell
         vrf = VRF.objects.create(name="Counted VRF", rd="65000:99", namespace=namespace)
         prefix = Prefix.objects.create(
             prefix="10.99.0.0/16", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
         )
         prefix.vrfs.add(vrf)
         user = self.create_user_with_table_config("PrefixTable", ["prefix", "vrf_count"])
-        rows = self.export_rows(
-            self.run_export(
-                model=Prefix,
-                username=user.username,
-                query_string="prefix=10.99.0.0/16",
-                use_current_view_columns=True,
-            )
-        )
-        self.assertEqual(list(rows[0]), ["prefix", "vrfs"])
-        self.assertIn(vrf.rd, rows[0]["vrfs"])
+        selected, _content = self.matched_columns(model=Prefix, user=user)
+        self.assertEqual(selected, ["prefix", "vrfs"])
 
     def test_columns__custom_field_column(self):
         """A custom-field column is exportable, and is carried across as its `cf_` reference."""
-        status = self.create_status_with_custom_fields()
+        self.create_status_with_custom_fields()
         user = self.create_user_with_table_config("StatusTable", ["name", "cf_export_cf_a"])
-        rows = self.export_rows(
-            self.run_export(username=user.username, query_string=f"name={status.name}", use_current_view_columns=True)
-        )
-        self.assertEqual(rows, [{"name": status.name, "cf_export_cf_a": "A value"}])
+        selected, _content = self.matched_columns(user=user)
+        self.assertEqual(selected, ["name", "cf_export_cf_a"])
 
-    def test_columns__non_exportable_column_does_not_fail_the_export(self):
-        """A view showing only non-exportable columns falls back to exporting every field.
+    def test_columns__nothing_exportable_selects_nothing(self):
+        """A view showing only non-exportable columns fills nothing in, which exports every field.
 
-        Warned about rather than merely noted: unlike losing one column among several, this means the
-        file bears no resemblance to the view that was asked for.
+        An empty selection is what "export everything" means, so there is nothing further to say: the
+        picker simply comes back with its columns named as unexportable and no box checked.
         """
         user = self.create_user_with_table_config("StatusTable", ["dynamic_group_count"])
-        job_result = self.run_export(username=user.username, use_current_view_columns=True, allow_issues=True)
-        self.assertIn("name", self.export_header(job_result))
-        self.assertJobLogEntry(job_result, "None of the displayed columns", level=LogLevelChoices.LOG_WARNING)
+        selected, content = self.matched_columns(user=user)
+        self.assertEqual(selected, [])
+        self.assertIn("dynamic_group_count", content)
 
     def test_columns__ignored_by_an_export_template(self):
-        """An Export Template renders its own output, so a field selection of any origin is irrelevant."""
-        user = self.create_user_with_table_config("StatusTable", ["name"])
+        """An Export Template renders its own output, so a field selection is irrelevant to it."""
         export_template = ExportTemplate.objects.create(
             content_type=ContentType.objects.get_for_model(Status),
             name="Status template",
             template_code="{% for status in queryset %}{{ status.name }},{{ status.color }}\n{% endfor %}",
         )
-        job_result = self.run_export(
-            username=user.username, export_template=export_template.pk, use_current_view_columns=True
-        )
+        job_result = self.run_export(export_template=export_template.pk, export_fields="name")
         first_status = Status.objects.first()
         self.assertIn(f"{first_status.name},{first_status.color}", self.export_text(job_result))
+
+
+# ===========================================================================
+# Export result modal & download
+# ===========================================================================
+class ExportResultModalTests(ImportExportJobTestCase):
+    def test_export_modal_button_get_redirect_button(self):
+        """The registered export job-modal button offers a file download for a completed export, else nothing."""
+        from nautobot.extras.registry import registry
+
+        button = registry["job_modal_buttons"]["core.export_object_list"]
+        job_result = self.run_export()
+        redirect_button = button.get_redirect_button(job_result, RequestFactory().get("/"))
+        self.assertTrue(redirect_button["url"])
+        self.assertIn("Download", redirect_button["label"])
+        self.assertEqual(redirect_button["color"], "success")
+        self.assertEqual(redirect_button["attributes"]["download"], job_result.files.first().name)
+
+        job_result.status = JobResultStatusChoices.STATUS_FAILURE
+        job_result.save()
+        self.assertEqual(button.get_redirect_button(job_result, RequestFactory().get("/")), {})
+
+    def test_jobresult_modal_offers_export_download(self):
+        """The job-result modal renders a Download button for the file a completed export produced."""
+        job_result = self.run_export()
+        self.add_permissions("extras.view_jobresult")
+        response = self.client.post(
+            reverse("extras:jobresult_modal", kwargs={"pk": job_result.pk}),
+            data={"job_modal_button": "core.export_object_list"},
+            HTTP_HX_REQUEST="true",
+        )
+        self.assertHttpStatus(response, 200)
+        content = response.content.decode(response.charset)
+        self.assertIn(f'download="{job_result.files.first().name}"', content)
+        self.assertIn("Download", content)
