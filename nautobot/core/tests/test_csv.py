@@ -830,6 +830,33 @@ class CSVImportDirectiveTestCase(TestCase):
         )
         self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
 
+    def test_parse_consumes_blank_and_comment_rows_before_the_header(self):
+        """Leading noise is skipped, matching what `detect_import_format` treats as leading noise.
+
+        Nautobot's own export writes one directive row and then the header, so this is tolerance for
+        hand-edited files: a blank row would otherwise be read as the header and every column would come
+        back unrecognized.
+        """
+        csv_text = "\n".join(
+            [
+                "",
+                "# a comment of my own",
+                "# nautobot_import_version=3; model=extras.status",
+                "",
+                "name,color",
+                "test_status,111111",
+            ]
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(parser_context["import_directives"], {"nautobot_import_version": 3, "model": "extras.status"})
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_comments_only_yields_no_rows(self):
+        """A file with no header row at all parses to nothing rather than raising."""
+        data, parser_context = self._parse("# nautobot_import_version=3; model=extras.status\n")
+        self.assertEqual(data, [])
+        self.assertEqual(parser_context["import_directives"]["model"], "extras.status")
+
     def test_parse_without_directive_is_unchanged(self):
         """A file with no directive parses exactly as before, with no directives surfaced."""
         data, parser_context = self._parse("name,color\ntest_status,111111")
