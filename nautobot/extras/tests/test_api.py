@@ -4157,10 +4157,34 @@ class JobLogEntryTest(
 
     def test_list_job_logs_from_job_results_detail(self):
         """Test `logs` endpoint from `JobResult` detail."""
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+        url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
+
+    def test_list_job_logs_from_job_results_detail_without_joblogentry_permission(self):
+        """A user with `view_jobresult` but no `view_joblogentry` must not be able to read job logs."""
         self.add_permissions("extras.view_jobresult")
         url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
         response = self.client.get(url, **self.header)
-        self.assertEqual(len(response.json()), JobLogEntry.objects.filter(job_result=self.job_result).count())
+        self.assertHttpStatus(response, status.HTTP_403_FORBIDDEN)
+
+    def test_list_job_logs_from_job_results_detail_respects_constraints(self):
+        """A constrained `view_joblogentry` permission must filter the logs returned by the `logs` endpoint."""
+        self.add_permissions("extras.view_jobresult")
+        self.add_permissions("extras.view_joblogentry", constraints={"log_level": LogLevelChoices.LOG_WARNING})
+        url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
+        response = self.client.get(url, **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual([entry["log_level"] for entry in response.json()], [LogLevelChoices.LOG_WARNING])
+
+    def test_job_logs_from_job_results_detail_allows_head_and_options(self):
+        """DRF routes HEAD and OPTIONS to this action, so its perms_map must cover them."""
+        self.add_permissions("extras.view_jobresult", "extras.view_joblogentry")
+        url = reverse("extras-api:jobresult-logs", kwargs={"pk": self.job_result.pk})
+        self.assertHttpStatus(self.client.head(url, **self.header), status.HTTP_200_OK)
+        self.assertHttpStatus(self.client.options(url, **self.header), status.HTTP_200_OK)
 
 
 class JobQueueTestCase(APIViewTestCases.APIViewTestCase):

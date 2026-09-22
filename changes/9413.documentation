@@ -1,0 +1,1 @@
+Added a best-practices note stating that HTTP GET handlers must not perform database writes.

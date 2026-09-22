@@ -41,7 +41,7 @@ This table defines repository parameters that are required to establish a reposi
 |Slug|Computer-friendly name for the repo. Auto-generated based on the `name` provided, but you can change it if you wish.|
 |Remote URL|The URL pointing to the Git repo. Current git url usage is limited to `http` or `https`.|
 |Branch|The branch in the Git repo to use. Defaults to `main`.|
-|Secrets Group|(Optional) Grouping containing a *HTTP token* and/or *HTTP username* as needed to access the repository.|
+|Secrets Group|(Optional) Grouping containing a _HTTP token_ and/or _HTTP username_ as needed to access the repository.|
 |Provides|Resource type(s) provided by this Git repo.|
 
 !!! tip
