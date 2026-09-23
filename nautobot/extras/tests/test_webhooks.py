@@ -25,7 +25,7 @@ from nautobot.extras.models.statuses import Status
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import _send_webhook_request_pinned, process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.extras.webhooks import validate_webhook_url, validate_webhook_url_format
+from nautobot.extras.webhooks import enqueue_webhooks, validate_webhook_url, validate_webhook_url_format
 
 User = get_user_model()
 
@@ -556,6 +556,21 @@ class WebhookTest(APITestCase):
             self._create_locations("Location 1", "Location 2", "Location 3")
 
         self.assertEqual(len(logs.output), 1, logs.output)
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_conditions_are_checked_when_no_gate_is_given(self, mock_async):
+        self._create_locations("Location 1")
+        change = get_changes_for_model(Location).first()
+
+        self._condition_webhook([{"type": "expression", "source": "data.name == 'Location 1'"}], type_create=True)
+        mock_async.reset_mock()
+        enqueue_webhooks(change, snapshots=change.get_snapshots())
+        mock_async.assert_called_once()
+
+        self._condition_webhook([{"type": "expression", "source": "data.name == 'elsewhere'"}], type_create=True)
+        mock_async.reset_mock()
+        enqueue_webhooks(change, snapshots=change.get_snapshots())
+        mock_async.assert_not_called()
 
     @patch("nautobot.extras.tasks.process_webhook.apply_async")
     def test_conditions_that_are_not_a_list_are_reported_and_are_not_enqueued(self, mock_async):

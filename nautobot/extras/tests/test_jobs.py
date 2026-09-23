@@ -43,7 +43,13 @@ from nautobot.extras.choices import (
     ObjectChangeEventContextChoices,
 )
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
-from nautobot.extras.jobs import BaseJob, get_job, get_jobs, run_console_log_job_and_return_job_result
+from nautobot.extras.jobs import (
+    BaseJob,
+    enqueue_job_hooks,
+    get_job,
+    get_jobs,
+    run_console_log_job_and_return_job_result,
+)
 from nautobot.extras.jobs_cancel import (
     CancelFactory,
     CeleryStrategy,
@@ -1681,6 +1687,22 @@ class JobHookTest(TestCase):
 
         self._create_location("Conditioned Location")
 
+        mock_enqueue_job.assert_not_called()
+
+    @mock.patch.object(models.JobResult, "enqueue_job")
+    def test_conditions_are_checked_when_no_gate_is_given(self, mock_enqueue_job):
+        self.add_permissions("extras.run_job")
+        self._create_location("Conditioned Location")
+        change = get_changes_for_model(Location).first()
+
+        self._condition_job_hook([{"type": "expression", "source": "data.name == 'Conditioned Location'"}])
+        mock_enqueue_job.reset_mock()
+        enqueue_job_hooks(change, may_reload_jobs=False)
+        mock_enqueue_job.assert_called_once()
+
+        self._condition_job_hook([{"type": "expression", "source": "data.name == 'elsewhere'"}])
+        mock_enqueue_job.reset_mock()
+        enqueue_job_hooks(change, may_reload_jobs=False)
         mock_enqueue_job.assert_not_called()
 
     @mock.patch("nautobot.extras.jobs.get_jobs")
