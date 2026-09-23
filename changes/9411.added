@@ -1,7 +1,5 @@
-Exposed new environment variable `NAUTOBOT_RATE_LIMITING_WINDOW_SECONDS`
-Exposed new environment variable `NAUTOBOT_RATE_LIMITING_RECORDS_LIMIT`
-Exposed new environment variable `NAUTOBOT_RATE_LIMITING_CALIBRATION_LOG`
-Exposed new environment variable `NAUTOBOT_RATE_LIMITING_CALIBRATION_SAMPLE_RATE`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS`
+Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_BUDGET`
 Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_MODE`
 Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_READ_COST`
 Exposed new environment variable `NAUTOBOT_REST_RATE_LIMITING_WRITE_COST`

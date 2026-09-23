@@ -617,7 +617,7 @@ class ComplexityCostRateLimitingMiddleware:
 
         remaining_budget = rate_limit_budget - consumed_budget
         advertised_remaining_budget = max(0, remaining_budget)
-        advertised_remaining_window_time_in_seconds = max(1, remaining_window_time_in_seconds)
+        advertised_remaining_window_time_in_seconds = max(0, remaining_window_time_in_seconds)
 
         rate_limit_policy_data = [
             f'"{budget_policy_name}"',  # Connects RateLimitPolicy to RateLimit headers, states which cost rule is being applied
