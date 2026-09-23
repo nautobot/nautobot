@@ -15,7 +15,7 @@ When viewing a device named Router4, this link would render as:
 <a href="https://nms.example.com/nodes/?name=Router4">View NMS</a>
 ```
 
-Custom links appear as buttons at the top right corner of the page. Numeric weighting can be used to influence the ordering of links.
+Custom links appear as buttons at the top right corner of the page. When more than one link or group applies to an object, they are collected into a single dropdown menu. A link's button class is applied to its entry in the menu, and to the button itself when only a single link or group applies. Numeric weighting can be used to influence the ordering of links.
 
 ## Context Data
 
@@ -56,4 +56,4 @@ The link will only appear when viewing a device with a manufacturer name of "Cis
 
 ## Link Groups
 
-Group names can be specified to organize links into groups. Links with the same group name will render as a dropdown menu beneath a single button bearing the name of the group.
+Group names can be specified to organize links into groups. Links with the same group name will render as a dropdown menu beneath a single button bearing the name of the group. When other links or groups are also present, each group appears as a labeled section within the combined dropdown menu.

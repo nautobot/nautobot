@@ -168,6 +168,15 @@ class JobHookFormTestCase(TestCase):
             "A job hook already exists for update on DCIM | device type to job TestJobHookReceiverLog",
         )
 
+    def test_conditions_are_accepted_as_json_text(self):
+        """One case is enough: `conditions` is the same field as on the webhook form, which covers the rest."""
+        form = JobHookForm(
+            data={**self.job_hooks_data[0], "conditions": '[{"type": "expression", "source": "data.name"}]'}
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["conditions"], [{"type": "expression", "source": "data.name"}])
+
 
 class JobButtonFormTestCase(TestCase):
     @classmethod
@@ -1099,6 +1108,35 @@ class WebhookFormTestCase(TestCase):
             error_msg["type_update"][0]["message"],
             "A webhook already exists for update on DCIM | console port to URL http://example.com/test",
         )
+
+    def test_conditions_are_accepted_as_json_text(self):
+        form = WebhookForm(
+            data={**self.webhooks_data[0], "conditions": '[{"type": "expression", "source": "data.name"}]'}
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["conditions"], [{"type": "expression", "source": "data.name"}])
+
+    def test_an_empty_conditions_field_is_accepted(self):
+        """Conditions are optional: without them the webhook fires on every change of its object types."""
+        form = WebhookForm(data={**self.webhooks_data[0], "conditions": ""})
+
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_a_bad_condition_row_is_reported_against_the_field(self):
+        """The form adds no rules of its own; this message comes from `ConditionsField` via `full_clean()`."""
+        row = '[{"type": "preset", "preset": "no_such_preset"}]'
+        form = WebhookForm(data={**self.webhooks_data[0], "conditions": row})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("Condition 1: ", form.errors["conditions"][0])
+        self.assertIn("no_such_preset", form.errors["conditions"][0])
+
+    def test_conditions_that_are_not_json_are_reported_against_the_field(self):
+        form = WebhookForm(data={**self.webhooks_data[0], "conditions": "data.name"})
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("conditions", form.errors)
 
 
 @skip(reason="Skipping until we have items that need to be deprecated again.")

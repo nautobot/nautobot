@@ -25,7 +25,7 @@ The Nautobot project also provides the following built-in `filters` that can be 
 
 ### as_range
 
-Given a list of *n* items, return a corresponding range of *n* integers.
+Given a list of _n_ items, return a corresponding range of _n_ integers.
 
 ```django
 # Django template
@@ -95,7 +95,7 @@ Return all object's in a queryset UUIDs/pks as a string separated by a comma.
 
 ### has_one_or_more_perms
 
-Return True if the user has *at least one* of the permissions in the list.
+Return True if the user has _at least one_ of the permissions in the list.
 
 ```django
 # Django Template
@@ -107,7 +107,7 @@ Return True if the user has *at least one* of the permissions in the list.
 
 ### has_perms
 
-Return True if the user has *all* permissions in the list.
+Return True if the user has _all_ permissions in the list.
 
 ```django
 # Django Template

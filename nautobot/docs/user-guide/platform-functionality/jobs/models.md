@@ -23,7 +23,7 @@ Records of this type store the following data as read-only (not modifiable via t
 * Whether the job is a [Job Button Receiver](../../../development/jobs/job-extensions.md#job-button-receivers)
 
 !!! note
-    As presently implemented, after a job is uninstalled, when the database is next refreshed, the corresponding Job database record will *not* be deleted - only its `installed` flag will be set to False. This allows existing `JobResult` and `ScheduledJob` records to continue to reference the Job that they originated from.
+    As presently implemented, after a job is uninstalled, when the database is next refreshed, the corresponding Job database record will _not_ be deleted - only its `installed` flag will be set to False. This allows existing `JobResult` and `ScheduledJob` records to continue to reference the Job that they originated from.
 
     An administrator or sufficiently privileged user can manually delete uninstalled Job records if desired, though this will result in the foreign-key from the corresponding `JobResult` and `ScheduledJob` records (if any exist) becoming null. In any case, for tracking and auditing purposes, deleting a Job does **not** automatically delete its related `JobResult` and `ScheduledJob` records.
 
