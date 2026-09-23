@@ -4,10 +4,24 @@ import csv
 import json
 import re
 
+from django.test import RequestFactory
 import yaml
 
 # A YAML block-mapping key at the start of a line: `records:`, `model: dcim.device`.
 _YAML_MAPPING_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\s*:(\s|$)")
+
+
+def import_serializer_context(user):
+    """The serializer context an import deserializes under.
+
+    Carries a request, built as `web_request_context` builds one, because some serializers take the owning
+    user from it rather than from the data -- `TokenSerializer` and `SavedViewSerializer` both read
+    `context["request"].user`, and without it neither model can be imported at all. A Job knows who is
+    running it, so there is a real answer to give them.
+    """
+    request = RequestFactory().request(SERVER_NAME="import_objects")
+    request.user = user
+    return {"request": request}
 
 
 def parse_field_name_list(value):

@@ -1,3 +1,5 @@
 Added JSON and YAML support to the `Import Objects` system Job, which previously accepted CSV only. The format is auto-detected from the file extension or content, or can be selected explicitly.
 Added support for importing a file that declares its own `model`, in which case the content type need not be specified. A file that declares a different model than the one requested is refused.
 Added a `nautobot-server import_objects` management command, which runs the `Import Objects` Job locally.
+Added a `ScriptVariable.default` attribute, recording the `default=` a Job variable was declared with.
+Added `APIViewTestCases.CreateObjectViewTestCase.test_recreate_object_document`, a generic per-model check that an object exported to the JSON/YAML document format can be imported back from it.

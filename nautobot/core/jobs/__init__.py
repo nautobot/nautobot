@@ -728,8 +728,9 @@ class ImportObjects(Job):
     def _perform_operation(self, data, serializer_class, queryset):
         new_objs = []
         validation_failed = False
+        context = import_utils.import_serializer_context(self.user)
         for row, entry in enumerate(data, start=1):
-            serializer = serializer_class(data=entry, context={"request": None})
+            serializer = serializer_class(data=entry, context=context)
             if serializer.is_valid():
                 try:
                     with transaction.atomic():

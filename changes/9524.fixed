@@ -1,1 +1,2 @@
 Fixed Job `BooleanVar` variables declared with `default=True` (such as `ImportObjects.roll_back_if_error`) being received as `False` when omitted from a REST API job-run request.
+Fixed the `Import Objects` system Job being unable to import models whose serializer takes the owning user from the request, such as Tokens and Saved Views; the Job now deserializes under a request carrying the user who ran it.

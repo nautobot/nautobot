@@ -22,6 +22,7 @@ from nautobot.core import constants
 from nautobot.core.api.import_export import build_document_records, build_import_document
 from nautobot.core.api.parsers import NautobotJSONImportParser
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.jobs.import_utils import import_serializer_context
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, utils, views
@@ -989,7 +990,8 @@ class APIViewTestCases:
                 parser_context={"request": None, "serializer_class": serializer_class, "strict_fields": True},
             )
             self.assertEqual(len(data), 1)
-            new_serializer = serializer_class(data=data[0], context={"request": None})
+            # Deserialized under the same context the Job uses, request and all
+            new_serializer = serializer_class(data=data[0], context=import_serializer_context(self.user))
             self.assertTrue(new_serializer.is_valid(), new_serializer.errors)
             new_instance = new_serializer.save()
             if isinstance(orig_pk, int):

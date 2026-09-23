@@ -1,5 +1,5 @@
 import base64
-from unittest import expectedFailure, skip
+from unittest import skip
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -195,20 +195,6 @@ class TokenTest(APIViewTestCases.APIViewTestCase):
     bulk_update_data = {
         "description": "New description",
     }
-
-    @expectedFailure
-    def test_recreate_object_document(self):
-        """A Token cannot currently be created from serializer input alone, so it cannot be imported.
-
-        `TokenSerializer.to_internal_value` takes the owning user from `self.context["request"].user`, and
-        an import has no request -- `ImportObjects` builds its serializer with `{"request": None}`, so this
-        fails the same way there.
-
-        Expected-failure rather than skipped because it is a limitation rather than a decision: an import
-        does know which user is running it, and supplying that would make this pass. Remove the marker if
-        it ever reports an unexpected success.
-        """
-        super().test_recreate_object_document()
 
     def _get_queryset(self):
         return Token.objects.with_sensitive_fields("key")
