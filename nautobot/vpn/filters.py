@@ -2,6 +2,7 @@
 
 from nautobot.apps.filters import (
     BaseFilterSet,
+    ModelMultipleChoiceFilter,
     MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
@@ -220,10 +221,9 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         to_field_name="name",
         label="Source Interface (ID or name)",
     )
-    source_ipaddress = NaturalKeyOrPKMultipleChoiceFilter(
+    source_ipaddress = ModelMultipleChoiceFilter(
         queryset=IPAddress.objects.all(),
-        to_field_name="name",
-        label="Source IPAddress (ID or name)",
+        label="Source IPAddress (ID)",
     )
     tunnel_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.filter(type="tunnel"),

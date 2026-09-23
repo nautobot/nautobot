@@ -155,6 +155,7 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
         ("device", "device__name"),
         ("source_interface", "source_interface__id"),
         ("source_interface", "source_interface__name"),
+        ("source_ipaddress", "source_ipaddress__id"),
         ("source_fqdn",),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__id"),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__name"),
