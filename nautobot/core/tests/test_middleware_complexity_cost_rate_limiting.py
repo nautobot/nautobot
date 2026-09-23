@@ -141,7 +141,9 @@ class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
         self.assertIn("remaining_budget", rate_limit)
         self.assertEqual(rate_limit["remaining_budget"], settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET)
         self.assertIn("remaining_window_in_seconds", rate_limit)
-        self.assertEqual(rate_limit["remaining_window_in_seconds"], settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS)
+        self.assertEqual(
+            rate_limit["remaining_window_in_seconds"], settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS
+        )
 
     @override_settings(NAUTOBOT_REST_RATE_LIMITING_MODE="enforce")
     def test_nautobot_cost_header_matches_expected_format(self):
@@ -152,7 +154,6 @@ class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
 
         self.assertIsNotNone(nautobot_cost)
         self.assertIsInstance(nautobot_cost, int)
-
 
     # TODO
     # - html request doesn't include headers in response?
