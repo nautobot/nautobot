@@ -1,4 +1,4 @@
-"""Match-key resolution and record-matching helpers for the ImportObjects system job."""
+"""Helpers shared by the `ExportObjectList` and `ImportObjects` system Jobs and the commands that run them."""
 
 import csv
 import json
@@ -10,10 +10,13 @@ import yaml
 _YAML_MAPPING_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\s*:(\s|$)")
 
 
-def parse_match_fields(value):
+def parse_field_name_list(value):
     """
-    Normalize a user-provided match-fields value (a comma/space/semicolon-separated string, or a list)
-    into a list of field names, or None if no fields were provided.
+    Normalize a user-provided list of field names (a comma/space/semicolon-separated string, or a list)
+    into a list, or None if no fields were provided.
+
+    Used for both of the Jobs' field-name inputs: `ExportObjectList.export_fields` and, once matching is
+    implemented, `ImportObjects.match_fields`.
     """
     if not value:
         return None
@@ -85,4 +88,9 @@ def peek_import_model(text, import_format):
         return None
 
     payload = json.loads(text) if import_format == "json" else yaml.safe_load(text)
-    return payload.get(IMPORT_DOCUMENT_MODEL_KEY) if isinstance(payload, dict) else None
+    model = payload.get(IMPORT_DOCUMENT_MODEL_KEY) if isinstance(payload, dict) else None
+    if model is not None and not isinstance(model, str):
+        # Reported rather than treated as absent, which would claim the data declares no model when it
+        # declares an unusable one
+        raise ValueError(f'"{IMPORT_DOCUMENT_MODEL_KEY}" must be a string, not {type(model).__name__}')
+    return model

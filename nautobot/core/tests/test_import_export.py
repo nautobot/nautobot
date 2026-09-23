@@ -2904,6 +2904,38 @@ class ImportModelDirectiveTests(ImportExportJobTestCase):
         self.assertJobResultStatus(job_result)
         self.assertTrue(Status.objects.filter(name="test_model_directive_status").exists())
 
+    def test_model_directive__unsupported_document_key_is_refused(self):
+        """A mistyped metadata key fails the file, as a mistyped CSV directive does.
+
+        Accepting it would let `mdoel:` take the content-type cross-check down with it, silently.
+        """
+        job_result = self.run_import(
+            "\n".join(["mdoel: extras.status", *self.YAML_RECORDS]),
+            import_format="yaml",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "Unsupported import document key(s): mdoel", level=LogLevelChoices.LOG_ERROR)
+
+    def test_model_directive__non_string_model_is_refused(self):
+        """`model` given as a list used to raise an AttributeError rather than report anything."""
+        job_result = self.run_import(
+            "\n".join(["model: [a.b, c.d]", *self.YAML_RECORDS]),
+            import_format="yaml",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "must be a string", level=LogLevelChoices.LOG_ERROR)
+
+    def test_model_directive__unreadable_data_without_a_content_type_is_reported(self):
+        """The content-type peek happens before the parser runs, so its errors need their own handling."""
+        job_result = create_job_result_and_run_job(
+            "nautobot.core.jobs",
+            "ImportObjects",
+            csv_data="{ not valid json",
+            import_format="json",
+        )
+        self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
+        self.assertJobLogEntry(job_result, "Unable to read the data", level=LogLevelChoices.LOG_ERROR)
+
     def test_model_directive__absent_with_no_content_type_is_refused(self):
         """Neither side supplies one, so there is nothing to import the data as."""
         job_result = create_job_result_and_run_job(

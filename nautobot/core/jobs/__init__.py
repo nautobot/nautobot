@@ -1,6 +1,6 @@
 import codecs
 import contextlib
-from io import BytesIO
+from io import StringIO
 import json
 
 from django.apps import apps as global_apps
@@ -390,7 +390,7 @@ class ExportObjectList(Job):
 
     def _resolve_export_field_paths(self, model, export_fields):
         """Parse and validate the explicit field-selection string (None if no selection was given)."""
-        export_field_paths = import_utils.parse_match_fields(export_fields)
+        export_field_paths = import_utils.parse_field_name_list(export_fields)
         if export_field_paths:
             try:
                 validate_field_paths(get_serializer_for_model(model), export_field_paths, user=self.user)
@@ -666,8 +666,7 @@ class ImportObjects(Job):
 
     content_type = ObjectVar(
         model=ContentType,
-        description="Type of objects to import; defaults to the model the data declares for itself, "
-        "as every file Nautobot exports does",
+        description="Type of objects to import; defaults to the model the data declares for itself, if any.",
         query_params={"can_add": True, "has_serializer": True},
         required=False,
     )
@@ -786,7 +785,12 @@ class ImportObjects(Job):
         self.logger.info("Importing data as %s", import_format.upper())
 
         if content_type is None:
-            declared_model = import_utils.peek_import_model(text, import_format) or ""
+            try:
+                declared_model = import_utils.peek_import_model(text, import_format) or ""
+            except Exception as exc:
+                # This read happens before the parser's, so its errors are not yet ParseErrors
+                self.logger.error("Unable to read the data to determine its content-type: `%s`", exc)
+                raise RunJobTaskFailed("Import data could not be read") from exc
             app_label, _, model_name = declared_model.lower().partition(".")
             content_type = ContentType.objects.filter(app_label=app_label, model=model_name).first()
             if content_type is None:
@@ -809,7 +813,7 @@ class ImportObjects(Job):
             serializer_class = get_serializer_for_model(model)
         except SerializerNotFound:
             self.logger.error(
-                'Could not find the "%s.%s" data serializer. Unable to process CSV for this model.',
+                'Could not find the "%s.%s" data serializer. Unable to import data for this model.',
                 content_type.app_label,
                 content_type.model,
             )
@@ -819,7 +823,7 @@ class ImportObjects(Job):
         new_objs = []
         try:
             parser_context = {"request": None, "serializer_class": serializer_class, "strict_fields": True}
-            data = parser_class().parse(stream=BytesIO(text.encode("utf-8")), parser_context=parser_context)
+            data = parser_class().parse(stream=StringIO(text), parser_context=parser_context)
 
             # A file-carried model declaration must agree with the requested content-type
             import_model = parser_context.get("import_directives", {}).get(IMPORT_DOCUMENT_MODEL_KEY)
@@ -832,7 +836,7 @@ class ImportObjects(Job):
                 )
                 raise RunJobTaskFailed("Import file model does not match the requested content-type")
 
-            self.logger.info("Processing %d rows of data", len(data))
+            self.logger.info("Processing %d record(s) of data", len(data))
             if roll_back_if_error:
                 new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)
             else:
@@ -850,8 +854,8 @@ class ImportObjects(Job):
 
         if validation_failed:
             if roll_back_if_error:
-                raise RunJobTaskFailed("CSV import not successful, all imports were rolled back, see logs")
-            raise RunJobTaskFailed("CSV import not fully successful, see logs")
+                raise RunJobTaskFailed("Import not successful, all imports were rolled back, see logs")
+            raise RunJobTaskFailed("Import not fully successful, see logs")
 
 
 def get_data_compliance_rules():

@@ -11,7 +11,7 @@ from rest_framework.parsers import BaseParser
 import yaml
 
 from nautobot.core.api.import_export import (
-    IMPORT_DOCUMENT_MATCH_FIELDS_KEY,
+    IMPORT_DOCUMENT_METADATA_KEYS,
     IMPORT_DOCUMENT_MODEL_KEY,
     IMPORT_DOCUMENT_RECORDS_KEY,
     IMPORT_DOCUMENT_VERSION_KEY,
@@ -125,12 +125,7 @@ class NautobotCSVParser(BaseParser):
 
     media_type = "text/csv"
 
-    IMPORT_DIRECTIVE_MARKER = IMPORT_DOCUMENT_VERSION_KEY
-    SUPPORTED_IMPORT_DIRECTIVES = (
-        IMPORT_DOCUMENT_VERSION_KEY,
-        IMPORT_DOCUMENT_MODEL_KEY,
-        IMPORT_DOCUMENT_MATCH_FIELDS_KEY,
-    )
+    SUPPORTED_IMPORT_DIRECTIVES = IMPORT_DOCUMENT_METADATA_KEYS
     # Directives taking exactly one value, and so having no use for a continuation segment
     SINGLE_VALUE_IMPORT_DIRECTIVES = (IMPORT_DOCUMENT_VERSION_KEY, IMPORT_DOCUMENT_MODEL_KEY)
 
@@ -149,10 +144,12 @@ class NautobotCSVParser(BaseParser):
         Parse a directive cell such as `# nautobot_import_version=3; model=dcim.device; match_fields=name serial`
         into a dict of directives.
 
-        Rows whose first cell starts with `#` but doesn't contain the `nautobot_import_version:` marker are ordinary
-        comments and parse to an empty dict. Within a directive, entries are separated by semicolons and the
-        values of an entry are separated by spaces (or semicolons/commas); commas are avoided as the primary
-        separator so that the directive stays in a single cell through spreadsheet round-trips.
+        A `#` row is Nautobot's if its first entry names a supported directive, whatever that entry is --
+        the docs invite editing this row by hand, so the order someone leaves it in should not decide
+        whether it is read at all. Any other `#` row is an ordinary comment and parses to an empty dict.
+        Within a directive, entries are separated by semicolons and the values of an entry are separated by
+        spaces (or semicolons/commas); commas are avoided as the primary separator so that the directive
+        stays in a single cell through spreadsheet round-trips.
 
         Returns:
             (dict): The parsed directives, e.g.
@@ -162,7 +159,7 @@ class NautobotCSVParser(BaseParser):
             ParseError: on an unsupported or malformed directive.
         """
         content = cell.lstrip("#").strip()
-        if not content.lower().startswith(cls.IMPORT_DIRECTIVE_MARKER):
+        if content.split(";", 1)[0].partition("=")[0].strip().lower() not in cls.SUPPORTED_IMPORT_DIRECTIVES:
             # An ordinary comment row, not a Nautobot import directive
             return {}
 
@@ -517,8 +514,19 @@ class ImportDocumentParserMixin:
                     "expected an import document"
                 )
             metadata = {key: value for key, value in payload.items() if key != IMPORT_DOCUMENT_RECORDS_KEY}
+            unsupported = sorted(key for key in metadata if key not in IMPORT_DOCUMENT_METADATA_KEYS)
+            if unsupported:
+                # Refused as `parse_directive_cell` refuses an unrecognized CSV directive. Accepting it
+                # would let a typo such as `mdoel:` take the model cross-check down with it, silently.
+                raise ParseError(
+                    f"Unsupported import document key(s): {', '.join(unsupported)}. "
+                    f"Supported keys are: {', '.join(IMPORT_DOCUMENT_METADATA_KEYS)}, "
+                    f"{IMPORT_DOCUMENT_RECORDS_KEY}"
+                )
             if IMPORT_DOCUMENT_VERSION_KEY in metadata:
                 metadata[IMPORT_DOCUMENT_VERSION_KEY] = validate_import_version(metadata[IMPORT_DOCUMENT_VERSION_KEY])
+            if not isinstance(metadata.get(IMPORT_DOCUMENT_MODEL_KEY, ""), str):
+                raise ParseError(f'"{IMPORT_DOCUMENT_MODEL_KEY}" must be a string')
             records = payload[IMPORT_DOCUMENT_RECORDS_KEY]
         elif isinstance(payload, list):
             metadata = {}
@@ -598,7 +606,12 @@ class ImportDocumentParserMixin:
 
 
 class NautobotJSONImportParser(ImportDocumentParserMixin, BaseParser):
-    """Bulk-import parser for JSON files, with optional metadata document."""
+    """Bulk-import parser for JSON files, with optional metadata document.
+
+    The `Import` infix, which `NautobotCSVParser` lacks, is deliberate: that one is also a REST API
+    request parser, whereas these two read import files only, and would otherwise shadow DRF's own
+    `JSONParser` by name.
+    """
 
     media_type = "application/json"
 

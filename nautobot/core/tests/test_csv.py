@@ -796,6 +796,17 @@ class CSVImportDirectiveTestCase(TestCase):
                 )
         self.assertEqual(self.parser_class.parse_directive_cell("# just an ordinary comment"), {})
 
+    def test_parse_directive_cell_order_does_not_matter(self):
+        """The docs invite editing this row by hand, so a reordered directive is still a directive."""
+        self.assertEqual(
+            self.parser_class.parse_directive_cell("# model=dcim.device; nautobot_import_version=3"),
+            {"model": "dcim.device", "nautobot_import_version": 3},
+        )
+        self.assertEqual(
+            self.parser_class.parse_directive_cell("# match_fields=name; model=dcim.device"),
+            {"match_fields": ["name"], "model": "dcim.device"},
+        )
+
     def test_parse_directive_cell_invalid(self):
         """Unsupported or malformed directives raise a clear ParseError."""
         with self.assertRaisesRegex(ParseError, "Unsupported import directive"):

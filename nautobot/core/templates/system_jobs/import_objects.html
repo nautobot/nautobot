@@ -8,9 +8,12 @@
             <strong>Job Data</strong>
         </div>
         <div class="card-body">
+            {% render_field job_form.roll_back_if_error %}
+            {# The three below are optional because a self-describing file supplies them: the model it #}
+            {# declares, the format its extension or content gives away, and its match_fields directive. #}
+            {% render_field job_form.import_format %}
             {% render_field job_form.content_type %}
             {% render_field job_form.match_fields %}
-            {% render_field job_form.roll_back_if_error %}
         </div>
     </div>
     <div class="card">
@@ -30,7 +33,6 @@
                     {% render_field job_form.csv_data %}
                 </div>
             </div>
-            {% render_field job_form.import_format %}
             <div id="csv-fields-info" class="alert alert-info" role="alert" style="display: none">
                 <p>
                     <span class="text-success"><span aria-hidden="true" class="mdi mdi-check-bold"></span></span>
@@ -105,7 +107,7 @@
             if (!response.ok) {
                 table_info.style.display = "none";
                 table.style.display = "none";
-                fetch_failure.innerHTML = data.detail + " CSV cannot be imported for this content-type.";
+                fetch_failure.innerHTML = data.detail + " Data cannot be imported for this content-type.";
                 fetch_failure.style.display = "";
                 return;
             }
