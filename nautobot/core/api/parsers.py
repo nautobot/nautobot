@@ -22,6 +22,21 @@ from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_SENTINELS
 
 logger = logging.getLogger(__name__)
 
+# What a parser treats as "this data is malformed", reported to the caller as a ParseError with the
+# offending detail. Deliberately not `Exception`: these parsers reach the database and the cache (custom
+# field keys), and a `DatabaseError` reported as a parse failure would have the user retrying the file
+# forever while the real fault goes unnoticed. Anything not listed here propagates as the server error it
+# is, with the traceback Django and Celery already log for one.
+MALFORMED_DATA_EXCEPTIONS = (
+    AttributeError,
+    KeyError,
+    TypeError,
+    UnicodeDecodeError,
+    ValueError,  # includes json.JSONDecodeError
+    csv.Error,
+    yaml.YAMLError,
+)
+
 
 def read_import_text(stream, parser_context):
     """Read a parser's input stream as text, decoding it and stripping any leading byte-order mark.
@@ -285,9 +300,7 @@ class NautobotCSVParser(BaseParser):
             if settings.DEBUG:
                 logger.debug("CSV loaded into data:\n%s", json.dumps(data, indent=2))
             return data
-        except ParseError:
-            raise
-        except Exception as exc:
+        except MALFORMED_DATA_EXCEPTIONS as exc:
             raise ParseError(str(exc)) from exc
 
     def _field_lookups_not_empty(self, field_lookups):
@@ -599,9 +612,7 @@ class ImportDocumentParserMixin:
                 self.record_to_data(counter, record, serializer, strict=strict, custom_field_keys=custom_field_keys)
                 for counter, record in enumerate(records, start=1)
             ]
-        except ParseError:
-            raise
-        except Exception as exc:
+        except MALFORMED_DATA_EXCEPTIONS as exc:
             raise ParseError(str(exc)) from exc
 
 
