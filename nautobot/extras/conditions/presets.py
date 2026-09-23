@@ -185,7 +185,7 @@ class ConditionPreset:
 
         Every declared parameter is present in the result, so the expression never meets Jinja2
         `Undefined` for its own parameters. An optional parameter that was not given is None. A
-        required one that was not given raises, so `check` reports the row as broken instead of
+        required one that was not given raises, so `check_conditions` reports the row as broken instead of
         evaluating it against None.
 
         Raises:

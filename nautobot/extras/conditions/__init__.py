@@ -1,6 +1,6 @@
 """Conditions: whether a change passes a list of stored condition rows.
 
-A row is a preset from the catalog with values filled in, or a raw Jinja2 expression. `check()` takes
+A row is a preset from the catalog with values filled in, or a raw Jinja2 expression. `check_conditions()` takes
 the rows and the payload of a change and returns a `Verdict`. Nothing here knows which model or action
 owns the rows.
 
@@ -9,7 +9,7 @@ Modules, each using only the ones before it: `errors` (the one exception type), 
 (compiling Jinja2), `rows` (the stored shape), `validation` (a whole stored list), `check`.
 """
 
-from nautobot.extras.conditions.check import check, check_row, RowVerdict, Verdict
+from nautobot.extras.conditions.check import check_conditions, check_row, RowVerdict, Verdict
 from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.expressions import compile_condition, ConditionError
 from nautobot.extras.conditions.operators import (
@@ -60,7 +60,7 @@ __all__ = (
     "RowVerdict",
     "Verdict",
     "build_event_payload",
-    "check",
+    "check_conditions",
     "check_row",
     "compile_condition",
     "field_matches",

@@ -154,7 +154,7 @@ def estimate_rest_read_request_cost(rest_read_request_features):
             that indicates specific expected Nautobot API requests
 
     Returns:
-        float: A number representing the complexity cost of the operation
+        int: A number representing the complexity cost of the operation
     """
     total_request_cost = 0
 
@@ -190,6 +190,4 @@ def estimate_rest_read_request_cost(rest_read_request_features):
     if rest_read_request_features.is_response_format_csv():
         total_request_cost *= settings.NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER
 
-    rounded_total_request_cost = round(total_request_cost, 2)
-
-    return rounded_total_request_cost
+    return math.ceil(total_request_cost)
