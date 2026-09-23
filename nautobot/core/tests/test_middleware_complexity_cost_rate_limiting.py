@@ -1,4 +1,5 @@
 import re
+import time
 from unittest.mock import patch
 
 from django.conf import settings
@@ -440,19 +441,20 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
     @override_settings(
         NAUTOBOT_REST_RATE_LIMITING_MODE="enforce",
-        NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS=3600,
-        NAUTOBOT_REST_RATE_LIMITING_BUDGET=10,
+        # The window has to outlast the time it takes to spend the budget, or the bucket expires
+        # mid-loop and consumption resets before anything is ever throttled. At this budget the
+        # third request trips the limit, and a reset window still leaves budget for one more.
+        NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS=6,
+        NAUTOBOT_REST_RATE_LIMITING_BUDGET=8,
     )
     def test_budget_resets_after_window_expires(self):
         _, throttled_response = self.call_api_until_throttled()
         self.assertIsNotNone(throttled_response)
         self.assertEqual(throttled_response.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
 
-        # Expiring the window is Redis dropping the bucket entirely, so deleting the key is what
-        # actually reproduces it. `expire()` would only re-arm the TTL and leave the spend behind.
-        bucket_id = get_rate_limit_bucket_id(self.header["HTTP_AUTHORIZATION"])
-        get_redis_connection("default").delete(bucket_id)
-
+        # Sleeping the full window always outlasts whatever is left of the bucket's TTL, which was
+        # set when the first request opened the window and has been counting down ever since.
+        time.sleep(settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS)
         api_response = self.call_api()
         remaining_budget = get_rate_limit_header_remaining_budget(api_response)
 
