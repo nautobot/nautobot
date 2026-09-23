@@ -148,6 +148,9 @@ class ExportFieldSelect(SelectMultipleOrderable):
         # Columns of the list view that had no exportable equivalent, reported by whoever seeded the
         # selection from a view, so the picker can say what was left out rather than quietly dropping it.
         self.omitted_columns = []
+        # Set when a "match the list view" found no list view to match, there being content types with no
+        # list view at all (`users.token`, `users.user`). Without it the button appears to do nothing.
+        self.no_list_view = False
         # The content type whose fields are offered, for the sake of saying which one has none.
         self.content_type = None
         # The paths that name a related object rather than a value of the object being exported.
@@ -216,7 +219,7 @@ class ExportFieldSelect(SelectMultipleOrderable):
         return format_html(
             '{}{}<ol id="{}" class="{}">{}</ol>{}',
             self._toolbar(has_selection=bool(widget["value"])),
-            self._omitted_hint(),
+            self._omitted_hint() or self._no_list_view_hint(),
             widget_id,
             widget["attrs"].get("class") or "",
             rows,
@@ -318,6 +321,22 @@ class ExportFieldSelect(SelectMultipleOrderable):
             format_html_join(", ", "<code>{}</code>", ((column,) for column in self.omitted_columns)),
             "has" if len(self.omitted_columns) == 1 else "have",
             "was" if len(self.omitted_columns) == 1 else "were",
+        )
+
+    def _no_list_view_hint(self):
+        """Said when a "match the list view" had no list view to match, rather than leaving it silent.
+
+        Shares `OMITTED_ID` with `_omitted_hint()` -- the two cannot both apply, and the id is what lets
+        clearing the selection take the report away with it.
+        """
+        if not self.no_list_view:
+            return ""
+        return format_html(
+            '<div id="{}" class="form-text text-info mb-6">'
+            "This content type has no list view, so there are no displayed columns to match. "
+            "Choose the fields to export below, or leave the selection empty to export all of them."
+            "</div>",
+            self.OMITTED_ID,
         )
 
     def _behavior_script(self):

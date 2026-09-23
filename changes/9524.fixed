@@ -1,2 +1,3 @@
 Fixed Job `BooleanVar` variables declared with `default=True` (such as `ImportObjects.roll_back_if_error`) being received as `False` when omitted from a REST API job-run request.
 Fixed the `Import Objects` system Job being unable to import models whose serializer takes the owning user from the request, such as Tokens and Saved Views; the Job now deserializes under a request carrying the user who ran it.
+Fixed the export field picker's "Match the list view" button appearing to do nothing for a content type that has no list view, such as `users | token`; it now says so rather than returning an empty selection.

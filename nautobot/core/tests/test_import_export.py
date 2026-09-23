@@ -93,7 +93,7 @@ from nautobot.extras.models import (
 from nautobot.ipam.api.serializers import VLANSerializer
 from nautobot.ipam.models import Namespace, Prefix, RouteTarget, VLAN, VRF, VRFDeviceAssignment
 from nautobot.users.api.serializers import UserSerializer
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import ObjectPermission, Token
 
 User = get_user_model()
 
@@ -2310,6 +2310,19 @@ class ExportViewColumnsTests(ImportExportJobTestCase):
         self.assertHttpStatus(response, 200)
         content = response.content.decode(response.charset)
         return re.findall(r'value="([^"]+)" checked', content), content
+
+    def test_columns__content_type_with_no_list_view_says_so(self):
+        """Some content types have no list view at all, so the button has nothing to match.
+
+        Without a word from the picker, pressing it just returns an unchecked list and looks broken.
+        """
+        selected, content = self.matched_columns(model=Token)
+        self.assertEqual(selected, [])
+        self.assertIn("This content type has no list view", content)
+
+    def test_columns__content_type_with_a_list_view_says_nothing_of_the_sort(self):
+        _selected, content = self.matched_columns()
+        self.assertNotIn("This content type has no list view", content)
 
     def test_columns__from_user_table_config(self):
         """The user's own table configuration for the view supplies the fields, in its column order."""

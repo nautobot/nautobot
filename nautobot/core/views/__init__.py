@@ -633,6 +633,7 @@ class ExportFieldsPickerView(LoginRequiredMixin, View):
 
         selection = request.GET.get("export_fields", "")
         omitted = []
+        no_list_view = False
         if model is not None and request.GET.get("use_current_view"):
             query_params = QueryDict(request.GET.get("query_string", ""))
             saved_view = get_saved_view_or_none(query_params["saved_view"]) if "saved_view" in query_params else None
@@ -644,6 +645,7 @@ class ExportFieldsPickerView(LoginRequiredMixin, View):
             )
             if paths:
                 selection = ",".join(paths)
+            no_list_view = paths is None
 
         # Rendered from the Job's own form, so that the label, the help text, the offered fields and the
         # order the selection puts them in are all the ones that form would have produced -- this replaces
@@ -654,6 +656,7 @@ class ExportFieldsPickerView(LoginRequiredMixin, View):
         # another one here would nest a second copy inside it on every rebuild.
         field.htmx_attrs = None
         field.widget.omitted_columns = omitted
+        field.widget.no_list_view = no_list_view
         return render(request, "inc/htmx_form_field.html", {"field": job_form["export_fields"]})
 
 
