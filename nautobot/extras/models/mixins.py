@@ -123,6 +123,11 @@ class ConditionsMixin(models.Model):
 
     conditions = ConditionsField()
 
+    @property
+    def has_conditions(self):
+        """Whether this narrows what it fires on, rather than firing on every change of its object types."""
+        return bool(self.conditions)
+
 
 class ContactMixin(models.Model):
     """Abstract mixin for enabling Contact/Team association to a given model class."""

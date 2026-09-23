@@ -10,6 +10,7 @@ from nautobot.core.events import publish_event
 from nautobot.core.utils.otel import traced_span
 from nautobot.extras.change_consumers import change_has_consumers, get_change_event_topic
 from nautobot.extras.choices import ObjectChangeEventContextChoices
+from nautobot.extras.conditions.gate import ConditionGate
 from nautobot.extras.constants import CHANGELOG_MAX_CHANGE_CONTEXT_DETAIL
 from nautobot.extras.models import ObjectChange
 from nautobot.extras.signals import change_context_state, get_user_if_authenticated
@@ -256,6 +257,8 @@ def web_request_context(
         # Save some repeated database queries by reusing the same evaluated querysets where applicable.
         jobhook_queryset = None
         webhook_queryset = None
+        # One gate for the whole request, so a broken condition is reported once, not per object.
+        condition_gate = ConditionGate()
         last_action = None
         last_content_type = None
         with traced_span(
@@ -292,14 +295,6 @@ def web_request_context(
                     skipped_object_change_count += 1
                     continue
 
-                if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
-                    # Make sure JobHooks are up to date (only once) before calling them
-                    did_reload_jobs, jobhook_queryset = enqueue_job_hooks(
-                        oc, may_reload_jobs=(not jobs_reloaded), jobhook_queryset=jobhook_queryset
-                    )
-                    if did_reload_jobs:
-                        jobs_reloaded = True
-
                 # An update already had its "before" state captured in pre_save, so nothing is read here.
                 # Deletes and M2M changes have no such capture and still pay a query for get_prev_change().
                 # See https://github.com/nautobot/nautobot/issues/6303
@@ -307,7 +302,22 @@ def web_request_context(
                     pre_object_data.get(str(oc.changed_object_id), None) if pre_object_data else None,
                     pre_object_data_v2.get(str(oc.changed_object_id), None) if pre_object_data_v2 else None,
                 )
-                webhook_queryset = enqueue_webhooks(oc, snapshots=snapshots, webhook_queryset=webhook_queryset)
+
+                if context != ObjectChangeEventContextChoices.CONTEXT_JOB_HOOK:
+                    # Make sure JobHooks are up to date (only once) before calling them
+                    did_reload_jobs, jobhook_queryset = enqueue_job_hooks(
+                        oc,
+                        may_reload_jobs=(not jobs_reloaded),
+                        jobhook_queryset=jobhook_queryset,
+                        snapshots=snapshots,
+                        gate=condition_gate,
+                    )
+                    if did_reload_jobs:
+                        jobs_reloaded = True
+
+                webhook_queryset = enqueue_webhooks(
+                    oc, snapshots=snapshots, webhook_queryset=webhook_queryset, gate=condition_gate
+                )
 
                 event_topic = get_change_event_topic(oc.changed_object_type, oc.action)
                 event_payload = snapshots.copy()

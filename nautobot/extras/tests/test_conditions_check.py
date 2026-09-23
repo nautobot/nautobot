@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, tag
 from nautobot.core.testing import TestCase as NautobotTestCase
 from nautobot.dcim.models import Location, LocationType
 from nautobot.extras.choices import ObjectChangeActionChoices
-from nautobot.extras.conditions.check import check, check_row, RowVerdict, Verdict
+from nautobot.extras.conditions.check import check_conditions, check_row, RowVerdict, Verdict
 from nautobot.extras.conditions.payload import build_event_payload
 from nautobot.extras.conditions.presets import register_builtin_condition_presets
 from nautobot.extras.context_managers import web_request_context
@@ -113,22 +113,22 @@ class CheckRowTest(CheckTestCase):
 @tag("unit")
 class CheckTest(CheckTestCase):
     def test_rows_are_anded(self):
-        verdict = check([expression("true"), expression("false"), expression("true")], PAYLOAD)
+        verdict = check_conditions([expression("true"), expression("false"), expression("true")], PAYLOAD)
         self.assertFalse(verdict.passed)
         self.assertEqual([row.passed for row in verdict.rows], [True, False, True])
 
     def test_every_row_is_checked_after_a_failure(self):
-        verdict = check([expression("1 / 0"), expression("true")], PAYLOAD)
+        verdict = check_conditions([expression("1 / 0"), expression("true")], PAYLOAD)
         self.assertEqual(len(verdict.rows), 2)
         self.assertTrue(verdict.rows[1].passed)
         self.assertFalse(verdict.passed)
 
     def test_no_conditions_pass(self):
         """An action with no conditions fires for every change, as it did before conditions existed."""
-        self.assertEqual(check([], PAYLOAD), Verdict(rows=(), passed=True))
+        self.assertEqual(check_conditions([], PAYLOAD), Verdict(rows=(), passed=True))
 
     def test_as_dict_shape(self):
-        as_dict = check([expression("true")], PAYLOAD).as_dict()
+        as_dict = check_conditions([expression("true")], PAYLOAD).as_dict()
         self.assertEqual(set(as_dict), {"passed", "rows"})
         self.assertEqual(set(as_dict["rows"][0]), {"index", "row", "passed", "error"})
 
@@ -142,8 +142,8 @@ class BuiltinPresetsEndToEndTest(CheckTestCase):
         Planned → Active does not match even though the destination is the same."""
         staged_to_active = preset("field_transition", field="status.name", **{"from": "Staged", "to": "Active"})
         planned_to_active = preset("field_transition", field="status.name", **{"from": "Planned", "to": "Active"})
-        self.assertTrue(check([staged_to_active], PAYLOAD).passed)
-        self.assertFalse(check([planned_to_active], PAYLOAD).passed)
+        self.assertTrue(check_conditions([staged_to_active], PAYLOAD).passed)
+        self.assertFalse(check_conditions([planned_to_active], PAYLOAD).passed)
 
     def test_field_transition_is_quiet_on_create_and_delete(self):
         row = preset("field_transition", field="status.name", **{"from": "Staged", "to": "Active"})
@@ -151,16 +151,16 @@ class BuiltinPresetsEndToEndTest(CheckTestCase):
         deleted = {**PAYLOAD, "event": "deleted", "snapshots": {**PAYLOAD["snapshots"], "postchange": None}}
         for payload in (created, deleted):
             with self.subTest(event=payload["event"]):
-                verdict = check([row], payload)
+                verdict = check_conditions([row], payload)
                 self.assertFalse(verdict.passed)
                 self.assertIsNone(verdict.rows[0].error)
 
     def test_field_changed(self):
-        self.assertTrue(check([preset("field_changed", field="mtu")], PAYLOAD).passed)
-        self.assertTrue(check([preset("field_changed", field="status.name")], PAYLOAD).passed)
-        self.assertFalse(check([preset("field_changed", field="name")], PAYLOAD).passed)
+        self.assertTrue(check_conditions([preset("field_changed", field="mtu")], PAYLOAD).passed)
+        self.assertTrue(check_conditions([preset("field_changed", field="status.name")], PAYLOAD).passed)
+        self.assertFalse(check_conditions([preset("field_changed", field="name")], PAYLOAD).passed)
         created = {**PAYLOAD, "event": "created", "snapshots": {**PAYLOAD["snapshots"], "prechange": None}}
-        self.assertFalse(check([preset("field_changed", field="mtu")], created).passed)
+        self.assertFalse(check_conditions([preset("field_changed", field="mtu")], created).passed)
 
     def test_field_compare(self):
         for row, expected in (
@@ -170,19 +170,19 @@ class BuiltinPresetsEndToEndTest(CheckTestCase):
             (preset("field_compare", field="status", operator="=", value="Active"), False),
         ):
             with self.subTest(values=row["values"]):
-                self.assertIs(check([row], PAYLOAD).passed, expected)
+                self.assertIs(check_conditions([row], PAYLOAD).passed, expected)
 
     def test_user_is(self):
-        self.assertTrue(check([preset("user_is", username="nautobotuser")], PAYLOAD).passed)
-        self.assertFalse(check([preset("user_is", username="sync")], PAYLOAD).passed)
-        self.assertTrue(check([preset("user_is", username="sync", negate=True)], PAYLOAD).passed)
+        self.assertTrue(check_conditions([preset("user_is", username="nautobotuser")], PAYLOAD).passed)
+        self.assertFalse(check_conditions([preset("user_is", username="sync")], PAYLOAD).passed)
+        self.assertTrue(check_conditions([preset("user_is", username="sync", negate=True)], PAYLOAD).passed)
 
     def test_presets_and_expressions_mix(self):
         rows = [
             preset("field_transition", field="status.name", **{"from": "Staged", "to": "Active"}),
             expression("data.mtu > 9000 and username != 'sync'"),
         ]
-        self.assertTrue(check(rows, PAYLOAD).passed)
+        self.assertTrue(check_conditions(rows, PAYLOAD).passed)
 
 
 class CheckAgainstRecordedChangeTest(NautobotTestCase):
@@ -214,22 +214,22 @@ class CheckAgainstRecordedChangeTest(NautobotTestCase):
         """`status` is a mapping in `object_data_v2`; `status.name` reaches the value, `status` does not."""
         by_sub_field = preset("field_compare", field="status.name", operator="=", value="Check Active")
         by_relation = preset("field_compare", field="status", operator="=", value="Check Active")
-        self.assertTrue(check([by_sub_field], self.payload).passed)
-        self.assertFalse(check([by_relation], self.payload).passed)
+        self.assertTrue(check_conditions([by_sub_field], self.payload).passed)
+        self.assertFalse(check_conditions([by_relation], self.payload).passed)
 
     def test_transition_and_change_read_both_recorded_snapshots(self):
         rows = [
             preset("field_transition", field="status.name", **{"from": "Check Staged", "to": "Check Active"}),
             preset("field_changed", field="status.name"),
         ]
-        verdict = check(rows, self.payload)
+        verdict = check_conditions(rows, self.payload)
         self.assertTrue(verdict.passed, verdict.as_dict())
 
     def test_unchanged_field_did_not_change(self):
-        self.assertFalse(check([preset("field_changed", field="name")], self.payload).passed)
+        self.assertFalse(check_conditions([preset("field_changed", field="name")], self.payload).passed)
 
     def test_user_is_the_recorded_user(self):
-        self.assertTrue(check([preset("user_is", username=self.user.username)], self.payload).passed)
+        self.assertTrue(check_conditions([preset("user_is", username=self.user.username)], self.payload).passed)
 
     def test_no_row_errors_on_a_real_payload(self):
         rows = [
@@ -237,6 +237,6 @@ class CheckAgainstRecordedChangeTest(NautobotTestCase):
             expression("data.status.name == 'Check Active' and snapshots.prechange.status.name == 'Check Staged'"),
             expression("event == 'updated' and username == '" + self.user.username + "'"),
         ]
-        verdict = check(rows, self.payload)
+        verdict = check_conditions(rows, self.payload)
         self.assertTrue(verdict.passed, verdict.as_dict())
         self.assertTrue(all(row.error is None for row in verdict.rows))

@@ -1,0 +1,2 @@
+Added documentation of conditions to the [Webhooks](../user-guide/platform-functionality/webhook.md) and [Job Hooks](../user-guide/platform-functionality/jobs/jobhook.md) pages.
+Documented what happens when a condition cannot be checked, in [Conditions](../user-guide/feature-guides/conditions.md).

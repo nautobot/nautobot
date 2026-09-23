@@ -1,6 +1,6 @@
 """Checks a list of condition rows against a payload.
 
-`check()` takes the rows and a payload built by `build_event_payload`, and returns a `Verdict`: a
+`check_conditions()` takes the rows and a payload built by `build_event_payload`, and returns a `Verdict`: a
 `RowVerdict` per row and `passed`, which is whether every row passed. Rows are AND-ed.
 
 A row passes when its expression, rendered with the payload and the row's `param_*` variables, is
@@ -70,7 +70,7 @@ def check_row(index, row, payload):
         return RowVerdict(index=index, row=row, passed=False, error=f"{type(exc).__name__}: {exc}")
 
 
-def check(conditions, payload):
+def check_conditions(conditions, payload):
     """
     Check every stored row against `payload`.
 
