@@ -90,6 +90,8 @@ not A
 
 The expression sees the payload variables above and the same filters as a webhook body template. Expressions run in a sandbox and cannot modify the payload.
 
+A field that can be empty arrives as `none`, and comparing that with `>` raises rather than returning false. Guard it, for example `data.mtu is not none and data.mtu > 9000`. A preset does this for you, and treats an empty field as a non-match.
+
 Prefer a preset when one fits.
 
 ## How conditions are checked
@@ -111,7 +113,7 @@ Conditions are a list. Each entry is a preset row or an expression row:
 ```json
 [
     {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}},
-    {"type": "expression", "source": "data.mtu > 9000 or username != 'sync-infoblox'", "negate": true}
+    {"type": "expression", "source": "(data.mtu is not none and data.mtu > 9000) or username != 'sync-infoblox'", "negate": true}
 ]
 ```
 
