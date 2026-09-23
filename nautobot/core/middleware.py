@@ -585,7 +585,7 @@ class ComplexityCostRateLimitingMiddleware:
             request_complexity_cost_estimate = estimate_rest_read_request_cost(read_request_features)
         elif request.method in WRITE_METHODS:
             # TODO: Revisit calculation for write requests
-            request_complexity_cost_estimate = math.ceil(settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST)
+            request_complexity_cost_estimate = settings.NAUTOBOT_REST_RATE_LIMITING_WRITE_COST
         else:
             return self.get_response(request)
 
