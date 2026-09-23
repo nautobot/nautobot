@@ -1024,6 +1024,28 @@ class CSVM2MRepresentationTestCase(TestCase):
         )
 
 
+class CSVSingleObjectUpdateTestCase(TestCase):
+    """A CSV PATCH to one object's detail endpoint, where `parse()` unwraps the single row it expects."""
+
+    def _parse(self, csv_text):
+        return NautobotCSVParser().parse(
+            io.BytesIO(csv_text.encode("utf-8")),
+            parser_context={
+                "request": None,
+                "serializer_class": StatusSerializer,
+                "kwargs": {"pk": uuid.uuid4()},
+            },
+        )
+
+    def test_single_row_is_unwrapped(self):
+        self.assertEqual(self._parse("name,color\ntest_status,111111"), {"name": "test_status", "color": "111111"})
+
+    def test_header_with_no_data_rows_is_a_parse_error(self):
+        """Reported rather than raising IndexError out of the parser onto a 500."""
+        with self.assertRaisesRegex(ParseError, "has no rows"):
+            self._parse("name,color\n")
+
+
 class CSVCustomFieldCellTestCase(TestCase):
     """How a `cf_<key>` column is read back.
 

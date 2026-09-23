@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # is, with the traceback Django and Celery already log for one.
 MALFORMED_DATA_EXCEPTIONS = (
     AttributeError,
+    IndexError,
     KeyError,
     TypeError,
     UnicodeDecodeError,
@@ -292,6 +293,8 @@ class NautobotCSVParser(BaseParser):
 
             if "pk" in parser_context.get("kwargs", {}):
                 # Single-object update, not bulk update - strip it so that we get the expected input and return format
+                if not data:
+                    raise ParseError("Expected one row of data to update this object, but the data has no rows")
                 data = data[0]
             # Note that we can't distinguish between single-create and bulk-create with a list of one object,
             # as both would have the same CSV representation. Therefore create via CSV **always** acts as bulk-create,
