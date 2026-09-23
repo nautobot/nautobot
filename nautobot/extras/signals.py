@@ -226,6 +226,9 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
         action = ObjectChangeActionChoices.ACTION_UPDATE
+    elif kwargs.get("action") == "post_clear":
+        # Clearing a relationship sends no pk_set, but its empty state must still be recorded.
+        action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
 
