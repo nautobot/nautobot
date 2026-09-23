@@ -1602,11 +1602,17 @@ properties:
     default: "off"
     description: "Cost-based rate limiting mode for token-authenticated GraphQL API requests."
     details: |-
-      | Value | Behavior |
-      |---|---|
-      | `"off"` | Requests are neither charged or limited. |
-      | `"report"` | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
-      | `"enforce"` | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted. |
+      | Value   | Behavior                                                                                                                |
+      |---------|-------------------------------------------------------------------------------------------------------------------------|
+      | off     | Requests are neither charged nor limited.                                                                               |
+      | report  | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | enforce | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted.       |
+
+      Only `"enforce"` consumes budget. In `report` mode the `RateLimit` header always reports a
+      full budget, so it shows the per-request cost but not what `enforce` would have rejected.
+
+      Requests without an `Authorization` header are never charged. If Redis is unreachable the
+      limiter fails open: the request is served and a full budget is reported.
     enum:
     - "off"
     - "report"
@@ -1614,7 +1620,7 @@ properties:
     environment_variable: "NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
-      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#NAUTOBOT_REST_RATE_LIMITING_BUDGET"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
@@ -1632,6 +1638,26 @@ properties:
       `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
     environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
     version_added: "3.2.0"
+  NAUTOBOT_REST_RATE_LIMITING_BUDGET:
+    default: 1000
+    description: >-
+      The complexity cost budget granted to each API token per window, in cost points.
+    details: |-
+      In `"enforce"` mode, a token is denied once its recorded consumption for the current window
+      reaches this value.
+
+      !!! note
+          This is a budget of *cost points*, not a count of requests or of returned objects. It is
+          unrelated to the REST API's `limit` query parameter.
+
+      Size this against the cost settings: with the defaults an unfiltered list request costs `4`,
+      so a budget of `1000` permits roughly 250 such requests per window.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_BUDGET"
+    minimum: 0
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS": "#nautobot_rest_rate_limiting_window_in_seconds"
+    type: "integer"
+    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER:
     default: 3.0
     description: >-
@@ -1675,14 +1701,14 @@ properties:
     default: "off"
     description: "Cost-based rate limiting mode for token-authenticated REST API requests."
     details: |-
-      | Value | Behavior |
-      |---|---|
-      | `"off"` | Requests are neither costed nor limited. |
-      | `"report"` | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
-      | `"enforce"` | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted. |
+      | Value   | Behavior                                                                                                                |
+      |---------|-------------------------------------------------------------------------------------------------------------------------|
+      | off     | Requests are neither charged nor limited.                                                                               |
+      | report  | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | enforce | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted.       |
 
-      Only `"enforce"` consumes budget. In `"report"` mode the `RateLimit` header always reports a
-      full budget, so it shows the per-request cost but not what `"enforce"` would have rejected.
+      Only `enforce` consumes budget. In `report` mode the `RateLimit` header always reports a
+      full budget, so it shows the per-request cost but not what `enforce` would have rejected.
 
       Requests without an `Authorization` header are never charged. If Redis is unreachable the
       limiter fails open: the request is served and a full budget is reported.
@@ -1692,7 +1718,7 @@ properties:
     - "enforce"
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_MODE"
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#NAUTOBOT_REST_RATE_LIMITING_BUDGET"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
     type: "string"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST:
@@ -1709,33 +1735,14 @@ properties:
       "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
     type: "number"
     version_added: "3.3.0"
-  NAUTOBOT_REST_RATE_LIMITING_BUDGET:
-    default: 1000
-    description: >-
-      The complexity cost budget granted to each API token per window, in cost points.
-    details: |-
-      In `"enforce"` mode, a token is denied once its recorded consumption for the current window
-      exceeds this value.
-
-      !!! note
-          This is a budget of *cost points*, not a count of requests or of returned objects. It is
-          unrelated to the REST API's `limit` query parameter.
-
-      Size this against the cost settings: with the defaults an unfiltered list request costs `4`,
-      so a budget of `1000` permits roughly 250 such requests per window.
-    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_BUDGET"
-    minimum: 0
-    see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS": "#NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS"
-    type: "integer"
-    version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_READ_COST:
     default: 1.0
     description: "Base cost of a REST API `GET`, `HEAD`, or `OPTIONS` request."
     details: |-
-      This is the starting point for the REST cost estimate. The weights combine as follows:
+      This is the starting point for the REST cost estimate of a read request. The weights combine
+      as follows:
 
-      1. Start from `READ_COST`, or `WRITE_COST` for any other HTTP method.
+      1. Start from `READ_COST`.
       2. Add `PAGINATION_COST` for each request needed to page through the whole result set.
       3. Multiply by `1 + (depth × DEPTH_MULTIPLIER_PER_LEVEL)` when `depth` is non-zero.
       4. Add `INDEXABLE_LOOKUP_COST` for every filter whose lookup can use an index, and
@@ -1744,6 +1751,8 @@ properties:
       6. Multiply by `CSV_MULTIPLIER` when `format=csv` is requested.
 
       The result is rounded up to a whole number and charged against the token's budget.
+
+      Write requests do not use this formula. They are charged a flat `WRITE_COST`, rounded up.
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_READ_COST"
     see_also:
       "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
@@ -1760,7 +1769,7 @@ properties:
     type: "number"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS:
-    default: 5
+    default: 60
     description: >-
       The length in seconds of each API token's complexity cost budget window.
     details: |-
@@ -1770,7 +1779,7 @@ properties:
     environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS"
     minimum: 1
     see_also:
-      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#NAUTOBOT_REST_RATE_LIMITING_BUDGET"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
     type: "integer"
     version_added: "3.3.0"
   NAUTOBOT_REST_RATE_LIMITING_WRITE_COST:
