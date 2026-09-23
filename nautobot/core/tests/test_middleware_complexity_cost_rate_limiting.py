@@ -1,3 +1,4 @@
+import re
 from unittest.mock import patch
 
 from django.conf import settings
@@ -23,25 +24,55 @@ class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
     """
 
     rate_limit_policy_header_name = "RateLimit-Policy"
+    # Example: "rest-complexity-cost";q=1000;w=5
+    rate_limit_policy_pattern = re.compile(r'^"(?P<policy_name>[^"]+)";q=(?P<budget>\d+);w=(?P<window_in_seconds>\d+)$')
+    # ----------------------------------------
+    # Example: "rest-complexity-cost";r=996;t=5
+    rate_limit_pattern = re.compile(
+        r'^"(?P<policy_name>[^"]+)";r=(?P<remaining_budget>\d+);t=(?P<remaining_window_in_seconds>\d+)$'
+    )
     rate_limit_header_name = "RateLimit"
+    # ----------------------------------------
     nautobot_cost_header_name = "X-Nautobot-Cost"
-    # Example: TODO
-    # TODO
-    # rate_limit_policy_pattern = re.compile()
-    # Example: TODO
-    # TODO
-    # rate_limit_pattern = re.compile()
-    # TODO: Test ratelimit pattern is correct
-    # TODO: Test ratelimit policy pattern is correct
-    # TODO: Test nautobot pattern is correct
+    # Example: 4
+    nautobot_cost_pattern = re.compile(r"^(?P<cost>\d+)$")
 
-    # TODO
     def parse_rate_limit_policy_header(self, header_value):
-        pass
+        match = self.rate_limit_policy_pattern.fullmatch(header_value)
 
-    # TODO
+        if match is None:
+            return None
+
+        rate_limit_policy_data = {
+            "policy_name": match.group("policy_name"),
+            "budget": int(match.group("budget")),
+            "window_in_seconds": int(match.group("window_in_seconds")),
+        }
+
+        return rate_limit_policy_data
+
     def parse_rate_limit_header(self, header_value):
-        pass
+        match = self.rate_limit_pattern.fullmatch(header_value)
+
+        if match is None:
+            return None
+
+        rate_limit_data = {
+            "policy_name": match.group("policy_name"),
+            "remaining_budget": int(match.group("remaining_budget")),
+            "remaining_window_in_seconds": int(match.group("remaining_window_in_seconds")),
+        }
+
+        return rate_limit_data
+
+    def parse_nautobot_cost_header(self, header_value):
+        match = self.nautobot_cost_pattern.fullmatch(header_value)
+        if match is None:
+            return None
+
+        nautobot_cost = int(match.group("cost"))
+
+        return nautobot_cost
 
     @staticmethod
     def call_middleware(get_response):
@@ -77,15 +108,51 @@ class ComplexityCostRateLimitingMiddlewareTestCase(APITestCase):
         self.assertIn(self.rate_limit_header_name, response.headers)
         self.assertIn(self.nautobot_cost_header_name, response.headers)
 
-    # TODO
-    @override_settings(NAUTOBOT_REST_RATE_LIMITING_MODE="off")
-    def test_api_request_is_allowed_when_rest_complexity_cost_rate_limiting_is_set_to_off(self):
-        pass
-
-    # TODO
     @override_settings(NAUTOBOT_REST_RATE_LIMITING_MODE="report")
-    def test_api_request_is_allowed_when_rest_complexity_cost_rate_limiting_is_set_to_report(self):
-        pass
+    def test_rate_limit_policy_header_matches_expected_format(self):
+        response = self.call_api()
+
+        raw_rate_limit_policy_header = response.headers[self.rate_limit_policy_header_name]
+        rate_limit_policy = self.parse_rate_limit_policy_header(raw_rate_limit_policy_header)
+
+        # Checks the fields exists and that they were correctly parsed out
+        self.assertIsNotNone(rate_limit_policy)
+        self.assertIn("policy_name", rate_limit_policy)
+        self.assertEqual(rate_limit_policy["policy_name"], "rest-complexity-cost")
+        self.assertIn("budget", rate_limit_policy)
+        self.assertEqual(rate_limit_policy["budget"], settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET)
+        self.assertIn("window_in_seconds", rate_limit_policy)
+        self.assertEqual(rate_limit_policy["window_in_seconds"], settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS)
+
+    @override_settings(
+        NAUTOBOT_REST_RATE_LIMITING_MODE="report",
+        NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS=3600,
+    )
+    def test_rate_limit_header_matches_expected_format(self):
+        response = self.call_api()
+
+        raw_rate_limit_header = response.headers[self.rate_limit_header_name]
+        rate_limit = self.parse_rate_limit_header(raw_rate_limit_header)
+
+        # Checks the fields exists and that they were correctly parsed out
+        self.assertIsNotNone(rate_limit)
+        self.assertIn("policy_name", rate_limit)
+        self.assertEqual(rate_limit["policy_name"], "rest-complexity-cost")
+        self.assertIn("remaining_budget", rate_limit)
+        self.assertEqual(rate_limit["remaining_budget"], settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET)
+        self.assertIn("remaining_window_in_seconds", rate_limit)
+        self.assertEqual(rate_limit["remaining_window_in_seconds"], settings.NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS)
+
+    @override_settings(NAUTOBOT_REST_RATE_LIMITING_MODE="enforce")
+    def test_nautobot_cost_header_matches_expected_format(self):
+        response = self.call_api()
+
+        raw_nautobot_cost_header = response.headers[self.nautobot_cost_header_name]
+        nautobot_cost = self.parse_nautobot_cost_header(raw_nautobot_cost_header)
+
+        self.assertIsNotNone(nautobot_cost)
+        self.assertIsInstance(nautobot_cost, int)
+
 
     # TODO
     # - html request doesn't include headers in response?
@@ -175,7 +242,6 @@ class ComplexityCostRateLimitingBudgetTestCase(APITestCase):
 
         remaining_budget = self.get_remaining_budget(api_response)
         self.assertEqual(settings.NAUTOBOT_REST_RATE_LIMITING_BUDGET, remaining_budget)
-
 
     @override_settings(
         NAUTOBOT_REST_RATE_LIMITING_MODE="enforce",
