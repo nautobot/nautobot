@@ -96,9 +96,18 @@ class ValidateDataBooleanDefaultTest(TestCase):
         cleaned_data = self.BooleanDefaultsJob.validate_data({"undeclared": True})
         self.assertTrue(cleaned_data["undeclared"])
 
-    def test_dryrun_is_never_defaulted_on(self):
-        """DryRunVar is excluded: dryrun can waive approval, so an omitted key must not enable it."""
-        self.assertFalse(self.BooleanDefaultsJob.validate_data({})["dryrun"])
+    def test_dryrun_is_excluded_from_the_fill(self):
+        """DryRunVar is excluded, dryrun being able to waive a Job's approval requirement.
+
+        Asserted against the fill rather than against `validate_data`'s output: `DryRunVar.__init__`
+        forces `default=False`, so including it would contribute `{"dryrun": False}` and clean to the
+        same False either way. The exclusion is only observable here.
+        """
+        job = self.BooleanDefaultsJob
+        defaults = job._omitted_boolean_var_defaults({}, job._get_vars())
+        self.assertNotIn("dryrun", defaults)
+        # ... and the fill is otherwise working, so that absence means something
+        self.assertIn("on_by_default", defaults)
 
 
 class JobTest(TestCase):

@@ -1,2 +1,1 @@
-Fixed the `ImportObjects` system Job not rolling back a failed import when `roll_back_if_error` was left unspecified, such as when run from the `nautobot-server import_objects` command.
-Fixed Job `BooleanVar` variables declared with `default=True` being received as `False` when omitted from a REST API job-run request.
+Fixed Job `BooleanVar` variables declared with `default=True` (such as `ImportObjects.roll_back_if_error`) being received as `False` when omitted from a REST API job-run request.

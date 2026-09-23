@@ -267,7 +267,7 @@ A file that declares no `model` — one you wrote yourself, say — needs the co
 
 Every column or key must be a field of that content type's REST API serializer, spelled exactly as an export writes it. Related objects may be given as a UUID or by natural key (`status__name`), and custom fields as `cf_<key>` columns. Anything unrecognized fails the import rather than being ignored, so that a mistyped field name is not silently dropped.
 
-Fields Nautobot generates rather than stores — `id`, `display`, `created`, `last_updated`, `object_type`, `natural_slug` and the like — are accepted and ignored, so a file exported from Nautobot re-imports without needing to be trimmed first.
+Fields Nautobot generates rather than stores — `display`, `object_type`, `natural_slug` and the like — are accepted and ignored, so a file exported from Nautobot re-imports without needing to be trimmed first.
 
 ### If a row fails
 

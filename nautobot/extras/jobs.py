@@ -740,8 +740,9 @@ class BaseJob:
         where "absent" still unambiguously means "unspecified" -- `as_form()` also binds UI POSTs and could
         not tell the two apart.
 
-        `DryRunVar` is excluded: its effective default is `job_model.dryrun_default`, and dryrun can waive a
-        job's approval requirement, so an omitted key must not be what turns it on.
+        `DryRunVar` is excluded defensively rather than of necessity: its `__init__` forces `default=False`,
+        so filling it in would change nothing today. Since dryrun can waive a Job's approval requirement,
+        an omitted key should not be able to turn it on even if that default later becomes settable.
         """
         return {
             name: var.default
