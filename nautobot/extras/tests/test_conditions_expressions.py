@@ -2,7 +2,7 @@
 
 from django.test import SimpleTestCase, tag
 
-from nautobot.extras.conditions.expressions import compile_condition, ConditionError
+from nautobot.extras.conditions.expressions import _environment, compile_condition, ConditionError
 
 
 @tag("unit")
@@ -37,3 +37,14 @@ class CompileConditionTest(SimpleTestCase):
             with self.assertRaises(ConditionError):
                 compile_condition("data.mtu >")
         self.assertEqual(compile_condition.cache_info().misses, misses_before + 2)
+
+    def test_a_source_too_deep_for_the_parser_is_a_condition_error(self):
+        """Jinja2 parses by recursive descent, and a short string can still exhaust the stack."""
+        for source in ("(" * 200 + "1" + ")" * 200, "1" + "+1" * 50000):
+            with self.subTest(length=len(source)):
+                with self.assertRaises(ConditionError):
+                    compile_condition(source)
+
+    def test_the_optimizer_stays_off(self):
+        """Turning it back on changes no result, which is exactly why the setting needs a test."""
+        self.assertFalse(_environment().optimized)

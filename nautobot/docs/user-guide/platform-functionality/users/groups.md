@@ -29,4 +29,4 @@ User Groups allow Nautobot administrators (users with the `is_staff` flag set on
 
 - Groups are also used in [Approval Workflow Stage Definitions](../approval-workflow.md#approvalworkflowstagedefinition) to control
 which users are eligible approvers for a given stage.
-- A user must belong to the specified approver group *and* have the required permissions in order to approve or deny workflow stages.
+- A user must belong to the specified approver group _and_ have the required permissions in order to approve or deny workflow stages.

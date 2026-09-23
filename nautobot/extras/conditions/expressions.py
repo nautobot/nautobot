@@ -39,9 +39,13 @@ def _environment():
     Filters, tests and globals are Nautobot's, so an expression sees what a webhook template sees.
     `ChainableUndefined` makes a missing value anywhere in a dotted lookup (`snapshots.postchange.status`
     on a delete) falsy rather than an error.
+
+    The optimizer is off: it evaluates literal arithmetic while compiling, so a short source could
+    allocate a great deal of memory just by being saved. Folding only pre-computes a subexpression, so
+    leaving it out changes nothing about what an expression evaluates to.
     """
     nautobot_environment = engines["jinja"].env
-    environment = ConditionEnvironment(undefined=ChainableUndefined)
+    environment = ConditionEnvironment(undefined=ChainableUndefined, optimized=False)
     environment.filters.update(nautobot_environment.filters)
     environment.tests.update(nautobot_environment.tests)
     environment.globals.update(nautobot_environment.globals)
@@ -62,10 +66,14 @@ def compile_condition(source):
         (callable): `compiled(**context)` evaluates the expression and returns its value.
 
     Raises:
-        ConditionError: If the source is not a valid Jinja2 expression. Failed compilations are not
-            cached, so a corrected source compiles fresh.
+        ConditionError: If the source is not a valid Jinja2 expression, or is too deeply nested for
+            the parser. Failed compilations are not cached, so a corrected source compiles fresh.
     """
     try:
         return _environment().compile_expression(source, undefined_to_none=False)
     except TemplateSyntaxError as error:
         raise ConditionError(f"Invalid condition expression: {error}") from error
+    except RecursionError as error:
+        # Jinja2 parses by recursive descent, so nesting or sheer length exhausts the stack on a source
+        # short enough to arrive in one request.
+        raise ConditionError("Condition expression is too long or too deeply nested to compile.") from error
