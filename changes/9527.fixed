@@ -1,2 +1,4 @@
 Fixed an exception when removing an invalid content-type from a LocationType where it had been added in error.
 Added missing validation on `LocationType.content_types.clear()`.
+Added missing validation on `VRF.devices.clear()`, `VRF.virtual_machines.clear(), `Device.vrfs.clear()`, and `VirtualMachine.vrfs.clear()`.
+Added missing validation on `VirtualDeviceContext.vrfs.remove()`, `VRF.virtual_device_contexts.remove()`, `VirtualDeviceContext.vrfs.clear()`, and `VRF.virtual_device_contexts.clear()`.
