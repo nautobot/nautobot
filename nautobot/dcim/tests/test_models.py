@@ -6,7 +6,7 @@ from constance.test import override_config
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import caches
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Model
 from django.test import TestCase
 from django.test.utils import override_settings
@@ -1429,19 +1429,32 @@ class LocationTypeTestCase(TestCase):
         location_type = LocationType.objects.get(name="Campus")
         device_ct = ContentType.objects.get_for_model(Device)
 
-        with self.assertRaises(ValidationError) as cm:
+        with self.assertRaisesRegex(ValidationError, "at least one device is associated"), transaction.atomic():
             location_type.content_types.remove(device_ct)
-        self.assertIn(
-            f"Cannot remove the content type {device_ct} as currently at least one device is associated to a location",
-            str(cm.exception),
-        )
+        with self.assertRaisesRegex(ValidationError, "at least one device is associated"), transaction.atomic():
+            device_ct.location_types.remove(location_type)
 
     def test_clearing_content_type(self):
         """Validation check to prevent clearing in-use content types from a LocationType."""
         location_type = LocationType.objects.get(name="Campus")
 
-        with self.assertRaisesRegex(ValidationError, "Cannot remove the content type"):
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the content type"), transaction.atomic():
             location_type.content_types.clear()
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the location type"), transaction.atomic():
+            ContentType.objects.get_for_model(Device).location_types.clear()
+
+    def test_clearing_content_type_handles_invalid_types(self):
+        location_type = LocationType.objects.create(name="wrong content types")
+
+        # Not a locatable model
+        location_type.content_types.add(ContentType.objects.get_for_model(Status))
+        # Not a resolvable model
+        location_type.content_types.add(ContentType.objects.create(app_label="dcim", model="nosuchmodel"))
+        # Locatable but lacking an actual `location` database field (it uses LocationToLocationsQuerySetMixin)
+        location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+
+        # Should succeed despite the above
+        location_type.content_types.clear()
 
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
