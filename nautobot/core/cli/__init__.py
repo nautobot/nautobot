@@ -238,7 +238,7 @@ def _split_cli_args(argv):
     """
     Split argv into (top_level_args, subcommand_and_args).
 
-    Top-level options for nautobot-server (such as -c/--config-path and --version)
+    Top-level options for nautobot-server (such as -c/--config/--config-path and --version)
     must appear before the subcommand. Any options appearing after the subcommand
     belong to the subcommand (e.g., `nautobot-server shell -c "print(1)"`).
     """
@@ -246,7 +246,7 @@ def _split_cli_args(argv):
     i = 0
     while i < len(argv):
         arg = argv[i]
-        if arg in ("-c", "--config-path"):
+        if arg in ("-c", "--config", "--config-path"):
             top_level_args.append(arg)
             if i + 1 < len(argv):
                 top_level_args.append(argv[i + 1])
@@ -255,7 +255,7 @@ def _split_cli_args(argv):
             else:
                 i += 1
                 continue
-        elif arg.startswith(("-c", "--config-path=")):
+        elif arg.startswith(("-c", "--config=", "--config-path=")):
             top_level_args.append(arg)
             i += 1
             continue
@@ -284,7 +284,12 @@ def main():
         formatter_class=_VerboseHelpFormatter,
     )
     parser.add_argument(
-        "-c", "--config-path", default=default_config_path, help="Path to the Nautobot configuration file"
+        "-c",
+        "--config",
+        "--config-path",
+        dest="config_path",
+        default=default_config_path,
+        help="Path to the Nautobot configuration file",
     )
     parser.add_argument("--version", action=_VersionAction, help="Show version numbers and exit")
 

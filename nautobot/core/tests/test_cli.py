@@ -208,6 +208,16 @@ class TestCliArgParsing(TestCase):
                 ["--config-path=test.py"],
                 ["shell", "-c", "print(1)"],
             ),
+            (
+                ["--config=nautobot/core/tests/nautobot_config.py", "makemigrations", "--dry-run", "--check"],
+                ["--config=nautobot/core/tests/nautobot_config.py"],
+                ["makemigrations", "--dry-run", "--check"],
+            ),
+            (
+                ["--config", "test.py", "makemigrations"],
+                ["--config", "test.py"],
+                ["makemigrations"],
+            ),
             (["init"], [], ["init"]),
             (["--config-path", "test.py", "init"], ["--config-path", "test.py"], ["init"]),
             (["--version"], ["--version"], []),
