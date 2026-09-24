@@ -238,7 +238,12 @@ class NavMenuTestCase(TestCase):
         self.assertIn("Circuits", registry["nav_menu"]["tabs"])
         circuits_groups = registry["nav_menu"]["tabs"]["Circuits"]["groups"]
         self.assertIn("Circuits", circuits_groups)
-        item_names = [item["name"] for item in circuits_groups["Circuits"]["items"].values()]
-        expected_items = ["Circuits", "Circuit Terminations", "Circuit Types", "Providers", "Provider Networks"]
-        for expected in expected_items:
-            self.assertIn(expected, item_names)
+        self.assertIn("Providers", circuits_groups)
+
+        circuit_items = [item["name"] for item in circuits_groups["Circuits"]["items"].values()]
+        for expected in ["Circuits", "Circuit Terminations", "Circuit Types"]:
+            self.assertIn(expected, circuit_items)
+
+        provider_items = [item["name"] for item in circuits_groups["Providers"]["items"].values()]
+        for expected in ["Providers", "Provider Networks"]:
+            self.assertIn(expected, provider_items)
