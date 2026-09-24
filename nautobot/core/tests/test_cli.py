@@ -218,6 +218,16 @@ class TestCliArgParsing(TestCase):
                 ["--config", "test.py"],
                 ["makemigrations"],
             ),
+            (
+                ["test", "nautobot", "--config=nautobot/core/tests/nautobot_config.py", "--parallel"],
+                ["--config=nautobot/core/tests/nautobot_config.py"],
+                ["test", "nautobot", "--parallel"],
+            ),
+            (
+                ["test", "nautobot", "--config", "nautobot/core/tests/nautobot_config.py", "--parallel"],
+                ["--config", "nautobot/core/tests/nautobot_config.py"],
+                ["test", "nautobot", "--parallel"],
+            ),
             (["init"], [], ["init"]),
             (["--config-path", "test.py", "init"], ["--config-path", "test.py"], ["init"]),
             (["--version"], ["--version"], []),

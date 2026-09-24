@@ -238,35 +238,61 @@ def _split_cli_args(argv):
     """
     Split argv into (top_level_args, subcommand_and_args).
 
-    Top-level options for nautobot-server (such as -c/--config/--config-path and --version)
-    must appear before the subcommand. Any options appearing after the subcommand
-    belong to the subcommand (e.g., `nautobot-server shell -c "print(1)"`).
+    Top-level options for nautobot-server:
+    - `-c` / `-c<val>` is only treated as config_path if it appears BEFORE the subcommand.
+      Any `-c` appearing after the subcommand belongs to the subcommand (e.g., `nautobot-server shell -c "..."`).
+    - `--config`, `--config=...`, `--config-path`, `--config-path=...` are always treated as
+      config_path, even if specified after the subcommand (as tasks.py does with `test ... --config=...`).
+    - `--version`, `-h`, `--help` are top-level options before the subcommand.
     """
     top_level_args = []
+    subcommand_and_args = []
+    subcommand_found = False
     i = 0
     while i < len(argv):
         arg = argv[i]
-        if arg in ("-c", "--config", "--config-path"):
+        if not subcommand_found:
+            if arg in ("-c", "--config", "--config-path"):
+                top_level_args.append(arg)
+                if i + 1 < len(argv):
+                    top_level_args.append(argv[i + 1])
+                    i += 2
+                    continue
+                i += 1
+                continue
+            if arg.startswith(("-c", "--config=", "--config-path=")):
+                top_level_args.append(arg)
+                i += 1
+                continue
+            if arg in ("--version", "-h", "--help"):
+                top_level_args.append(arg)
+                i += 1
+                continue
+            # First non-option is the subcommand
+            subcommand_found = True
+            subcommand_and_args.append(arg)
+            i += 1
+            continue
+
+        # After the subcommand has been identified:
+        # Long config options (--config, --config-path) still configure nautobot-server
+        if arg in ("--config", "--config-path"):
             top_level_args.append(arg)
             if i + 1 < len(argv):
                 top_level_args.append(argv[i + 1])
                 i += 2
                 continue
-            else:
-                i += 1
-                continue
-        elif arg.startswith(("-c", "--config=", "--config-path=")):
+            i += 1
+            continue
+        if arg.startswith(("--config=", "--config-path=")):
             top_level_args.append(arg)
             i += 1
             continue
-        elif arg in ("--version", "-h", "--help"):
-            top_level_args.append(arg)
-            i += 1
-            continue
-        else:
-            break
 
-    subcommand_and_args = argv[i:]
+        # Everything else (including -c) belongs to the subcommand
+        subcommand_and_args.append(arg)
+        i += 1
+
     return top_level_args, subcommand_and_args
 
 
