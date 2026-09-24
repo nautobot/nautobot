@@ -106,6 +106,48 @@ class CheckFilterForDisplayTest(TestCase):
                 expected_output,
             )
 
+        with self.subTest("Test null choice value in filter"):
+            expected_output = {
+                "name": "platform",
+                "display": "Platform",
+                "values": [{"name": "null", "display": "None"}],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(device_filter_set_filters, "platform", ["null"]),
+                expected_output,
+            )
+
+        with self.subTest("Test None value in filter"):
+            expected_output = {
+                "name": "platform",
+                "display": "Platform",
+                "values": [{"name": "null", "display": "None"}],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(device_filter_set_filters, "platform", [None]),
+                expected_output,
+            )
+
+        with self.subTest("Test combined UUID and null in filter"):
+            example_obj = DeviceRedundancyGroup.objects.first()
+            expected_output = {
+                "name": "device_redundancy_group",
+                "display": "Device Redundancy Group (name or ID)",
+                "values": [
+                    {"name": str(example_obj.pk), "display": str(example_obj)},
+                    {"name": "null", "display": "None"},
+                ],
+            }
+
+            self.assertEqual(
+                check_filter_for_display(
+                    device_filter_set_filters, "device_redundancy_group", [str(example_obj.pk), "null"]
+                ),
+                expected_output,
+            )
+
         # TODO(glenn): We need some filters that *aren't* getting updated to the new pattern - maybe in example_app?
         # with self.subTest("Test get value display (also legacy filter ModelMultipleChoiceFilter)"):
         #     example_obj = DeviceType.objects.first()
