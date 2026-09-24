@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.apps.testing import FilterTestCases
 from nautobot.extras.models import Status
+from nautobot.ipam.models import IPAddress
 from nautobot.vpn import choices, factory as vpn_factory, filters, models
 
 
@@ -155,13 +156,25 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
         ("device", "device__name"),
         ("source_interface", "source_interface__id"),
         ("source_interface", "source_interface__name"),
-        ("source_ipaddress", "source_ipaddress__id"),
         ("source_fqdn",),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__id"),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__name"),
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__id"),
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__name"),
     )
+
+    def test_source_ipaddress(self):
+        endpoint = models.VPNTunnelEndpoint.objects.filter(source_interface__isnull=False).first()
+        ip = IPAddress.objects.filter(interface_assignments__isnull=True).last()
+        ip.interfaces.add(endpoint.source_interface)
+        endpoint.source_ipaddress = ip
+        endpoint.save()
+
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"source_ipaddress": [str(ip.pk)]}, self.queryset).qs,
+            self.queryset.filter(source_ipaddress=ip),
+            ordered=False,
+        )
 
 
 class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):
