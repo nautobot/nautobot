@@ -3,7 +3,7 @@ import logging
 import threading
 
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ValidationError
+from django.core.exceptions import FieldDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models.signals import m2m_changed, post_delete, post_save, pre_delete
 from django.dispatch import receiver
@@ -458,13 +458,31 @@ def content_type_changed(instance, action, **kwargs):
     associated with the locations.
     """
 
-    if action != "pre_remove":
+    if action == "pre_remove":
+        removed_content_types = ContentType.objects.filter(pk__in=kwargs.get("pk_set", []))
+    elif action == "pre_clear":
+        removed_content_types = instance.content_types.all()
+    else:
         return
 
-    removed_content_types = ContentType.objects.filter(pk__in=kwargs.get("pk_set", []))
+    logger = logging.getLogger(__name__ + ".LocationType")
 
     for content_type in removed_content_types:
         model_class = content_type.model_class()
+
+        if model_class is None:
+            logger.warning(
+                "Removing inactive ContentType %s from LocationType %s - unable to validate the removal",
+                content_type,
+                instance,
+            )
+            continue
+
+        try:
+            model_class._meta.get_field("location")
+        except FieldDoesNotExist:
+            # not a locatable model - must have been added in error, okay to remove
+            continue
 
         if model_class.objects.filter(location__location_type=instance).exists():
             raise ValidationError(

@@ -1,0 +1,2 @@
+Fixed an exception when removing an invalid content-type from a LocationType where it had been added in error.
+Added missing validation on `LocationType.content_types.clear()`.

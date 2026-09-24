@@ -1436,6 +1436,13 @@ class LocationTypeTestCase(TestCase):
             str(cm.exception),
         )
 
+    def test_clearing_content_type(self):
+        """Validation check to prevent clearing in-use content types from a LocationType."""
+        location_type = LocationType.objects.get(name="Campus")
+
+        with self.assertRaisesRegex(ValidationError, "Cannot remove the content type"):
+            location_type.content_types.clear()
+
 
 class LocationTestCase(ModelTestCases.BaseModelTestCase):
     model = Location
@@ -1949,19 +1956,20 @@ class DeviceTestCase(ModelTestCases.BaseModelTestCase):
         device2.save()
 
     def test_device_location_content_type_not_allowed(self):
-        self.location_type_2.content_types.clear()
+        location_type = LocationType.objects.create(name="Sub-floor", parent=self.location_type_2)
+        location = Location.objects.create(
+            name="Sub-floor Leaf", status=self.device_status, location_type=location_type, parent=self.location_2
+        )
         device = Device(
             name="Device 3",
             device_type=self.device_type,
             role=self.device_role,
             status=self.device_status,
-            location=self.location_2,
+            location=location,
         )
         with self.assertRaises(ValidationError) as cm:
             device.validated_save()
-        self.assertIn(
-            f'Devices may not associate to locations of type "{self.location_type_2.name}"', str(cm.exception)
-        )
+        self.assertIn(f'Devices may not associate to locations of type "{location_type.name}"', str(cm.exception))
 
     def test_device_cluster_location_mismatch(self):
         with self.subTest("Invalid cluster assignment at creation time"):
