@@ -76,7 +76,6 @@ def created_device(create_object, status_for):
         "dcim/device-types",
         model=f"{unique}-model",
         manufacturer=manufacturer["id"],
-        part_number=f"{unique}-part",
     )
     role = create_object("extras/roles", name=f"{unique}-role", content_types=["dcim.device"])
     status = status_for("dcim.device")
