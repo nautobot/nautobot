@@ -213,6 +213,18 @@ class VPNPhase2PolicyAPITest(APIViewTestCases.APIViewTestCase):
 class VPNProfilePhase1PolicyAssignmentAPITest(APIViewTestCases.APIViewTestCase):
     """VPNProfilePhase1PolicyAssignment API tests."""
 
+    # Removes 'crypt' because of encryption_algorithm field on referenced policy.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
     model = models.VPNProfilePhase1PolicyAssignment
 
     @classmethod
@@ -264,6 +276,18 @@ class VPNProfilePhase1PolicyAssignmentAPITest(APIViewTestCases.APIViewTestCase):
 class VPNProfilePhase2PolicyAssignmentAPITest(APIViewTestCases.APIViewTestCase):
     """VPNProfilePhase2PolicyAssignment API tests."""
 
+    # Removes 'crypt' because of encryption_algorithm field on referenced policy.
+    VERBOTEN_STRINGS = (
+        "password",
+        "argon2",
+        "bcrypt",
+        "md5",
+        "pbkdf2",
+        "scrypt",
+        "sha1",
+        "sha256",
+        "sha512",
+    )
     model = models.VPNProfilePhase2PolicyAssignment
 
     @classmethod
