@@ -2,7 +2,6 @@
 
 from nautobot.apps.filters import (
     BaseFilterSet,
-    ModelMultipleChoiceFilter,
     MultiValueCharFilter,
     NaturalKeyOrPKMultipleChoiceFilter,
     NautobotFilterSet,
