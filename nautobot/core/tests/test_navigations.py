@@ -232,3 +232,13 @@ class NavMenuTestCase(TestCase):
 
             # Assert that the menu item for the requested URL is active
             self.assertTrue(nav["tabs"]["Devices"]["groups"]["Devices"]["items"]["/dcim/devices/"]["is_active"])
+
+    def test_circuits_navigation_items_registered(self):
+        """Verify that all Circuits navigation menu items are properly registered in nav_menu registry (Fix #9418)."""
+        self.assertIn("Circuits", registry["nav_menu"]["tabs"])
+        circuits_groups = registry["nav_menu"]["tabs"]["Circuits"]["groups"]
+        self.assertIn("Circuits", circuits_groups)
+        item_names = [item["name"] for item in circuits_groups["Circuits"]["items"].values()]
+        expected_items = ["Circuits", "Circuit Terminations", "Circuit Types", "Providers", "Provider Networks"]
+        for expected in expected_items:
+            self.assertIn(expected, item_names)
