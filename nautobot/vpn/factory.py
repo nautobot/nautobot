@@ -355,10 +355,6 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
         if self.has_source_interface and self.source_interface and self.has_source_ipaddress:
             if self.source_interface.ip_addresses.exists():
                 return factory.random.randgen.choice(self.source_interface.ip_addresses.all())
-            available_ip = IPAddress.objects.filter(interfaces__isnull=True).first()
-            if available_ip:
-                self.source_interface.add_ip_addresses(available_ip)
-                return available_ip
         return None
 
     @factory.lazy_attribute
