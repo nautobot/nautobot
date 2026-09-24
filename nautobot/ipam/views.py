@@ -1570,6 +1570,8 @@ class VLANGroupUIViewSet(NautobotUIViewSet):
                 context_table_key="vlan_table",
                 related_field_name="vlan_group",
                 enable_bulk_actions=True,
+                include_paginator=True,
+                enable_related_link=False,
                 add_button_route=None,
                 form_id="vlan_form",
                 footer_buttons=[
