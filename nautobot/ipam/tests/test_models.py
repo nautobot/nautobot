@@ -3092,7 +3092,7 @@ class VRFDeviceAssignmentSignalTest(TestCase):
             vrf=vrf,
         )
         intf.validated_save()
-        intf.virtual_device_contexts.add(vdc)
+        intf.virtual_device_contexts.add(vdc)  # pylint: disable=no-member
         return intf
 
     def test_cannot_remove_vrf_from_device_with_interface(self):
