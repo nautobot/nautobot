@@ -13,7 +13,7 @@ from nautobot.core.factory import (
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Interface
 from nautobot.extras.models import DynamicGroup, Role, SecretsGroup, Status
-from nautobot.ipam.models import Prefix, VLAN
+from nautobot.ipam.models import IPAddress, Prefix, VLAN
 from nautobot.tenancy.models import Tenant
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 from nautobot.vpn import choices, models
@@ -337,7 +337,7 @@ class VPNTerminationFactory(PrimaryModelFactory):
 class VPNTunnelEndpointFactory(PrimaryModelFactory):
     class Meta:
         model = models.VPNTunnelEndpoint
-        exclude = ("has_source_interface", "has_profile", "has_role", "has_tenant")
+        exclude = ("has_source_interface", "has_source_ipaddress", "has_profile", "has_role", "has_tenant")
 
     has_source_interface = NautobotBoolIterator()
     source_interface = factory.Maybe(
@@ -348,6 +348,18 @@ class VPNTunnelEndpointFactory(PrimaryModelFactory):
         None,
     )
     source_fqdn = factory.Maybe("has_source_interface", "", factory.Faker("hostname"))
+    has_source_ipaddress = NautobotBoolIterator()
+
+    @factory.lazy_attribute
+    def source_ipaddress(self):
+        if self.has_source_interface and self.source_interface and self.has_source_ipaddress:
+            if self.source_interface.ip_addresses.exists():
+                return factory.random.randgen.choice(self.source_interface.ip_addresses.all())
+            available_ip = IPAddress.objects.filter(interfaces__isnull=True).first()
+            if available_ip:
+                self.source_interface.add_ip_addresses(available_ip)
+                return available_ip
+        return None
 
     @factory.lazy_attribute
     def tunnel_interface(self):
