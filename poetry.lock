@@ -6317,14 +6317,14 @@ dev = ["coverage (>=3.6)", "django-stubs (==6.0.7)", "django-stubs-ext (==6.0.7)
 
 [[package]]
 name = "social-auth-core"
-version = "5.1.0"
+version = "5.1.1"
 description = "Python social authentication made simple."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "social_auth_core-5.1.0-py3-none-any.whl", hash = "sha256:7a622ceeab857c8310e358b4ad7727e410b735052ab90cc408835c16304b18e8"},
-    {file = "social_auth_core-5.1.0.tar.gz", hash = "sha256:1e8b678473fef38a972d3e4c5f6fa898558abe7ba46bd56b8429cc484483bf7b"},
+    {file = "social_auth_core-5.1.1-py3-none-any.whl", hash = "sha256:fa320931bcfdb0d65f9d01c46f9fbf0c273b72184712ccb9ecdef8de71c75a24"},
+    {file = "social_auth_core-5.1.1.tar.gz", hash = "sha256:a1763474d8bb7300effc7a934bbae74a8eb24d9c968e0d50fcddc8a38cc13a39"},
 ]
 
 [package.dependencies]
@@ -6340,8 +6340,8 @@ requests-oauthlib = ">=2.0.0"
 [package.extras]
 all = ["social-auth-core[azuread]", "social-auth-core[google-onetap]", "social-auth-core[saml]", "social-auth-core[shopify]"]
 allpy3 = ["social-auth-core[all]"]
-dev = ["coverage (==7.15.3)", "flake8 (==7.3.0)", "google-auth-stubs (==0.3.0)", "mypy (==2.3.0)", "pyright (==1.1.411)", "pytest (==9.1.1)", "pytest-cov (==7.1.0)", "pytest-github-actions-annotate-failures (==0.4.2)", "pytest-profiling (==1.8.1)", "pytest-xdist (==3.8.0)", "responses (==0.26.2)", "ty (==0.0.69)", "types-defusedxml (==0.7.0.20260504)", "types-oauthlib (==3.3.0.20260724)", "types-requests (==2.33.0.20260712)", "types-requests-oauthlib (==2.0.0.20260610)"]
-google-onetap = ["google-auth (>=2.40.0,<2.57)"]
+dev = ["coverage (==7.16.1)", "flake8 (==7.3.0)", "google-auth-stubs (==0.3.0)", "mypy (==2.3.1)", "pyright (==1.1.414)", "pytest (==9.1.1)", "pytest-cov (==7.1.0)", "pytest-github-actions-annotate-failures (==0.4.2)", "pytest-profiling (==1.8.1)", "pytest-xdist (==3.8.0)", "responses (==0.26.3)", "ty (==0.0.82)", "types-defusedxml (==0.7.0.20260504)", "types-lxml (==2026.2.16)", "types-oauthlib (==3.3.0.20260724)", "types-requests (==2.33.0.20260906)", "types-requests-oauthlib (==2.0.0.20260907)"]
+google-onetap = ["google-auth (>=2.40.0,<2.59)"]
 saml = ["python3-saml (>=1.16.0)"]
 shopify = ["ShopifyAPI"]
 
@@ -7342,4 +7342,4 @@ sso = ["social-auth-core"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.15"
-content-hash = "f2a28ab4ebfe56660402bc7647b616608d2aeb4b0fa81c96a5dda0f971281d50"
+content-hash = "b7ec720067122a87440db0e8b2d42ff368de2fa5ca3891b3b5401512e40eb4f1"
