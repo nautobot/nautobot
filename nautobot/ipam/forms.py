@@ -665,6 +665,15 @@ class IPAddressForm(IPAddressFormMixin, ReturnURLForm):
 
 
 class IPAddressBulkCreateForm(BootstrapMixin, forms.Form):
+    """
+    Pattern form for bulk-creating IPAddresses.
+
+    The `pattern` field expands into individual addresses (e.g. `192.0.2.[1-5]/24`); the
+    `IPAddressUIViewSet.bulk_add` action maps each expanded value onto the `address` field of a
+    per-instance `IPAddressBulkAddForm` (equivalent to the legacy
+    `IPAddressBulkCreateView.pattern_target = "address"`).
+    """
+
     pattern = ExpandableIPAddressField(label="Address pattern")
 
 
