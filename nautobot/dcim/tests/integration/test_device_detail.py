@@ -71,17 +71,13 @@ class DeviceDetailTestCase:
 
     @pytest.mark.behavioral
     def test_deferred_power_utilization_panel(self, auth_page, base_url, created_pdu):
-        """The Power Utilization panel arrives in its own request, after a placeholder.
-
-        Failing that request first proves the body is not in the document the server
-        sends: the placeholder stays and the panel never appears. Allowing it then shows
-        the body arriving, listing the device's own power port.
-        """
+        """The Power Utilization panel arrives in its own request, after a placeholder."""
         detail = DeviceDetailPage(auth_page, base_url)
         device_id = created_pdu["device"]["id"]
 
         detail.fail_deferred_components()
         detail.navigate(device_id)
+        # The Power Utilization panel is the only deferred component on this page.
         detail.expect_deferred_placeholder_count(1)
         detail.expect_no_panel("Power Utilization")
 

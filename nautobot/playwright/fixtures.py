@@ -121,8 +121,8 @@ def api(playwright, base_url):
 
 
 @pytest.fixture(scope="session")
-def status_id_for(api):
-    """Callable returning the id of a valid Status for a content type (e.g. `dcim.location`).
+def status_for(api):
+    """Callable returning a Status assignable to *content_type* (e.g. `dcim.location`).
 
     Nearly every `created_*` fixture needs a status; results are cached per content
     type for the session.
@@ -137,7 +137,7 @@ def status_id_for(api):
             results = response.json()["results"]
             if not results:
                 pytest.fail(f"No status exists for content type {content_type}")
-            cache[content_type] = results[0]["id"]
+            cache[content_type] = results[0]
         return cache[content_type]
 
     return _lookup

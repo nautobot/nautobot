@@ -19,39 +19,21 @@ from nautobot.playwright.base_page import BasePage
 
 
 class DetailPage(BasePage):
-    """Shared detail-view behavior: navigation, the heading, the Edit button, and panels.
-
-    `VERBOSE_NAME` names the model, which core uses to label the Edit button
-    "Edit <verbose name>".
-
-    The selectors, which are not obvious from their values:
-
-    - `_HEADING` is the heading's own span, not the surrounding h1. The h1 also holds the
-      copy-to-clipboard button, whose label would come back as part of the object's name.
-    - `_PANEL_TITLE` is the single `strong` in a panel header, holding that panel's title.
-      Titles are matched without regard to case: a panel's own label is uppercased when it
-      is rendered ("MANAGEMENT"), while a table panel's title keeps the case it was
-      declared with ("Assigned VRFs").
-    - `_ENCLOSING_CARD` walks from a panel title to the card that owns it. Its predicate
-      matches a whole class name because a `contains` match stops at the `card-header` in
-      between and returns the header.
-    - `_PLACEHOLDER_SPINNER` and `_DEFERRED_COMPONENT_REQUEST` are the two halves of
-      deferred rendering. A component with `deferred_render` set ships a placeholder card
-      with a spinner in its body, then fetches its real body with a second request to the
-      same URL carrying the component's id. The spinner lives inside the placeholder, so
-      it is gone once that body has swapped in. Count it by presence rather than
-      visibility, since htmx keeps `.htmx-indicator` transparent except while its own
-      request is in flight.
-    """
+    """Shared detail-view behavior: navigation, the heading, the Edit button, and panels."""
 
     DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
-    VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device"
+    VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device". The Edit button reads "Edit <this>".
 
+    # The span inside the h1. Reading the h1 appends the copy button's label to the name.
     _HEADING = "#page-title #copy_title"
     _EDIT_BUTTON = "#edit-button"
+    # One per panel header. A panel's own label renders uppercased ("MANAGEMENT"), a table's title does not.
     _PANEL_TITLE = ".card > .card-header strong"
+    # Matches a whole class name. A `contains` match would stop at the `card-header`.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
+    # Gone once the deferred body swaps in. Count it rather than check visibility: htmx keeps it transparent.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
+    # The placeholder's follow-up request.
     _DEFERRED_COMPONENT_REQUEST = re.compile(r"[?&]component_id=")
 
     def __init__(self, page, base_url):
@@ -103,7 +85,8 @@ class DetailPage(BasePage):
 
     def expect_panel_field(self, title, key, value):
         """Assert (auto-retrying) that the row keyed *key* in panel *title* contains *value*."""
-        row = self.panel(title).locator("tr").filter(has=self.page.locator(f"td:first-child:text-is({key!r})"))
+        key_cell = self.page.locator("td:first-child").filter(has_text=re.compile(rf"^\s*{re.escape(key)}\s*$"))
+        row = self.panel(title).locator("tr").filter(has=key_cell)
         expect(row.locator("td").nth(1)).to_contain_text(value)
 
     # -------------------------------------------------------------------------
