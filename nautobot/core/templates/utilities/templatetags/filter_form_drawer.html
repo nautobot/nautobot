@@ -200,11 +200,11 @@
                             ...[...defaultFilterFormSearchParams].filter(([, value]) => value !== ''),
                             ...[...dynamicFilterFormSearchParams].filter(
                                 ([property, value]) =>
-                                    value !== '' && !defaultFilterFormSearchParams.has(property, value),
+                                value !== '' && !defaultFilterFormSearchParams.has(property, value),
                             ),
                             ...[...searchParams].filter(
                                 ([property]) =>
-                                    NON_FILTER_PARAMS.includes(property) && property !== 'all_filters_removed',
+                                NON_FILTER_PARAMS.includes(property) && property !== 'all_filters_removed',
                             ),
                         ].filter(([property, value]) => {
                             const key = `${property}=${value}`;
