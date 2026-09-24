@@ -234,6 +234,42 @@ def get_config_path():
     )
 
 
+def _split_cli_args(argv):
+    """
+    Split argv into (top_level_args, subcommand_and_args).
+
+    Top-level options for nautobot-server (such as -c/--config-path and --version)
+    must appear before the subcommand. Any options appearing after the subcommand
+    belong to the subcommand (e.g., `nautobot-server shell -c "print(1)"`).
+    """
+    top_level_args = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg in ("-c", "--config-path"):
+            top_level_args.append(arg)
+            if i + 1 < len(argv):
+                top_level_args.append(argv[i + 1])
+                i += 2
+                continue
+            else:
+                i += 1
+                continue
+        elif arg.startswith(("-c", "--config-path=")):
+            top_level_args.append(arg)
+            i += 1
+            continue
+        elif arg in ("--version", "-h", "--help"):
+            top_level_args.append(arg)
+            i += 1
+            continue
+        else:
+            break
+
+    subcommand_and_args = argv[i:]
+    return top_level_args, subcommand_and_args
+
+
 def main():
     """Run administrative tasks."""
     # Point Django to our 'nautobot_config' pseudo-module that we'll load from the provided config path
@@ -253,7 +289,8 @@ def main():
     parser.add_argument("--version", action=_VersionAction, help="Show version numbers and exit")
 
     # Parse out the `--config` argument here and capture the rest of the CLI args
-    args, unparsed_args = parser.parse_known_args()
+    top_level_args, unparsed_args = _split_cli_args(sys.argv[1:])
+    args, _ = parser.parse_known_args(top_level_args)
 
     # `nautobot-server init` needs to be handled here, rather than as a Django management subcommand,
     # because Django commands need the settings to already exist and be valid, which we don't have yet at this point!
