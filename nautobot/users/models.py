@@ -346,11 +346,10 @@ class ObjectPermission(BaseModel, ChangeLoggedModel):
     )
 
     documentation_static_path = "docs/user-guide/platform-functionality/users/objectpermission.html"
-    s_metadata_associable_model = False
+    is_metadata_associable_model = False
 
     class Meta:
         ordering = ["name"]
-
 
     def __str__(self):
         return self.name
