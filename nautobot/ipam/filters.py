@@ -1,4 +1,3 @@
-import contextlib
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -18,11 +17,11 @@ from nautobot.core.filters import (
     SearchFilter,
     TreeNodeMultipleChoiceFilter,
 )
-from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.filters import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.ipam import choices, formfields
+from nautobot.ipam.validators import ip_address_list_validator
 from nautobot.tenancy.filters.mixins import TenancyModelFilterSetMixin
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
@@ -86,8 +85,21 @@ class PrefixFilter(NaturalKeyOrPKMultipleChoiceFilter):
             return {self.field_name: v}
         except (AttributeError, TypeError, ValueError):
             # It's a prefix string
-            prefixes_queryset = Prefix.objects.net_equals(v)
+            try:
+                prefixes_queryset = Prefix.objects.net_equals(v)
+            except (netaddr.AddrFormatError, ValueError) as error:
+                # DynamicModelChoiceMixin also calls this before form cleaning to populate widget choices.
+                raise ValidationError("Enter a valid IPv4 or IPv6 prefix.", code="invalid") from error
             return {f"{self.field_name}__in": prefixes_queryset.values_list("pk", flat=True)}
+
+
+class MultiValueIPNetworkFilter(MultiValueCharFilter):
+    """Supply network strings to filter methods, resolving Prefix UUIDs to network values.
+
+    Literal networks need not exist in the database. Use PrefixFilter to select related Prefix objects instead.
+    """
+
+    field_class = formfields.MultiValueIPNetworkFormField
 
 
 class NamespaceFilterSet(NautobotFilterSet):
@@ -258,19 +270,19 @@ class PrefixFilterSet(
     RoleModelFilterSetMixin,
 ):
     parent = PrefixFilter()
-    prefix = MultiValueCharFilter(
+    prefix = MultiValueIPNetworkFilter(
         method="filter_prefix",
         label="Prefix",
     )
-    within = MultiValueCharFilter(
+    within = MultiValueIPNetworkFilter(
         method="search_within",
         label="Within prefix",
     )
-    within_include = MultiValueCharFilter(
+    within_include = MultiValueIPNetworkFilter(
         method="search_within_include",
         label="Within and including prefix",
     )
-    contains = MultiValueCharFilter(
+    contains = MultiValueIPNetworkFilter(
         method="search_contains",
         label="Prefixes which contain this prefix or IP",
     )
@@ -339,48 +351,25 @@ class PrefixFilterSet(
         model = Prefix
         fields = ["date_allocated", "id", "prefix_length", "tags"]
 
-    def _strip_values(self, values):
-        result = []
-        for value in values:
-            value = value.strip()
-            if is_uuid(value):
-                result.append(Prefix.objects.get(pk=value).prefix)
-            elif value:
-                result.append(value)
-        return result
-
     def filter_prefix(self, queryset, name, value):
-        prefixes = self._strip_values(value)
-        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-            return queryset.net_equals(*prefixes)
-        return queryset.none()
+        return queryset.net_equals(*value)
 
     def search_within(self, queryset, name, value):
-        prefixes = self._strip_values(value)
-        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-            return queryset.net_contained(*prefixes)
-        return queryset.none()
+        return queryset.net_contained(*value)
 
     def search_within_include(self, queryset, name, value):
-        prefixes = self._strip_values(value)
-        with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-            return queryset.net_contained_or_equal(*prefixes)
-        return queryset.none()
+        return queryset.net_contained_or_equal(*value)
 
     def search_contains(self, queryset, name, value):
         prefixes_queryset = queryset.none()
-        values = self._strip_values(value)
+        if prefixes := [prefix for prefix in value if "/" in prefix]:
+            prefixes_queryset |= queryset.net_contains_or_equals(*prefixes)
 
-        if prefixes := [prefix for prefix in values if "/" in prefix]:
-            with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-                prefixes_queryset |= queryset.net_contains_or_equals(*prefixes)
-
-        if prefixes_without_length := [prefix for prefix in values if "/" not in prefix]:
+        if prefixes_without_length := [prefix for prefix in value if "/" not in prefix]:
             query = Q()
             for _prefix in prefixes_without_length:
-                with contextlib.suppress(netaddr.AddrFormatError, ValueError):
-                    prefix = netaddr.IPAddress(_prefix)
-                    query |= Q(network__lte=bytes(prefix), broadcast__gte=bytes(prefix))
+                prefix = netaddr.IPAddress(_prefix)
+                query |= Q(network__lte=bytes(prefix), broadcast__gte=bytes(prefix))
             prefixes_queryset |= queryset.filter(query)
         return prefixes_queryset
 
@@ -431,13 +420,14 @@ class IPAddressFilterSet(
         queryset=Prefix.objects.all(),
         label="Parent prefix",
     )
-    prefix = MultiValueCharFilter(
+    prefix = MultiValueIPNetworkFilter(
         method="search_by_prefix",
         label="Contained in prefix",
     )
     address = MultiValueCharFilter(
         method="filter_address",
         label="Address",
+        validators=[ip_address_list_validator],
     )
     vrfs = NaturalKeyOrPKMultipleChoiceFilter(
         field_name="parent__vrfs",
@@ -526,28 +516,11 @@ class IPAddressFilterSet(
         params = self.generate_query__has_interface_assignments(value)
         return queryset.filter(params)
 
-    def _strip_prefix_values(self, values):
-        """Normalize inputs: strip whitespace + resolve UUIDs to Prefix.prefix."""
-        prefixes = []
-        for prefix in values:
-            prefix = prefix.strip()
-            if not prefix:
-                continue
-            if is_uuid(prefix):
-                prefixes.append(Prefix.objects.get(pk=prefix).prefix)
-            else:
-                prefixes.append(prefix)
-        return prefixes
-
     def search_by_prefix(self, queryset, name, value):
-        prefixes = self._strip_prefix_values(value)
-        return queryset.net_host_contained(*prefixes)
+        return queryset.net_host_contained(*value)
 
     def filter_address(self, queryset, name, value):
-        try:
-            return queryset.net_in(value)
-        except ValidationError:
-            return queryset.none()
+        return queryset.net_in(value)
 
     def generate_query_filter_present_in_vrf(self, value):
         if isinstance(value, (str, uuid.UUID)):
