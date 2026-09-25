@@ -411,45 +411,6 @@ class DirectiveRowTests(SimpleTestCase):
         self.assertEqual(lines[1], "name,description")
 
 
-class ImportDocumentTests(SimpleTestCase):
-    """`build_import_document` (writer) and `unwrap_document` (reader) share one wire format."""
-
-    def test_core_document__build(self):
-        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
-        self.assertEqual(list(doc.keys()), ["nautobot_import_version", "model", "match_fields", "records"])
-        self.assertEqual(doc["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
-        self.assertEqual(doc["model"], "dcim.manufacturer")
-        self.assertEqual(doc["match_fields"], ["name"])
-        self.assertEqual(doc["records"], [{"name": "Cisco"}])
-
-    def test_core_document__build_omits_empty_match_fields(self):
-        self.assertNotIn("match_fields", build_import_document("dcim.manufacturer", [{"name": "Cisco"}]))
-
-    def test_core_document__unwrap_envelope(self):
-        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
-        metadata, records = ImportDocumentParserMixin.unwrap_document(doc)
-        self.assertEqual(metadata["model"], "dcim.manufacturer")
-        self.assertEqual(metadata["match_fields"], ["name"])
-        self.assertEqual(records, [{"name": "Cisco"}])
-
-    def test_core_document__unwrap_bare_list(self):
-        metadata, records = ImportDocumentParserMixin.unwrap_document([{"name": "Cisco"}])
-        self.assertEqual(metadata, {})
-        self.assertEqual(records, [{"name": "Cisco"}])
-
-    def test_core_document__unwrap_bad_version(self):
-        with self.assertRaises(ParseError):
-            ImportDocumentParserMixin.unwrap_document({"nautobot_import_version": 999, "records": []})
-
-    def test_core_document__unwrap_mapping_without_records(self):
-        with self.assertRaises(ParseError):
-            ImportDocumentParserMixin.unwrap_document({"model": "dcim.manufacturer"})
-
-    def test_core_document__unwrap_records_not_a_list(self):
-        with self.assertRaises(ParseError):
-            ImportDocumentParserMixin.unwrap_document({"records": {"not": "a list"}})
-
-
 # ===========================================================================
 # Shared base — the run/read/assert cadence for job-backed tests
 # ===========================================================================
@@ -2547,6 +2508,48 @@ class CoreImportResolveTests(ImportExportJobTestCase):
         text = self.export_text(self.run_export(query_string="name=test_cf_status", export_fields="name,cf_test_ie_cf"))
         self.assertIn("cf_test_ie_cf", text)
         self.assertIn("hello-cf", text)
+
+
+# ===========================================================================
+# Import — document wire format & format detection (pure)
+# ===========================================================================
+class ImportDocumentTests(SimpleTestCase):
+    """`build_import_document` (writer) and `unwrap_document` (reader) share one wire format."""
+
+    def test_core_document__build(self):
+        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
+        self.assertEqual(list(doc.keys()), ["nautobot_import_version", "model", "match_fields", "records"])
+        self.assertEqual(doc["nautobot_import_version"], IMPORT_DOCUMENT_VERSION)
+        self.assertEqual(doc["model"], "dcim.manufacturer")
+        self.assertEqual(doc["match_fields"], ["name"])
+        self.assertEqual(doc["records"], [{"name": "Cisco"}])
+
+    def test_core_document__build_omits_empty_match_fields(self):
+        self.assertNotIn("match_fields", build_import_document("dcim.manufacturer", [{"name": "Cisco"}]))
+
+    def test_core_document__unwrap_envelope(self):
+        doc = build_import_document("dcim.manufacturer", [{"name": "Cisco"}], match_fields=["name"])
+        metadata, records = ImportDocumentParserMixin.unwrap_document(doc)
+        self.assertEqual(metadata["model"], "dcim.manufacturer")
+        self.assertEqual(metadata["match_fields"], ["name"])
+        self.assertEqual(records, [{"name": "Cisco"}])
+
+    def test_core_document__unwrap_bare_list(self):
+        metadata, records = ImportDocumentParserMixin.unwrap_document([{"name": "Cisco"}])
+        self.assertEqual(metadata, {})
+        self.assertEqual(records, [{"name": "Cisco"}])
+
+    def test_core_document__unwrap_bad_version(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"nautobot_import_version": 999, "records": []})
+
+    def test_core_document__unwrap_mapping_without_records(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"model": "dcim.manufacturer"})
+
+    def test_core_document__unwrap_records_not_a_list(self):
+        with self.assertRaises(ParseError):
+            ImportDocumentParserMixin.unwrap_document({"records": {"not": "a list"}})
 
 
 class DetectImportFormatTests(SimpleTestCase):
