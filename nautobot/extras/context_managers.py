@@ -4,10 +4,10 @@ import uuid
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
-from django.test.client import RequestFactory
 
 from nautobot.core.events import publish_event
 from nautobot.core.utils.otel import traced_span
+from nautobot.core.utils.requests import mock_wsgi_request
 from nautobot.extras.change_consumers import change_has_consumers, get_change_event_topic
 from nautobot.extras.choices import ObjectChangeEventContextChoices
 from nautobot.extras.conditions.gate import ConditionGate
@@ -242,8 +242,7 @@ def web_request_context(
         raise TypeError(f"{user} is not a valid user object")
 
     if request is None:
-        request = RequestFactory().request(SERVER_NAME="web_request_context")
-        request.user = user
+        request = mock_wsgi_request(user=user, SERVER_NAME="web_request_context")
     change_context = valid_contexts[context](request=request, context_detail=context_detail, change_id=change_id)
     pre_object_data, pre_object_data_v2 = None, None
     try:

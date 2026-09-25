@@ -97,12 +97,12 @@ Arguments:
 * `execute_query()`:
     * `query` (`str`): String with GraphQL query.
     * `variables` (`dict`, optional): If the query has variables they need to be passed in as a dictionary.
-    * `request` (`django.test.client.RequestFactory`, optional): Used to authenticate.
+    * `request` (`django.core.handlers.wsgi.WSGIRequest`, optional): Used to authenticate.
     * `user` (`django.contrib.auth.models.User`, optional): Used to authenticate.
 * `execute_saved_query()`:
     * `saved_query_name` (`str`): Name of a saved GraphQL query.
     * `variables` (`dict`, optional): If the query has variables they need to be passed in as a dictionary.
-    * `request` (`django.test.client.RequestFactory`, optional): Used to authenticate.
+    * `request` (`django.core.handlers.wsgi.WSGIRequest`, optional): Used to authenticate.
     * `user` (`django.contrib.auth.models.User`, optional): Used to authenticate.
 
 Both functions return a GraphQL `ExecutionResult` object, with attributes including `data` (the dictionary describing a successful response to the query) and `errors` (a list of errors encountered while running the query, if any).
