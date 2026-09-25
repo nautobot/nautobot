@@ -1,0 +1,1 @@
+Added a `searchable` attribute to nav menu items, so they can be excluded from the global search bar's model filters.

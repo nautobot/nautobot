@@ -214,7 +214,6 @@ def get_expected_menu_item_name(view_model) -> str:
         "Regular Expression Validation Rules": "Regex Rules",
         "Required Validation Rules": "Required Rules",
         "Unique Validation Rules": "Unique Rules",
-        "VM Interfaces": "Interfaces",
     }
 
     expected = bettertitle(view_model._meta.verbose_name_plural)
