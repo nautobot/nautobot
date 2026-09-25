@@ -63,7 +63,7 @@ def created_device(create_object, status_for):
     them by id and URL only.
     """
     unique = unique_name()
-    # Create a location type as a prerequisite for the device's location.
+    # A location holds devices only when its type lists dcim.device.
     location_type = create_object("dcim/location-types", name=f"{unique}-location-type", content_types=["dcim.device"])
     location = create_object(
         "dcim/locations",
