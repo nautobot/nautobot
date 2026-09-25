@@ -60,6 +60,7 @@ from nautobot.extras.managers import JobResultManager, ScheduledJobsManager
 from nautobot.extras.models import ChangeLoggedModel, GitRepository
 from nautobot.extras.models.mixins import (
     ApprovableModelMixin,
+    ConditionsMixin,
     ContactMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
@@ -485,7 +486,7 @@ class Job(PrimaryModel):
 
 
 @extras_features("graphql")
-class JobHook(OrganizationalModel):
+class JobHook(ConditionsMixin, OrganizationalModel):
     """
     A job hook defines a request that will trigger a job hook receiver when an object is created, updated, and/or
     deleted in Nautobot. Each job hook can be limited to firing only on certain actions or certain object types.

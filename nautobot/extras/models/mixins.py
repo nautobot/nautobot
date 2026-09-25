@@ -10,6 +10,7 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.utils.deprecation import method_deprecated_in_favor_of
 from nautobot.core.utils.lookup import get_route_for_model, get_user_from_instance
 from nautobot.extras.choices import ApprovalWorkflowStateChoices
+from nautobot.extras.models.fields import ConditionsField
 
 
 class ApprovableModelMixin(models.Model):
@@ -112,6 +113,20 @@ class ApprovableModelMixin(models.Model):
         from nautobot.extras.models.approvals import ApprovalWorkflowDefinition
 
         return ApprovalWorkflowDefinition.objects.find_for_model(self) is not None
+
+
+class ConditionsMixin(models.Model):
+    """Abstract mixin for narrowing what a model fires on to the changes its conditions accept."""
+
+    class Meta:
+        abstract = True
+
+    conditions = ConditionsField()
+
+    @property
+    def has_conditions(self):
+        """Whether this narrows what it fires on, rather than firing on every change of its object types."""
+        return bool(self.conditions)
 
 
 class ContactMixin(models.Model):

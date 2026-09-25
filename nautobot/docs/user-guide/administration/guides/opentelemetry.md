@@ -196,7 +196,7 @@ To see the full nested waterfall hierarchy (HTTP request span containing the Gra
 
 Several instrumentation layers record request and query content. The values are captured verbatim, both as span attributes (exported to the trace backend) and, for GraphQL, in a structured INFO log entry:
 
-- **GraphQL** - The `graphql.document` (full query text) and `graphql.variables` attributes are recorded for every request to `/graphql` and `/api/graphql`. Nautobot's GraphQL schema is read-only, so secret *values* stored in Nautobot are not submitted by clients. However, the query document and variables still contain user-supplied **filter and search terms** (for example, `secrets(name: "prod-db-root-password")` or a `q` search string). These terms may themselves be sensitive, and apps that register custom GraphQL mutations would have their input arguments captured here as well.
+- **GraphQL** - The `graphql.document` (full query text) and `graphql.variables` attributes are recorded for every request to `/graphql` and `/api/graphql`. Nautobot's GraphQL schema is read-only, so secret _values_ stored in Nautobot are not submitted by clients. However, the query document and variables still contain user-supplied **filter and search terms** (for example, `secrets(name: "prod-db-root-password")` or a `q` search string). These terms may themselves be sensitive, and apps that register custom GraphQL mutations would have their input arguments captured here as well.
 - **Database** - The `db.statement` attribute on every SQL query span contains the full query text, including literal values bound into the statement.
 
 If telemetry is routed to an external backend, account for this in your data-handling and retention policy.
@@ -204,7 +204,7 @@ If telemetry is routed to an external backend, account for this in your data-han
 OpenTelemetry does not provide a single SDK setting to globally redact attribute values; the vendor-neutral approach is to filter at the collector before export. The OpenTelemetry Collector provides four standard processors for this:
 
 - `attributes` - remove, hash, or modify specific named attributes.
-- `redaction` - delete all attributes *except* those on an allow-list.
+- `redaction` - delete all attributes _except_ those on an allow-list.
 - `filter` - drop entire spans, logs, or metrics matching a condition.
 - `transform` - rewrite values with regular expressions (for example, masking patterns that look like tokens).
 

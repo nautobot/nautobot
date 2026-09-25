@@ -9,6 +9,7 @@ from django.utils import timezone
 import netaddr
 
 from nautobot.extras.choices import ObjectChangeActionChoices
+from nautobot.extras.conditions.gate import ConditionGate
 from nautobot.extras.models import Webhook
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import process_webhook
@@ -176,7 +177,7 @@ def validate_webhook_url(url):
     return chosen
 
 
-def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None):
+def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None, gate=None):
     """
     Find Webhook(s) assigned to this instance + action and enqueue them to be processed.
 
@@ -184,6 +185,7 @@ def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None):
         object_change (ObjectChange): The change that may trigger Webhooks to be sent.
         snapshots (list): The before/after data snapshots corresponding to the object_change.
         webhook_queryset (QuerySet): Previously retrieved set of Webhooks to potentially send.
+        gate (ConditionGate): Defaults to a new `ConditionGate()`.
 
     Returns:
         webhook_queryset (QuerySet): for reuse when processing multiple ObjectChange with the same content-type+action.
@@ -208,8 +210,11 @@ def enqueue_webhooks(object_change, snapshots=None, webhook_queryset=None):
         if serialized_data is None:
             serialized_data = object_change.object_data
 
+        if gate is None:
+            gate = ConditionGate()
+
         # Enqueue the webhooks
-        for webhook in webhook_queryset:
+        for webhook in gate.accepted(webhook_queryset, object_change, snapshots):
             args = [
                 webhook.pk,
                 serialized_data,

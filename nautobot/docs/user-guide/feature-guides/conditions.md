@@ -2,9 +2,9 @@
 
 +++ 3.3.0
 
-A condition narrows *which changes* a Webhook or Job Hook reacts to. Without conditions, an action fires for every change to every object of its selected types. With conditions, it fires only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
+A condition narrows _which changes_ a Webhook or Job Hook reacts to. Without conditions, an action fires for every change to every object of its selected types. With conditions, it runs only when the change looks a certain way: a device's status went from `Staged` to `Active`, an interface's MTU went above 9000, a change was made by anyone other than the sync account.
 
-Conditions are a list of rows. Every row must pass for the action to fire; an empty list passes. Each row is either a **preset** chosen from a catalog and filled in, or a **raw expression** written in Jinja2. Either kind can be negated.
+Conditions are a list of rows. Every row must pass for the action to run. An empty list passes. Each row is either a _preset_ chosen from a catalog and filled in, or a _raw expression_ written in Jinja2. Either kind can be negated.
 
 ## The event payload
 
@@ -90,15 +90,19 @@ not A
 
 The expression sees the payload variables above and the same filters as a webhook body template. Expressions run in a sandbox and cannot modify the payload.
 
+A field that can be empty arrives as `none`, and comparing that with `>` raises rather than returning false. Guard it, for example `data.mtu is not none and data.mtu > 9000`. A preset does this for you, and treats an empty field as a non-match.
+
 Prefer a preset when one fits.
 
 ## How conditions are checked
 
-When a change is recorded, Nautobot goes through the action's conditions one by one. Each row is checked on its own against the change. The action fires only if every row passes, so adding rows narrows the action down. An action with no rows fires for every change.
+When a change is recorded, Nautobot goes through the action's conditions one by one. Each row is checked on its own against the change. The action runs only if every row passes, so adding rows narrows the action down. An action with no rows runs for every change.
 
-A row passes when what it asks is true of the change. A negated row passes when it is false. A row that cannot be checked at all, for example because of a syntax error in an expression or a value of the wrong type for the operator, fails and reports why.
+A row passes when what it asks is true of the change. A negated row passes when it is false. A row that cannot be checked at all, for example because of a syntax error in an expression or a value of the wrong type for the operator, counts as not passing, so the action does not run.
 
-All rows are checked, even after one has failed, so you can see which rows passed, which failed, and which could not be checked.
+A row that cannot be checked is written to the Nautobot log at `ERROR` level, naming the action, the number of the row (counted from one, the way the form shows it) and the reason. Each fault is reported once per request, so a change touching many objects at once logs one message rather than one per object. The log is the only place this appears. An action stopped by a broken row looks no different in the web UI.
+
+All rows are checked even after one has failed, so the full verdict exists (which row passed, which failed and which could not be checked). Showing that verdict comes with the dry run feature, which is not available yet.
 
 ## Row format
 
@@ -109,7 +113,7 @@ Conditions are a list. Each entry is a preset row or an expression row:
 ```json
 [
     {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}},
-    {"type": "expression", "source": "data.mtu > 9000 or username != 'sync-infoblox'", "negate": true}
+    {"type": "expression", "source": "(data.mtu is not none and data.mtu > 9000) or username != 'sync-infoblox'", "negate": true}
 ]
 ```
 

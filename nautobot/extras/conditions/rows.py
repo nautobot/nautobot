@@ -5,25 +5,24 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
-from django.core.exceptions import ValidationError
-
 from nautobot.extras.choices import ConditionTypeChoices
+from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.expressions import compile_condition, ConditionError
 from nautobot.extras.conditions.presets import ConditionPreset, get_condition_preset
 
 
-class ConditionRowError(ValidationError):
-    """A stored condition row is malformed. `params["key"]` names the row key at fault."""
+class ConditionRowError(ConditionValidationError):
+    """A stored condition row is incorrectly formed. `params["key"]` names the row key at fault."""
 
     code = "condition_row"
 
     def __init__(self, message, key):
-        super().__init__(message, code=self.code, params={"key": key})
+        super().__init__(message, key=key)
 
 
 @dataclass(frozen=True)
 class ConditionRow(ABC):
-    """One stored condition. Subclasses know how to resolve themselves; `check` decides what passes."""
+    """One stored condition. Subclasses know how to resolve themselves; `check_conditions` decides what passes."""
 
     negate: bool  # inverts the row's result
     _allowed_keys: ClassVar[frozenset[str]] = frozenset()
@@ -56,7 +55,8 @@ class ConditionRow(ABC):
     @classmethod
     def _common_fields(cls, row):
         """Check the keys a row of this type may carry and return its `negate`."""
-        unknown = sorted(set(row) - cls._allowed_keys)
+        # `str()` because a row built in Python, unlike one parsed from JSON, can be keyed by anything.
+        unknown = sorted(str(key) for key in set(row) - cls._allowed_keys)
         if unknown:
             raise ConditionRowError(f"Condition row does not accept key(s): {', '.join(unknown)}.", key=unknown[0])
         negate = row.get("negate", False)
@@ -70,7 +70,7 @@ class ConditionRow(ABC):
 
     @abstractmethod
     def resolve(self):
-        """Return `(source, context_variables)` for `check`. Subclasses override."""
+        """Return `(source, context_variables)` for `check_conditions`. Subclasses override."""
 
     @abstractmethod
     def to_dict(self):
@@ -96,9 +96,8 @@ class ExpressionRow(ConditionRow):
             raise ConditionRowError("An expression row needs a non-empty `source`.", key="source")
         for delimiter in ("{{", "{%"):
             if delimiter in source:
-                # Django interpolates `message % params`, so the `%` in `{%` has to be doubled.
                 raise ConditionRowError(
-                    f"A condition is a bare expression, not a template: remove the `{delimiter.replace('%', '%%')}`.",
+                    f"A condition is a bare expression, not a template: remove the `{delimiter}`.",
                     key="source",
                 )
         return cls(source=source, negate=negate)
@@ -132,15 +131,18 @@ class PresetRow(ConditionRow):
     @classmethod
     def from_dict(cls, row):
         negate = cls._common_fields(row)
-        preset = get_condition_preset(row.get("preset"))
+        key = row.get("preset")
+        if not isinstance(key, str) or not key.strip():
+            raise ConditionRowError("A preset row needs a non-empty `preset`.", key="preset")
+        preset = get_condition_preset(key)
         if preset is None:
-            raise ConditionRowError(f"Unknown condition preset `{row.get('preset')}`.", key="preset")
+            raise ConditionRowError(f"Unknown condition preset `{key}`.", key="preset")
         values = row.get("values")
         if values is None:
             values = {}
         if not isinstance(values, dict):
             raise ConditionRowError(f"`values` must be a mapping, not {type(values).__name__}.", key="values")
-        unknown = sorted(set(values) - {parameter.name for parameter in preset.parameters})
+        unknown = sorted(str(name) for name in set(values) - {parameter.name for parameter in preset.parameters})
         if unknown:
             raise ConditionRowError(
                 f"Preset `{preset.key}` does not accept value(s): {', '.join(unknown)}.", key="values"

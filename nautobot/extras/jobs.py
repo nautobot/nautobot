@@ -48,6 +48,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
 )
+from nautobot.extras.conditions.gate import ConditionGate
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
@@ -1458,7 +1459,7 @@ def run_console_log_job_and_return_job_result(self, *args, **kwargs):
     return executor.execute()
 
 
-def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
+def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None, snapshots=None, gate=None):
     """
     Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
 
@@ -1466,6 +1467,8 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         object_change (ObjectChange): The change that may trigger JobHooks to execute.
         may_reload_jobs (bool): Whether to reload JobHook source code from disk to guarantee up-to-date code.
         jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
+        snapshots (dict): The before/after data snapshots corresponding to the object_change.
+        gate (ConditionGate): Defaults to a new `ConditionGate()`.
 
     Returns:
         result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered
@@ -1489,12 +1492,19 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
     if not jobhook_queryset:  # not .exists() as we *want* to populate the queryset cache
         return jobs_reloaded, jobhook_queryset
 
+    if gate is None:
+        gate = ConditionGate()
+
+    accepted = gate.accepted(jobhook_queryset, object_change, snapshots)
+    if not accepted:
+        return jobs_reloaded, jobhook_queryset
+
     # Enqueue the jobs related to the job_hooks
     if may_reload_jobs:
         get_jobs(reload=True)
         jobs_reloaded = True
 
-    for job_hook in jobhook_queryset:
+    for job_hook in accepted:
         job_model = job_hook.job
         if not job_model.installed or not job_model.enabled:
             logger.warning(
