@@ -286,17 +286,27 @@ As in the UI, `--content-type` may be omitted for a file that declares its own m
 
 ### Match fields
 
-!!! warning "Not yet implemented"
-    Match fields are accepted as an input but nothing acts on them yet, so every import currently creates new objects. The rest of this section describes the intended behavior.
+Each record in the file is paired with an existing object by its match fields. A record that matches an object updates that object in place; a record that matches nothing creates a new object. A record whose values are identical to the object it matches changes nothing, and is counted as unchanged rather than updated.
 
-All Nautobot data models define their default match fields, which are either a "natural key" (field or set of fields that uniquely identify an object, for example a Status's `name` field), or if no unique natural key is possible, simply use the object's `id` as its match field. This default set of match fields is added to the exported file as metadata, as described [above](#the-self-describing-file).
+The match fields for an import are, in order of precedence:
+
+1. the match fields given as an input to the "Import Objects" Job, if any;
+2. otherwise, the `match_fields` in the file's own [metadata](#the-self-describing-file), if any;
+3. otherwise, `id`, if the records include it;
+4. otherwise, the object type's default match fields: its "natural key", the field or set of fields that uniquely identify an object, for example a Status's `name` field. This is the same set of fields that an export writes into the file's metadata.
+
+An object type that has no natural key, and whose records don't include an `id`, can't be matched, so importing it only ever creates new objects.
+
+When the default match fields are in use (3 or 4 above), a record that can't be matched on them is treated as a new object: one that lacks a match field, such as a record without an `id` when matching on `id`, or one whose value for a related match field doesn't identify an existing object. Like any new object, it's only created if it's valid, so a record missing a required field, or referring to a related object that doesn't exist, is reported as an error. Match fields that you specify yourself (1 or 2 above) must be matchable in every record: a record that lacks one of them, or whose value for one doesn't identify an existing related object, is reported as an error without any attempt to create it.
+
+The import log reports each updated object with the fields that changed and their old and new values, naming related objects by the same fields the file uses. The values of sensitive fields, such as an API token's `key`, are never logged: a change to one is reported without either value.
 
 Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
 
 When importing, you can override the match fields for a particular file either by editing the metadata directly before uploading the file, or by explicitly specifying match fields as an input to the "Import Objects" Job. This can be powerful for in-place updates where you know that a given field(s), even though not actually enforced unique by Nautobot itself, happen in your particular use case to be unique identifiers for the existing objects in the system. Overriding the match fields in this case can allow you to specify records in a simpler or more portable way than using a full natural-key field set or using the raw `id` values would.
 
 !!! warning "You own the uniqueness"
-    When setting a custom set of match fields, _you are responsible_ for ensuring that the fields you choose do in fact uniquely identify objects in Nautobot. Nautobot does not enforce that your chosen fields are backed by a database-level uniqueness constraint, a data validation rule, or anything of the sort. If two rows in your file share the same match field values, you'll get a clear "does not uniquely identify each row" error, and if any row in your file matches more than one existing object, the import will refuse to row rather than guess which object you meant.
+    When setting a custom set of match fields, _you are responsible_ for ensuring that the fields you choose do in fact uniquely identify objects in Nautobot. Nautobot does not enforce that your chosen fields are backed by a database-level uniqueness constraint, a data validation rule, or anything of the sort. If two rows in your file share the same match field values, you'll get a clear "does not uniquely identify each row" error, and if any row in your file matches more than one existing object, the import will refuse to import that row rather than guess which object you meant.
 
 ## Permissions
 
@@ -305,3 +315,8 @@ When importing, you can override the match fields for a particular file either b
 | Export | Run permission for the `Export Object List` job, plus _view_ permission on the model. |
 | Import (create rows) | Run permission for the `Import Objects` job, plus _add_ permission on the model. |
 | Import (update rows) | Run permission for the `Import Objects` job, plus _change_ permission on the model. |
+
+Object permissions with constraints apply to imports as they do elsewhere in Nautobot:
+
+- Records are matched only against objects that you have permission to change. A record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object.
+- An updated object must still fall within your _change_ permission's constraints after the update, and a created object must fall within your _add_ permission's constraints. A record that would leave an object outside them is reported as an error, such as "does not have permission to update an object with these attributes", and nothing is saved for it.

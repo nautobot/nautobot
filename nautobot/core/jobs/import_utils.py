@@ -31,8 +31,7 @@ def parse_field_name_list(value):
     Normalize a user-provided list of field names (a comma/space/semicolon-separated string, or a list)
     into a list, or None if no fields were provided.
 
-    Used for both of the Jobs' field-name inputs: `ExportObjectList.export_fields` and, once matching is
-    implemented, `ImportObjects.match_fields`.
+    Used for both of the Jobs' field-name inputs: `ExportObjectList.export_fields` and `ImportObjects.match_fields`.
     """
     if not value:
         return None
