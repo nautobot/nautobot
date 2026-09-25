@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 from types import SimpleNamespace
 from unittest import mock
+import uuid
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -3352,6 +3353,20 @@ class RoundTripE2ETests(ImportExportJobTestCase):
 
     def test_e2e_roundtrip__yaml(self):
         self._roundtrip("yaml", source="file directive")
+
+    def test_e2e_roundtrip__ids_from_another_instance(self):
+        """An export whose ids differ from this Nautobot's, as another instance's would, still updates in place."""
+        status = self.create_status(name="test_foreign_id_roundtrip", color="111111")
+        exported = self.export_text(self.run_export(query_string="name=test_foreign_id_roundtrip"))
+        foreign = exported.replace(str(status.pk), str(uuid.uuid4())).replace("111111", "222222")
+        count_before = Status.objects.count()
+
+        job_result = self.run_import(foreign)
+
+        self.assertImport(job_result, created=0, updated=1, match_fields=["name"], source="file directive")
+        self.assertEqual(Status.objects.count(), count_before)
+        status.refresh_from_db()  # would raise DoesNotExist had the pk changed
+        self.assertEqual(status.color, "222222")
 
 
 class NaturalKeyRoundTripTests(ImportExportJobTestCase):

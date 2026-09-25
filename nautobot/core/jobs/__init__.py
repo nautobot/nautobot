@@ -836,6 +836,11 @@ class ImportObjects(Job):
                 # Snapshot the pristine state now: is_valid()/save() mutate the in-memory instance, so a
                 # later snapshot would already reflect the incoming values and hide the change.
                 before = self._snapshot(serializer_class, instance)
+                if "id" not in match_fields and "pk" not in match_fields:
+                    # Matched on other fields, such as the natural key of an export from another Nautobot, whose
+                    # objects have different ids. Saving the row's `id` onto the instance wouldn't change its pk:
+                    # Django would insert a copy under the new pk, or refuse it as a duplicate.
+                    entry = {key: value for key, value in entry.items() if key != "id"}
                 serializer = serializer_class(instance, data=entry, partial=True, context=context)
             else:
                 serializer = serializer_class(data=entry, context=context)
