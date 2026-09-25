@@ -11,7 +11,7 @@ from nautobot.core.filters import (
 from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device
 from nautobot.extras.filters import NautobotFilterSet
 from nautobot.extras.models import SecretsGroup
-from nautobot.tenancy.filters import TenancyModelFilterSetMixin
+from nautobot.tenancy.filter_mixins import TenancyModelFilterSetMixin
 from nautobot.wireless import choices, models
 
 
