@@ -1,0 +1,1 @@
+Clarified that config context group assignments made through the REST API or a Git repository use the plural field names (for example `locations`, not `location`).
