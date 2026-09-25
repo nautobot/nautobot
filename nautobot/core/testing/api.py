@@ -1,5 +1,6 @@
 import csv
 from io import StringIO
+import json
 from typing import Optional, Sequence, Union
 
 from django.conf import settings
@@ -18,7 +19,10 @@ from rest_framework.relations import ManyRelatedField
 from rest_framework.test import APITransactionTestCase as _APITransactionTestCase
 
 from nautobot.core import constants
+from nautobot.core.api.import_export import build_document_records, build_import_document
+from nautobot.core.api.parsers import NautobotJSONImportParser
 from nautobot.core.api.utils import get_serializer_for_model
+from nautobot.core.jobs.import_utils import import_serializer_context
 from nautobot.core.models import fields as core_fields
 from nautobot.core.models.tree_queries import TreeModel
 from nautobot.core.testing import mixins, utils, views
@@ -938,6 +942,85 @@ class APIViewTestCases:
                     # This is an explicit M2M through model; creating this record must record
                     # an ObjectChange against both of the objects it associates between
                     self.assert_m2m_side_objects_change_logged(changed_m2m_side_objects)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+        def test_recreate_object_document(self):
+            """Export an object to the JSON/YAML document format, delete it, and recreate it from the document.
+
+            The counterpart to `test_recreate_object_csv`, but at the serializer layer rather than over
+            HTTP: the document format is not a REST representation -- it is written by `ExportObjectList`
+            and read by `ImportObjects` -- so there is no endpoint to round-trip it through.
+
+            What this is really for is the field vocabulary. An export instantiates its serializer with
+            `for_import_export=True`, which exposes M2M fields a REST response omits; if the reader's view
+            of the model's fields differs from the writer's, strict mode rejects a file Nautobot itself
+            produced. That mismatch is a property of each model's serializer, so it wants testing per
+            model rather than on whichever one a hand-written test happened to pick.
+            """
+            if hasattr(self, "get_deletable_object"):
+                instance = self.get_deletable_object()
+            else:
+                instance = utils.get_deletable_objects(self.model, self._get_queryset()).first()
+            if instance is None:
+                self.fail("Couldn't find a single deletable object!")
+
+            serializer_class = get_serializer_for_model(self.model)
+            content_type = ContentType.objects.get_for_model(self.model)
+            # Built exactly as `ExportObjectList._render_serialized` builds it, down to the `default=str`
+            # encoding, so that what is parsed back is what a real export would have written.
+            export_serializer = serializer_class(
+                self._get_queryset().filter(pk=instance.pk),
+                many=True,
+                context={"request": None, "depth": 0},
+                for_import_export=True,
+            )
+            document = build_import_document(
+                f"{content_type.app_label}.{content_type.model}", build_document_records(export_serializer.data)
+            )
+            document_json = json.dumps(document, indent=2, default=str)
+
+            old_data = serializer_class(instance, context={"request": None}).data
+            # save the pk because .delete() will clear it, making the test below always pass
+            orig_pk = instance.pk
+            instance.delete()
+
+            # `strict_fields` as the Job sets it: an unrecognized field is what this test is looking for
+            data = NautobotJSONImportParser().parse(
+                stream=StringIO(document_json),
+                parser_context={"request": None, "serializer_class": serializer_class, "strict_fields": True},
+            )
+            self.assertEqual(len(data), 1)
+            # Deserialized under the same context the Job uses, request and all
+            new_serializer = serializer_class(data=data[0], context=import_serializer_context(self.user))
+            self.assertTrue(new_serializer.is_valid(), new_serializer.errors)
+            new_instance = new_serializer.save()
+            if isinstance(orig_pk, int):
+                self.assertNotEqual(new_instance.pk, orig_pk)
+            else:
+                # for our non-integer PKs, we're expecting the creation to respect the requested PK
+                self.assertEqual(new_instance.pk, orig_pk)
+
+            new_data = serializer_class(new_instance, context={"request": None}).data
+            for field_name, field in new_serializer.fields.items():
+                if isinstance(field, ManyRelatedField) and field_name != "tags":
+                    # As in `test_recreate_object_csv`: comparing M2M membership is its own problem. The
+                    # import of these fields is still exercised above, where a strict parse would reject
+                    # any the reader does not know about.
+                    continue
+                if field.read_only or field.write_only:
+                    continue
+                if field_name in ["created", "last_updated"]:
+                    self.assertNotEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been updated on delete/recreate but it didn't change!",
+                    )
+                else:
+                    self.assertEqual(
+                        old_data[field_name],
+                        new_data[field_name],
+                        f"{field_name} should have been unchanged on delete/recreate but it differs!",
+                    )
 
         # TODO: The override_settings here is a temporary workaround for not breaking any app tests
         # long term fix should be using appropriate object permissions instead of the blanket override

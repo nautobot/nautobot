@@ -10,7 +10,6 @@ from django.core.exceptions import FieldError, ImproperlyConfigured, ValidationE
 from django.db.models import ForeignKey
 from django.http import QueryDict
 from django.template import Template
-from django.test.client import RequestFactory
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -29,7 +28,7 @@ from nautobot.core.utils.lookup import (
     get_form_for_model,
     get_view_for_model,
 )
-from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.utils.requests import mock_wsgi_request, normalize_querydict
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
@@ -715,9 +714,8 @@ def get_bulk_queryset_from_view(
     for key, values in (filter_query_params or {}).items():
         values = values if isinstance(values, (list, tuple)) else [values]
         get_params.setlist(key, [str(value) for value in values])
-    synthetic_request = RequestFactory().get("/")
+    synthetic_request = mock_wsgi_request(user=user)
     synthetic_request.GET = get_params
-    synthetic_request.user = user
 
     def scoped_queryset(scoping_view_class):
         """Instantiate the given view and return its alter_queryset() result using the synthetic request."""

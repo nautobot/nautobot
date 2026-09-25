@@ -7,6 +7,7 @@ import uuid
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
+from rest_framework.exceptions import ParseError
 
 from nautobot.core.api import serializers as core_api_serializers
 from nautobot.core.api.parsers import NautobotCSVParser
@@ -17,6 +18,9 @@ from nautobot.dcim.api.serializers import DeviceSerializer
 from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.dcim.models.locations import Location
 from nautobot.dcim.models.racks import Rack
+from nautobot.extras.api.serializers import StatusSerializer
+from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.models.customfields import CustomField
 from nautobot.extras.models.roles import Role
 from nautobot.extras.models.statuses import Status
 from nautobot.extras.models.tags import Tag
@@ -482,7 +486,7 @@ TestDevice7,{self.device.device_type.pk},{self.device.location.pk},{self.device.
             # flattened natural-key lookups in a single column rather than as comma-separated values.
             device5.software_image_files.set(software_image_files[:2])
             exported = DeviceSerializer(
-                instance=device5, context={"request": None, "depth": 0}, exporting=True, force_csv=True
+                instance=device5, context={"request": None, "depth": 0}, for_import_export=True, force_csv=True
             ).data
             exported_row = next(iter(csv.DictReader(io.StringIO(NautobotCSVRenderer().render([exported])))))
             self.assertEqual(
@@ -521,7 +525,7 @@ class NaturalKeyLookupValuesTest(SimpleTestCase):
     """`_get_natural_key_lookups_value_for_field` maps raw lookup values to their export representations."""
 
     def _values(self, natural_key_field_instance, field_name="location", for_csv=True):
-        serializer = DeviceSerializer(context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv)
+        serializer = DeviceSerializer(context={"request": None, "depth": 0}, for_import_export=True, force_csv=for_csv)
         return serializer._get_natural_key_lookups_value_for_field(field_name, natural_key_field_instance)
 
     def test_none_becomes_the_null_sentinel_for_csv(self):
@@ -560,9 +564,9 @@ class M2MNaturalKeyValuesTest(TestCase):
     """
 
     def _values(self, instance, field_name, for_csv=True):
-        # `exporting` is what makes the non-default M2M fields readable here.
+        # `for_import_export` is what makes the non-default M2M fields readable here.
         serializer = get_serializer_for_model(type(instance))(
-            context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv
+            context={"request": None, "depth": 0}, for_import_export=True, force_csv=for_csv
         )
         return serializer._get_m2m_natural_key_values(instance, serializer.fields[field_name])
 
@@ -677,10 +681,10 @@ class M2MNaturalKeyValuesTest(TestCase):
 
 
 class ExportingWidensM2MFieldsTest(TestCase):
-    """`exporting=True` exposes every M2M field; a REST request, in any format, keeps the default subset.
+    """`for_import_export=True` exposes every M2M field; a REST request, in any format, keeps the default subset.
 
     An export file has to carry every M2M field to be re-importable, so `_include_all_m2m_by_default`
-    returns `self._exporting`. A REST response keeps `DEFAULT_M2M_FIELDS` plus `Meta.default_m2m_fields`
+    returns `self._for_import_export`. A REST response keeps `DEFAULT_M2M_FIELDS` plus `Meta.default_m2m_fields`
     for performance and backwards compatibility -- which is why the Job's CSV has columns that the same
     model's `?format=csv` response does not.
     """
@@ -689,31 +693,31 @@ class ExportingWidensM2MFieldsTest(TestCase):
         self.vrf = VRF.objects.create(name="Exporting M2M VRF", namespace=Namespace.objects.first())
         self.vrf.import_targets.add(RouteTarget.objects.create(name="65000:501"))
 
-    def _data(self, *, exporting=False, exclude_m2m=None):
+    def _data(self, *, for_import_export=False, exclude_m2m=None):
         context = {"request": None, "depth": 0}
         if exclude_m2m is not None:
             context["exclude_m2m"] = exclude_m2m
         serializer = get_serializer_for_model(VRF)(
-            instance=self.vrf, context=context, exporting=exporting, force_csv=True
+            instance=self.vrf, context=context, for_import_export=for_import_export, force_csv=True
         )
         return serializer.data
 
     def test_export_includes_a_non_default_m2m(self):
         """`import_targets` is not one of the DEFAULT_M2M_FIELDS, so only the export mode carries it."""
-        self.assertEqual(self._data(exporting=True)["import_targets"], ["65000:501"])
+        self.assertEqual(self._data(for_import_export=True)["import_targets"], ["65000:501"])
 
     def test_rest_omits_a_non_default_m2m(self):
         """Absent, not merely empty -- there is no column for a reader to round-trip."""
         self.assertNotIn("import_targets", self._data())
 
     def test_default_m2m_fields_are_in_both(self):
-        for exporting in (True, False):
-            with self.subTest(exporting=exporting):
-                self.assertIn("tags", self._data(exporting=exporting))
+        for for_import_export in (True, False):
+            with self.subTest(for_import_export=for_import_export):
+                self.assertIn("tags", self._data(for_import_export=for_import_export))
 
-    def test_explicit_exclude_m2m_wins_over_exporting(self):
+    def test_explicit_exclude_m2m_wins_over_for_import_export(self):
         """`exclude_m2m` is an instruction rather than a default, so it overrides the export widening."""
-        self.assertNotIn("import_targets", self._data(exporting=True, exclude_m2m=True))
+        self.assertNotIn("import_targets", self._data(for_import_export=True, exclude_m2m=True))
 
     def test_explicit_include_m2m_widens_a_rest_request(self):
         """The same escape hatch in reverse: `exclude_m2m=false` opts a REST response into every M2M."""
@@ -736,7 +740,7 @@ class M2MContentTypeValuesTest(TestCase):
 
     def _representation(self, for_csv=True):
         serializer = get_serializer_for_model(Status)(
-            instance=self.status, context={"request": None, "depth": 0}, exporting=True, force_csv=for_csv
+            instance=self.status, context={"request": None, "depth": 0}, for_import_export=True, force_csv=for_csv
         )
         return serializer.data["content_types"]
 
@@ -759,8 +763,318 @@ class M2MContentTypeValuesTest(TestCase):
         """Why `to_representation` excludes `ContentTypeField`: routing it through the natural-key M2M path
         falls back to the pk, and a ContentType pk is an install-specific integer that no import can resolve.
         """
-        serializer = get_serializer_for_model(Status)(context={"request": None, "depth": 0}, exporting=True)
+        serializer = get_serializer_for_model(Status)(context={"request": None, "depth": 0}, for_import_export=True)
         self.assertEqual(
             sorted(serializer._get_m2m_natural_key_values(self.status, serializer.fields["content_types"])),
             sorted(str(content_type.pk) for content_type in self.status.content_types.all()),
         )
+
+
+class CSVImportDirectiveTestCase(TestCase):
+    """Tests for the `# nautobot_import_version=3;` directive parsing and rendering."""
+
+    parser_class = NautobotCSVParser
+
+    def _parse(self, csv_text):
+        """Parse the given CSV text as Status data and return (parsed data, parser_context)."""
+        parser_context = {"request": None, "serializer_class": StatusSerializer}
+        data = NautobotCSVParser().parse(io.BytesIO(csv_text.encode("utf-8")), parser_context=parser_context)
+        return data, parser_context
+
+    def test_parse_directive_cell(self):
+        """Directive cells parse in all supported value-separator forms; plain comments parse to nothing."""
+        for cell in (
+            "# nautobot_import_version=3; model=dcim.device; match_fields=name serial",
+            "#nautobot_import_version=3; model=dcim.device; match_fields=name;serial",
+            "# nautobot_import_version=3; model=dcim.device; match_fields=name,serial",
+            "#  NAUTOBOT_IMPORT_VERSION=3;  MODEL=dcim.device;MATCH_FIELDS=name  serial ;",
+        ):
+            with self.subTest(cell=cell):
+                self.assertEqual(
+                    self.parser_class.parse_directive_cell(cell),
+                    {"nautobot_import_version": 3, "model": "dcim.device", "match_fields": ["name", "serial"]},
+                )
+        self.assertEqual(self.parser_class.parse_directive_cell("# just an ordinary comment"), {})
+
+    def test_parse_directive_cell_order_does_not_matter(self):
+        """The docs invite editing this row by hand, so a reordered directive is still a directive."""
+        self.assertEqual(
+            self.parser_class.parse_directive_cell("# model=dcim.device; nautobot_import_version=3"),
+            {"model": "dcim.device", "nautobot_import_version": 3},
+        )
+        self.assertEqual(
+            self.parser_class.parse_directive_cell("# match_fields=name; model=dcim.device"),
+            {"match_fields": ["name"], "model": "dcim.device"},
+        )
+
+    def test_parse_directive_cell_invalid(self):
+        """Unsupported or malformed directives raise a clear ParseError."""
+        with self.assertRaisesRegex(ParseError, "Unsupported import directive"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=3; no_such_directive=foo")
+        with self.assertRaisesRegex(ParseError, "No value"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=3; match_fields=")
+        with self.assertRaisesRegex(ParseError, "Malformed import directive"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version")
+        with self.assertRaisesRegex(ParseError, "Expected a single value"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=3; model=a.b c.d")
+        # A segment with no `=` after a single-valued directive is malformed, not a continuation of it
+        with self.assertRaisesRegex(ParseError, "Malformed import directive"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=3; name serial")
+        with self.assertRaisesRegex(ParseError, "Unsupported nautobot_import_version"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=999; model=extras.status")
+        with self.assertRaisesRegex(ParseError, "expected an integer"):
+            self.parser_class.parse_directive_cell("# nautobot_import_version=three")
+
+    def test_parse_consumes_directive_rows(self):
+        """Leading directive rows are consumed into parser_context and the data parses normally."""
+        csv_text = "\n".join(
+            [
+                "# nautobot_import_version=3; model=extras.status; match_fields=name",
+                "name,color",
+                "test_status,111111",
+            ]
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(
+            parser_context["import_directives"],
+            {"nautobot_import_version": 3, "model": "extras.status", "match_fields": ["name"]},
+        )
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_consumes_blank_and_comment_rows_before_the_header(self):
+        """Leading noise is skipped, matching what `detect_import_format` treats as leading noise.
+
+        Nautobot's own export writes one directive row and then the header, so this is tolerance for
+        hand-edited files: a blank row would otherwise be read as the header and every column would come
+        back unrecognized.
+        """
+        csv_text = "\n".join(
+            [
+                "",
+                "# a comment of my own",
+                "# nautobot_import_version=3; model=extras.status",
+                "",
+                "name,color",
+                "test_status,111111",
+            ]
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(parser_context["import_directives"], {"nautobot_import_version": 3, "model": "extras.status"})
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_comments_only_yields_no_rows(self):
+        """A file with no header row at all parses to nothing rather than raising."""
+        data, parser_context = self._parse("# nautobot_import_version=3; model=extras.status\n")
+        self.assertEqual(data, [])
+        self.assertEqual(parser_context["import_directives"]["model"], "extras.status")
+
+    def test_parse_without_directive_is_unchanged(self):
+        """A file with no directive parses exactly as before, with no directives surfaced."""
+        data, parser_context = self._parse("name,color\ntest_status,111111")
+        self.assertNotIn("import_directives", parser_context)
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_directive_survives_spreadsheet_quoting(self):
+        """A directive that came back from Excel as a quoted first cell (with trailing empty cells) still parses."""
+        csv_text = "\n".join(
+            [
+                '"# nautobot_import_version=3; model=extras.status; match_fields=name",,',
+                "name,color",
+                "test_status,111111",
+            ]
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(
+            parser_context["import_directives"],
+            {"nautobot_import_version": 3, "model": "extras.status", "match_fields": ["name"]},
+        )
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_parse_directive_with_byte_order_mark(self):
+        """A leading UTF-8 BOM doesn't defeat directive detection."""
+        csv_text = (
+            "\ufeff"
+            + "# nautobot_import_version=3; model=extras.status; match_fields=name\nname,color\ntest_status,111111"
+        )
+        data, parser_context = self._parse(csv_text)
+        self.assertEqual(
+            parser_context["import_directives"],
+            {"nautobot_import_version": 3, "model": "extras.status", "match_fields": ["name"]},
+        )
+        self.assertEqual(data, [{"name": "test_status", "color": "111111"}])
+
+    def test_render_directive_row(self):
+        """The renderer stamps a directive row when (and only when) asked to via renderer_context."""
+        records = [{"name": "test_status", "color": "111111"}]
+        renderer = NautobotCSVRenderer()
+        output = renderer.render(
+            records,
+            renderer_context={
+                "import_directives": {
+                    "nautobot_import_version": 3,
+                    "model": "dcim.device",
+                    "match_fields": ["name", "serial"],
+                }
+            },
+        )
+        self.assertEqual(
+            output.splitlines()[0], "# nautobot_import_version=3; model=dcim.device; match_fields=name serial"
+        )
+        # Without renderer_context the output is unchanged (the REST API path)
+        output = renderer.render(records)
+        self.assertEqual(output.splitlines()[0], "name,color")
+
+    def test_render_parse_round_trip(self):
+        """A stamped rendering parses back to the same directives and data."""
+        records = [{"name": "test_status", "color": "111111"}]
+        output = NautobotCSVRenderer().render(
+            records,
+            renderer_context={
+                "import_directives": {"nautobot_import_version": 3, "model": "dcim.device", "match_fields": ["name"]}
+            },
+        )
+        data, parser_context = self._parse(output)
+        self.assertEqual(
+            parser_context["import_directives"],
+            {"nautobot_import_version": 3, "model": "dcim.device", "match_fields": ["name"]},
+        )
+        self.assertEqual(data, records)
+
+
+class CSVM2MRepresentationTestCase(TestCase):
+    """Tests for the two-tier M2M representation on CSV export/import."""
+
+    def setUp(self):
+        location = Location.objects.filter(
+            location_type__content_types__in=[ContentType.objects.get_for_model(Device)],
+        ).first()
+        Controller.objects.filter(controller_device__isnull=False).delete()
+        Device.objects.all().delete()
+        self.device = Device.objects.create(
+            device_type=DeviceType.objects.first(),
+            role=Role.objects.get_for_model(Device).first(),
+            name="TestDeviceM2M",
+            status=Status.objects.get_for_model(Device).first(),
+            location=location,
+        )
+        self.tags = list(Tag.objects.get_for_model(Device).all()[:3])
+        self.device.tags.set(self.tags)
+        software_version = SoftwareVersion.objects.create(
+            platform=Platform.objects.first(),
+            version="m2m-test-1.0",
+            status=Status.objects.get_for_model(SoftwareVersion).first(),
+        )
+        software_image_file_status = Status.objects.get_for_model(SoftwareImageFile).first()
+        self.image_files = [
+            SoftwareImageFile.objects.create(
+                software_version=software_version,
+                image_file_name=f"m2m_test_{i}.bin",
+                status=software_image_file_status,
+            )
+            for i in range(2)
+        ]
+        self.device.software_image_files.set(self.image_files)
+
+    def _export_row(self):
+        serializer = DeviceSerializer(self.device, context={"request": None, "exclude_m2m": False}, force_csv=True)
+        return dict(serializer.data)
+
+    def test_tags_export_as_comma_separated_names(self):
+        """Scalar-keyed M2M members (tags) render as a comma-separated list of names in the CSV cell."""
+        rendered = NautobotCSVRenderer().render([self._export_row()])
+        parsed_rows = list(csv.DictReader(io.StringIO(rendered)))
+        cell = parsed_rows[0]["tags"]
+        self.assertEqual(sorted(cell.split(",")), sorted(tag.name for tag in self.tags))
+
+    def test_composite_m2m_exports_as_json_cell(self):
+        """Composite-keyed M2M members render as a JSON-encoded cell of natural-key dicts."""
+        row = self._export_row()
+        value = row["software_image_files"]
+        self.assertIsInstance(value, list)
+        self.assertEqual(len(value), 2)
+        for member in value:
+            self.assertIsInstance(member, dict)
+            self.assertIn("image_file_name", member)
+        rendered = NautobotCSVRenderer().render([row])
+        parsed_rows = list(csv.DictReader(io.StringIO(rendered)))
+        cell = parsed_rows[0]["software_image_files"]
+        self.assertTrue(cell.lstrip().startswith("["), cell)
+        self.assertEqual(json.loads(cell), list(value))
+
+    def test_m2m_round_trip_import(self):
+        """A rendered row with M2M cells parses and imports back with the same memberships."""
+        row = self._export_row()
+        row["name"] = "TestDeviceM2MRoundTrip"
+        row.pop("id")
+        rendered = NautobotCSVRenderer().render([row])
+        data = NautobotCSVParser().parse(
+            io.BytesIO(rendered.encode("utf-8")),
+            parser_context={"request": None, "serializer_class": DeviceSerializer},
+        )
+        serializer = DeviceSerializer(data=data[0], context={"request": None})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        new_device = serializer.save()
+        self.assertEqual(
+            sorted(tag.name for tag in new_device.tags.all()),
+            sorted(tag.name for tag in self.tags),
+        )
+        self.assertEqual(
+            set(new_device.software_image_files.values_list("pk", flat=True)),
+            {image_file.pk for image_file in self.image_files},
+        )
+
+
+class CSVSingleObjectUpdateTestCase(TestCase):
+    """A CSV PATCH to one object's detail endpoint, where `parse()` unwraps the single row it expects."""
+
+    def _parse(self, csv_text):
+        return NautobotCSVParser().parse(
+            io.BytesIO(csv_text.encode("utf-8")),
+            parser_context={
+                "request": None,
+                "serializer_class": StatusSerializer,
+                "kwargs": {"pk": uuid.uuid4()},
+            },
+        )
+
+    def test_single_row_is_unwrapped(self):
+        self.assertEqual(self._parse("name,color\ntest_status,111111"), {"name": "test_status", "color": "111111"})
+
+    def test_header_with_no_data_rows_is_a_parse_error(self):
+        """Reported rather than raising IndexError out of the parser onto a 500."""
+        with self.assertRaisesRegex(ParseError, "has no rows"):
+            self._parse("name,color\n")
+
+
+class CSVCustomFieldCellTestCase(TestCase):
+    """How a `cf_<key>` column is read back.
+
+    These columns are lifted out before `nest_flat_dict` runs so that a custom field whose key contains
+    `__` is not split into a subtree; the null handling below is applied separately to keep that lift from
+    changing anything else.
+    """
+
+    def setUp(self):
+        for key in ("plain", "with__underscores"):
+            custom_field = CustomField.objects.create(
+                type=CustomFieldTypeChoices.TYPE_TEXT, label=f"CSV CF {key}", key=key
+            )
+            custom_field.content_types.set([ContentType.objects.get_for_model(Status)])
+
+    def _parse(self, csv_text):
+        return NautobotCSVParser().parse(
+            io.BytesIO(csv_text.encode("utf-8")),
+            parser_context={"request": None, "serializer_class": StatusSerializer},
+        )
+
+    def test_empty_cell_becomes_null(self):
+        """What the renderer writes for a null custom field, and for an empty-string one."""
+        self.assertIsNone(self._parse("name,cf_plain\ntest_status,")[0]["custom_fields"]["plain"])
+
+    def test_null_sentinel_becomes_null(self):
+        """Longstanding behavior, incidental though its origin is; see `row_elements_to_data`."""
+        self.assertIsNone(self._parse(f"name,cf_plain\ntest_status,{CSV_NULL_TYPE}")[0]["custom_fields"]["plain"])
+
+    def test_key_containing_a_double_underscore(self):
+        data = self._parse("name,cf_with__underscores\ntest_status,value")
+        self.assertEqual(data[0]["custom_fields"], {"with__underscores": "value"})

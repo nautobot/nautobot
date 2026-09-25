@@ -2,12 +2,12 @@
     {% if list_element %}
         <li>
             <a class="dropdown-item" id="import-button" href="{{ import_url }}">
-                <span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from CSV
+                <span class="mdi mdi-database-import text-secondary" aria-hidden="true"></span> Import from File
             </a>
         </li>
     {% else %}
         <a id="import-button" href="{{ import_url }}" class="btn btn-info">
-            <span class="mdi mdi-database-import" aria-hidden="true"></span> Import
+            <span class="mdi mdi-database-import" aria-hidden="true"></span> Import from File
         </a>
     {% endif %}
 {% endif %}

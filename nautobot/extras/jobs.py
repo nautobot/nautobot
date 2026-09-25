@@ -733,6 +733,28 @@ class BaseJob:
         return return_data
 
     @classmethod
+    def _omitted_boolean_var_defaults(cls, data, cls_vars):
+        """The declared defaults of the `BooleanVar`s that `data` doesn't mention.
+
+        A bound `BooleanField` cleans an absent key to False, never to its `initial`, because an unchecked
+        HTML box submits nothing. A JSON body has no such convention, so restore the declared default here,
+        where "absent" still unambiguously means "unspecified" -- `as_form()` also binds UI POSTs and could
+        not tell the two apart.
+
+        `DryRunVar` is excluded defensively rather than of necessity: its `__init__` forces `default=False`,
+        so filling it in would change nothing today. Since dryrun can waive a Job's approval requirement,
+        an omitted key should not be able to turn it on even if that default later becomes settable.
+        """
+        return {
+            name: var.default
+            for name, var in cls_vars.items()
+            if isinstance(var, BooleanVar)
+            and not isinstance(var, DryRunVar)
+            and name not in data
+            and var.default is not None
+        }
+
+    @classmethod
     def validate_data(cls, data, files=None):
         cls_vars = cls._get_vars()
 
@@ -742,6 +764,8 @@ class BaseJob:
         for k in data:
             if k not in cls_vars:
                 raise ValidationError({k: "Job data contained an unknown property"})
+
+        data = {**cls._omitted_boolean_var_defaults(data, cls_vars), **data}
 
         # defer validation to the form object
         f = cls.as_form(data=cls.deserialize_data(data), files=files)
@@ -876,6 +900,7 @@ class ScriptVariable:
             self.field_attrs["label"] = label
         if description:
             self.field_attrs["help_text"] = description
+        self.default = default
         if default is not None:
             self.field_attrs["initial"] = default
         if widget:

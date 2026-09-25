@@ -1,8 +1,8 @@
-from django.test.client import RequestFactory
 from graphene.types import BigInt
 from graphene_django.settings import graphene_settings
 from graphql import execute, parse
 
+from nautobot.core.utils.requests import mock_wsgi_request
 from nautobot.extras.models import GraphQLQuery
 
 
@@ -12,7 +12,7 @@ def execute_query(query, variables=None, request=None, user=None):
     Args:
         query (str): String with GraphQL query.
         variables (dict, optional): If the query has variables they need to be passed in as a dictionary.
-        request (django.test.client.RequestFactory, optional): Used to authenticate.
+        request (django.core.handlers.wsgi.WSGIRequest, optional): Used to authenticate.
         user (django.contrib.auth.models.User, optional): Used to authenticate.
 
     Returns:
@@ -21,8 +21,7 @@ def execute_query(query, variables=None, request=None, user=None):
     if not request and not user:
         raise ValueError("Either request or username should be provided")
     if not request:
-        request = RequestFactory().post("/graphql/")
-        request.user = user
+        request = mock_wsgi_request(user=user, REQUEST_METHOD="POST", PATH_INFO="/graphql/")
     schema = graphene_settings.SCHEMA.graphql_schema
     document = parse(query)
     if variables:
@@ -39,7 +38,7 @@ def execute_saved_query(saved_query_name, **kwargs):
 
     Keyword Args:
         variables (Optional[dict]): If the query has variables they need to be passed in as a dictionary.
-        request (Optional[django.test.client.RequestFactory]): Used to authenticate.
+        request (Optional[django.core.handlers.wsgi.WSGIRequest]): Used to authenticate.
         user (Optional[django.contrib.auth.models.User]): Used to authenticate.
 
     Returns:

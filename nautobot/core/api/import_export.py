@@ -25,9 +25,17 @@ from nautobot.core.utils.permissions import permission_is_exempt
 # which declared a version, so a file with no version key is either version 1 or 2.
 IMPORT_DOCUMENT_VERSION = 3
 IMPORT_DOCUMENT_VERSION_KEY = "nautobot_import_version"
+# The versions an import will read. A file declaring no version at all is accepted rather than assumed to
+# be unreadable, per the lineage described above.
+SUPPORTED_IMPORT_DOCUMENT_VERSIONS = (IMPORT_DOCUMENT_VERSION,)
 IMPORT_DOCUMENT_MODEL_KEY = "model"
 IMPORT_DOCUMENT_MATCH_FIELDS_KEY = "match_fields"
 IMPORT_DOCUMENT_RECORDS_KEY = "records"
+IMPORT_DOCUMENT_METADATA_KEYS = (
+    IMPORT_DOCUMENT_VERSION_KEY,
+    IMPORT_DOCUMENT_MODEL_KEY,
+    IMPORT_DOCUMENT_MATCH_FIELDS_KEY,
+)
 
 # Serializer fields that describe the API representation rather than the object, and so are omitted.
 EXCLUDED_DOCUMENT_FIELDS = ("url", "notes_url")
@@ -301,13 +309,13 @@ def validate_field_paths(serializer_class, paths, *, user, max_depth=EXPORT_FIEL
         ValueError: describing every invalid path.
     """
     # Instantiated the way `ExportObjectList._get_serializer_data` does, so that the field set vetted here is
-    # the one the export will actually emit: `exporting=True` is what makes the opt-in M2M fields readable
+    # the one the export will actually emit: `for_import_export=True` is what makes the opt-in M2M fields readable
     # (`OptInFieldsMixin._readable_m2m_sources`), and without it a column the export produces by default --
     # `dcim.devicetype.software_image_files`, say -- could not be named explicitly.
     # Related serializers below are deliberately *not* built this way: a selection only applies at the root
     # (`NaturalKeyRepresentationMixin` ignores `export_fields` when nested), and a nested path is emitted as a
     # database lookup, which a to-many field cannot satisfy.
-    root_serializer = serializer_class(context={"request": None, "depth": 0}, exporting=True)
+    root_serializer = serializer_class(context={"request": None, "depth": 0}, for_import_export=True)
     errors = []
     for path in paths:
         parts = path.split("__")
@@ -496,7 +504,7 @@ def enumerate_field_paths(serializer_class, *, max_segments=EXPORT_FIELD_MAX_DEP
 
     # Instantiated as `validate_field_paths()` does, and for the same reason: the field set enumerated here
     # has to be the one the export will actually emit.
-    root_serializer = serializer_class(context={"request": None, "depth": 0}, exporting=True)
+    root_serializer = serializer_class(context={"request": None, "depth": 0}, for_import_export=True)
     _walk("", root_serializer, 1)
 
     if for_csv:

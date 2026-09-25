@@ -1,3 +1,4 @@
+from io import BytesIO
 import re
 from urllib.parse import parse_qs, urlencode, urlparse
 
@@ -5,6 +6,7 @@ from django import forms
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
+from django.core.handlers.wsgi import WSGIRequest
 from django.http import QueryDict
 import django_filters
 
@@ -30,6 +32,34 @@ left over is handed to the view's filterset, so a parameter missing from a view'
 filter -- which is why `ExportObjectList` unions a view's list into these rather than assuming these
 alone; see `ExportObjectList._get_non_filter_params()`.
 """
+
+
+def mock_wsgi_request(user=None, **kwargs):
+    """
+    Stripped down version of `django.test.client.RequestFactory.request()` that isn't dependent on `django.test`.
+    """
+    request = WSGIRequest(
+        {
+            "PATH_INFO": "/",
+            "REMOTE_ADDR": "127.0.0.1",
+            "REQUEST_METHOD": "GET",
+            "SCRIPT_NAME": "",
+            "SERVER_NAME": "nautobot",
+            "SERVER_PORT": "80",
+            "SERVER_PROTOCOL": "HTTP/1.1",
+            "wsgi.version": (1, 0),
+            "wsgi.url_scheme": "http",
+            "wsgi.input": BytesIO(b""),
+            "wsgi.errors": BytesIO(),
+            "wsgi.multiprocess": True,
+            "wsgi.multithread": False,
+            "wsgi.run_once": False,
+            **kwargs,
+        }
+    )
+    if user is not None:
+        request.user = user
+    return request
 
 
 def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict, filterset):

@@ -8,15 +8,19 @@
             <strong>Job Data</strong>
         </div>
         <div class="card-body">
-            {% render_field job_form.content_type %}
             {% render_field job_form.roll_back_if_error %}
+            {# The three below are optional because a self-describing file supplies them: the model it #}
+            {# declares, the format its extension or content gives away, and its match_fields directive. #}
+            {% render_field job_form.import_format %}
+            {% render_field job_form.content_type %}
+            {% render_field job_form.match_fields %}
         </div>
     </div>
     <div class="card">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs" role="tablist">
-                <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">CSV File Upload</a></li>
-                <li class="nav-item" role="presentation"><a class="nav-link" href="#csv-text" role="tab" data-bs-toggle="tab">CSV Text Input</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link active" href="#csv-file" role="tab" data-bs-toggle="tab">File Upload</a></li>
+                <li class="nav-item" role="presentation"><a class="nav-link" href="#csv-text" role="tab" data-bs-toggle="tab">Text Input</a></li>
             </ul>
         </div>
         <div class="card-body">
@@ -48,7 +52,7 @@
                         </li>
                     </ul>
                     In either case, if no related object is intended for a given field, the string <code>NoObject</code>
-                    can be given.
+                    can be given in CSV data; JSON/YAML data should use a literal <code>null</code>.
                 </p>
                 <p>
                     <span class="text-info"><span aria-hidden="true" class="mdi mdi-help-circle"></span></span>
@@ -103,7 +107,7 @@
             if (!response.ok) {
                 table_info.style.display = "none";
                 table.style.display = "none";
-                fetch_failure.innerHTML = data.detail + " CSV cannot be imported for this content-type.";
+                fetch_failure.innerHTML = data.detail + " Data cannot be imported for this content-type.";
                 fetch_failure.style.display = "";
                 return;
             }
