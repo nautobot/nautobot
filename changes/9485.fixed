@@ -1,0 +1,1 @@
+Fixed HTTP 500 `TypeError` during POST to `/api/vpn/vpn-profile-phase-1-policy-assignments/` and `/api/vpn/vpn-profile-phase-2-policy-assignments/` by using `ValidatedModelSerializer`.
