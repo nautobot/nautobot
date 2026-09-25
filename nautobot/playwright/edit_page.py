@@ -12,7 +12,6 @@ import re
 
 from playwright.sync_api import expect
 
-from nautobot.playwright.base_page import select2_filter_pick
 from nautobot.playwright.list_page import ListPage
 
 
@@ -31,10 +30,6 @@ class EditPage(ListPage):
     def get_bulk_edit_pks(self) -> list:
         """Ids of the objects the bulk edit form will submit, read from its hidden pk inputs."""
         return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
-
-    def set_bulk_edit_field(self, field_name, label):
-        """Choose an option in a bulk edit dropdown by the text, e.g. "5 GHz" for frequency."""
-        select2_filter_pick(self.page, field_name, search=label, pick_text=label)
 
     def apply_bulk_edit(self) -> str:
         """Submit the form and return the job result id from the redirect URL."""
