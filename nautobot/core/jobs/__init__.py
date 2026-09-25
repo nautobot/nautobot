@@ -405,20 +405,26 @@ class ExportObjectList(Job):
     @staticmethod
     def _get_match_fields(model, export_field_paths=None):
         """
-        The model's natural key lookups, to stamp exports with their own import instructions.
+        The model's natural key as match fields, to stamp exports with their own import instructions.
 
         When an explicit field selection is in effect, the match key is only stamped if the selection
-        actually includes every match field (otherwise a re-import couldn't resolve the key).
+        covers every match field (otherwise a re-import couldn't resolve the key): a related match field is
+        covered by selecting it whole, or by selecting every lookup of the related model's natural key.
         """
-        try:
-            match_fields = list(model.csv_natural_key_field_lookups())
-        except AttributeError:
-            # Model without an identifiable natural key
+        match_fields = import_utils.natural_key_match_fields(model, get_serializer_for_model(model))
+        if match_fields is None:
             return None
         if export_field_paths is not None:
             for match_field in match_fields:
-                head = match_field.split("__", 1)[0]
-                if match_field not in export_field_paths and head not in export_field_paths:
+                if match_field in export_field_paths:
+                    continue
+                try:
+                    related_model = model._meta.get_field(match_field).related_model
+                    related_lookups = related_model.csv_natural_key_field_lookups()
+                except (AttributeError, FieldDoesNotExist):
+                    # Not a relation, or one to a model without an identifiable natural key
+                    return None
+                if any(f"{match_field}__{lookup}" not in export_field_paths for lookup in related_lookups):
                     return None
         return match_fields
 
@@ -773,11 +779,13 @@ class ImportObjects(Job):
         unchanged_objs = []
         validation_failed = False
         context = import_utils.import_serializer_context(self.user)
+        # Resolves each row's match-field values, as the serializer that saves the row will resolve them
+        match_serializer = serializer_class(context=context)
         for row, entry in enumerate(data, start=1):
             instance = None
             if match_fields:
                 try:
-                    filter_params = import_utils.build_match_filter(entry, match_fields)
+                    filter_params = import_utils.build_match_filter(entry, match_fields, match_serializer)
                     # Matching is performed within the change-restricted queryset: a record the user isn't
                     # permitted to update is treated as unmatched, and the resulting create attempt will
                     # surface a uniqueness error rather than exposing or modifying the record.
@@ -1032,7 +1040,7 @@ class ImportObjects(Job):
 
             # RESOLVE MATCH — run parameter > file directive > model default
             effective_match_fields, match_fields_source = import_utils.resolve_match_fields(
-                model, data, match_fields, directive_match_fields
+                model, serializer_class, data, match_fields, directive_match_fields
             )
             add_queryset, change_queryset = self._require_import_permissions(model, content_type)
             self._validate_match(data, effective_match_fields, match_fields_source, serializer_class)

@@ -92,7 +92,8 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.ipam.api.serializers import VLANSerializer
-from nautobot.ipam.models import Namespace, Prefix, RouteTarget, VLAN, VRF, VRFDeviceAssignment
+from nautobot.ipam.models import IPAddress, Namespace, Prefix, RouteTarget, VLAN, VRF, VRFDeviceAssignment
+from nautobot.tenancy.models import Tenant
 from nautobot.users.api.serializers import UserSerializer
 from nautobot.users.models import ObjectPermission, Token
 
@@ -154,7 +155,7 @@ class MatchFieldsTests(TestCase):
 
     def test_match__no_selection_uses_the_whole_natural_key(self):
         self.assertEqual(self.match_fields(Status), ["name"])
-        self.assertEqual(self.match_fields(DeviceType), ["manufacturer__name", "model"])
+        self.assertEqual(self.match_fields(DeviceType), ["manufacturer", "model"])
 
     def test_match__selection_covering_the_key(self):
         self.assertEqual(self.match_fields(Status, ["name", "color"]), ["name"])
@@ -166,13 +167,11 @@ class MatchFieldsTests(TestCase):
         """All or nothing: `model` alone cannot identify a DeviceType without its manufacturer."""
         self.assertIsNone(self.match_fields(DeviceType, ["model"]))
         self.assertIsNone(self.match_fields(DeviceType, ["manufacturer"]))
-        self.assertEqual(
-            self.match_fields(DeviceType, ["model", "manufacturer__name"]), ["manufacturer__name", "model"]
-        )
+        self.assertEqual(self.match_fields(DeviceType, ["model", "manufacturer__name"]), ["manufacturer", "model"])
 
     def test_match__relation_head_covers_its_lookups(self):
         """A bare relation expands to its own natural key, so selecting the head covers those lookups."""
-        self.assertEqual(self.match_fields(DeviceType, ["model", "manufacturer"]), ["manufacturer__name", "model"])
+        self.assertEqual(self.match_fields(DeviceType, ["model", "manufacturer"]), ["manufacturer", "model"])
 
     def test_match__nested_selection_that_is_not_the_natural_key(self):
         """A nested selection replaces the relation's default lookups, so this one covers nothing."""
@@ -182,10 +181,7 @@ class MatchFieldsTests(TestCase):
         """An Interface is keyed by its device *and* its module, so one of the two is not enough."""
         self.assertIn("module__pk", Interface.csv_natural_key_field_lookups())
         self.assertIsNone(self.match_fields(Interface, ["name", "device"]))
-        self.assertEqual(
-            self.match_fields(Interface, ["name", "device", "module"]),
-            list(Interface.csv_natural_key_field_lookups()),
-        )
+        self.assertEqual(self.match_fields(Interface, ["name", "device", "module"]), ["device", "module", "name"])
 
     def test_match__partial_lookup_of_a_relation_is_not_enough(self):
         """`device__name` is one of three `device__` lookups the key needs; naming it alone is not coverage."""
@@ -195,6 +191,18 @@ class MatchFieldsTests(TestCase):
         """No identifiable key means no directive, selection or not."""
         self.assertIsNone(self.match_fields(JobLogEntry))
         self.assertIsNone(self.match_fields(JobLogEntry, ["message"]))
+
+    def test_match__pk_natural_key_matches_on_id(self):
+        self.assertEqual(self.match_fields(VLAN), ["id"])
+        self.assertEqual(self.match_fields(VLAN, ["id", "name"]), ["id"])
+        self.assertIsNone(self.match_fields(VLAN, ["name"]))
+
+    def test_match__serializer_declared_match_fields(self):
+        """A serializer declares the match fields its model's natural key isn't spelled in."""
+        self.assertEqual(self.match_fields(IPAddress), ["address", "parent"])
+        self.assertEqual(self.match_fields(Prefix), ["prefix", "namespace"])
+        self.assertEqual(self.match_fields(IPAddress, ["address", "parent", "type"]), ["address", "parent"])
+        self.assertIsNone(self.match_fields(IPAddress, ["address"]))
 
 
 @tag("unit")
@@ -1389,7 +1397,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertEqual(
             lines[0],
             f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.devicetype; "
-            "match_fields=manufacturer__name model",
+            "match_fields=manufacturer model",
         )
         self.assertEqual(lines[1], "model,manufacturer__name")
         self.assertEqual(lines[2], "Selection DT,Selection Mfr")
@@ -1417,11 +1425,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertEqual(lines[1], "model")
 
     def test_select__relation_head_covers_the_key_it_expands_to(self):
-        """Selecting the bare relation stamps the key, and the column it names is really in the file.
-
-        The directive would otherwise be a lie: it claims `manufacturer__name`, which is not what was
-        typed -- it is what the head expands to.
-        """
+        """Selecting the bare relation stamps the key, and the columns it expands to are really in the file."""
         mfr = Manufacturer.objects.create(name="Head Key Mfr")
         DeviceType.objects.create(manufacturer=mfr, model="Head Key DT", u_height=1)
         lines = self.export_lines(
@@ -1430,7 +1434,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
         self.assertEqual(
             lines[0],
             f"# nautobot_import_version={IMPORT_DOCUMENT_VERSION}; model=dcim.devicetype; "
-            "match_fields=manufacturer__name model",
+            "match_fields=manufacturer model",
         )
         self.assertEqual(lines[1], "model,manufacturer__name")  # the claimed column is present
         self.assertEqual(lines[2], "Head Key DT,Head Key Mfr")
@@ -1462,7 +1466,7 @@ class ExportFieldSelectionTests(ImportExportJobTestCase):
                 export_fields="model,manufacturer__name",
             )
         )
-        self.assertEqual(covered["match_fields"], ["manufacturer__name", "model"])
+        self.assertEqual(covered["match_fields"], ["manufacturer", "model"])
         self.assertEqual(list(covered.keys()), ["nautobot_import_version", "model", "match_fields", "records"])
 
         uncovered = self.export_document(
@@ -2532,9 +2536,6 @@ class CoreImportResolveTests(ImportExportJobTestCase):
 
     def test_core_import__cf(self):
         """A custom-field value round-trips: importable as cf_<key> and exportable as a cf_<key> column."""
-        from nautobot.extras.choices import CustomFieldTypeChoices
-        from nautobot.extras.models import CustomField
-
         cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, key="test_ie_cf", label="Test IE CF")
         cf.content_types.set([ContentType.objects.get_for_model(Status)])
         status = self.create_status(name="test_cf_status", color="111111")
@@ -2863,7 +2864,18 @@ class MatchKeyTests(ImportExportJobTestCase):
             match_fields="no_such_field",
             expected_status=JobResultStatusChoices.STATUS_FAILURE,
         )
-        self.assertJobLogEntry(job_result, "Unknown match field(s): no_such_field", level=LogLevelChoices.LOG_ERROR)
+        self.assertJobLogEntry(job_result, "Invalid match field(s): no_such_field", level=LogLevelChoices.LOG_ERROR)
+
+    def test_match__lookup_into_a_relation(self):
+        """A related field is matched as a whole, by the reference the row gives for it, not by a lookup into it."""
+        job_result = self.run_import(
+            "name,color\ntest_update_status,222222",
+            match_fields="name,content_types__model",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result, "Invalid match field(s): content_types__model", level=LogLevelChoices.LOG_ERROR
+        )
 
 
 # ===========================================================================
@@ -3288,6 +3300,102 @@ class RoundTripE2ETests(ImportExportJobTestCase):
 
     def test_e2e_roundtrip__yaml(self):
         self._roundtrip("yaml", source="file directive")
+
+
+class NaturalKeyRoundTripTests(ImportExportJobTestCase):
+    """An export re-imports as an in-place update, matched on the natural key its own directive declares."""
+
+    def assertRoundTripUpdatesInPlace(self, model, objects, match_fields, edited_field="description"):
+        for export_format in ("csv", "json", "yaml"):
+            with self.subTest(export_format=export_format):
+                for obj in objects:
+                    setattr(obj, edited_field, f"before {export_format}")
+                    obj.validated_save()
+                export_kwargs = {"query_string": "&".join(f"id={obj.pk}" for obj in objects)}
+                if export_format != "csv":
+                    export_kwargs["export_format"] = export_format
+                exported = self.export_text(self.run_export(model=model, **export_kwargs))
+                count_before = model.objects.count()
+
+                job_result = self.run_import(
+                    exported.replace(f"before {export_format}", f"after {export_format}"), model=model
+                )
+
+                self.assertImport(
+                    job_result, created=0, updated=len(objects), match_fields=match_fields, source="file directive"
+                )
+                self.assertEqual(model.objects.count(), count_before)
+                for obj in objects:
+                    obj.refresh_from_db()
+                    self.assertEqual(getattr(obj, edited_field), f"after {export_format}")
+
+    def create_location_tree(self):
+        """A top-level Location and a child of it."""
+        parent_type = LocationType.objects.create(name="Round Trip Region")
+        child_type = LocationType.objects.create(name="Round Trip Site", parent=parent_type)
+        child_type.content_types.add(ContentType.objects.get_for_model(Device))
+        status = Status.objects.get_for_model(Location).first()
+        top = Location.objects.create(name="Round Trip Top", location_type=parent_type, status=status)
+        child = Location.objects.create(name="Round Trip Child", location_type=child_type, parent=top, status=status)
+        return top, child
+
+    def test_roundtrip__null_relation_in_the_natural_key(self):
+        """A Device with no tenant matches on `tenant` being null, alongside one that has a tenant."""
+        _, location = self.create_location_tree()
+        manufacturer = Manufacturer.objects.create(name="Round Trip Mfr")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Round Trip DT", u_height=1)
+        role = Role.objects.create(name="Round Trip Role")
+        role.content_types.add(ContentType.objects.get_for_model(Device))
+        common = {
+            "device_type": device_type,
+            "role": role,
+            "location": location,
+            "status": Status.objects.get_for_model(Device).first(),
+        }
+        devices = [
+            Device.objects.create(name="Round Trip No Tenant", **common),
+            Device.objects.create(name="Round Trip Tenant", tenant=Tenant.objects.create(name="RT Tenant"), **common),
+        ]
+        self.assertRoundTripUpdatesInPlace(Device, devices, ["name", "tenant", "location"], edited_field="comments")
+
+    def test_roundtrip__null_relation_in_a_related_natural_key(self):
+        """A top-level Location has no parent, and a child's parent has none either."""
+        self.assertRoundTripUpdatesInPlace(Location, self.create_location_tree(), ["name", "parent"])
+
+    def test_roundtrip__pk_natural_key(self):
+        vlan = VLAN.objects.create(vid=3999, name="Round Trip VLAN", status=Status.objects.get_for_model(VLAN).first())
+        self.assertRoundTripUpdatesInPlace(VLAN, [vlan], ["id"])
+
+    def test_roundtrip__serializer_declared_match_fields(self):
+        namespace = Namespace.objects.create(name="Round Trip Namespace")
+        prefix = Prefix.objects.create(
+            prefix="10.99.0.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        ip_address = IPAddress.objects.create(
+            address="10.99.0.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
+        )
+        self.assertRoundTripUpdatesInPlace(Prefix, [prefix], ["prefix", "namespace"])
+        self.assertRoundTripUpdatesInPlace(IPAddress, [ip_address], ["address", "parent"])
+
+    def test_roundtrip__exported_null_relation_clears_the_relation(self):
+        """A relation the file gives as null is cleared on update, however the file spells that null."""
+        _, location = self.create_location_tree()
+        tenant = Tenant.objects.create(name="RT Clearing Tenant")
+        for export_format in ("csv", "json", "yaml"):
+            with self.subTest(export_format=export_format):
+                location.tenant = None
+                location.validated_save()
+                export_kwargs = {"query_string": f"id={location.pk}"}
+                if export_format != "csv":
+                    export_kwargs["export_format"] = export_format
+                exported = self.export_text(self.run_export(model=Location, **export_kwargs))
+                location.tenant = tenant
+                location.validated_save()
+
+                self.assertImport(self.run_import(exported, model=Location), updated=1)
+
+                location.refresh_from_db()
+                self.assertIsNone(location.tenant)
 
 
 # ===========================================================================

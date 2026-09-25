@@ -5,9 +5,9 @@ import json
 import re
 
 from django.core.exceptions import FieldError, ObjectDoesNotExist, ValidationError
+from rest_framework import serializers
 import yaml
 
-from nautobot.core.api.utils import dict_to_filter_params
 from nautobot.core.utils.requests import mock_wsgi_request
 
 # A YAML block-mapping key at the start of a line: `records:`, `model: dcim.device`.
@@ -43,17 +43,69 @@ def parse_field_name_list(value):
     return fields or None
 
 
-def default_match_fields(model, header_fields=None):
-    """
-    The default match fields for a model: the pk if an `id` column is present in the data,
-    otherwise the model's natural key field lookups.
-    """
-    if header_fields and "id" in header_fields:
-        return ["id"]
-    return list(model.csv_natural_key_field_lookups())
+def _row_key(match_field):
+    """The key a record carries a match field's value under: every record spells its primary key `id`."""
+    return "id" if match_field == "pk" else match_field
 
 
-def resolve_match_fields(model, data, match_fields_param, directive_match_fields):
+def _match_serializer(serializer_class):
+    return serializer_class(context={"request": None, "depth": 0})
+
+
+def _unusable_match_fields(match_fields, serializer):
+    """The match fields that aren't a writable, single-valued field of `serializer`.
+
+    A match field has to be something a record gives a value for, and that value has to identify one thing:
+    a read-only field (`display`) is dropped by the parser, and a to-many field (`tags`) holds a set.
+    """
+    unusable = []
+    for field in match_fields:
+        if _row_key(field) == "id":
+            continue
+        serializer_field = serializer.fields.get(field)
+        if (
+            serializer_field is None
+            or serializer_field.read_only
+            or serializer_field.source == "*"
+            or isinstance(serializer_field, (serializers.ManyRelatedField, serializers.ListSerializer))
+        ):
+            unusable.append(field)
+    return unusable
+
+
+def natural_key_match_fields(model, serializer_class):
+    """The model's default match fields: its natural key, as the serializer fields that its lookups start from.
+
+    A Device's natural key lookups `name`, `tenant__name` and `location__name` (etc.) make the match fields
+    `name`, `tenant` and `location`. A `pk` natural key is matched on `id`.
+
+    A serializer whose model's natural key isn't spelled in its own fields declares its match fields instead,
+    as `Meta.import_match_fields`: an IPAddress is keyed on `host`, which its serializer reads only as part
+    of `address`.
+
+    Returns:
+        (list): The match fields, or None if the model has no identifiable natural key, or one that the
+            serializer can't match on.
+    """
+    match_fields = getattr(serializer_class.Meta, "import_match_fields", None)
+    if match_fields is not None:
+        match_fields = list(match_fields)
+    else:
+        try:
+            lookups = model.csv_natural_key_field_lookups()
+        except AttributeError:
+            return None
+        match_fields = []
+        for lookup in lookups:
+            head = _row_key(lookup.split("__", 1)[0])
+            if head not in match_fields:
+                match_fields.append(head)
+    if _unusable_match_fields(match_fields, _match_serializer(serializer_class)):
+        return None
+    return match_fields
+
+
+def resolve_match_fields(model, serializer_class, data, match_fields_param, directive_match_fields):
     """
     Resolve the effective match key and where it came from, by precedence.
 
@@ -63,7 +115,7 @@ def resolve_match_fields(model, data, match_fields_param, directive_match_fields
 
     Returns:
         tuple: `(effective_match_fields, source)` where `source` is one of `"run parameter"`,
-        `"file directive"`, or `"default"`. For a model with no identifiable natural key (and no `id`
+        `"file directive"`, or `"default"`. For a model with no usable natural key (and no `id`
         column), returns `(None, None)` — the import is then create-only.
     """
     explicit_match_fields = parse_field_name_list(match_fields_param)
@@ -71,71 +123,84 @@ def resolve_match_fields(model, data, match_fields_param, directive_match_fields
         return explicit_match_fields, "run parameter"
     if directive_match_fields:
         return directive_match_fields, "file directive"
-    header_fields = list(data[0].keys()) if data else []
-    try:
-        return default_match_fields(model, header_fields), "default"
-    except AttributeError:
+    if data and "id" in data[0]:
+        return ["id"], "default"
+    match_fields = natural_key_match_fields(model, serializer_class)
+    if match_fields is None:
         return None, None
+    return match_fields, "default"
 
 
 def validate_match_fields(match_fields, serializer_class):
     """
-    Confirm that each of the given match fields corresponds to a field of the given serializer.
+    Confirm that each of the given match fields is a writable, single-valued field of the given serializer.
 
-    Match fields may be bare serializer field names (`name`, `location`) or nested lookups into a related
-    field (`location__name`); in the latter case only the head of the lookup is validated here, as the
-    remainder is validated by the database when matching.
+    A related field is matched as a whole (`location`), by whatever reference the record gives for it, so a
+    lookup into one (`location__name`) is not a match field.
 
     Raises:
-        ValueError: identifying any unrecognized fields.
+        ValueError: identifying any unusable fields.
     """
-    serializer = serializer_class(context={"request": None, "depth": 0})
-    invalid = []
-    for field in match_fields:
-        head = field.split("__", 1)[0]
-        if head not in ("id", "pk") and head not in serializer.fields:
-            invalid.append(field)
+    invalid = _unusable_match_fields(match_fields, _match_serializer(serializer_class))
     if invalid:
         raise ValueError(
-            f"Unknown match field(s): {', '.join(invalid)}. "
-            "Match fields must be field names of the serializer for this content-type."
+            f"Invalid match field(s): {', '.join(invalid)}. "
+            "Match fields must be writable field names of the serializer for this content-type, such as "
+            '"name" or "location", not lookups such as "location__name" or to-many fields such as "tags".'
         )
 
 
-def build_match_filter(row_data, match_fields):
+def _require_match_fields(row_data, match_fields):
+    """Raise ValueError naming any match field that the row gives no value for."""
+    missing = [field for field in match_fields if _row_key(field) not in row_data]
+    if missing:
+        raise ValueError(f"Match field(s) not present in the import data: {', '.join(missing)}")
+
+
+def build_match_filter(row_data, match_fields, serializer):
     """
     Build ORM filter parameters from a parsed row of import data, restricted to the given match fields.
 
+    Each value is read by the serializer field it belongs to, so that matching resolves a related object
+    exactly as saving the row will: `location: {"name": "Site A"}` becomes that Location, and
+    `tenant: None` becomes `tenant=None`, which matches records with no tenant.
+
     Args:
-        row_data (dict): One parsed record (as produced by the import parser), possibly containing nested
-            dicts for related fields.
-        match_fields (list): Field names to match on; a bare related field name (e.g. `location`) matches
-            all of the row's lookups into that field (e.g. `location__name`, `location__parent__name`).
+        row_data (dict): One parsed record (as produced by the import parser).
+        match_fields (list): Serializer field names to match on, as `validate_match_fields()` accepts.
+        serializer (Serializer): An instance of the serializer the rows are imported with.
 
     Returns:
         (dict): Parameters suitable for `queryset.get(**params)`.
 
     Raises:
-        ValueError: if any match field has no corresponding value in the row data.
+        ValueError: if any match field has no value in the row data, or a value that doesn't resolve.
     """
-    flat_data = dict_to_filter_params(row_data)
+    _require_match_fields(row_data, match_fields)
     params = {}
-    missing = []
     for field in match_fields:
-        matched = {key: value for key, value in flat_data.items() if key == field or key.startswith(f"{field}__")}
-        if not matched:
-            missing.append(field)
-        params.update(matched)
-    if missing:
-        raise ValueError(f"Match field(s) not present in the import data: {', '.join(missing)}")
-    if "id" in params:
-        params["pk"] = params.pop("id")
+        value = row_data[_row_key(field)]
+        if _row_key(field) == "id":
+            params["pk"] = value
+            continue
+        serializer_field = serializer.fields[field]
+        if value is not None:
+            try:
+                value = serializer_field.to_internal_value(value)
+            except serializers.ValidationError as exc:
+                details = exc.detail if isinstance(exc.detail, list) else [exc.detail]
+                raise ValueError(f"Match field {field}: {'; '.join(str(detail) for detail in details)}") from exc
+        params[serializer_field.source.replace(".", "__")] = value
     return params
 
 
 def match_key_for_row(row_data, match_fields):
-    """Reduce a row's match-field values to a hashable key, for uniqueness checking within a file."""
-    return json.dumps(build_match_filter(row_data, match_fields), sort_keys=True, default=str)
+    """Reduce a row's match-field values to a hashable key, for uniqueness checking within a file.
+
+    Read from the row as written rather than resolved, since that would cost a query per relation per row.
+    """
+    _require_match_fields(row_data, match_fields)
+    return json.dumps({field: row_data[_row_key(field)] for field in match_fields}, sort_keys=True, default=str)
 
 
 def validate_match_uniqueness_within_file(data, match_fields):

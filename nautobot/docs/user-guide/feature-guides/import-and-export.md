@@ -139,7 +139,7 @@ model,manufacturer__name,u_height
 The columns appear in exactly the order you list them, so this is also how you control column order:
 
 ```csv
-# nautobot_import_version=3; model=dcim.devicetype; match_fields=manufacturer__name model
+# nautobot_import_version=3; model=dcim.devicetype; match_fields=manufacturer model
 model,manufacturer__name,u_height
 ISR4331,Cisco,1
 ```
@@ -290,6 +290,8 @@ As in the UI, `--content-type` may be omitted for a file that declares its own m
     Match fields are accepted as an input but nothing acts on them yet, so every import currently creates new objects. The rest of this section describes the intended behavior.
 
 All Nautobot data models define their default match fields, which are either a "natural key" (field or set of fields that uniquely identify an object, for example a Status's `name` field), or if no unique natural key is possible, simply use the object's `id` as its match field. This default set of match fields is added to the exported file as metadata, as described [above](#the-self-describing-file).
+
+Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
 
 When importing, you can override the match fields for a particular file either by editing the metadata directly before uploading the file, or by explicitly specifying match fields as an input to the "Import Objects" Job. This can be powerful for in-place updates where you know that a given field(s), even though not actually enforced unique by Nautobot itself, happen in your particular use case to be unique identifiers for the existing objects in the system. Overriding the match fields in this case can allow you to specify records in a simpler or more portable way than using a full natural-key field set or using the raw `id` values would.
 
