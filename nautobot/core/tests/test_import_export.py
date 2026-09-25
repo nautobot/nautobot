@@ -2747,6 +2747,20 @@ class CoreUpsertTests(ImportExportJobTestCase):
         self.assertIn("manufacturer__name: Old Log Mfr → New Log Mfr", entry.message)
         self.assertNotIn(str(old_manufacturer.pk), entry.message)
 
+    def test_core_upsert__m2m_only__update(self):
+        """A row that changes only a many-to-many field is an update, not unchanged."""
+        manufacturer = Manufacturer.objects.create(name="Tag Log Mfr")
+        device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Tag Log DT", u_height=1)
+        tag = Tag.objects.create(name="Tag Log Tag")
+        tag.content_types.add(ContentType.objects.get_for_model(DeviceType))
+        job_result = self.run_import(
+            "model,manufacturer__name,tags\nTag Log DT,Tag Log Mfr,Tag Log Tag", model=DeviceType, match_fields="model"
+        )
+        self.assertImport(job_result, updated=1, unchanged=0)
+        self.assertQuerySetEqual(device_type.tags.all(), [tag])
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertIn('tags: [] → ["Tag Log Tag"]', entry.message)
+
     def test_core_upsert__sensitive_field__update(self):
         """A changed sensitive field is logged as changed, without either of its values."""
         old_key, new_key = "a" * 40, "b" * 40

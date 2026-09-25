@@ -524,9 +524,10 @@ class IPAddressRangeQuerySet(RestrictedQuerySet):
     def _address_kwargs_to_host_kwargs(kwargs, start_address, end_address):
         """Translate the `start_address`/`end_address` model properties to the `start_host`/`end_host` fields."""
         hosts = {}
-        if start_address:
+        # `is not None`, not truthiness: netaddr treats 0.0.0.0 and :: as false
+        if start_address is not None:
             hosts["start_host"] = netaddr.IPAddress(str(start_address))
-        if end_address:
+        if end_address is not None:
             hosts["end_host"] = netaddr.IPAddress(str(end_address))
         return merge_dicts_without_collision(kwargs, hosts)
 

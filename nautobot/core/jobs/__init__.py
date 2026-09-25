@@ -728,9 +728,9 @@ class ImportObjects(Job):
     def _snapshot(serializer_class, instance):
         """The instance's writable fields as an export would write them, for detecting changes.
 
-        Read through the serializer rather than `serialize_object()`, which omits every many-to-many field
-        with a custom through model (`DeviceType.software_image_files`), so a row changing only such a field
-        would look unchanged and be rolled back. The export representation also spells each field the way the
+        Read through the same serializer that saves the row, so that the snapshot holds exactly the fields an
+        import can set, whatever kind of field each is: a field left out would make a row changing only that
+        field look unchanged, and be rolled back. The export representation also spells each field the way the
         file does, so a change is logged as `location__name: A → B` rather than by primary key.
 
         Read-only fields are left out, a row being unable to change them: they are either bookkeeping, such as

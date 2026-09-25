@@ -892,3 +892,18 @@ class IPAddressRangeQuerySetTestCase(TestCase):
         self.assertEqual(IPAddressRange.objects.get(start_address="10.0.0.30"), self.range2)
         self.assertQuerySetEqual(queryset.exclude(start_address="10.0.0.10"), [self.range2])
         self.assertQuerySetEqual(queryset.exclude(end_address="10.0.0.40"), [self.range1])
+
+    def test_filter_by_all_zeros_address(self):
+        """An all-zeros address, which netaddr treats as false, still filters."""
+        namespace = Namespace.objects.create(name="IP Address Range Queryset Zeros Test")
+        Prefix.objects.create(prefix="::/64", namespace=namespace, status=Status.objects.get_for_model(Prefix).first())
+        status = Status.objects.get_for_model(IPAddressRange).first()
+        zeros = IPAddressRange.objects.create(
+            start_address="::", end_address="::10", namespace=namespace, status=status
+        )
+        other = IPAddressRange.objects.create(
+            start_address="::20", end_address="::30", namespace=namespace, status=status
+        )
+        queryset = IPAddressRange.objects.filter(pk__in=[zeros.pk, other.pk])
+        self.assertQuerySetEqual(queryset.filter(start_address=netaddr.IPAddress("::")), [zeros])
+        self.assertQuerySetEqual(queryset.exclude(start_address=netaddr.IPAddress("::")), [other])
