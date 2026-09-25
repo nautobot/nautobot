@@ -1478,6 +1478,9 @@ properties:
       A list of app names for which Prometheus metrics should be disabled.
       (If provided as an environment variable, it should be a comma-separated string, for example
       `NAUTOBOT_METRICS_DISABLED_APPS="nautobot_ssot, nautobot_device_lifecycle_mgmt"`.)
+    details: |-
+      This setting only has an effect when `METRICS_ENABLED` is `True`. When metrics are disabled, no App metrics
+      are loaded regardless of this setting.
     environment_variable: "NAUTOBOT_METRICS_DISABLED_APPS"
     items:
       type: "string"
@@ -1487,7 +1490,10 @@ properties:
     version_added: "2.2.1"
   METRICS_ENABLED:
     default: false
-    description: "Toggle the availability of Prometheus-compatible metrics at `/metrics`."
+    description: >-
+      Toggle the availability of Prometheus-compatible metrics at `/metrics`.
+      When `False`, Nautobot also does not import the `metrics.py` module of any installed App, so App metric
+      functions are neither registered nor evaluated.
     environment_variable: "NAUTOBOT_METRICS_ENABLED"
     see_also:
       "Guide to Nautobot Prometheus metrics": "../guides/prometheus-metrics.md"
