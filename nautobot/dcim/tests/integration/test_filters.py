@@ -11,12 +11,7 @@ from nautobot.dcim.tests.integration.pages.locations_page import LocationsPage
 
 
 class ListViewFilterTestCase:
-    """1:1 Playwright port of ``core/tests/selenium/test_filters.py::ListViewFilterTestCase.test_list_view_filter``.
-
-    The single Selenium test is fanned out into three behavior-scoped tests below; the
-    class keeps the Selenium name as the migration ledger. Interim structure, not the
-    long-term pattern — retire this class when generic list-view filter tests land.
-    """
+    """The Locations list-view filter drawer: opening it, filtering by parent, and removing the filter again."""
 
     def test_filter_drawer_opens(self, auth_page, base_url):
         """The filter drawer starts hidden and opens from the Filter toolbar button."""
