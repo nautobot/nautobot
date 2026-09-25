@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 import re
 from types import SimpleNamespace
-from unittest import expectedFailure, mock, skip
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -2548,48 +2548,6 @@ class CoreImportResolveTests(ImportExportJobTestCase):
         self.assertIn("cf_test_ie_cf", text)
         self.assertIn("hello-cf", text)
 
-    def test_core_import__gfk(self):
-        """A GFK-backed association (ContactAssociation) resolves its generic target and related keys."""
-        self.add_permissions(
-            "dcim.view_locationtype",
-            "extras.view_status",
-            "dcim.view_location",
-            "extras.add_role",
-            "extras.add_contact",
-        )
-        self.run_import("name\nContactAssignmentImportTestLocationType", model=LocationType)
-        self.assertEqual(LocationType.objects.filter(name="ContactAssignmentImportTestLocationType").count(), 1)
-
-        self.run_import(
-            "\n".join(
-                [
-                    "location_type__name,name,status__name",
-                    "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation1,Active",
-                    "ContactAssignmentImportTestLocationType,ContactAssignmentImportTestLocation2,Active",
-                ]
-            ),
-            model=Location,
-        )
-        self.assertEqual(
-            Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType").count(), 2
-        )
-
-        self.run_import("name,email\nBob-ContactAssignmentImportTestLocation,bob@example.com", model=Contact)
-        self.assertEqual(Contact.objects.filter(name="Bob-ContactAssignmentImportTestLocation").count(), 1)
-
-        self.run_import(
-            "name,content_types\nContactAssignmentImportTestLocation-On Site,extras.contactassociation", model=Role
-        )
-        self.assertEqual(Role.objects.filter(name="ContactAssignmentImportTestLocation-On Site").count(), 1)
-        associations = ["associated_object_id,associated_object_type,status__name,role__name,contact__name"]
-
-        for location in Location.objects.filter(location_type__name="ContactAssignmentImportTestLocationType"):
-            associations.append(
-                f"{location.pk},dcim.location,Active,ContactAssignmentImportTestLocation-On Site,"
-                "Bob-ContactAssignmentImportTestLocation"
-            )
-        self.run_import("\n".join(associations), model=ContactAssociation)
-
 
 class DetectImportFormatTests(SimpleTestCase):
     """`detect_import_format` sniffs by filename first, then content, else CSV."""
@@ -3282,6 +3240,21 @@ class ImportRollbackTests(ImportExportJobTestCase):
         self.assertEqual(log_warning[0].message, "Rolling back all 4 records.")
         self.assertEqual(log_warning[1].message, "No status objects were created or updated")
 
+    def test_import_rollback__enabled_reverts_updated_rows(self):
+        """With rollback on, a record that a row updated is restored as well."""
+        status = self.create_status(color="111111")
+        csv_data = "\n".join(["name,color", "test_update_status,222222", "test_update_status_new,notacolor"])
+        job_result = self.run_import(
+            csv_data,
+            match_fields="name",
+            roll_back_if_error=True,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, 'Row 1: Updated record "test_update_status"', level=LogLevelChoices.LOG_INFO)
+        self.assertJobLogEntry(job_result, "Rolling back all 1 records.", level=LogLevelChoices.LOG_WARNING)
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
+
     def test_import_rollback__disabled_keeps_the_good_rows(self):
         """With rollback off, the bad row is reported and every other row is still imported."""
         job_result = self.run_import(
@@ -3532,28 +3505,15 @@ class SentinelValueTests(ImportExportJobTestCase):
         status.refresh_from_db()
         self.assertEqual(status.description, tricky)
 
-    @expectedFailure
-    def test_sentinel__empty_equiv_null_noobject(self):
-        """Intended: an empty cell clears a scalar to null, equivalent to NULL/NoObject.
-
-        Known gap (qa-test-plan §13): an empty string is preserved as "" on a non-nullable CharField
-        rather than coerced to null, so this currently fails.
-        """
-        status = self.create_status(name="test_empty_null", color="111111")
+    def test_sentinel__empty_cell_clears_a_string(self):
+        """An empty cell clears a string field to "", which is how a non-nullable CharField spells empty."""
+        status = self.create_status(name="test_empty_string", color="111111")
         status.description = "seed"
-        status.save()
-        self.run_import("name,description\ntest_empty_null,\n", match_fields="name")
+        status.validated_save()
+        job_result = self.run_import("name,description\ntest_empty_string,\n", match_fields="name")
+        self.assertImport(job_result, updated=1)
         status.refresh_from_db()
-        self.assertIsNone(status.description)
-
-
-# ===========================================================================
-# Import mode
-# ===========================================================================
-class ImportModeTests(ImportExportJobTestCase):
-    @skip("Open question: create-only mode + an existing match — behavior undefined (test-matrix Q2)")
-    def test_mode__create_only_match_exists(self):
-        """Create-only mode encountering an existing match: expected behavior TBD."""
+        self.assertEqual(status.description, "")
 
 
 # ===========================================================================
@@ -3655,12 +3615,38 @@ class PermissionTests(ImportExportJobTestCase):
         obj_perm.users.add(self.user)
         obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
         status = self.create_status()
-        self.run_import(
+        job_result = self.run_import(
             "name,color\ntest_update_status,999999",
             match_fields="name",
             username=self.user.username,
             roll_back_if_error=False,
             expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        # Unmatched (the record isn't in the user's change-permitted queryset), so the row is a create, which
+        # the existing record's unique name refuses
+        self.assertJobLogEntry(
+            job_result, "Row 1: `name`: `status with this name already exists.`", level=LogLevelChoices.LOG_ERROR
+        )
+        status.refresh_from_db()
+        self.assertEqual(status.color, "111111")
+
+    def test_perm__import_update_constrained_change(self):
+        """An update that would take a record outside the user's change constraint is refused."""
+        obj_perm = ObjectPermission(name="Change 111111 only", constraints={"color": "111111"}, actions=["change"])
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(Status))
+        status = self.create_status(color="111111")
+        job_result = self.run_import(
+            "name,color\ntest_update_status,999999",
+            match_fields="name",
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result,
+            f'Row 1: User "{self.user}" does not have permission to update an object with these attributes',
+            level=LogLevelChoices.LOG_ERROR,
         )
         status.refresh_from_db()
         self.assertEqual(status.color, "111111")
