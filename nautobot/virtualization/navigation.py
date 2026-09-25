@@ -34,7 +34,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="virtualization:vminterface_list",
-                        name="Interfaces",
+                        name="VM Interfaces",
                         weight=200,
                         permissions=[
                             "virtualization.view_vminterface",

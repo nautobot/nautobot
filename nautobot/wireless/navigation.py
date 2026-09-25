@@ -49,6 +49,7 @@ menu_items = (
                                 ],
                             ),
                         ),
+                        searchable=False,
                     ),
                     NavMenuItem(
                         link="dcim:controllermanageddevicegroup_list",
@@ -67,6 +68,7 @@ menu_items = (
                                 ],
                             ),
                         ),
+                        searchable=False,
                     ),
                     NavMenuItem(
                         link="wireless:radioprofile_list",

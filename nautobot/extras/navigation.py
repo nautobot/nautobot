@@ -547,11 +547,13 @@ menu_items = (
                         link="apps:apps_marketplace",
                         name="Apps Marketplace",
                         weight=100,
+                        searchable=False,
                     ),
                     NavMenuItem(
                         link="apps:apps_list",
                         name="Installed Apps",
                         weight=200,
+                        searchable=False,
                     ),
                 ),
             ),
