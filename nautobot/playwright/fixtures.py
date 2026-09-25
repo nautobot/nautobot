@@ -21,6 +21,7 @@ development API token.
 # pylint: disable=redefined-outer-name
 
 import os
+import time
 
 import pytest
 
@@ -195,3 +196,28 @@ def api_count(api):
         return response.json()["count"]
 
     return _count
+
+
+# Celery's READY_STATES: a job result in one of these will not change again.
+JOB_RESULT_FINISHED_STATES = {"SUCCESS", "FAILURE", "REVOKED"}
+
+
+@pytest.fixture(scope="session")
+def wait_for_job_result(api):
+    """Wait for a job to finish by checking its status through the API, then return the job result."""
+
+    def _wait(pk, timeout=60):
+        deadline = time.monotonic() + timeout
+        while True:
+            response = api.get(f"/api/extras/job-results/{pk}/")
+            if not response.ok:
+                pytest.fail(f"GET /api/extras/job-results/{pk}/ returned {response.status}: {response.text()}")
+            record = response.json()
+            status = record["status"]["value"]
+            if status in JOB_RESULT_FINISHED_STATES:
+                return record
+            if time.monotonic() > deadline:
+                pytest.fail(f"Job result {pk} was still {status} after {timeout}s. Is a Celery worker running?")
+            time.sleep(0.5)
+
+    return _wait

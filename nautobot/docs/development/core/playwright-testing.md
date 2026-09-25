@@ -129,6 +129,11 @@ populated instance _around_ those records, so narrowing and exclusion assertions
 meaningful rather than trivially true. On failure the job uploads the Playwright
 traces and screenshots as a build artifact and prints the server log.
 
+The job also starts a Celery worker, because bulk edit and bulk delete run as jobs. A test
+that triggers one takes the job result id from the redirect and passes it to the
+`wait_for_job_result` fixture before asserting on the job's effects. The local development
+stack already runs a worker.
+
 ## Adding a test package
 
 If a new `nautobot/<app>/tests/integration/` package is created, its `__init__.py`

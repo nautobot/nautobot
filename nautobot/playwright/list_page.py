@@ -41,6 +41,8 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
+    # The row selection checkbox; its value is the object's id.
+    _PK_CHECKBOX = "input[name='pk']"
     # The per-row overview toggle.
     _OVERVIEW_TOGGLE = "button.nb-overview-toggle"
     # Every overview fragment request, for routing and response waits.
@@ -98,6 +100,24 @@ class ListPage(BasePage):
         column_position = headers.index(header_name) + 1
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
+
+    # -------------------------------------------------------------------------
+    # Row selection
+    # -------------------------------------------------------------------------
+
+    @property
+    def _edit_selected(self):
+        """Finds the Edit Selected button. Its link can end with the current filter, and unlike Edit All it has no name."""
+        return f"button[formaction^='{self.LIST_PATH}edit/']:not([name])"
+
+    def select_row(self, name):
+        """Check the pk checkbox of the data row whose link text is exactly *name*."""
+        row = self.page.locator(self._DATA_ROWS).filter(has=self.page.get_by_role("link", name=name, exact=True))
+        row.locator(self._PK_CHECKBOX).check()
+
+    def click_edit_selected(self):
+        """Click Edit Selected and wait for the bulk edit form to load."""
+        self._click_and_wait_for_navigation(self._edit_selected)
 
     # -------------------------------------------------------------------------
     # Overview rows
