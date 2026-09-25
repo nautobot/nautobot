@@ -2806,6 +2806,19 @@ class MatchKeyTests(ImportExportJobTestCase):
         self.assertEqual(status.color, "999999")
         self.assertImport(job_result, updated=1, match_fields=["id"], source="default")
 
+    def test_match__default_id_in_a_later_record(self):
+        """Records that carry an `id` match on it even when the first doesn't; those without one are created."""
+        status = self.create_status(color="111111")
+        records = [
+            {"name": "test_id_less_status", "color": "222222", "content_types": ["dcim.device"]},
+            {"id": str(status.pk), "color": "333333"},
+        ]
+        job_result = self.run_import(json.dumps(records), import_format="json")
+        self.assertImport(job_result, created=1, updated=1, match_fields=["id"], source="default")
+        status.refresh_from_db()
+        self.assertEqual(status.color, "333333")
+        self.assertTrue(Status.objects.filter(name="test_id_less_status").exists())
+
     def test_match__composite(self):
         """A composite match key (name, color) resolves the record; a non-key field is updated."""
         status = self.create_status(name="test_composite", color="111111")

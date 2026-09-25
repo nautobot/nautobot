@@ -122,7 +122,8 @@ def resolve_match_fields(model, serializer_class, data, match_fields_param, dire
         return explicit_match_fields, "run parameter"
     if directive_match_fields:
         return directive_match_fields, "file directive"
-    if data and "id" in data[0]:
+    # Any record, not just the first: JSON and YAML records needn't all have the same keys
+    if any("id" in row for row in data):
         return ["id"], "default"
     match_fields = natural_key_match_fields(model, serializer_class)
     if match_fields is None:
