@@ -110,13 +110,17 @@ class HtmxLoginRedirectMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        if not request.headers.get("HX-Request") or not self._redirects_to_login(response):
-            return response
+        if request.headers.get("HX-Request") and self._redirects_to_login(response):
+            login_url = response["Location"]
+            return self._hx_redirect(request, login_url)
+        return response
 
-        redirect = HttpResponse(status=204)
-        redirect["HX-Redirect"] = self._login_url_with_next(request, response["Location"])
-        patch_vary_headers(redirect, ["HX-Request"])
-        return redirect
+    def _hx_redirect(self, request, login_url):
+        """Return a 204 telling HTMX to navigate the window to `login_url`."""
+        hx_redirect = HttpResponse(status=204)
+        hx_redirect["HX-Redirect"] = self._login_url_with_next(request, login_url)
+        patch_vary_headers(hx_redirect, ["HX-Request"])
+        return hx_redirect
 
     @staticmethod
     def _redirects_to_login(response):
@@ -124,29 +128,32 @@ class HtmxLoginRedirectMiddleware:
         location = response.headers.get("Location")
         if not location or not 300 <= response.status_code < 400:
             return False
-        return urlsplit(location).path == urlsplit(resolve_url(settings.LOGIN_URL)).path
+        login_path = urlsplit(resolve_url(settings.LOGIN_URL)).path
+        return urlsplit(location).path == login_path
 
     @staticmethod
     def _login_url_with_next(request, login_url):
         """Return `login_url` with `next` pointing at the page the user was viewing rather than the HTMX endpoint."""
-        current_url = request.headers.get("HX-Current-URL")
-        if not current_url:
+        browser_url = request.headers.get("HX-Current-URL")
+        if not browser_url:
             return login_url
 
-        current_parts = urlsplit(current_url)
-        next_url = urlunsplit(("", "", current_parts.path, current_parts.query, ""))
+        # `next` must be site-relative, so drop the scheme and host HTMX sent.
+        browser_parts = urlsplit(browser_url)
+        next_url = urlunsplit(("", "", browser_parts.path, browser_parts.query, ""))
+
         allowed_hosts = {request.get_host()}
         require_https = request.is_secure()
         # A "//" path is protocol-relative, so `next` can still point off-site when the host looks fine.
-        for url in (current_url, next_url):
+        for url in (browser_url, next_url):
             if not url_has_allowed_host_and_scheme(url, allowed_hosts, require_https=require_https):
                 return login_url
 
-        login_parts = list(urlsplit(login_url))
-        querystring = QueryDict(login_parts[3], mutable=True)
+        # Replace only `next`, so any query string already on `LOGIN_URL` survives.
+        scheme, netloc, path, query, fragment = urlsplit(login_url)
+        querystring = QueryDict(query, mutable=True)
         querystring[REDIRECT_FIELD_NAME] = next_url
-        login_parts[3] = querystring.urlencode(safe="/")
-        return urlunsplit(login_parts)
+        return urlunsplit((scheme, netloc, path, querystring.urlencode(safe="/"), fragment))
 
 
 class RequestCacheMiddleware:
