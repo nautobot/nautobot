@@ -636,11 +636,13 @@ class ViewportMetaTestCase(TestCase):
 
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
-        """Unauthenticated access redirects to the login page."""
+        """Unauthenticated access navigates the browser to the login page."""
         self.client.logout()
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
-        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+        self.assertEqual(response.status_code, 204)
+        redirect = urllib.parse.urlsplit(response.headers["HX-Redirect"])
+        self.assertEqual(redirect.path, reverse("login"))
+        self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("messages")])
 
     def test_empty(self):
         """When there are no messages queued, response contains an empty header_messages container."""
@@ -754,11 +756,13 @@ class SearchViewTestCase(TestCase):
         self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
 
     def test_get_unauthenticated_redirects_htmx(self):
-        """Unauthenticated HTMX access redirects to the login page."""
+        """Unauthenticated HTMX access navigates the browser to the login page."""
         self.client.logout()
         response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
-        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
-        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+        self.assertEqual(response.status_code, 204)
+        redirect = urllib.parse.urlsplit(response.headers["HX-Redirect"])
+        self.assertEqual(redirect.path, reverse("login"))
+        self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("search") + "?q=test"])
 
     def test_get_no_query_renders_search_form(self):
         """GET without ?q renders the search page, not the results page."""
