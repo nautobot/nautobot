@@ -4848,15 +4848,6 @@ class InterfaceUIViewSet(
         def should_render(self, context):
             return get_obj_from_context(context).is_lag
 
-    class InterfaceVPNEndpointsPanel(object_detail.Panel):
-        """ "VPN Endpoints" panel, shown only when this interface is a VPN tunnel endpoint source."""
-
-        body_content_template_path = "dcim/inc/interface_vpn_endpoints.html"
-        body_wrapper_template_path = "components/panel/body_wrapper_table.html"
-
-        def should_render(self, context):
-            return hasattr(get_obj_from_context(context), "vpn_tunnel_endpoints_src_int")
-
     class InterfaceFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
             if key == "mac_address":
@@ -4900,11 +4891,6 @@ class InterfaceUIViewSet(
                 section=SectionChoices.RIGHT_HALF,
                 label="LAG Members",
             ),
-            InterfaceVPNEndpointsPanel(
-                weight=400,
-                section=SectionChoices.RIGHT_HALF,
-                label="VPN Endpoints",
-            ),
             *get_connected_endpoint_panels("interface"),
             object_detail.ObjectsTablePanel(
                 weight=300,
@@ -4936,6 +4922,15 @@ class InterfaceUIViewSet(
             object_detail.ObjectsTablePanel(
                 weight=600,
                 section=SectionChoices.FULL_WIDTH,
+                context_table_key="vpn_tunnel_endpoints_table",
+                table_title="VPN Tunnel Endpoints",
+                related_field_name="vpn_tunnel_endpoints_src_int",
+                enable_related_link=False,
+                add_button_route=None,
+            ),
+            object_detail.ObjectsTablePanel(
+                weight=700,
+                section=SectionChoices.FULL_WIDTH,
                 table_class=tables.InterfaceTable,
                 table_attribute="child_interfaces",
                 related_field_name="parent_interface",
@@ -4944,7 +4939,7 @@ class InterfaceUIViewSet(
                 add_button_route=None,
             ),
             object_detail.ObjectsTablePanel(
-                weight=700,
+                weight=800,
                 section=SectionChoices.FULL_WIDTH,
                 table_class=tables.VirtualDeviceContextTable,
                 table_attribute="virtual_device_contexts",
@@ -4982,6 +4977,7 @@ class InterfaceUIViewSet(
                 {
                     "vlan_table": InterfaceVLANTable(interface=instance, data=vlans, orderable=False),
                     "redundancy_table": self._get_interface_redundancy_groups_table(request, instance),
+                    "vpn_tunnel_endpoints_table": self._get_vpn_tunnel_endpoints_table(request, instance),
                 }
             )
         return context
@@ -5007,6 +5003,16 @@ class InterfaceUIViewSet(
         for field in column_sequence:
             table.columns.show(field)
         return table
+
+    def _get_vpn_tunnel_endpoints_table(self, request, instance):
+        """Return a table of assigned Interface VPNTunnelEndpoints."""
+        return VPNTunnelEndpointTable(
+            instance.vpn_tunnel_endpoints_src_int.restrict(request.user, "view").select_related(
+                "vpn_profile", "device", "source_ipaddress", "tunnel_interface", "role", "tenant"
+            ),
+            orderable=False,
+            exclude=("source_interface",),
+        )
 
 
 #

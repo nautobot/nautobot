@@ -188,7 +188,7 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
                 name="Tunnel0",
                 device=Device.objects.exclude(id=source_int.device.id).first(),
                 status=source_int.status,
-                type="tunnel",
+                type=InterfaceTypeChoices.TYPE_TUNNEL,
             )
             endpoint = models.VPNTunnelEndpoint(
                 device=source_int.device, source_interface=source_int, tunnel_interface=tunnel_int
@@ -208,6 +208,17 @@ class TestVPNTunnelEndpointModel(ModelTestCases.BaseModelTestCase):
             self.assertIn(endpoint.source_interface.name, endpoint.name)
             self.assertIn(endpoint.source_interface.device.name, endpoint.name)
             self.assertIn(endpoint.source_ipaddress.host, endpoint.name)
+
+        with self.subTest("Test Tunnel is added to name"):
+            tunnel_interface = Interface.objects.create(
+                name="IPSecTunnel0",
+                device=endpoint.source_interface.device,
+                status=Status.objects.get(name="Active"),
+                type=InterfaceTypeChoices.TYPE_TUNNEL,
+            )
+            endpoint.tunnel_interface = tunnel_interface
+            endpoint.save()
+            self.assertIn(endpoint.tunnel_interface.name, endpoint.name)
 
         with self.subTest("Test name contains interface name and device name"):
             endpoint = models.VPNTunnelEndpoint.objects.filter(
