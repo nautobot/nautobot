@@ -3572,6 +3572,23 @@ class PermissionTests(ImportExportJobTestCase):
         )
         self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
 
+    def test_perm__import_without_permission_gets_no_feedback_on_the_data(self):
+        """A user who can neither add nor change the objects gets only the permission error, nothing about the data.
+
+        Validation feedback would otherwise tell them about the model, such as which custom-field keys it lacks.
+        """
+        job_result = self.run_import(
+            "name,colour\ntest_status,111111",
+            username=self.user.username,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(
+            job_result,
+            f'User "{self.user}" does not have permission to create or update status objects',
+            level=LogLevelChoices.LOG_ERROR,
+        )
+        self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__icontains="colour").exists())
+
     def test_perm__import_constrained_add(self):
         """Job only creates objects the user has permission to add."""
         obj_perm = ObjectPermission(

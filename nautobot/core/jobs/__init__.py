@@ -904,7 +904,7 @@ class ImportObjects(Job):
 
     # ---- PREPARE (resolve target, read input, pick parser) ----
 
-    def _resolve_model_and_serializer(self, content_type, text, import_format):
+    def _resolve_model_and_serializer(self, content_type):
         """The model and its serializer for the requested content-type; hard-fail if either is missing."""
         model = content_type.model_class()
         if model is None:
@@ -1056,7 +1056,9 @@ class ImportObjects(Job):
                 self.logger.error('No content-type given, and the data declares no usable model ("%s")', declared_model)
                 raise RunJobTaskFailed("Unable to determine the content-type to import this data as")
 
-        model, serializer_class = self._resolve_model_and_serializer(content_type, text, import_format)
+        model, serializer_class = self._resolve_model_and_serializer(content_type)
+        # Before parsing: a user who can neither add nor change these objects needn't wait for the file to be read
+        add_queryset, change_queryset = self._require_import_permissions(model, content_type)
 
         data = []
         created_objs, updated_objs, unchanged_objs = [], [], []
@@ -1070,7 +1072,6 @@ class ImportObjects(Job):
             effective_match_fields, match_fields_source = import_utils.resolve_match_fields(
                 model, serializer_class, data, match_fields, directive_match_fields
             )
-            add_queryset, change_queryset = self._require_import_permissions(model, content_type)
             self._validate_match(data, effective_match_fields, match_fields_source, serializer_class)
 
             # UPSERT

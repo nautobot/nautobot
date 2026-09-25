@@ -93,6 +93,7 @@ def natural_key_match_fields(model, serializer_class):
         try:
             lookups = model.csv_natural_key_field_lookups()
         except AttributeError:
+            # How `BaseModel.natural_key_field_lookups` reports a model with no identifiable natural key
             return None
         match_fields = []
         for lookup in lookups:
