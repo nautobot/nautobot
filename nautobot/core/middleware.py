@@ -135,19 +135,19 @@ class HtmxLoginRedirectMiddleware:
     def _login_url_with_next(request, login_url):
         """Return `login_url` with `next` pointing at the page the user was viewing rather than the HTMX endpoint."""
         browser_url = request.headers.get("HX-Current-URL")
-        if not browser_url:
+        allowed_hosts = {request.get_host()}
+        require_https = request.is_secure()
+        if not (
+            browser_url
+            and url_has_allowed_host_and_scheme(browser_url, allowed_hosts, require_https=require_https)
+        ):
             return login_url
 
         # `next` must be site-relative, so drop the scheme and host HTMX sent.
         browser_parts = urlsplit(browser_url)
         next_url = urlunsplit(("", "", browser_parts.path, browser_parts.query, ""))
-
-        allowed_hosts = {request.get_host()}
-        require_https = request.is_secure()
-        # A "//" path is protocol-relative, so `next` can still point off-site when the host looks fine.
-        for url in (browser_url, next_url):
-            if not url_has_allowed_host_and_scheme(url, allowed_hosts, require_https=require_https):
-                return login_url
+        if not url_has_allowed_host_and_scheme(next_url, allowed_hosts, require_https=require_https):
+            return login_url
 
         # Replace only `next`, so any query string already on `LOGIN_URL` survives.
         scheme, netloc, path, query, fragment = urlsplit(login_url)
