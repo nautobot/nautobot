@@ -866,3 +866,29 @@ class PrefixQuerysetTestCase(TestCase):
         slash128 = Prefix.objects.create(prefix="::1/128", namespace=namespace, status=self.status)
         self.assertEqual(slash126, Prefix.objects.get_closest_parent(slash127.prefix))
         self.assertEqual(slash127, Prefix.objects.get_closest_parent(slash128.prefix))
+
+
+class IPAddressRangeQuerySetTestCase(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        namespace = Namespace.objects.create(name="IP Address Range Queryset Test")
+        Prefix.objects.create(
+            prefix="10.0.0.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        status = Status.objects.get_for_model(IPAddressRange).first()
+        cls.range1 = IPAddressRange.objects.create(
+            start_address="10.0.0.10", end_address="10.0.0.20", namespace=namespace, status=status
+        )
+        cls.range2 = IPAddressRange.objects.create(
+            start_address="10.0.0.30", end_address="10.0.0.40", namespace=namespace, status=status
+        )
+
+    def test_filter_by_address(self):
+        """`start_address` and `end_address` are accepted in place of the `start_host` and `end_host` fields."""
+        queryset = IPAddressRange.objects.filter(pk__in=[self.range1.pk, self.range2.pk])
+        self.assertQuerySetEqual(queryset.filter(start_address="10.0.0.10"), [self.range1])
+        self.assertQuerySetEqual(queryset.filter(end_address="10.0.0.40"), [self.range2])
+        self.assertQuerySetEqual(queryset.filter(start_address="10.0.0.10", end_address="10.0.0.40"), [])
+        self.assertEqual(IPAddressRange.objects.get(start_address="10.0.0.30"), self.range2)
+        self.assertQuerySetEqual(queryset.exclude(start_address="10.0.0.10"), [self.range2])
+        self.assertQuerySetEqual(queryset.exclude(end_address="10.0.0.40"), [self.range1])

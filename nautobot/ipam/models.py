@@ -26,7 +26,7 @@ from nautobot.ipam import choices, constants
 from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 from .fields import VarbinaryIPField
-from .querysets import IPAddressQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuerySet
+from .querysets import IPAddressQuerySet, IPAddressRangeQuerySet, PrefixQuerySet, RIRQuerySet, VLANQuerySet
 from .validators import DNSValidator
 
 __all__ = (
@@ -34,6 +34,7 @@ __all__ = (
     "VLAN",
     "VRF",
     "IPAddress",
+    "IPAddressRange",
     "IPAddressToInterface",
     "Namespace",
     "Prefix",
@@ -2029,6 +2030,8 @@ class IPAddressRange(NamespaceParentedModelMixin, PrimaryModel):
         verbose_name="Exclusive (block IPs)",
         help_text="Prevent individual IP Address objects from being created within this range.",
     )
+
+    objects = BaseManager.from_queryset(IPAddressRangeQuerySet)()
 
     clone_fields = [
         "parent",

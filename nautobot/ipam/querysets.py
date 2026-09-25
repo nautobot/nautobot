@@ -517,5 +517,31 @@ class IPAddressQuerySet(BaseNetworkQuerySet):
         return super().filter(q)
 
 
+class IPAddressRangeQuerySet(RestrictedQuerySet):
+    """Queryset for `IPAddressRange` objects."""
+
+    @staticmethod
+    def _address_kwargs_to_host_kwargs(kwargs, start_address, end_address):
+        """Translate the `start_address`/`end_address` model properties to the `start_host`/`end_host` fields."""
+        hosts = {}
+        if start_address:
+            hosts["start_host"] = netaddr.IPAddress(str(start_address))
+        if end_address:
+            hosts["end_host"] = netaddr.IPAddress(str(end_address))
+        return merge_dicts_without_collision(kwargs, hosts)
+
+    def filter(self, *args, start_address=None, end_address=None, **kwargs):
+        """
+        Provide a convenience for `.filter(start_address=<address>, end_address=<address>)`
+        """
+        return super().filter(*args, **self._address_kwargs_to_host_kwargs(kwargs, start_address, end_address))
+
+    def exclude(self, *args, start_address=None, end_address=None, **kwargs):
+        """
+        Provide a convenience for `.exclude(start_address=<address>, end_address=<address>)`
+        """
+        return super().exclude(*args, **self._address_kwargs_to_host_kwargs(kwargs, start_address, end_address))
+
+
 class VLANQuerySet(LocationToLocationsQuerySetMixin, RestrictedQuerySet):
     """Queryset for `VLAN` objects."""

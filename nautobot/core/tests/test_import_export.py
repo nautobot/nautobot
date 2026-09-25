@@ -92,7 +92,16 @@ from nautobot.extras.models import (
     Tag,
 )
 from nautobot.ipam.api.serializers import VLANSerializer
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, RouteTarget, VLAN, VRF, VRFDeviceAssignment
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressRange,
+    Namespace,
+    Prefix,
+    RouteTarget,
+    VLAN,
+    VRF,
+    VRFDeviceAssignment,
+)
 from nautobot.tenancy.models import Tenant
 from nautobot.users.api.serializers import UserSerializer
 from nautobot.users.models import ObjectPermission, Token
@@ -201,6 +210,7 @@ class MatchFieldsTests(TestCase):
         """A serializer declares the match fields its model's natural key isn't spelled in."""
         self.assertEqual(self.match_fields(IPAddress), ["address", "parent"])
         self.assertEqual(self.match_fields(Prefix), ["prefix", "namespace"])
+        self.assertEqual(self.match_fields(IPAddressRange), ["start_address", "parent"])
         self.assertEqual(self.match_fields(IPAddress, ["address", "parent", "type"]), ["address", "parent"])
         self.assertIsNone(self.match_fields(IPAddress, ["address"]))
 
@@ -3391,8 +3401,15 @@ class NaturalKeyRoundTripTests(ImportExportJobTestCase):
         ip_address = IPAddress.objects.create(
             address="10.99.0.1/24", namespace=namespace, status=Status.objects.get_for_model(IPAddress).first()
         )
+        ip_address_range = IPAddressRange.objects.create(
+            start_address="10.99.0.10",
+            end_address="10.99.0.20",
+            namespace=namespace,
+            status=Status.objects.get_for_model(IPAddressRange).first(),
+        )
         self.assertRoundTripUpdatesInPlace(Prefix, [prefix], ["prefix", "namespace"])
         self.assertRoundTripUpdatesInPlace(IPAddress, [ip_address], ["address", "parent"])
+        self.assertRoundTripUpdatesInPlace(IPAddressRange, [ip_address_range], ["start_address", "parent"])
 
     def test_roundtrip__exported_null_relation_clears_the_relation(self):
         """A relation the file gives as null is cleared on update, however the file spells that null."""

@@ -368,6 +368,8 @@ class IPAddressRangeSerializer(NautobotModelSerializer, TaggedModelSerializerMix
     class Meta:
         model = IPAddressRange
         fields = "__all__"
+        # The natural key's `start_host` is written as `start_address`, and `parent__namespace` as part of `parent`
+        import_match_fields = ["start_address", "parent"]
         extra_kwargs = {
             "ip_version": {"read_only": True},
             "parent": {"required": False},
