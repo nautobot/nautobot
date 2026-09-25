@@ -2903,6 +2903,17 @@ class MatchKeyTests(ImportExportJobTestCase):
             job_result, "Invalid match field(s): content_types__model", level=LogLevelChoices.LOG_ERROR
         )
 
+    def test_match__serializer_only_field(self):
+        """A writable serializer field that existing records can't be looked up by is refused before any row runs."""
+        job_result = self.run_import(
+            "address,namespace__name,status__name\n10.0.0.1/24,Global,Active",
+            model=IPAddress,
+            match_fields="address,namespace",
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        self.assertJobLogEntry(job_result, "Invalid match field(s): namespace.", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists())
+
 
 # ===========================================================================
 # Layer 2 — import format adapters

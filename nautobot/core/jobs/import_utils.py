@@ -51,12 +51,24 @@ def _match_serializer(serializer_class):
     return serializer_class(context={"request": None, "depth": 0})
 
 
+def _is_queryset_lookup(queryset, lookup):
+    """Whether `queryset` can filter on `lookup`, which a model field or a queryset convenience can provide."""
+    try:
+        queryset.filter(**{lookup: None})
+    except FieldError:
+        return False
+    return True
+
+
 def _unusable_match_fields(match_fields, serializer):
-    """The match fields that aren't a writable, single-valued field of `serializer`.
+    """The match fields that aren't a writable, single-valued field of `serializer` that its model can filter on.
 
     A match field has to be something a record gives a value for, and that value has to identify one thing:
-    a read-only field (`display`) is dropped by the parser, and a to-many field (`tags`) holds a set.
+    a read-only field (`display`) is dropped by the parser, and a to-many field (`tags`) holds a set. It also
+    has to be something existing records can be looked up by, which a serializer-only field such as
+    IPAddress's write-only `namespace` is not.
     """
+    queryset = serializer.Meta.model.objects.none()
     unusable = []
     for field in match_fields:
         if _row_key(field) == "id":
@@ -67,6 +79,7 @@ def _unusable_match_fields(match_fields, serializer):
             or serializer_field.read_only
             or serializer_field.source == "*"
             or isinstance(serializer_field, (serializers.ManyRelatedField, serializers.ListSerializer))
+            or not _is_queryset_lookup(queryset, serializer_field.source.replace(".", "__"))
         ):
             unusable.append(field)
     return unusable
@@ -134,7 +147,8 @@ def resolve_match_fields(model, serializer_class, data, match_fields_param, dire
 
 def validate_match_fields(match_fields, serializer_class):
     """
-    Confirm that each of the given match fields is a writable, single-valued field of the given serializer.
+    Confirm that each of the given match fields is a writable, single-valued field of the given serializer,
+    which existing records can be looked up by.
 
     A related field is matched as a whole (`location`), by whatever reference the record gives for it, so a
     lookup into one (`location__name`) is not a match field.
@@ -146,8 +160,9 @@ def validate_match_fields(match_fields, serializer_class):
     if invalid:
         raise ValueError(
             f"Invalid match field(s): {', '.join(invalid)}. "
-            "Match fields must be writable field names of the serializer for this content-type, such as "
-            '"name" or "location", not lookups such as "location__name" or to-many fields such as "tags".'
+            "Match fields must be writable fields of the serializer for this content-type that existing records "
+            'can be looked up by, such as "name" or "location", not lookups such as "location__name", to-many '
+            'fields such as "tags", or fields that exist only on the serializer.'
         )
 
 
