@@ -50,7 +50,8 @@ from nautobot.core.jobs.customfields import (
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.models.querysets import RestrictedQuerySet
-from nautobot.core.models.utils import m2m_through_data_fields, serialize_object
+from nautobot.core.models.sensitive_fields import get_sensitive_field_names
+from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.data import shallow_compare_dict
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS, resolve_filter_params
@@ -723,9 +724,27 @@ class ImportObjects(Job):
         "yaml": NautobotYAMLImportParser,
     }
 
-    # Auto-managed bookkeeping fields are ignored when detecting changes: `last_updated` (auto_now) bumps
-    # on every save, so including it would make every row look changed and defeat idempotent skipping.
-    _DIFF_EXCLUDE_FIELDS = ("created", "last_updated")
+    @staticmethod
+    def _snapshot(serializer_class, instance):
+        """The instance's writable fields as an export would write them, for detecting changes.
+
+        Read through the serializer rather than `serialize_object()`, which omits every many-to-many field
+        with a custom through model (`DeviceType.software_image_files`), so a row changing only such a field
+        would look unchanged and be rolled back. The export representation also spells each field the way the
+        file does, so a change is logged as `location__name: A → B` rather than by primary key.
+
+        Read-only fields are left out, a row being unable to change them: they are either bookkeeping, such as
+        `last_updated`, which bumps on every save and would make every row look changed, or derived from the
+        fields a row does set, such as `display`.
+        """
+        serializer = serializer_class(instance, context={"request": None}, for_import_export=True)
+        fields = serializer.fields
+        return {
+            key: value
+            for key, value in serializer.data.items()
+            # A related field is exported as its natural-key lookups (`location__name`), named for the field
+            if not getattr(fields.get(key.split("__", 1)[0]), "read_only", False)
+        }
 
     def _perform_import_operation(self, data, serializer_class, add_queryset, change_queryset, match, *, atomic):
         """Run the upsert, optionally wrapped in an atomic transaction.
@@ -756,11 +775,12 @@ class ImportObjects(Job):
         return created_objs, updated_objs, unchanged_objs, validation_failed
 
     @staticmethod
-    def _format_diff(before, changed):
+    def _format_diff(before, changed, sensitive_fields=()):
         """Render a shallow_compare_dict result as `field: old → new, ...` for logging.
 
         `changed` is `{field: new_value}` (as returned by `shallow_compare_dict`); the old values come
-        from the pre-change `before` snapshot.
+        from the pre-change `before` snapshot. A field in `sensitive_fields` is reported as changed, but
+        with neither value, since anyone who can view the job result can read its log.
         """
 
         def display(value):
@@ -770,7 +790,12 @@ class ImportObjects(Job):
                 return json.dumps(value, default=str)
             return value
 
-        return ", ".join(f"{field}: {display(before.get(field))} → {display(new)}" for field, new in changed.items())
+        def describe(field, new):
+            if field in sensitive_fields:
+                return f"{field}: <redacted> → <redacted>"
+            return f"{field}: {display(before.get(field))} → {display(new)}"
+
+        return ", ".join(describe(field, new) for field, new in changed.items())
 
     def _perform_operation(self, data, serializer_class, add_queryset, change_queryset, match):
         match_fields, match_fields_source = match
@@ -810,7 +835,7 @@ class ImportObjects(Job):
             if instance is not None:
                 # Snapshot the pristine state now: is_valid()/save() mutate the in-memory instance, so a
                 # later snapshot would already reflect the incoming values and hide the change.
-                before = serialize_object(instance, exclude=self._DIFF_EXCLUDE_FIELDS)
+                before = self._snapshot(serializer_class, instance)
                 serializer = serializer_class(instance, data=entry, partial=True, context=context)
             else:
                 serializer = serializer_class(data=entry, context=context)
@@ -831,8 +856,7 @@ class ImportObjects(Job):
                         outcome = "denied"
                         raise AbortTransaction()
                     if instance is not None:
-                        # Reuse the same shallow diff the change-logging framework uses (change_logging.py).
-                        diff = shallow_compare_dict(before, serialize_object(obj, exclude=self._DIFF_EXCLUDE_FIELDS))
+                        diff = shallow_compare_dict(before, self._snapshot(serializer_class, obj))
                         if not diff:
                             # Idempotent: nothing changed, so roll back the no-op save (and its change-log
                             # entry) and record the row as unchanged.
@@ -866,7 +890,11 @@ class ImportObjects(Job):
                 self.logger.debug('Row %d: No changes for record "%s"', row, instance, extra={"object": instance})
             elif outcome == "updated":
                 self.logger.info(
-                    'Row %d: Updated record "%s" (%s)', row, obj, self._format_diff(before, diff), extra={"object": obj}
+                    'Row %d: Updated record "%s" (%s)',
+                    row,
+                    obj,
+                    self._format_diff(before, diff, get_sensitive_field_names(type(obj))),
+                    extra={"object": obj},
                 )
                 updated_objs.append(obj)
             elif outcome == "created":

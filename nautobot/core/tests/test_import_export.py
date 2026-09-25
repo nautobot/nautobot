@@ -2761,6 +2761,34 @@ class CoreUpsertTests(ImportExportJobTestCase):
         self.assertTrue(Status.objects.filter(name="test_upsert_new_status", color="666666").exists())
         self.assertImport(job_result, updated=1, created=1)
 
+    def test_core_upsert__relation__update(self):
+        """A changed relation is logged by the natural key the file names it with, not by primary key."""
+        old_manufacturer = Manufacturer.objects.create(name="Old Log Mfr")
+        new_manufacturer = Manufacturer.objects.create(name="New Log Mfr")
+        device_type = DeviceType.objects.create(manufacturer=old_manufacturer, model="Log DT", u_height=1)
+        job_result = self.run_import(
+            "model,manufacturer__name\nLog DT,New Log Mfr", model=DeviceType, match_fields="model"
+        )
+        self.assertImport(job_result, updated=1)
+        device_type.refresh_from_db()
+        self.assertEqual(device_type.manufacturer, new_manufacturer)
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertIn("manufacturer__name: Old Log Mfr → New Log Mfr", entry.message)
+        self.assertNotIn(str(old_manufacturer.pk), entry.message)
+
+    def test_core_upsert__sensitive_field__update(self):
+        """A changed sensitive field is logged as changed, without either of its values."""
+        old_key, new_key = "a" * 40, "b" * 40
+        token = Token.objects.create(user=self.user, key=old_key)
+        job_result = self.run_import(f"id,key\n{token.pk},{new_key}", model=Token)
+        self.assertImport(job_result, updated=1)
+        token.refresh_from_db()
+        self.assertEqual(token.key, new_key)
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertIn("key: <redacted> → <redacted>", entry.message)
+        self.assertNotIn(old_key, entry.message)
+        self.assertNotIn(new_key, entry.message)
+
 
 # ===========================================================================
 # Match key (source, uniqueness, failures)
