@@ -138,8 +138,7 @@ class HtmxLoginRedirectMiddleware:
         allowed_hosts = {request.get_host()}
         require_https = request.is_secure()
         if not (
-            browser_url
-            and url_has_allowed_host_and_scheme(browser_url, allowed_hosts, require_https=require_https)
+            browser_url and url_has_allowed_host_and_scheme(browser_url, allowed_hosts, require_https=require_https)
         ):
             return login_url
 
