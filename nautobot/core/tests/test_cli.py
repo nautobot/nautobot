@@ -1,9 +1,10 @@
 import importlib.util
 import os.path
+from types import ModuleType
 from unittest import mock
 
 from nautobot.core import settings as core_settings
-from nautobot.core.cli import _preprocess_settings, migrate_deprecated_templates
+from nautobot.core.cli import _preprocess_settings, _split_cli_args, main, migrate_deprecated_templates
 from nautobot.core.testing import TestCase
 
 
@@ -195,3 +196,85 @@ class TestPreprocessSettings(TestCase):
 
         self.assertNotIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
         self.assertEqual(settings_module.LOGGING["handlers"]["normal_console"]["filters"], [])
+
+
+class TestCliArgParsing(TestCase):
+    def test_split_cli_args(self):
+        cases = [
+            (["shell", "-c", "print(1)"], [], ["shell", "-c", "print(1)"]),
+            (["-c", "test.py", "shell", "-c", "print(1)"], ["-c", "test.py"], ["shell", "-c", "print(1)"]),
+            (
+                ["--config-path=test.py", "shell", "-c", "print(1)"],
+                ["--config-path=test.py"],
+                ["shell", "-c", "print(1)"],
+            ),
+            (
+                ["--config=nautobot/core/tests/nautobot_config.py", "makemigrations", "--dry-run", "--check"],
+                ["--config=nautobot/core/tests/nautobot_config.py"],
+                ["makemigrations", "--dry-run", "--check"],
+            ),
+            (
+                ["--config", "test.py", "makemigrations"],
+                ["--config", "test.py"],
+                ["makemigrations"],
+            ),
+            (
+                ["test", "nautobot", "--config=nautobot/core/tests/nautobot_config.py", "--parallel"],
+                ["--config=nautobot/core/tests/nautobot_config.py"],
+                ["test", "nautobot", "--parallel"],
+            ),
+            (
+                ["test", "nautobot", "--config", "nautobot/core/tests/nautobot_config.py", "--parallel"],
+                ["--config", "nautobot/core/tests/nautobot_config.py"],
+                ["test", "nautobot", "--parallel"],
+            ),
+            (["init"], [], ["init"]),
+            (["--config-path", "test.py", "init"], ["--config-path", "test.py"], ["init"]),
+            (["--version"], ["--version"], []),
+            (["version"], [], ["version"]),
+            (["-v", "2", "shell", "-c", "print(1)"], [], ["-v", "2", "shell", "-c", "print(1)"]),
+            (
+                ["-c", "test.py", "-v", "2", "shell", "-c", "print(1)"],
+                ["-c", "test.py"],
+                ["-v", "2", "shell", "-c", "print(1)"],
+            ),
+        ]
+        for argv, expected_top, expected_sub in cases:
+            with self.subTest(argv=argv):
+                top, sub = _split_cli_args(argv)
+                self.assertEqual(top, expected_top)
+                self.assertEqual(sub, expected_sub)
+
+    @mock.patch("nautobot.core.cli.load_settings")
+    @mock.patch("nautobot.core.cli.execute_from_command_line")
+    def test_subcommand_c_argument_not_shadowed(self, mock_execute, mock_load_settings):
+        """Verify that -c passed to a subcommand like shell is passed to the subcommand, not read as config_path."""
+        fake_config = ModuleType("nautobot_config")
+        fake_config.OTEL_PYTHON_DJANGO_INSTRUMENT = False
+
+        with (
+            mock.patch.dict("sys.modules", {"nautobot_config": fake_config}),
+            mock.patch("sys.argv", ["nautobot-server", "shell", "-c", "print('hello')"]),
+        ):
+            main()
+
+        mock_load_settings.assert_called_once()
+        config_path_arg = mock_load_settings.call_args[0][0]
+        self.assertNotEqual(config_path_arg, "print('hello')")
+        mock_execute.assert_called_once_with(["nautobot-server", "shell", "-c", "print('hello')"])
+
+    @mock.patch("nautobot.core.cli.load_settings")
+    @mock.patch("nautobot.core.cli.execute_from_command_line")
+    def test_top_level_c_with_subcommand_c_argument(self, mock_execute, mock_load_settings):
+        """Verify that top-level -c sets config_path while subcommand -c is still forwarded."""
+        fake_config = ModuleType("nautobot_config")
+        fake_config.OTEL_PYTHON_DJANGO_INSTRUMENT = False
+
+        with (
+            mock.patch.dict("sys.modules", {"nautobot_config": fake_config}),
+            mock.patch("sys.argv", ["nautobot-server", "-c", "/custom/path.py", "shell", "-c", "print('hello')"]),
+        ):
+            main()
+
+        mock_load_settings.assert_called_once_with("/custom/path.py")
+        mock_execute.assert_called_once_with(["nautobot-server", "shell", "-c", "print('hello')"])
