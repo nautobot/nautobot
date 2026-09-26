@@ -28,7 +28,7 @@ dependencies = [
     # Added as an explicit dependency to protect against various CVEs in older versions.
     "cryptography (>=50.0.0,<51)",
     # Fundamental web framework for Nautobot
-    "django (>=5.2.17,<5.3)",
+    "django (>=6.1.1,<6.2)",
     # Adds AJAX capabilities to django-tables2. This dependency has been deprecated.
     "django-ajax-tables (>=1.1.1,<1.2)",
     # Database backend for task scheduling with Celery Beat
@@ -48,7 +48,7 @@ dependencies = [
     "django-filter (>=26.1,<26.2)",
     # Health check endpoint
     # 3.21.0 and later (including 4.x) have breaking changes that we'll need to account for when upgrading.
-    "django-health-check (>=3.20.8,<3.21)",
+    "django-health-check (>=4.6.1,<4.7)",
     # Django Jinja - jinja2 backend for django, used to easily register custom jinja filters and render jinja.
     "django-jinja (>=2.11.0,<2.12)",
     # Prometheus metrics for Django
@@ -122,7 +122,7 @@ dependencies = [
     # NOTE: psycopg3 is available now and nominally replaces psycopg2
     "psycopg2-binary (>=2.9.13,<2.10)",
     # A Python slugify application that handles unicode.
-    "python-slugify (>=8.0.4,<8.1)",
+    "python-slugify (>=9.1.1,<9.2)",
     # The uWSGI WSGI HTTP server as a Python module
     "pyuwsgi (>=2.0.30.post1,<2.1)",
     # YAML parsing and rendering
@@ -183,7 +183,7 @@ exclude = [
 
 [tool.poetry.group.dev.dependencies]
 # Tool for debugging Django
-django-debug-toolbar = "~7.1.1"
+django-debug-toolbar = "~8.0.0"
 # Nautobot example App used for testing
 example-app = {path = "examples/example_app", develop = true}
 # Nautobot test App used for testing core view overrides
@@ -197,7 +197,7 @@ invoke = "~3.0.3"
 # Colorization and autoformatting of CLI output, used for Invoke tasks
 rich = "~15.0.0"
 # Change log management and generation
-towncrier = "~25.8.0"
+towncrier = "~26.9.0"
 # Watch files for celery and mkdocs reload
 watchdog = "~6.0.0"
 
