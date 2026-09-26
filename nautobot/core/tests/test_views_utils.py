@@ -109,7 +109,7 @@ class CheckFilterForDisplayTest(TestCase):
         with self.subTest("Test null choice value in filter"):
             expected_output = {
                 "name": "platform",
-                "display": "Platform",
+                "display": "Platform (name or ID)",
                 "values": [{"name": "null", "display": "None"}],
             }
 
@@ -121,7 +121,7 @@ class CheckFilterForDisplayTest(TestCase):
         with self.subTest("Test None value in filter"):
             expected_output = {
                 "name": "platform",
-                "display": "Platform",
+                "display": "Platform (name or ID)",
                 "values": [{"name": "null", "display": "None"}],
             }
 
