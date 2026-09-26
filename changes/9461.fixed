@@ -1,0 +1,1 @@
+Fixed Job Results for Kubernetes Jobs staying in `PENDING` status while the Job was running.
