@@ -1,0 +1,1 @@
+Replaced the Selenium view-authentication test with a Playwright `AuthenticationEnforcedTestCase` that checks authentication enforcement on a representative sample of protected views (home, a list view, a detail view, and the REST API root).
