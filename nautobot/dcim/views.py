@@ -908,8 +908,11 @@ class RackUIViewSet(NautobotUIViewSet):
 
     class RackObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
-            if key == "space_utilization" or key == "power_utilization":
+            if key == "space_utilization":
                 return self.get_utilization_graph(value)
+
+            if key == "power_utilization":
+                return self.get_power_utilization_graph(value, context)
 
             if key == "devices":
                 request = context["request"]
@@ -926,6 +929,24 @@ class RackUIViewSet(NautobotUIViewSet):
         def get_utilization_graph(self, value):
             data = helpers.utilization_graph(value)
             return render_to_string("utilities/templatetags/utilization_graph.html", data)
+
+        def get_power_utilization_graph(self, value, context):
+            """Render overall rack utilization and, when applicable, utilization by phase."""
+            overall_graph = self.get_utilization_graph(value)
+            obj = get_obj_from_context(context, self.context_object_key)
+            utilization_by_phase = obj.get_power_utilization_by_phase()
+
+            if not utilization_by_phase.attribution_complete or not any(
+                utilization.denominator for utilization in utilization_by_phase.values()
+            ):
+                return overall_graph
+
+            phase_graphs = format_html_join(
+                "",
+                '<div class="mt-2"><strong>Phase {}</strong>{}</div>',
+                ((leg, self.get_utilization_graph(utilization)) for leg, utilization in utilization_by_phase.items()),
+            )
+            return format_html("<div><strong>Overall</strong>{}{}</div>", overall_graph, phase_graphs)
 
     class DimensionsObjectFieldsPanel(object_detail.ObjectFieldsPanel):
         def render_value(self, key, value, context):
