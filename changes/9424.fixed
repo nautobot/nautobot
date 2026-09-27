@@ -1,0 +1,1 @@
+Fixed `FileNotFoundError` when running Jobs with console-logging enabled on installs where `nautobot-server` is not on the Celery worker's `PATH`, by falling back to the entry point next to the running Python executable.

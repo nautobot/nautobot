@@ -1,7 +1,10 @@
 import functools
 import logging
+from pathlib import Path
 from queue import Empty, Queue
+import shutil
 import subprocess
+import sys
 import threading
 from typing import Any, Dict
 
@@ -23,6 +26,25 @@ class JobConsoleLogSubprocessError(subprocess.SubprocessError):
         super().__init__(message)
         self.returncode = returncode
         self.stderr = stderr
+
+
+def resolve_nautobot_server_executable() -> str:
+    """
+    Return an executable path for the ``nautobot-server`` CLI.
+
+    Celery workers launched by systemd run with a minimal ``PATH`` that often
+    lacks the virtualenv ``bin/`` directory, so a bare ``PATH`` lookup fails
+    with ``FileNotFoundError``. The worker always runs from the same
+    environment Nautobot is installed into, so fall back to the entry point
+    sitting next to the current Python executable before giving up and
+    returning the bare command name.
+    """
+    if found := shutil.which("nautobot-server"):
+        return found
+    sibling = Path(sys.executable).parent / "nautobot-server"
+    if sibling.is_file():
+        return str(sibling)
+    return "nautobot-server"
 
 
 def store_job_output_line(job_result: JobResult, data: str, output_type: str = "output", timestamp=None):
@@ -142,7 +164,7 @@ class JobConsoleLogExecutor:
     def _build_command(self) -> list:
         """Build command to execute."""
         return [
-            "nautobot-server",
+            resolve_nautobot_server_executable(),
             "execute_job_result",
             f"{self.job_result_pk}",
             f"--config={settings.SETTINGS_PATH}",
