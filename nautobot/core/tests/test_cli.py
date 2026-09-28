@@ -229,6 +229,7 @@ class TestCliArgParsing(TestCase):
                 ["test", "nautobot", "--parallel"],
             ),
             (["init"], [], ["init"]),
+            (["init", "--config-path", "test.py"], ["--config-path", "test.py"], ["init"]),
             (["--config-path", "test.py", "init"], ["--config-path", "test.py"], ["init"]),
             (["--version"], ["--version"], []),
             (["version"], [], ["version"]),
@@ -238,6 +239,13 @@ class TestCliArgParsing(TestCase):
                 ["-c", "test.py"],
                 ["-v", "2", "shell", "-c", "print(1)"],
             ),
+            (["--help"], ["--help"], []),
+            (["--help", "shell"], ["--help"], ["shell"]),
+            (["shell", "--help"], [], ["shell", "--help"]),
+            # Generally invalid, but providing branch coverage
+            (["-c"], ["-c"], []),
+            (["--config"], ["--config"], []),
+            (["shell", "--config"], ["--config"], ["shell"]),
         ]
         for argv, expected_top, expected_sub in cases:
             with self.subTest(argv=argv):
