@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Data Compliance feature audits any object within Nautobot according to a set of rules that you can define programmatically or from the built-in data validation rules (e.g. Min/Max, Regex, Required, or Unique rules). Rather than only checking for adherence to specified rules during the *creation or modification* of objects, Data Compliance will run a job that produces compliance statuses across *existing* objects (such as all pre-existing devices).
+The Data Compliance feature audits any object within Nautobot according to a set of rules that you can define programmatically or from the built-in data validation rules (e.g. Min/Max, Regex, Required, or Unique rules). Rather than only checking for adherence to specified rules during the _creation or modification_ of objects, Data Compliance will run a job that produces compliance statuses across _existing_ objects (such as all pre-existing devices).
 
 This is ideal for implementing some kind of business logic or standardization requirement into Nautobot after data is already populated within the platform. Data Compliance will allow you to identify valid or invalid existing objects based on your specified data compliance and validation rules. Additionally, Data Compliance enables the ability to implement more complex rules using the full power of programming logic, in addition to the built-in data validation ones.
 
@@ -43,7 +43,7 @@ The first step is to create your desired data compliance rules following whateve
 
 There are two options for where to include these data compliance rule classes:
 
-1. In a remote Git repository *(recommended)*
+1. In a remote Git repository _(recommended)_
 2. In the app's code
 
 #### Writing Data Compliance Rules in a Remote Git Repository

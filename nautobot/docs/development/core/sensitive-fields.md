@@ -44,7 +44,7 @@ A companion system check (`nautobot.core.E011`) reports a model that declares `s
 >>> Token.objects.get(pk=pk).key                     # raises SensitiveFieldError
 ```
 
-**Values your own code assigned.** The protection applies to values coming *out of* the database. An object you just constructed or saved still reads back normally, which is why creating a token and then using its key works exactly as before:
+**Values your own code assigned.** The protection applies to values coming _out of_ the database. An object you just constructed or saved still reads back normally, which is why creating a token and then using its key works exactly as before:
 
 ```python
 >>> token = Token.objects.create(user=user)
@@ -52,7 +52,7 @@ A companion system check (`nautobot.core.E011`) reports a model that declares `s
 '4a1b...'
 ```
 
-**Saving and validating.** Saving an object whose sensitive value was withheld leaves that column untouched rather than blanking it, and `validated_save()` skips validating a field whose value is not present. A value you *did* assign is validated as normal, including uniqueness.
+**Saving and validating.** Saving an object whose sensitive value was withheld leaves that column untouched rather than blanking it, and `validated_save()` skips validating a field whose value is not present. A value you _did_ assign is validated as normal, including uniqueness.
 
 ## Reading a value on purpose
 
@@ -78,7 +78,7 @@ The instance method's extra query is deliberate. Opting in to reading a credenti
 from nautobot.apps.exceptions import SensitiveFieldError
 ```
 
-It is deliberately *not* an `AttributeError`. Making it one would cause `hasattr(obj, "key")` to return `False` and `getattr(obj, "key", "")` to return the default, so generic code and Django templates would silently render nothing where a value was withheld. Failing loudly is the intent.
+It is deliberately _not_ an `AttributeError`. Making it one would cause `hasattr(obj, "key")` to return `False` and `getattr(obj, "key", "")` to return the default, so generic code and Django templates would silently render nothing where a value was withheld. Failing loudly is the intent.
 
 ## Fields the framework reads constantly
 
@@ -110,7 +110,7 @@ This reduces accidental exposure through generic machinery. It is not a sandbox,
 Specifically:
 
 - Raw SQL is not checked, including `extra()`, `raw()` with a column alias, and `RawSQL()`.
-- A query that *starts* on a model whose queryset is a plain `django.db.models.QuerySet`, such as one of Django's own built-in models, can still project a sensitive field by traversing a relation to it. Reading it off an object is still refused.
+- A query that _starts_ on a model whose queryset is a plain `django.db.models.QuerySet`, such as one of Django's own built-in models, can still project a sensitive field by traversing a relation to it. Reading it off an object is still refused.
 - `nautobot-server dumpdata` is deliberately exempt and serializes these values, so that backup and database migration workflows keep working. Running any management command already implies enough access to read the column directly, so refusing would protect nothing.
 - Migrations are unaffected by design, since historical models do not inherit `BaseModel`. A data migration can read the column.
 - A `ModelForm`, a Django admin `list_display`, or Django's own serializers will raise if given a sensitive field without an opt-in queryset.

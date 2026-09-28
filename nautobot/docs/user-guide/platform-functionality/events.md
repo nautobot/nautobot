@@ -53,8 +53,8 @@ The data payload associated with events of any of the above topics has the follo
     * `request_id` - A UUID that can be used to correlate multiple changes associated with a single request or action.
     * `change_context` - One of `Web`, `Job`, `Job hook`, `ORM`, or `Unknown`, indicating what type of action caused the event
     * `change_context_detail` - A string optionally providing more information about the change context. For example, for a `Web` change context, this might indicate which URL pattern or view was involved in the event.
-* `prechange` - a dictionary of record attributes and their values *before* the event occurred (or null, in the case of a `nautobot.create` event)
-* `postchange` - a dictionary of record attributes and their values *after* the event occurred (or null, in the case of a `nautobot.delete` event)
+* `prechange` - a dictionary of record attributes and their values _before_ the event occurred (or null, in the case of a `nautobot.create` event)
+* `postchange` - a dictionary of record attributes and their values _after_ the event occurred (or null, in the case of a `nautobot.delete` event)
 * `differences` - a dictionary with keys `added` and `removed`, each of which is a dictionary of record attributes that changed in the event, providing a convenient alternative to manually comparing the prechange and postchange data.
 
 ### User Events

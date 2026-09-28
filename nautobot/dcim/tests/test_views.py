@@ -869,9 +869,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed 11 is displaying correctly on Rack View.
         power_feed_11_html = """
         <td><div title="Used: 1263&#13;Count: 3840" class="progress text-center">
+            <span>32%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="width: 32%">
-                32%
+                role="progressbar" aria-valuenow="32" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 32%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 32)">32%</span>
             </div>
         </div></td>
         """
@@ -879,9 +880,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Power Utilization for PowerFeed12 is displaying correctly on Rack View.
         power_feed_12_html = """
         <td><div title="Used: 2526&#13;Count: 3840" class="progress text-center">
+            <span>65%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="width: 65%">
-                65%
+                role="progressbar" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 65%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 65)">65%</span>
             </div>
         </div></td>
         """
@@ -889,9 +891,10 @@ class RackTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         # Validate Rack Power Utilization for Combined powerfeeds is displaying correctly on the Rack View
         total_utilization_html = """
         <div title="Used: 3789&#13;Count: 7680" class="progress text-center">
+            <span>49%</span>
             <div class="progress-bar bg-success"
-                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="width: 49%">
-                49%
+                role="progressbar" aria-valuenow="49" aria-valuemin="0" aria-valuemax="100" style="position: relative; width: 49%">
+                <span aria-hidden="true" style="left: 0; transform: none; width: calc(10000% / 49)">49%</span>
             </div>
         </div>
         """

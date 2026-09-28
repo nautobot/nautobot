@@ -69,7 +69,7 @@ graph LR
     class Exec1,Exec2 execution
 ```
 
-Figure: *Celery queuing with concurrency set to 2, default prefetch multiplier of 4*
+Figure: _Celery queuing with concurrency set to 2, default prefetch multiplier of 4_
 
 This behavior may be controlled by the [`CELERY_WORKER_PREFETCH_MULTIPLIER`](https://docs.celeryq.dev/en/stable/userguide/configuration.html#std-setting-worker_prefetch_multiplier) setting. If you have longer running jobs that are blocking short-lived jobs from running, you may want to consider reducing the prefetch multiplier to 1 so that a worker will only reserve as many tasks as it can run concurrently.
 
@@ -96,7 +96,7 @@ graph LR
     class Exec1,Exec2 execution
 ```
 
-Figure: *Celery queuing with concurrency set to 2, prefetch multiplier set to 1*
+Figure: _Celery queuing with concurrency set to 2, prefetch multiplier set to 1_
 
 !!! warning "Zero means unlimited, not disabled"
     A value of zero is also valid and means "no limit". Effectively, the worker will keep consuming messages, not respecting that there may be other available worker nodes that may be able to process them sooner, or that the messages may not even fit in memory.
@@ -118,6 +118,6 @@ graph LR
     class Exec1,Exec2 execution
 ```
 
-Figure: *Celery queuing with concurrency set to 2, prefetch multiplier set to 1, late acknowledgments enabled*
+Figure: _Celery queuing with concurrency set to 2, prefetch multiplier set to 1, late acknowledgments enabled_
 
 Enabling late acknowledgments may have implications on the way tasks are processed. Most importantly, if a worker is killed while processing a task, that task will be re-queued and executed by another available worker. This may lead to tasks being partially executed more than once, which may not be desirable for all types of tasks. This concern is best addressed by ensuring that tasks are idempotent, meaning that running the same task multiple times will not have unintended side effects - a best practice regardless of whether late acknowledgments are enabled or not.

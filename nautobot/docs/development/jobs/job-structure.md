@@ -174,7 +174,7 @@ A list of strings (field names) representing the order your Job [variables](#var
 
 Default: `True`
 
-Unless set to False, it prevents the Job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each Job's inputs contain any such variables before setting this to False; if a Job *does* contain sensitive inputs, if possible you should consider whether the Job could be re-implemented using Nautobot's [Secrets](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a Job variable at all.
+Unless set to False, it prevents the Job's input parameters from being saved to the database. This defaults to True so as to protect against inadvertent database exposure of input parameters that may include sensitive data such as passwords or other user credentials. Review whether each Job's inputs contain any such variables before setting this to False; if a Job _does_ contain sensitive inputs, if possible you should consider whether the Job could be re-implemented using Nautobot's [Secrets](../../user-guide/platform-functionality/secret.md) feature as a way to ensure that the sensitive data is not directly provided as a Job variable at all.
 
 Important notes about Jobs with sensitive variables:
 
@@ -321,7 +321,7 @@ class ExampleJobWithHardTimeLimit(Job):
 
 ## Variables
 
-Variables allow your Job to accept user input via the Nautobot UI, but they are optional; if your Job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your Job, you *must* also implement the `run()` method, as it is the only entry point to your Job that has visibility into the variable values provided by the user.
+Variables allow your Job to accept user input via the Nautobot UI, but they are optional; if your Job does not require any user input, there is no need to define any variables. Conversely, if you are making use of user input in your Job, you _must_ also implement the `run()` method, as it is the only entry point to your Job that has visibility into the variable values provided by the user.
 
 This example defines two input variables using `StringVar` and `IntegerVar`, which are passed as keyword arguments into the `run()` method. The values provided by the user at runtime are then used inside a loop to print a customized greeting message using `self.logger.info()`. By logging each message, the Job provides immediate feedback in the JobResult view. Finally, the class is registered using `register_jobs()` to ensure it can be discovered and run within Nautobot.
 
@@ -722,7 +722,7 @@ If either `before_start()` or `run()` raises any unhandled exception, or reports
 
 ### The `after_return()` Method
 
-Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is *either* the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
+Regardless of the overall Job execution success or failure, the `after_return()` method will be called after `on_success()` or `on_failure()`. It has the signature `after_return(self, status, retval, task_id, args, kwargs, einfo)`; the `status` will indicate success or failure (using the `JobResultStatusChoices` enum), `retval` is _either_ the return value from `run()` or the exception raised, and once again `kwargs` contains the user variables.
 
 ## Reserved Names: Avoiding Collisions with Job Internals
 
@@ -763,7 +763,7 @@ As of Nautobot 2.4.0, the current list of reserved names (not including low-leve
 | `load_yaml`               | [helper method](./job-patterns.md#reading-static-data-from-files)              |
 | `name`                    | [metadata property](#name)                                              |
 | `on_failure`              | [special method](#the-on_failure-method)                                |
-| `on_retry`                | reserved as a future special method *(not present)* |
+| `on_retry`                | reserved as a future special method _(not present)_ |
 | `on_success`              | [special method](#the-on_success-method)                                |
 | `prepare_job_kwargs`      | internal class method                                                   |
 | `properties_dict`         | class property                                                          |

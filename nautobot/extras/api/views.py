@@ -1207,6 +1207,17 @@ class JobResultViewSet(
             "POST": ["%(app_label)s.view_jobresult"],
         }
 
+    class JobLogEntryPermission(TokenPermissions):
+        """
+        Enforce `view_joblogentry` permission (in addition to `view_jobresult`) on the /logs/ endpoint.
+        """
+
+        perms_map = {
+            "GET": ["%(app_label)s.view_jobresult", "extras.view_joblogentry"],
+            "HEAD": ["%(app_label)s.view_jobresult", "extras.view_joblogentry"],
+            "OPTIONS": [],
+        }
+
     def restrict_queryset(self, request, *args, **kwargs):
         """
         Apply special permissions as queryset filter on the /cancel/ endpoint.
@@ -1219,10 +1230,13 @@ class JobResultViewSet(
         else:
             super().restrict_queryset(request, *args, **kwargs)
 
-    @action(detail=True)
+    @action(detail=True, permission_classes=[JobLogEntryPermission])
     def logs(self, request, pk=None):
-        job_result = self.get_object()
-        logs = job_result.job_log_entries.all()
+        # `get_object_or_404()` and not `self.get_object()` because object-level check of the latter resolves every entry in
+        # `perms_map` against the JobResult, so `extras.view_joblogentry` would raise ValueError (HTTP 500).
+        # `self.queryset` is already restricted to viewable JobResults by `restrict_queryset()`, so nothing is lost.
+        job_result = get_object_or_404(self.queryset, pk=pk)
+        logs = job_result.job_log_entries.restrict(request.user, "view")
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 

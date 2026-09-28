@@ -4,6 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from nautobot.apps.testing import FilterTestCases
 from nautobot.extras.models import Status
+from nautobot.ipam.models import IPAddress
 from nautobot.vpn import choices, factory as vpn_factory, filters, models
 
 
@@ -155,12 +156,60 @@ class VPNTunnelEndpointFilterTestCase(FilterTestCases.FilterTestCase):
         ("device", "device__name"),
         ("source_interface", "source_interface__id"),
         ("source_interface", "source_interface__name"),
+        ("source_ipaddress", "source_ipaddress__id"),
         ("source_fqdn",),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__id"),
         ("endpoint_a_vpn_tunnels", "endpoint_a_vpn_tunnels__name"),
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__id"),
         ("endpoint_z_vpn_tunnels", "endpoint_z_vpn_tunnels__name"),
     )
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        endpoints_with_ip = models.VPNTunnelEndpoint.objects.filter(source_ipaddress__isnull=False)
+        needed = 3 - endpoints_with_ip.count()
+        if needed > 0:
+            candidates = list(
+                models.VPNTunnelEndpoint.objects.filter(source_interface__isnull=False, source_ipaddress__isnull=True)[
+                    :needed
+                ]
+            )
+            available_ips = list(
+                IPAddress.objects.exclude(
+                    id__in=models.VPNTunnelEndpoint.objects.filter(source_ipaddress__isnull=False).values_list(
+                        "source_ipaddress_id", flat=True
+                    )
+                )[:needed]
+            )
+            for endpoint, ip in zip(candidates, available_ips):
+                endpoint.source_interface.add_ip_addresses(ip)
+                endpoint.source_ipaddress = ip
+                endpoint.save()
+
+    def test_source_ipaddress(self):
+        endpoints = models.VPNTunnelEndpoint.objects.filter(source_ipaddress__isnull=False)
+        ip1 = endpoints[0].source_ipaddress
+        ip2 = endpoints[1].source_ipaddress
+
+        # Test filtering by address string
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"source_ipaddress": [str(ip1.address)]}, self.queryset).qs,
+            self.queryset.filter(source_ipaddress=ip1),
+            ordered=False,
+        )
+        # Test filtering by host string
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"source_ipaddress": [str(ip1.host)]}, self.queryset).qs,
+            self.queryset.filter(source_ipaddress=ip1),
+            ordered=False,
+        )
+        # Test filtering by mixed address string and PK
+        self.assertQuerySetEqualAndNotEmpty(
+            self.filterset({"source_ipaddress": [str(ip1.address), str(ip2.pk)]}, self.queryset).qs,
+            self.queryset.filter(source_ipaddress__in=[ip1, ip2]),
+            ordered=False,
+        )
 
 
 class VPNTerminationFilterTestCase(FilterTestCases.FilterTestCase):

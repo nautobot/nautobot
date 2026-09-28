@@ -17,10 +17,10 @@ The Nautobot documentation has more info about [VLANs](../../core-data-model/ipa
 
 The following example will show:
 
-* Creating a `vlan 200` without a location assignment (*global* scope)
+* Creating a `vlan 200` without a location assignment (_global_ scope)
 * Creating two VLANs, each with overlapping Names and IDs: ID = `100` and Name = `vlan 100`
-    * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different location (*location-specific* scope)
-* How the *location-specific* and *global* scopes affect which VLANs can be assigned on which Devices
+    * Neither of the `vlan 100` instances will be assigned to a group, but each of the VLANs will be assigned to a different location (_location-specific_ scope)
+* How the _location-specific_ and _global_ scopes affect which VLANs can be assigned on which Devices
 
 !!! note
     This example will require a Location (`Ottawa 1`) within a Parent Location (`Ottawa`) in the `North America` Parent Location in addition to the `Vancouver 1` Location and `Vancouver` Parent Location created prior.

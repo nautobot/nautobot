@@ -100,7 +100,7 @@ def run_sync(records):
     ...
 ```
 
-Metrics are exported only when the operator has enabled a metrics exporter; otherwise these calls are no-ops. Use tracing to find *where* time goes on a single request or Job, and metrics to track *trends* (rates, distributions) across many runs so you know what to focus improvement efforts on.
+Metrics are exported only when the operator has enabled a metrics exporter; otherwise these calls are no-ops. Use tracing to find _where_ time goes on a single request or Job, and metrics to track _trends_ (rates, distributions) across many runs so you know what to focus improvement efforts on.
 
 !!! note
     Nautobot also exposes Prometheus metrics through a separate mechanism; see [Prometheus Metrics](../prometheus.md) if you want to expose app metrics on the Nautobot `/metrics` endpoint instead of through the OpenTelemetry pipeline.

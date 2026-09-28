@@ -84,7 +84,7 @@ Create a new Device with these attributes:
 * **Location** select `ANGO1`
 * **Status** select `Active`
 
-On the main screen for the new *Device*, you will see an **Interfaces** tab with the expected Interfaces from the *Device Type* template:
+On the main screen for the new _Device_, you will see an **Interfaces** tab with the expected Interfaces from the _Device Type_ template:
 
 ![Assign device type](../images/getting-started-nautobot-ui/18-assign-device-type-light.png#only-light){ .on-glb }
 ![Assign device type](../images/getting-started-nautobot-ui/18-assign-device-type-dark.png#only-dark){ .on-glb }

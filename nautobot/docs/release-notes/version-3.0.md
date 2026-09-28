@@ -143,7 +143,7 @@ The Device model has replaced its single `cluster` foreign-key field with a many
 
 To provide a modicum of backwards-compatibility, the Device model and queryset still support a singular `cluster` property which can be retrieved and (in some cases) set for the case of a single associated Cluster, but App authors, Job Authors, and GraphQL users are encouraged to migrate to using `clusters` as soon as possible. The `cluster` property will raise a `MultipleObjectsReturned` exception if the Device in question has more than one associated Cluster.
 
-Note that due to technical limitations, the Device REST API does *not* support a `cluster` field in Nautobot v3, so users of the REST API *must* migrate to reading the `clusters` field where applicable. Assignment of Devices to Clusters via the REST API is now managed via a dedicated endpoint `/api/dcim/device-cluster-assignments/` similar to other many-to-many fields in Nautobot.
+Note that due to technical limitations, the Device REST API does _not_ support a `cluster` field in Nautobot v3, so users of the REST API _must_ migrate to reading the `clusters` field where applicable. Assignment of Devices to Clusters via the REST API is now managed via a dedicated endpoint `/api/dcim/device-cluster-assignments/` similar to other many-to-many fields in Nautobot.
 
 #### Filter Standardization Improvements ([#1889](https://github.com/nautobot/nautobot/issues/1889))
 
