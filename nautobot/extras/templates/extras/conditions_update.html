@@ -1,0 +1,22 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>{{ obj_type|capfirst }}</strong></div>
+        <div class="card-body">
+            {% render_form form excluded_fields=main_card_excluded_fields %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><strong>Conditions</strong></div>
+        <div class="card-body">
+            <span class="form-text mb-12">
+                Every condition must pass for this to run. With no conditions it runs for every change to
+                the selected object types.
+            </span>
+            {% render_field form.conditions %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock form %}

@@ -3505,12 +3505,40 @@ class ScheduledJobUIViewSet(
         return redirect(obj.get_absolute_url())
 
 
+class ConditionsViewMixin:
+    """The conditions card on the edit form, and the conditions panel on the detail view."""
+
+    conditions_template = "extras/conditions_update.html"
+    main_card_excluded_fields = ["conditions"]
+
+    def get_template_name(self):
+        if self.action in ("create", "update"):
+            return self.conditions_template
+        return super().get_template_name()
+
+    def get_extra_context(self, request, instance=None):
+        context = super().get_extra_context(request, instance)
+        context["main_card_excluded_fields"] = self.main_card_excluded_fields
+        return context
+
+    @staticmethod
+    def conditions_panel(weight=200, section=SectionChoices.RIGHT_HALF):
+        """The Conditions panel, for a detail view's `panels`."""
+        return object_detail.ObjectTextPanel(
+            label="Conditions",
+            section=section,
+            weight=weight,
+            object_field="conditions",
+            render_as=object_detail.BaseTextPanel.RenderOptions.JSON,
+        )
+
+
 #
 # Job hooks
 #
 
 
-class JobHookUIViewSet(NautobotUIViewSet):
+class JobHookUIViewSet(ConditionsViewMixin, NautobotUIViewSet):
     bulk_update_form_class = forms.JobHookBulkEditForm
     filterset_class = filters.JobHookFilterSet
     filterset_form_class = forms.JobHookFilterForm
@@ -3525,7 +3553,9 @@ class JobHookUIViewSet(NautobotUIViewSet):
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
                 fields="__all__",
+                exclude_fields=("conditions",),
             ),
+            ConditionsViewMixin.conditions_panel(weight=100),
         )
     )
 
@@ -5161,7 +5191,7 @@ class TeamUIViewSet(NautobotUIViewSet):
 #
 
 
-class WebhookUIViewSet(NautobotUIViewSet):
+class WebhookUIViewSet(ConditionsViewMixin, NautobotUIViewSet):
     bulk_update_form_class = forms.WebhookBulkEditForm
     filterset_class = filters.WebhookFilterSet
     filterset_form_class = forms.WebhookFilterForm
@@ -5198,5 +5228,6 @@ class WebhookUIViewSet(NautobotUIViewSet):
                 object_field="body_template",
                 render_as=object_detail.BaseTextPanel.RenderOptions.CODE,
             ),
+            ConditionsViewMixin.conditions_panel(),
         ]
     )
