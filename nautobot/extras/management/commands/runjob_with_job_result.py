@@ -52,17 +52,17 @@ class Command(BaseCommand):
             job_result = JobResult.objects.get(pk=job_result_id)
         except JobResult.DoesNotExist:
             raise CommandError(f"Job result with pk {job_result_id} not found.")
-        if job_result.status not in (JobResultStatusChoices.STATUS_PENDING, JobResultStatusChoices.STATUS_STARTED):
-            raise CommandError(
-                f"Job result has an invalid status {job_result.status} for this command."
-                f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"
-                f" or {JobResultStatusChoices.STATUS_STARTED}."
-            )
         if job_result.status == JobResultStatusChoices.STATUS_STARTED:
             job_result.log(
                 "Job result was already started by a previous attempt that did not finish; running the job again.",
                 level_choice=LogLevelChoices.LOG_WARNING,
                 grouping="initialization",
+            )
+        elif job_result.status != JobResultStatusChoices.STATUS_PENDING:
+            raise CommandError(
+                f"Job result has an invalid status {job_result.status} for this command."
+                f" You can only pass in a job result with status {JobResultStatusChoices.STATUS_PENDING}"
+                f" or {JobResultStatusChoices.STATUS_STARTED}."
             )
 
         job_user = job_result.user
