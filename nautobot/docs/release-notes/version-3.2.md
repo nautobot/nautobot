@@ -298,14 +298,14 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 ### Security in v3.2.6
 
-- [#GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/issues/GHSA-m6h7-g92h-9p44) - Fixed the cable `trace` and `paths` API endpoints to now render objects that the requesting user does not have permission to view in a brief `{id, object_type, url, display}` form instead.
+- [GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44) - Fixed the cable `trace` and `paths` API endpoints to now render objects that the requesting user does not have permission to view in a brief `{id, object_type, url, display}` form instead.
 - [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated dependency `gitpython` to `>=3.1.62,<3.2` to mitigate GHSA-59cr-6r3x-644w.
-- [#9503](https://github.com/nautobot/nautobot/issues/9503) - Fixed a Nautobot API permission bypass where /job-results/{id}/logs/ ignored the absence of view_joblogentry permission, leaking job log entries.
+- [#9503](https://github.com/nautobot/nautobot/issues/9503) - Fixed a Nautobot API permission bypass where `/job-results/{id}/logs/` ignored the absence of `view_joblogentry` permission, leaking job log entries.
 - [#9540](https://github.com/nautobot/nautobot/issues/9540) - Updated dependency `social-auth-core` to `>=5.1.1,<5.2` to mitigate multiple vulnerabilities.
 
 ### Changed in v3.2.6
 
-- [#GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/issues/GHSA-m6h7-g92h-9p44) - Changed the Cable representation returned by the cable `trace` REST API endpoint to use Nautobot's standard serializer fields, adding `display`, `natural_slug`, `object_type`, and `url` and removing private fields and the per-model termination lists (`interfaces`, `front_ports`, etc.).
+- [GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44) - Changed the Cable representation returned by the cable `trace` REST API endpoint to use Nautobot's standard serializer fields, adding `display`, `natural_slug`, `object_type`, and `url` and removing private fields and the per-model termination lists (`interfaces`, `front_ports`, etc.).
 - [#9413](https://github.com/nautobot/nautobot/issues/9413) - Changed `User.set_config()` and `User.clear_config()` to do nothing while `MAINTENANCE_MODE` is enabled, so user preferences are not saved in that mode.
 
 ### Fixed in v3.2.6
