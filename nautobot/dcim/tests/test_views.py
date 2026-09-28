@@ -1306,6 +1306,29 @@ class ModuleTypeTestCase(
             content,
         )
 
+    def test_detail_component_table_action_buttons_have_correct_return_url(self):
+        """Assert that a component template's edit/delete buttons return to the correct tab of the ModuleType view."""
+        self.add_permissions(
+            "dcim.view_moduletype",
+            "dcim.view_interfacetemplate",
+            "dcim.change_interfacetemplate",
+            "dcim.delete_interfacetemplate",
+        )
+        module_type = ModuleType.objects.first()
+        interface_template = InterfaceTemplate.objects.create(
+            module_type=module_type,
+            name="Test Interface Template 1",
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+        )
+        response = self.client.get(module_type.get_absolute_url())
+        self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+
+        return_url = f"{module_type.get_absolute_url()}%3Ftab=interfaces"
+        for action in ("edit", "delete"):
+            action_url = reverse(f"dcim:interfacetemplate_{action}", kwargs={"pk": interface_template.pk})
+            self.assertIn(f'href="{action_url}?return_url={return_url}"', content)
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_import_objects(self):
         """
