@@ -1,1 +1,0 @@
-Changed the Cable representation returned by the cable `trace` REST API endpoint to use Nautobot's standard serializer fields, adding `display`, `natural_slug`, `object_type`, and `url` and removing private fields.
