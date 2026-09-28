@@ -66,6 +66,7 @@ menu_items = (
                         link="data_validation:device-constraints",
                         name="Device Constraints",
                         permissions=["dcim.view_device"],
+                        searchable=False,
                     ),
                 ),
             ),

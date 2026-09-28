@@ -116,6 +116,7 @@ def nav_menu(request):
                             nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
                                 "is_active": False,
                                 "name": item_details["name"],
+                                "searchable": item_details.get("searchable", True),
                                 "weight": item_details["weight"],
                             }
                     if len(nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"]) == 0:

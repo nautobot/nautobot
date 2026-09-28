@@ -45,6 +45,8 @@ from nautobot.extras.choices import (
 from nautobot.extras.context_managers import change_logging, JobHookChangeContext, web_request_context
 from nautobot.extras.jobs import (
     BaseJob,
+    BooleanVar,
+    DryRunVar,
     enqueue_job_hooks,
     get_job,
     get_jobs,
@@ -61,6 +63,52 @@ from nautobot.extras.jobs_cancel import (
 from nautobot.extras.models import Job, JobQueue, JobResult
 from nautobot.extras.models.jobs import JOB_LOGS, JobLogEntry
 from nautobot.users.models import ObjectPermission
+
+
+class ValidateDataBooleanDefaultTest(TestCase):
+    """`validate_data()` restores a BooleanVar's declared default when the caller omits the key.
+
+    A bound Django BooleanField cleans an absent key to False rather than to its `initial`, because an
+    unchecked HTML checkbox submits nothing. A JSON API body carries no such convention, so without this
+    an API caller silently gets the opposite of the job's declared default.
+    """
+
+    class BooleanDefaultsJob(BaseJob):
+        on_by_default = BooleanVar(default=True)
+        off_by_default = BooleanVar(default=False)
+        undeclared = BooleanVar()
+        dryrun = DryRunVar()
+
+        def run(self):  # pylint: disable=arguments-differ
+            pass
+
+    def test_omitted_boolean_takes_its_declared_default(self):
+        cleaned_data = self.BooleanDefaultsJob.validate_data({})
+        self.assertTrue(cleaned_data["on_by_default"])
+        self.assertFalse(cleaned_data["off_by_default"])
+        self.assertFalse(cleaned_data["undeclared"])
+
+    def test_explicit_false_is_not_overridden(self):
+        """An explicit False must survive -- otherwise a deliberately-cleared checkbox is re-asserted."""
+        cleaned_data = self.BooleanDefaultsJob.validate_data({"on_by_default": False})
+        self.assertFalse(cleaned_data["on_by_default"])
+
+    def test_explicit_true_is_preserved(self):
+        cleaned_data = self.BooleanDefaultsJob.validate_data({"undeclared": True})
+        self.assertTrue(cleaned_data["undeclared"])
+
+    def test_dryrun_is_excluded_from_the_fill(self):
+        """DryRunVar is excluded, dryrun being able to waive a Job's approval requirement.
+
+        Asserted against the fill rather than against `validate_data`'s output: `DryRunVar.__init__`
+        forces `default=False`, so including it would contribute `{"dryrun": False}` and clean to the
+        same False either way. The exclusion is only observable here.
+        """
+        job = self.BooleanDefaultsJob
+        defaults = job._omitted_boolean_var_defaults({}, job._get_vars())
+        self.assertNotIn("dryrun", defaults)
+        # ... and the fill is otherwise working, so that absence means something
+        self.assertIn("on_by_default", defaults)
 
 
 class JobTest(TestCase):

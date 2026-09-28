@@ -1,0 +1,2 @@
+Excluded the following nav menu items from the global search bar's model filters: Apps Marketplace, Installed Apps, Device Constraints, IP Address Assignments, Wireless Controllers and (Wireless) Device Groups.
+Renamed the Virtualization "Interfaces" nav menu item to "VM Interfaces".

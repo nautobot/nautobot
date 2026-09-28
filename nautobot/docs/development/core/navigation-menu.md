@@ -126,6 +126,10 @@ A `NavMenuItem` has the following attributes:
 * `permissions` - A list of permissions required to display this link (optional)
 * `buttons` - An iterable of NavMenuButton (or subclasses of NavMenuButton) instances to display (optional)
 * `query_params` - A dictionary of query parameters to add to the URL (optional)
+* `searchable` - Whether this item should appear as a model filter in the global search bar (optional, defaults to `True`)
+
++++ 3.3.0
+    Added the `searchable` attribute.
 
 !!! note
     Any buttons associated within a menu item will be hidden if the user does not have permission to access the menu item, regardless of what permissions are set on the buttons.

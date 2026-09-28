@@ -416,10 +416,10 @@ class BaseTable(django_tables2.Table):
             (dict): `{column_name: serializer_field_path_or_None}`, in column display order.
         """
         # Instantiated the way an export instantiates it, as `validate_field_paths()` also takes care to
-        # do: `exporting=True` is what makes the opt-in M2M fields readable (see
+        # do: `for_import_export=True` is what makes the opt-in M2M fields readable (see
         # `OptInFieldsMixin._readable_m2m_sources`), and without it every column backed by one of them --
         # the VRFs behind `PrefixTable.vrf_count`, say -- looks unexportable.
-        serializer = serializer_class(context={"request": None, "depth": 0}, exporting=True)
+        serializer = serializer_class(context={"request": None, "depth": 0}, for_import_export=True)
         serializer_fields = serializer.fields
         paths = {}
         for name in self.visible_columns:

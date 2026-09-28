@@ -1,6 +1,6 @@
 import codecs
 import contextlib
-from io import BytesIO
+from io import StringIO
 import json
 
 from django.apps import apps as global_apps
@@ -22,9 +22,14 @@ from nautobot.core.api.import_export import (
     build_document_records,
     build_import_document,
     build_import_metadata,
+    IMPORT_DOCUMENT_MODEL_KEY,
     validate_field_paths,
 )
-from nautobot.core.api.parsers import NautobotCSVParser
+from nautobot.core.api.parsers import (
+    NautobotCSVParser,
+    NautobotJSONImportParser,
+    NautobotYAMLImportParser,
+)
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
@@ -181,7 +186,7 @@ class ExportFieldsStringVar(StringVar):
 
 
 class ExportObjectList(Job):
-    """System Job to export a list of objects via CSV or ExportTemplate."""
+    """System Job to export a list of objects to CSV/JSON/YAML or using an ExportTemplate."""
 
     content_type = ObjectVar(
         model=ContentType,
@@ -231,7 +236,7 @@ class ExportObjectList(Job):
 
     class Meta:
         name = "Export Object List"
-        description = "Export a list of objects to CSV or YAML, or render a specified Export Template."
+        description = "Export a list of objects to CSV/JSON/YAML, or render a specified Export Template."
         has_sensitive_variables = False
         # Exporting large querysets may take substantial processing time
         soft_time_limit = 1800
@@ -385,7 +390,7 @@ class ExportObjectList(Job):
 
     def _resolve_export_field_paths(self, model, export_fields):
         """Parse and validate the explicit field-selection string (None if no selection was given)."""
-        export_field_paths = import_utils.parse_match_fields(export_fields)
+        export_field_paths = import_utils.parse_field_name_list(export_fields)
         if export_field_paths:
             try:
                 validate_field_paths(get_serializer_for_model(model), export_field_paths, user=self.user)
@@ -514,12 +519,12 @@ class ExportObjectList(Job):
             queryset = queryset.prefetch_related(*m2m_prefetches)
 
         # The force_csv=True attribute is a hack, but much easier than trying to construct a valid HttpRequest
-        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `exporting`
+        # object from scratch that passes all implicit and explicit assumptions in Django and DRF. `for_import_export`
         # is what makes every M2M field readable; see `OptInFieldsMixin._readable_m2m_sources`.
         context = {"request": None}
         if export_field_paths:
             context["export_fields"] = export_field_paths
-        serializer = serializer_class(queryset, many=True, context=context, exporting=True, force_csv=for_csv)
+        serializer = serializer_class(queryset, many=True, context=context, for_import_export=True, force_csv=for_csv)
         self._log_lossy_m2m_fields(model, serializer.child.fields)
         return serializer.data
 
@@ -657,15 +662,34 @@ class ExportObjectList(Job):
 
 
 class ImportObjects(Job):
-    """System Job to import CSV data to create a set of objects."""
+    """System Job to import CSV/JSON/YAML data to create a set of objects."""
 
     content_type = ObjectVar(
         model=ContentType,
-        description="Type of objects to import",
+        description="Type of objects to import; defaults to the model the data declares for itself, if any.",
         query_params={"can_add": True, "has_serializer": True},
+        required=False,
     )
-    csv_data = TextVar(label="CSV Data", required=False)
-    csv_file = FileVar(label="CSV File", required=False)
+    # These variables retain their historical "csv_" names for API and scheduled-job compatibility,
+    # but accept CSV, JSON, or YAML data (see import_format).
+    csv_data = TextVar(label="Import Data (CSV/JSON/YAML)", required=False)
+    csv_file = FileVar(label="Import File (CSV/JSON/YAML)", required=False)
+    import_format = ChoiceVar(
+        choices=(("auto", "Auto-detect"), ("csv", "CSV"), ("json", "JSON"), ("yaml", "YAML")),
+        label="Format",
+        default="auto",
+        required=False,
+        description="Format of the import data; auto-detected from the file extension or content if not specified.",
+    )
+    match_fields = StringVar(
+        label="Match Fields",
+        default="",
+        required=False,
+        description="The field(s) to match records in the file against existing objects, as a comma-separated "
+        "list (e.g. <code>name,serial</code>), overriding any <code>match_fields</code> the file itself "
+        "declares. <strong>Not yet implemented</strong>: the value is accepted and recorded, but every "
+        "import currently creates new objects regardless.",
+    )
     roll_back_if_error = BooleanVar(
         label="Rollback Changes on Failure",
         required=False,
@@ -677,11 +701,17 @@ class ImportObjects(Job):
 
     class Meta:
         name = "Import Objects"
-        description = "Import objects from CSV-formatted data."
+        description = "Import objects from CSV, JSON, or YAML data."
         has_sensitive_variables = False
         # Importing large files may take substantial processing time
         soft_time_limit = 1800
         time_limit = 2000
+
+    IMPORT_PARSERS = {
+        "csv": NautobotCSVParser,
+        "json": NautobotJSONImportParser,
+        "yaml": NautobotYAMLImportParser,
+    }
 
     def _perform_atomic_operation(self, data, serializer_class, queryset):
         new_objs = []
@@ -698,8 +728,9 @@ class ImportObjects(Job):
     def _perform_operation(self, data, serializer_class, queryset):
         new_objs = []
         validation_failed = False
+        context = import_utils.import_serializer_context(self.user)
         for row, entry in enumerate(data, start=1):
-            serializer = serializer_class(data=entry, context={"request": None})
+            serializer = serializer_class(data=entry, context=context)
             if serializer.is_valid():
                 try:
                     with transaction.atomic():
@@ -722,7 +753,51 @@ class ImportObjects(Job):
                         self.logger.error("Row %d: `%s`: `%s`", row, field, err)
         return new_objs, validation_failed
 
-    def run(self, *, content_type, csv_data=None, csv_file=None, roll_back_if_error=False):  # pylint:disable=arguments-differ
+    def run(  # pylint:disable=arguments-differ
+        self,
+        *,
+        content_type=None,
+        csv_data=None,
+        csv_file=None,
+        roll_back_if_error=True,
+        import_format="auto",
+        match_fields="",
+    ):
+        # Read the data first: a file that declares its own model is allowed to supply the content-type.
+        if not csv_data and not csv_file:
+            raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
+        if csv_file:
+            raw = csv_file.read()
+            filename = getattr(csv_file, "name", "")
+            try:
+                text = raw.decode("utf-8-sig") if isinstance(raw, bytes) else raw
+            except UnicodeDecodeError as exc:
+                self.logger.error("Unable to decode `%s` as UTF-8: `%s`", filename or "the uploaded file", exc)
+                raise RunJobTaskFailed("Import file is not valid UTF-8") from exc
+        else:
+            text = csv_data
+            filename = ""
+
+        if not import_format or import_format == "auto":
+            import_format = import_utils.detect_import_format(filename, text)
+        parser_class = self.IMPORT_PARSERS.get(import_format)
+        if parser_class is None:
+            raise RunJobTaskFailed(f'Unsupported import format "{import_format}"')
+        self.logger.info("Importing data as %s", import_format.upper())
+
+        if content_type is None:
+            try:
+                declared_model = import_utils.peek_import_model(text, import_format) or ""
+            except Exception as exc:
+                # This read happens before the parser's, so its errors are not yet ParseErrors
+                self.logger.error("Unable to read the data to determine its content-type: `%s`", exc)
+                raise RunJobTaskFailed("Import data could not be read") from exc
+            app_label, _, model_name = declared_model.lower().partition(".")
+            content_type = ContentType.objects.filter(app_label=app_label, model=model_name).first()
+            if content_type is None:
+                self.logger.error('No content-type given, and the data declares no usable model ("%s")', declared_model)
+                raise RunJobTaskFailed("Unable to determine the content-type to import this data as")
+
         if not self.user.has_perm(f"{content_type.app_label}.add_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to create %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have create permissions on the requested content-type")
@@ -739,29 +814,30 @@ class ImportObjects(Job):
             serializer_class = get_serializer_for_model(model)
         except SerializerNotFound:
             self.logger.error(
-                'Could not find the "%s.%s" data serializer. Unable to process CSV for this model.',
+                'Could not find the "%s.%s" data serializer. Unable to import data for this model.',
                 content_type.app_label,
                 content_type.model,
             )
             raise
         queryset = model.objects.restrict(self.user, "add")
 
-        if not csv_data and not csv_file:
-            raise RunJobTaskFailed("Either csv_data or csv_file must be provided")
-        if csv_file:
-            # data_encoding is utf-8 and file_encoding is utf-8-sig
-            # Bytes read from the original file are decoded according to file_encoding, and the result is encoded using data_encoding.
-            csv_bytes = codecs.EncodedFile(csv_file, "utf-8", "utf-8-sig")
-        else:
-            csv_bytes = BytesIO(csv_data.encode("utf-8"))
-
         new_objs = []
         try:
-            data = NautobotCSVParser().parse(
-                stream=csv_bytes,
-                parser_context={"request": None, "serializer_class": serializer_class},
-            )
-            self.logger.info("Processing %d rows of data", len(data))
+            parser_context = {"request": None, "serializer_class": serializer_class, "strict_fields": True}
+            data = parser_class().parse(stream=StringIO(text), parser_context=parser_context)
+
+            # A file-carried model declaration must agree with the requested content-type
+            import_model = parser_context.get("import_directives", {}).get(IMPORT_DOCUMENT_MODEL_KEY)
+            if import_model and import_model.lower() != f"{content_type.app_label}.{content_type.model}":
+                self.logger.error(
+                    'The file declares model "%s" but this import was requested for "%s.%s"',
+                    import_model,
+                    content_type.app_label,
+                    content_type.model,
+                )
+                raise RunJobTaskFailed("Import file model does not match the requested content-type")
+
+            self.logger.info("Processing %d record(s) of data", len(data))
             if roll_back_if_error:
                 new_objs, validation_failed = self._perform_atomic_operation(data, serializer_class, queryset)
             else:
@@ -779,8 +855,8 @@ class ImportObjects(Job):
 
         if validation_failed:
             if roll_back_if_error:
-                raise RunJobTaskFailed("CSV import not successful, all imports were rolled back, see logs")
-            raise RunJobTaskFailed("CSV import not fully successful, see logs")
+                raise RunJobTaskFailed("Import not successful, all imports were rolled back, see logs")
+            raise RunJobTaskFailed("Import not fully successful, see logs")
 
 
 def get_data_compliance_rules():

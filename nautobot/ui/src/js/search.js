@@ -38,7 +38,7 @@ export const initializeSearch = () => {
   const SEARCHABLE_MODELS = Object.fromEntries(
     Object.entries(NAV_MENU.tabs).flatMap(([, tab_details]) =>
       Object.entries(tab_details.groups).flatMap(([, group_details]) =>
-        Object.entries(group_details.items).map(([item_link, item_details]) => [item_link, item_details]),
+        Object.entries(group_details.items).filter(([, item_details]) => item_details.searchable !== false),
       ),
     ),
   );

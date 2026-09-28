@@ -35,6 +35,7 @@ menu_items = (
                         name="Example Models filtered",
                         permissions=["example_app.view_examplemodel"],
                         query_params={"number": "100"},
+                        searchable=False,
                     ),
                     NavMenuItem(
                         link="plugins:example_app:anotherexamplemodel_list",

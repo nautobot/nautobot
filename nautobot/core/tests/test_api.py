@@ -1418,7 +1418,9 @@ class RelatedModelResolutionTest(TestCase):
         This one is also sourced from a *reverse* relation under a different name, so it exercises both
         the unwrapping and the `source`-not-`field_name` lookup.
         """
-        serializer = extras_serializers.SecretsGroupSerializer(context={"request": None, "depth": 0}, exporting=True)
+        serializer = extras_serializers.SecretsGroupSerializer(
+            context={"request": None, "depth": 0}, for_import_export=True
+        )
         field = serializer.fields["secrets"]
         self.assertIsInstance(field, ManyRelatedField)
         self.assertIsNone(field.child_relation.queryset)
@@ -1433,7 +1435,7 @@ class RelatedModelResolutionTest(TestCase):
         their `related_query_name`, which equals the accessor name whenever `related_name` is set -- as it
         is for every reverse relation a Nautobot serializer sources a field from.
         """
-        serializer = ipam_serializers.IPAddressSerializer(context={"request": None, "depth": 0}, exporting=True)
+        serializer = ipam_serializers.IPAddressSerializer(context={"request": None, "depth": 0}, for_import_export=True)
         field = serializer.fields["interfaces"]
         self.assertIsNone(field.child_relation.queryset)
         self.assertIsInstance(ipam_models.IPAddress._meta.get_field(field.source), ForeignObjectRel)
@@ -1467,9 +1469,9 @@ class RelatedModelResolutionTest(TestCase):
                 # Plenty of models (through tables, internal models) have no serializer at all
                 continue
             try:
-                fields = serializer_class(context=context, exporting=True).fields
+                fields = serializer_class(context=context, for_import_export=True).fields
             except TypeError:
-                # A plain DRF serializer rather than a Nautobot one, so it takes no `exporting` kwarg -- and
+                # A plain DRF serializer rather than a Nautobot one, so it takes no `for_import_export` kwarg -- and
                 # has no opt-in fields either, so its plain field set is the whole of it. `CablePathSerializer`
                 # is the only one in core today.
                 fields = serializer_class(context=context).fields
