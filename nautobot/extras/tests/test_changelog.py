@@ -448,13 +448,15 @@ class ChangeLogAPITest(APITestCase):
         interface = Interface.objects.get(pk=response.data["id"])
         url = reverse("dcim-api:interface-detail", kwargs={"pk": interface.pk})
 
-        for label, data, expected_tags in (
-            ("omit tags", {"description": "Updated description"}, tags),
-            ("remove one tag", {"tags": [str(tags[1].pk)]}, tags[1:]),
-            ("clear final tag", {"tags": []}, []),
-            ("add two tags", {"tags": payload["tags"]}, tags),
-            ("clear multiple tags", {"tags": []}, []),
-            ("clear untagged interface", {"tags": []}, []),
+        for label, data, expected_tags, expect_change in (
+            ("omit tags", {"description": "Updated description"}, tags, True),
+            ("remove one tag", {"tags": [str(tags[1].pk)]}, tags[1:], True),
+            ("clear final tag", {"tags": []}, [], True),
+            ("add two tags", {"tags": payload["tags"]}, tags, True),
+            ("clear multiple tags", {"tags": []}, [], True),
+            # Clearing an already-untagged interface changes nothing a reader would see, and this PATCH
+            # touches no other field either, so it must add no change.
+            ("clear untagged interface", {"tags": []}, [], False),
         ):
             with self.subTest(operation=label):
                 previous_tags = get_changes_for_model(interface).first().object_data_v2["tags"]
@@ -468,7 +470,9 @@ class ChangeLogAPITest(APITestCase):
                     [str(tag_obj.pk) for tag_obj in expected_tags],
                 )
                 changes = get_changes_for_model(interface)
-                self.assertEqual(changes.count(), change_count + 1)
+                self.assertEqual(changes.count(), change_count + (1 if expect_change else 0))
+                if not expect_change:
+                    continue
                 change = changes.first()
                 self.assertCountEqual(change.object_data["tags"], [tag_obj.name for tag_obj in expected_tags])
                 self.assertCountEqual(
@@ -1199,6 +1203,66 @@ class ChangeLogUnchangedSaveTest(TestCase):
         with context_managers.web_request_context(self.user):
             self.location.tags.add(location_tag)
         self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def _create_vm_interface(self, mode):
+        cluster_type = ClusterType.objects.create(name="Unchanged save m2m clear test")
+        cluster = Cluster.objects.create(name="Unchanged save m2m clear test", cluster_type=cluster_type)
+        vm = VirtualMachine.objects.create(
+            name="Unchanged save m2m clear test",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        with context_managers.web_request_context(self.user):
+            return VMInterface.objects.create(
+                name="eth0",
+                virtual_machine=vm,
+                status=Status.objects.get_for_model(VMInterface).first(),
+                mode=mode,
+            )
+
+    def test_m2m_clear_of_empty_relation_records_nothing(self):
+        """
+        `VMInterface.save()` always calls `tagged_vlans.clear()` when not in tagged mode.
+
+        Clearing a relation that already has nothing in it is a no-op and must not manufacture a change.
+        """
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_ACCESS)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)  # the create
+        with context_managers.web_request_context(self.user):
+            vm_interface.tagged_vlans.clear()
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)
+
+    def test_m2m_clear_of_populated_relation_is_recorded(self):
+        """Clearing a relation that actually has members is a real change and must be recorded."""
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_TAGGED)
+        vlan = VLAN.objects.create(
+            vid=4001,
+            name="Unchanged save m2m clear test",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        vm_interface.tagged_vlans.add(vlan)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)  # the create; add() was outside any context
+
+        with context_managers.web_request_context(self.user):
+            vm_interface.tagged_vlans.clear()
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 2)
+
+    def test_m2m_clear_of_populated_relation_is_recorded_from_reverse_side(self):
+        """The no-op check must also resolve the relation correctly from its reverse accessor."""
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_TAGGED)
+        vlan = VLAN.objects.create(
+            vid=4002,
+            name="Unchanged save m2m clear test reverse",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        vm_interface.tagged_vlans.add(vlan)
+        self.assertEqual(get_changes_for_model(vlan).count(), 0)  # add() was outside any context
+
+        with context_managers.web_request_context(self.user):
+            vlan.vminterfaces_as_tagged.clear()
+        self.assertEqual(get_changes_for_model(vlan).count(), 1)
 
     def test_model_can_opt_out(self):
         """A model whose stored value is not a pure function of its own fields opts out of the comparison."""

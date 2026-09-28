@@ -406,6 +406,24 @@ def _object_change_branch_name(instance):
     return DOLT_DEFAULT_BRANCH  # need to switch temporarily to the default `main` branch for this record
 
 
+def _m2m_manager_for_clear(instance, through, reverse):
+    """
+    Find the related manager on `instance` for the many-to-many relation an m2m_changed clear applies to.
+
+    `m2m_changed` identifies the relation only by its `through` model and `reverse` direction, not by
+    field name, so the field has to be found by matching those two against `instance`'s model. Returns
+    None if no matching field is found (which should not normally happen).
+    """
+    for field in instance._meta.get_fields():
+        if not getattr(field, "many_to_many", False) or field.concrete == reverse:
+            continue
+        field_through = getattr(field, "through", None) or getattr(field.remote_field, "through", None)
+        if field_through is through:
+            accessor_name = field.name if field.concrete else field.get_accessor_name()
+            return getattr(instance, accessor_name)
+    return None
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
@@ -437,7 +455,19 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
         action = ObjectChangeActionChoices.ACTION_UPDATE
+    elif kwargs.get("action") == "pre_clear":
+        # `post_clear` fires after the relationship is already empty, so a `.clear()` on an already-empty
+        # relationship is indistinguishable from one that actually removed something. Checking here, before
+        # the clear happens, is the only way to tell a no-op clear from a real one. The instance isn't
+        # serialized yet, though: that has to wait for `post_clear`, once the relation actually reflects
+        # its new, empty state, so the verdict is stashed for that handler to read.
+        manager = _m2m_manager_for_clear(instance, sender, kwargs.get("reverse", False))
+        instance._m2m_clear_has_data = manager is None or manager.exists()
+        return
     elif kwargs.get("action") == "post_clear":
+        if not instance.__dict__.pop("_m2m_clear_has_data", True):
+            # Nothing was cleared: no-op, so no change to record.
+            return
         # Clearing a relationship sends no pk_set, but its empty state must still be recorded.
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
