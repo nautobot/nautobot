@@ -1,1 +1,0 @@
-Fixed the cable `trace` and `paths` API endpoints to now render objects that the requesting user does not have permission to view in a brief `{id, object_type, url, display}` form instead.

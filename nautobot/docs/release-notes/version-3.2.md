@@ -290,6 +290,61 @@ As usual for Nautobot minor-version releases, 3.2.0 includes updates to many of 
 
 <!-- towncrier release notes start -->
 
+## v3.2.6 (2026-09-28)
+
+### Breaking Changes in v3.2.6
+
+- [#9540](https://github.com/nautobot/nautobot/issues/9540) - As a consequence of the upgrade to `social-auth-app-django` 6.x, the "Continue with SSO" login action has changed from an HTTP GET to an HTTP POST, and bookmarked SSO login URLs such as `/login/saml?idp=...` will no longer work. Bookmark the main login page `/login/` instead.
+
+### Security in v3.2.6
+
+- [#GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/issues/GHSA-m6h7-g92h-9p44) - Fixed the cable `trace` and `paths` API endpoints to now render objects that the requesting user does not have permission to view in a brief `{id, object_type, url, display}` form instead.
+- [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated dependency `gitpython` to `>=3.1.62,<3.2` to mitigate GHSA-59cr-6r3x-644w.
+- [#9503](https://github.com/nautobot/nautobot/issues/9503) - Fixed a Nautobot API permission bypass where /job-results/{id}/logs/ ignored the absence of view_joblogentry permission, leaking job log entries.
+- [#9540](https://github.com/nautobot/nautobot/issues/9540) - Updated dependency `social-auth-core` to `>=5.1.1,<5.2` to mitigate multiple vulnerabilities.
+
+### Changed in v3.2.6
+
+- [#GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/issues/GHSA-m6h7-g92h-9p44) - Changed the Cable representation returned by the cable `trace` REST API endpoint to use Nautobot's standard serializer fields, adding `display`, `natural_slug`, `object_type`, and `url` and removing private fields and the per-model termination lists (`interfaces`, `front_ports`, etc.).
+- [#9413](https://github.com/nautobot/nautobot/issues/9413) - Changed `User.set_config()` and `User.clear_config()` to do nothing while `MAINTENANCE_MODE` is enabled, so user preferences are not saved in that mode.
+
+### Fixed in v3.2.6
+
+- [#2046](https://github.com/nautobot/nautobot/issues/2046) - Fixed the login page appearing inside a modal or table, instead of redirecting to it, after a session expired.
+- [#8981](https://github.com/nautobot/nautobot/issues/8981) - Fixed dropdown (Select2) fields not hiding when their "Set null" checkbox is checked on bulk-edit forms.
+- [#9413](https://github.com/nautobot/nautobot/issues/9413) - Fixed an HTTP 500 error when viewing pages that save a user preference, such as the home page, while `MAINTENANCE_MODE` is enabled and the database is read-only.
+- [#9418](https://github.com/nautobot/nautobot/issues/9418) - Fixed circular import between DCIM, IPAM, and Circuits during startup that caused Circuits navigation menu items to be missing.
+- [#9465](https://github.com/nautobot/nautobot/issues/9465) - Fixed `ValueError` when saving a cable with a length unit of miles.
+- [#9484](https://github.com/nautobot/nautobot/issues/9484) - Fixed HTTP 500 `FieldError` when filtering `VPNTunnelEndpoint` by `source_ipaddress`.
+- [#9485](https://github.com/nautobot/nautobot/issues/9485) - Fixed HTTP 500 `TypeError` during POST to `/api/vpn/vpn-profile-phase-1-policy-assignments/` and `/api/vpn/vpn-profile-phase-2-policy-assignments/` by using `ValidatedModelSerializer`.
+- [#9510](https://github.com/nautobot/nautobot/issues/9510) - Fixed progress bar percentage labels being drawn inside the filled portion of the bar, making them unreadable at low utilization.
+- [#9526](https://github.com/nautobot/nautobot/issues/9526) - Fixed stale changelog snapshots when clearing all tags or other many-to-many relationships.
+
+### Dependencies in v3.2.6
+
+- [#9453](https://github.com/nautobot/nautobot/issues/9453) - Updated npm dependency `htmx.org` to `^2.0.11`.
+- [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated dependency `psycopg2-binary` to `>=2.9.13,<2.10`.
+- [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated dependency `regex` to `>=2026.9.10`.
+- [#9540](https://github.com/nautobot/nautobot/issues/9540) - Updated dependency `social-auth-app-django` to `>=6.0.1,<6.1`.
+
+### Documentation in v3.2.6
+
+- [#9413](https://github.com/nautobot/nautobot/issues/9413) - Added a best-practices note stating that HTTP GET handlers must not perform database writes.
+- [#9540](https://github.com/nautobot/nautobot/issues/9540) - Fixed a typo in the development guide to testing with Keycloak.
+
+### Housekeeping in v3.2.6
+
+- [#9453](https://github.com/nautobot/nautobot/issues/9453) - Updated development npm dependency `css-loader` to `^7.1.5`.
+- [#9453](https://github.com/nautobot/nautobot/issues/9453) - Updated development npm dependency `postcss` to `^8.5.28`.
+- [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated development dependency `mkdocstrings-python` to `~2.0.8`.
+- [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated development dependency `pylint` to `~4.0.8`.
+- [#9454](https://github.com/nautobot/nautobot/issues/9454) - Updated development dependency `ruff` to `~0.16.8`.
+- [#9500](https://github.com/nautobot/nautobot/issues/9500) - Updated development dependency `pymarkdownlnt` to `~0.9.40`, added configuration for some of its new rules, and updated documentation Markdown as needed to conform to those rules.
+- [#9512](https://github.com/nautobot/nautobot/issues/9512) - Updated development dependency `mkdocstrings-python` to `~2.0.9`.
+- [#9512](https://github.com/nautobot/nautobot/issues/9512) - Updated development dependency `pylint` to `~4.0.9`.
+- [#9512](https://github.com/nautobot/nautobot/issues/9512) - Updated development dependency `ruff` to `~0.16.9`.
+- [#9522](https://github.com/nautobot/nautobot/issues/9522) - Excluded the `meraki` extra of `nautobot-app-chatops` from the `dependencies-check` CI job, as its `meraki` version constraint is incompatible with the one required by `nautobot-app-ssot`.
+
 ## v3.2.5 (2026-09-14)
 
 ### Security in v3.2.5

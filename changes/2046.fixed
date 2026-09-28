@@ -1,1 +1,0 @@
-Fixed the login page appearing inside a modal or table, instead of redirecting to it, after a session expired.

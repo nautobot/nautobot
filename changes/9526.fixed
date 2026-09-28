@@ -1,1 +1,0 @@
-Fixed stale changelog snapshots when clearing all tags or other many-to-many relationships.
