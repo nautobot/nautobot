@@ -43,6 +43,10 @@ class ListPage(BasePage):
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
     # The row selection checkbox; its value is the object's id.
     _PK_CHECKBOX = "input[name='pk']"
+    # The bulk edit form carries the selected ids as hidden pk inputs.
+    _BULK_EDIT_PKS = "form input[type='hidden'][name='pk']"
+    _BULK_EDIT_APPLY = "button[name='_apply']"
+    _JOB_RESULT_URL = re.compile(r"/extras/job-results/(?P<pk>[0-9a-f-]{36})/")
     # The per-row overview toggle.
     _OVERVIEW_TOGGLE = "button.nb-overview-toggle"
     # Every overview fragment request, for routing and response waits.
@@ -102,12 +106,12 @@ class ListPage(BasePage):
         return [text.strip() for text in cells.all_inner_texts()]
 
     # -------------------------------------------------------------------------
-    # Row selection
+    # Row selection and bulk edit
     # -------------------------------------------------------------------------
 
     @property
     def _edit_selected(self):
-        """Finds the Edit Selected button. Its link can end with the current filter, and unlike Edit All it has no name."""
+        """Finds the Edit Selected button. Its formaction can end with the current filter, and unlike Edit All it has no name."""
         return f"button[formaction^='{self.LIST_PATH}edit/']:not([name])"
 
     def select_row(self, name):
@@ -118,6 +122,20 @@ class ListPage(BasePage):
     def click_edit_selected(self):
         """Click Edit Selected and wait for the bulk edit form to load."""
         self._click_and_wait_for_navigation(self._edit_selected)
+
+    def expect_bulk_edit_count(self, count):
+        """Assert (auto-retrying) that the bulk edit form's heading states it edits *count* objects."""
+        expect(self.page.locator("h1", has_text=re.compile(rf"\bEditing {count} "))).to_have_count(1)
+
+    def get_bulk_edit_pks(self) -> list:
+        """Ids of the objects the bulk edit form will submit, read from its hidden pk inputs. Reads once, with no retry."""
+        return [pk.get_attribute("value") for pk in self.page.locator(self._BULK_EDIT_PKS).all()]
+
+    def apply_bulk_edit(self) -> str:
+        """Submit the form and return the job result id from the redirect URL."""
+        self.page.locator(self._BULK_EDIT_APPLY).click()
+        self.page.wait_for_url(self._JOB_RESULT_URL, wait_until="commit")
+        return self._JOB_RESULT_URL.search(self.page.url).group("pk")
 
     # -------------------------------------------------------------------------
     # Overview rows

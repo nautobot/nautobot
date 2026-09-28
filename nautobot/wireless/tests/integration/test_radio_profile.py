@@ -10,7 +10,7 @@ class RadioProfileTestCase:
 
     @pytest.mark.behavioral
     def test_radio_profile_bulk_edit(self, auth_page, base_url, api, created_radio_profile):
-        """Bulk editing the selected radio profile starts a Bulk Edit Objects job for that profile."""
+        """Bulk editing the selected radio profile starts a Bulk Edit Objects job."""
         radio_profiles = RadioProfilesPage(auth_page, base_url)
         radio_profiles.navigate(q=created_radio_profile["name"])
         radio_profiles.expect_row_count(1)
@@ -26,5 +26,8 @@ class RadioProfileTestCase:
         job_result_id = radio_profiles.apply_bulk_edit()
 
         # The job is not awaited: the CI job runs no Celery worker, so it stays pending there.
-        job_result = api.get(f"/api/extras/job-results/{job_result_id}/").json()
+        response = api.get(f"/api/extras/job-results/{job_result_id}/")
+        if not response.ok:
+            pytest.fail(f"GET job result {job_result_id} returned {response.status}: {response.text()}")
+        job_result = response.json()
         assert job_result["name"] == "Bulk Edit Objects", f"Apply redirected to a {job_result['name']!r} job result"
