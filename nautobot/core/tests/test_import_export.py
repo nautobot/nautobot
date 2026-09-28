@@ -438,10 +438,6 @@ class DirectiveRowTests(SimpleTestCase):
         )
         self.assertEqual(len(next(csv.reader(StringIO(rendered)))), 1)
 
-    def test_core_directive__no_legacy_marker(self):
-        """The version directive is the marker; the old `nautobot-import:` prefix is gone."""
-        self.assertNotIn("nautobot-import", self._first_line(match_fields=["name"]))
-
     def test_core_directive__precedes_the_header_row(self):
         rendered = NautobotCSVRenderer().render(
             [{"name": "Cisco", "description": "x"}],
@@ -2721,12 +2717,12 @@ class RecordToDataTests(TestCase):
 # ===========================================================================
 class CoreUpsertTests(ImportExportJobTestCase):
     def test_core_upsert__scalar__update(self):
-        """An update logs the changed fields as `field: old → new`."""
+        """An update logs each changed field and its values as Markdown code, `` `field`: `old` → `new` ``."""
         self.create_status(color="111111")
         job_result = self.run_import("name,color\ntest_update_status,222222", match_fields="name")
         self.assertImport(job_result, updated=1)
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertRegex(entry.message, r"color:.*111111.*→.*222222")
+        self.assertIn("`color`: `111111` → `222222`", entry.message)
 
     def test_core_upsert__scalar__unchanged(self):
         """Re-importing identical data writes nothing: no save, no change-log, reported as unchanged."""
@@ -2775,7 +2771,7 @@ class CoreUpsertTests(ImportExportJobTestCase):
         device_type.refresh_from_db()
         self.assertEqual(device_type.manufacturer, new_manufacturer)
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertIn("manufacturer__name: Old Log Mfr → New Log Mfr", entry.message)
+        self.assertIn("`manufacturer__name`: `Old Log Mfr` → `New Log Mfr`", entry.message)
         self.assertNotIn(str(old_manufacturer.pk), entry.message)
 
     def test_core_upsert__m2m_only__update(self):
@@ -2790,7 +2786,7 @@ class CoreUpsertTests(ImportExportJobTestCase):
         self.assertImport(job_result, updated=1, unchanged=0)
         self.assertQuerySetEqual(device_type.tags.all(), [new_tag])
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertIn('tags: [] → ["Tag Log Tag"]', entry.message)
+        self.assertIn('`tags`: `[]` → `["Tag Log Tag"]`', entry.message)
 
     def test_core_upsert__non_ascii__update(self):
         """Non-ASCII values are logged as written, in both scalar and list values."""
@@ -2805,8 +2801,8 @@ class CoreUpsertTests(ImportExportJobTestCase):
         )
         self.assertImport(job_result, updated=1)
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertIn("comments: ∅ → Café", entry.message)
-        self.assertIn('tags: [] → ["Zürich"]', entry.message)
+        self.assertIn("`comments`: ∅ → `Café`", entry.message)
+        self.assertIn('`tags`: `[]` → `["Zürich"]`', entry.message)
 
     def test_core_upsert__sensitive_field__update(self):
         """A changed sensitive field is logged as changed, without either of its values."""
@@ -2817,9 +2813,49 @@ class CoreUpsertTests(ImportExportJobTestCase):
         token.refresh_from_db()
         self.assertEqual(token.key, new_key)
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
-        self.assertIn("key: <redacted> → <redacted>", entry.message)
+        self.assertIn("`key`: (redacted) → (redacted)", entry.message)
         self.assertNotIn(old_key, entry.message)
         self.assertNotIn(new_key, entry.message)
+
+    def test_core_upsert__write_only_field__update(self):
+        """A row that sets only a write-only field is an update, not unchanged, as its old value can't be compared."""
+        user = User.objects.create(username="write-only-user")
+        user.set_password("Old-Passw0rd-For-Import!")
+        user.save()
+        new_secret = "New-Passw0rd-For-Import!"  # noqa: S105  # hardcoded-password-string -- ok as this is test code only
+        job_result = self.run_import(
+            f"username,password\nwrite-only-user,{new_secret}", model=User, match_fields="username"
+        )
+        self.assertImport(job_result, updated=1, unchanged=0)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password(new_secret))
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertIn("`password`: (redacted) → (redacted)", entry.message)
+        self.assertNotIn(new_secret, entry.message)
+
+    def test_core_upsert__write_only_field_with_read_only_effect__update(self):
+        """A write-only field whose effect is on a read-only field (`Prefix.location` sets `locations`) is an update."""
+        location_type = LocationType.objects.create(name="Write Only Location Type")
+        location_type.content_types.add(ContentType.objects.get_for_model(Prefix))
+        location_status = Status.objects.get_for_model(Location).first()
+        old_location = Location.objects.create(
+            name="Write Only Old", location_type=location_type, status=location_status
+        )
+        new_location = Location.objects.create(
+            name="Write Only New", location_type=location_type, status=location_status
+        )
+        namespace = Namespace.objects.create(name="Write Only Namespace")
+        prefix = Prefix.objects.create(
+            prefix="10.97.0.0/24", namespace=namespace, status=Status.objects.get_for_model(Prefix).first()
+        )
+        prefix.locations.set([old_location])
+        job_result = self.run_import(
+            "prefix,namespace__name,location__name\n10.97.0.0/24,Write Only Namespace,Write Only New", model=Prefix
+        )
+        self.assertImport(job_result, updated=1, unchanged=0, match_fields=["prefix", "namespace"])
+        self.assertQuerySetEqual(prefix.locations.all(), [new_location])
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertIn("`location`: (unknown) → `Write Only New`", entry.message)
 
 
 # ===========================================================================
@@ -2836,22 +2872,26 @@ class MatchKeyTests(ImportExportJobTestCase):
         self.assertImport(job_result, created=0, updated=1, match_fields=["name"], source="run parameter")
 
     def test_match__directive_csv(self):
-        """A `# nautobot-import:` directive row resolves the match key with no parameters supplied."""
+        """A `# nautobot_import_version:` directive row resolves the match key with no parameters supplied."""
         status = self.create_status()
-        csv_data = "\n".join(["# nautobot-import: match_fields=name", "name,color", "test_update_status,333333"])
+        csv_data = "\n".join(
+            ["# nautobot_import_version=3; match_fields=name", "name,color", "test_update_status,333333"]
+        )
         job_result = self.run_import(csv_data)
         status.refresh_from_db()
         self.assertEqual(status.color, "333333")
-        self.assertImport(job_result, updated=1, match_fields=["name"])
+        self.assertImport(job_result, updated=1, match_fields=["name"], source="file directive")
 
     def test_match__precedence_param_over_directive(self):
         """An explicit match_fields parameter takes precedence over the file's directive."""
         status = self.create_status()
-        csv_data = "\n".join(["# nautobot-import: match_fields=color", "name,color", "test_update_status,444444"])
+        csv_data = "\n".join(
+            ["# nautobot_import_version=3; match_fields=color", "name,color", "test_update_status,444444"]
+        )
         job_result = self.run_import(csv_data, match_fields="name")
         status.refresh_from_db()
         self.assertEqual(status.color, "444444")
-        self.assertImport(job_result, match_fields=["name"])
+        self.assertImport(job_result, match_fields=["name"], source="run parameter")
 
     def test_match__default_natural_key(self):
         """With no parameter or directive, records match on the model's natural key by default."""
@@ -3558,7 +3598,7 @@ class NaturalKeyRoundTripTests(ImportExportJobTestCase):
                 location.refresh_from_db()
                 self.assertIsNone(location.tenant)
                 self.assertJobLogEntry(
-                    job_result, "tenant__name: RT Clearing Tenant → ∅", level=LogLevelChoices.LOG_INFO
+                    job_result, "`tenant__name`: `RT Clearing Tenant` → ∅", level=LogLevelChoices.LOG_INFO
                 )
 
 

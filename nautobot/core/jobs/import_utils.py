@@ -8,10 +8,25 @@ from django.core.exceptions import FieldError, ObjectDoesNotExist, ValidationErr
 from rest_framework import serializers
 import yaml
 
+from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.requests import mock_wsgi_request
 
 # A YAML block-mapping key at the start of a line: `records:`, `model: dcim.device`.
 _YAML_MAPPING_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\s*:(\s|$)")
+
+
+def restricted_queryset(model, user, action):
+    """Every object of `model` that `user` may perform `action` (`"view"`, `"add"`, ...) on, unfiltered and unordered.
+
+    A model whose default manager is not one of Nautobot's has no `restrict()` to call: `auth.Group` and
+    `contenttypes.ContentType` are plain Django models, and `users.User`'s manager extends Django's own
+    `UserManager`. Wrapping such a model in a `RestrictedQuerySet` applies object permissions to it all the
+    same, which is what `users.api.views` does for the very same reason.
+    """
+    queryset = model.objects.all()
+    if not hasattr(queryset, "restrict"):
+        queryset = RestrictedQuerySet(model=model)
+    return queryset.restrict(user, action)
 
 
 def import_serializer_context(user):

@@ -1,2 +1,3 @@
 Changed exported `match_fields` metadata to name the object's own fields rather than lookups into related objects, for example `match_fields=manufacturer model` for device types rather than `match_fields=manufacturer__name model`.
 Changed CSV import, including via the REST API, to treat a related object whose every column reads `NoObject` as null, so that updating an object from such a row clears the relation rather than leaving it unchanged.
+Changed the `Import Objects` system Job to update, rather than fail on, records that match an existing object, including when no match fields are given. The Job now also returns the counts of created, updated and unchanged objects, and the match fields it used.

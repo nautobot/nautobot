@@ -271,7 +271,7 @@ Fields Nautobot generates rather than stores — `display`, `object_type`, `natu
 
 ### If a row fails
 
-**Rollback Changes on Failure** is enabled by default: if any row fails validation, the entire import is rolled back and nothing is created. Every failing row is still reported, so one run tells you everything that needs fixing. Disable it to keep the rows that succeeded and import the rest later.
+**Rollback Changes on Failure** is enabled by default: if any row fails validation, the entire import is rolled back, so nothing is created or updated. Every failing row is still reported, so one run tells you everything that needs fixing. If you disable it, the rows that succeeded are kept, including any updates to existing objects, and you can import the rest later.
 
 ### From the command line
 
@@ -304,7 +304,10 @@ A record's `id` never changes the `id` of an existing object. When a record is m
 !!! tip "Renaming objects"
     To rename objects in an exported file, enter `id` as the Job's match fields. The file's own match fields usually include the name, so a renamed record would otherwise match nothing.
 
-The import log reports each updated object with the fields that changed and their old and new values, naming related objects by the same fields the file uses. The values of sensitive fields, such as an API token's `key`, are never logged: a change to one is reported without either value.
+The import log reports each updated object with the fields that changed and their old and new values, naming related objects by the same fields the file uses. The values of sensitive fields, such as an API token's `key`, are never logged: a change to one is reported without either value. A field that can be written but not read, such as a user's `password`, has no old value to compare, so a record that sets one always counts as an update.
+
+!!! note "Only the fields in the file are updated"
+    An update changes only the fields that the record includes, so a file with just `name` and `description` leaves every other field of the matched object as it is. A field that the record includes as null (`NULL`, or `NoObject` in every column of a related object in CSV) is cleared.
 
 Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
 

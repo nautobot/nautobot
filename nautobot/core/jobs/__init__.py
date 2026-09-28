@@ -50,7 +50,6 @@ from nautobot.core.jobs.customfields import (
     UpdateCustomFieldChoiceData,
 )
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
-from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.models.sensitive_fields import get_sensitive_field_names
 from nautobot.core.models.utils import m2m_through_data_fields
 from nautobot.core.utils.data import shallow_compare_dict
@@ -270,19 +269,6 @@ class ExportObjectList(Job):
         if not self.user.has_perm(f"{content_type.app_label}.view_{content_type.model}"):
             self.logger.error('User "%s" does not have permission to view %s objects', self.user, content_type.model)
             raise PermissionDenied("User does not have view permissions on the requested content-type")
-
-    def _restricted_queryset(self, model):
-        """Every object of the requested type that the user may view, unfiltered and unordered.
-
-        A model whose default manager is not one of Nautobot's has no `restrict()` to call --
-        `auth.Group` and `contenttypes.ContentType` are both exportable and both plain Django models.
-        Wrapping such a model in a `RestrictedQuerySet` applies object permissions to it all the same,
-        which is what `users.api.views.GroupViewSet` does for the very same reason.
-        """
-        queryset = model.objects.all()
-        if not hasattr(queryset, "restrict"):
-            queryset = RestrictedQuerySet(model=model)
-        return queryset.restrict(self.user, "view")
 
     def _filter_queryset(self, model, queryset, query_params, saved_view):
         """Narrow and order the queryset per `query_params`: the view's filters, then its sort order.
@@ -636,7 +622,7 @@ class ExportObjectList(Job):
 
         # RESOLVE QUERYSET — which records, in what order: whatever the query string says the launching
         # list view was showing. An empty query string is therefore a full export in the model's own order.
-        queryset = self._restricted_queryset(model)
+        queryset = import_utils.restricted_queryset(model, self.user, "view")
         queryset = self._filter_queryset(model, queryset, query_params, saved_view)
 
         filename = self._export_filename(model)
@@ -776,12 +762,31 @@ class ImportObjects(Job):
         return created_objs, updated_objs, unchanged_objs, validation_failed
 
     @staticmethod
-    def _format_diff(before, changed, sensitive_fields=()):
-        """Render a shallow_compare_dict result as `field: old → new, ...` for logging.
+    def _write_only_changes(serializer, match_fields):
+        """The write-only fields a validated row sets, other than its match fields, as `{field: new_value}`.
+
+        A write-only field (`User.password`, `Prefix.location`) is absent from `_snapshot()`, so a change to it
+        can't be seen by comparing snapshots, and a row changing nothing else would be rolled back as
+        unchanged. So each one the row sets is taken to be a change: at worst an update that changed nothing.
+        A match field is the exception, having matched the existing object's own value.
+        """
+        return {
+            name: serializer.validated_data[field.source]
+            for name, field in serializer.fields.items()
+            if field.write_only and field.source in serializer.validated_data and name not in (match_fields or ())
+        }
+
+    @staticmethod
+    def _format_diff(before, changed, sensitive_fields=(), write_only_fields=()):
+        """Render a shallow_compare_dict result as `` `field`: `old` → `new`, ... `` for logging.
+
+        The Job log is rendered as Markdown, so each field and value is set as code, where nothing in it can be
+        taken for markup.
 
         `changed` is `{field: new_value}` (as returned by `shallow_compare_dict`); the old values come
         from the pre-change `before` snapshot. A field in `sensitive_fields` is reported as changed, but
-        with neither value, since anyone who can view the job result can read its log.
+        with neither value, since anyone who can view the job result can read its log. A field in
+        `write_only_fields` has no old value to report, as it can't be read.
         """
 
         def display(field, value):
@@ -789,13 +794,14 @@ class ImportObjects(Job):
             if value is None or value == "" or ("__" in field and value == CSV_NO_OBJECT):
                 return "∅"
             if isinstance(value, (list, dict)):
-                return json.dumps(value, default=str, ensure_ascii=False)
-            return value
+                value = json.dumps(value, default=str, ensure_ascii=False)
+            return f"`{value}`"
 
         def describe(field, new):
             if field in sensitive_fields:
-                return f"{field}: <redacted> → <redacted>"
-            return f"{field}: {display(field, before.get(field))} → {display(field, new)}"
+                return f"`{field}`: (redacted) → (redacted)"
+            old = "(unknown)" if field in write_only_fields else display(field, before.get(field))
+            return f"`{field}`: {old} → {display(field, new)}"
 
         return ", ".join(describe(field, new) for field, new in changed.items())
 
@@ -856,6 +862,7 @@ class ImportObjects(Job):
             permission_queryset = change_queryset if instance is not None else add_queryset
             outcome = None  # one of: "created", "updated", "unchanged", "denied"
             diff = {}
+            write_only_changes = self._write_only_changes(serializer, match_fields) if instance is not None else {}
             try:
                 with transaction.atomic():
                     obj = serializer.save()
@@ -863,7 +870,10 @@ class ImportObjects(Job):
                         outcome = "denied"
                         raise AbortTransaction()
                     if instance is not None:
-                        diff = shallow_compare_dict(before, self._snapshot(serializer_class, obj))
+                        diff = {
+                            **shallow_compare_dict(before, self._snapshot(serializer_class, obj)),
+                            **write_only_changes,
+                        }
                         if not diff:
                             # Idempotent: nothing changed, so roll back the no-op save (and its change-log
                             # entry) and record the row as unchanged.
@@ -900,7 +910,9 @@ class ImportObjects(Job):
                     'Row %d: Updated record "%s" (%s)',
                     row,
                     obj,
-                    self._format_diff(before, diff, get_sensitive_field_names(type(obj))),
+                    self._format_diff(
+                        before, diff, get_sensitive_field_names(type(obj)), write_only_fields=write_only_changes
+                    ),
                     extra={"object": obj},
                 )
                 updated_objs.append(obj)
@@ -997,7 +1009,10 @@ class ImportObjects(Job):
                 content_type.model,
             )
             raise PermissionDenied("User does not have create or update permissions on the requested content-type")
-        return model.objects.restrict(self.user, "add"), model.objects.restrict(self.user, "change")
+        return (
+            import_utils.restricted_queryset(model, self.user, "add"),
+            import_utils.restricted_queryset(model, self.user, "change"),
+        )
 
     def _validate_match(self, data, effective_match_fields, match_fields_source, serializer_class):
         """Log the effective match key and validate it (field names + within-file uniqueness); no-op if unset."""
