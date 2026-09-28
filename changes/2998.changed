@@ -1,1 +1,1 @@
-Removed custom `verbose_name = "permission"` from `ObjectPermission` model, restoring the default Django-derived verbose name.
+Changed the display name of permissions in the UI from "permission" to "object permission" to match other models.
