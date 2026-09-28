@@ -3038,7 +3038,7 @@ class _JobModalButton(Button):
         try:
             jobs = Job.objects
             if user is not None:
-                jobs = jobs.restrict(user, "view")
+                jobs = jobs.restrict(user, "run")
             job = jobs.get_for_class_path(self.class_path)
             if not job.enabled:
                 disabled = True

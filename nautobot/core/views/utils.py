@@ -526,6 +526,19 @@ def common_detail_view_context(request, instance):
 
 
 def get_saved_views_for_user(user, list_url):
+    """
+    Get the SavedViews for the given list view that the user is permitted to see.
+
+    Users with the `extras.view_savedview` permission can see all SavedViews for the list view;
+    other users can see only shared SavedViews and SavedViews they own.
+
+    Args:
+        user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
+        list_url (str): The list view name, for example `"dcim:device_list"`.
+
+    Returns:
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name.
+    """
     # We are not using .restrict(request.user, "view") here
     # User should be able to see any saved view that he has the list view access to.
     saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
