@@ -4,6 +4,42 @@ As a part of the Nautobot development team's commitment to security, we maintain
 
 <!-- pyml disable-num-lines 1000 proper-names -->
 
+## GHSA-m6h7-g92h-9p44
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 28, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Missing permissions enforcement on the REST API <code>/trace/</code> and <code>/paths/</code> endpoints for various cable-termination models. A user granted view permission on a cable termination through a constrained `ObjectPermission` received the full serialized detail of every other termination and cable along that cable path, including objects on devices outside their permitted scope.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44">GHSA-m6h7-g92h-9p44</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.43</li>
+        <li>&ge;3.0.0, &lt;3.2.6</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.43 (<a href="https://github.com/nautobot/nautobot/commit/406ec35a23ebe929df61172d5147f7cef102d3e5">patch</a>)</li>
+        <li>3.2.6 (<a href="https://github.com/nautobot/nautobot/commit/3bca201bf8a7f33be1cf792110e46e720bfaf38c">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
 ## GHSA-2v7j-x3g6-qj94
 
 <!-- pyml disable-next-line no-inline-html -->
