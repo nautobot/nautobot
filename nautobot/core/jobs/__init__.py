@@ -36,6 +36,7 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
+from nautobot.core.constants import CSV_NO_OBJECT
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms.fields import ExportFieldsChoiceField
 from nautobot.core.forms.widgets import ExportFieldSelect
@@ -783,17 +784,18 @@ class ImportObjects(Job):
         with neither value, since anyone who can view the job result can read its log.
         """
 
-        def display(value):
-            if value is None or value == "":
+        def display(field, value):
+            # A relation's natural-key lookup reads CSV_NO_OBJECT, whatever the import format, when it has no object
+            if value is None or value == "" or ("__" in field and value == CSV_NO_OBJECT):
                 return "∅"
             if isinstance(value, (list, dict)):
-                return json.dumps(value, default=str)
+                return json.dumps(value, default=str, ensure_ascii=False)
             return value
 
         def describe(field, new):
             if field in sensitive_fields:
                 return f"{field}: <redacted> → <redacted>"
-            return f"{field}: {display(before.get(field))} → {display(new)}"
+            return f"{field}: {display(field, before.get(field))} → {display(field, new)}"
 
         return ", ".join(describe(field, new) for field, new in changed.items())
 

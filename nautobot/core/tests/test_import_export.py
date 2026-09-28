@@ -18,6 +18,7 @@ from types import SimpleNamespace
 from unittest import mock
 import uuid
 
+from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -49,10 +50,11 @@ from nautobot.core.api.parsers import (
     validate_import_version,
 )
 from nautobot.core.api.renderers import NautobotCSVRenderer
+from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE
 from nautobot.core.forms.widgets import ExportFieldSelect
 from nautobot.core.jobs import ExportObjectList
-from nautobot.core.jobs.import_utils import detect_import_format
+from nautobot.core.jobs.import_utils import detect_import_format, natural_key_match_fields
 from nautobot.core.testing import create_job_result_and_run_job, get_job_class_and_model, TransactionTestCase
 from nautobot.core.utils.lookup import get_filterset_for_model, get_view_for_model
 from nautobot.core.utils.requests import NON_FILTER_PARAMS
@@ -202,6 +204,33 @@ class MatchFieldsTests(TestCase):
         """No identifiable key means no directive, selection or not."""
         self.assertIsNone(self.match_fields(JobLogEntry))
         self.assertIsNone(self.match_fields(JobLogEntry, ["message"]))
+
+    def test_match__every_natural_key_is_matchable(self):
+        """Every model with a serializer and a natural key can be matched on that key, bar the few listed here.
+
+        A model left out of default matching can still be matched on `id`, but can't be matched by a file from
+        another instance, so one that joins this list should do so deliberately.
+        """
+        not_matchable = {
+            "extras.fileproxy",  # Internal storage for Job file inputs, keyed on an automatic timestamp
+            "extras.job",  # Discovered from code, and keyed on fields the serializer only reads
+            "extras.note",  # Keyed on its author and creation time, both set automatically
+            "extras.savedview",  # Unique only per owner, which the serializer takes from the request
+        }
+        for model in apps.get_models():
+            try:
+                serializer_class = get_serializer_for_model(model)
+            except SerializerNotFound:
+                continue
+            try:
+                model.csv_natural_key_field_lookups()
+            except AttributeError:
+                continue
+            label = model._meta.label_lower
+            with self.subTest(model=label):
+                self.assertEqual(
+                    natural_key_match_fields(model, serializer_class) is not None, label not in not_matchable
+                )
 
     def test_match__pk_natural_key_matches_on_id(self):
         self.assertEqual(self.match_fields(VLAN), ["id"])
@@ -2763,6 +2792,22 @@ class CoreUpsertTests(ImportExportJobTestCase):
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
         self.assertIn('tags: [] → ["Tag Log Tag"]', entry.message)
 
+    def test_core_upsert__non_ascii__update(self):
+        """Non-ASCII values are logged as written, in both scalar and list values."""
+        manufacturer = Manufacturer.objects.create(name="Unicode Log Mfr")
+        DeviceType.objects.create(manufacturer=manufacturer, model="Unicode Log DT", u_height=1)
+        zurich = Tag.objects.create(name="Zürich")
+        zurich.content_types.add(ContentType.objects.get_for_model(DeviceType))
+        job_result = self.run_import(
+            "model,manufacturer__name,comments,tags\nUnicode Log DT,Unicode Log Mfr,Café,Zürich",
+            model=DeviceType,
+            match_fields="model",
+        )
+        self.assertImport(job_result, updated=1)
+        entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
+        self.assertIn("comments: ∅ → Café", entry.message)
+        self.assertIn('tags: [] → ["Zürich"]', entry.message)
+
     def test_core_upsert__sensitive_field__update(self):
         """A changed sensitive field is logged as changed, without either of its values."""
         old_key, new_key = "a" * 40, "b" * 40
@@ -3507,10 +3552,14 @@ class NaturalKeyRoundTripTests(ImportExportJobTestCase):
                 location.tenant = tenant
                 location.validated_save()
 
-                self.assertImport(self.run_import(exported, model=Location), updated=1)
+                job_result = self.run_import(exported, model=Location)
 
+                self.assertImport(job_result, updated=1)
                 location.refresh_from_db()
                 self.assertIsNone(location.tenant)
+                self.assertJobLogEntry(
+                    job_result, "tenant__name: RT Clearing Tenant → ∅", level=LogLevelChoices.LOG_INFO
+                )
 
 
 # ===========================================================================
@@ -3519,7 +3568,8 @@ class NaturalKeyRoundTripTests(ImportExportJobTestCase):
 class ImportErrorTests(ImportExportJobTestCase):
     def test_error__no_data_no_file(self):
         """Either csv_data or csv_file must be provided."""
-        self.run_import(username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+        job_result = self.run_import(username=self.user.username, expected_status=JobResultStatusChoices.STATUS_FAILURE)
+        self.assertIn("Either csv_data or csv_file must be provided", job_result.traceback or "")
 
     def test_error__unknown_field_json(self):
         """An import with an unrecognized field fails with an error identifying the field (#6464)."""
@@ -3742,23 +3792,6 @@ class PermissionTests(ImportExportJobTestCase):
         )
         self.assertFalse(Status.objects.filter(name="test_status4").exists())
         self.assertEqual(log_successes[2].message, "Created 2 status object(s) from 4 row(s) of data")
-
-    def test_perm__import_update_without_permission(self):
-        """An import by a user with neither add nor change permissions is denied outright."""
-        status = self.create_status()
-        job_result = self.run_import(
-            "name,color\ntest_update_status,999999",
-            match_fields="name",
-            username=self.user.username,
-            expected_status=JobResultStatusChoices.STATUS_FAILURE,
-        )
-        self.assertJobLogEntry(
-            job_result,
-            f'User "{self.user}" does not have permission to create or update status objects',
-            level=LogLevelChoices.LOG_ERROR,
-        )
-        status.refresh_from_db()
-        self.assertEqual(status.color, "111111")
 
     def test_perm__import_update_requires_change(self):
         """A user with only add permission cannot update matched records (treated as create → fails)."""

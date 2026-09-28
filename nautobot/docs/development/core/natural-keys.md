@@ -134,4 +134,6 @@ class IPAddressSerializer(NautobotModelSerializer):
         import_match_fields = ["address", "parent"]
 ```
 
-Each match field must be a writable field of the serializer that holds a single value, and the model's queryset must accept that field's value as a `filter()` argument. A model whose natural key maps onto neither is matched on `id` when the imported data includes it, and is otherwise only ever created by an import.
+Each match field must be a writable field of the serializer that holds a single value, and the model's queryset must accept that field's value as a `filter()` argument.
+
+The natural key is the fallback, not the first choice: an import whose records include `id` matches on `id`, whatever the model, unless match fields are given explicitly. A model whose natural key can't be matched on, and that doesn't declare `import_match_fields`, can therefore still be updated by an import that includes `id`, and is otherwise only ever created.

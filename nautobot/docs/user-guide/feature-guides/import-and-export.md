@@ -301,6 +301,9 @@ When the default match fields are in use (3 or 4 above), a record that can't be 
 
 A record's `id` never changes the `id` of an existing object. When a record is matched on fields other than `id`, its `id` is ignored and the object keeps its own. This is what lets you import a file exported from a different Nautobot instance, in which the same objects have different ids: matched on their natural key, they update the objects that already exist here. When a record creates a new object, its `id`, if it has one, becomes the new object's `id`. Importing a file that includes `id` into an instance that doesn't have those objects therefore keeps their ids from the original instance.
 
+!!! tip "Renaming objects"
+    To rename objects in an exported file, enter `id` as the Job's match fields. The file's own match fields usually include the name, so a renamed record would otherwise match nothing.
+
 The import log reports each updated object with the fields that changed and their old and new values, naming related objects by the same fields the file uses. The values of sensitive fields, such as an API token's `key`, are never logged: a change to one is reported without either value.
 
 Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
