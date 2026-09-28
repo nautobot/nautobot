@@ -214,7 +214,7 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, service="nautobot", **kwargs):
+def run_command(context, command, service="nautobot", docker_env=None, **kwargs):
     """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
@@ -227,16 +227,16 @@ def run_command(context, command, service="nautobot", **kwargs):
         results = docker_compose(context, docker_compose_status, hide="out")
 
         root = kwargs.pop("root", False)
-        docker_env = kwargs.pop("docker_env", {})
-        docker_env_string = ""
-        for key, value in docker_env.items():
-            docker_env_string += f'--env "{key}={value}" '
+        env_string = ""
+        if docker_env:
+            for key, value in docker_env.items():
+                env_string += f'--env "{key}={value}" '
 
         if service in results.stdout:
-            compose_command = f"exec {'--user=root ' if root else ''}{docker_env_string}{service} {command}"
+            compose_command = f"exec {'--user=root ' if root else ''}{env_string}{service} {command}"
         else:
             # Explicitly set the container name to allow network access by calling "nautobot:<port>"
-            compose_command = f"run {'--user=root ' if root else ''}--rm {docker_env_string}--name '{service}' --entrypoint '{command}' {service}"
+            compose_command = f"run {'--user=root ' if root else ''}--rm {env_string}--name '{service}' --entrypoint '{command}' {service}"
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
 
