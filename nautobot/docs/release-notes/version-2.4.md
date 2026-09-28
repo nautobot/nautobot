@@ -286,12 +286,12 @@ As Python 3.8 has reached end-of-life, Nautobot 2.4 requires a minimum of Python
 
 ### Security in v2.4.43
 
-- [#GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/issues/GHSA-m6h7-g92h-9p44) - Fixed the cable `trace` and `paths` API endpoints to now render objects that the requesting user does not have permission to view in a brief `{id, object_type, url, display}` form instead.
-- [#9503](https://github.com/nautobot/nautobot/issues/9503) - Fixed a Nautobot API permission bypass where /job-results/{id}/logs/ ignored the absence of view_joblogentry permission, leaking job log entries.
+- [GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44) - Fixed the cable `trace` and `paths` API endpoints to now render objects that the requesting user does not have permission to view in a brief `{id, object_type, url, display}` form instead.
+- [#9503](https://github.com/nautobot/nautobot/issues/9503) - Fixed a Nautobot API permission bypass where `/job-results/{id}/logs/` ignored the absence of `view_joblogentry` permission, leaking job log entries.
 
 ### Changed in v2.4.43
 
-- [#GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/issues/GHSA-m6h7-g92h-9p44) - Changed the Cable representation returned by the cable `trace` REST API endpoint to use Nautobot's standard serializer fields, adding `display`, `natural_slug`, `object_type`, and `url` and removing private fields.
+- [GHSA-m6h7-g92h-9p44](https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44) - Changed the Cable representation returned by the cable `trace` REST API endpoint to use Nautobot's standard serializer fields, adding `display`, `natural_slug`, `object_type`, and `url` and removing private fields.
 
 ### Fixed in v2.4.43
 
