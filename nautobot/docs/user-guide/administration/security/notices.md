@@ -14,7 +14,7 @@ As a part of the Nautobot development team's commitment to security, we maintain
   </tr>
   <tr>
     <th>Summary</th>
-    <td>Missing permissions enforcement on the REST API <code>/trace/</code> and <code>/paths/</code> endpoints for various cable-termination models. A user granted view permission on a cable termination through a constrained `ObjectPermission` received the full serialized detail of every other termination and cable along that cable path, including objects on devices outside their permitted scope.</td>
+    <td>Missing permissions enforcement on the REST API <code>/trace/</code> and <code>/paths/</code> endpoints for various cable-termination models. A user granted view permission on a cable termination through a constrained <code>ObjectPermission</code> received the full serialized detail of every other termination and cable along that cable path, including objects on devices outside their permitted scope.</td>
   </tr>
   <tr>
     <th>Full&nbsp;Description</th>
