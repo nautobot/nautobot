@@ -98,6 +98,7 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.conditions.presets import get_condition_presets
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
@@ -3518,7 +3519,11 @@ class ConditionsViewMixin:
 
     def get_extra_context(self, request, instance=None):
         context = super().get_extra_context(request, instance)
-        context["main_card_excluded_fields"] = self.main_card_excluded_fields
+        if self.action in ("create", "update"):
+            context["main_card_excluded_fields"] = self.main_card_excluded_fields
+            # The same catalog the `/api/extras/condition-presets/` endpoint serves. Rendered into the
+            # page so the editor has it before the user touches anything.
+            context["condition_presets"] = [preset.as_dict() for preset in get_condition_presets()]
         return context
 
     @staticmethod

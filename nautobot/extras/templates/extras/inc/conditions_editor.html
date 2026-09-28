@@ -1,0 +1,43 @@
+{% load form_helpers %}
+
+{% comment %}
+    The conditions editor. The Form tab builds the rows, the JSON tab holds the field that is actually
+    submitted, and the two are kept in step by `conditions_editor_js.html`.
+{% endcomment %}
+
+{{ condition_presets|json_script:"condition-presets" }}
+
+<style type="text/css">
+    /* Parameters share the width left over by the preset select, and wrap only when they must. */
+    .nb-conditions .nb-condition-values { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .nb-conditions .nb-condition-values > * { flex: 1 1 10rem; min-width: 8rem; }
+    .nb-conditions .select2-container { width: 100% !important; }
+    .nb-conditions td:first-child { width: 16rem; }
+</style>
+
+<span class="form-text mb-12">
+    Every condition must pass for this to run. With no conditions it runs for every change to the
+    selected object types.
+</span>
+
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" href="#conditions_form" role="tab" data-bs-toggle="tab">Form</a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" href="#conditions_json" role="tab" data-bs-toggle="tab">JSON</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane active" id="conditions_form">
+        <table class="table table-borderless align-middle nb-conditions mb-0">
+            <tbody id="conditions-rows"></tbody>
+        </table>
+        <button type="button" class="btn btn-primary add-row" id="conditions-add">
+            <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Condition
+        </button>
+    </div>
+    <div class="tab-pane" id="conditions_json">
+        {% render_field form.conditions %}
+    </div>
+</div>
