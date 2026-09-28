@@ -1,0 +1,1 @@
+Fixed progress bar percentage labels being drawn inside the filled portion of the bar, making them unreadable at low utilization.
