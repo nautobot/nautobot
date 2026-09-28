@@ -227,13 +227,16 @@ def run_command(context, command, service="nautobot", **kwargs):
         results = docker_compose(context, docker_compose_status, hide="out")
 
         root = kwargs.pop("root", False)
+        docker_env = kwargs.pop("docker_env", {})
+        docker_env_string = ""
+        for key, value in docker_env.items():
+            docker_env_string += f'--env "{key}={value}" '
+
         if service in results.stdout:
-            compose_command = f"exec {'--user=root ' if root else ''}{service} {command}"
+            compose_command = f"exec {'--user=root ' if root else ''}{docker_env_string}{service} {command}"
         else:
             # Explicitly set the container name to allow network access by calling "nautobot:<port>"
-            compose_command = (
-                f"run {'--user=root ' if root else ''}--rm --name '{service}' --entrypoint '{command}' {service}"
-            )
+            compose_command = f"run {'--user=root ' if root else ''}--rm {docker_env_string}--name '{service}' --entrypoint '{command}' {service}"
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
 
@@ -1194,6 +1197,7 @@ def playwright(
         "buffer": "Discard output from passing tests.",
         "pdb": "Drop into the Python debugger on test failure. Should be used with `--no-buffer` to see output.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "color": "Colorize test output.",
         "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "exclude_tag": "Do not run tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
@@ -1217,6 +1221,7 @@ def tests(
     buffer=True,
     pdb=False,
     cache_test_fixtures=True,
+    color=True,
     config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
     exclude_tag=None,
@@ -1251,6 +1256,7 @@ def tests(
     if parallel_workers:
         parallel_workers = int(parallel_workers)
 
+    docker_env = {}
     if coverage:
         append_arg = " --append" if append_coverage and not parallel else ""
         parallel_arg = " --parallel-mode" if parallel else ""
@@ -1261,6 +1267,9 @@ def tests(
     # booleans
     if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
+    if not color:
+        docker_env["DJANGO_COLORS"] = "nocolor"
+        docker_env["NO_COLOR"] = "1"
     if keepdb:
         command += " --keepdb"
     if not reusedb:
@@ -1289,7 +1298,7 @@ def tests(
     for item in pattern or []:
         command += f" -k='{item}'"
 
-    run_command(context, command)
+    run_command(context, command, docker_env=docker_env)
 
     if coverage:
         run_command(context, "coverage combine")
