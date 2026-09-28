@@ -7,6 +7,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator, UniqueValidator
 
 from nautobot.core.api import (
+    BaseModelSerializer,
     ChoiceField,
     ContentTypeField,
     NautobotModelSerializer,
@@ -18,9 +19,9 @@ from nautobot.core.api.serializers import PolymorphicProxySerializer
 from nautobot.core.api.utils import (
     get_brief_representation,
     get_nested_serializer_depth,
-    get_serializer_for_model,
     nested_serializers_for_models,
     return_nested_serializer_data_based_on_depth,
+    serialize_object_for_user,
     user_can_view_object,
 )
 from nautobot.core.models.utils import get_all_concrete_models
@@ -864,7 +865,7 @@ class CableSerializer(TaggedModelSerializerMixin, NautobotModelSerializer):
         return self._get_termination(obj, "b")
 
 
-class TracedCableSerializer(serializers.ModelSerializer):
+class TracedCableSerializer(BaseModelSerializer):
     """
     Used only while tracing a cable path.
     """
@@ -925,12 +926,11 @@ class CablePathSerializer(serializers.ModelSerializer):
         )
     )
     def get_path(self, obj):
-        ret = []
-        for node in obj.get_path():
-            serializer = get_serializer_for_model(node)
-            context = {"request": self.context["request"]}
-            ret.append(serializer(node, context=context).data)
-        return ret
+        # Path nodes are loaded by `CablePath.get_path()` from each model's default manager with no user
+        # context, so each node must be permission-checked before being serialized in full. Note this applies
+        # regardless of `?depth`, unlike the `origin`/`destination` fields above.
+        request = self.context["request"]
+        return [serialize_object_for_user(node, request) for node in obj.get_path()]
 
 
 #
