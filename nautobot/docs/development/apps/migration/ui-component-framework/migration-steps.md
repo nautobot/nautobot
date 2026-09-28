@@ -32,11 +32,14 @@ Map your existing components to UI Framework panels:
 # Before
 from nautobot.core.views import generic
 
+
 class MyDetailView(generic.ObjectView):
-    template_name = 'myapp/detail.html'
+    template_name = "myapp/detail.html"
+
 
 # After
 from nautobot.apps import views
+
 
 class MyDetailView(views.ObjectDetailViewMixin):
     object_detail_content = ObjectDetailContent(
@@ -59,6 +62,7 @@ and appropriate panel will handle data generation automatically.
 from nautobot.core.views import generic
 from my_app.models import Tenant, Circuit, Cluster, Device
 
+
 class TenantView(generic.ObjectView):
     queryset = Tenant.objects.select_related("tenant_group")
 
@@ -77,6 +81,7 @@ class TenantView(generic.ObjectView):
 ```python title="views.py"
 from nautobot.apps import views
 from my_app.models import Tenant, Circuit, Cluster, Device
+
 
 class TenantView(views.ObjectDetailViewMixin):
     queryset = Tenant.objects.select_related("tenant_group")
@@ -118,13 +123,11 @@ object_detail_content = ObjectDetailContent(
             weight=100,
             section=SectionChoices.LEFT_HALF,
         ),
-
         # Right column
         StatsPanel(
             weight=100,
             section=SectionChoices.RIGHT_HALF,
         ),
-
         # Full width at bottom
         ObjectsTablePanel(
             weight=200,

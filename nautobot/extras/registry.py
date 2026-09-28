@@ -26,6 +26,7 @@ class Registry(dict):
 registry = Registry(
     datasource_contents=defaultdict(list),
     secrets_providers={},
+    job_modal_buttons={},
 )
 
 registry_jobs_lock = threading.RLock()

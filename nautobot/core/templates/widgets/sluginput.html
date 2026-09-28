@@ -6,7 +6,8 @@
                 title="{% if widget.custom_title %}{{ widget.custom_title }}{% else %}Regenerate slug{% endif %}"
                 data-regenerate="{{ widget.attrs.id }}"
         >
-            <span class="mdi mdi-refresh"></span>
+            <span aria-hidden="true" class="mdi mdi-refresh"></span>
+            <span class="visually-hidden">{% if widget.custom_title %}{{ widget.custom_title }}{% else %}Regenerate slug{% endif %}</span>
         </button>
     </span>
 </div>

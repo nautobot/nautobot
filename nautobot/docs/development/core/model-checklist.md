@@ -32,6 +32,7 @@ article ul li {
         - Object-metadata association (`is_metadata_associable_model = False`, any base class)
         - Saved-view support (`is_saved_view_model = False`, OrganizationalModel/PrimaryModel only)
         - Data Compliance (`is_data_compliance_model = False`, OrganizationalModel/PrimaryModel only)
+    - _optional_ Declare any field holding a credential or comparable secret in [`sensitive_fields`](sensitive-fields.md), so that the ORM will not return its value and user-authored templates cannot read it
 - Generate database schema migration(s) with `invoke makemigrations <app> -n <migration_name>`
 - _optional_ Add [data migration(s)](https://docs.djangoproject.com/en/stable/topics/migrations/#data-migrations) to populate default records, migrate data from existing models, etc.
     - Remember: data migrations must not share a file with schema migrations or vice versa!
@@ -118,6 +119,7 @@ Most new models should use the `custom_links`, `custom_validators`, `export_temp
 
 - Name the field [appropriately](best-practices.md#field-naming-in-data-models)
 - For CharFields, use [`CHARFIELD_MAX_LENGTH`](best-practices.md#charfield-and-slugfield-max-length) as appropriate
+- If the field holds a credential or comparable secret, add it to the model's [`sensitive_fields`](sensitive-fields.md) and check the sites listed there that would otherwise expose it
 - Generate schema migration
     - Updating an existing migration is preferred if the model/migration hasn't yet shipped in a release. Once a new release has been published, its migrations **may not** be altered (other than for the purpose of correcting a bug).
 - Add field to `<Model>Factory`
@@ -148,7 +150,7 @@ Most new models should use the `custom_links`, `custom_validators`, `export_temp
 ### Adding a Foreign Key from ModelA to ModelB
 
 - Specify appropriate [`related_name`](best-practices.md#field-naming-in-data-models)
-- Select appropriate `on_delete` behavior (`SET_NULL`, `CASCADE`, `PROTECT`)
+- Select appropriate [`on_delete` behavior](best-practices.md#foreign-key-deletion-behavior-on_delete) (`CASCADE`, `SET_NULL`, or `PROTECT`)
 - Add a `DynamicModelChoiceField` to `<ModelA>Form`
 - Add a [`NaturalKeyOrPKMultipleChoiceFilter`](best-practices.md#filter-naming-and-definition) to `<ModelA>FilterSet`
 - Add a `DynamicModelMultipleChoiceField(required=False, ...)` to `<ModelA>FilterForm`

@@ -1,4 +1,5 @@
 {% if link %}<a href="{{ link }}" {% else %}<button type="button"{% endif %}
+        id="component-{{ component.component_id }}"
         class="btn btn-{{ color }}{% if size %} btn-{{ size }}{% endif %}"
         {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}>
 

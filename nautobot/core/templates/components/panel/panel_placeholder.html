@@ -1,0 +1,20 @@
+<div id="component-{{ component.component_id }}"
+     hx-get=""
+     hx-select="#component-{{ component.component_id }}"
+     hx-trigger="load"
+     hx-vals='{"component_id": "{{ component.component_id }}"}'
+>
+    <div class="card{% if component.css_class %} border-{{ component.css_class }}{% endif %}">
+        {# most cards in Nautobot have headers, so don't bother making the header conditional #}
+        <div class="card-header{% if component.css_class%} bg-{{ component.css_class }}-subtle border-{{ component.css_class }}{% endif %}">
+            <strong>Loading&hellip;</strong>
+        </div>
+        <div class="card-body">
+            <div class="htmx-indicator text-center">
+                <div class="spinner-border">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

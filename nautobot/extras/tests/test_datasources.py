@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory
+from git import Repo
 import yaml
 
 from nautobot.core.jobs import GitRepositoryDryRun, GitRepositorySync
@@ -17,6 +18,7 @@ from nautobot.core.testing import (
     run_job_for_testing,
     TransactionTestCase,
 )
+from nautobot.core.utils.git import GitRepo
 from nautobot.dcim.models import Device, DeviceType, Location, LocationType, Manufacturer
 from nautobot.extras.choices import (
     JobResultStatusChoices,
@@ -24,6 +26,7 @@ from nautobot.extras.choices import (
     SecretsGroupAccessTypeChoices,
     SecretsGroupSecretTypeChoices,
 )
+from nautobot.extras.datasources.git import ensure_git_repository
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.models import (
     ConfigContext,
@@ -258,7 +261,7 @@ class GitTest(TransactionTestCase):
         """
         with tempfile.TemporaryDirectory() as tempdir:
             with self.settings(GIT_ROOT=tempdir):
-                MockGitRepo.return_value.checkout.return_value = ("0123456789abcdef", True)
+                MockGitRepo.return_value.__enter__.return_value.checkout.return_value = ("0123456789abcdef", True)
                 with open(os.path.join(tempdir, "username.txt"), "wt") as handle:
                     handle.write("núñez")
 
@@ -321,7 +324,7 @@ class GitTest(TransactionTestCase):
                 self.repo.branch = "valid-files"  # actually a tag
                 self.repo.save()
                 job_model = GitRepositorySync().job_model
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result)
 
@@ -369,7 +372,7 @@ class GitTest(TransactionTestCase):
                 self.repo.save()
 
                 # Run the Git operation and refresh the object from the DB
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result)
 
@@ -422,7 +425,7 @@ class GitTest(TransactionTestCase):
                 self.assertIsNotNone(job_model)
                 job_result = run_job_for_testing(
                     job=job_model,
-                    repository=self.repo.pk,
+                    job_kwargs={"repository": self.repo.pk},
                 )
                 job_result.refresh_from_db()
 
@@ -523,7 +526,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositorySync().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
-                    repository=self.repo.pk,
+                    job_kwargs={"repository": self.repo.pk},
                 )
                 job_result.refresh_from_db()
 
@@ -603,7 +606,7 @@ class GitTest(TransactionTestCase):
                 self.repo.branch = "valid-files"  # actually a tag
                 self.repo.save()
                 job_model = GitRepositorySync().job_model
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result)
 
@@ -635,7 +638,7 @@ class GitTest(TransactionTestCase):
                 self.repo.save()
 
                 # Resync, attempting and failing to update to the new commit
-                job_result = run_job_for_testing(job=job_model, repository=self.repo.pk)
+                job_result = run_job_for_testing(job=job_model, job_kwargs={"repository": self.repo.pk})
                 job_result.refresh_from_db()
                 self.assertJobResultStatus(job_result, JobResultStatusChoices.STATUS_FAILURE)
                 log_entries = JobLogEntry.objects.filter(job_result=job_result)
@@ -674,7 +677,7 @@ class GitTest(TransactionTestCase):
                 job_model = GitRepositoryDryRun().job_model
                 job_result = run_job_for_testing(
                     job=job_model,
-                    repository=self.repo.pk,
+                    job_kwargs={"repository": self.repo.pk},
                 )
                 job_result.refresh_from_db()
 
@@ -808,3 +811,85 @@ class GitTest(TransactionTestCase):
             self.assertEqual(from_url, "http://n%C3%BA%C3%B1ez:1%3A3%40%2F%3F%3Dab%40@localhost/git.git")
             self.assertEqual(kwargs["depth"], 0)
             self.assertEqual(kwargs["branch"], "main")
+
+    def assert_no_leaked_git_subprocess(self, repos):
+        # Issue #8287: Git repository syncing must not leave lingering `git` subprocesses.
+        # GitPython spawns a persistent `git cat-file --batch-check` subprocess the first time object data
+        # is read and keeps it running until the underlying `Repo` is closed. This test reproduces the
+        # leak by holding a reference to each repo object the code under test creates, then asserting that
+        # no such subprocess is still running.
+        self.assertTrue(repos, "expected a Git repo object to have been created")
+        for repo in repos:
+            # `repo` may be a GitRepo wrapper or a raw git.Repo; reach the underlying Git command object.
+            git_repo = repo.repo if isinstance(repo, GitRepo) else repo
+            git_cmd = git_repo.git
+            for cmd in (git_cmd.cat_file_header, git_cmd.cat_file_all):
+                self.assertTrue(
+                    cmd is None or cmd.proc is None or cmd.proc.poll() is not None,
+                    "a persistent `git cat-file` subprocess is still running (leaked)",
+                )
+
+    def _track_git_repo_instances(self):
+        """Patch GitRepo.__init__ to record every instance created; returns (patcher, instances)."""
+        instances = []
+        original_init = GitRepo.__init__
+
+        def tracking_init(repo_self, *args, **kwargs):
+            original_init(repo_self, *args, **kwargs)
+            instances.append(repo_self)
+
+        return mock.patch.object(GitRepo, "__init__", tracking_init), instances
+
+    def test_ensure_git_repository_does_not_leak_subprocess(self):
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            patcher, created = self._track_git_repo_instances()
+            with patcher:
+                ensure_git_repository(self.repo)
+            self.assert_no_leaked_git_subprocess(created)
+
+    def test_ensure_git_repository_head_match_does_not_leak_subprocess(self):
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            # First sync to clone the repo and record its current head.
+            ensure_git_repository(self.repo)
+            self.repo.refresh_from_db()
+            head = self.repo.current_head
+
+            created = []
+
+            class TrackingRepo(Repo):
+                def __init__(self, *args, **kwargs):
+                    super().__init__(*args, **kwargs)
+                    created.append(self)
+
+            with mock.patch("nautobot.extras.datasources.git.Repo", TrackingRepo):
+                # Repo is already at `head`, so this hits the early-return Repo(...).rev_parse("HEAD") branch.
+                changed = ensure_git_repository(self.repo, head=head)
+            self.assertFalse(changed)
+            self.assert_no_leaked_git_subprocess(created)
+
+    def test_ensure_git_repository_closes_repo_on_failure(self):
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            patcher, created = self._track_git_repo_instances()
+
+            def exploding_checkout(repo_self, *args, **kwargs):
+                # Read head first so the persistent `git cat-file` subprocess is spawned, then fail.
+                _ = repo_self.head
+                raise RuntimeError("simulated checkout failure")
+
+            with patcher, mock.patch.object(GitRepo, "checkout", exploding_checkout):
+                with self.assertRaises(RuntimeError):
+                    ensure_git_repository(self.repo)
+            self.assert_no_leaked_git_subprocess(created)
+
+    def test_clone_to_directory_does_not_leak_subprocess(self):
+        with tempfile.TemporaryDirectory() as tempdir, self.settings(GIT_ROOT=tempdir):
+            # Establish the current head so we can request a checkout (which reads object data).
+            ensure_git_repository(self.repo)
+            self.repo.refresh_from_db()
+            head = self.repo.current_head
+
+            patcher, created = self._track_git_repo_instances()
+            with patcher:
+                # Clones into a subdirectory of `tempdir`, so the TemporaryDirectory cleans it up.
+                self.repo.clone_to_directory(path=tempdir, head=head)
+            self.assert_no_leaked_git_subprocess(created)

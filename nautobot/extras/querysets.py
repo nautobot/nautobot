@@ -5,6 +5,7 @@ from django.db.models.functions import JSONObject
 
 from nautobot.core.models.query_functions import EmptyGroupByJSONBAgg
 from nautobot.core.models.querysets import RestrictedQuerySet
+from nautobot.extras.choices import ScheduledJobStateChoices
 from nautobot.extras.models.tags import TaggedItem
 
 
@@ -271,6 +272,4 @@ class ScheduledJobExtendedQuerySet(RestrictedQuerySet):
         """
         Return only ScheduledJob instances that are enabled and approved (if approval required)
         """
-        return self.filter(
-            Q(enabled=True) & Q(Q(approval_required=True, decision_date__isnull=False) | Q(approval_required=False))
-        )
+        return self.filter(state=ScheduledJobStateChoices.ACTIVE)

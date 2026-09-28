@@ -15,10 +15,14 @@ class RandomAnimalView(GenericView):
     """Display a randomly-selected Animal."""
 
     def get(self, request):
-        animal = Animal.objects.order_by('?').first()
-        return render(request, 'nautobot_animal_sounds/animal.html', {
-            'animal': animal,
-        })
+        animal = Animal.objects.order_by("?").first()
+        return render(
+            request,
+            "nautobot_animal_sounds/animal.html",
+            {
+                "animal": animal,
+            },
+        )
 ```
 
 !!! tip

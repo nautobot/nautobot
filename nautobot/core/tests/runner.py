@@ -36,6 +36,12 @@ def init_worker_with_unique_cache(*args, **kwargs):
 class NautobotParallelTestSuite(ParallelTestSuite):
     init_worker = init_worker_with_unique_cache
 
+    def run(self, result):
+        # TODO: Remove this override once we upgrade to Django 6.0, which fixes this upstream.
+        # Ref: https://github.com/django/django/pull/19853
+        result.buffer = False
+        return super().run(result)
+
 
 class NautobotTestRunner(DiscoverRunner):
     """

@@ -43,6 +43,18 @@ class ProviderTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             "comments": "New comments",
         }
 
+    def test_provider_contacts_rendered_as_markdown(self):
+        """The noc_contact and admin_contact fields are rendered as Markdown on the detail view (#8677)."""
+        self.add_permissions("circuits.view_provider")
+        provider = Provider.objects.create(
+            name="Markdown Provider",
+            noc_contact="**NOC bold**",
+            admin_contact="*Admin italic*",
+        )
+        response = self.client.get(provider.get_absolute_url())
+        self.assertBodyContains(response, "<strong>NOC bold</strong>", html=True)
+        self.assertBodyContains(response, "<em>Admin italic</em>", html=True)
+
 
 class CircuitTypeTestCase(ViewTestCases.OrganizationalObjectViewTestCase, ViewTestCases.BulkEditObjectsViewTestCase):
     model = CircuitType
@@ -283,6 +295,48 @@ class CircuitTerminationTestCase(
         # Visit the circuit object detail page and check there is no connect button present:
         response = self.client.get(reverse("circuits:circuit", kwargs={"pk": circuit.pk}))
         self.assertNotIn("</span> Connect", utils.extract_page_body(response.content.decode(response.charset)))
+
+    def test_circuit_termination_detail_shows_connected_endpoints(self):
+        """A circuit termination cabled to an interface shows it in an "Interface Endpoints" panel."""
+        from nautobot.dcim.models import Cable, Interface
+        from nautobot.dcim.tests.test_views import create_test_device
+
+        self.user.is_superuser = True
+        self.user.save()
+
+        # Far-end endpoint to connect to.
+        device = create_test_device("Connected Endpoint Device")
+        interface = Interface.objects.create(
+            device=device, name="eth0", status=Status.objects.get_for_model(Interface).first()
+        )
+
+        # Circuit termination with a location, so it can be cabled.
+        location_type = LocationType.objects.get(name="Building")
+        location_type.content_types.add(ContentType.objects.get_for_model(CircuitTermination))
+        location = Location.objects.create(
+            name="Connected Endpoint Location",
+            location_type=location_type,
+            status=Status.objects.get_for_model(Location).first(),
+        )
+        circuit = Circuit.objects.create(
+            cid="Connected Endpoint Circuit",
+            provider=Provider.objects.first(),
+            circuit_type=CircuitType.objects.first(),
+            status=Status.objects.get_for_model(Circuit).first(),
+        )
+        termination = CircuitTermination.objects.create(
+            circuit=circuit, term_side=CircuitTerminationSideChoices.SIDE_A, location=location
+        )
+        Cable.objects.create(
+            termination_a=termination,
+            termination_b=interface,
+            status=Status.objects.get_for_model(Cable).first(),
+        )
+
+        # The "Interface Endpoints" panel should list the connected interface.
+        response = self.client.get(reverse("circuits:circuittermination", kwargs={"pk": termination.pk}))
+        self.assertBodyContains(response, "Interface Endpoints")
+        self.assertBodyContains(response, interface.get_absolute_url())
 
 
 class CircuitSwapTerminationsTestCase(NautobotTestCase):

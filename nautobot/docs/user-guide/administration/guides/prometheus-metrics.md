@@ -110,6 +110,7 @@ For environments where it's not enough to rely on cleanups based on worker resta
     # Minimum age of files to consider for cleanup (e.g., 1 hour)
     MIN_AGE_SECONDS = 3600
 
+
     def cleanup_orphaned_prom_metric_files(metrics_dir):
         """
         Scans the multiproc directory and removes files
@@ -119,11 +120,11 @@ For environments where it's not enough to rely on cleanups based on worker resta
             return
 
         # Pattern to find PIDs in filenames (e.g., gauge_multiproc_123.db)
-        pid_pattern = re.compile(r'.+_(\d+)\.db$')
+        pid_pattern = re.compile(r".+_(\d+)\.db$")
 
         # Get list of currently running PIDs
         active_pids = set()
-        for pid in os.listdir('/proc'):
+        for pid in os.listdir("/proc"):
             if pid.isdigit():
                 active_pids.add(int(pid))
 
@@ -146,20 +147,21 @@ For environments where it's not enough to rely on cleanups based on worker resta
                         multiprocess.mark_process_dead(file_pid)
                         # 2. Delete the physical file, ignore if it was already removed
                         with suppress(FileNotFoundError):
-                           os.remove(file_path)
+                            os.remove(file_path)
                         print(f"Cleaned up orphaned metric file: {filename}")
                     except OSError as e:
                         print(f"Error deleting {filename}: {e}")
 
+
     # Schedule this script to run at regular intervals using uWSGI's `timer` feature.
     def cleanup_timer(signum):
-        cleanup_orphaned_prom_metric_files(os.getenv('prometheus_multiproc_dir'))
+        cleanup_orphaned_prom_metric_files(os.getenv("prometheus_multiproc_dir"))
+
 
     # Register only on the first worker to avoid multiple workers trying to clean up at the same time
     if uwsgi.worker_id() == 0:
         uwsgi.register_signal(99, "", cleanup_timer)
-        uwsgi.add_timer(99, 3600) # this is 1 hour in seconds
-
+        uwsgi.add_timer(99, 3600)  # this is 1 hour in seconds
     ```
 
 2. Copy the file to a specific path (eg. `/opt/nautobot/media/prometheus_cleanup.py`) and import it from uwsgi.ini file.

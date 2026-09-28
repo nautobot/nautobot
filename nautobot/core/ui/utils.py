@@ -36,7 +36,8 @@ def render_component_template(template_path: str, context: Context, **kwargs) ->
         >>> render_component_template(self.label_wrapper_template_path, context, tab_id=self.tab_id, label="Hello")
     """
     with context.update(kwargs):
-        return get_template(template_path).render(flatten_context(context))
+        flat_context = flatten_context(context)
+        return get_template(template_path).render(flat_context, request=flat_context.get("request"))
 
 
 def get_absolute_url(value: Optional[Model]) -> str:

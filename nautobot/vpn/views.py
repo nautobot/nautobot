@@ -303,7 +303,12 @@ class VPNUIViewSet(NautobotUIViewSet):
             ObjectFieldsPanel(
                 weight=100,
                 section=SectionChoices.LEFT_HALF,
-                fields=["vpn_profile", "name", "description", "vpn_id", "role", "tenant"],
+                fields=["name", "description", "vpn_profile", "role", "tenant"],
+            ),
+            ObjectFieldsPanel(
+                weight=150,
+                section=SectionChoices.RIGHT_HALF,
+                fields=["service_type", "status", "vpn_id", "extra_attributes"],
             ),
             ObjectsTablePanel(
                 weight=200,
@@ -311,6 +316,13 @@ class VPNUIViewSet(NautobotUIViewSet):
                 table_filter="vpn",
                 section=SectionChoices.FULL_WIDTH,
                 exclude_columns=[],
+            ),
+            ObjectsTablePanel(
+                weight=300,
+                table_class=tables.VPNTerminationTable,
+                table_filter="vpn",
+                section=SectionChoices.FULL_WIDTH,
+                table_title="Terminations",
             ),
         ],
     )
@@ -494,3 +506,38 @@ class VPNTunnelEndpointUIViewSet(NautobotUIViewSet):
     )
     def protected_dynamic_groups(self, request, *args, **kwargs):
         return Response({})
+
+
+class VPNTerminationUIViewSet(NautobotUIViewSet):
+    """ViewSet for VPNTermination."""
+
+    bulk_update_form_class = forms.VPNTerminationBulkEditForm
+    filterset_class = filters.VPNTerminationFilterSet
+    filterset_form_class = forms.VPNTerminationFilterForm
+    form_class = forms.VPNTerminationForm
+    lookup_field = "pk"
+    queryset = models.VPNTermination.objects.select_related(
+        "vpn",
+        "vlan",
+        "interface",
+        "interface__device",
+        "vm_interface",
+        "vm_interface__virtual_machine",
+    )
+    serializer_class = serializers.VPNTerminationSerializer
+    table_class = tables.VPNTerminationTable
+
+    object_detail_content = ObjectDetailContent(
+        panels=[
+            ObjectFieldsPanel(
+                weight=100,
+                section=SectionChoices.LEFT_HALF,
+                fields=[
+                    "vpn",
+                    "vlan",
+                    "interface",
+                    "vm_interface",
+                ],
+            ),
+        ],
+    )

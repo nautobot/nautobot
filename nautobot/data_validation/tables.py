@@ -189,7 +189,7 @@ class DataComplianceTable(BaseTable):
 
     pk = ToggleColumn()
     id = tables.Column(linkify=True, verbose_name="ID")
-    validated_object = tables.RelatedLinkColumn()
+    validated_object = tables.Column(linkify=True)
     validated_attribute = ValidatedAttributeColumn()
     valid = BooleanColumn()
 

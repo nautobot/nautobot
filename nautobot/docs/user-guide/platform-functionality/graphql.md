@@ -255,3 +255,92 @@ Inside of **Extensibility -> Data Management -> GraphQL Queries**, there are vie
 Saved queries can be executed from the detailed query view or via a REST API request. The queries can also be populated from the detailed query view into GraphiQL by using the "Open in GraphiQL" button. Additionally, in the GraphiQL UI, there is now a menu item, "Queries", which can be used to populate GraphiQL with any previously saved query.
 
 To execute a stored query via the REST API, a POST request can be sent to `/api/extras/graphql-queries/[uuid]/run/`. Any GraphQL variables required by the query can be passed in as JSON data within the request body.
+
+## Permissions Enforcement
+
+Nautobot enforces object "view" [permissions](../administration/guides/permissions.md) on GraphQL queries. As a general pattern, if a portion of the query resolves to:
+
+- **a single related object** (such as via a database foreign key) - if you do not have permissions to `view` that object, the query will return `null`, as if that related object did not exist at all.
+- **a list of objects** (such as the root of a GraphQL query, a reverse foreign key relation, or a many-to-many relation) - the list will only contain the objects you have permissions to `view`, and other objects will simply be omitted from the list as if they did not exist at all.
+
+Examples:
+
+```graphql
+query {
+  devices {
+    name
+    location {
+      name
+    }
+    interfaces {
+      name
+    }
+  }
+}
+```
+
+A user with full unrestricted `view` permissions on all Device, Location, and Interface records might get a response like:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": {
+          "name": "AMER",
+        },
+        "interfaces": [
+          {
+            "name": "Ethernet1",
+          },
+          {
+            "name": "Ethernet2",
+          },
+          {
+            "name": "Ethernet3",
+          }
+        ]
+      },
+      ...
+    ]
+  }
+}
+```
+
+By contrast, a user with `view` permission on Devices but no permissions to view Locations or Interfaces might get, for the same data and same query:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": null,
+        "interfaces": []
+      },
+      ...
+    ]
+  }
+}
+```
+
+and a user with _limited_ `view` permission on Devices and Interfaces might get:
+
+```json
+{
+  "data": {
+    "devices": [
+      {
+        "name": "device1",
+        "location": null,
+        "interfaces": [
+          {
+            "name": "Ethernet3"
+          }
+        ]
+      }
+    ]
+  }
+}
+```

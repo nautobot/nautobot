@@ -1,8 +1,8 @@
 import importlib.util
 import os.path
-import sys
 from unittest import mock
 
+from nautobot.core import settings as core_settings
 from nautobot.core.cli import _preprocess_settings, migrate_deprecated_templates
 from nautobot.core.testing import TestCase
 
@@ -124,36 +124,74 @@ class TestPreprocessSettings(TestCase):
         # more specifically:
         self.assertEqual("baz.bat", settings_module.MIDDLEWARE[-1])
 
-    def test_legacy_storage_behavior(self, *args):
-        """Handling legacy storage settings."""
+    def test_otel_log_correlation_applied_when_enabled(self, *args):
+        """When OTEL tracing + log correlation are enabled, the trace/span IDs are surfaced in LOGGING.
+
+        Covers the _preprocess_settings wiring that calls enable_otel_log_correlation() against the
+        resolved settings, so it works even when the flags are set in nautobot_config.py (not env vars).
+        """
         settings_module, config_path = self.load_settings_module()
-
-        settings_module.DEFAULT_FILE_STORAGE = "storages.some_custom_backend"
-        settings_module.JOB_FILE_IO_STORAGE = "some_custom_job_file_storage"
-        settings_module.STATICFILES_STORAGE = "some_custom_static_storage"
-        settings_module.STORAGE_BACKEND = "storages.some_custom_backend"
-        settings_module.STORAGE_CONFIG = {"MY_BACKEND_OPTION": "some_value"}
-
-        import storages.utils
-
-        original_setting = storages.utils.setting
-        del sys.modules["storages.utils"]
-        del storages.utils
-
-        try:
-            # Process the settings module
+        settings_module.TESTING = False
+        settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = True
+        settings_module.OTEL_PYTHON_LOG_CORRELATION = True
+        # Default (correlation-off) LOGGING shape, mirroring nautobot.core.settings. The helper only
+        # augments the dict Nautobot itself ships, so this fixture is installed as that object -- which
+        # is what an operator who never overrides LOGGING actually has (nautobot_config.py star-imports
+        # it from nautobot.core.settings).
+        default_logging = {
+            "version": 1,
+            "filters": {"otel_trace_context": {"()": "nautobot.core.logging.OtelTraceContextFilter"}},
+            "formatters": {
+                "normal": {"format": "%(asctime)s %(levelname)s %(name)s :\n  %(message)s"},
+                "verbose": {"format": "%(asctime)s %(levelname)s %(name)s %(funcName)s() :\n  %(message)s"},
+            },
+            "handlers": {
+                "normal_console": {"class": "logging.StreamHandler", "formatter": "normal", "filters": []},
+                "verbose_console": {"class": "logging.StreamHandler", "formatter": "verbose", "filters": []},
+            },
+        }
+        settings_module.LOGGING = default_logging
+        with mock.patch.object(core_settings, "LOGGING", default_logging):
             _preprocess_settings(settings_module, config_path)
 
-            self.assertFalse(hasattr(settings_module, "DEFAULT_FILE_STORAGE"))  # unset to avoid a Django exception
-            self.assertEqual("storages.some_custom_backend", settings_module.STORAGES["default"]["BACKEND"])
-            self.assertEqual("some_custom_job_file_storage", settings_module.STORAGES["nautobotjobfiles"]["BACKEND"])
-            self.assertFalse(hasattr(settings_module, "STATICFILES_STORAGE"))  # unset to avoid a Django exception
-            self.assertEqual("some_custom_static_storage", settings_module.STORAGES["staticfiles"]["BACKEND"])
+        self.assertIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertIn("otel_trace_context", settings_module.LOGGING["handlers"]["normal_console"]["filters"])
 
-            self.assertEqual("some_value", storages.utils.setting("MY_BACKEND_OPTION"))
-        finally:
-            # Clean up the STORAGE_CONFIG monkeypatch
-            import storages.utils  # pylint: disable=reimported
+    def test_otel_log_correlation_skipped_for_custom_logging(self, *args):
+        """A LOGGING dict the operator reassigned must not be augmented, even with correlation on.
 
-            storages.utils.setting = original_setting
-            self.assertIsNone(storages.utils.setting("MY_BACKEND_OPTION"))
+        The identity gate in enable_otel_log_correlation(): any customization of LOGGING rebinds the
+        name away from nautobot.core.settings.LOGGING, so Nautobot leaves the operator's config alone.
+        """
+        settings_module, config_path = self.load_settings_module()
+        settings_module.TESTING = False
+        settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = True
+        settings_module.OTEL_PYTHON_LOG_CORRELATION = True
+        # Same names/shape as the default, but a distinct object -- i.e. an operator-supplied LOGGING.
+        settings_module.LOGGING = {
+            "version": 1,
+            "formatters": {"normal": {"format": "%(asctime)s %(levelname)s %(name)s :\n  %(message)s"}},
+            "handlers": {"normal_console": {"class": "logging.StreamHandler", "formatter": "normal", "filters": []}},
+        }
+
+        _preprocess_settings(settings_module, config_path)
+
+        self.assertNotIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertEqual(settings_module.LOGGING["handlers"]["normal_console"]["filters"], [])
+
+    def test_otel_log_correlation_skipped_when_disabled(self, *args):
+        """With OTEL tracing off (the default), _preprocess_settings must not touch LOGGING formatters."""
+        settings_module, config_path = self.load_settings_module()
+        settings_module.TESTING = False
+        settings_module.OTEL_PYTHON_DJANGO_INSTRUMENT = False
+        settings_module.OTEL_PYTHON_LOG_CORRELATION = True
+        settings_module.LOGGING = {
+            "version": 1,
+            "formatters": {"normal": {"format": "%(asctime)s %(levelname)s %(name)s :\n  %(message)s"}},
+            "handlers": {"normal_console": {"class": "logging.StreamHandler", "formatter": "normal", "filters": []}},
+        }
+
+        _preprocess_settings(settings_module, config_path)
+
+        self.assertNotIn("%(otelTraceID)s", settings_module.LOGGING["formatters"]["normal"]["format"])
+        self.assertEqual(settings_module.LOGGING["handlers"]["normal_console"]["filters"], [])

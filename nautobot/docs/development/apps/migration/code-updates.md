@@ -22,33 +22,31 @@ For example:
 Before:
 
 ```python
+from nautobot.extras.plugins import PluginMenuItem
 
-    from nautobot.extras.plugins import PluginMenuItem
 
-    menu_items = (
-        PluginMenuItem(
-            link="plugins:your_app:dashboard",
-            link_text="Dashboard",
-            permissions=["your_app.view_sync"],
-        ),
-        PluginMenuItem(
-            link="plugins:your_app:sync_list",
-            link_text="History",
-            permissions=["your_app.view_sync"],
-        ),
-        PluginMenuItem(
-            link="plugins:your_app:synclogentry_list",
-            link_text="Logs",
-            permissions=["your_app.view_synclogentry"],
-        ),
-    )
-
+menu_items = [
+    PluginMenuItem(
+        link="plugins:your_app:dashboard",
+        link_text="Dashboard",
+        permissions=["your_app.view_sync"],
+    ),
+    PluginMenuItem(
+        link="plugins:your_app:sync_list",
+        link_text="History",
+        permissions=["your_app.view_sync"],
+    ),
+    PluginMenuItem(
+        link="plugins:your_app:synclogentry_list",
+        link_text="Logs",
+        permissions=["your_app.view_synclogentry"],
+    ),
+]
 ```
 
 After:
 
 ```python
-
 from nautobot.apps.ui import NavMenuGroup, NavMenuItem, NavMenuTab
 
 
@@ -76,7 +74,6 @@ menu_items = (
         groups=(NavMenuGroup(weight=1000, name="Your App", items=tuple(items)),),
     ),
 )
-
 ```
 
 ### Remove Tag/Tags Filter from FilterSet Definitions
@@ -86,9 +83,7 @@ In Nautobot 2.0, you can safely remove `tag = TagFilter(...)` from your filter s
 For example, before the filter set could look like this:
 
 ```py
-
 class AppModelFilterSet(BaseFilterSet):
-
     name = MultiValueCharFilter(...)
     number = MultiValueNumberFilter(...)
     tag = TagFilter(...)
@@ -100,15 +95,12 @@ class AppModelFilterSet(BaseFilterSet):
 After changing the base class to `NautobotFilterSet` the `tag` filter should be removed:
 
 ```py
-
 class AppModelFilterSet(NautobotFilterSet):
-
     name = MultiValueCharFilter(...)
     number = MultiValueNumberFilter(...)
 
     class Meta:
         fields = ["name", "number", "tags"]
-
 ```
 
 ## Replace DjangoFilterBackend with NautobotFilterBackend

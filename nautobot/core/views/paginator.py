@@ -44,7 +44,7 @@ class EnhancedPage(Page):
         return page_list
 
 
-def get_paginate_count(request, saved_view=None):
+def get_paginate_count(request, saved_view=None, save_user_config=True):
     """
     Determine the length of a page, using the following in order:
 
@@ -56,7 +56,7 @@ def get_paginate_count(request, saved_view=None):
     if "per_page" in request.GET:
         try:
             per_page = int(request.GET.get("per_page"))
-            if request.user.is_authenticated:
+            if request.user.is_authenticated and save_user_config:
                 request.user.set_config("pagination.per_page", per_page, commit=True)
             return per_page
         except ValueError:

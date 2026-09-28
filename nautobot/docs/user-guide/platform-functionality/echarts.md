@@ -118,6 +118,7 @@ The `theme_colors` parameter controls the color palette used in charts. You can 
 Nautobot provides predefined color schemes through `EChartsThemeColor`s. When creating an ECharts instance, a custom `theme_colors` value can be defined, but it’s optional (by default, `theme_colors` is set to `EChartsThemeColors.NAUTOBOT_COLORS`).
 
 Available predefined schemes:
+
 - `NAUTOBOT_COLORS` - Default Nautobot color palette with multiple colors
 - `LIGHTER_GREEN_RED_COLORS` - Lighter shades of green and red only
 
@@ -135,6 +136,7 @@ chart = EChartsBase(
 ```
 
 To use your own theme colors, there are two options:
+
 - Add a custom theme colors to `EChartsThemeColors`.
 - Pass a custom color list directly without modifying `EChartsThemeColors`.
 

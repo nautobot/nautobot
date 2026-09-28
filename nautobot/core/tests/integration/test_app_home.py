@@ -96,7 +96,7 @@ class AppHomeTestCase(SeleniumTestCase):
         for panel_name, panel_details in self.layout.items():
             columns_html.first.find_by_xpath(f".//strong[text()='{panel_name}']")
             for item_name, _ in panel_details.items():
-                item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
+                item_html = columns_html.first.find_by_xpath(f".//h3[contains(text(), '{item_name}')]")
                 # Assert Panel items without permissions are not shown in DOM
                 self.assertFalse(item_html)
 
@@ -137,6 +137,6 @@ class AppHomeTestCase(SeleniumTestCase):
                         counter_html = int(item_html.find_by_xpath("./../../span")["innerHTML"])
                         self.assertEqual(counter, counter_html)
                 else:
-                    item_html = columns_html.first.find_by_xpath(f".//h4[contains(text(), '{item_name}')]")
+                    item_html = columns_html.first.find_by_xpath(f".//h3[contains(text(), '{item_name}')]")
                     # Assert Layout items without permission is not visible in DOM
                     self.assertFalse(item_html)

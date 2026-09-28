@@ -1,6 +1,18 @@
+{% load helpers %}
 {% load form_helpers %}
 
-<div class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}">
+{% comment %}
+Django already emits `aria-describedby="<auto_id>_helptext <auto_id>_error"` on the widget (plus `aria-invalid` and
+`required` where applicable) -- see `BoundField.aria_describedby`. Those ids have to actually exist on the elements
+holding the help text and the error list, otherwise the reference dangles and assistive technology announces nothing.
+Hence the `id` attributes below; do not rename them without matching Django's naming (WCAG 1.3.1, 3.3.1, 3.3.2).
+{% endcomment %}
+
+{# If the form field carries an `htmx_attrs` dict, wrap output in a persistent HTMX swap target. #}
+{# The wrapper's innerHTML is replaced on each swap; the wrapper itself persists across swaps so #}
+{# its HTMX attributes do not need to be re-emitted by the partial that returns the new content. #}
+{% if field.field.htmx_attrs %}<div {% for attr_name, attr_value in field.field.htmx_attrs.items %}{{ attr_name }}="{{ attr_value }}" {% endfor %}>{% endif %}
+<div{% if field.auto_id %} id="{{ field.auto_id }}-container"{% endif %} class="mb-10 d-md-flex justify-content-center{% if field.errors %} has-error{% endif %}{% if container_class %} {{ container_class }}{% endif %}">
     {% if field|widget_type == 'checkboxinput' %}
         <div class="col-md-9 offset-md-3">
             <div class="form-check mt-6{% if field.errors %} has-error{% endif %}">
@@ -16,10 +28,18 @@
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text">{{ field.help_text|safe }}</span>
+                <span class="form-text"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>
             {% endif %}
     {% elif field|widget_type == 'textarea' and not field.label %}
         <div class="col-md-12">
+            {% comment %}
+            This branch exists for full-width textareas that deliberately show no visible label (Comments being the
+            common case). "No visible label" is not the same as "no label", so emit a visually hidden one; otherwise the
+            field is announced as an unlabelled text area. Falls back to the field name when there is no label at all.
+            {% endcomment %}
+            <label class="visually-hidden" for="{{ field.id_for_label }}">
+                {% firstof field.label field.name|title %}
+            </label>
             {{ field }}
             {% if bulk_nullable %}
                 <div class="form-check mt-6">
@@ -28,26 +48,70 @@
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text">{{ field.help_text|safe }}</span>
+                <span class="form-text"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>
             {% endif %}
     {% else %}
         <label class="col-md-3 col-form-label{% if field.field.required %} nb-required{% endif %}" for="{{ field.id_for_label }}">
             {{ field.label }}
         </label>
-        <div class="col-md-9">
-            {{ field }}
+        <div class="col-md-9{% if should_render_embedded_create or should_render_embedded_search %} align-items-start d-flex gap-8 flex-wrap{% endif %}">
+            {% if should_render_embedded_create or should_render_embedded_search %}
+                <div class="flex-grow-1 nb-w-0">{{ field }}</div>
+                {% if should_render_embedded_create %}
+                    {% with verbose_name=field.field.queryset.model|meta:"verbose_name" %}
+                        <span data-bs-title="Add a new {{ verbose_name }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                            <button
+                                class="btn btn-primary flex-grow-0 flex-shrink-0"
+                                data-bs-toggle="modal"
+                                data-bs-target="#embedded_action_modal"
+                                hx-get="{% url field.field.queryset.model|viewname:'add' %}{% if embedded_create_query_string %}?{{ embedded_create_query_string }}{% endif %}"
+                                hx-headers='{"HX-Embedded-Action": "create"}'
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
+                                hx-target="#embedded_action_modal .modal-content"
+                                type="button"
+                                {% if field.field.disabled %}disabled=""{% endif %}
+                            >
+                                <span class="mdi mdi-plus-thick"></span>
+                                <span class="visually-hidden">Add a new {{ verbose_name }}</span>
+                            </button>
+                        </span>
+                    {% endwith %}
+                {% endif %}
+                {% if should_render_embedded_search %}
+                    {% with verbose_name_plural=field.field.queryset.model|meta:"verbose_name_plural" %}
+                        <span data-bs-title="Search {{ verbose_name_plural }}" data-bs-toggle="tooltip" data-bs-trigger="hover">
+                            <button
+                                class="btn btn-secondary flex-grow-0 flex-shrink-0"
+                                data-bs-toggle="modal"
+                                data-bs-target="#embedded_action_modal"
+                                hx-get="{% url 'search_content_type' content_type=embedded_search_content_type %}{% if embedded_search_query_string %}?{{ embedded_search_query_string }}{% endif %}"
+                                hx-headers='{"HX-Embedded-Action": "search"}'
+                                hx-on:htmx:trigger="window.nb?.embeddedAction?.handleStart?.({ targetFieldName: '{{ field.name }}' });"
+                                hx-target="#embedded_action_modal .modal-content"
+                                type="button"
+                                {% if field.field.disabled %}disabled=""{% endif %}
+                            >
+                                <span class="mdi mdi-filter"></span>
+                                <span class="visually-hidden">Search {{ verbose_name_plural }}</span>
+                            </button>
+                        </span>
+                    {% endwith %}
+                {% endif %}
+            {% else %}
+                {{ field }}
+            {% endif %}
             {% if bulk_nullable %}
-                <div class="form-check mt-6">
+                <div class="form-check mt-6 w-100">
                     <input class="form-check-input" id="{{ field.id_for_label }}_nullify" name="_nullify" type="checkbox" value="{{ field.name }}">
                     <label class="form-check-label" for="{{ field.id_for_label }}_nullify">Set null</label>
                 </div>
             {% endif %}
             {% if field.help_text %}
-                <span class="form-text">{{ field.help_text|safe }}</span>
+                <span class="form-text w-100"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>
             {% endif %}
     {% endif %}
     {% if field.errors %}
-        <ul class="mb-0 mt-4">
+        <ul class="mb-0 mt-4 w-100"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>
             {% for error in field.errors %}
                 {# Embed an HTML comment indicating the error for extraction by tests #}
                 <!-- FORM-ERROR {{ field.name }}: {{ error }} -->
@@ -57,3 +121,4 @@
     {% endif %}
 </div>
 </div>
+{% if field.field.htmx_attrs %}</div>{% endif %}

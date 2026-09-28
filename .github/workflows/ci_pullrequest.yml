@@ -17,6 +17,39 @@ jobs:
         uses: "actions/checkout@v4"
       - name: "Security checks"
         uses: "./.github/actions/security-checks"
+  dependencies-check:
+    runs-on: "ubuntu-24.04"
+    steps:
+      - name: "Check out repository code"
+        uses: "actions/checkout@v4"
+      - name: "Setup environment"
+        uses: "networktocode/gh-action-setup-poetry-environment@v6"
+        with:
+          poetry-version: "2.1.4"
+          python-version: "3.14"
+      - name: "Install OSS Nautobot Apps to verify dependency compatibility"
+        # nautobot-app-chatops[ipfabric] requires `ipfabric<7.0` as it uses APIs that are removed in later versions.
+        # nautobot-app-ssot[ipfabric] requires a more current version of `ipfabric`, so they are incompatible.
+        # nautobot-app-chatops[meraki] requires `meraki<=1.45.0` while nautobot-app-ssot[meraki]
+        # requires `meraki>=3.0.2,<4`, so they are incompatible as well.
+        # This is unlikely to be resolved any time soon so we are skipping these chatops extras intentionally for now.
+        run: >-
+          poetry add
+          'git+https://github.com/nautobot/nautobot-app-bgp-models.git@main'
+          'git+https://github.com/nautobot/nautobot-app-capacity-metrics.git@main'
+          'git+https://github.com/nautobot/nautobot-app-chatops.git@main[aci,aristacv,ansible,grafana,panorama,slurpit]'
+          'git+https://github.com/nautobot/nautobot-app-circuit-maintenance.git@main'
+          'git+https://github.com/nautobot/nautobot-app-design-builder.git@main'
+          'git+https://github.com/nautobot/nautobot-app-device-lifecycle-mgmt.git@main'
+          'git+https://github.com/nautobot/nautobot-app-device-onboarding.git@main'
+          'git+https://github.com/nautobot/nautobot-app-dns-models.git@main'
+          'git+https://github.com/nautobot/nautobot-app-firewall-models.git@main'
+          'git+https://github.com/nautobot/nautobot-app-floor-plan.git@main'
+          'git+https://github.com/nautobot/nautobot-app-golden-config.git@main'
+          'git+https://github.com/nautobot/nautobot-app-secrets-providers.git@main[all]'
+          'git+https://github.com/nautobot/nautobot-app-ssot.git@main[all]'
+          'git+https://github.com/nautobot/nautobot-app-welcome-wizard.git@main'
+          'git+https://github.com/nautobot/nautobot-plugin-nornir.git@main'
   ruff:
     runs-on: "ubuntu-24.04"
     env:
@@ -29,7 +62,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: ruff"
         run: "poetry run invoke ruff --output-format github"
   yamllint:
@@ -44,7 +77,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: yamllint"
         run: "poetry run invoke yamllint"
   markdownlint:
@@ -59,7 +92,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: pymarkdownlnt"
         run: "poetry run invoke markdownlint"
   docs:
@@ -74,7 +107,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only docs"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: docs build and validation"
         run: "poetry run invoke build-and-check-docs"
   compress-images:
@@ -89,7 +122,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: check for images needing compression"
         run: "poetry run invoke compress-images"
   djhtml:
@@ -104,7 +137,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: djhtml"
         run: "poetry run invoke djhtml"
   djlint:
@@ -119,7 +152,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Linting: djlint"
         run: "poetry run invoke djlint"
   hadolint:
@@ -143,7 +176,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -158,7 +191,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run check migrations"
         run: "poetry run invoke check-migrations"
   check-schema:
@@ -172,7 +205,7 @@ jobs:
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -187,7 +220,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run check-schema"
         # REST API schema generation currently includes GraphQL schema generation, which is dependent on the DB :-(
         run: "poetry run invoke migrate check-schema"
@@ -201,7 +234,7 @@ jobs:
       NAUTOBOT_CONFIG: "nautobot/core/tests/nautobot_config.py"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -216,7 +249,7 @@ jobs:
         with:
           poetry-install-options: "--extras=remote_storage"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run pylint"
         run: "poetry run invoke pylint"
   ui-code-check:
@@ -232,7 +265,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Setup Node.js"
         uses: "actions/setup-node@v4"
         with:
@@ -254,7 +287,7 @@ jobs:
         with:
           poetry-install-options: "--only dev --only linting"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Setup Node.js"
         uses: "actions/setup-node@v4"
         with:
@@ -292,7 +325,7 @@ jobs:
       NAUTOBOT_DB_ENGINE: "django_prometheus.db.backends.postgresql"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -327,6 +360,10 @@ jobs:
       - "djhtml"
       - "djlint"
   tests-mysql-plus-coverage:
+    # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+    # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+    # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+    # https://code.djangoproject.com/ticket/36531
     name: "Unit tests (MySQL and Python 3.13) plus test coverage reporting"
     runs-on: "ubuntu-24.04"
     env:
@@ -362,6 +399,10 @@ jobs:
         with:
           poetry-install-options: "--extras=mysql --extras=remote_storage"
           poetry-version: "2.1.4"
+          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+          # https://code.djangoproject.com/ticket/36531
           python-version: "3.13"
       - name: "Run unittest"
         run: "poetry run invoke tests --failfast --no-keepdb --no-cache-test-fixtures --parallel --coverage"
@@ -398,6 +439,10 @@ jobs:
       - "djhtml"
       - "djlint"
   # tests-doltsql:
+  #   # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+  #   # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+  #   # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+  #   # https://code.djangoproject.com/ticket/36531
   #   name: "Unit tests (DoltSQL and Python 3.13)"
   #   runs-on: "ubuntu-24.04"
   #   env:
@@ -430,6 +475,10 @@ jobs:
   #       with:
   #         poetry-install-options: "--extras mysql"
   #         poetry-version: "2.1.4"
+  #         # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+  #         # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+  #         # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+  #         # https://code.djangoproject.com/ticket/36531
   #         python-version: "3.13"
   #     - name: "Run unittest"
   #       run: "poetry run invoke tests --no-keepdb --no-cache-test-fixtures --no-parallel"
@@ -490,7 +539,7 @@ jobs:
       - "djhtml"
       - "djlint"
   migration-tests-postgres:
-    name: "Run migrations against test dataset (PostgreSQL and Python 3.13)"
+    name: "Run migrations against test dataset (PostgreSQL and Python 3.14)"
     runs-on: "ubuntu-24.04"
     env:
       MIGRATION_TEST_DATASET: "development/datasets/nautobot_1.5.16_postgres.tar.gz"
@@ -502,7 +551,7 @@ jobs:
       PGPASSWORD: "decinablesprewad"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -517,7 +566,7 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Run migration test"
         run: "poetry run invoke migration-test --db-engine postgres --dataset $MIGRATION_TEST_DATASET"
     needs:
@@ -542,7 +591,7 @@ jobs:
       NAUTOBOT_SELENIUM_URL: "http://localhost:4444/wd/hub"
     services:
       postgres:
-        image: "postgres:13-alpine"
+        image: "postgres:14-alpine"
         env:
           POSTGRES_USER: "nautobot"
           POSTGRES_PASSWORD: "decinablesprewad"
@@ -565,6 +614,10 @@ jobs:
         with:
           poetry-install-options: ""  # override default "--only dev"
           poetry-version: "2.1.4"
+          # Sticking with Python 3.13 rather than 3.14 here for now, because Django 5.2's test runner doesn't
+          # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+          # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+          # https://code.djangoproject.com/ticket/36531
           python-version: "3.13"
       - name: "Run Integration Tests"
         # If NAUTOBOT_SELENIUM_HOST is set to 'localhost' or '127.0.0.1' the connection does not work
@@ -594,13 +647,13 @@ jobs:
         with:
           poetry-install-options: "--only dev"
           poetry-version: "2.1.4"
-          python-version: "3.13"
+          python-version: "3.14"
       - name: "Check for changelog entry"
         run: |
           git fetch --no-tags origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
           poetry run towncrier check --compare-with origin/${{ github.base_ref }}
   container-build-test:
-    name: "Test Container Build (Python 3.13 only)"
+    name: "Test Container Build (Python 3.14 only)"
     strategy:
       matrix:
         include:
@@ -638,7 +691,7 @@ jobs:
         uses: "./.github/actions/build-nautobot-image"
         with:
           images: "ghcr.io/nautobot/nautobot"
-          python-version: "3.13"
+          python-version: "3.14"
           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
           arch: "${{ matrix.arch }}"
           push: false
@@ -646,7 +699,7 @@ jobs:
           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
 
 #   container-merge-test:
-#     name: "Test Merge Manifests (Python 3.13 only)"
+#     name: "Test Merge Manifests (Python 3.14 only)"
 #     needs:
 #       - "container-build-test"
 #     runs-on: "ubuntu-24.04"
@@ -667,9 +720,9 @@ jobs:
 #         uses: "./.github/actions/merge-image-digests"
 #         with:
 #           image: "ghcr.io/nautobot/nautobot"
-#           python-version: "3.13"
+#           python-version: "3.14"
 #           nautobot-version: "${{ steps.versionname.outputs.nautobot-version }}"
-#           default-python-version: "3.13"
+#           default-python-version: "3.14"
 #           set-latest: false
 #           cache-scope: "nautobot-${{ steps.versionname.outputs.nautobot-version }}"
 

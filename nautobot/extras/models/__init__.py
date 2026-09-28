@@ -13,6 +13,7 @@ from .groups import DynamicGroup, DynamicGroupMembership, StaticGroupAssociation
 from .jobs import (
     Job,
     JobButton,
+    JobConsoleEntry,
     JobHook,
     JobLogEntry,
     JobQueue,
@@ -78,6 +79,7 @@ __all__ = (
     "ImageAttachment",
     "Job",
     "JobButton",
+    "JobConsoleEntry",
     "JobHook",
     "JobLogEntry",
     "JobQueue",

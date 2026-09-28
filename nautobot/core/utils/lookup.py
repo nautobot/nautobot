@@ -214,6 +214,11 @@ def get_related_class_for_model(model, module_name, object_suffix):
 
     # e.g. "nautobot.dcim.forms.DeviceFilterForm"
     app_config = apps.get_app_config(model._meta.app_label)
+
+    # Job uses `JobEditForm` instead of `JobForm`, so we need to adjust the object_suffix accordingly.
+    if model._meta.label_lower == "extras.job" and object_suffix == "Form" and module_name == "forms":
+        object_suffix = "EditForm"
+
     object_name = f"{model.__name__}{object_suffix}"
     object_path = f"{app_config.name}.{module_name}.{object_name}"
 
@@ -235,6 +240,31 @@ def get_filterset_for_model(model):
         (Union[FilterSet,None]): Either the `FilterSet` class or `None`
     """
     return get_related_class_for_model(model, module_name="filters", object_suffix="FilterSet")
+
+
+def get_searchable_fields_for_model(model):
+    """Return the fields searchable via a model's list-view search bar (the `q=` filter).
+
+    The fields are read from the `q` `SearchFilter` on the model's FilterSet. Because `SearchFilter`
+    resolves its `filter_predicates` at class-definition time, the returned list already reflects both
+    inherited `q` filters and the default predicates layered in by `SearchFilter` itself.
+
+    Args:
+        model (BaseModel): A model class
+
+    Returns:
+        (Union[list,None]): A sorted list of searchable field names, or `None` if the model's FilterSet
+            does not define a `q` `SearchFilter`.
+    """
+    from nautobot.core.filters import SearchFilter  # avoid circular import
+
+    filterset = get_filterset_for_model(model)
+    if filterset is None:
+        return None
+    q_filter = filterset.base_filters.get("q")
+    if not isinstance(q_filter, SearchFilter):
+        return None
+    return sorted(q_filter.filter_predicates.keys())
 
 
 def get_form_for_model(model, form_prefix=""):

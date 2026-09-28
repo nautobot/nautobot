@@ -1,0 +1,13 @@
+<button id="component-{{ component.component_id }}"
+        class="btn btn-{{ component.color }}"
+        hx-get=""
+        hx-select="#component-{{ component.component_id }}"
+        hx-swap="outerHTML"
+        hx-trigger="load"
+        hx-vals='{"component_id": "{{ component.component_id }}"}'
+>
+    <span class="htmx-indicator text-center">
+        <span class="spinner-border spinner-border-sm"></span>
+        <span class="visually-hidden">Loading...</span>
+    </span>
+</button>

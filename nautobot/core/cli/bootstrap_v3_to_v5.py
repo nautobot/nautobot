@@ -71,9 +71,11 @@ def _fix_nav_item_to_li(html: str, stats: dict, file_path=None) -> str:
         # Move plain active from <li> to child <a> or <button>
         li_tag, n_active = re.subn(
             r'(<li[^>]+)class=(["\'])([^"\']*\bactive\b[^"\']*)\2',
-            lambda m: f'{m.group(1)}class="{" ".join([c for c in m.group(3).split() if c != "active"])}"'
-            if "active" in m.group(3).split()
-            else m.group(0),
+            lambda m: (
+                f'{m.group(1)}class="{" ".join([c for c in m.group(3).split() if c != "active"])}"'
+                if "active" in m.group(3).split()
+                else m.group(0)
+            ),
             li_tag,
         )
         if n_active:
@@ -767,7 +769,7 @@ def convert_bootstrap_classes(html_input: str, file_path: str) -> tuple[str, dic
 
 def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=False) -> None:
     """
-    Recursively finds all .html files in the given directory, applies convert_bootstrap_classes,
+    Recursively finds all .html and .js files in the given directory, applies convert_bootstrap_classes,
     and overwrites each file with the fixed content.
     """
 
@@ -797,7 +799,7 @@ def fix_html_files_in_directory(directory: str, dry_run=False, skip_templates=Fa
         for filename in files:
             if only_filename and only_filename != filename:
                 continue
-            if filename.lower().endswith(".html"):
+            if filename.lower().endswith(".html") or filename.lower().endswith(".js"):
                 file_path = os.path.join(root, filename)
                 logger.info("Processing: %s", file_path)
                 with open(file_path, "r", encoding="utf-8") as f:
@@ -919,7 +921,7 @@ def main():
         action="store_true",
         help="Show which files would be modified without making any changes.",
     )
-    parser.add_argument("path", type=str, help="Path to directory in which to recursively fix all .html files.")
+    parser.add_argument("path", type=str, help="Path to directory in which to recursively fix all .html and .js files.")
     parser.add_argument(
         "-st", "--skip-template-replacement", action="store_true", help="Skip replacing deprecated templates."
     )

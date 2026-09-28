@@ -13,6 +13,14 @@ ALLOWED_HOSTS = ["nautobot.example.com"]
 # Do *not* send anonymized install metrics when migration or post_upgrade management commands are run while testing
 INSTALLATION_METRICS_ENABLED = False
 
+# Disable OTEL exporters during testing.
+# The console exporter writes every span as multi-line JSON to stdout, which generates
+# millions of lines of output when DB/Redis instrumentation is active, causing OOM kills.
+# instrument() reads these from the loaded nautobot_config module (i.e. this file), so setting
+# them here is sufficient.
+OTEL_TRACES_EXPORTER = ["none"]
+OTEL_METRICS_EXPORTER = ["none"]
+
 # Discover test jobs from within the Nautobot source code
 JOBS_ROOT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "extras", "test_jobs"

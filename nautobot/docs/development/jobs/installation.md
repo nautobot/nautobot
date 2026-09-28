@@ -44,12 +44,14 @@ In `device_jobs.py`:
 ```python
 from nautobot.apps.jobs import Job, register_jobs
 
+
 class CleanupDevices(Job):
     class Meta:
         name = "Cleanup Obsolete Devices"
 
     def run(self):
         self.logger.info("Cleaning old device entries")
+
 
 register_jobs(CleanupDevices)
 ```
@@ -85,12 +87,14 @@ In `sync_devices.py`:
 ```python
 from nautobot.apps.jobs import Job, register_jobs
 
+
 class SyncDevices(Job):
     class Meta:
         name = "Sync Devices from CMDB"
 
     def run(self):
         self.logger.info("Running external sync...")
+
 
 register_jobs(SyncDevices)
 ```
@@ -132,7 +136,7 @@ When the repo is synced, Nautobot loads the job class under the path:
 
 ## Installation as Part of an App
 
-Apps are full Python packages that can include models, views, static files *and* can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/index.md).
+Apps are full Python packages that can include models, views, static files _and_ can include Jobs. They are the best choice for reusable automation. To learn how to create a Nautobot App, check out the [App Development Documentation](../../apps/index.md).
 
 Key requirements:
 
@@ -161,6 +165,7 @@ In `apps.py`:
 
 ```python
 from nautobot.apps.apps import NautobotAppConfig
+
 
 class MyAppConfig(NautobotAppConfig):
     name = "my_app"

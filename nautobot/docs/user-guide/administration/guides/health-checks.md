@@ -91,6 +91,7 @@ from health_check.backends import BaseHealthCheckBackend
 from health_check.exceptions import ServiceUnavailable
 from netutils.ping import tcp_ping
 
+
 class MyCustomRedisHealthCheck(BaseHealthCheckBackend):
     def check_status(self):
         if not tcp_ping("198.51.100.100", 6379):

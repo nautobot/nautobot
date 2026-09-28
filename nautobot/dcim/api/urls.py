@@ -58,7 +58,9 @@ router.register(
 )
 
 # Cables
+router.register("cable-types", views.CableTypeViewSet)
 router.register("cables", views.CableViewSet)
+router.register("cables-to-cable-terminations", views.CableToCableTerminationViewSet)
 
 # Interface Redundancy Group
 router.register("interface-redundancy-groups", views.InterfaceRedundancyGroupViewSet)

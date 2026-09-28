@@ -1,0 +1,7 @@
+{% extends 'generic/object_create.html' %}
+{% load helpers %}
+
+{% block javascript %}
+    {{ block.super }}
+    <script src="{% versioned_static 'js/relationship_form.js' %}" onerror="nb.media.handleFailure(this)"></script>
+{% endblock javascript %}

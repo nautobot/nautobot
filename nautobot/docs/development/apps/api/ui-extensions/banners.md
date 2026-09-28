@@ -10,6 +10,7 @@ from django.utils.html import format_html
 
 from nautobot.apps.ui import Banner, BannerClassChoices
 
+
 def banner(context, *args, **kwargs):
     """Greet the user, if logged in."""
     # Request parameters can be accessed via context.request

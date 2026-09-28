@@ -6,14 +6,15 @@ from django.urls import NoReverseMatch, reverse
 from nautobot.core.settings_funcs import sso_auth_enabled
 from nautobot.core.templatetags.helpers import has_one_or_more_perms
 from nautobot.core.utils import lookup
+from nautobot.core.utils.config import ExposedSettings
 from nautobot.extras.registry import registry
 
 
 def get_saml_idp():
     """
-    Context function to provide a query string for the first IDP configured for SAML.
+    Context function to provide the key for the first IDP configured for SAML.
 
-    If the configured SAML IDP is `google`, this returns `idp=google`.
+    If the configured SAML IDP is `google`, this returns `google`.
 
     If SAML is not configured, this returns an empty string.
     """
@@ -25,25 +26,31 @@ def get_saml_idp():
     # robust login system.
     value = ""
     if idp_map is not None:
-        try:
-            idp = next(iter(idp_map.keys()))
-        except IndexError:
-            pass
-        else:
-            value = f"idp={idp}"
+        value = next(iter(idp_map.keys()), "")
 
     return value
 
 
 def settings(request):
     """
-    Expose Django settings in the template context. Example: {{ settings.DEBUG }}
+    Expose an allowlisted, non-sensitive subset of Django settings in the template context.
+
+    Access is limited by `ExposedSettings`. Example: {{ settings.VERSION }}
     """
     root_template = "base_django.html"
     return {
-        "settings": django_settings,
+        "settings": ExposedSettings(),
         "root_template": root_template,
     }
+
+
+class NavMenuDict(dict):
+    """Because this is a large dictionary, it tends to flood the Django debug toolbar with its contents."""
+
+    def __repr__(self):
+        if django_settings.DEBUG:
+            return "<NavMenu dict>"
+        return super().__repr__()
 
 
 def nav_menu(request):
@@ -51,7 +58,7 @@ def nav_menu(request):
     Expose nav menu data for navigation and global search.
     Also, indicate whether `"nautobot_version_control"` app is installed in order to render branch picker in nav menu.
     """
-    has_identified_active_link = False
+    active_link = (None, None, None)
     related_list_view_link = None
     if request.resolver_match:
         # Try to map requested page `view_name` to a specific `model` via `lookup.get_model_for_view_name`.
@@ -79,7 +86,7 @@ def nav_menu(request):
         except (NoReverseMatch, ValueError):
             pass
 
-    nav_menu_object = {"tabs": {}}
+    nav_menu_object = NavMenuDict({"tabs": {}})
 
     if htmx_current_url := request.headers.get("HX-Current-URL"):
         current_url = urlparse(htmx_current_url).path
@@ -98,15 +105,13 @@ def nav_menu(request):
                         if not item_details["permissions"] or has_one_or_more_perms(
                             request.user, item_details["permissions"]
                         ):
-                            if has_identified_active_link:
-                                is_active = False
-                            else:
-                                is_active = item_link in [current_url, related_list_view_link]
-                                if is_active:
-                                    has_identified_active_link = True
+                            if item_link == current_url:  # Always prefer exact match
+                                active_link = (tab_name, group_name, item_link)
+                            elif None in active_link and item_link == related_list_view_link:
+                                active_link = (tab_name, group_name, item_link)
 
                             nav_menu_object["tabs"][tab_name]["groups"][group_name]["items"][item_link] = {
-                                "is_active": is_active,
+                                "is_active": False,
                                 "name": item_details["name"],
                                 "weight": item_details["weight"],
                             }
@@ -114,6 +119,9 @@ def nav_menu(request):
                         del nav_menu_object["tabs"][tab_name]["groups"][group_name]
             if len(nav_menu_object["tabs"][tab_name]["groups"]) == 0:
                 del nav_menu_object["tabs"][tab_name]
+
+    if None not in active_link:
+        nav_menu_object["tabs"][active_link[0]]["groups"][active_link[1]]["items"][active_link[2]]["is_active"] = True
 
     nav_menu_version_control = None
     if "nautobot_version_control" in django_settings.PLUGINS:

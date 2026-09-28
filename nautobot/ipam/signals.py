@@ -6,6 +6,7 @@ from django.dispatch import receiver
 
 from nautobot.dcim.models import Device, VirtualDeviceContext
 from nautobot.ipam.models import (
+    interfaces_assigned_to_vrf,
     IPAddress,
     IPAddressToInterface,
     Prefix,
@@ -110,6 +111,25 @@ def vrf_device_associated(sender, instance, action, reverse, model, pk_set, **kw
             else:
                 return
             _validate_device_vrf_assignments(sender, instance, pk_set, device_field)
+
+
+@receiver(m2m_changed, sender=VRFDeviceAssignment)
+def vrf_device_disassociated(sender, instance, action, reverse, model, pk_set, **kwargs):
+    """Prevent removing a VRF from a parent object while its interfaces still reference that VRF."""
+    if action != "pre_remove" or not pk_set:
+        return
+    if isinstance(instance, VRF):
+        pairs = [(instance, parent) for parent in model.objects.filter(pk__in=pk_set)]
+    else:
+        pairs = [(vrf, instance) for vrf in VRF.objects.filter(pk__in=pk_set)]
+    for vrf, parent in pairs:
+        interfaces = interfaces_assigned_to_vrf(vrf, parent)
+        if interfaces.exists():
+            raise ValidationError(
+                f"Cannot remove VRF {vrf} from {parent} because it is still assigned to the following "
+                f"interface(s): {', '.join(str(interface) for interface in interfaces)}. "
+                "Remove the VRF from those interfaces first."
+            )
 
 
 @receiver(pre_delete, sender=IPAddressToInterface)

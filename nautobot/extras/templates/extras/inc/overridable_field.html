@@ -10,7 +10,7 @@
             <label class="form-check-label" for="{{ override_field.id_for_label }}">
                 <i>Override default value</i>
                 {% if override_field.help_text %}
-                    <span class="form-text">{{ override_field.help_text|safe }}</span>
+                    <span class="form-text"{% if override_field.auto_id %} id="{{ override_field.auto_id }}_helptext"{% endif %}>{{ override_field.help_text|safe }}</span>
                 {% endif %}
             </label>
         </div>
@@ -21,15 +21,15 @@
                 {{ field }}
                 <label class="form-check-label" for="{{ field.id_for_label }}">
                     {{ field.label }}
-                    {% if field.help_text %}<span class="form-text">{{ field.help_text|safe }}</span>{% endif %}
+                    {% if field.help_text %}<span class="form-text"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>{% endif %}
                 </label>
             </div>
         {% else %}
             {{ field }}
-            {% if field.help_text %}<span class="form-text">{{ field.help_text|safe }}</span>{% endif %}
+            {% if field.help_text %}<span class="form-text"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</span>{% endif %}
         {% endif %}
         {% if field.errors %}
-            <ul>
+            <ul{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>
                 {% for error in field.errors %}
                     {# Embed an HTML comment indicating the error for extraction by tests #}
                     <!-- FORM-ERROR {{ field.name }}: {{ error }} -->

@@ -1,0 +1,10 @@
+{% load form_helpers %}
+{% comment %}
+    HTMX partial: parent + termination fields for a single lane side.
+    Rendered when the user changes the type selector.
+{% endcomment %}
+{% for field in form %}
+    {% if field.name == parent_field or field.name == term_field %}
+        {% render_field field %}
+    {% endif %}
+{% endfor %}

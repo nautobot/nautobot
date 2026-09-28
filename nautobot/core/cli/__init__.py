@@ -10,7 +10,6 @@ import os
 import sys
 
 import django
-from django.core.exceptions import ImproperlyConfigured
 from django.core.management import CommandError, CommandParser, execute_from_command_line
 from django.core.management.utils import get_random_secret_key
 from jinja2 import BaseLoader, Environment
@@ -48,9 +47,9 @@ def _preprocess_settings(settings_module, config_path):
     - Create Nautobot storage directories if they don't already exist
     - Change database backends to django-prometheus if appropriate
     - Set up 'job_logs' database mirror
-    - Handle our custom `STORAGE_BACKEND` setting.
     - Load plugins based on settings_module.PLUGINS (may affect INSTALLED_APPS, MIDDLEWARE, and CONSTANCE_CONFIG)
     - Load event brokers based on settings_module.EVENT_BROKERS
+    - Surface OTEL trace/span IDs in the default LOGGING when OpenTelemetry log correlation is enabled
     """
     settings_module.SETTINGS_PATH = config_path
 
@@ -100,70 +99,6 @@ def _preprocess_settings(settings_module, config_path):
     settings_module.DATABASES["job_logs"]["TEST"] = {"MIRROR": "default"}
 
     #
-    # Media storage
-    #
-
-    # Avoid modifying nautobot.core.settings.STORAGES by accident!
-    settings_module.STORAGES = deepcopy(settings_module.STORAGES)
-
-    if hasattr(settings_module, "JOB_FILE_IO_STORAGE"):
-        settings_module.STORAGES.setdefault("nautobotjobfiles", {})["BACKEND"] = settings_module.JOB_FILE_IO_STORAGE
-
-    if hasattr(settings_module, "STORAGE_BACKEND") and settings_module.STORAGE_BACKEND is not None:
-        settings_module.STORAGES["default"]["BACKEND"] = settings_module.STORAGE_BACKEND
-
-        # django-storages
-        if hasattr(settings_module, "STORAGE_BACKEND") and settings_module.STORAGE_BACKEND.startswith("storages."):
-            try:
-                import storages.utils
-            except ModuleNotFoundError as e:
-                if getattr(e, "name") == "storages":
-                    raise ImproperlyConfigured(
-                        f"STORAGE_BACKEND is set to {settings_module.STORAGE_BACKEND} but django-storages is not present. "
-                        "It can be installed by running 'pip install django-storages'."
-                    )
-                raise e
-
-            # Monkey-patch django-storages to fetch settings from STORAGE_CONFIG or fall back to settings
-            def _setting(name, default=None):
-                if name in settings_module.STORAGE_CONFIG:
-                    return settings_module.STORAGE_CONFIG[name]
-                return getattr(settings_module, name, default)
-
-            storages.utils.setting = _setting
-
-    # Django 4.2 will throw an exception if both:
-    # - DEFAULT_FILE_STORAGE/STATICFILES_STORAGE is set in nautobot_config.py (recommended until Nautobot v2.4.24)
-    # - STORAGES is configured in nautobot.core.settings (which it is nowadays).
-    # Unfortunately, it's not implemented as a standard system check (which we could opt out of) but is instead
-    # hard-coded, so we hack around it instead by explicitly copying any non-default *_STORAGE to STORAGES
-    # and then unsetting *_STORAGE.
-    for setting_name, storages_key, default_value in [
-        ("DEFAULT_FILE_STORAGE", "default", "django.core.files.storage.FileSystemStorage"),
-        ("STATICFILES_STORAGE", "staticfiles", "django.contrib.staticfiles.storage.StaticFilesStorage"),
-    ]:
-        if hasattr(settings_module, setting_name):
-            # Make sure we don't clobber any existing explicit configuration in STORAGES:
-            if settings_module.STORAGES[storages_key]["BACKEND"] not in (
-                default_value,  # Nautobot/Django default
-                getattr(settings_module, setting_name),  # same as explicitly set value for setting_name
-            ):
-                raise ImproperlyConfigured(
-                    f"It looks like you've configured both {setting_name} and STORAGES['{storages_key}']['BACKEND'],"
-                    "but their values do not match."
-                )
-
-            # No clobbering, but undesired, so warn the user and handle it:
-            logger.warning(
-                f"It looks like you've configured {setting_name} in {settings_module.SETTINGS_PATH}. "
-                "This setting is deprecated since Nautobot v2.4.24, and support will be removed in Nautobot v3.1. "
-                f"You should migrate to configuring STORAGES['{storages_key}']['BACKEND'] instead. Refer to "
-                "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance."
-            )
-            settings_module.STORAGES[storages_key]["BACKEND"] = getattr(settings_module, setting_name)
-            delattr(settings_module, setting_name)
-
-    #
     # Plugins
     #
 
@@ -176,6 +111,25 @@ def _preprocess_settings(settings_module, config_path):
     #
 
     load_event_brokers(settings_module.EVENT_BROKERS)
+
+    #
+    # OpenTelemetry log correlation
+    #
+
+    # Surface the OTEL trace/span IDs in the default console logs when correlation is enabled. Done here
+    # -- after the config is fully loaded, before django.setup() applies dictConfig -- so it honors the
+    # *resolved* settings (which may be overridden in nautobot_config.py), not just the env-var defaults
+    # baked into LOGGING at settings-import time. The helper itself no-ops unless LOGGING is still the
+    # exact dict Nautobot ships, so any operator customization of LOGGING is left alone; likewise a no-op
+    # for the TESTING config.
+    if (
+        not getattr(settings_module, "TESTING", False)
+        and getattr(settings_module, "OTEL_PYTHON_DJANGO_INSTRUMENT", False)
+        and getattr(settings_module, "OTEL_PYTHON_LOG_CORRELATION", False)
+    ):
+        from nautobot.core.logging import enable_otel_log_correlation
+
+        enable_otel_log_correlation(settings_module.LOGGING)
 
 
 def load_settings(config_path):
@@ -343,6 +297,36 @@ def main():
 
     # If we get here, it's a regular Django management command - so load in the nautobot_config.py then hand off
     load_settings(args.config_path)
+
+    # Read the flag from the loaded nautobot_config module (registered in sys.modules by load_settings)
+    # rather than nautobot.core.settings, so an OTEL_PYTHON_DJANGO_INSTRUMENT override in nautobot_config.py
+    # is honored, not just the env-var default.
+    nautobot_config = sys.modules["nautobot_config"]
+    if nautobot_config.OTEL_PYTHON_DJANGO_INSTRUMENT:
+        from nautobot.core.cli.opentelemetry import install_exporters, instrument
+
+        instrument()
+
+        # instrument() installs the auto-instrumentors + tracer provider but NOT the OTLP exporters,
+        # because the OTLP gRPC channel is not fork-safe (grpc's C-core would be inherited broken by
+        # forked workers -> SIGSEGV). The forking servers install their exporters per process AFTER
+        # fork, via their own hooks:
+        #   - `start` (uWSGI): the postfork hook in nautobot.core.wsgi.
+        #   - `celery`: the worker builds them post-fork via the `worker_process_init` handler, and the
+        #     (non-forking) beat scheduler in-process via the `beat_init` handler -- both in
+        #     nautobot.core.celery. (`celery <subcommand>` is always launched with `celery` as the
+        #     Django subcommand, so its own subcommand/flags never reach this check.)
+        # Every other command is single-process, so install the exporters here where in-process channel
+        # creation is safe. Only do so when we are positively sure NO forking command is present:
+        # checking membership anywhere in unparsed_args (rather than parsing out "the" subcommand) is
+        # robust against value-bearing options preceding it (e.g. `--verbosity 2 start`), which would
+        # otherwise be misread as the command and wrongly install pre-fork. The trade-off -- a command
+        # taking a literal "start"/"celery" argument value would over-skip its in-process exporter -- is
+        # safe: a missed export is far better than a SIGSEGV.
+        _FORKING_COMMANDS = {"start", "celery"}
+        if not _FORKING_COMMANDS.intersection(unparsed_args):
+            install_exporters(config=nautobot_config)
+
     execute_from_command_line([sys.argv[0], *unparsed_args])
 
 

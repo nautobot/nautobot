@@ -16,6 +16,7 @@ Nautobot supports these custom field types:
 * Integer: A whole number (positive or negative)
 * Boolean: True or false
 * Date: A date in ISO 8601 format (YYYY-MM-DD)
+* Date/time: A date and time in ISO 8601 format (YYYY-MM-DDThh:mm:ssZ)
 * URL: This will be presented as a link in the web UI
 * JSON: Arbitrary JSON data
 * Markdown: Free-form text that will be rendered from Markdown in the web UI.
@@ -55,6 +56,8 @@ Nautobot supports limited custom validation for custom field values. Following a
 | Text         | ✅ (length) | ✅ (length) | ✅    |                                                                    |
 | Integer      | ✅ (value)  | ✅ (value)  | ❌    |                                                                    |
 | Boolean      | ❌          | ❌          | ❌    |                                                                    |
+| Date         | ❌          | ❌          | ❌    |                                                                    |
+| Date/time    | ❌          | ❌          | ❌    |                                                                    |
 | URL          | ✅ (length) | ✅ (length) | ✅    |                                                                    |
 | Markdown     | ✅ (length) | ✅ (length) | ✅    |                                                                    |
 | JSON         | ✅ (length) | ✅ (length) | ✅    | Must be valid JSON; validators apply to string representation      |
@@ -84,7 +87,9 @@ from nautobot.dcim.models import Location
 
 all_locs = Location.objects.all()  # -> ['Raleigh', 'Charlotte', 'Greensboro']
 filtered_locs_1 = Location.objects.filter(_custom_field_data__location_code="US-NC-RAL42")  # -> ['Raleigh']
-filtered_locs_2 = Location.objects.filter(_custom_field_data__location_code__in=["US-NC-RAL42", "US-NC-CLT22"])  # -> ['Raleigh', 'Charlotte']
+filtered_locs_2 = Location.objects.filter(
+    _custom_field_data__location_code__in=["US-NC-RAL42", "US-NC-CLT22"]
+)  # -> ['Raleigh', 'Charlotte']
 ```
 
 For further ORM interaction with custom fields check out the [custom fields user guide](../../user-guide/feature-guides/custom-fields.md).

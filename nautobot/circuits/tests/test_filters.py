@@ -60,9 +60,9 @@ class ProviderTestCase(FilterTestCases.FilterTestCase):
             circuits__circuit_terminations__location__in=[self.locations[0].pk, self.locations[1].pk]
         ).distinct()
         params = {"location": [self.locations[0].pk, self.locations[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [self.locations[0].name, self.locations[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
 class CircuitTypeTestCase(FilterTestCases.FilterTestCase):
@@ -115,9 +115,9 @@ class CircuitTestCase(FilterTestCases.FilterTestCase, FilterTestCases.TenancyFil
             circuit_terminations__location__in=[locations[0].pk, locations[1].pk]
         ).distinct()
         params = {"location": [locations[0].pk, locations[1].pk]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
         params = {"location": [locations[0].name, locations[1].name]}
-        self.assertQuerysetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
+        self.assertQuerySetEqualAndNotEmpty(self.filterset(params, self.queryset).qs, expected)
 
 
 class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
@@ -163,7 +163,7 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
         interface1 = Interface.objects.create(device=device1, name="eth0", status=interface_status, role=interface_role)
         interface2 = Interface.objects.create(device=device2, name="eth0", status=interface_status)
 
-        circuit_terminations = CircuitTermination.objects.all()
+        circuit_terminations = list(CircuitTermination.objects.filter(provider_network__isnull=True)[:2])
         circuit_terminations[0].tags.set(Tag.objects.get_for_model(CircuitTermination))
 
         cable_statuses = Status.objects.get_for_model(Cable)
@@ -186,17 +186,17 @@ class CircuitTerminationTestCase(FilterTestCases.FilterTestCase):
                 params = {"term_side": [choice]}
                 filterset_result = self.filterset(params, self.queryset).qs
                 qs_result = self.queryset.filter(term_side=choice).distinct()
-                self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
     def test_connected(self):
         params = {"connected": True}
         filterset_result = self.filterset(params, self.queryset).qs
-        qs_result = self.queryset.filter(_path__is_active=True).distinct()
-        self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+        qs_result = self.queryset.filter(cable_paths__is_active=True).distinct()
+        self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
         params = {"connected": False}
         filterset_result = self.filterset(params, self.queryset).qs
-        qs_result = self.queryset.filter(Q(_path__isnull=True) | Q(_path__is_active=False)).distinct()
-        self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+        qs_result = self.queryset.filter(Q(cable_paths__isnull=True) | Q(cable_paths__is_active=False)).distinct()
+        self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
 
 class ProviderNetworkTestCase(FilterTestCases.FilterTestCase):

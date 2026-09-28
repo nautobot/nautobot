@@ -47,11 +47,11 @@ from nautobot.extras.models import (
     Status,
     Tag,
 )
-from nautobot.extras.utils import fixup_dynamic_group_group_types
+from nautobot.extras.utils import FeatureQuery, fixup_dynamic_group_group_types
 from nautobot.ipam.models import IPAddress, Prefix
 from nautobot.ipam.querysets import PrefixQuerySet
 from nautobot.tenancy.models import Tenant
-from nautobot.virtualization.models import VirtualMachine
+from nautobot.virtualization.models import VirtualMachine, VMInterface
 
 
 class DynamicGroupTestBase(TestCase):
@@ -305,12 +305,12 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Assert that the groups we got from `get_for_object()` match the lookup
         # from the group instance itself.
         device1_groups = DynamicGroup.objects.get_for_object(device1)
-        self.assertQuerysetEqualAndNotEmpty(device1_groups, device1.dynamic_groups)
+        self.assertQuerySetEqualAndNotEmpty(device1_groups, device1.dynamic_groups)
 
         # Device4 should not be in ANY Dynamic Groups.
         device4_groups = DynamicGroup.objects.get_for_object(device4)
         self.assertEqual(list(device4_groups), [])
-        self.assertQuerysetEqual(device4.dynamic_groups, [])
+        self.assertQuerySetEqual(device4.dynamic_groups, [])
 
     def test_members(self):
         """Test `DynamicGroup.members`."""
@@ -338,42 +338,42 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # test bulk addition
         sg.add_members(Prefix.objects.filter(ip_version=4))
         self.assertIsInstance(sg.members, PrefixQuerySet)
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
         # test cumulative construction and alternate code path
         sg.add_members(list(Prefix.objects.filter(ip_version=6)))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.all())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
         # test duplicate objects aren't re-added
         sg.add_members(Prefix.objects.all())
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.all())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
         # test idempotence and alternate code path
         sg.add_members(list(Prefix.objects.all()))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.all())
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.all())
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.all().count())
 
         # test bulk removal
         sg.remove_members(Prefix.objects.filter(ip_version=4))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
         # test idempotence and alternate code path
         sg.remove_members(list(Prefix.objects.filter(ip_version=4)))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
         self.assertEqual(sg.static_group_associations.count(), Prefix.objects.filter(ip_version=6).count())
         # test cumulative removal and alternate code path
         sg.remove_members(list(Prefix.objects.filter(ip_version=6)))
-        self.assertQuerysetEqual(sg.members, Prefix.objects.none())
+        self.assertQuerySetEqual(sg.members, Prefix.objects.none())
         self.assertEqual(sg.static_group_associations.count(), 0)
 
         # test property setter
         sg.members = Prefix.objects.filter(ip_version=4)
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
         sg.members = Prefix.objects.filter(ip_version=6)
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
         sg.members = list(Prefix.objects.filter(ip_version=4))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=4))
         sg.members = list(Prefix.objects.filter(ip_version=6))
-        self.assertQuerysetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
+        self.assertQuerySetEqualAndNotEmpty(sg.members, Prefix.objects.filter(ip_version=6))
 
         self.assertIsInstance(Prefix.objects.filter(ip_version=6).first().dynamic_groups, QuerySet)
         self.assertIn(sg, list(Prefix.objects.filter(ip_version=6).first().dynamic_groups))
@@ -672,6 +672,23 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Form instance should have identical field set to filter fields.
         self.assertEqual(sorted(form.fields), sorted(filter_fields))
 
+    def test_all_types_have_filter_forms(self):
+        for model_class in FeatureQuery("dynamic_groups").list_subclasses():
+            # TODO: Fix test for VMInterface instantiation
+            if model_class is VMInterface:
+                continue
+
+            with self.subTest(model_class=model_class):
+                try:
+                    test_dynamic_group = DynamicGroup.objects.create(
+                        name="Placeholder Dynamic Group", content_type=ContentType.objects.get_for_model(model_class)
+                    )
+
+                    self.assertIsNotNone(test_dynamic_group.generate_filter_form())
+                finally:
+                    if test_dynamic_group is not None:
+                        test_dynamic_group.delete()
+
     def test_get_initial(self):
         """Test `DynamicGroup.get_initial()`."""
         group1 = self.first_child  # Filter has `location`
@@ -775,7 +792,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Assert that both querysets return the same results
         group_qs = queryset.filter(multi_query)
         device_qs = Device.objects.filter(location__name__in=multi_value)
-        self.assertQuerysetEqual(group_qs, device_qs, ordered=False)
+        self.assertQuerySetEqual(group_qs, device_qs, ordered=False)
 
         # Now do a non-multi-value filter.
         solo_field = fs.filters["has_interfaces"]
@@ -783,7 +800,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         solo_query = group._generate_query_for_filter(filter_field=solo_field, value=solo_value)
         solo_qs = queryset.filter(solo_query)
         interface_qs = Device.objects.filter(interfaces__isnull=True)
-        self.assertQuerysetEqual(solo_qs, interface_qs, ordered=False)
+        self.assertQuerySetEqual(solo_qs, interface_qs, ordered=False)
 
         # Tags are conjoined in the TagFilterSet, ensure that tags__name is using AND. We know this isn't right
         # since the resulting query actually does tag.name == tag_1 AND tag.name == tag_2, but django_filter does
@@ -806,7 +823,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         nested_query = group._generate_query_for_filter(filter_field=fs.filters["manufacturer"], value=nested_value)
         nested_qs = queryset.filter(nested_query)
         parent_qs = Device.objects.filter(device_type__manufacturer__name__in=nested_value)
-        self.assertQuerysetEqual(nested_qs, parent_qs, ordered=False)
+        self.assertQuerySetEqual(nested_qs, parent_qs, ordered=False)
 
     def test_generate_filter_based_query(self):
         """Test `DynamicGroup._generate_filter_based_query()`."""
@@ -817,7 +834,7 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         # Assert that both querysets return the same results
         group_qs = self.second_child.members
         device_qs = Device.objects.filter(**lookup_kwargs)
-        self.assertQuerysetEqual(group_qs, device_qs, ordered=False)
+        self.assertQuerySetEqual(group_qs, device_qs, ordered=False)
 
     def test_get_group_queryset(self):
         """Test `DynamicGroup._get_group_queryset()`."""
@@ -828,7 +845,40 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         base_qs = Device.objects.all()
         process_qs = base_qs.filter(process_query)
 
-        self.assertQuerysetEqual(group_qs, process_qs, ordered=False)
+        self.assertQuerySetEqual(group_qs, process_qs, ordered=False)
+
+    def test_get_group_queryset_conjoined_tags(self):
+        """A `tags` filter with multiple values must match objects tagged with ALL of them (match-ALL).
+
+        Regression test: previously `_get_group_queryset()` folded the conjoined per-tag predicates into a
+        single `Q`, collapsing them onto one JOIN (`tags__name == A AND tags__name == B`) and matching zero
+        objects. Membership must instead agree with the FilterSet's own `.qs`, which JOINs once per tag value.
+        """
+        tag_a, tag_b = Tag.objects.create(name="DG Tag A"), Tag.objects.create(name="DG Tag B")
+        for tag_obj in (tag_a, tag_b):
+            tag_obj.content_types.add(self.device_ct)
+
+        device_both = self.devices[0]  # tagged with both A and B -> should match
+        device_a_only = self.devices[1]  # tagged with only A -> should NOT match
+        device_both.tags.set([tag_a, tag_b])
+        device_a_only.tags.set([tag_a])
+
+        filter_data = {"tags": [tag_a.name, tag_b.name]}
+        group = DynamicGroup.objects.create(
+            name="Conjoined Tags",
+            filter=filter_data,
+            content_type=self.device_ct,
+        )
+
+        group_qs = group._get_group_queryset()
+        # Membership must exactly match the FilterSet the UI/REST use.
+        self.assertQuerySetEqualAndNotEmpty(
+            group_qs,
+            DeviceFilterSet(filter_data, Device.objects.all()).qs,
+            ordered=False,
+        )
+        self.assertIn(device_both, group_qs)
+        self.assertNotIn(device_a_only, group_qs)
 
     def test_get_ancestors(self):
         """Test `DynamicGroup.get_ancestors()`."""
@@ -1117,6 +1167,20 @@ class DynamicGroupModelTest(DynamicGroupTestBase):  # TODO: BaseModelTestCase mi
         expected = [str(device)]
         self.assertEqual(sorted(dg.members.values_list("name", flat=True)), expected)
 
+    def test_filter_exclude_type(self):
+        """Test that 'exclude' filters work properly in dynamic groups."""
+        dg = DynamicGroup(
+            name="shallow prefixes only",
+            filter={"max_depth": 2},
+            content_type=ContentType.objects.get_for_model(Prefix),
+        )
+        dg.validated_save()
+
+        for prefix in Prefix.objects.exclude(parent__parent__isnull=False):
+            self.assertIn(prefix, dg.members)
+        for prefix in Prefix.objects.filter(parent__parent__isnull=False):
+            self.assertNotIn(prefix, dg.members)
+
     @tag("example_app")
     def test_group_overloaded_filter_form_field(self):
         """FilterForm fields can overload how they pass in the values."""
@@ -1230,7 +1294,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with self.assertNumQueries(1):
             qs = self.devices[0].dynamic_groups
             list(qs)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             qs,
             [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter],
             ordered=False,
@@ -1242,7 +1306,7 @@ class DynamicGroupMixinModelTest(DynamicGroupTestBase):
         with self.assertNumQueries(1):
             qs = self.devices[0].dynamic_groups_cached
             list(qs)
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             qs,
             [self.first_child, self.third_child, self.nested_child, self.multivaluechar_filter, self.search_filter],
             ordered=False,
@@ -1287,7 +1351,7 @@ class DynamicGroupFilterTest(DynamicGroupTestBase, FilterTestCases.FilterTestCas
 
     def test_content_type(self):
         params = {"content_type": ["dcim.device", "virtualization.virtualmachine"]}
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset(params, self.queryset).qs,
             DynamicGroup.objects.filter(
                 content_type__in=[
@@ -1307,11 +1371,11 @@ class DynamicGroupFilterTest(DynamicGroupTestBase, FilterTestCases.FilterTestCas
             params = {"q": value}
             self.assertEqual(self.filterset(params, self.queryset).qs.count(), cnt)
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"q": "dcim"}).qs,
             DynamicGroup.objects.filter(content_type__app_label="dcim"),
         )
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             self.filterset({"q": "device"}).qs,
             DynamicGroup.objects.filter(content_type__model__icontains="device"),
         )

@@ -11,6 +11,7 @@ def tenant_related_objects_data(context):
         "Devices": instance.devices.count(),
         "DynamicGroups": instance.dynamic_groups.count(),
         "IpAddresses": instance.ip_addresses.count(),
+        "IpAddressRanges": instance.ip_address_ranges.count(),
         "Locations": instance.locations.count(),
         "Prefixes": instance.prefixes.count(),
         "Racks": instance.racks.count(),

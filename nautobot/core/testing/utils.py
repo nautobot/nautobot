@@ -1,19 +1,84 @@
+from collections import Counter
 from contextlib import contextmanager
 import logging
 import random
 import re
 import string
+import unittest
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
+from django.core.exceptions import FieldDoesNotExist
+from django.db import connection
 from django.db.models import Q
 from django.db.models.deletion import PROTECT
+from django.test.utils import CaptureQueriesContext
 from tree_queries.models import TreeNodeForeignKey
 
+from nautobot.core.models.sensitive_fields import (
+    _ALL_SENSITIVE_FIELD_NAMES,
+    install_sensitive_fields,
+    RESOLVED_ATTR,
+    SensitiveFieldDescriptor,
+    WITHHELD_ATTR,
+)
 from nautobot.core.templatetags.helpers import bettertitle
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+@contextmanager
+def temporarily_sensitive_fields(model, *field_names):
+    """Declare `field_names` sensitive on `model` for the duration of the block, then restore.
+
+    Lets the sensitive-fields mechanism be exercised against an ordinary non-secret field, so that the
+    tests do not double as a recipe for reading a real credential.
+    """
+    original_declaration = model.__dict__.get("sensitive_fields")
+    original_resolved = model.__dict__.get(RESOLVED_ATTR)
+    original_withheld = model.__dict__.get(WITHHELD_ATTR)
+    original_registry = set(_ALL_SENSITIVE_FIELD_NAMES)
+    original_descriptors = {}
+    for field_name in field_names:
+        # A name that does not resolve to a concrete field has no descriptor to save or restore.
+        # Rejecting such a name is `install_sensitive_fields()`'s job, and this helper is used to test that.
+        try:
+            attname = model._meta.get_field(field_name).attname
+        except (AttributeError, FieldDoesNotExist):
+            continue
+        original_descriptors[attname] = model.__dict__.get(attname)
+
+    # Everything that mutates the model class happens inside the `try`, so that an `install` which rejects
+    # the declaration still leaves the class exactly as it was found.
+    try:
+        model.sensitive_fields = tuple(field_names)
+        for cached_attr in (RESOLVED_ATTR, WITHHELD_ATTR):
+            if cached_attr in model.__dict__:
+                delattr(model, cached_attr)
+        install_sensitive_fields(model)
+        yield
+    finally:
+        for attname, descriptor in original_descriptors.items():
+            if descriptor is None:
+                # Restore Django's own descriptor rather than deleting the attribute outright.
+                if isinstance(model.__dict__.get(attname), SensitiveFieldDescriptor):
+                    field = model._meta.get_field(attname)
+                    setattr(model, attname, field.descriptor_class(field))
+            else:
+                setattr(model, attname, descriptor)
+        if original_declaration is None:
+            del model.sensitive_fields
+        else:
+            model.sensitive_fields = original_declaration
+        for cached_attr, original in ((RESOLVED_ATTR, original_resolved), (WITHHELD_ATTR, original_withheld)):
+            if original is None:
+                if cached_attr in model.__dict__:
+                    delattr(model, cached_attr)
+            else:
+                setattr(model, cached_attr, original)
+        _ALL_SENSITIVE_FIELD_NAMES.clear()
+        _ALL_SENSITIVE_FIELD_NAMES.update(original_registry)
 
 
 def post_data(data):
@@ -154,3 +219,63 @@ def get_expected_menu_item_name(view_model) -> str:
 
     expected = bettertitle(view_model._meta.verbose_name_plural)
     return name_map.get(expected, expected)
+
+
+class AssertNoRepeatedQueries:
+    """Context manager that detects N+1 query patterns by finding SQL templates that repeat excessively.
+
+    Captures all SQL queries within the block, normalizes them (strips literal values to create
+    structural templates), and flags any template that appears more than ``threshold`` times.
+
+    Args:
+        test_case: A ``unittest.TestCase`` instance whose ``.fail()`` will be called on violations.
+        threshold: Maximum allowed repetitions of any single query template (default 10).
+
+    Example::
+
+        with AssertNoRepeatedQueries(self, threshold=10):
+            execute_my_graphql_query()
+    """
+
+    _NORMALIZE_PATTERNS = [
+        (re.compile(r"'[^']*'"), "'?'"),
+        (re.compile(r"IN \([^)]+\)"), "IN (?)"),
+    ]
+
+    def __init__(self, test_case: "unittest.TestCase", threshold: int = 10):
+        self.test_case = test_case
+        self.threshold = threshold
+        self._context = CaptureQueriesContext(connection)
+        self.captured_queries = []
+
+    def __enter__(self):
+        self._context.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._context.__exit__(exc_type, exc_val, exc_tb)
+        if exc_type is not None:
+            return False
+
+        self.captured_queries = [q["sql"] for q in self._context.captured_queries]
+        normalized = [self._normalize_sql(q) for q in self.captured_queries]
+        counts = Counter(normalized)
+
+        violations = {pattern: count for pattern, count in counts.items() if count > self.threshold}
+
+        if violations:
+            details = "\n".join(
+                f"  [{count}x] {pattern[:300]}" for pattern, count in sorted(violations.items(), key=lambda x: -x[1])
+            )
+            self.test_case.fail(
+                f"Detected N+1 query pattern(s) exceeding threshold of {self.threshold}:\n{details}\n"
+                f"Total queries: {len(self.captured_queries)}"
+            )
+        return False
+
+    @classmethod
+    def _normalize_sql(cls, sql):
+        """Replace literal values with placeholders so structurally identical queries share a key."""
+        for pattern, replacement in cls._NORMALIZE_PATTERNS:
+            sql = pattern.sub(replacement, sql)
+        return sql

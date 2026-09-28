@@ -32,7 +32,14 @@
                 const actionUrl = button.getAttribute('action-url');
                 const form = document.getElementById('{{ form_id }}');
                 if (form && actionUrl) {
-                    form.action = actionUrl;
+                    // Default `return_url` to the current page so the post-submit redirect lands the user
+                    // back where they invoked the bulk action (e.g. a detail-view tab) rather than at
+                    // the generic model list. Skip if the button's action-url already specifies one.
+                    const url = new URL(actionUrl, window.location.origin);
+                    if (!url.searchParams.has('return_url')) {
+                        url.searchParams.set('return_url', window.location.pathname + window.location.search);
+                    }
+                    form.action = url.pathname + url.search;
                     form.submit();
                 }
                 else {

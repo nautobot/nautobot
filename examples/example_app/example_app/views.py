@@ -1,3 +1,5 @@
+import random
+
 from django.shortcuts import HttpResponse, render
 from django.utils.html import format_html
 from rest_framework.decorators import action
@@ -253,6 +255,20 @@ class ExampleModelUIViewSet(views.NautobotUIViewSet):
         ),
     )
 
+    def alter_queryset(self, request):
+        """Hide "archived" records (negative `number`) from the default list view.
+
+        If the user explicitly filters on `number` (e.g., `number` or `number__lt`),
+        return the queryset as is.
+        """
+        queryset = super().alter_queryset(request)
+        filter_params = self.get_filter_params(request)
+        # This is fragile and can create a false positive if we add another filter
+        # that starts with "number", but it's just an example.
+        if not any(param.startswith("number") for param in filter_params):
+            queryset = queryset.exclude(number__lt=0)
+        return queryset
+
     def get_extra_context(self, request, instance):
         context = super().get_extra_context(request, instance)
         if self.action == "retrieve":
@@ -361,6 +377,14 @@ class AnotherExampleModelUIViewSet(
             ]
         }
     )
+
+    def list(self, request, *args, **kwargs):
+        """View that sometimes returns an error through HTMX, to demonstrate HTMX error handling in the template."""
+        if (
+            request.headers.get("HX-Request", False) and random.choice([True, False])  # noqa: S311 # suspicious-non-cryptographic-random-usage
+        ):
+            raise RuntimeError("This is a test of error responses from HTMX. Do not adjust your Nautobot.")
+        return super().list(request, *args, **kwargs)
 
     @action(
         detail=True,

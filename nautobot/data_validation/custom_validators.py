@@ -48,7 +48,7 @@ class BaseValidator(CustomValidator):
 
     def clean(self, exclude_disabled_rules=True):  # pylint: disable=too-many-branches
         """The clean method executes the actual rule enforcement logic for each model."""
-        obj = self.context["object"]
+        obj = self.context["obj"]
 
         method_name = "get_enabled_for_model" if exclude_disabled_rules else "get_for_model"
 
@@ -61,6 +61,9 @@ class BaseValidator(CustomValidator):
                 field_value = ""
 
             if rule.context_processing:
+                self.context.warn_about_deprecated_template_variables(
+                    rule.regular_expression, source=f"Data validation rule '{rule}'"
+                )
                 # Render the regular_expression as a jinja2 string and ensure it is valid
                 try:
                     regular_expression = render_jinja2(rule.regular_expression, self.context)
@@ -155,11 +158,11 @@ class BaseValidator(CustomValidator):
         for repo in GitRepository.objects.get_for_provided_contents("data_validation.data_compliance_rule"):
             for compliance_class in get_data_compliance_classes_from_git_repo(repo):
                 if (
-                    f"{self.context['object']._meta.app_label}.{self.context['object']._meta.model_name}"
+                    f"{self.context['obj']._meta.app_label}.{self.context['obj']._meta.model_name}"
                     != compliance_class.model
                 ):
                     continue
-                compliance_class(self.context["object"]).clean()
+                compliance_class(self.context["obj"]).clean()
 
     def get_compliance_result(self, message=None, instance=None, attribute=None, valid=True):
         """Generate a DataCompliance object based on the given parameters."""
@@ -253,7 +256,7 @@ class DataComplianceRule(CustomValidator):
         We pass in any attributes that had ComplianceErrors raised so that we end up with the list of attributes that should now be valid.
         This doesn't create DataCompliance objects for any fields that have always been valid or not referenced in the DataComplianceRule.
         """
-        instance = self.context["object"]
+        instance = self.context["obj"]
         if not exclude_attributes:
             exclude_attributes = []
         attributes = (
@@ -273,7 +276,7 @@ class DataComplianceRule(CustomValidator):
         try:
             self.audit()
             self.mark_existing_attributes_as_valid()
-            self.compliance_result(message=f"All {self.name} class rules for {self.context['object']} are valid.")
+            self.compliance_result(message=f"All {self.name} class rules for {self.context['obj']} are valid.")
         except ComplianceError as ex:
             # Create a list of attributes that had ComplianceErrors raised to exclude from later function call
             exclude_attributes = []
@@ -290,7 +293,7 @@ class DataComplianceRule(CustomValidator):
             finally:
                 self.mark_existing_attributes_as_valid(exclude_attributes=exclude_attributes)
                 self.compliance_result(
-                    message=f"One or more {self.name} class rules for {self.context['object']} are not valid.",
+                    message=f"One or more {self.name} class rules for {self.context['obj']} are not valid.",
                     valid=False,
                 )
             if self.enforce:
@@ -303,7 +306,7 @@ class DataComplianceRule(CustomValidator):
 
     def compliance_result(self, message, attribute=None, valid=True):
         """Generate a DataCompliance object based on the given parameters."""
-        instance = self.context["object"]
+        instance = self.context["obj"]
         attribute_value = None
         if attribute:
             attribute_value = getattr(instance, attribute)

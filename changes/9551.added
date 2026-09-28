@@ -1,0 +1,1 @@
+Added `get_saved_views_for_user` to `nautobot.apps.views`.

@@ -18,7 +18,7 @@ Navigate to the custom fields page by clicking on **Extensibility -> Custom Fiel
     CustomField model's `slug` attribute was renamed to `key` (unique for all CustomField instances), which contains a GraphQL-safe string used as the key in the underlying custom field data dictionary.
 
     These aforementioned changes do not require users to do any manual work as they are properly handled by data migrations during the upgrade from Nautobot v1.x to v2.0. Note that if you have non-GraphQL-safe `slug` values in your database pre-migration, some of the resulting CustomField `key` values might be altered to ensure that `key` values for all CustomField instances are valid and unique.
-  
+
 #### Label
 
 The label is the human readable label of the custom field that will be displayed on the associated object detail view.
@@ -85,6 +85,13 @@ The list of content types to add this custom field to. Only models that inherit 
 
 !!! note
     When a custom field is created or associated to a new content type (model), all affected existing objects will be updated to add the custom field. The initial value will be set to the `default` value of the custom field. This update runs as a background task via [Celery](../administration/installation/services.md#worker-service), so it may take a few seconds or more before all objects reflect the new custom field, depending on the size of your database.
+
+#### Scope Filter
+
+The list of filters that will be applied to models from selected content types to show custom field only for subset of records.
+
+!!! note
+    Having more than 10 custom fields with scope filters enabled may impact performance when loading detail views for associated content types.
 
 ### Validation Rules
 
@@ -154,7 +161,7 @@ Since automatic provisioning is only performed when a custom field's content typ
 
 If a custom field is created with `required=False` and then later changed to `required=True`, all of the associated objects that do not yet have a value for this field will fail validation the next time they're saved unless updated with a valid value. Similarly, changes to the validation fields for a custom field will not automatically result in changes to affected objects, but may require changes the next time those objects are edited in order to bring them into compliance with the updated validation rules.
 
-If a custom field's `default` value is changed, newly created objects will use the new default, but existing objects that were set to the previous default value will *not* automatically be updated.
+If a custom field's `default` value is changed, newly created objects will use the new default, but existing objects that were set to the previous default value will _not_ automatically be updated.
 
 ## Deleting Custom Fields
 

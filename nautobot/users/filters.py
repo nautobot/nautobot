@@ -94,6 +94,7 @@ class TokenFilterSet(BaseFilterSet):
 
     class Meta:
         model = Token
+        # TODO 4.0: consider removing "key".
         fields = ["id", "key", "write_enabled", "created", "expires", "description"]
 
 

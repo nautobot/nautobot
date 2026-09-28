@@ -1,5 +1,6 @@
 {% extends 'generic/object_retrieve.html' %}
 {% load buttons %}
+{% load cables %}
 {% load helpers %}
 
 {% block extra_buttons %}
@@ -13,7 +14,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:consoleport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_consoleports' pk=object.pk %}">
-                            <span class="mdi mdi-console" aria-hidden="true"></span> Console Ports
+                            <span class="mdi {{ 'consoleport'|termination_type_icon }}" aria-hidden="true"></span> Console Ports
                         </a>
                     </li>
                 {% endif %}
@@ -21,7 +22,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:consoleserverport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_consoleserverports' pk=object.pk %}">
-                            <span class="mdi mdi-console-network-outline" aria-hidden="true"></span> Console Server Ports
+                            <span class="mdi {{ 'consoleserverport'|termination_type_icon }}" aria-hidden="true"></span> Console Server Ports
                         </a>
                     </li>
                 {% endif %}
@@ -29,7 +30,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:powerport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_powerports' pk=object.pk %}">
-                            <span class="mdi mdi-power-plug-outline" aria-hidden="true"></span> Power Ports
+                            <span class="mdi {{ 'powerport'|termination_type_icon }}" aria-hidden="true"></span> Power Ports
                         </a>
                     </li>
                 {% endif %}
@@ -37,7 +38,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:poweroutlet_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_poweroutlets' pk=object.pk %}">
-                            <span class="mdi mdi-power-socket" aria-hidden="true"></span> Power Outlets
+                            <span class="mdi {{ 'poweroutlet'|termination_type_icon }}" aria-hidden="true"></span> Power Outlets
                         </a>
                     </li>
                 {% endif %}
@@ -45,7 +46,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:interface_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_interfaces' pk=object.pk %}">
-                            <span class="mdi mdi-ethernet" aria-hidden="true"></span> Interfaces
+                            <span class="mdi {{ 'interface'|termination_type_icon }}" aria-hidden="true"></span> Interfaces
                         </a>
                     </li>
                 {% endif %}
@@ -53,7 +54,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:frontport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_frontports' pk=object.pk %}">
-                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Front Ports
+                            <span class="mdi {{ 'frontport'|termination_type_icon }}" aria-hidden="true"></span> Front Ports
                         </a>
                     </li>
                 {% endif %}
@@ -61,7 +62,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:rearport_add' %}?module={{ object.pk }}&return_url={% url 'dcim:module_rearports' pk=object.pk %}">
-                            <span class="mdi mdi-square-rounded-outline" aria-hidden="true"></span> Rear Ports
+                            <span class="mdi {{ 'rearport'|termination_type_icon }}" aria-hidden="true"></span> Rear Ports
                         </a>
                     </li>
                 {% endif %}
@@ -69,7 +70,7 @@
                     <li>
                         <a class="dropdown-item"
                            href="{% url 'dcim:modulebay_add' %}?parent_module={{ object.pk }}&return_url={% url 'dcim:module_modulebays' pk=object.pk %}">
-                            <span class="mdi mdi-tray" aria-hidden="true"></span> Module Bays
+                            <span class="mdi {{ 'modulebay'|termination_type_icon }}" aria-hidden="true"></span> Module Bays
                         </a>
                     </li>
                 {% endif %}

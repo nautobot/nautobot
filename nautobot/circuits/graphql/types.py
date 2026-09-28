@@ -24,6 +24,6 @@ class CircuitTerminationType(OptimizedNautobotObjectType, CableTerminationMixin,
     resolve_cable_peer_circuit_termination = construct_resolver("CircuitTermination", "cable_peer")
     resolve_cable_peer_front_port = construct_resolver("FrontPort", "cable_peer")
     resolve_cable_peer_interface = construct_resolver("Interface", "cable_peer")
-    resolve_cable_rear_port = construct_resolver("RearPort", "cable_peer")
+    resolve_cable_peer_rear_port = construct_resolver("RearPort", "cable_peer")
     resolve_connected_circuit_termination = construct_resolver("CircuitTermination", "connected_endpoint")
     resolve_connected_interface = construct_resolver("Interface", "connected_endpoint")

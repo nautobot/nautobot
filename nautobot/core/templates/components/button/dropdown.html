@@ -1,4 +1,4 @@
-<div class="dropdown d-inline-flex">
+<div id="component-{{ component.component_id }}" class="dropdown d-inline-flex">
     <button type="button" class="btn btn-{{ color }} dropdown-toggle" data-bs-toggle="dropdown"
             aria-haspopup="true" aria-expanded="false"
             {% for key, value in attributes.items %}{{ key }}="{{ value }}" {% endfor %}
@@ -10,7 +10,8 @@
     <ul class="dropdown-menu">
         {% for child in children %}
             <li>
-                <a href="{{ child.link }}" class="dropdown-item text-{{ child.color }}"
+                <a href="{% if 'disabled' in child.attributes %}#{% else %}{{ child.link|default:'#' }}{% endif %}"
+                   class="dropdown-item text-{{ child.color }} {% if 'disabled' in child.attributes %}disabled{% endif %}"
                    {% for key, value in child.attributes.items %}{{ key }}="{{ value }}" {% endfor %}
                 >
                     {% if child.icon %}<span class="mdi {{ child.icon }}" aria-hidden="true"></span>{% endif %}

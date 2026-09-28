@@ -11,5 +11,8 @@ Each VRF may have one or more import and/or export route targets applied to it. 
 
 Prefixes (and, implicitly, their contained IP addresses) can be assigned to zero or more VRFs in their namespace, as best suits their usage within your network. Any prefix or IP address not assigned to a VRF is said to belong to the "global" VRF within their namespace. It's important to distinguish this from the "global" namespace that you may have defined and which may contain any number of distinct VRFs.
 
+!!! note
+    VRF-to-Prefix associations cannot be set during Prefix CSV/bulk import; assign them via the UI or the `/api/ipam/vrf-prefix-assignments/` REST endpoint after import.
+
 +/- 2.0.0
     In Nautobot 1.x, each prefix could only be assigned to at most one VRF, and you would have to create multiple prefix records in the database to reflect a prefix's existence in multiple VRFs. On migrating existing data to Nautobot 2.0, you may need to do some cleanup of your IPAM data to fit the new models.

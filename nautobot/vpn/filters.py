@@ -10,8 +10,10 @@ from nautobot.apps.filters import (
     StatusModelFilterSetMixin,
     TenancyModelFilterSetMixin,
 )
+from nautobot.core.utils.data import is_uuid
 from nautobot.dcim.models import Device, Interface
-from nautobot.ipam.models import IPAddress
+from nautobot.ipam.models import IPAddress, VLAN
+from nautobot.virtualization.models import VMInterface
 
 from . import models
 
@@ -139,7 +141,7 @@ class VPNProfilePhase2PolicyAssignmentFilterSet(BaseFilterSet):
         fields = "__all__"
 
 
-class VPNFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
+class VPNFilterSet(RoleModelFilterSetMixin, StatusModelFilterSetMixin, TenancyModelFilterSetMixin, NautobotFilterSet):  # pylint: disable=too-many-ancestors
     """Filter for VPN."""
 
     q = SearchFilter(
@@ -219,10 +221,9 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         to_field_name="name",
         label="Source Interface (ID or name)",
     )
-    source_ipaddress = NaturalKeyOrPKMultipleChoiceFilter(
-        queryset=IPAddress.objects.all(),
-        to_field_name="name",
-        label="Source IPAddress (ID or name)",
+    source_ipaddress = MultiValueCharFilter(
+        method="filter_source_ipaddress",
+        label="Source IP Address (address or ID)",
     )
     tunnel_interface = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Interface.objects.filter(type="tunnel"),
@@ -240,8 +241,55 @@ class VPNTunnelEndpointFilterSet(RoleModelFilterSetMixin, TenancyModelFilterSetM
         label="Endpoint Z",
     )
 
+    def filter_source_ipaddress(self, queryset, name, value):
+        pk_values = set(item for item in value if is_uuid(item))
+        addresses = set(item for item in value if item not in pk_values)
+
+        ip_queryset = IPAddress.objects.filter_address_or_pk_in(addresses, pk_values)
+        return queryset.filter(source_ipaddress__in=ip_queryset).distinct()
+
     class Meta:
         """Meta attributes for filter."""
 
         model = models.VPNTunnelEndpoint
+        fields = "__all__"
+
+
+class VPNTerminationFilterSet(NautobotFilterSet):
+    """Filter for VPNTermination."""
+
+    q = SearchFilter(
+        filter_predicates={
+            "vpn__name": "icontains",
+            "vlan__name": "icontains",
+            "interface__name": "icontains",
+            "vm_interface__name": "icontains",
+        }
+    )
+    vpn = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=models.VPN.objects.all(),
+        to_field_name="name",
+        label="VPN (name or ID)",
+    )
+    vlan = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="vid",
+        queryset=VLAN.objects.all(),
+        label="VLAN (VID or ID)",
+    )
+    interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="name",
+        queryset=Interface.objects.all(),
+        label="Interface (name or ID)",
+    )
+    vm_interface = NaturalKeyOrPKMultipleChoiceFilter(
+        prefers_id=True,
+        to_field_name="name",
+        queryset=VMInterface.objects.all(),
+        label="VM Interface (name or ID)",
+    )
+
+    class Meta:
+        model = models.VPNTermination
         fields = "__all__"

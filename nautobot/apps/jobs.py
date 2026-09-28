@@ -31,6 +31,7 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
+from nautobot.extras.utils import get_celery_queues
 
 __all__ = (
     "BaseJob",
@@ -58,6 +59,7 @@ __all__ = (
     "StringVar",
     "TextVar",
     "enqueue_job_hooks",
+    "get_celery_queues",
     "get_job",
     "get_jobs",
     "is_job",

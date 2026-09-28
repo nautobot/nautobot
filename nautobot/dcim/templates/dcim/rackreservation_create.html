@@ -1,0 +1,24 @@
+{% extends 'generic/object_create.html' %}
+{% load form_helpers %}
+
+{% block form %}
+    <div class="card">
+        <div class="card-header"><strong>Rack Reservation</strong></div>
+        <div class="card-body">
+            {% render_field form.location %}
+            {% render_field form.rack_group %}
+            {% render_field form.rack %}
+            {% render_field form.units %}
+            {% render_field form.user %}
+            {% render_field form.description %}
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header"><strong>Tenant Assignment</strong></div>
+        <div class="card-body">
+            {% render_field form.tenant_group %}
+            {% render_field form.tenant %}
+        </div>
+    </div>
+    {% include 'inc/extras_features_edit_form_fields.html' %}
+{% endblock %}

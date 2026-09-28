@@ -10,6 +10,8 @@ from nautobot.core.forms import (
     SmallTextarea,
     TagFilterField,
 )
+from nautobot.core.forms.constants import BOOLEAN_WITH_BLANK_CHOICES
+from nautobot.core.forms.widgets import StaticSelect2
 from nautobot.dcim.form_mixins import (
     LocatableModelBulkEditFormMixin,
     LocatableModelFilterFormMixin,
@@ -324,3 +326,4 @@ class CircuitTerminationFilterForm(LocatableModelFilterFormMixin, NautobotFilter
     cloud_network = DynamicModelMultipleChoiceField(
         queryset=CloudNetwork.objects.all(), to_field_name="name", required=False
     )
+    has_cable = forms.NullBooleanField(required=False, widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES))

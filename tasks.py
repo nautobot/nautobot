@@ -13,10 +13,12 @@ limitations under the License.
 """
 
 import concurrent.futures
+from functools import partial
 import json
 import os
 import platform
 import re
+import shlex
 import time
 
 from invoke import Collection, task as invoke_task
@@ -83,6 +85,10 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
+            # Sticking with 3.13 rather than 3.14 as our default for now, because Django 5.2's test runner doesn't
+            # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
+            # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
+            # https://code.djangoproject.com/ticket/36531
             "python_ver": "3.13",
             "local": False,
             "ephemeral_ports": False,
@@ -495,47 +501,73 @@ def docker_push(context, branch, commit="", datestamp=""):  # pylint: disable=re
 # ------------------------------------------------------------------------------
 # START / STOP / DEBUG
 # ------------------------------------------------------------------------------
+def _parse_env_kwargs(env) -> dict:
+    """Parse a list of 'KEY=VALUE' strings into a dict.
+
+    Args:
+        env: None, or an iterable of 'KEY=VALUE' strings (as produced by invoke's
+            iterable=['env'] CLI argument).
+
+    Returns:
+        dict mapping keys to values; empty dict if env is falsy.
+    """
+    if not env:
+        return {}
+    result = {}
+    for item in env:
+        if "=" not in item:
+            raise Exit(f"Invalid --env value {item!r}; expected KEY=VALUE.")
+        key, value = item.split("=", 1)
+        result[key] = value
+    return result
+
+
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def debug(context, service=None):
+def debug(context, service=None, env=None):
     """Start all services, or specified service(s) and their dependencies, in debug mode."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Starting {service or 'all services'} in debug mode...")
-
     with concurrent.futures.ThreadPoolExecutor() as executor:
         executor.submit(dump_service_ports_to_disk, context)
-        docker_compose(context, "up", service=service)
+        docker_compose(context, "up", service=service, env=dict_env)
 
 
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def start(context, service=None):
+def start(context, service=None, env=None):
     """Start all services, or specified service(s) and their dependencies, in detached mode."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Starting {service or 'all services'} in detached mode...")
-    docker_compose(context, "up --detach", service=service)
+    docker_compose(context, "up --detach", service=service, env=dict_env)
     dump_service_ports_to_disk(context)
 
 
 @task(
     help={
-        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker)."
+        "service": "If specified, only affect the specified service(s); can be provided multiple times (i.e. -s nautobot -s celery_worker).",
+        "env": "Environment variable in KEY=VALUE format; can be provided multiple times (i.e. -e FOO=bar -e BAZ=qux).",
     },
-    iterable=["service"],
+    iterable=["service", "env"],
 )
-def restart(context, service=None):
+def restart(context, service=None, env=None):
     """Gracefully restart specified or all services."""
     service = " ".join(service) if service else ""
+    dict_env = _parse_env_kwargs(env)
     print(f"Restarting {service or 'all services'}...")
-    docker_compose(context, "restart", service=service)
+    docker_compose(context, "restart", service=service, env=dict_env)
 
 
 @task(
@@ -635,32 +667,36 @@ def logs(context, service=None, follow=False, tail=0):
     help={
         "quiet": "Suppress verbose output on launch",
         "print_sql": "Enable printing of all executed SQL statements",
+        "command": "Python code to execute non-interactively, instead of launching an interactive shell",
     }
 )
-def nbshell(context, quiet=False, print_sql=False):
-    """Launch an interactive Nautobot shell."""
-    command = "nautobot-server nbshell"
+def nbshell(context, quiet=False, print_sql=False, command=None):
+    """Launch an interactive Nautobot shell, or run a single Python command non-interactively."""
+    cmd = "nautobot-server nbshell"
 
     if quiet:
-        command += " --quiet"
+        cmd += " --quiet"
     if print_sql:
-        command += " --print-sql"
+        cmd += " --print-sql"
+    if command:
+        cmd += f" --command {shlex.quote(command)}"
 
-    run_command(context, command)
+    run_command(context, cmd)
 
 
 @task(
     help={
         "service": "Name of the service to shell into",
         "root": "Launch shell as root",
+        "command": "Run this one-off command in the container instead of launching an interactive shell.",
     }
 )
-def cli(context, service="nautobot", root=False):
-    """Launch a bash shell inside the running Nautobot (or other) Docker container."""
+def cli(context, service="nautobot", root=False, command=""):
+    """Launch a bash shell inside the running Nautobot (or other) Docker container, or run a one-off command with `-c`."""
     context.nautobot.local = False
-    command = "bash"
+    cmd = command or "bash"
 
-    run_command(context, command, service=service, root=root)
+    run_command(context, cmd, service=service, root=root)
 
 
 @task(
@@ -791,13 +827,13 @@ def build_and_check_docs(context):
 
 def build_nautobot_docs(context):
     "Build Nautobot docs."
-    command = "mkdocs build --no-directory-urls --strict"
+    command = "mkdocs build"
     run_command(context, command)
 
 
 def build_example_app_docs(context):
     """Build Example App docs."""
-    command = "mkdocs build --no-directory-urls --strict"
+    command = "mkdocs build"
     if is_truthy(context.nautobot.local):
         local_command = f"cd examples/example_app && {command}"
         print_command(local_command)
@@ -867,30 +903,38 @@ def open_selenium_vnc(context):
 
 
 # ------------------------------------------------------------------------------
-# TESTS
+# TESTS AND LINTING
 # ------------------------------------------------------------------------------
+
+PYTHON_LINT_TARGETS = ["development/", "examples/", "nautobot/", "scripts/", "tasks.py"]
 
 
 @task(
     help={
-        "target": "Module or file or directory to inspect, repeatable",
+        "jobs": "Number of parallel processes to split into (default 1, use 0 to autodetect available CPU count)."
+        "Use with caution, as we've seen occasional false positives when running with values other than 1.",
         "recursive": "Must be set if target is a directory rather than a module or file name",
+        "target": "Module or file or directory to inspect, repeatable",
+        "verbose": "Output additional information verbosely",
     },
     iterable=["target"],
 )
-def pylint(context, target=None, recursive=False):
+def pylint(context, jobs=1, recursive=False, target=None, verbose=False):
     """Perform static analysis of Nautobot code."""
-    base_command = 'pylint --verbose --init-hook "import nautobot; nautobot.setup()" '
+    command = "pylint "
+    if verbose:
+        command += "--verbose "
+    if jobs != 1:
+        command += f"--jobs={jobs} "
     if not target:
         # Lint everything
-        command = base_command + "--recursive=y nautobot tasks.py development/ examples/"
-        run_command(context, command)
-    else:
-        command = base_command
-        if recursive:
-            command += "--recursive=y "
-        command += " ".join(target)
-        run_command(context, command)
+        target = PYTHON_LINT_TARGETS
+        recursive = True
+
+    if recursive:
+        command += "--recursive=y "
+    command += " ".join(target)
+    run_command(context, command)
 
 
 @task(
@@ -905,7 +949,7 @@ def pylint(context, target=None, recursive=False):
 def ruff(context, fix=False, diff=False, target=None, output_format="concise"):
     """Run ruff to perform code formatting and linting."""
     if not target:
-        target = ["development", "examples", "nautobot", "tasks.py"]
+        target = PYTHON_LINT_TARGETS
 
     command = "ruff format "
     if not fix:
@@ -1012,7 +1056,9 @@ def hadolint(context):
 def markdownlint(context, fix=False):
     """Lint Markdown files."""
     if fix:
-        command = "pymarkdown fix --recurse nautobot/docs examples *.md"
+        # Disable md044 (proper-names) only while fixing: its fixer over-applies
+        # proper-name capitalization to URLs, link/image targets, icons, etc.
+        command = "pymarkdown --disable-rules md044 fix --recurse nautobot/docs examples *.md"
         run_command(context, command)
     # fix mode doesn't scan/report issues it can't fix, so always run scan even after fixing
     command = "pymarkdown scan --recurse nautobot/docs examples *.md"
@@ -1097,6 +1143,7 @@ def check_schema(context, api_version=None):
         "failfast": "Fail as soon as a single test fails don't run the entire test suite.",
         "keepdb": "Save test database after test run for faster re-testing in combination with `--reusedb`.",
         "label": "Specify a directory or module to test instead of running all Nautobot tests.",
+        "no_input": "Suppress interactive prompts (e.g. confirmation when `--no-reusedb` would destroy an existing test database).",
         "parallel": "Run tests in parallel; auto-detects the number of workers if not specified with `--parallel-workers`.",
         "parallel_workers": "Specify the number of workers to use when running tests in parallel.",
         "pattern": "Only run tests which match the given substring. Can be used multiple times.",
@@ -1119,6 +1166,7 @@ def tests(
     failfast=False,
     keepdb=True,
     label="nautobot",
+    no_input=False,
     parallel=True,
     parallel_workers=None,
     pattern=None,
@@ -1160,6 +1208,8 @@ def tests(
         command += " --keepdb"
     if not reusedb:
         command += " --no-reusedb"
+    if no_input:
+        command += " --no-input"
     if failfast:
         command += " --failfast"
     if buffer:
@@ -1231,21 +1281,44 @@ def migration_test(context, dataset, db_engine="postgres", db_name="nautobot_mig
         )
 
 
-@task
-def lint(context):
+@task(
+    help={"fix": "Automatically apply formatting and linting recommendations where supported. May not fix all issues."}
+)
+def lint(context, fix=False):
     """Run all linters."""
-    hadolint(context)
-    markdownlint(context)
-    yamllint(context)
-    ruff(context)
-    pylint(context)
-    eslint(context)
-    prettier(context)
-    djhtml(context)
-    djlint(context)
-    check_migrations(context)
-    check_schema(context)
-    build_and_check_docs(context)
+    linters = (
+        partial(hadolint, context),
+        partial(markdownlint, context, fix=fix),
+        partial(yamllint, context),
+        partial(ruff, context, fix=fix),
+        partial(pylint, context),
+        partial(eslint, context, fix=fix),
+        partial(prettier, context, fix=fix),
+        partial(djhtml, context, fix=fix),
+        partial(djlint, context),
+        partial(check_migrations, context),
+        partial(check_schema, context),
+        partial(build_and_check_docs, context),
+    )
+
+    exception_group = []
+
+    # Run each linter even if preceeding linter has failure
+    for linter in linters:
+        try:
+            linter()
+        except Exception as exception:
+            exception_group.append((linter.func.__name__, exception))
+
+    if len(exception_group) > 0:
+        exception_messages = [
+            f"----- {linter_name} -----\n" + str(exception) for linter_name, exception in exception_group
+        ]
+        output_string = "\n".join(exception_messages)
+        print("-" * 80)
+        print("Lint Errors Detected")
+        print("-" * 80)
+        raise Exit(output_string)
 
 
 @task(help={"version": "The version number or the rule to update the version."})

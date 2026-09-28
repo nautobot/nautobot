@@ -22,6 +22,12 @@ from nautobot.core.celery import app, register_jobs
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.jobs.bulk_actions import BulkDeleteObjects, BulkEditObjects
 from nautobot.core.jobs.cleanup import LogsCleanup
+from nautobot.core.jobs.customfields import (
+    CleanupCustomFieldsData,
+    DeleteCustomFieldData,
+    ProvisionCustomField,
+    UpdateCustomFieldChoiceData,
+)
 from nautobot.core.jobs.groups import RefreshDynamicGroupCacheJobButtonReceiver, RefreshDynamicGroupCaches
 from nautobot.core.utils.lookup import get_filterset_for_model
 from nautobot.core.utils.requests import get_filterable_params_from_filter_params
@@ -49,9 +55,10 @@ from nautobot.extras.jobs import (
     StringVar,
     TextVar,
 )
-from nautobot.extras.models import ExportTemplate, GitRepository, SavedView
+from nautobot.extras.models import ExportTemplate, GitRepository
 from nautobot.extras.plugins import CustomValidator, ValidationError
 from nautobot.extras.registry import registry
+from nautobot.extras.utils import get_saved_view_or_none
 
 name = "System Jobs"
 
@@ -166,7 +173,14 @@ class ExportObjectList(Job):
     def _get_saved_view_filter_params(self, query_params):
         """Extract filter params from saved view if applicable."""
         if "saved_view" in query_params and "all_filters_removed" not in query_params:
-            saved_view_filters = SavedView.objects.get(pk=query_params["saved_view"]).config.get("filter_params", {})
+            # Not using get_saved_view_filter_params(), as that cannot distinguish a missing Saved View from one with no filter params.
+            saved_view = get_saved_view_or_none(query_params["saved_view"])
+            if saved_view is None:
+                self.logger.warning(
+                    "Saved view %s not found; exporting without its filter parameters.", query_params["saved_view"]
+                )
+                return {}
+            saved_view_filters = saved_view.config.get("filter_params", {})
             if len(query_params) > 1:
                 # Retain only filters also present in query_params
                 saved_view_filters = {key: value for key, value in saved_view_filters.items() if key in query_params}
@@ -293,7 +307,7 @@ class ImportObjects(Job):
                 if validation_failed:
                     raise AbortTransaction
                 return new_objs, validation_failed
-        # If validation failed return an empty list, since all objs created where rolled back
+        # If validation failed return an empty list, since all objs created were rolled back
         self.logger.warning("Rolling back all %s records.", len(new_objs))
         return [], validation_failed
 
@@ -587,14 +601,18 @@ class ValidateModelData(Job):
 jobs = [
     BulkDeleteObjects,
     BulkEditObjects,
+    CleanupCustomFieldsData,
+    DeleteCustomFieldData,
     ExportObjectList,
     GitRepositorySync,
     GitRepositoryDryRun,
     ImportObjects,
     LogsCleanup,
+    ProvisionCustomField,
     RefreshDynamicGroupCaches,
     RefreshDynamicGroupCacheJobButtonReceiver,
     RunRegisteredDataComplianceRules,
+    UpdateCustomFieldChoiceData,
     ValidateModelData,
 ]
 register_jobs(*jobs)

@@ -11,6 +11,7 @@ from .models import (
 app_name = "ipam"
 
 router = NautobotUIViewSetRouter()
+router.register("ip-address-ranges", views.IPAddressRangeUIViewSet)
 router.register("ip-address-to-interface", views.IPAddressToInterfaceUIViewSet)
 router.register("namespaces", views.NamespaceUIViewSet)
 router.register("prefixes", views.PrefixUIViewSet)

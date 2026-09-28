@@ -12,7 +12,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.viewsets import NautobotUIViewSet
 from nautobot.dcim.models import Controller, ControllerManagedDeviceGroup, Device, Location, Rack, RackReservation
 from nautobot.extras.models import DynamicGroup
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, VLAN, VRF
+from nautobot.ipam.models import IPAddress, IPAddressRange, Namespace, Prefix, VLAN, VRF
 from nautobot.tenancy.api import serializers
 from nautobot.virtualization.models import Cluster, VirtualMachine
 
@@ -103,6 +103,7 @@ class TenantUIViewSet(NautobotUIViewSet):
                     Device,
                     DynamicGroup,
                     IPAddress,
+                    IPAddressRange,
                     # TODO: Should we include child locations of the filtered locations in the location_count below?
                     Location,
                     Namespace,

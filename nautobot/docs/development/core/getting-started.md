@@ -54,10 +54,10 @@ changes                 nautobot
 
 ### About Remote Repos
 
-Git refers to remote repositories as *remotes*. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
+Git refers to remote repositories as _remotes_. When you make your initial clone of your fork, Git defaults to naming this remote `origin`. Throughout this documentation, the following remote names will be used:
 
-* `origin` - The default remote name used to refer to *your fork of Nautobot*
-* `upstream` - The main remote used to refer to the *official Nautobot repository*
+* `origin` - The default remote name used to refer to _your fork of Nautobot_
+* `upstream` - The main remote used to refer to the _official Nautobot repository_
 
 ### Setting up your Remotes
 
@@ -241,7 +241,7 @@ Additional useful commands for the development environment:
     * You can add `-f` or `--follow` to follow the logs in real time.
     * You can add `-t N` or `--tail N` to specify the number of previous lines to show.
 * `invoke nbshell` - Launches a Nautobot Python shell inside the Nautobot container
-* `invoke cli [-s servicename]` - Launches a `bash` shell inside the specified service container (if none is specified, defaults to the Nautobot container)
+* `invoke cli [-s servicename] [-c command]` - Launches a `bash` shell (or runs the specified `command`) inside the specified service container (if no servicename is specified, defaults to the Nautobot container)
 * `invoke stop [-s servicename] [-s servicename]` - Stops all containers (or specific containers/services) created by `invoke start`
 * `invoke createsuperuser` - Creates a superuser account for the Nautobot application
 
@@ -266,7 +266,7 @@ There are a few things you'll need:
 * A MySQL or PostgreSQL server, which can be installed locally [per the documentation](../../user-guide/administration/installation/install_system.md)
 * A Redis server, which can also be [installed locally](../../user-guide/administration/installation/install_system.md)
 * A supported version of Python
-* A recent version of [Poetry](https://python-poetry.org/docs/#installation)
+* A recent version (at least 2.1.x) of [Poetry](https://python-poetry.org/docs/#installation)
 
 #### Install Poetry
 
@@ -287,6 +287,12 @@ curl -sSL https://install.python-poetry.org | python3 -
 
 For detailed installation instructions, please see the [official Poetry installation guide](https://python-poetry.org/docs/#installation).
 
+After successfully installing Poetry, you may wish to add the `poetry-plugin-shell` plugin to it:
+
+```no-highlight
+poetry self add poetry-plugin-shell
+```
+
 #### Install Hadolint
 
 [Hadolint](https://github.com/hadolint/hadolint) is a tool used to validate and lint Dockerfiles to ensure we are following best practices. On macOS with [Homebrew](https://brew.sh/) you can install Hadolint by running:
@@ -297,7 +303,7 @@ brew install hadolint
 
 #### Creating a Python Virtual Environment
 
-A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or *virtualenv*) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
+A Python [virtual environment](https://docs.python.org/3/tutorial/venv.html) (or _virtualenv_) is like a container for a set of Python packages. A virtualenv allow you to build environments suited to specific projects without interfering with system packages or other projects. When installed per the documentation, Nautobot uses a virtual environment in production.
 
 For Nautobot development, we have selected Poetry, which will transparently create a virtualenv for you, automatically install all dependencies required for Nautobot to operate, and will also install the `nautobot-server` CLI command that you will utilize to interact with Nautobot from here on out.
 
@@ -326,6 +332,9 @@ Spawning shell within /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyD
 . /home/example/.cache/pypoetry/virtualenvs/nautobot-Ams_xyDt-py3.12/bin/activate
 (nautobot-Ams_xyDt-py3.12) $
 ```
+
+!!! hint
+    If the above command fails, you might need to run `poetry self add poetry-plugin-shell` then try again.
 
 Notice that the console prompt changes to indicate the active environment. This updates the necessary system environment variables to ensure that any Python scripts are run within the virtual environment.
 
@@ -391,7 +400,7 @@ Check out the [Poetry usage guide](https://python-poetry.org/docs/basic-usage/) 
     Unless otherwise noted, all following commands should be executed inside the virtualenv.
 
 !!! hint
-    Use `poetry shell` to enter the virtualenv.
+    If necessary, first run `poetry self add poetry-plugin-shell`, then you can use `poetry shell` to enter the virtualenv.
 
 Nautobot's configuration file is `nautobot_config.py`.
 
@@ -730,10 +739,10 @@ If you make changes to the REST API, you should verify that the REST API OpenAPI
 To enforce best practices around consistent [coding style](style-guide.md), Nautobot uses [Ruff](https://docs.astral.sh/ruff). Additionally, [static analysis](https://en.wikipedia.org/wiki/Static_program_analysis) of Nautobot code is performed by Ruff and [Pylint](https://pylint.pycqa.org/en/latest/). You should run all of these commands and ensure that they pass fully with regard to your code changes before opening a pull request upstream.
 
 <!-- pyml disable-num-lines 4 no-inline-html -->
-| Docker Compose Workflow | Virtual Environment Workflow                                                                                                     |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `invoke ruff`           | `ruff format --check nautobot/ development/ examples/ tasks.py`<br>and<br>`ruff check nautobot/ development/ examples/ tasks.py` |
-| `invoke pylint`         | `nautobot-server pylint nautobot tasks.py`<br>and<br>`nautobot-server pylint --recursive development/ examples/`                 |
+| Docker Compose Workflow | Virtual Environment Workflow                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invoke ruff`           | `ruff format --check development/ examples/ nautobot/ scripts/ tasks.py`<br>and<br>`ruff check development/ examples/ nautobot/ scripts/ tasks.py` |
+| `invoke pylint`         | `pylint --recursive development/ examples/ nautobot/ scripts/ tasks.py`                                                                            |
 
 ### Handling Migrations
 
@@ -793,7 +802,7 @@ will render as:
     The custom `mkdocs` plugin was added.
 
 !!! caution
-    While you *can* use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
+    While you _can_ use the `version-added` / `version-changed` / `version-removed` admonitions directly to add a custom title to a specific admonition, in general, you should use the macros for consistency across the documentation.
 
 ### Writing Documentation
 

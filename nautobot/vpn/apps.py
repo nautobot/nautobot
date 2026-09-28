@@ -5,4 +5,4 @@ class VPNConfig(NautobotConfig):
     default = True
     name = "nautobot.vpn"
     verbose_name = "VPNs"
-    searchable_models = ["VPN", "VPNTunnel"]
+    searchable_models = ["vpn", "vpntunnel"]

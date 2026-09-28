@@ -1,13 +1,1 @@
-{% load helpers %}
-{% load static %}
-
-<script type="text/javascript">
-    {% if result.status != 'FAILURE' and result.status != 'REVOKED' and result.status != 'SUCCESS' %}
-        var job_is_pending = true;
-    {% else %}
-        var job_is_pending = false;
-    {% endif %}
-    var job_result_id = "{{ result.pk }}";
-
-</script>
-<script src="{% versioned_static 'js/job_result.js' %}" onerror="nb.media.handleFailure(this)"></script>
+{% comment %}4.0 TODO: remove this template, which only exists for backward compatibility with 3.0 and earlier{% endcomment %}

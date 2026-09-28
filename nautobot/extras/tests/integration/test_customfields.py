@@ -19,6 +19,21 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.login_as_superuser()
         self.device = create_test_device()
 
+    def _open_custom_field_create_form_with_content_type(self, content_type_search="dev"):
+        """Open the custom field create form and select one content type."""
+        # Navigate to CustomFields list view and open the create form.
+        self.browser.visit(self.live_server_url)
+        self.click_navbar_entry("Extensibility", "Custom Fields")
+        self.browser.find_by_id("add-button").click()
+
+        # Find the "content_types" dynamic Select2 input and type a search term, then press Enter to select
+        # one matching content type. This mirrors real user behavior on this form.
+        # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
+        ct = self.browser.find_by_css(".select2-search__field")
+        for _ in ct.first.type(content_type_search, slowly=True):
+            pass
+        ct.first.type(Keys.ENTER)
+
     def _create_custom_field(self, field_label, field_type, choices=None, call_before_create=None):
         """
         Repeatable method for creating custom fields.
@@ -37,23 +52,12 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         if choices is None:
             choices = []
 
-        # Navigate to CustomFields list view
-        self.browser.visit(self.live_server_url)
-        self.click_navbar_entry("Extensibility", "Custom Fields")
-
-        # Click add button
-        self.browser.find_by_id("add-button").click()
+        # Open create form and pre-select one applicable content type.
+        self._open_custom_field_create_form_with_content_type()
 
         # Fill out form
         self.browser.select("type", field_type)
         self.fill_input("label", field_label)
-
-        # Find the "content_types" dynamic multi-select and type into it.
-        # See: https://splinter.readthedocs.io/en/latest/elements-in-the-page.html#interacting-with-forms
-        ct = self.browser.find_by_css(".select2-search__field")
-        for _ in ct.first.type("dev", slowly=True):
-            pass
-        ct.first.type(Keys.ENTER)
 
         # Enumerate and set the choices (if any)
         for idx, choice in enumerate(choices):
@@ -86,17 +90,6 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self._create_custom_field(field_label="Test Select", field_type="select")
         # pass create type=multi-select w/out choices
         self._create_custom_field(field_label="Test Multi-select", field_type="multi-select")
-
-    def test_fail_create_invalid_type_with_choices(self):
-        """Test fail type!=select with choices."""
-        cf_label = "Test Text"
-        with self.assertRaises(AssertionError):
-            self._create_custom_field(field_label=cf_label, field_type="text", choices=["bad1"])
-
-        # Assert error state
-        self.assertTrue(self.browser.is_text_present("Add a new custom field"))
-        self.assertTrue(self.browser.is_text_present(f"{cf_label} failed validation"))
-        self.assertTrue(self.browser.is_text_present("Custom field choices can only be assigned to selection fields"))
 
     def test_create_type_select_with_choices_adding_dynamic_row(self):
         """Test pass create type=select adding w/ dynamic row."""
@@ -333,3 +326,225 @@ class CustomFieldTestCase(SeleniumTestCase, ObjectDetailsMixin):
         self.assertTrue(self.browser.is_text_present("Modified device"))
         # Check custom field is no longer present
         self.assertFalse(self.browser.is_text_present("SelectionChoice"))
+
+    def test_type_controls_relevant_field_visibility(self):
+        """Test relevant field visibility by selected custom field type."""
+        self.browser.visit(self.live_server_url)
+        self.click_navbar_entry("Extensibility", "Custom Fields")
+        self.browser.find_by_id("add-button").click()
+
+        validation_rules_card = self.browser.find_by_id("nb-validation-rules-card").first
+        validation_minimum_field = self.browser.find_by_id("nb-validation-minimum-field").first
+        validation_maximum_field = self.browser.find_by_id("nb-validation-maximum-field").first
+        validation_regex_field = self.browser.find_by_id("nb-validation-regex-field").first
+        choices_card = self.browser.find_by_id("nb-custom-field-choices-card").first
+        expectations = [
+            {
+                "type": "text",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": True,
+                "choices_visible": False,
+            },
+            {
+                "type": "integer",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": False,
+                "choices_visible": False,
+            },
+            {
+                "type": "boolean",
+                "validation_rules_visible": False,
+                "minimum_visible": False,
+                "maximum_visible": False,
+                "regex_visible": False,
+                "choices_visible": False,
+            },
+            {
+                "type": "date",
+                "validation_rules_visible": False,
+                "minimum_visible": False,
+                "maximum_visible": False,
+                "regex_visible": False,
+                "choices_visible": False,
+            },
+            {
+                "type": "datetime",
+                "validation_rules_visible": False,
+                "minimum_visible": False,
+                "maximum_visible": False,
+                "regex_visible": False,
+                "choices_visible": False,
+            },
+            {
+                "type": "url",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": True,
+                "choices_visible": False,
+            },
+            {
+                "type": "select",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": True,
+                "choices_visible": True,
+            },
+            {
+                "type": "multi-select",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": True,
+                "choices_visible": True,
+            },
+            {
+                "type": "json",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": True,
+                "choices_visible": False,
+            },
+            {
+                "type": "markdown",
+                "validation_rules_visible": True,
+                "minimum_visible": True,
+                "maximum_visible": True,
+                "regex_visible": True,
+                "choices_visible": False,
+            },
+        ]
+
+        for expected in expectations:
+            with self.subTest(type=expected["type"]):
+                self.browser.select("type", expected["type"])
+                self.assertEqual(validation_rules_card.visible, expected["validation_rules_visible"])
+                self.assertEqual(validation_minimum_field.visible, expected["minimum_visible"])
+                self.assertEqual(validation_maximum_field.visible, expected["maximum_visible"])
+                self.assertEqual(validation_regex_field.visible, expected["regex_visible"])
+                self.assertEqual(choices_card.visible, expected["choices_visible"])
+
+    def test_type_controls_min_max_help_text(self):
+        """Test min/max help text changes based on selected custom field type."""
+        self.browser.visit(self.live_server_url)
+        self.click_navbar_entry("Extensibility", "Custom Fields")
+        self.browser.find_by_id("add-button").click()
+
+        minimum_help_text = self.browser.find_by_css(
+            "#nb-validation-minimum-field .form-text, #nb-validation-minimum-field .help-block"
+        ).first
+        maximum_help_text = self.browser.find_by_css(
+            "#nb-validation-maximum-field .form-text, #nb-validation-maximum-field .help-block"
+        ).first
+
+        help_text_mode_to_expected = {
+            "length": ("Minimum length of the value.", "Maximum length of the value."),
+            "value": ("Minimum numeric value.", "Maximum numeric value."),
+        }
+        type_to_help_text_mode = {
+            "text": "length",
+            "integer": "value",
+            "url": "length",
+            "select": "length",
+            "multi-select": "length",
+            "json": "length",
+            "markdown": "length",
+        }
+
+        for field_type, help_text_mode in type_to_help_text_mode.items():
+            with self.subTest(type=field_type):
+                expected_minimum_help_text, expected_maximum_help_text = help_text_mode_to_expected[help_text_mode]
+                self.browser.select("type", field_type)
+                self.assertEqual(minimum_help_text.text.strip(), expected_minimum_help_text)
+                self.assertEqual(maximum_help_text.text.strip(), expected_maximum_help_text)
+
+    def test_submit_ignores_hidden_choice_and_validation_values(self):
+        """Test submit ignores hidden choices and hidden validation values."""
+
+        cf_label = "Type Switch Hidden All"
+        self._open_custom_field_create_form_with_content_type()
+        self.browser.select("type", "select")
+        self.fill_input("label", cf_label)
+        self.fill_input("custom_field_choices-0-value", "do_not_save")
+        self.fill_input("custom_field_choices-0-weight", "123")
+        self.browser.select("type", "text")
+        self.fill_input("validation_minimum", "7")
+        self.fill_input("validation_maximum", "9")
+        self.fill_input("validation_regex", "^do_not_save$")
+        self.browser.select("type", "date")
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
+        self.assertTrue(self.browser.is_text_present(f"Created custom field {cf_label}"))
+        custom_field = CustomField.objects.get(label=cf_label)
+        self.assertEqual(custom_field.type, "date")
+        self.assertEqual(custom_field.custom_field_choices.count(), 0)
+        self.assertIsNone(custom_field.validation_minimum)
+        self.assertIsNone(custom_field.validation_maximum)
+        self.assertEqual(custom_field.validation_regex, "")
+
+    def test_submit_ignores_hidden_regex_value(self):
+        """Test submit ignores hidden regex value for text-to-integer transition."""
+
+        cf_label = "Type Switch Hidden Regex"
+        self._open_custom_field_create_form_with_content_type()
+        self.browser.select("type", "text")
+        self.fill_input("label", cf_label)
+        self.fill_input("validation_minimum", "2")
+        self.fill_input("validation_maximum", "10")
+        self.fill_input("validation_regex", "^ignore_me$")
+        self.browser.select("type", "integer")
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
+        self.assertTrue(self.browser.is_text_present(f"Created custom field {cf_label}"))
+        custom_field = CustomField.objects.get(label=cf_label)
+        self.assertEqual(custom_field.type, "integer")
+        self.assertEqual(custom_field.validation_minimum, 2)
+        self.assertEqual(custom_field.validation_maximum, 10)
+        self.assertEqual(custom_field.validation_regex, "")
+
+    def test_toggle_back_preserves_choice_values(self):
+        """Test choice values are preserved when toggling away and back to select."""
+
+        cf_label = "Type Switch Preserve Choices"
+        self._open_custom_field_create_form_with_content_type()
+        self.browser.select("type", "select")
+        self.fill_input("label", cf_label)
+        self.fill_input("custom_field_choices-0-value", "keep_me")
+        self.fill_input("custom_field_choices-0-weight", "123")
+        self.browser.select("type", "date")
+        self.browser.select("type", "select")
+        self.assertEqual(self.browser.find_by_name("custom_field_choices-0-value").first.value, "keep_me")
+        self.assertEqual(self.browser.find_by_name("custom_field_choices-0-weight").first.value, "123")
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
+        self.assertTrue(self.browser.is_text_present(f"Created custom field {cf_label}"))
+        custom_field = CustomField.objects.get(label=cf_label)
+        self.assertEqual(custom_field.type, "select")
+        self.assertEqual(custom_field.custom_field_choices.count(), 1)
+        self.assertEqual(custom_field.custom_field_choices.first().value, "keep_me")
+
+    def test_toggle_back_preserves_validation_values(self):
+        """Test validation values are preserved when toggling away and back to text."""
+
+        cf_label = "Type Switch Preserve Validation"
+        self._open_custom_field_create_form_with_content_type()
+        self.browser.select("type", "text")
+        self.fill_input("label", cf_label)
+        self.fill_input("validation_minimum", "1")
+        self.fill_input("validation_maximum", "22")
+        self.fill_input("validation_regex", "^keep_me$")
+        self.browser.select("type", "integer")
+        self.browser.select("type", "text")
+        self.assertEqual(self.browser.find_by_name("validation_minimum").first.value, "1")
+        self.assertEqual(self.browser.find_by_name("validation_maximum").first.value, "22")
+        self.assertEqual(self.browser.find_by_name("validation_regex").first.value, "^keep_me$")
+        self.browser.find_by_xpath("//button[contains(normalize-space(), 'Create')]").click()
+        self.assertTrue(self.browser.is_text_present(f"Created custom field {cf_label}"))
+        custom_field = CustomField.objects.get(label=cf_label)
+        self.assertEqual(custom_field.type, "text")
+        self.assertEqual(custom_field.validation_minimum, 1)
+        self.assertEqual(custom_field.validation_maximum, 22)
+        self.assertEqual(custom_field.validation_regex, "^keep_me$")

@@ -8,6 +8,7 @@ from django.db.models.fields import CharField, TextField
 from django.db.models.fields.related import ManyToManyField
 from django.db.models.fields.reverse_related import ManyToManyRel, ManyToOneRel
 from django.test import tag
+import django_filters
 from django_filters import FilterSet
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
@@ -15,6 +16,8 @@ from nautobot.core.filters import (
     ContentTypeChoiceFilter,
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
+    field_path_traverses_to_many,
+    MappedPredicatesFilterMixin,
     NaturalKeyOrPKMultipleChoiceFilter,
     RelatedMembershipBooleanFilter,
     SearchFilter,
@@ -109,6 +112,86 @@ class FilterTestCases:
                 "Filter set with empty parameter added `DISTINCT` to select query. This needs to be avoided because it incurs heavy performance penalties.",
             )
 
+        _DISTINCT_REMEDIATION = (
+            "To fix each of them:\n"
+            "  1. If the filter is declared using a `django_filters` class, switch to the Nautobot class of the "
+            "same name from `nautobot.apps.filters`, which derives `distinct` from the field path automatically "
+            "so that you don't need to declare it at all. This requires a minimum Nautobot version of 3.2.4: "
+            "`MultipleChoiceFilter` and `BooleanFilter` were *added* to `nautobot.apps.filters` in 3.2.4, so "
+            "importing them from an earlier version raises `ImportError`, while `ModelMultipleChoiceFilter` and "
+            "the `MultiValue<type>Filter` classes already existed but only gained the derivation in 3.2.4.\n"
+            "  2. If your App supports Nautobot versions earlier than 3.2.4, or the filter's `field_name` is "
+            "not a real model field path (as with `RelationshipFilter`), declare `distinct={distinct_value}` "
+            "explicitly on the filter instead, with a comment explaining why.\n"
+            "Note that `distinct` has no effect on a filter that declares a `method`; such a filter is "
+            "responsible for calling `.distinct()` itself where needed, and is not checked by this test."
+        )
+
+        def test_filters_distinct(self):
+            """Verify that each filter applies `.distinct()` if and only if it traverses a to-many relation.
+
+            A filter that traverses a to-many relation (a many-to-many field, a reverse foreign key, or a generic
+            relation) must apply `.distinct()`, as the underlying SQL join can otherwise return the same object
+            more than once. Any other filter applying `.distinct()` incurs database overhead for no benefit.
+
+            Nautobot's filter classes derive this automatically, so a failure here usually means either that the
+            filter uses a `django_filters` class rather than the Nautobot equivalent of the same name, or that its
+            `field_name` doesn't describe the relation that the filter actually traverses.
+            """
+
+            if not self.__class__.__module__.startswith("nautobot."):
+                # TODO: Enable this once we have fixed any issues with apps that would fail this test.
+                # For now, we want to be able to run this test in core without it being a problem to apps.
+                self.skipTest("Skipping: currently only runs in nautobot core test suite.")
+
+            self.assertIsNotNone(self.filterset)
+            filterset = self.filterset({}, self.queryset)  # pylint: disable=not-callable  # see assertion above
+            model = self.queryset.model
+            should_be_distinct = []
+            should_not_be_distinct = []
+
+            for filter_name, filter_field in filterset.filters.items():
+                # `distinct` has no effect on a filter with a `method`, as django-filter replaces its `filter()`
+                if filter_field.method:
+                    continue
+                if isinstance(filter_field, MappedPredicatesFilterMixin):
+                    # A `q`-style filter ORs all of its predicates into one `.filter()` call, so it needs
+                    # `.distinct()` if any one of those predicates traverses a to-many relation.
+                    paths = list(filter_field.filter_predicates)
+                    label = f"{filter_name} (filter_predicates={paths})"
+                elif isinstance(filter_field, (django_filters.MultipleChoiceFilter, django_filters.BooleanFilter)):
+                    paths = [filter_field.field_name]
+                    label = f"{filter_name} (field_name={filter_field.field_name!r})"
+                else:
+                    continue
+                results = [field_path_traverses_to_many(model, path) for path in paths]
+                if any(result is None for result in results):
+                    # Not a resolvable model field path, so there's nothing to derive an expectation from
+                    continue
+                traverses_to_many = any(results)
+                # `RelatedMembershipBooleanFilter` repurposes `exclude` as a lookup value rather than as an
+                # instruction to negate, so it doesn't get the "`.exclude()` is a subquery" exemption.
+                negates = filter_field.exclude and getattr(filter_field, "exclude_uses_subquery", True)
+                if traverses_to_many and not negates and not filter_field.distinct:
+                    should_be_distinct.append(label)
+                elif not traverses_to_many and filter_field.distinct:
+                    should_not_be_distinct.append(label)
+
+            self.assertEqual(
+                should_be_distinct,
+                [],
+                f"The above {self.filterset.__name__} filters traverse a to-many relation (a many-to-many field, "
+                "a reverse foreign key, or a generic relation) but do not apply `.distinct()`, so they can return "
+                "the same object more than once.\n" + self._DISTINCT_REMEDIATION.format(distinct_value="True"),
+            )
+            self.assertEqual(
+                should_not_be_distinct,
+                [],
+                f"The above {self.filterset.__name__} filters apply `.distinct()` without traversing a to-many "
+                "relation. `.distinct()` cannot change the result in that case, and is a significant database "
+                "cost at scale.\n" + self._DISTINCT_REMEDIATION.format(distinct_value="False"),
+            )
+
         def test_id(self):
             """Verify that the filterset supports filtering by id with only lookup `__n`."""
             self.assertIsNotNone(self.filterset)
@@ -118,14 +201,14 @@ class FilterTestCases:
                 expected_queryset = self.queryset.filter(id__in=params["id"])
                 filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertTrue(filterset.is_valid())
-                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
+                self.assertQuerySetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert negate lookup"):
                 params = {"id__n": list(self.queryset.values_list("pk", flat=True)[:2])}
                 expected_queryset = self.queryset.exclude(id__in=params["id__n"])
                 filterset = self.filterset(params, self.queryset)  # pylint: disable=not-callable  # see assertion above
                 self.assertTrue(filterset.is_valid())
-                self.assertQuerysetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
+                self.assertQuerySetEqualAndNotEmpty(filterset.qs.order_by("id"), expected_queryset.order_by("id"))
 
             with self.subTest("Assert invalid lookup"):
                 params = {"id__in": list(self.queryset.values_list("pk", flat=True)[:2])}
@@ -191,6 +274,14 @@ class FilterTestCases:
                     Team.objects.create(name="Generic Filter Test Team 3")
 
                 # Make sure we have some valid contact-associations:
+                if not Role.objects.get_for_model(ContactAssociation).exists():
+                    contact_role, _ = Role.objects.get_or_create(name="Administration")
+                    contact_role.content_types.add(ContentType.objects.get_for_model(ContactAssociation))
+
+                if not Status.objects.get_for_model(ContactAssociation).exists():
+                    contact_status, _ = Status.objects.get_or_create(name="Active")
+                    contact_status.content_types.add(ContentType.objects.get_for_model(ContactAssociation))
+
                 for contact, team, instance in zip(Contact.objects.all()[:3], Team.objects.all()[:3], self.queryset):
                     ContactAssociation.objects.create(
                         contact=contact,
@@ -218,7 +309,7 @@ class FilterTestCases:
                     self.assertIn(filter_name, list(filterset.filters.keys()))
                     filterset_result = filterset.qs
                     qs_result = self.queryset.filter(**{f"{field_name}__in": test_data}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
+                    self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result, ordered=False)
 
         def test_automagic_filters(self):
             """https://github.com/nautobot/nautobot/issues/6656"""
@@ -251,11 +342,11 @@ class FilterTestCases:
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (True)"):
                     filterset_result = self.filterset({filter_name: True}, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.filter(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                    self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
                 with self.subTest(f"{self.filterset.__name__} RelatedMembershipBooleanFilter {filter_name} (False)"):
                     filterset_result = self.filterset({filter_name: False}, self.queryset).qs  # pylint: disable=not-callable
                     qs_result = self.queryset.exclude(**{f"{field_name}__isnull": filter_object.exclude}).distinct()
-                    self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+                    self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
         def test_tags_filter(self):
             """Test the `tags` filter which should be present on all PrimaryModel filtersets."""
@@ -283,7 +374,7 @@ class FilterTestCases:
             filterset_result = self.filterset(params, self.queryset).qs  # pylint: disable=not-callable
             # Tags is an AND filter not an OR filter
             qs_result = self.queryset.filter(tags=tags[0]).filter(tags=tags[1]).distinct()
-            self.assertQuerysetEqualAndNotEmpty(filterset_result, qs_result)
+            self.assertQuerySetEqualAndNotEmpty(filterset_result, qs_result)
 
         def _assert_valid_filter_predicates(self, obj, field_name):
             self.assertTrue(
@@ -357,7 +448,7 @@ class FilterTestCases:
                 filterset_result = self.filterset(params, self.queryset)  # pylint: disable=not-callable
 
                 self.assertTrue(filterset_result.is_valid())
-                self.assertQuerysetEqualAndNotEmpty(
+                self.assertQuerySetEqualAndNotEmpty(
                     filterset_result.qs,
                     model_queryset,
                     ordered=False,
@@ -442,11 +533,11 @@ class FilterTestCases:
         def test_tenant(self):
             tenants = list(models.Tenant.objects.filter(**{f"{self.tenancy_related_name}__isnull": False}))[:2]
             params = {"tenant_id": [tenants[0].pk, tenants[1].pk]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
             params = {"tenant": [tenants[0].name, tenants[1].name]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs, self.queryset.filter(tenant__in=tenants), ordered=False
             )
 
@@ -461,14 +552,14 @@ class FilterTestCases:
                 tenant_groups_including_children += tenant_group.descendants(include_self=True)
 
             params = {"tenant_group": [tenant_groups[0].pk, tenant_groups[1].pk]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant__tenant_group__in=tenant_groups_including_children),
                 ordered=False,
             )
 
             params = {"tenant_group": [tenant_groups[0].name, tenant_groups[1].name]}
-            self.assertQuerysetEqual(
+            self.assertQuerySetEqual(
                 self.filterset(params, self.queryset).qs,
                 self.queryset.filter(tenant__tenant_group__in=tenant_groups_including_children),
                 ordered=False,

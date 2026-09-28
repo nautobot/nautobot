@@ -8,6 +8,7 @@ import django_filters
 from nautobot.core.filters import (
     MultiValueCharFilter,
     MultiValueDateFilter,
+    MultiValueDateTimeFilter,
     MultiValueNumberFilter,
 )
 from nautobot.core.forms import NullableDateField
@@ -18,6 +19,7 @@ from nautobot.extras.models import CustomFieldChoice
 EXACT_FILTER_TYPES = (
     CustomFieldTypeChoices.TYPE_BOOLEAN,
     CustomFieldTypeChoices.TYPE_DATE,
+    CustomFieldTypeChoices.TYPE_DATETIME,
     CustomFieldTypeChoices.TYPE_INTEGER,
     CustomFieldTypeChoices.TYPE_SELECT,
     CustomFieldTypeChoices.TYPE_MULTISELECT,
@@ -35,7 +37,10 @@ class CustomFieldFilterMixin:
         if custom_field.type not in EXACT_FILTER_TYPES:
             if custom_field.filter_logic == CustomFieldFilterLogicChoices.FILTER_LOOSE:
                 kwargs.setdefault("lookup_expr", "icontains")
-        kwargs["widget"] = custom_field.to_form_field(set_initial=False, enforce_required=False).widget
+        # A pre-built widget may be passed in (e.g. shared across a base filter and its lookup-expression
+        # variants) to avoid rebuilding it, which would redundantly re-read `custom_field.choices`.
+        if kwargs.get("widget") is None:
+            kwargs["widget"] = custom_field.to_form_field(set_initial=False, enforce_required=False).widget
         super().__init__(*args, **kwargs)
         self.field_name = f"_custom_field_data__{self.field_name}"
 
@@ -140,6 +145,10 @@ class CustomFieldMultiValueCharFilter(CustomFieldFilterMixin, MultiValueCharFilt
 
 class CustomFieldMultiValueDateFilter(CustomFieldFilterMixin, MultiValueDateFilter):
     """Custom field multi value date filter for extended lookup expressions"""
+
+
+class CustomFieldMultiValueDateTimeFilter(CustomFieldFilterMixin, MultiValueDateTimeFilter):
+    """Custom field multi value datetime filter for extended lookup expressions"""
 
 
 class CustomFieldMultiValueNumberFilter(CustomFieldFilterMixin, MultiValueNumberFilter):

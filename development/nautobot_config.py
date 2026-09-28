@@ -97,7 +97,7 @@ KUBERNETES_JOB_MANIFEST = {
     "kind": "Job",
     "metadata": {"name": "nautobot-job"},
     "spec": {
-        "ttlSecondsAfterFinished": 5,
+        "ttlSecondsAfterFinished": 300,
         "template": {
             "spec": {
                 "containers": [

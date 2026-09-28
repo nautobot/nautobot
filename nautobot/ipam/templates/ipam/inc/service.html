@@ -13,16 +13,19 @@
     <td>{{ service.description }}</td>
     <td class="text-end d-print-none">
         <a href="{% url 'ipam:service_changelog' pk=service.pk %}" class="btn btn-secondary btn-sm" title="Change log">
-            <span class="mdi mdi-history"></span>
+            <span aria-hidden="true" class="mdi mdi-history"></span>
+            <span class="visually-hidden">Change log</span>
         </a>
         {% if perms.ipam.change_service %}
             <a href="{% url 'ipam:service_edit' pk=service.pk %}?return_url={{ service.parent.get_absolute_url }}" class="btn btn-info btn-sm" title="Edit service">
-                <span class="mdi mdi-pencil"></span>
+                <span aria-hidden="true" class="mdi mdi-pencil"></span>
+                <span class="visually-hidden">Edit service</span>
             </a>
         {% endif %}
         {% if perms.ipam.delete_service %}
             <a href="{% url 'ipam:service_delete' pk=service.pk %}?return_url={{ service.parent.get_absolute_url }}" class="btn btn-danger btn-sm">
-                <span class="mdi mdi-trash-can-outline" title="Delete service"></span>
+                <span aria-hidden="true" class="mdi mdi-trash-can-outline" title="Delete service"></span>
+                <span class="visually-hidden">Delete service</span>
             </a>
         {% endif %}
     </td>

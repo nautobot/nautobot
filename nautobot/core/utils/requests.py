@@ -69,6 +69,8 @@ def convert_querydict_to_factory_formset_acceptable_querydict(request_querydict,
                     lookup_value = request_querydict.getlist(filter_field_name)
                 else:
                     lookup_value = request_querydict.get(filter_field_name)
+                if not isinstance(lookup_value, list):
+                    lookup_value = [lookup_value]
 
                 query_dict.setlistdefault(lookup_field_placeholder % num, [lookup_field])
                 query_dict.setlistdefault(lookup_type_placeholder % num, [filter_field_name])
@@ -114,7 +116,7 @@ def get_filterable_params_from_filter_params(filter_params, non_filter_params, f
     Args:
         filter_params (QueryDict): Filter param querydict
         non_filter_params (list): Non queryset filterable params
-        filterset (FilterSet): The FilterSet class
+        filterset (FilterSet): FilterSet class instance
 
     Returns:
         (QueryDict): Filter param querydict with only queryset filterable params

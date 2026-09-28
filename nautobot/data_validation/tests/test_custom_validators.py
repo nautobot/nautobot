@@ -84,7 +84,7 @@ class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTest
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="description",
-            regular_expression="{{ object.name[0:3] }}.*",
+            regular_expression="{{ obj.name[0:3] }}.*",
             context_processing=True,
         )
 
@@ -105,7 +105,7 @@ class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTest
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="description",
-            regular_expression="{{ object.name[0:3] }}.*",
+            regular_expression="{{ obj.name[0:3] }}.*",
             context_processing=True,
         )
 
@@ -124,7 +124,7 @@ class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTest
             name="Regex rule 1",
             content_type=ContentType.objects.get_for_model(Location),
             field="description",
-            regular_expression="[{{ object.name[0:3] }}.*",  # once processed, this is an invalid regex
+            regular_expression="[{{ obj.name[0:3] }}.*",  # once processed, this is an invalid regex
             context_processing=True,
         )
 
@@ -135,6 +135,31 @@ class RegularExpressionValidationRuleCustomValidatorTestCase(CustomValidatorTest
             "There was an error rendering the regular expression in the data validation rule 'Regex rule 1'. Either fix the validation rule or disable it in order to save this data.",
         ):
             location.clean()
+
+    def test_context_processing_deprecated_object_variable_still_works_and_warns(self):
+        # TODO: 4.0 remove this test along with support for the legacy `object` variable.
+        RegularExpressionValidationRule.objects.create(
+            name="Regex rule 1",
+            content_type=ContentType.objects.get_for_model(Location),
+            field="description",
+            regular_expression="{{ object.name[0:3] }}.*",  # legacy variable name
+            context_processing=True,
+        )
+
+        location = Location(
+            name="AMS-195",
+            location_type=self.location_type,
+            status=self.status,
+            description="AMS-195 is really cool",  # This should match `AMS.*`
+        )
+
+        # The legacy `object` variable is still rendered (backward compatible) but logs a deprecation warning.
+        with self.assertLogs("nautobot.extras.plugins", level="WARNING") as logs:
+            try:
+                location.clean()
+            except ValidationError as e:
+                self.fail(f"rule.clean() failed validation: {e}")
+        self.assertTrue(any("deprecated Jinja2 variable `object`" in message for message in logs.output))
 
 
 class MinMaxValidationRuleCustomValidatorTestCase(CustomValidatorTestCases.CustomValidatorTestCase):

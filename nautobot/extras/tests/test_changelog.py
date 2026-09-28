@@ -1,5 +1,7 @@
+from unittest import mock
 import uuid
 
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.contenttypes.models import ContentType
 from django.test import override_settings, tag
 from django.urls import reverse
@@ -11,17 +13,44 @@ from nautobot.core.testing import APITestCase, TestCase
 from nautobot.core.testing.utils import post_data
 from nautobot.core.testing.views import ModelViewTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
-from nautobot.dcim.choices import InterfaceModeChoices
-from nautobot.dcim.models import Location, LocationType
+from nautobot.dcim.choices import InterfaceModeChoices, InterfaceTypeChoices
+from nautobot.dcim.models import (
+    Device,
+    DeviceType,
+    DeviceTypeToSoftwareImageFile,
+    Interface,
+    Location,
+    LocationType,
+    SoftwareImageFile,
+)
 from nautobot.extras import context_managers
 from nautobot.extras.choices import (
     CustomFieldTypeChoices,
+    DynamicGroupOperatorChoices,
     DynamicGroupTypeChoices,
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
 )
-from nautobot.extras.models import CustomField, CustomFieldChoice, DynamicGroup, ObjectChange, Status, Tag
-from nautobot.ipam.models import VLAN, VLANGroup
+from nautobot.extras.models import (
+    CustomField,
+    CustomFieldChoice,
+    DynamicGroup,
+    DynamicGroupMembership,
+    ObjectChange,
+    Role,
+    Status,
+    Tag,
+)
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressToInterface,
+    Prefix,
+    PrefixLocationAssignment,
+    RouteTarget,
+    VLAN,
+    VLANGroup,
+    VRF,
+)
 from nautobot.virtualization.models import Cluster, ClusterType, VirtualMachine, VMInterface
 
 
@@ -252,7 +281,7 @@ class ChangeLogViewTest(ModelViewTestCase):
         )
         url = reverse("extras:objectchange_list")
         with self.assertLogs(level="WARNING") as cm:
-            response = self.client.get(url)
+            response = self.client.get(url, headers={"HX-Request": "true"})
             self.assertHttpStatus(response, 200)
             self.assertContains(response, oc.object_repr)
             self.assertIn(
@@ -391,6 +420,61 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["custom_fields"], location.custom_field_data)
         self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
+
+    def test_interface_tag_changes(self):
+        """Tag updates must persist matching snapshots and diffs, including an empty tag list."""
+        tags = [Tag.objects.create(name=name) for name in ("Interface tag A", "Interface tag B")]
+        for tag_obj in tags:
+            tag_obj.content_types.add(ContentType.objects.get_for_model(Interface))
+        self.add_permissions(
+            "dcim.add_interface", "dcim.change_interface", "dcim.view_device", "extras.view_status", "extras.view_tag"
+        )
+        payload = {
+            "device": str(Device.objects.first().pk),
+            "name": "vlan150",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": str(Status.objects.get_for_model(Interface).first().pk),
+            "tags": [str(tag_obj.pk) for tag_obj in tags],
+        }
+        response = self.client.post(reverse("dcim-api:interface-list"), payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        interface = Interface.objects.get(pk=response.data["id"])
+        url = reverse("dcim-api:interface-detail", kwargs={"pk": interface.pk})
+
+        for label, data, expected_tags in (
+            ("omit tags", {"description": "Updated description"}, tags),
+            ("remove one tag", {"tags": [str(tags[1].pk)]}, tags[1:]),
+            ("clear final tag", {"tags": []}, []),
+            ("add two tags", {"tags": payload["tags"]}, tags),
+            ("clear multiple tags", {"tags": []}, []),
+            ("clear untagged interface", {"tags": []}, []),
+        ):
+            with self.subTest(operation=label):
+                previous_tags = get_changes_for_model(interface).first().object_data_v2["tags"]
+                change_count = get_changes_for_model(interface).count()
+                response = self.client.patch(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                interface.refresh_from_db()
+                self.assertCountEqual(interface.tags.all(), expected_tags)
+                self.assertCountEqual(
+                    [str(tag_data["id"]) for tag_data in response.data["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                changes = get_changes_for_model(interface)
+                self.assertEqual(changes.count(), change_count + 1)
+                change = changes.first()
+                self.assertCountEqual(change.object_data["tags"], [tag_obj.name for tag_obj in expected_tags])
+                self.assertCountEqual(
+                    [tag_data["id"] for tag_data in change.object_data_v2["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                differences = change.get_snapshots()["differences"]
+                if previous_tags != change.object_data_v2["tags"]:
+                    self.assertEqual(differences["removed"]["tags"], previous_tags)
+                    self.assertEqual(differences["added"]["tags"], change.object_data_v2["tags"])
+                else:
+                    self.assertNotIn("tags", differences["removed"])
+                    self.assertNotIn("tags", differences["added"])
 
     def test_delete_object(self):
         location_type = LocationType.objects.get(name="Campus")
@@ -563,6 +647,53 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
             ContentType.objects.filter(app_label="dcim").count(),
         )
 
+    def test_clear_tags(self):
+        """Clearing tags directly must record the resulting empty relationship."""
+        location = Location.objects.filter(location_type__name="Campus").first()
+        tags = list(Tag.objects.get_for_model(Location)[:2])
+        with context_managers.web_request_context(self.user):
+            location.tags.set(tags)
+            location.save()
+        previous_change = get_changes_for_model(location).first()
+        change_count = get_changes_for_model(location).count()
+
+        with context_managers.web_request_context(self.user):
+            location.tags.clear()
+
+        self.assertFalse(location.tags.exists())
+        changes = get_changes_for_model(location)
+        self.assertEqual(changes.count(), change_count + 1)
+        change = changes.first()
+        self.assertEqual(change.object_data["tags"], [])
+        self.assertEqual(change.object_data_v2["tags"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {"removed": {"tags": previous_change.object_data_v2["tags"]}, "added": {"tags": []}},
+        )
+        self.assertEqual(Tag.objects.filter(pk__in=[tag_obj.pk for tag_obj in tags]).count(), len(tags))
+
+    def test_clear_m2m_fields(self):
+        """Clearing a standard M2M field must refresh its changelog snapshot too."""
+        with context_managers.web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test clear locationtype")
+            location_type.content_types.set(ContentType.objects.filter(app_label="dcim"))
+        previous_change = get_changes_for_model(location_type).first()
+
+        with context_managers.web_request_context(self.user):
+            location_type.content_types.clear()
+
+        changes = get_changes_for_model(location_type)
+        self.assertEqual(changes.count(), 2)
+        change = changes.first()
+        self.assertEqual(change.object_data_v2["content_types"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {
+                "removed": {"content_types": previous_change.object_data_v2["content_types"]},
+                "added": {"content_types": []},
+            },
+        )
+
     def test_opt_out(self):
         """Hidden static group associations can "opt out" of change logging."""
         dg = DynamicGroup.objects.exclude(group_type=DynamicGroupTypeChoices.TYPE_STATIC).first()
@@ -647,3 +778,348 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
             self.assertIsNone(snapshots["postchange"])
             self.assertEqual(snapshots["differences"]["removed"], oc_with_object_data_v2.object_data_v2)
             self.assertIsNone(snapshots["differences"]["added"])
+
+
+class ChangeLogM2MThroughTest(APITestCase):
+    """
+    Test automatic change logging of both side objects of explicit M2M through models,
+    whether written via their REST API endpoints or via M2M manager methods.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        self.prefix_location_ct = ContentType.objects.get_for_model(Prefix)
+        self.locations = Location.objects.filter(location_type__content_types=self.prefix_location_ct)
+        # Materialized to a list because MySQL doesn't support a LIMIT-ed queryset inside an `__in` filter
+        self.prefix = Prefix.objects.exclude(locations__in=list(self.locations[:2])).first()
+
+        location = Location.objects.get_for_model(Device).first()
+        devicetype = DeviceType.objects.first()
+        devicerole = Role.objects.get_for_model(Device).first()
+        devicestatus = Status.objects.get_for_model(Device).first()
+        self.device = Device.objects.create(
+            name="Change Log M2M Test Device",
+            location=location,
+            device_type=devicetype,
+            role=devicerole,
+            status=devicestatus,
+        )
+        int_status = Status.objects.get_for_model(Interface).first()
+        self.interface = Interface.objects.create(
+            device=self.device, name="eth0", status=int_status, type=InterfaceTypeChoices.TYPE_1GE_FIXED
+        )
+        clustertype = ClusterType.objects.create(name="Change Log M2M Test Cluster Type")
+        cluster = Cluster.objects.create(cluster_type=clustertype, name="Change Log M2M Test Cluster")
+        vm_status = Status.objects.get_for_model(VirtualMachine).first()
+        virtual_machine = VirtualMachine.objects.create(
+            name="Change Log M2M Test VM", cluster=cluster, status=vm_status
+        )
+        vm_int_status = Status.objects.get_for_model(VMInterface).first()
+        self.vm_interface = VMInterface.objects.create(
+            virtual_machine=virtual_machine, name="veth0", status=vm_int_status
+        )
+        self.ip_addresses = list(IPAddress.objects.all()[:6])
+
+    def assert_single_update_change(self, instance, request_id):
+        """Assert exactly one ACTION_UPDATE ObjectChange was recorded for `instance` in the given request."""
+        changes = ObjectChange.objects.filter(
+            changed_object_type=ContentType.objects.get_for_model(instance),
+            changed_object_id=instance.pk,
+            request_id=request_id,
+        )
+        self.assertEqual(changes.count(), 1)
+        self.assertEqual(changes.first().action, ObjectChangeActionChoices.ACTION_UPDATE)
+        return changes.first()
+
+    def test_api_create_logs_both_sides(self):
+        self.add_permissions("ipam.add_prefixlocationassignment", "ipam.view_prefix", "dcim.view_location")
+        location = self.locations[0]
+
+        url = reverse("ipam-api:prefixlocationassignment-list")
+        response = self.client.post(
+            url, {"prefix": self.prefix.pk, "location": location.pk}, format="json", **self.header
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        prefix_change = get_changes_for_model(self.prefix).first()
+        self.assertIsNotNone(prefix_change)
+        location_change = self.assert_single_update_change(location, prefix_change.request_id)
+        self.assertEqual(prefix_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(prefix_change.user_id, self.user.pk)
+        self.assertEqual(location_change.user_id, self.user.pk)
+
+    def test_api_create_with_null_side_logs_non_null_sides(self):
+        self.add_permissions("ipam.add_ipaddresstointerface", "ipam.view_ipaddress", "virtualization.view_vminterface")
+        ip_address = self.ip_addresses[0]
+
+        url = reverse("ipam-api:ipaddresstointerface-list")
+        response = self.client.post(
+            url,
+            {"ip_address": ip_address.pk, "interface": None, "vm_interface": self.vm_interface.pk},
+            format="json",
+            **self.header,
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        ip_change = get_changes_for_model(ip_address).first()
+        self.assertIsNotNone(ip_change)
+        self.assert_single_update_change(self.vm_interface, ip_change.request_id)
+        self.assertEqual(ip_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
+
+    def test_api_delete_logs_both_sides(self):
+        self.add_permissions("ipam.delete_ipaddresstointerface")
+        ip_address = self.ip_addresses[1]
+        assignment = IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+
+        url = reverse("ipam-api:ipaddresstointerface-detail", kwargs={"pk": assignment.pk})
+        response = self.client.delete(url, **self.header)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        interface_change = get_changes_for_model(self.interface).first()
+        self.assertIsNotNone(interface_change)
+        self.assert_single_update_change(ip_address, interface_change.request_id)
+        self.assertEqual(interface_change.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        # post_delete timing: the recorded snapshot must reflect the association's removal
+        self.assertNotIn(str(ip_address.pk), str(interface_change.object_data_v2.get("ip_addresses", "")))
+
+    def test_orm_add_logs_both_sides_once_each(self):
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.interface.ip_addresses.add(self.ip_addresses[2], self.ip_addresses[3])
+
+        self.assert_single_update_change(self.interface, change_id)
+        self.assert_single_update_change(self.ip_addresses[2], change_id)
+        self.assert_single_update_change(self.ip_addresses[3], change_id)
+
+    def test_orm_reverse_manager_add_logs_both_sides(self):
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.ip_addresses[4].interfaces.add(self.interface)
+
+        self.assert_single_update_change(self.ip_addresses[4], change_id)
+        self.assert_single_update_change(self.interface, change_id)
+
+    def test_orm_set_remove_clear_log_both_sides_once_each(self):
+        locations = list(self.locations[:2])
+
+        with self.subTest("set() with additions"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                self.prefix.locations.set(locations)
+            self.assert_single_update_change(self.prefix, change_id)
+            self.assert_single_update_change(locations[0], change_id)
+            self.assert_single_update_change(locations[1], change_id)
+
+        with self.subTest("remove() does not double-log despite firing both delete and m2m signals"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                self.prefix.locations.remove(locations[0])
+            self.assert_single_update_change(self.prefix, change_id)
+            self.assert_single_update_change(locations[0], change_id)
+            self.assertFalse(
+                ObjectChange.objects.filter(changed_object_id=locations[1].pk, request_id=change_id).exists()
+            )
+
+        with self.subTest("clear() logs both sides via the through record deletions"):
+            change_id = uuid.uuid4()
+            with context_managers.web_request_context(self.user, change_id=change_id):
+                self.prefix.locations.clear()
+            self.assert_single_update_change(self.prefix, change_id)
+            self.assert_single_update_change(locations[1], change_id)
+
+    def test_clear_interface_ip_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate interface/IP changes."""
+        ip_addresses = self.ip_addresses[:2]
+        self.interface.ip_addresses.set(ip_addresses)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.interface.ip_addresses.clear()
+
+        self.assertFalse(self.interface.ip_addresses.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.interface, change_id)
+        self.assertEqual(change.object_data_v2["ip_addresses"], [])
+        for ip_address in ip_addresses:
+            self.assertFalse(ip_address.interfaces.filter(pk=self.interface.pk).exists())
+            self.assert_single_update_change(ip_address, change_id)
+
+    def test_clear_prefix_location_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate prefix/location changes."""
+        locations = list(self.locations[:2])
+        self.prefix.locations.set(locations)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.prefix.locations.clear()
+
+        self.assertFalse(self.prefix.locations.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.prefix, change_id)
+        self.assertEqual(change.object_data_v2["locations"], [])
+        for location in locations:
+            self.assertFalse(location.prefixes.filter(pk=self.prefix.pk).exists())
+            self.assert_single_update_change(location, change_id)
+
+    def test_orm_auto_created_m2m_remains_one_sided(self):
+        route_target = RouteTarget.objects.create(name="65000:99999")
+        vrf = VRF.objects.create(name="Change Log M2M Test VRF", namespace=self.prefix.namespace)
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            vrf.import_targets.add(route_target)
+
+        self.assert_single_update_change(vrf, change_id)
+        self.assertFalse(ObjectChange.objects.filter(changed_object_id=route_target.pk, request_id=change_id).exists())
+
+    def test_parent_created_in_same_request_stays_create(self):
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            vrf = VRF.objects.create(name="Change Log M2M Test VRF 2", namespace=self.prefix.namespace)
+            vrf.prefixes.add(self.prefix)
+
+        vrf_changes = ObjectChange.objects.filter(changed_object_id=vrf.pk, request_id=change_id)
+        self.assertEqual(vrf_changes.count(), 1)
+        self.assertEqual(vrf_changes.first().action, ObjectChangeActionChoices.ACTION_CREATE)
+        self.assert_single_update_change(self.prefix, change_id)
+
+    def test_cascade_delete_does_not_log_surviving_side(self):
+        vrf = VRF.objects.create(name="Change Log M2M Test VRF 3", namespace=self.prefix.namespace)
+        with context_managers.web_request_context(self.user):
+            vrf.prefixes.add(self.prefix)
+
+        vrf_pk = vrf.pk
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            vrf.delete()
+
+        vrf_changes = ObjectChange.objects.filter(changed_object_id=vrf_pk, request_id=change_id)
+        self.assertEqual(vrf_changes.count(), 1)
+        self.assertEqual(vrf_changes.first().action, ObjectChangeActionChoices.ACTION_DELETE)
+        self.assertFalse(ObjectChange.objects.filter(changed_object_id=self.prefix.pk, request_id=change_id).exists())
+
+    def test_queryset_delete_of_through_records_logs_both_sides(self):
+        ip_address = self.ip_addresses[5]
+        assignment = IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            IPAddressToInterface.objects.filter(pk=assignment.pk).delete()
+
+        self.assert_single_update_change(self.interface, change_id)
+        self.assert_single_update_change(ip_address, change_id)
+
+    def test_deferred_change_logging_logs_both_sides(self):
+        location = self.locations[0]
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            with context_managers.deferred_change_logging_for_bulk_operation():
+                PrefixLocationAssignment.objects.create(prefix=self.prefix, location=location)
+
+        self.assert_single_update_change(self.prefix, change_id)
+        self.assert_single_update_change(location, change_id)
+
+    def test_tags_remain_unlogged(self):
+        location_tag = Tag.objects.get_for_model(Location).first()
+        location = self.locations[0]
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            location.tags.set([location_tag])
+
+        self.assertTrue(ObjectChange.objects.filter(changed_object_id=location.pk, request_id=change_id).exists())
+        self.assertFalse(ObjectChange.objects.filter(changed_object_id=location_tag.pk, request_id=change_id).exists())
+
+    def test_anonymous_user_does_not_error(self):
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(AnonymousUser(), change_id=change_id):
+            self.interface.ip_addresses.add(self.ip_addresses[2])
+
+        changes = ObjectChange.objects.filter(changed_object_id=self.ip_addresses[2].pk, request_id=change_id)
+        self.assertEqual(changes.count(), 1)
+        self.assertIsNone(changes.first().user)
+
+    def test_self_referential_through_model_logs_both_sides(self):
+        device_ct = ContentType.objects.get_for_model(Device)
+        parent_group = DynamicGroup.objects.create(
+            name="Change Log M2M Test Parent Group",
+            content_type=device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_SET,
+        )
+        child_group = DynamicGroup.objects.create(
+            name="Change Log M2M Test Child Group",
+            content_type=device_ct,
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+        )
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            DynamicGroupMembership.objects.create(
+                parent_group=parent_group,
+                group=child_group,
+                operator=DynamicGroupOperatorChoices.OPERATOR_UNION,
+                weight=10,
+            )
+
+        self.assert_single_update_change(parent_group, change_id)
+        self.assert_single_update_change(child_group, change_id)
+
+    def test_change_logged_through_model_logs_itself_and_both_sides(self):
+        software_image_file = SoftwareImageFile.objects.first()
+        device_type = DeviceType.objects.exclude(software_image_files=software_image_file).first()
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            assignment = DeviceTypeToSoftwareImageFile.objects.create(
+                device_type=device_type, software_image_file=software_image_file
+            )
+
+        assignment_changes = ObjectChange.objects.filter(changed_object_id=assignment.pk, request_id=change_id)
+        self.assertEqual(assignment_changes.count(), 1)
+        self.assertEqual(assignment_changes.first().action, ObjectChangeActionChoices.ACTION_CREATE)
+        self.assert_single_update_change(device_type, change_id)
+        self.assert_single_update_change(software_image_file, change_id)
+
+    def test_primary_ip_nullification_on_assignment_delete(self):
+        ip_address = IPAddress.objects.filter(ip_version=4).first()
+        assignment = IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+        self.device.primary_ip4 = ip_address
+        self.device.save()
+
+        change_id = uuid.uuid4()
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            assignment.delete()
+
+        self.device.refresh_from_db()
+        self.assertIsNone(self.device.primary_ip4)
+        self.assert_single_update_change(self.interface, change_id)
+        self.assert_single_update_change(ip_address, change_id)
+
+    @mock.patch("nautobot.extras.context_managers.publish_event")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(False, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_hooks_and_events_dispatched_for_both_sides(
+        self, mock_enqueue_webhooks, mock_enqueue_job_hooks, mock_publish_event
+    ):
+        """Creating a through record dispatches job hooks, webhooks, and events for both side objects (#9270)."""
+        ip_address = self.ip_addresses[0]
+        with context_managers.web_request_context(self.user):
+            IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
+
+        expected_changed_objects = {
+            (ContentType.objects.get_for_model(Interface), self.interface.pk),
+            (ContentType.objects.get_for_model(IPAddress), ip_address.pk),
+        }
+        webhook_changed_objects = {
+            (call.args[0].changed_object_type, call.args[0].changed_object_id)
+            for call in mock_enqueue_webhooks.call_args_list
+        }
+        self.assertEqual(webhook_changed_objects, expected_changed_objects)
+        jobhook_changed_objects = {
+            (call.args[0].changed_object_type, call.args[0].changed_object_id)
+            for call in mock_enqueue_job_hooks.call_args_list
+        }
+        self.assertEqual(jobhook_changed_objects, expected_changed_objects)
+        event_topics = {call.kwargs["topic"] for call in mock_publish_event.call_args_list}
+        self.assertEqual(event_topics, {"nautobot.update.dcim.interface", "nautobot.update.ipam.ipaddress"})

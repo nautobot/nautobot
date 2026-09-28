@@ -78,30 +78,197 @@ CABLE_TERMINATION_MODELS = Q(
     )
 )
 
+DEVICE_COMPONENT_ICONS = {
+    "circuittermination": "mdi-cable-data",
+    "consoleport": "mdi-console",
+    "consoleporttemplate": "mdi-console",
+    "consoleserverport": "mdi-console-network-outline",
+    "consoleserverporttemplate": "mdi-console-network-outline",
+    "devicebay": "mdi-circle-outline",  # DeviceDeviceBayTable overrides -> mdi-circle-slice-8 for populated bays
+    "devicebaytemplate": "mdi-circle-outline",
+    "frontport": "mdi-arrow-right-bold-box-outline",
+    "frontporttemplate": "mdi-arrow-right-bold-box-outline",
+    "interface": "mdi-ethernet",
+    "interfacetemplate": "mdi-ethernet",
+    "inventoryitem": "mdi-invoice-list-outline",
+    "modulebay": "mdi-tray",  # DeviceModuleBayTable overrides -> mdi-expansion-card-variant for populated bays
+    "modulebaytemplate": "mdi-tray",
+    "powerfeed": "mdi-flash",
+    "poweroutlet": "mdi-power-socket",
+    "poweroutlettemplate": "mdi-power-socket",
+    "powerport": "mdi-power-plug-outline",
+    "powerporttemplate": "mdi-power-plug-outline",
+    "rearport": "mdi-arrow-left-bold-box-outline",
+    "rearporttemplate": "mdi-arrow-left-bold-box-outline",
+}
+
+CABLE_TERMINATION_GENERIC_ICON = "mdi-cable-data"
+
+# Maps each cable-termination type to the list of types its other end may connect to. List order is
+# significant: the first entry is used as the default B-side type when creating a cable from a given
+# A-side type (see `CableForm._init_lane_fields`), so each list should lead with the most natural /
+# most common peer for that termination type.
 COMPATIBLE_TERMINATION_TYPES = {
     "circuittermination": ["interface", "frontport", "rearport", "circuittermination"],
     "consoleport": ["consoleserverport", "frontport", "rearport"],
     "consoleserverport": ["consoleport", "frontport", "rearport"],
     "interface": ["interface", "circuittermination", "frontport", "rearport"],
     "frontport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
     "powerfeed": ["powerport"],
     "poweroutlet": ["powerport"],
     "powerport": ["poweroutlet", "powerfeed"],
     "rearport": [
-        "consoleport",
-        "consoleserverport",
         "interface",
         "frontport",
         "rearport",
         "circuittermination",
+        "consoleport",
+        "consoleserverport",
     ],
+}
+
+# Maximum number of distinct connectors/lanes in a breakout cable
+CABLE_BREAKOUT_MAX_CONNECTORS = 16
+CABLE_BREAKOUT_MAX_LANES = 256
+
+BREAKOUT_COMPATIBLE_TERMINATION_TYPES = frozenset(
+    {
+        "circuittermination",
+        "frontport",
+        "interface",
+        "rearport",
+    }
+)
+
+# Per-type one-to-one FK field name on `CableToCableTermination` → ContentType natural key
+# (app_label, model) for its target model. At most one of these FKs may be non-null on each row;
+# enforced by a CheckConstraint on the model. The "exactly one" stricter requirement is enforced
+# in `clean()` — at the DB level the all-null state is allowed because Django's cascade-delete
+# machinery temporarily nulls the nullable FK before deleting the row, and a CHECK constraint
+# would block that intermediate step on MySQL.
+TERMINATION_FK_TO_CONTENT_TYPE = {
+    "circuit_termination": ("circuits", "circuittermination"),
+    "console_port": ("dcim", "consoleport"),
+    "console_server_port": ("dcim", "consoleserverport"),
+    "front_port": ("dcim", "frontport"),
+    "interface": ("dcim", "interface"),
+    "power_feed": ("dcim", "powerfeed"),
+    "power_outlet": ("dcim", "poweroutlet"),
+    "power_port": ("dcim", "powerport"),
+    "rear_port": ("dcim", "rearport"),
+}
+TERMINATION_FK_FIELDS = tuple(TERMINATION_FK_TO_CONTENT_TYPE)
+# Reverse map: ContentType natural key (app_label, model) → FK field name. Used by signal /
+# form / serializer code that needs to write to the right per-type FK given a termination instance.
+CONTENT_TYPE_TO_TERMINATION_FK = {ct: fk for fk, ct in TERMINATION_FK_TO_CONTENT_TYPE.items()}
+
+# Per-type FK field on `CableToCableTermination` → the FK on that termination model that resolves
+# its `parent` (e.g. an Interface's parent is its `device`, a CircuitTermination's is its `circuit`,
+# a PowerFeed's is its `power_panel`). Used to extend `select_related` so that rendering
+# `termination.parent` for cable / cable-peer / connection columns stays query-free per row.
+TERMINATION_FK_TO_PARENT_FK = {
+    "circuit_termination": "circuit",
+    "console_port": "device",
+    "console_server_port": "device",
+    "front_port": "device",
+    "interface": "device",
+    "power_feed": "power_panel",
+    "power_outlet": "device",
+    "power_port": "device",
+    "rear_port": "device",
+}
+# `select_related` paths joining each termination through to its parent, e.g. "interface__device".
+TERMINATION_PARENT_FK_FIELDS = tuple(
+    f"{termination_fk}__{parent_fk}" for termination_fk, parent_fk in TERMINATION_FK_TO_PARENT_FK.items()
+)
+
+# Per-type FK fields on `CableToCableTermination` whose termination is a device component (and thus
+# has a `device` FK). Circuit terminations and power feeds are excluded (they have no device). Used
+# to filter cables by the device — and its rack/location/tenant — of any of their terminations,
+# reaching each termination's device directly via `<fk>__device` rather than a denormalized cache.
+TERMINATION_DEVICE_FK_FIELDS = tuple(
+    termination_fk for termination_fk, parent_fk in TERMINATION_FK_TO_PARENT_FK.items() if parent_fk == "device"
+)
+
+# Extra `select_related` paths needed to render a termination's display string without a query.
+# Only `CircuitTermination` has a non-trivial `__str__` — it names its location / provider network /
+# cloud network — so those FKs must be joined; every other termination renders as its (already
+# loaded) name.
+TERMINATION_DISPLAY_FK_FIELDS = (
+    "circuit_termination__location",
+    "circuit_termination__provider_network",
+    "circuit_termination__cloud_network",
+)
+
+# Everything a `CableToCableTermination` row needs `select_related` so that rendering each mapped
+# termination's cable columns — the termination itself, its `parent`, and its display string — is
+# query-free. Use this wherever `cable.terminations` is prefetched for table / detail renders.
+TERMINATION_CABLE_COLUMN_FK_FIELDS = (
+    *TERMINATION_FK_FIELDS,
+    *TERMINATION_PARENT_FK_FIELDS,
+    *TERMINATION_DISPLAY_FK_FIELDS,
+)
+
+DEFAULT_CABLE_TYPES = {
+    "1x2 Breakout": {
+        "description": "1 trunk connector broken out to 2 individual legs",
+        "a_connectors": 1,
+        "b_connectors": 2,
+        "total_lanes": 2,
+        "mapping": [
+            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 3)
+        ],
+        "strands_per_lane": 1,
+        "polarity_method": "",
+        "is_shuffle": False,
+        "has_embedded_transceivers": False,
+    },
+    "1x4 Breakout": {
+        "description": "1 trunk connector broken out to 4 individual legs",
+        "a_connectors": 1,
+        "b_connectors": 4,
+        "total_lanes": 4,
+        "mapping": [
+            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 5)
+        ],
+        "strands_per_lane": 1,
+        "polarity_method": "",
+        "is_shuffle": False,
+        "has_embedded_transceivers": False,
+    },
+    "1x6 Breakout": {
+        "description": "1 trunk connector broken out to 6 individual legs",
+        "a_connectors": 1,
+        "b_connectors": 6,
+        "total_lanes": 6,
+        "mapping": [
+            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 7)
+        ],
+        "strands_per_lane": 1,
+        "polarity_method": "",
+        "is_shuffle": False,
+        "has_embedded_transceivers": False,
+    },
+    "1x8 Breakout": {
+        "description": "1 trunk connector broken out to 8 individual legs",
+        "a_connectors": 1,
+        "b_connectors": 8,
+        "total_lanes": 8,
+        "mapping": [
+            {"label": str(i), "a_connector": 1, "a_position": i, "b_connector": i, "b_position": 1} for i in range(1, 9)
+        ],
+        "strands_per_lane": 1,
+        "polarity_method": "",
+        "is_shuffle": False,
+        "has_embedded_transceivers": False,
+    },
 }
 
 #
@@ -110,3 +277,11 @@ COMPATIBLE_TERMINATION_TYPES = {
 
 # Limit of 4 allows recursion depth of Device->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module->ModuleBay->Module
 MODULE_RECURSION_DEPTH_LIMIT = 4
+
+#
+# Devices
+#
+
+# Limit of 4 allows recursion depth of Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device->DeviceBay->Device
+# Matches MODULE_RECURSION_DEPTH_LIMIT for consistency
+DEVICE_RECURSION_DEPTH_LIMIT = 4

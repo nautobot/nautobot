@@ -1,6 +1,9 @@
 """Test IPAM forms."""
 
+import re
+
 from django.forms import Form
+from django.http import QueryDict
 
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.forms import FormTestCases
@@ -81,6 +84,75 @@ class PrefixFormTest(NetworkFormTestCases.BaseNetworkFormTest, FormTestCases.Bas
         }
 
 
+class PrefixFilterFormTest(TestCase):
+    """Tests for PrefixFilterForm."""
+
+    form_class = forms.PrefixFilterForm
+
+    def test_all_fields_render_submitted_values(self):
+        """
+        Every field must render its submitted value back in the generated HTML:
+        input-based widgets via the value attribute, select-based widgets via a
+        selected option. Multi-value fields receive list values, as produced by
+        the list view's filter params processing.
+        """
+        namespace = Namespace.objects.first()
+        status = Status.objects.get_for_model(Prefix).first()
+
+        # field name -> submitted data; input widgets checked via value attribute
+        input_cases = {
+            "prefix_length__lte": ["16"],
+            "q": "192.168",
+            "within_include": "192.168.0.0/16",
+            "max_depth": "2",
+        }
+        # field name -> (submitted data, expected selected option value)
+        select_cases = {
+            "ip_version": ("4", "4"),
+            "prefix_length": ("24", "24"),
+            "type": (["container"], "container"),
+            "namespace": ([namespace.name], namespace.name),
+            "status": ([status.name], status.name),
+        }
+
+        for field_name, value in input_cases.items():
+            with self.subTest(field=field_name):
+                form = self.form_class(data={field_name: value})
+                html = str(form[field_name])
+                rendered_value = value[0] if isinstance(value, list) else value
+                self.assertIn(f'value="{rendered_value}"', html)
+
+        for field_name, (value, expected) in select_cases.items():
+            with self.subTest(field=field_name):
+                form = self.form_class(data={field_name: value})
+                html = str(form[field_name])
+                self.assertRegex(html, rf'<option value="{re.escape(expected)}"\s+selected')
+
+    def test_form_valid_with_combined_filters_from_querydict(self):
+        """A realistic multi-filter query string must validate and clean without corruption."""
+        namespace = Namespace.objects.first()
+        query = f"prefix_length__lte=16&type=container&type=network&namespace={namespace.name}&ip_version=4&q=192.168"
+        form = self.form_class(data=QueryDict(query))
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["prefix_length__lte"], ["16"])
+        self.assertEqual(form.cleaned_data["type"], ["container", "network"])
+        self.assertEqual(form.cleaned_data["q"], "192.168")
+
+    def test_within_include_handles_list_values(self):
+        """
+        `within_include` is backed by a MultiValueCharFilter, so the form field must
+        accept a list value (as produced by the list view's filter params processing),
+        render it back without corruption, and clean it to a list of values.
+        """
+        form = self.form_class(data={"within_include": ["192.168.0.0/16"]})
+
+        html = str(form["within_include"])
+        self.assertIn('value="192.168.0.0/16"', html)
+
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(form.cleaned_data["within_include"], ["192.168.0.0/16"])
+
+
 class IPAddressFormTest(NetworkFormTestCases.BaseNetworkFormTest):
     form_class = forms.IPAddressForm
     field_name = "address"
@@ -132,3 +204,79 @@ class IPAddressBulkCreateFormTest(TestCase):
         with self.subTest("Assert IPAddressBulkCreateForm with valid pattern"):
             form = form_class(data={"pattern": "192.0.2.[1,5,100-254]/24"})
             self.assertTrue(form.is_valid())
+
+
+class IPAddressRangeFormTest(TestCase):
+    """Tests for IPAddressRangeForm, covering NamespaceFormMixin."""
+
+    def setUp(self):
+        super().setUp()
+        self.namespace = Namespace.objects.create(name="IP Range Form Test")
+        self.prefix_status = Status.objects.get_for_model(Prefix).first()
+        self.range_status = Status.objects.get_for_model(models.IPAddressRange).first()
+        self.parent = Prefix.objects.create(
+            prefix="192.168.1.0/24",
+            namespace=self.namespace,
+            status=self.prefix_status,
+            type="network",
+        )
+
+    def _base_data(self, **overrides):
+        data = {
+            "start_address": "192.168.1.10",
+            "end_address": "192.168.1.20",
+            "namespace": self.namespace.pk,
+            "status": self.range_status.pk,
+        }
+        data.update(overrides)
+        return data
+
+    def test_valid_range(self):
+        """A range with start <= end, contained in a parent Prefix, is valid and saves."""
+        form = forms.IPAddressRangeForm(data=self._base_data())
+        self.assertTrue(form.is_valid(), form.errors)
+        instance = form.save()
+        self.assertEqual(str(instance.start_address), "192.168.1.10")
+        self.assertEqual(str(instance.end_address), "192.168.1.20")
+        self.assertEqual(instance.parent, self.parent)
+        self.assertEqual(instance.status, self.range_status)
+
+    def test_start_after_end_is_invalid(self):
+        """start_address greater than end_address is rejected by model validation."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="192.168.1.200", end_address="192.168.1.50"))
+        self.assertFalse(form.is_valid())
+
+    def test_no_parent_prefix_is_invalid(self):
+        """A range whose addresses resolve to no parent Prefix in the namespace is rejected."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="10.99.0.10", end_address="10.99.0.20"))
+        self.assertFalse(form.is_valid())
+
+    def test_address_with_mask_is_invalid(self):
+        """start/end address fields are bare hosts; a value carrying a mask is rejected."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="192.168.1.10/24"))
+        self.assertFalse(form.is_valid())
+
+    def test_invalid_address_is_invalid(self):
+        """A non-address value in start_address is rejected."""
+        form = forms.IPAddressRangeForm(data=self._base_data(start_address="not-an-ip"))
+        self.assertFalse(form.is_valid())
+
+    def test_clean_sets_addresses_on_instance(self):
+        """clean() pushes start/end address onto the instance for model validation."""
+        form = forms.IPAddressRangeForm(data=self._base_data())
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertEqual(str(form.instance.start_address), "192.168.1.10")
+        self.assertEqual(str(form.instance.end_address), "192.168.1.20")
+
+    def test_edit_prepopulates_addresses_and_namespace(self):
+        """On edit, the form prepopulates start/end address (from properties) and namespace (from parent)."""
+        instance = models.IPAddressRange.objects.create(
+            start_address="192.168.1.30",
+            end_address="192.168.1.40",
+            namespace=self.namespace,
+            status=self.range_status,
+        )
+        form = forms.IPAddressRangeForm(instance=instance)
+        self.assertEqual(str(form.initial["start_address"]), "192.168.1.30")
+        self.assertEqual(str(form.initial["end_address"]), "192.168.1.40")
+        self.assertEqual(form.initial["namespace"], self.namespace)

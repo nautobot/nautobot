@@ -1,8 +1,0 @@
-{% load helpers %}
-<div class="nb-termination{% if obj == termination %} nb-active{% endif %}">
-    <strong>{{ termination|hyperlinked_object }}</strong><br />
-    {{ termination|meta:"verbose_name"|bettertitle }}
-    {% if termination.type %}
-        ({{ termination.get_type_display }})
-    {% endif %}
-</div>

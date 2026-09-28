@@ -411,6 +411,15 @@ menu_items = (
                 weight=500,
                 items=(
                     NavMenuItem(
+                        link="dcim:cabletype_list",
+                        name="Cable Types",
+                        weight=50,
+                        permissions=[
+                            "dcim.view_cabletype",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
                         link="dcim:cable_list",
                         name="Cables",
                         weight=100,

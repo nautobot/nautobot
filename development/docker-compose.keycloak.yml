@@ -18,7 +18,7 @@ services:
       - --import-realm
       - --http-port=8087
   keycloak_db:
-    image: postgres:13
+    image: postgres:14
     env_file:
       - keycloak.env
     volumes:

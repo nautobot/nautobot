@@ -3,11 +3,14 @@ import logging
 import math
 
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 import factory
 import faker
+import netaddr
 
 from nautobot.core.constants import CHARFIELD_MAX_LENGTH
 from nautobot.core.factory import (
+    BaseModelFactory,
     get_random_instances,
     NautobotBoolIterator,
     OrganizationalModelFactory,
@@ -18,7 +21,21 @@ from nautobot.core.factory import (
 from nautobot.dcim.models import Location, VirtualDeviceContext
 from nautobot.extras.models import Role, Status
 from nautobot.ipam.choices import PrefixTypeChoices
-from nautobot.ipam.models import IPAddress, Namespace, Prefix, RIR, RouteTarget, VLAN, VLANGroup, VRF
+from nautobot.ipam.models import (
+    IPAddress,
+    IPAddressRange,
+    Namespace,
+    Prefix,
+    PrefixLocationAssignment,
+    RIR,
+    RouteTarget,
+    VLAN,
+    VLANGroup,
+    VLANLocationAssignment,
+    VRF,
+    VRFDeviceAssignment,
+    VRFPrefixAssignment,
+)
 from nautobot.tenancy.models import Tenant
 
 logger = logging.getLogger(__name__)
@@ -48,16 +65,19 @@ def random_route_distinguisher():
     - "<2-byte ASN>:<4-byte integer>"
     - "<IPv4 address>:<2-byte integer>"
     - "<4-byte ASN>:<2-byte integer>"
+
+    Note that we limit the generated RD to 20 characters max so as to avoid issues with the `bulk_rename` test cases,
+    which need to be able to append a character to the name without hitting max-length problems.
     """
     fake = faker.Faker()
     branch = fake.pyint(0, 2)
     if branch == 0:
         # 16-bit ASNs 64496-64511 are reserved for documentation and sample code
-        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"
+        return f"{fake.pyint(64496, 64511)}:{fake.pyint(0, 2**32 - 1)}"[:20]
     if branch == 1:
-        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"
+        return f"{fake.ipv4_private()}:{fake.pyint(0, 2**16 - 1)}"[:20]
     # 32-bit ASNs 4200000000-4294967294 are reserved for private use
-    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"
+    return f"{fake.pyint(4200000000, 4294967294)}:{fake.pyint(0, 2**16 - 1)}"[:20]
 
 
 class RouteTargetFactory(PrimaryModelFactory):
@@ -130,20 +150,18 @@ class VRFFactory(PrimaryModelFactory):
     @factory.post_generation
     def prefixes(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.prefixes.set(extracted)
-            else:
-                self.prefixes.set(
-                    get_random_instances(lambda: Prefix.objects.filter(namespace=self.namespace), minimum=0)
-                )
+            if not extracted:
+                extracted = get_random_instances(lambda: Prefix.objects.filter(namespace=self.namespace), minimum=0)
+            for prefix in extracted:
+                VRFPrefixAssignmentFactory.create(prefix=prefix, vrf=self)
 
     @factory.post_generation
     def virtual_device_contexts(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.virtual_device_contexts.set(extracted)
-            else:
-                self.virtual_device_contexts.set(get_random_instances(VirtualDeviceContext))
+            if not extracted:
+                extracted = get_random_instances(VirtualDeviceContext)
+            for vdc in extracted:
+                VRFDeviceAssignmentFactory.create(virtual_device_context=vdc, vrf=self)
 
 
 class VLANGroupFactory(OrganizationalModelFactory):
@@ -248,17 +266,20 @@ class VLANFactory(PrimaryModelFactory):
     def locations(self, create, extracted, **kwargs):
         if create:
             if extracted:
-                self.locations.set(extracted)
+                for location in extracted:
+                    VLANLocationAssignmentFactory.create(location=location, vlan=self)
             else:
                 vlan_ct = ContentType.objects.get_for_model(VLAN)
-                self.locations.set(
-                    get_random_instances(
-                        lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
-                    )
-                )
+                for location in get_random_instances(
+                    lambda: Location.objects.filter(location_type__content_types__in=[vlan_ct]), minimum=0
+                ):
+                    if not VLANLocationAssignment.objects.filter(location=location, vlan=self).exists():
+                        VLANLocationAssignmentFactory.create(location=location, vlan=self)
                 if self.vlan_group and self.vlan_group.location:
                     # add the parent of the vlan group location to the vlan locations
-                    self.locations.add(self.vlan_group.location.ancestors(include_self=True)[0])
+                    parent_location = self.vlan_group.location.ancestors(include_self=True)[0]
+                    if not VLANLocationAssignment.objects.filter(location=parent_location, vlan=self).exists():
+                        VLANLocationAssignmentFactory.create(location=parent_location, vlan=self)
 
 
 class VLANGetOrCreateFactory(VLANFactory):
@@ -266,9 +287,24 @@ class VLANGetOrCreateFactory(VLANFactory):
         django_get_or_create = ("vlan_group", "vid")
 
 
+class VLANLocationAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = VLANLocationAssignment
+
+
 class VRFGetOrCreateFactory(VRFFactory):
     class Meta:
         django_get_or_create = ("tenant",)
+
+
+class VRFDeviceAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = VRFDeviceAssignment
+
+
+class VRFPrefixAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = VRFPrefixAssignment
 
 
 class NamespaceFactory(PrimaryModelFactory):
@@ -351,23 +387,21 @@ class PrefixFactory(PrimaryModelFactory):
     @factory.post_generation
     def locations(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.locations.set(extracted)
-            else:
+            if not extracted:
                 prefix_ct = ContentType.objects.get_for_model(Prefix)
-                self.locations.set(
-                    get_random_instances(
-                        lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
-                    )
+                extracted = get_random_instances(
+                    lambda: Location.objects.filter(location_type__content_types__in=[prefix_ct]), minimum=0
                 )
+            for location in extracted:
+                PrefixLocationAssignmentFactory.create(location=location, prefix=self)
 
     @factory.post_generation
     def vrfs(self, create, extracted, **kwargs):
         if create:
-            if extracted:
-                self.vrfs.set(extracted)
-            else:
-                self.vrfs.set(get_random_instances(lambda: VRF.objects.filter(namespace=self.namespace), minimum=0))
+            if not extracted:
+                extracted = get_random_instances(lambda: VRF.objects.filter(namespace=self.namespace), minimum=0)
+            for vrf in extracted:
+                VRFPrefixAssignmentFactory.create(vrf=vrf, prefix=self)
 
     @factory.post_generation
     def children(self, create, extracted, **kwargs):
@@ -458,6 +492,11 @@ class PrefixFactory(PrimaryModelFactory):
                 )
 
 
+class PrefixLocationAssignmentFactory(BaseModelFactory):
+    class Meta:
+        model = PrefixLocationAssignment
+
+
 class IPAddressFactory(PrimaryModelFactory):
     """Create random IPAddress objects with randomized data.
 
@@ -516,3 +555,82 @@ class IPAddressFactory(PrimaryModelFactory):
     tenant = factory.Maybe("has_tenant", random_instance(Tenant))
     # Obviously improve this
     # namespace = Namespace.objects.first()
+
+
+class IPAddressRangeFactory(PrimaryModelFactory):
+    """Create random IPAddressRange objects, each carved from a Network Prefix.
+
+    Picks an existing leaf Network Prefix that has no children and no existing range
+    (so the carved span can't collide with a child prefix or another range); if none
+    is available, creates a fresh parent so create_batch(n) reliably yields n ranges.
+
+    Ordering: must run after overlapping IPAddresses exist — is_exclusive inspects
+    the IPs currently in the span (see below).
+    """
+
+    class Meta:
+        model = IPAddressRange
+        exclude = ("has_description", "has_name", "has_role", "has_tenant", "_parent_prefix", "_start_idx", "_end_idx")
+
+    class Params:
+        has_description = NautobotBoolIterator()
+        has_name = NautobotBoolIterator()
+        has_role = NautobotBoolIterator()
+        has_tenant = NautobotBoolIterator()
+
+    @factory.lazy_attribute
+    def parent(self):
+        qs = (
+            Prefix.objects.filter(type=PrefixTypeChoices.TYPE_NETWORK)
+            .filter(Q(ip_version=4, prefix_length__lte=28) | Q(ip_version=6, prefix_length__lte=124))
+            .filter(children__isnull=True)
+            .filter(ip_address_ranges__isnull=True)
+        )
+        if qs.exists():
+            return factory.random.randgen.choice(qs)
+        # Guarantee a parent rather than silently dropping the object.
+        return PrefixFactory(type=PrefixTypeChoices.TYPE_NETWORK, prefix_length=24)
+
+    @factory.lazy_attribute
+    def _start_idx(self):
+        net = self.parent.prefix
+        return factory.random.randgen.randint(0, net.size - 1)
+
+    @factory.lazy_attribute
+    def _end_idx(self):
+        net = self.parent.prefix
+        return factory.random.randgen.randint(self._start_idx, net.size - 1)
+
+    @factory.lazy_attribute
+    def start_address(self):
+        net = self.parent.prefix
+        return str(netaddr.IPAddress(net.first + self._start_idx))
+
+    @factory.lazy_attribute
+    def end_address(self):
+        net = self.parent.prefix
+        return str(netaddr.IPAddress(net.first + self._end_idx))
+
+    name = factory.Maybe("has_name", factory.Faker("word"), "")
+    description = factory.Maybe("has_description", factory.Faker("text", max_nb_chars=CHARFIELD_MAX_LENGTH), "")
+    role = factory.Maybe(
+        "has_role",
+        random_instance(lambda: Role.objects.get_for_model(IPAddressRange), allow_null=False),
+        None,
+    )
+    status = random_instance(lambda: Status.objects.get_for_model(IPAddressRange), allow_null=False)
+    tenant = factory.Maybe("has_tenant", random_instance(Tenant))
+    count_as_utilized = factory.Faker("pybool")
+
+    @factory.lazy_attribute
+    def is_exclusive(self):
+        # Randomize, but only commit to True when the carved span is actually empty,
+        # so we never trip _validate_no_exclusive_ip_conflict on a reused prefix.
+        if factory.random.randgen.random() < 0.5:
+            return False
+        has_ip = IPAddress.objects.filter(
+            parent=self.parent,
+            host__gte=self.start_address,
+            host__lte=self.end_address,
+        ).exists()
+        return not has_ip

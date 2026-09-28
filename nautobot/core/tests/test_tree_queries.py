@@ -47,7 +47,7 @@ class QuerySetAncestorTests(TestCase):
             Location.objects.without_tree_fields().filter(location_type__name="Campus").first()
         )
 
-        self.assertQuerysetEqual(
+        self.assertQuerySetEqual(
             base_location_with_tree_fields.ancestors(),
             base_location_without_tree_fields.ancestors(),
             msg="`TreeQuerySet.ancestors()` output doesn't match between custom and original implementation for empty ancestors list",
@@ -60,7 +60,7 @@ class QuerySetAncestorTests(TestCase):
             Location.objects.without_tree_fields().filter(location_type__name="Aisle").first()
         )
 
-        self.assertQuerysetEqualAndNotEmpty(
+        self.assertQuerySetEqualAndNotEmpty(
             base_location_with_tree_fields.ancestors(),
             base_location_without_tree_fields.ancestors(),
             msg="`TreeQuerySet.ancestors()` output doesn't match between custom and original implementation",
@@ -183,6 +183,7 @@ class TreeModelCachedDescendantsPKsTests(TestCase):
         new_parent = (
             Location.objects.filter(location_type=old_parent.location_type)
             .exclude(pk__in=[old_parent.pk, loc.pk])
+            .exclude(pk__in=old_parent.descendants().values_list("pk", flat=True))
             .first()
         )
         self.assertIsNotNone(new_parent)

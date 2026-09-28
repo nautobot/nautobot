@@ -21,7 +21,12 @@ from nautobot.core.models.managers import BaseManager, TagsManager
 from nautobot.core.models.name_color_content_types import ContentTypeRelatedQuerySet, NameColorContentTypesModel
 from nautobot.core.models.ordering import naturalize, naturalize_interface
 from nautobot.core.models.query_functions import CollateAsChar, EmptyGroupByJSONBAgg, JSONBAgg
-from nautobot.core.models.querysets import CompositeKeyQuerySetMixin, count_related, RestrictedQuerySet
+from nautobot.core.models.querysets import (
+    CompositeKeyQuerySetMixin,
+    count_related,
+    RestrictedQuerySet,
+    SensitiveFieldsQuerySetMixin,
+)
 from nautobot.core.models.tree_queries import TreeManager, TreeModel, TreeQuerySet
 from nautobot.core.models.utils import (
     array_to_string,
@@ -97,6 +102,7 @@ __all__ = (
     "RelationshipModel",
     "RestrictedQuerySet",
     "SavedViewMixin",
+    "SensitiveFieldsQuerySetMixin",
     "StatusField",
     "TagsField",
     "TagsManager",

@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from django.conf import settings
@@ -16,10 +17,19 @@ from nautobot.core.models.querysets import (
     CompositeKeyQuerySetMixin,
     LocationToLocationsQuerySetMixin,
     RestrictedQuerySet,
+    SensitiveFieldsQuerySetMixin,
+)
+from nautobot.core.models.sensitive_fields import (
+    get_sensitive_field_names,
+    get_withheld_sensitive_field_names,
+    sensitive_field_alias,
+    strict_sensitive_fields_enabled,
 )
 from nautobot.core.models.utils import construct_composite_key, construct_natural_slug, deconstruct_composite_key
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
+
+logger = logging.getLogger(__name__)
 
 __all__ = (
     "BaseManager",
@@ -29,6 +39,7 @@ __all__ = (
     "ContentTypeRelatedQuerySet",
     "LocationToLocationsQuerySetMixin",
     "RestrictedQuerySet",
+    "SensitiveFieldsQuerySetMixin",
     "construct_composite_key",
     "construct_natural_slug",
     "deconstruct_composite_key",
@@ -62,6 +73,12 @@ class BaseModel(models.Model):
     is_saved_view_model = False  # SavedViewMixin overrides this to default True
     is_cloud_resource_type_model = False  # CloudResourceTypeMixin overrides this to default True
     is_approval_workflow_model = False  # ApprovableModelMixin overrides this to default True
+
+    # Names of concrete fields whose values should not be returned unless explicitly opted in.
+    sensitive_fields = ()
+    # For fields in `sensitive_fields` that framework internals read frequently (like password hashes),
+    # retain them on loaded instances to avoid unnecessary re-fetching while still withholding them from templates/queries.
+    sensitive_fields_kept_on_instance = ()
 
     associated_object_metadata = GenericRelation(
         "extras.ObjectMetadata",
@@ -101,6 +118,103 @@ class BaseModel(models.Model):
                     continue
 
         raise AttributeError(f"Cannot find a URL for {self} ({self._meta.app_label}.{self._meta.model_name})")
+
+    def get_sensitive_field(self, field_name):
+        """Retrieve the value of one of this model's sensitive fields, issuing a query if necessary.
+
+        The extra query is intentional: an opt-in to reading a withheld value should be visibly not free.
+        Prefer `Model.objects.with_sensitive_fields(...)` when fetching more than one object.
+        """
+        if field_name not in get_sensitive_field_names(type(self)):
+            raise ValueError(f"{field_name} is not declared in {self._meta.label}.sensitive_fields")
+        field = self._meta.get_field(field_name)
+        alias = sensitive_field_alias(field.attname)
+        for key in (field.attname, alias):
+            if key in self.__dict__:
+                return self.__dict__[key]
+        # `_default_manager` rather than `_base_manager`: Django's base manager is a plain
+        # `django.db.models.Manager` unless `Meta.base_manager_name` says otherwise, so it does not carry
+        # `SensitiveFieldsQuerySetMixin` and has no `with_sensitive_fields()`.
+        value = (
+            type(self)
+            ._default_manager.filter(pk=self.pk)
+            .with_sensitive_fields(field_name)
+            .values_list(alias, flat=True)
+            .first()
+        )
+        self.__dict__[alias] = value
+        return value
+
+    get_sensitive_field.do_not_call_in_templates = True
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Build an instance from a database row, withholding the values of any sensitive fields.
+
+        Every database-to-instance path funnels through `Model.from_db()` (`ModelIterable`,
+        `RawModelIterable`, and `RelatedPopulator` for `select_related`), so scrubbing here covers plain
+        fetches, `only()`, `select_related()`, `prefetch_related()`, `in_bulk()`, `raw()`,
+        `refresh_from_db()`, and the `_base_manager` paths, without any of them needing to know about it.
+
+        Removing the value from `instance.__dict__` is what activates `SensitiveFieldDescriptor`: as a
+        non-data descriptor it is only consulted when the attribute is absent. A value assigned in Python
+        therefore stays readable, which is why `Model.objects.create()` and `save()` are unaffected.
+
+        Gated on `settings.STRICT_SENSITIVE_FIELDS`; when that is disabled the value is left in place and
+        reading it behaves exactly as it did before sensitive fields existed.
+        """
+        instance = super().from_db(db, field_names, values)
+        withheld_field_names = get_withheld_sensitive_field_names(cls)
+        if withheld_field_names and strict_sensitive_fields_enabled():
+            for field_name in withheld_field_names:
+                instance.__dict__.pop(field_name, None)
+        return instance
+
+    def refresh_from_db(self, using=None, fields=None, from_queryset=None):
+        """Reload this instance from the database, discarding any previously opted-in sensitive values.
+
+        The opt-in values are cached on the instance, so leaving them in place across a refresh would hand
+        back a stale value from the earlier query. Dropping them means a subsequent read is blocked again
+        and the caller has to opt in explicitly for the refreshed instance, which is the safer default.
+
+        Naming a withheld sensitive field in `fields` logs a warning, because a refresh is the one case
+        where the caller has asked for that specific value by name and will not get it. Every other route
+        into a withheld field is an incidental read that would only be noise to log.
+        """
+        for field_name in get_sensitive_field_names(type(self)):
+            if fields is None or field_name in fields:
+                self.__dict__.pop(sensitive_field_alias(self._meta.get_field(field_name).attname), None)
+        if fields and strict_sensitive_fields_enabled():
+            requested_and_withheld = sorted(get_withheld_sensitive_field_names(type(self)).intersection(fields))
+            if requested_and_withheld:
+                logger.warning(
+                    "refresh_from_db() on %s was asked to refresh the sensitive field(s) %s, whose values are "
+                    "withheld and so will not be readable on the refreshed instance. Use "
+                    "%s.objects.with_sensitive_fields(...) or get_sensitive_field() to read them deliberately.",
+                    self._meta.label,
+                    ", ".join(requested_and_withheld),
+                    self._meta.object_name,
+                )
+        return super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+
+    def full_clean(self, exclude=None, *args, **kwargs):
+        """Validate this instance, skipping any sensitive fields whose values were withheld on load.
+
+        `Model.clean_fields()` and `Model._perform_unique_checks()` both read every field's value directly
+        with `getattr()`, so a withheld sensitive field would raise there. Excluding it is the behavior
+        Django's own `_get_unique_checks()` documents for a partially-loaded instance: a unique check
+        cannot be performed on a field whose value is not present. A sensitive value that *was* assigned
+        in Python is still validated normally.
+        """
+        withheld = [
+            field_name
+            for field_name in get_sensitive_field_names(type(self))
+            if field_name not in self.__dict__
+            and sensitive_field_alias(self._meta.get_field(field_name).attname) not in self.__dict__
+        ]
+        if withheld:
+            exclude = set(exclude or ()) | set(withheld)
+        return super().full_clean(exclude, *args, **kwargs)
 
     @property
     def page_title(self):
@@ -294,7 +408,15 @@ class BaseModel(models.Model):
                     natural_key_field_names = cls._meta.unique_together[0]
                 else:
                     # Else, do we have any individual unique=True fields? If so, pick the first one.
-                    unique_fields = [field for field in cls._meta.fields if field.unique and field.name != "id"]
+                    # Also exclude sensitive fields when `STRICT_SENSITIVE_FIELDS` is enabled.
+                    sensitive_field_names = (
+                        get_sensitive_field_names(cls) if strict_sensitive_fields_enabled() else frozenset()
+                    )
+                    unique_fields = [
+                        field
+                        for field in cls._meta.fields
+                        if field.unique and field.name != "id" and field.name not in sensitive_field_names
+                    ]
                     if unique_fields:
                         natural_key_field_names = (unique_fields[0].name,)
 

@@ -327,6 +327,15 @@ class PrefixQuerySet(LocationToLocationsQuerySetMixin, BaseNetworkQuerySet):
                     protected_objects=err.protected_objects,
                 ) from err
 
+            if protected_model._meta.model_name == "ipaddressrange" and new_parent is None:
+                raise ProtectedError(
+                    msg=(
+                        f"Cannot delete Prefix {protected_parent} because it has child IPAddressRange"
+                        " objects that would no longer have a parent."
+                    ),
+                    protected_objects=err.protected_objects,
+                ) from err
+
             # Update protected objects to use grand-parent of the parent Prefix and delete the old
             # parent. This should be equivalent at the row level of saying `parent=self.parent`.
             protected_objects.update(parent=new_parent)

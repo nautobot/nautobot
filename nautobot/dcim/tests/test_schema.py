@@ -29,16 +29,22 @@ class DCIMOpenAPISchemaTestCase(OpenAPISchemaTestCases.BaseSchemaTestCase):
         )
 
     def test_cable_terminations_schema(self):
-        """Test the polymorphic serializer for a Cable endpoint's `termination_a` and `termination_b` fields."""
+        """Test the polymorphic serializer for a Cable endpoint's `termination_a` and `termination_b` fields.
+
+        These are nullable because the new Cable model allows a cable to exist transiently without
+        an A- or B-side termination (e.g. during multi-step form save, or after a single-side disconnect).
+        """
         termination_a_ref_name, _ = self.validate_polymorphic_property(
             "Cable",
             "termination_a",
             models=get_all_concrete_models(CableTermination),
+            nullable=True,
         )
         termination_b_ref_name, _ = self.validate_polymorphic_property(
             "Cable",
             "termination_b",
             models=get_all_concrete_models(CableTermination),
+            nullable=True,
         )
         # both terminations should reference the same schema component since they're interchangeable.
         self.assertEqual(termination_a_ref_name, termination_b_ref_name)

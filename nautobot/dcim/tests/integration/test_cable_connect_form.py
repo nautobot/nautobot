@@ -1,7 +1,6 @@
 import time
 
 from django.urls import reverse
-from splinter.exceptions import ElementDoesNotExist
 
 from nautobot.core.testing.integration import SeleniumTestCase
 from nautobot.dcim.models import Interface
@@ -11,85 +10,87 @@ from nautobot.extras.models import Status
 
 class CableConnectFormTestCase(SeleniumTestCase):
     """
-    Integration test to check:
-     - select2 API call limits the choices on the termination_b drop-down on the cable connect form.
-     - termination_b_id drop-down choices are cleared when any termination_b dropdown select element value is changed
-       (except the name dropdown)
+    Integration test for the unified `cable_add` form (reached via the legacy `<port>_connect`
+    URLs, which now redirect into it). Checks:
+
+     - The B-side termination dropdown's Select2 API call excludes terminations already chosen on
+       any other lane — initially the A-side termination, and later anything picked on B-side
+       lanes too.
+     - Changing the B-side parent (Device, Circuit, PowerPanel, ...) clears the previously
+       selected B-side termination value.
     """
 
     def test_js_functionality(self):
-        """
-        This test:
-         1 creates some test data (two devices and three interfaces): L35-L39
-         2 goes to the cable connect form for interface1: L40-L43
-         3 selects the first device in the device drop-down on the termination_b form: L44-L52
-         4 selects the first available interface in the "Name" drop-down: L56-L60
-           checks the results of the select2 API call (which should have excluded interface1): L63-L66
-           this should not be interface1 (this should be excluded) -- it should be interface2: L72-L73
-         5 selects a different device: L77-L81
-         6 checks to see the "Name" (in this case interface) drop-down is cleared: L82-L84
-         7 checks to see if the correct CSS query is loaded for the interface connection form: L87-L91
-        """
         self.user.is_superuser = True
         self.user.save()
         self.login(self.user.username, self.password)
+
+        # Two devices, three interfaces on Device 1, one interface on Device 2 so it shows up in
+        # the `has_interfaces=True`-filtered Device parent dropdown.
         device1 = create_test_device("Device 1")
-        create_test_device("Device 2")
+        device2 = create_test_device("Device 2")
         interface_status = Status.objects.get_for_model(Interface).first()
         interface1 = Interface.objects.create(device=device1, name="Interface 1", status=interface_status)
         Interface.objects.create(device=device1, name="Interface 2", status=interface_status)
         Interface.objects.create(device=device1, name="Interface 3", status=interface_status)
+        Interface.objects.create(device=device2, name="Interface A", status=interface_status)
+
+        # The `<port>_connect` URL redirects into the unified `cable_add` form with A-side
+        # identity pre-populated in the query string.
         cable_connect_form_url = reverse(
             "dcim:interface_connect", kwargs={"termination_a_id": interface1.pk, "termination_b_type": "interface"}
         )
         self.browser.visit(f"{self.live_server_url}{cable_connect_form_url}")
 
-        # Find Device selection drop-down label, clicking sets the drop-down as active element
-        self.browser.find_by_xpath("//label[@for='id_termination_b_device']").click()
-        # Trigger Select2 drop-down loading by clicking it
+        # The B-side lane (connector 1) parent field is `id_b_conn_1_parent` (Device).
+        # Click its label to focus the field, then click to open the Select2 dropdown.
+        self.browser.find_by_xpath("//label[@for='id_b_conn_1_parent']").click()
         self.browser.driver.switch_to.active_element.click()
-        # Wait for Select2 to load choices
         time.sleep(1)
-        # Find 'Device 1' in drop-down and click it
+        # Choose 'Device 1' from the dropdown.
         self.browser.find_by_xpath(
-            "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 1')]"
+            "//ul[@id='select2-id_b_conn_1_parent-results']"
+            "/li[contains(@class,'select2-results__option') and contains(text(),'Device 1')]"
         ).click()
 
-        # Similar to Device drop-down, find and trigger Interface Select2 drop-down
-        self.browser.find_by_xpath("//label[@for='id_termination_b_id']").click()
+        # Open the B-side termination dropdown.
+        self.browser.find_by_xpath("//label[@for='id_b_conn_1_termination']").click()
         self.browser.driver.switch_to.active_element.click()
         time.sleep(1)
 
-        # Find the drop-down choices and confirm expected filtered output
+        # Verify Interface 1 (already chosen as the A-side termination) is excluded from the
+        # B-side termination choices; only Interface 2 and Interface 3 should appear.
         select2_results = self.browser.find_by_xpath(
-            "//ul[@id='select2-id_termination_b_id-results']/li[contains(@class,'select2-results__option')]"
+            "//ul[@id='select2-id_b_conn_1_termination-results']/li[contains(@class,'select2-results__option')]"
         )
         self.assertEqual(2, len(select2_results))
         self.assertEqual("Interface 2", select2_results[0].text)
         self.assertEqual("Interface 3", select2_results[1].text)
 
-        # Find 'Interface 2' in drop-down and click it
+        # Pick 'Interface 2' as the B-side termination.
         self.browser.find_by_xpath(
-            "//ul[@id='select2-id_termination_b_id-results']/li[contains(@class,'select2-results__option') and contains(text(),'Interface 2')]"
+            "//ul[@id='select2-id_b_conn_1_termination-results']"
+            "/li[contains(@class,'select2-results__option') and contains(text(),'Interface 2')]"
         ).click()
+        time.sleep(0.5)
 
-        # Ensure correct value was selected
-        selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
-        self.assertEqual("Interface 2", selected.text)
+        # Ensure Interface 2 is now the selected value of the underlying <select>. Use jQuery's
+        # `:selected` (property-based) rather than xpath `[@selected]` (attribute-based) — Select2
+        # updates the .selected property without necessarily mirroring it into the markup.
+        self.assertEqual(
+            "Interface 2",
+            self.browser.evaluate_script("$('#id_b_conn_1_termination option:selected').text()"),
+        )
 
-        # Change Device selection to "Device 2"
-        self.browser.find_by_xpath("//label[@for='id_termination_b_device']").click()
+        # Change the B-side parent to 'Device 2'.
+        self.browser.find_by_xpath("//label[@for='id_b_conn_1_parent']").click()
         self.browser.driver.switch_to.active_element.click()
         time.sleep(1)
         self.browser.find_by_xpath(
-            "//ul[@id='select2-id_termination_b_device-results']/li[contains(@class,'select2-results__option') and contains(text(),'Device 2')]"
+            "//ul[@id='select2-id_b_conn_1_parent-results']"
+            "/li[contains(@class,'select2-results__option') and contains(text(),'Device 2')]"
         ).click()
+        time.sleep(0.5)
 
-        # Device 2 has no interface, ensure that is filtered properly
-        with self.assertRaises(ElementDoesNotExist) as context:
-            selected = self.browser.find_by_xpath("//select[@id='id_termination_b_id']/option").first
-        self.assertIn("no elements could be found", str(context.exception))
-
-        # check the correct css query is present in the HTML
-        js_query = '"select#id_termination_b_location, select#id_termination_b_rack, select#id_termination_b_device, select#id_termination_b_module"'
-        self.assertIn(js_query, self.browser.html)
+        # The previously selected Interface 2 should now be cleared.
+        self.assertFalse(self.browser.evaluate_script("$('#id_b_conn_1_termination').val()"))

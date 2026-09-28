@@ -73,7 +73,6 @@
 
 {% block javascript %}
     {{ block.super }}
-    <script src="{% static 'jquery/jquery.formset.js' %}"></script>
     <script type="text/javascript">
         $('.formset_row-{{ controller_managed_device_groups.prefix }}').formset({
             addText: '<span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Controller Managed Device Group',

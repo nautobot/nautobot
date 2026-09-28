@@ -19,11 +19,13 @@
                     {% if perms.extras.change_imageattachment %}
                         <a href="{% url 'extras:imageattachment_edit' pk=attachment.pk %}" class="btn btn-warning btn-sm" title="Edit image">
                             <span class="mdi mdi-pencil" aria-hidden="true"></span>
+                            <span class="visually-hidden">Edit image</span>
                         </a>
                     {% endif %}
                     {% if perms.extras.delete_imageattachment %}
                         <a href="{% url 'extras:imageattachment_delete' pk=attachment.pk %}" class="btn btn-danger btn-sm" title="Delete image">
                             <span class="mdi mdi-trash-can-outline" aria-hidden="true"></span>
+                            <span class="visually-hidden">Delete image</span>
                         </a>
                     {% endif %}
                 </td>

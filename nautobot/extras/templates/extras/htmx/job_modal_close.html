@@ -1,0 +1,10 @@
+{# Closes the generic modal and swaps any queued Django messages into the page header banners. #}
+<script>
+    (() => {
+        const modal = document.querySelector('#nautobot-generic-modal');
+        if (modal) {
+            bootstrap.Modal.getOrCreateInstance(modal).hide();
+        }
+        window.nb.messages.refreshMessages('{% url "messages" %}');
+    })();
+</script>

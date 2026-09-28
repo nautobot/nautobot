@@ -47,8 +47,8 @@ Enable the LDAP authentication backend by adding the following to your `nautobot
 
 ```python
 AUTHENTICATION_BACKENDS = [
-    'django_auth_ldap.backend.LDAPBackend',
-    'nautobot.core.authentication.ObjectPermissionBackend',
+    "django_auth_ldap.backend.LDAPBackend",
+    "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 ```
 
@@ -66,9 +66,7 @@ import ldap
 AUTH_LDAP_SERVER_URI = "ldap://ad.example.com"
 
 # The following may be needed if you are binding to Active Directory.
-AUTH_LDAP_CONNECTION_OPTIONS = {
-    ldap.OPT_REFERRALS: 0
-}
+AUTH_LDAP_CONNECTION_OPTIONS = {ldap.OPT_REFERRALS: 0}
 
 # Set the DN and password for the Nautobot service account.
 AUTH_LDAP_BIND_DN = "CN=NAUTOBOTSA, OU=Service Accounts,DC=example,DC=com"
@@ -104,7 +102,7 @@ When using either TLS or SSL it is necessary to validate the certificate from yo
 # Set the path to the trusted CA certificates and create a new internal SSL context.
 AUTH_LDAP_CONNECTION_OPTIONS = {
     ldap.OPT_X_TLS_CACERTFILE: "/opt/nautobot/ca.pem",
-    ldap.OPT_X_TLS_NEWCTX: 0
+    ldap.OPT_X_TLS_NEWCTX: 0,
 }
 ```
 
@@ -129,9 +127,7 @@ from django_auth_ldap.config import LDAPSearch
 
 # This search matches users with the sAMAccountName equal to the provided username. This is required if the user's
 # username is not in their DN (Active Directory).
-AUTH_LDAP_USER_SEARCH = LDAPSearch("ou=Users,dc=example,dc=com",
-                                    ldap.SCOPE_SUBTREE,
-                                    "(sAMAccountName=%(user)s)")
+AUTH_LDAP_USER_SEARCH = LDAPSearch("ou=Users,dc=example,dc=com", ldap.SCOPE_SUBTREE, "(sAMAccountName=%(user)s)")
 
 # If a user's DN is producible from their username, we don't need to search.
 AUTH_LDAP_USER_DN_TEMPLATE = "uid=%(user)s,ou=users,dc=example,dc=com"
@@ -140,7 +136,7 @@ AUTH_LDAP_USER_DN_TEMPLATE = "uid=%(user)s,ou=users,dc=example,dc=com"
 AUTH_LDAP_USER_ATTR_MAP = {
     "first_name": "givenName",
     "last_name": "sn",
-    "email": "mail"
+    "email": "mail",
 }
 ```
 
@@ -180,8 +176,7 @@ from django_auth_ldap.config import LDAPSearch, GroupOfNamesType
 
 # This search ought to return all groups to which the user belongs. django_auth_ldap uses this to determine group
 # hierarchy.
-AUTH_LDAP_GROUP_SEARCH = LDAPSearch("dc=example,dc=com", ldap.SCOPE_SUBTREE,
-                                    "(objectClass=group)")
+AUTH_LDAP_GROUP_SEARCH = LDAPSearch("dc=example,dc=com", ldap.SCOPE_SUBTREE, "(objectClass=group)")
 AUTH_LDAP_GROUP_TYPE = GroupOfNamesType()
 
 # Define a group required to login.
@@ -191,7 +186,7 @@ AUTH_LDAP_REQUIRE_GROUP = "CN=NAUTOBOT_USERS,DC=example,DC=com"
 AUTH_LDAP_USER_FLAGS_BY_GROUP = {
     "is_active": "cn=active,ou=groups,dc=example,dc=com",
     "is_staff": "cn=staff,ou=groups,dc=example,dc=com",
-    "is_superuser": "cn=superuser,ou=groups,dc=example,dc=com"
+    "is_superuser": "cn=superuser,ou=groups,dc=example,dc=com",
 }
 
 # For more granular permissions, we can map LDAP groups to Django groups.
@@ -199,7 +194,6 @@ AUTH_LDAP_FIND_GROUP_PERMS = True
 
 # Cache groups for one hour to reduce LDAP traffic
 AUTH_LDAP_CACHE_TIMEOUT = 3600
-
 ```
 
 * `is_active` - All users must be mapped to at least this group to enable authentication. Without this, users cannot log in.
@@ -220,6 +214,7 @@ In order to define and load additional backends into Nautobot an App can be used
 
 from django_auth_ldap.backend import LDAPBackend
 
+
 class LDAPBackendSecondary(LDAPBackend):
     settings_prefix = "AUTH_LDAP_SECONDARY_"
 ```
@@ -230,9 +225,9 @@ If the App is named `nautobot_ldap_app`, the following snippet could be used to 
 # nautobot_config.py
 
 AUTHENTICATION_BACKENDS = [
-    'django_auth_ldap.backend.LDAPBackend',
-    'nautobot_ldap_app.my_customer_backends.LDAPBackendSecondary',  # path to the custom LDAP Backend
-    'nautobot.core.authentication.ObjectPermissionBackend',
+    "django_auth_ldap.backend.LDAPBackend",
+    "nautobot_ldap_app.my_customer_backends.LDAPBackendSecondary",  # path to the custom LDAP Backend
+    "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 ```
 
@@ -259,21 +254,21 @@ For troubleshooting LDAP user/group queries, add or merge the following [logging
 
 ```python
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'nautobot_auth_log': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '/opt/nautobot/logs/django-ldap-debug.log',
-            'maxBytes': 1024 * 500,
-            'backupCount': 5,
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "nautobot_auth_log": {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": "/opt/nautobot/logs/django-ldap-debug.log",
+            "maxBytes": 1024 * 500,
+            "backupCount": 5,
         },
     },
-    'loggers': {
-        'django_auth_ldap': {
-            'handlers': ['nautobot_auth_log'],
-            'level': 'DEBUG',
+    "loggers": {
+        "django_auth_ldap": {
+            "handlers": ["nautobot_auth_log"],
+            "level": "DEBUG",
         },
     },
 }

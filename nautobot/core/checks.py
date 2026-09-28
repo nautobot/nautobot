@@ -52,11 +52,9 @@ E009 = Error(
     obj=settings,
 )
 
-W005 = Warning(
-    "STORAGE_CONFIG has been set but STORAGE_BACKEND is not defined. STORAGE_CONFIG will be ignored.",
-    id="nautobot.core.W005",
-    obj=settings,
-)
+# E010 is dynamically constructed inline below
+
+# W005 was removed in v3.1.
 
 W006 = Warning(
     "The deprecated setting DEVICE_NAME_AS_NATURAL_KEY is still defined.",
@@ -71,9 +69,9 @@ W007 = Warning(
     id="nautobot.core.W007",
 )
 
-# W008 is dynamically constructed inline below
+# W008 was removed in v3.1.
 
-MIN_POSTGRESQL_MAJOR_VERSION = 12
+MIN_POSTGRESQL_MAJOR_VERSION = 14
 MIN_POSTGRESQL_MINOR_VERSION = 0
 
 MIN_POSTGRESQL_VERSION = MIN_POSTGRESQL_MAJOR_VERSION * 10000 + MIN_POSTGRESQL_MINOR_VERSION
@@ -105,13 +103,6 @@ def check_release_check_url(app_configs, **kwargs):
 
 
 @register(Tags.compatibility)
-def check_storage_config_and_backend(app_configs, **kwargs):
-    if getattr(settings, "STORAGE_CONFIG", None) and not getattr(settings, "STORAGE_BACKEND", None):
-        return [W005]
-    return []
-
-
-@register(Tags.compatibility)
 def check_maintenance_mode(app_configs, **kwargs):
     if settings.MAINTENANCE_MODE and settings.SESSION_ENGINE == "django.contrib.sessions.backends.db":
         return [E005]
@@ -139,6 +130,48 @@ def check_postgresql_version(app_configs, databases=None, **kwargs):
                     )
                 )
 
+    return errors
+
+
+@register(Tags.security)
+def check_sensitive_fields_are_enforceable(app_configs, **kwargs):
+    """Flag a model that declares `sensitive_fields` but whose queryset cannot block query projections.
+
+    `BaseModel.from_db()` withholds the value from instances of any model, but refusing `values()`,
+    `values_list()`, `annotate()` and the other projection methods is the queryset's job. A model whose
+    default manager returns a plain `django.db.models.QuerySet`, or a custom one that does not build on
+    Nautobot's, therefore advertises a protection it only half provides.
+    """
+    # Imported here rather than at module scope: `nautobot.core.checks` is imported from
+    # `nautobot/core/__init__.py`, which runs before the app registry is populated, and reaching
+    # `nautobot.core.models` that early is circular by way of ContentType.
+    from django.apps import apps
+
+    from nautobot.core.models.querysets import SensitiveFieldsQuerySetMixin
+    from nautobot.core.models.sensitive_fields import get_sensitive_field_names
+
+    errors = []
+    for model in apps.get_models():
+        declared = get_sensitive_field_names(model)
+        if not declared:
+            continue
+        queryset = model._default_manager.get_queryset()
+        if not isinstance(queryset, SensitiveFieldsQuerySetMixin):
+            errors.append(
+                Error(
+                    f"{model._meta.label} declares sensitive_fields "
+                    f"({', '.join(sorted(declared))}) but its default queryset "
+                    f"({type(queryset).__name__}) does not provide SensitiveFieldsQuerySetMixin.",
+                    hint=(
+                        "The values are withheld from loaded instances, but values(), values_list(), "
+                        "annotate(), alias(), aggregate(), order_by() and distinct() will still return "
+                        "them. Mix SensitiveFieldsQuerySetMixin into the queryset class, or build it on "
+                        "RestrictedQuerySet, and make sure any custom manager's get_queryset() calls super()."
+                    ),
+                    obj=model,
+                    id="nautobot.core.E011",
+                )
+            )
     return errors
 
 
@@ -224,9 +257,9 @@ def check_valid_value_for_device_uniqueness(app_configs, **kwargs):
 
 
 @register(Tags.compatibility)
-def check_for_deprecated_storage_settings(app_configs, **kwargs):
-    """Warn if any deprecated storage settings are set."""
-    warnings = []
+def check_for_removed_storage_settings(app_configs, **kwargs):
+    """Warn if any removed storage settings are set."""
+    errors = []
     for setting_name, replacement in [
         ("DEFAULT_FILE_STORAGE", 'STORAGES["default"]["BACKEND"]'),
         ("JOB_FILE_IO_STORAGE", 'STORAGES["nautobotjobfiles"]["BACKEND"]'),
@@ -235,15 +268,14 @@ def check_for_deprecated_storage_settings(app_configs, **kwargs):
         ("STORAGE_BACKEND", 'STORAGES["default"]["BACKEND"]'),
     ]:
         if settings.is_overridden(setting_name):
-            warnings.append(
-                Warning(
-                    msg=f"The setting {setting_name} is deprecated since Nautobot v3.0.3, "
-                    "and support will be removed in Nautobot 3.1.",
-                    hint=f"You should migrate to setting {replacement} instead. Refer to "
+            errors.append(
+                Error(
+                    msg=f"The setting {setting_name} is no longer supported in Nautobot 3.1 and later.",
+                    hint=f"You must migrate to setting {replacement} instead. Refer to "
                     "https://docs.nautobot.com/projects/core/en/stable/user-guide/administration/configuration/settings/#storages for guidance.",
                     obj=settings,
-                    id="nautobot.core.W008",
+                    id="nautobot.core.E010",
                 )
             )
 
-    return warnings
+    return errors

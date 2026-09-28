@@ -135,12 +135,8 @@ celery@worker1 v5.1.1 (sun-harmonics)
 
 [tasks]
   . nautobot.core.tasks.get_releases
-  . nautobot.extras.datasources.git.pull_git_repository_and_refresh_data
   . nautobot.extras.jobs.run_job
-  . nautobot.extras.tasks.delete_custom_field_data
   . nautobot.extras.tasks.process_webhook
-  . nautobot.extras.tasks.provision_field
-  . nautobot.extras.tasks.update_custom_field_choice_data
 
 [2021-07-01 21:32:40,680: INFO/MainProcess] Connected to redis://localhost:6379/0
 [2021-07-01 21:32:40,690: INFO/MainProcess] mingle: searching for neighbors
@@ -206,6 +202,35 @@ Output (when pass):
 
 ```no-highlight
 No approval_required jobs or scheduled jobs found.
+```
+
+### `create_breakout_demo_data`
+
+`nautobot-server create_breakout_demo_data`
+
+Creates some example data for demonstrating the breakout-cable modelling capabilities introduced in Nautobot v3.2.
+
+```no-highlight
+nautobot-server create_breakout_demo_data
+```
+
+Output:
+
+```no-highlight
+Creating breakout cable demo data...
+12:55:05.131 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination A-side for Ethernet1/1 on cable DEMO-BKO-SPINE-LEAF-400G
+12:55:05.135 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination B-side for Ethernet1/1 on cable DEMO-BKO-SPINE-LEAF-400G
+12:55:05.228 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination A-side for Ethernet1/2 on cable DEMO-BKO-1x2-PARTIAL
+12:55:05.231 DEBUG   nautobot.dcim.models.cables cables.py       _materialize_initial_terminations() :
+  Created CableToCableTermination B-side for Ethernet1/2 on cable DEMO-BKO-1x2-PARTIAL
+Demo data created successfully.
+  Location: DEMO-DC1
+  Devices: 5
+  Cable types: 2
+  Cables: 2
 ```
 
 ### `createsuperuser`
@@ -284,7 +309,7 @@ Use this command to generate a JSON dump of the database contents.
 One example of using this command would be to [export data from PostgreSQL](../migration/migrating-from-postgresql.md#export-data-from-postgresql) and then [import the data dump into MySQL](../migration/migrating-from-postgresql.md#import-the-database-dump-into-mysql).
 
 !!! warning
-    While this command *can* be used in combination with `nautobot-server loaddata` as a way to do database backup-and-restore, it's not generally the most efficient or straightforward way to do so. Refer to [Database Backup](../upgrading/database-backup.md) for recommendations.
+    While this command _can_ be used in combination with `nautobot-server loaddata` as a way to do database backup-and-restore, it's not generally the most efficient or straightforward way to do so. Refer to [Database Backup](../upgrading/database-backup.md) for recommendations.
 
 ### `fix_custom_fields`
 
@@ -309,7 +334,7 @@ Processing ContentType ipam | prefix
 ... (truncated for brevity of documentation) ...
 ```
 
-You may optionally specify one or more specific models (each prefixed with its app_label) to fix:
+You may optionally specify one or more specific models (each prefixed with its `app_label`) to fix:
 
 ```no-highlight
 nautobot-server fix_custom_fields circuits.Circuit dcim.Location
@@ -695,7 +720,10 @@ nautobot-server runjob --username someuser example_app.jobs.MyJobWithNoVars
 Run the job on the local system and not on a worker.
 
 `--data <data>`
-JSON string that populates the `data` variable of the job.
+JSON string that populates the `data` variable of the job. Defaults to `{}` (an empty dict). Passing `null` will result in a validation error.
+
++++ 3.2.0
+    The default value of `--data` is now `{}` instead of `None`. Job input validation is also stricter: passing `data=null` raises a `ValueError` rather than being silently treated as an empty input.
 
 ```no-highlight
 nautobot-server runjob --username someuser --local --data '{"my_boolvar": false}' example_app.jobs.MyJobWithVars
@@ -721,7 +749,7 @@ The following is an example of the data that is sent:
     "installed_apps": {
         # "example_app" hashed by sha256
         "ded1fb19a53a47aa4fe26b72b4ab9297b631e4d4f852b03b3788d5dbc292ae8d": "1.0.0"
-    }
+    },
 }
 ```
 
@@ -880,27 +908,3 @@ Nautobot version: 2.2.0a1
 Django version: 3.2.24
 Configuration file: /opt/nautobot/nautobot_config.py
 ```
-
-### `webhook_receiver`
-
-`nautobot-server webhook_receiver`
-
-Start a simple listener to display received HTTP requests.
-
-`--port PORT`  
-Optional port number (default: `9000`)
-
-`--no-headers`  
-Hide HTTP request headers.
-
-```no-highlight
-nautobot-server webhook_receiver --port 9001 --no-headers
-```
-
-Example output:
-
-```no-highlight
-Listening on port http://localhost:9000. Stop with CONTROL-C.
-```
-
-Please see the guide on [Troubleshooting Webhooks](../../platform-functionality/webhook.md#troubleshooting-webhooks) for more information.

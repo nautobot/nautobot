@@ -88,6 +88,10 @@ class TokenSerializer(ValidatedModelSerializer):
 
 class ObjectPermissionSerializer(ValidatedModelSerializer):
     object_types = ContentTypeField(queryset=ContentType.objects.all(), many=True)
+    actions = serializers.ListField(
+        child=serializers.CharField(max_length=30),
+        help_text="The list of actions granted by this permission",
+    )
 
     class Meta:
         model = ObjectPermission

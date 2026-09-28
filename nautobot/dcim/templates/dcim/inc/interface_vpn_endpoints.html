@@ -1,0 +1,15 @@
+{% load helpers %}
+<table class="table table-hover nb-table-headings">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Role</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>{{ object.vpn_tunnel_endpoints_src_int|hyperlinked_object }}</td>
+            <td>{{ object.vpn_tunnel_endpoints_src_int.role|placeholder }}</td>
+        </tr>
+    </tbody>
+</table>
