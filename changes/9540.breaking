@@ -1,0 +1,1 @@
+As a consequence of the upgrade to `social-auth-app-django` 6.x, the "Continue with SSO" login action has changed from an HTTP GET to an HTTP POST, and bookmarked SSO login URLs such as `/login/saml?idp=...` will no longer work. Bookmark the main login page `/login/` instead.

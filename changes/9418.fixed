@@ -1,0 +1,1 @@
+Fixed circular import between DCIM, IPAM, and Circuits during startup that caused Circuits navigation menu items to be missing.
