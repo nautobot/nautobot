@@ -23,6 +23,7 @@ from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import FieldDoesNotExist
 from django.core.files.base import ContentFile
+from django.db import IntegrityError
 from django.test import RequestFactory, SimpleTestCase, tag, TestCase
 from django.urls import reverse
 from rest_framework import serializers
@@ -2752,13 +2753,13 @@ class CoreUpsertTests(ImportExportJobTestCase):
         """A row that changes only a many-to-many field is an update, not unchanged."""
         manufacturer = Manufacturer.objects.create(name="Tag Log Mfr")
         device_type = DeviceType.objects.create(manufacturer=manufacturer, model="Tag Log DT", u_height=1)
-        tag = Tag.objects.create(name="Tag Log Tag")
-        tag.content_types.add(ContentType.objects.get_for_model(DeviceType))
+        new_tag = Tag.objects.create(name="Tag Log Tag")
+        new_tag.content_types.add(ContentType.objects.get_for_model(DeviceType))
         job_result = self.run_import(
             "model,manufacturer__name,tags\nTag Log DT,Tag Log Mfr,Tag Log Tag", model=DeviceType, match_fields="model"
         )
         self.assertImport(job_result, updated=1, unchanged=0)
-        self.assertQuerySetEqual(device_type.tags.all(), [tag])
+        self.assertQuerySetEqual(device_type.tags.all(), [new_tag])
         entry = JobLogEntry.objects.get(job_result=job_result, message__icontains="Updated record")
         self.assertIn('tags: [] → ["Tag Log Tag"]', entry.message)
 
@@ -2914,6 +2915,46 @@ class MatchKeyTests(ImportExportJobTestCase):
         )
         self.assertJobLogEntry(job_result, "Invalid match field(s): namespace.", level=LogLevelChoices.LOG_ERROR)
         self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__startswith="Row ").exists())
+
+    def test_match__specified_fields_must_be_matchable(self):
+        """With match fields you specify, a record that can't be matched on them is an error, and isn't created."""
+        Manufacturer.objects.create(name="Matchable Mfr")
+        cases = {
+            "missing": (
+                "manufacturer__name,u_height\nMatchable Mfr,1",
+                "Row 1: `Match field(s) not present in the import data: model`",
+            ),
+            "unresolved": ("manufacturer__name,model\nNo Such Mfr,Matchable DT", "Row 1: `Match field manufacturer:"),
+        }
+        for case, (csv_data, message) in cases.items():
+            with self.subTest(case):
+                job_result = self.run_import(
+                    csv_data,
+                    model=DeviceType,
+                    match_fields="manufacturer,model",
+                    roll_back_if_error=False,
+                    expected_status=JobResultStatusChoices.STATUS_FAILURE,
+                )
+                self.assertJobLogEntry(job_result, message, level=LogLevelChoices.LOG_ERROR)
+                # The only error for the row: a create would have added the record's own validation errors
+                row_errors = JobLogEntry.objects.filter(
+                    job_result=job_result, log_level=LogLevelChoices.LOG_ERROR, message__startswith="Row 1:"
+                )
+                self.assertEqual(row_errors.count(), 1)
+                self.assertFalse(DeviceType.objects.filter(model="Matchable DT").exists())
+
+    def test_match__default_fields_unmatched_record_is_a_create(self):
+        """With the default match fields, a record whose related value doesn't resolve is treated as a new object."""
+        job_result = self.run_import(
+            "manufacturer__name,model\nNo Such Mfr,Unmatched DT",
+            model=DeviceType,
+            roll_back_if_error=False,
+            expected_status=JobResultStatusChoices.STATUS_FAILURE,
+        )
+        # Refused by the create's own validation of the record, not by matching
+        self.assertJobLogEntry(job_result, "Row 1: `manufacturer`:", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(JobLogEntry.objects.filter(job_result=job_result, message__icontains="Match field").exists())
+        self.assertFalse(DeviceType.objects.filter(model="Unmatched DT").exists())
 
 
 # ===========================================================================
@@ -3512,6 +3553,27 @@ class ImportErrorTests(ImportExportJobTestCase):
         job_result = self.run_import("name,color\n")
         self.assertFalse(Status.objects.filter(name__startswith="test_status").exists())
         self.assertJobLogEntry(job_result, "created or updated", level=LogLevelChoices.LOG_WARNING)
+
+    def test_error__database_error_on_one_row(self):
+        """A database error saving one row is reported against that row, and the rows after it still import."""
+        original_save = StatusSerializer.save
+        saved = []
+
+        def save_failing_first_row(serializer, **kwargs):
+            saved.append(serializer)
+            if len(saved) == 1:
+                raise IntegrityError("simulated database error")
+            return original_save(serializer, **kwargs)
+
+        with mock.patch.object(StatusSerializer, "save", autospec=True, side_effect=save_failing_first_row):
+            job_result = self.run_import(
+                STATUS_CSV_DATA, roll_back_if_error=False, expected_status=JobResultStatusChoices.STATUS_FAILURE
+            )
+
+        self.assertJobLogEntry(job_result, "Row 1: simulated database error", level=LogLevelChoices.LOG_ERROR)
+        self.assertFalse(Status.objects.filter(name="test_status1").exists())
+        for name in ("test_status2", "test_status3", "test_status4"):
+            self.assertTrue(Status.objects.filter(name=name).exists(), name)
 
 
 class ImportRelatedObjectTests(ImportExportJobTestCase):
