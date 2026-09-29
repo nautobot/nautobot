@@ -482,6 +482,11 @@ class APIConstraintTests(TestCase):
                 view.perform_create(serializer)
         self.assertIs(raised.exception, error)
 
+    def test_unsupported_database_vendor_is_not_translated(self):
+        error = IntegrityError("An unsupported database failure")
+        with patch("nautobot.core.api.constraints.connections", {"unsupported": SimpleNamespace(vendor="unsupported")}):
+            self.assertIsNone(get_constraint_error(error, InterfaceSerializer(), using="unsupported"))
+
     def test_unrecognized_integrity_error_rolls_back_update(self):
         instance = self.interfaces[1]
         original_description = instance.description
