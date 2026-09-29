@@ -110,6 +110,10 @@ class RegexFilterTests(TestCase):
         self.assertIn("nautobot-select2-multi-value-char", rendered)
         self.assertIn('value="^00:11:" selected', rendered)
 
+    def test_empty_pattern_list_does_not_query_database(self):
+        with self.assertNumQueries(0):
+            validate_regex([], using=connection.alias, lookup_expr="regex")
+
     def test_pattern_is_passed_as_a_sql_parameter(self):
         calls = []
 
