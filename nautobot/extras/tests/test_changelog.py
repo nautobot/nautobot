@@ -15,6 +15,8 @@ from nautobot.core.testing.views import ModelViewTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
+    Cable,
+    CableToCableTermination,
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -1263,6 +1265,67 @@ class ChangeLogUnchangedSaveTest(TestCase):
         with context_managers.web_request_context(self.user):
             vlan.vminterfaces_as_tagged.clear()
         self.assertEqual(get_changes_for_model(vlan).count(), 1)
+
+    def test_m2m_clear_disambiguates_fields_sharing_a_through_model(self):
+        """
+        `VRF.devices`, `.virtual_machines`, and `.virtual_device_contexts` all share one through model
+        (`VRFDeviceAssignment`), distinguished only by `through_fields`. Django's `.clear()` deletes by
+        filtering that through model on the `vrf` column alone (see `_m2m_clear_would_touch_anything`),
+        so clearing one of these fields while it is itself empty still deletes a populated sibling's row
+        for the same VRF — and that must be recorded as the real change it is, not skipped as a no-op.
+        """
+        cluster_type = ClusterType.objects.create(name="Unchanged save m2m clear shared-through test")
+        cluster = Cluster.objects.create(name="Unchanged save m2m clear shared-through test", cluster_type=cluster_type)
+        vm = VirtualMachine.objects.create(
+            name="Unchanged save m2m clear shared-through test",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        with context_managers.web_request_context(self.user):
+            vrf = VRF.objects.create(
+                name="Unchanged save m2m clear shared-through test",
+                status=Status.objects.get_for_model(VRF).first(),
+            )
+        vrf.virtual_machines.add(vm)  # outside any context: `devices` itself stays empty
+        self.assertEqual(get_changes_for_model(vrf).count(), 1)  # the create
+
+        # `devices` has nothing of its own, but clearing it also clears the shared through model's
+        # `virtual_machines` row for this VRF, which is a real change.
+        with context_managers.web_request_context(self.user):
+            vrf.devices.clear()
+        self.assertEqual(get_changes_for_model(vrf).count(), 2)
+
+        # With nothing left in the through model for this VRF at all, clearing another field is a
+        # genuine no-op.
+        with context_managers.web_request_context(self.user):
+            vrf.virtual_device_contexts.clear()
+        self.assertEqual(get_changes_for_model(vrf).count(), 2)
+
+    def test_m2m_clear_disambiguates_fields_sharing_a_through_model_with_many_fields(self):
+        """
+        `Cable`'s termination accessors (`interfaces`, `front_ports`, etc.) all share one through model
+        (`CableToCableTermination`). Same hazard as `VRF`: clearing an accessor that is itself empty still
+        deletes a populated sibling accessor's row for the same cable, which must be recorded.
+        """
+        interface = Interface.objects.first()
+        with context_managers.web_request_context(self.user):
+            cable = Cable.objects.create(status=Status.objects.get_for_model(Cable).first())
+        # Created directly on the through model, bypassing `cable.interfaces.add()`, so only the `clear()`
+        # calls below are exercised through `m2m_changed`.
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=interface)
+        self.assertEqual(get_changes_for_model(cable).count(), 1)  # the create
+
+        # `front_ports` has nothing of its own, but clearing it also clears the shared through model's
+        # `interfaces` row for this cable, which is a real change.
+        with context_managers.web_request_context(self.user):
+            cable.front_ports.clear()
+        self.assertEqual(get_changes_for_model(cable).count(), 2)
+
+        # With nothing left in the through model for this cable at all, clearing another accessor is a
+        # genuine no-op.
+        with context_managers.web_request_context(self.user):
+            cable.console_ports.clear()
+        self.assertEqual(get_changes_for_model(cable).count(), 2)
 
     def test_model_can_opt_out(self):
         """A model whose stored value is not a pure function of its own fields opts out of the comparison."""
