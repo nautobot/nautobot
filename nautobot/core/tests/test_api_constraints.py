@@ -481,3 +481,24 @@ class APIConstraintTests(TestCase):
             with self.assertRaises(IntegrityError) as raised:
                 view.perform_create(serializer)
         self.assertIs(raised.exception, error)
+
+    def test_unrecognized_integrity_error_rolls_back_update(self):
+        instance = self.interfaces[1]
+        original_description = instance.description
+        error = IntegrityError("An internal update failure")
+
+        def update(serializer, instance, validated_data):
+            instance.description = validated_data["description"]
+            instance.save(update_fields=["description"])
+            raise error
+
+        serializer = InterfaceSerializer(instance, data={"description": "must roll back"}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        view = ModelViewSet()
+        view.queryset = Interface.objects.all()
+        with patch.object(InterfaceSerializer, "update", update):
+            with self.assertRaises(IntegrityError) as raised:
+                view.perform_update(serializer)
+        self.assertIs(raised.exception, error)
+        instance.refresh_from_db()
+        self.assertEqual(instance.description, original_description)
