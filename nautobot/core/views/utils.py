@@ -525,32 +525,47 @@ def common_detail_view_context(request, instance):
     return context
 
 
-def get_saved_views_for_user(user, list_url):
+def get_all_saved_views_for_user(user):
     """
-    Get the SavedViews for the given list view that the user is permitted to see.
+    Get the SavedViews across all list views that the user is permitted to see.
 
-    Users with the `extras.view_savedview` permission can see all SavedViews for the list view;
-    other users can see only shared SavedViews and SavedViews they own.
+    Users with the `extras.view_savedview` permission can see all SavedViews; other users can see
+    only shared SavedViews and SavedViews they own.
 
     Args:
         user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
-        list_url (str): The list view name, for example `"dcim:device_list"`.
 
     Returns:
         (QuerySet[SavedView]): The permitted SavedViews, ordered by name.
     """
     # We are not using .restrict(request.user, "view") here
     # User should be able to see any saved view that he has the list view access to.
-    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+    saved_views = SavedView.objects.order_by("name")
     if user.has_perms(["extras.view_savedview"]):
         return saved_views
 
     shared_saved_views = saved_views.filter(is_shared=True)
     if user.is_authenticated:
-        user_owned_saved_views = SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
-        return shared_saved_views | user_owned_saved_views
+        return shared_saved_views | saved_views.filter(owner=user)
 
     return shared_saved_views
+
+
+def get_saved_views_for_user(user, list_url):
+    """
+    Get the SavedViews for the given list view that the user is permitted to see.
+
+    Users with the `extras.view_savedview` permission can see all SavedViews for the list view.
+    Other users can see only shared SavedViews and SavedViews they own.
+
+    Args:
+        user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
+        list_url (str): The list view name, for example `"dcim:device_list"`.
+
+    Returns:
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name, deferred to `pk` and `name`.
+    """
+    return get_all_saved_views_for_user(user).filter(view=list_url).only("pk", "name")
 
 
 def is_metrics_experimental_caching_enabled():

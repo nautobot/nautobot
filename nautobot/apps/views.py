@@ -39,6 +39,7 @@ from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     check_filter_for_display,
     csv_format,
+    get_all_saved_views_for_user,
     get_csv_form_fields_from_serializer_class,
     get_obj_from_context,
     get_saved_views_for_user,
@@ -95,6 +96,7 @@ __all__ = (
     "check_and_call_git_repository_function",
     "check_filter_for_display",
     "csv_format",
+    "get_all_saved_views_for_user",
     "get_csv_form_fields_from_serializer_class",
     "get_obj_from_context",
     "get_paginate_count",
