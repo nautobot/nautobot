@@ -992,7 +992,7 @@ class DeviceTypeTestCase(
     def test_list_has_correct_links(self):
         """Assert that the DeviceType list view has both import links (single-record YAML/JSON, multi-record CSV)
         and the export trigger."""
-        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.view_job")
+        self.add_permissions("dcim.add_devicetype", "dcim.view_devicetype", "extras.run_job")
         # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
         # enable the system Job for the button to render enabled (as it is in production).
         job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
@@ -1409,7 +1409,7 @@ class ModuleTypeTestCase(
     def test_list_has_correct_links(self):
         """Assert that the ModuleType list view has both import links (single-record YAML/JSON, multi-record CSV)
         and the export trigger."""
-        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.view_job")
+        self.add_permissions("dcim.add_moduletype", "dcim.view_moduletype", "extras.run_job")
         # The export trigger reuses the job-modal framework's gate (view permission + enabled Job), so
         # enable the system Job for the button to render enabled (as it is in production).
         job_model = Job.objects.get_for_class_path("nautobot.core.jobs.ExportObjectList")
