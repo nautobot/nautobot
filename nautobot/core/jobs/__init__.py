@@ -762,18 +762,34 @@ class ImportObjects(Job):
         return created_objs, updated_objs, unchanged_objs, validation_failed
 
     @staticmethod
-    def _write_only_changes(serializer, match_fields):
+    def _write_only_fields(serializer_class):
+        """The names of the fields that `_snapshot()` can't read, and so can't compare.
+
+        Asked of the serializer as `_snapshot()` builds it, with every field shown: a REST serializer also marks
+        the M2M fields it leaves out of its responses by default (`VRF.import_targets`) as write-only, but those
+        the snapshot does read.
+        """
+        fields = serializer_class(context={"request": None}, for_import_export=True).fields
+        return {name for name, field in fields.items() if field.write_only}
+
+    @staticmethod
+    def _write_only_changes(serializer, match_fields, write_only_fields):
         """The write-only fields a validated row sets, other than its match fields, as `{field: new_value}`.
 
         A write-only field (`User.password`, `Prefix.location`) is absent from `_snapshot()`, so a change to it
         can't be seen by comparing snapshots, and a row changing nothing else would be rolled back as
         unchanged. So each one the row sets is taken to be a change: at worst an update that changed nothing.
         A match field is the exception, having matched the existing object's own value.
+
+        Args:
+            write_only_fields (set): As `_write_only_fields()` gives them.
         """
         return {
-            name: serializer.validated_data[field.source]
-            for name, field in serializer.fields.items()
-            if field.write_only and field.source in serializer.validated_data and name not in (match_fields or ())
+            name: serializer.validated_data[serializer.fields[name].source]
+            for name in write_only_fields
+            if name in serializer.fields
+            and serializer.fields[name].source in serializer.validated_data
+            and name not in (match_fields or ())
         }
 
     @staticmethod
@@ -814,6 +830,7 @@ class ImportObjects(Job):
         context = import_utils.import_serializer_context(self.user)
         # Resolves each row's match-field values, as the serializer that saves the row will resolve them
         match_serializer = serializer_class(context=context)
+        write_only_fields = self._write_only_fields(serializer_class)
         for row, entry in enumerate(data, start=1):
             instance = None
             if match_fields:
@@ -862,7 +879,9 @@ class ImportObjects(Job):
             permission_queryset = change_queryset if instance is not None else add_queryset
             outcome = None  # one of: "created", "updated", "unchanged", "denied"
             diff = {}
-            write_only_changes = self._write_only_changes(serializer, match_fields) if instance is not None else {}
+            write_only_changes = (
+                self._write_only_changes(serializer, match_fields, write_only_fields) if instance is not None else {}
+            )
             try:
                 with transaction.atomic():
                     obj = serializer.save()

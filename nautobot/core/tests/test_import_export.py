@@ -2833,6 +2833,21 @@ class CoreUpsertTests(ImportExportJobTestCase):
         self.assertIn("`password`: (redacted) → (redacted)", entry.message)
         self.assertNotIn(new_secret, entry.message)
 
+    def test_core_upsert__m2m_hidden_from_rest_output__unchanged(self):
+        """An M2M field hidden from REST responses by default (`VRF.import_targets`) isn't taken for a write-only one.
+
+        The REST serializer marks such a field write-only unless asked for all M2M fields, but the snapshot reads
+        it, so an unchanged re-import of an export that includes it is unchanged.
+        """
+        vrf = VRF.objects.create(name="Hidden M2M VRF", rd="65000:9547", namespace=Namespace.objects.first())
+        vrf.import_targets.add(RouteTarget.objects.create(name="65000:9547"))
+        exported = self.export_text(self.run_export(model=VRF, query_string=f"id={vrf.pk}", export_format="json"))
+        self.assertIn('"import_targets"', exported)
+
+        job_result = self.run_import(exported, model=VRF)
+
+        self.assertImport(job_result, created=0, updated=0, unchanged=1)
+
     def test_core_upsert__write_only_field_with_read_only_effect__update(self):
         """A write-only field whose effect is on a read-only field (`Prefix.location` sets `locations`) is an update."""
         location_type = LocationType.objects.create(name="Write Only Location Type")
