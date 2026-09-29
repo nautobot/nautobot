@@ -1197,10 +1197,10 @@ def tests(
     if coverage:
         append_arg = " --append" if append_coverage and not parallel else ""
         parallel_arg = " --parallel-mode" if parallel else ""
-        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli"
     else:
-        command = f"nautobot-server test {label}"
-    command += f" --config={config_file}"
+        command = "nautobot-server"
+    command += f" --config={config_file} test {label}"
     # booleans
     if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
