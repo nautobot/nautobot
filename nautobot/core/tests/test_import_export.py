@@ -2839,7 +2839,9 @@ class CoreUpsertTests(ImportExportJobTestCase):
         The REST serializer marks such a field write-only unless asked for all M2M fields, but the snapshot reads
         it, so an unchanged re-import of an export that includes it is unchanged.
         """
-        vrf = VRF.objects.create(name="Hidden M2M VRF", rd="65000:9547", namespace=Namespace.objects.first())
+        vrf = VRF.objects.create(
+            name="Hidden M2M VRF", rd="65000:9547", namespace=Namespace.objects.create(name="Hidden M2M Namespace")
+        )
         vrf.import_targets.add(RouteTarget.objects.create(name="65000:9547"))
         exported = self.export_text(self.run_export(model=VRF, query_string=f"id={vrf.pk}", export_format="json"))
         self.assertIn('"import_targets"', exported)
