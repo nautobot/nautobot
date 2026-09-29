@@ -214,10 +214,11 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, service="nautobot", docker_env=None, **kwargs):
+def run_command(context, command, service="nautobot", command_env=None, **kwargs):
     """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
+        env.update(command_env or {})
         if "hide" not in kwargs:
             print_command(command, env=env)
         return context.run(command, pty=True, env=env, **kwargs)
@@ -227,16 +228,19 @@ def run_command(context, command, service="nautobot", docker_env=None, **kwargs)
         results = docker_compose(context, docker_compose_status, hide="out")
 
         root = kwargs.pop("root", False)
-        env_string = ""
-        if docker_env:
-            for key, value in docker_env.items():
-                env_string += f'--env "{key}={value}" '
+        cmd_env = ""
+        if command_env:
+            for key, value in command_env.items():
+                cmd_env += f'--env "{key}={value}" '
 
         if service in results.stdout:
-            compose_command = f"exec {'--user=root ' if root else ''}{env_string}{service} {command}"
+            compose_command = f"exec {'--user=root ' if root else ''}{cmd_env}{service} {command}"
         else:
             # Explicitly set the container name to allow network access by calling "nautobot:<port>"
-            compose_command = f"run {'--user=root ' if root else ''}--rm {env_string}--name '{service}' --entrypoint '{command}' {service}"
+            compose_command = (
+                f"run {'--user=root ' if root else ''}--rm "
+                f"{cmd_env}--name '{service}' --entrypoint '{command}' {service}"
+            )
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
 
@@ -1256,7 +1260,7 @@ def tests(
     if parallel_workers:
         parallel_workers = int(parallel_workers)
 
-    docker_env = {}
+    command_env = {}
     if coverage:
         append_arg = " --append" if append_coverage and not parallel else ""
         parallel_arg = " --parallel-mode" if parallel else ""
@@ -1268,8 +1272,8 @@ def tests(
     if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
     if not color:
-        docker_env["DJANGO_COLORS"] = "nocolor"
-        docker_env["NO_COLOR"] = "1"
+        command_env["DJANGO_COLORS"] = "nocolor"
+        command_env["NO_COLOR"] = "1"
     if keepdb:
         command += " --keepdb"
     if not reusedb:
@@ -1298,7 +1302,7 @@ def tests(
     for item in pattern or []:
         command += f" -k='{item}'"
 
-    run_command(context, command, docker_env=docker_env)
+    run_command(context, command, command_env=command_env)
 
     if coverage:
         run_command(context, "coverage combine")
