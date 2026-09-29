@@ -5,6 +5,7 @@ from nautobot.core.celery import (
     app,
     setup_nautobot_job_logging,
 )
+from nautobot.extras.choices import JobResultStatusChoices
 from nautobot.extras.jobs import run_job
 from nautobot.extras.management.utils import handle_eager_result_failure, validate_job_and_job_data
 from nautobot.extras.models import JobResult
@@ -34,8 +35,9 @@ class Command(BaseCommand):
 
         Looks up the JobResult by UUID, resolves and validates the job data (from --data
         or from the existing task_kwargs on the JobResult), builds celery_kwargs if not
-        already present, stamps date_started, then runs the job via run_job.apply().
-        After execution, syncs the eager result back to the JobResult.
+        already present, marks the JobResult as STARTED and stamps date_started, then
+        runs the job via run_job.apply(). After execution, syncs the eager result back
+        to the JobResult.
 
         This is the leaf command in two execution chains:
 
@@ -83,6 +85,7 @@ class Command(BaseCommand):
         if not job_celery_kwargs:
             raise CommandError(f"Job result with pk {job_result_id} does not have `celery_kwargs` defined.")
         job_result.date_started = timezone.now()
+        job_result.status = JobResultStatusChoices.STATUS_STARTED
         job_result.save()
         setup_nautobot_job_logging(None, None, app.conf)
         eager_result = run_job.apply(
