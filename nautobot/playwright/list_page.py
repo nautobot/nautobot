@@ -18,7 +18,7 @@ from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
 class ListPage(BasePage):
-    """Shared list-view behavior: navigation, table reads, and the filter drawer."""
+    """Shared list-view behavior: navigation, table reads, table configuration, and the filter drawer."""
 
     LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
 
@@ -41,6 +41,12 @@ class ListPage(BasePage):
     # Scoped to the filter button: other toolbar controls (e.g. saved-view state)
     # reuse the nb-btn-indicator class for their own dots.
     _FILTER_INDICATOR = "button#id__filterbtn span.nb-btn-indicator"
+    # The table-configuration drawer and its toolbar button. The drawer's id is derived
+    # from the table class name, so it is addressed by the form it contains instead.
+    _TABLE_CONFIG_TOGGLE = "button[title='Configure table']"
+    _TABLE_CONFIG_DRAWER = "section.nb-drawer:has(form.userconfigform)"
+    _TABLE_CONFIG_SAVE = "form.userconfigform button[type='submit']"
+    _TABLE_CONFIG_RESET = "form.userconfigform button[type='reset']"
     # The per-row overview toggle.
     _OVERVIEW_TOGGLE = "button.nb-overview-toggle"
     # Every overview fragment request, for routing and response waits.
@@ -98,6 +104,45 @@ class ListPage(BasePage):
         column_position = headers.index(header_name) + 1
         cells = self.page.locator(f"{self._DATA_ROWS} td:nth-child({column_position})")
         return [text.strip() for text in cells.all_inner_texts()]
+
+    def expect_column_shown(self, header_name, shown=True):
+        """Assert (auto-retrying) that a column headed *header_name* is, or is not, in the table."""
+        header = self.page.locator("table thead th").filter(has_text=header_name)
+        expect(header).to_have_count(1 if shown else 0)
+
+    # -------------------------------------------------------------------------
+    # Table configuration drawer
+    # -------------------------------------------------------------------------
+
+    def open_table_config(self):
+        """Open the table-configuration drawer, if it is not already open.
+
+        Saving or resetting reloads the page with the drawer kept open, and clicking
+        the toolbar button again would close it, so the open state is checked first.
+        """
+        drawer = self.page.locator(f"{self._TABLE_CONFIG_DRAWER}.nb-drawer-open")
+        if drawer.count() == 0:
+            self.page.locator(self._TABLE_CONFIG_TOGGLE).click()
+        expect(drawer).to_have_count(1)
+
+    def toggle_table_column(self, column_label):
+        """Flip the checkbox for the column labeled *column_label* and save the table config.
+
+        Saving stores the choice in the user's config and reloads the page, keeping the
+        current query string, so a filtered list stays filtered.
+        """
+        self.open_table_config()
+        self.page.locator(self._TABLE_CONFIG_DRAWER).get_by_label(column_label, exact=True).click()
+        self._click_and_wait_for_navigation(self._TABLE_CONFIG_SAVE)
+
+    def reset_table_columns(self):
+        """Restore the table's default columns with the drawer's Reset button.
+
+        Reset clears the user's saved column config and reloads the page, so a test
+        that changed the columns can leave the shared user's table at its defaults.
+        """
+        self.open_table_config()
+        self._click_and_wait_for_navigation(self._TABLE_CONFIG_RESET)
 
     # -------------------------------------------------------------------------
     # Overview rows
