@@ -118,7 +118,7 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         view tests that key for truthiness, where the string "False" would be as true as any other and
         would open the form instead of running the export.
         """
-        self.add_permissions("extras.view_exporttemplate", "extras.view_job")
+        self.add_permissions("extras.view_exporttemplate", "extras.run_job")
         ExportTemplate.objects.create(
             content_type=ContentType.objects.get_for_model(Provider),
             name="Provider inventory",
@@ -141,6 +141,7 @@ class ObjectListViewActionButtonsTestCase(TestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_export_templates_the_user_cannot_view_are_not_offered(self):
         """The templates offered are the ones the user may view, the menu being built for them."""
+        self.add_permissions("extras.run_job")
         ExportTemplate.objects.create(
             content_type=ContentType.objects.get_for_model(Provider),
             name="Provider inventory",
