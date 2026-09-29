@@ -56,7 +56,13 @@ jobs:
           python-version: "${{ env.PYTHON_VERSION }}"
       # This deviates from the app CI since we can't force invoke to run locally using the `INVOKE_APPNAME_LOCAL` environment variable
       - name: "Constrain Nautobot version and regenerate lock file"
-        run: "poetry add --lock git+https://github.com/nautobot/nautobot.git#${{ inputs.nautobot_branch }} --python ${{ env.PYTHON_VERSION }}"
+        run: |
+          CORE_PY=$(curl -sf "https://raw.githubusercontent.com/nautobot/nautobot/${{ inputs.nautobot_branch }}/pyproject.toml" \
+            | grep -E '^(requires-python|python) = ' | head -1 | cut -d'"' -f2)
+          test -n "${CORE_PY}" || { echo "::error::Could not read core's Python range for ${{ inputs.nautobot_branch }}"; exit 1; }
+          echo "Constraining app to core's Python range: ${CORE_PY}"
+          sed -i -E "s/^(python|requires-python) = \".*\"/\1 = \"${CORE_PY}\"/" pyproject.toml
+          poetry add --lock "git+https://github.com/nautobot/nautobot.git#${{ inputs.nautobot_branch }}"
       - name: "Set up Docker Buildx"
         id: "buildx"
         uses: "docker/setup-buildx-action@f211e3e9ded2d9377c8cadc4489a4e38014bc4c9" # v1
