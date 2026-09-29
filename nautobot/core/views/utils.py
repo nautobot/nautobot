@@ -536,11 +536,11 @@ def get_all_saved_views_for_user(user):
         user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
 
     Returns:
-        (QuerySet[SavedView]): The permitted SavedViews, ordered by name.
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name, deferred to `pk`, `name` and `view`.
     """
     # We are not using .restrict(request.user, "view") here
     # User should be able to see any saved view that he has the list view access to.
-    saved_views = SavedView.objects.order_by("name")
+    saved_views = SavedView.objects.order_by("name").only("pk", "name", "view")
     if user.has_perms(["extras.view_savedview"]):
         return saved_views
 
