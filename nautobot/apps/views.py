@@ -41,6 +41,7 @@ from nautobot.core.views.utils import (
     csv_format,
     get_csv_form_fields_from_serializer_class,
     get_obj_from_context,
+    get_saved_views_for_user,
     handle_protectederror,
     prepare_cloned_fields,
 )
@@ -97,6 +98,7 @@ __all__ = (
     "get_csv_form_fields_from_serializer_class",
     "get_obj_from_context",
     "get_paginate_count",
+    "get_saved_views_for_user",
     "git_repository_sync_view",
     "handle_protectederror",
     "prepare_cloned_fields",

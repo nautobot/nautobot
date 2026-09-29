@@ -250,5 +250,7 @@ class NavbarFavoritesReorderViewTest(TestCase):
         """Unauthenticated requests should be redirected to the login page."""
         self.client.logout()
         response = self._post_reorder(["/dcim/devices/"])
-        self.assertHttpStatus(response, 302)
-        self.assertIn("login", response.url)
+        self.assertHttpStatus(response, 204)
+        self.assertIn("login", response.headers["HX-Redirect"])
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.get_config("navbar_favorites", []), list(SAMPLE_FAVORITES))

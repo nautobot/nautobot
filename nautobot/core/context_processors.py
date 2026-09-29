@@ -26,10 +26,7 @@ def get_saml_idp():
     # robust login system.
     value = ""
     if idp_map is not None:
-        try:
-            value = next(iter(idp_map.keys()))
-        except IndexError:
-            pass
+        value = next(iter(idp_map.keys()), "")
 
     return value
 
