@@ -33,7 +33,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from nautobot.core.choices import ButtonActionColorChoices
+from nautobot.core.choices import ButtonActionColorChoices, ColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import CeleryWorkerNotRunningException, FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
@@ -41,7 +41,7 @@ from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import bettertitle
+from nautobot.core.templatetags.helpers import bettertitle, fgcolor
 from nautobot.core.templatetags.perms import can_cancel, can_change
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
@@ -98,6 +98,7 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
+from nautobot.extras.conditions.operators import describe_operators
 from nautobot.extras.conditions.presets import get_condition_presets
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
@@ -3506,6 +3507,14 @@ class ScheduledJobUIViewSet(
         return redirect(obj.get_absolute_url())
 
 
+# The palette and its per-swatch style, so the editor renders colors the way every other color field in
+# Nautobot does without working out the readable foreground itself. The same for every request.
+CONDITION_COLORS = [
+    {"value": value, "label": label, "style": f"color: {fgcolor(value)}; background-color: #{value}"}
+    for value, label in ColorChoices
+]
+
+
 class ConditionsViewMixin:
     """The conditions card on the edit form, and the conditions panel on the detail view."""
 
@@ -3524,6 +3533,8 @@ class ConditionsViewMixin:
             # The same catalog the `/api/extras/condition-presets/` endpoint serves. Rendered into the
             # page so the editor has it before the user touches anything.
             context["condition_presets"] = [preset.as_dict() for preset in get_condition_presets()]
+            context["condition_operators"] = describe_operators()
+            context["condition_colors"] = CONDITION_COLORS
         return context
 
     @staticmethod

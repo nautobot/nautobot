@@ -2,10 +2,12 @@
 
 {% comment %}
     The conditions editor. The Form tab builds the rows, the JSON tab holds the field that is actually
-    submitted, and the two are kept in step by `conditions_editor_js.html`.
+    submitted, and the two are kept in step by `js/conditions_editor.js`.
 {% endcomment %}
 
 {{ condition_presets|json_script:"condition-presets" }}
+{{ condition_operators|json_script:"condition-operators" }}
+{{ condition_colors|json_script:"condition-colors" }}
 
 <style type="text/css">
     /* Parameters share the width left over by the preset select, and wrap only when they must. */
@@ -31,7 +33,7 @@
 <div class="tab-content">
     <div class="tab-pane active" id="conditions_form">
         <table class="table table-borderless align-middle nb-conditions mb-0">
-            <tbody id="conditions-rows"></tbody>
+            <tbody id="conditions-rows" data-fields-url="{% url 'extras-api:condition-field-list' %}"></tbody>
         </table>
         <button type="button" class="btn btn-primary add-row" id="conditions-add">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Condition

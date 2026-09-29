@@ -186,13 +186,15 @@ class Operator:
     list of str for a set-valued operator), and returns whether the comparison holds.
 
     `applies_to` is advisory metadata for the form and for save-time validation; evaluation never
-    consults it.
+    consults it. So is `compares_whole_value`, which says whether the target is a complete value of
+    the field rather than a fragment of one, and so whether a form may offer the values that exist.
     """
 
     key: str
     label: str
     predicate: Callable[[Any, Any], bool]
     applies_to: frozenset
+    compares_whole_value: bool
 
     def matches(self, value, target):
         return self.predicate(value, target)
@@ -210,49 +212,68 @@ OPERATOR_ENDSWITH = "endswith"
 
 #: Every operator, in the order the form offers them.
 OPERATORS = (
-    Operator(key=OPERATOR_EQUALS, label="= (equals)", predicate=_equals, applies_to=ALL_KINDS),
+    Operator(
+        key=OPERATOR_EQUALS,
+        label="= (equals)",
+        predicate=_equals,
+        applies_to=ALL_KINDS,
+        compares_whole_value=True,
+    ),
     Operator(
         key=OPERATOR_GT,
         label="> (greater than)",
         predicate=_ordering(py_operator.gt),
         applies_to=ORDERABLE_KINDS,
+        compares_whole_value=True,
     ),
     Operator(
         key=OPERATOR_GTE,
         label=">= (greater than or equal)",
         predicate=_ordering(py_operator.ge),
         applies_to=ORDERABLE_KINDS,
+        compares_whole_value=True,
     ),
     Operator(
         key=OPERATOR_LT,
         label="< (less than)",
         predicate=_ordering(py_operator.lt),
         applies_to=ORDERABLE_KINDS,
+        compares_whole_value=True,
     ),
     Operator(
         key=OPERATOR_LTE,
         label="<= (less than or equal)",
         predicate=_ordering(py_operator.le),
         applies_to=ORDERABLE_KINDS,
+        compares_whole_value=True,
     ),
-    Operator(key=OPERATOR_IN, label="in (any of)", predicate=_in, applies_to=SET_MEMBER_KINDS),
+    Operator(
+        key=OPERATOR_IN,
+        label="in (any of)",
+        predicate=_in,
+        applies_to=SET_MEMBER_KINDS,
+        compares_whole_value=True,
+    ),
     Operator(
         key=OPERATOR_CONTAINS,
         label="contains",
         predicate=_text_operation(str.__contains__),
         applies_to=TEXTUAL_KINDS,
+        compares_whole_value=False,
     ),
     Operator(
         key=OPERATOR_STARTSWITH,
         label="starts with",
         predicate=_text_operation(str.startswith),
         applies_to=TEXTUAL_KINDS,
+        compares_whole_value=False,
     ),
     Operator(
         key=OPERATOR_ENDSWITH,
         label="ends with",
         predicate=_text_operation(str.endswith),
         applies_to=TEXTUAL_KINDS,
+        compares_whole_value=False,
     ),
 )
 
@@ -263,6 +284,25 @@ OPERATOR_REGISTRY = {operator.key: operator for operator in OPERATORS}
 # parameter schema both consume.
 FIELD_OPERATORS = tuple((operator.key, operator.label) for operator in OPERATORS)
 FIELD_OPERATOR_KEYS = tuple(operator.key for operator in OPERATORS)
+
+
+def describe_operators():
+    """Everything a form needs to offer the operators, in the order they are offered.
+
+    `kinds` are the field kinds an operator suits, `whole_value` says whether its target is a complete
+    value of the field rather than a fragment, and `set_kinds` are the kinds for which it takes several
+    values at once. A form reads this instead of keeping its own copy of the rules.
+    """
+    return [
+        {
+            "key": operator.key,
+            "label": operator.label,
+            "kinds": sorted(operator.applies_to),
+            "whole_value": operator.compares_whole_value,
+            "set_kinds": sorted(kind for kind in operator.applies_to if takes_a_set(operator.key, kind)),
+        }
+        for operator in OPERATORS
+    ]
 
 
 def operators_for_kind(kind):

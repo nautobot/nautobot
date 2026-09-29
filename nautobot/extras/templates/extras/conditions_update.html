@@ -1,5 +1,6 @@
 {% extends 'generic/object_create.html' %}
 {% load form_helpers %}
+{% load helpers %}
 
 {% block form %}
     <div class="card">
@@ -19,5 +20,5 @@
 
 {% block javascript %}
     {{ block.super }}
-    {% include 'extras/inc/conditions_editor_js.html' %}
+    <script src="{% versioned_static 'js/conditions_editor.js' %}" onerror="nb.media.handleFailure(this)"></script>
 {% endblock javascript %}
