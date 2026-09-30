@@ -59,8 +59,8 @@ def created_manufacturer(create_object):
 def created_device(create_object, status_for):
     """A device owned by this test, with its own location type, location, manufacturer, device type and role.
 
-    Returns the device and the records that name its fields, since the API represents
-    them by id and URL only.
+    Also returns the related records. The device's API response gives only their id and 
+    URL, and the tests need their names.
     """
     unique = unique_name()
     # A location holds devices only when its type lists dcim.device.
