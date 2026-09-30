@@ -69,6 +69,13 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
         null=True,
         related_name="virtual_servers",
     )
+    virtual_device_context = models.ForeignKey(
+        to="dcim.VirtualDeviceContext",
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
+        related_name="virtual_context",
+    )
     tenant = models.ForeignKey(
         to="tenancy.Tenant",
         on_delete=models.PROTECT,
@@ -111,6 +118,7 @@ class VirtualServer(PrimaryModel):  # pylint: disable=too-many-ancestors
         "device_redundancy_group",
         "cloud_service",
         "virtual_chassis",
+        "virtual_device_context",
         "tenant",
         "load_balancer_pool",
         "health_check_monitor",
