@@ -11,7 +11,6 @@ class DeviceDetailPage(DetailPage):
     DETAIL_PATH = "/dcim/devices/{pk}/"
     VERBOSE_NAME = "Device"
 
-    # Devices add one button of their own beside the standard detail-view actions.
     _ADD_COMPONENTS_BUTTON = "#device-add-components-button"
 
     def expect_add_components_button(self):

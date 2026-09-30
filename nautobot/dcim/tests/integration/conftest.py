@@ -59,7 +59,7 @@ def created_manufacturer(create_object):
 def created_device(create_object, status_for):
     """A device owned by this test, with its own location type, location, manufacturer, device type and role.
 
-    Also returns the related records. The device's API response gives only their id and 
+    Also returns the related records. The device's API response gives only their id and
     URL, and the tests need their names.
     """
     unique = unique_name()
