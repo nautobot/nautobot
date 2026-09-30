@@ -13,7 +13,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from django.http import QueryDict
-from django.test import override_settings, tag
+from django.test import override_settings, RequestFactory, tag
 
 from nautobot.circuits import models as circuits_models
 from nautobot.core import exceptions, forms, settings_funcs
@@ -44,6 +44,7 @@ from nautobot.extras.filters import StatusFilterSet
 from nautobot.extras.forms import StatusForm
 from nautobot.extras.models import ObjectChange
 from nautobot.ipam import models as ipam_models
+from nautobot.ipam.api import serializers as ipam_serializers
 
 
 class ConstructCacheKeyTest(TestCase):
@@ -1564,3 +1565,90 @@ class TestSerializeObjectV2(TestCase):
             data = models_utils.serialize_object_v2(instance)
             with self.assertNumQueries(0):  # make sure we're not leaving a time bomb by including a lazy QuerySet
                 NautobotKombuJSONEncoder(ensure_ascii=False).encode(data)
+
+
+class GetRelatedFieldQueryOptimizationsTest(TestCase):
+    """
+    Unit tests for api_utils.get_related_field_query_optimizations().
+
+    IPAddress is used as the subject model because it has both a single-valued FK chain
+    (IPAddress -> parent (Prefix) -> namespace/tenant/status/role/vlan) and a to-many relation
+    (IPAddress -> interfaces (M2M) -> device/status/role) that are exercised by `?depth` nested
+    serialization, mirroring the `/api/dcim/interfaces/` N+1 discovered via tracing.
+    """
+
+    def _get_serializer(self, depth):
+        request = RequestFactory().get("/")
+        # exclude_m2m=False ensures M2M/reverse relations are readable (not forced write_only), matching how
+        # the InterfaceViewSet/InterfaceSerializer traces that motivated this fix were actually queried.
+        return ipam_serializers.IPAddressSerializer(context={"request": request, "depth": depth, "exclude_m2m": False})
+
+    def test_depth_0_only_optimizes_top_level_relations(self):
+        """At depth=0, related fields are flat (not nested), so only the first hop can/should be optimized."""
+        serializer = self._get_serializer(depth=0)
+        select_fields, prefetch_fields = api_utils.get_related_field_query_optimizations(
+            serializer, ipam_models.IPAddress
+        )
+
+        self.assertIn("parent", select_fields)
+        self.assertIn("tenant", select_fields)
+        self.assertIn("interfaces", prefetch_fields)
+        self.assertIn("vm_interfaces", prefetch_fields)
+
+        # No second-hop relations should be present; the top-level serializer's fields don't expose them at depth=0.
+        self.assertFalse(any(field.startswith("parent__") for field in select_fields))
+        self.assertFalse(any(field.startswith("interfaces__") for field in select_fields + prefetch_fields))
+
+    def test_depth_1_recurses_into_nested_serializer_fk_fields(self):
+        """At depth=1, `parent` is a nested PrefixSerializer; its own FK fields must also be select_related."""
+        serializer = self._get_serializer(depth=1)
+        select_fields, prefetch_fields = api_utils.get_related_field_query_optimizations(
+            serializer, ipam_models.IPAddress
+        )
+
+        self.assertIn("parent", select_fields)
+        # Second-hop FK relations exposed by the nested PrefixSerializer:
+        self.assertIn("parent__namespace", select_fields)
+        self.assertIn("parent__tenant", select_fields)
+        self.assertIn("parent__status", select_fields)
+        self.assertIn("parent__role", select_fields)
+        self.assertFalse(any(field in prefetch_fields for field in ("parent__namespace", "parent__tenant")))
+
+    def test_depth_1_crossing_to_many_relation_forces_prefetch(self):
+        """Once a relation path crosses a to-many (M2M/reverse-FK) hop, everything beneath it must be prefetched,
+        even simple FK fields, since select_related() cannot span to-many relations."""
+        serializer = self._get_serializer(depth=1)
+        select_fields, prefetch_fields = api_utils.get_related_field_query_optimizations(
+            serializer, ipam_models.IPAddress
+        )
+
+        self.assertIn("interfaces", prefetch_fields)
+        self.assertIn("interfaces__device", prefetch_fields)
+        self.assertIn("interfaces__status", prefetch_fields)
+        # These must NOT show up in select_fields; select_related() can't cross the `interfaces` M2M.
+        self.assertNotIn("interfaces__device", select_fields)
+        self.assertNotIn("interfaces__status", select_fields)
+
+    def test_hard_cap_defaults_to_max_related_field_query_optimizations_setting(self):
+        """
+        When `max_fields` isn't explicitly passed, the cap should come from the `MAX_RELATED_FIELD_QUERY_
+        OPTIMIZATIONS` Nautobot setting (documented in nautobot/core/settings.yaml), not a hardcoded constant.
+        This is verified here by overriding the setting to an artificially low example value and confirming the
+        behavior (truncation + warning) matches what passing that same value as `max_fields` would produce.
+        """
+        serializer = self._get_serializer(depth=4)
+
+        with override_settings(MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS=2):
+            with self.assertLogs("nautobot.core.api.utils", level="WARNING") as cm:
+                select_fields, prefetch_fields = api_utils.get_related_field_query_optimizations(
+                    serializer, ipam_models.IPAddress
+                )
+        self.assertLessEqual(len(select_fields) + len(prefetch_fields), 2)
+        self.assertTrue(any("maximum" in message.lower() for message in cm.output))
+
+        # A generous setting value should not trigger the cap/warning, mirroring test_hard_cap_not_exceeded_does_not_warn
+        # above but exercising the setting instead of the max_fields argument.
+        serializer = self._get_serializer(depth=1)
+        with override_settings(MAX_RELATED_FIELD_QUERY_OPTIMIZATIONS=1000):
+            with self.assertNoLogs("nautobot.core.api.utils", level="WARNING"):
+                api_utils.get_related_field_query_optimizations(serializer, ipam_models.IPAddress)

@@ -936,7 +936,6 @@ class PrefixUIViewSet(NautobotUIViewSet):
         custom_view_additional_permissions=["ipam.view_ipaddressrange"],
     )
     def ip_address_ranges(self, request, *args, **kwargs):
-
         instance = self.get_object()
         ip_address_ranges_qs = instance.get_all_ip_address_ranges().restrict(request.user, "view")
 
