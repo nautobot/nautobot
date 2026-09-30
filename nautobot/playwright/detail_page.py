@@ -96,7 +96,7 @@ class DetailPage(BasePage):
         self.page.route(self._DEFERRED_COMPONENT_REQUEST, lambda route: route.fulfill(status=status, body=""))
 
     def allow_deferred_components(self):
-        """Stop failing deferred components' follow-up requests."""
+        """Undo fail_deferred_components()."""
         self.page.unroute(self._DEFERRED_COMPONENT_REQUEST)
 
     def expect_deferred_placeholder_count(self, expected):
