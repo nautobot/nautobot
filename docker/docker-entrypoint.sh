@@ -1,8 +1,27 @@
 #!/bin/bash
 # Runs on every start of the Nautobot Docker container
+# OpenShift-compatible version
 
-# Stop when an error occures
+# Stop when an error occurs
 set -e
+
+# OpenShift compatibility: Handle arbitrary UIDs
+if ! whoami &> /dev/null; then
+  if [ -w /etc/passwd ]; then
+    echo "${USER_NAME:-nautobot}:x:$(id -u):0:${USER_NAME:-nautobot} user:${HOME}:/bin/bash" >> /etc/passwd
+  fi
+fi
+
+# Ensure proper permissions for directories that might be mounted
+# OpenShift may assign arbitrary UIDs, so we need to ensure the current user can write
+for dir in /opt/nautobot /prom_cache; do
+    if [ -d "$dir" ]; then
+        # Only change permissions if we're not already the owner and we have permission to change them
+        if [ ! -w "$dir" ] && [ -O "$dir" ]; then
+            chmod g+rwX "$dir" 2>/dev/null || true
+        fi
+    fi
+done
 
 # Try to connect to the DB
 DB_WAIT_TIMEOUT=${DB_WAIT_TIMEOUT-3}
@@ -30,8 +49,8 @@ echo "⏳ Running initial systems check..."
 nautobot-server check --deploy
 RC=$?
 if [[ $RC != 0 ]]; then
-	echo -e "❌ Nautobot systems check failed!"
-	exit $RC
+        echo -e "❌ Nautobot systems check failed!"
+        exit $RC
 fi
 
 # Create Superuser if required
