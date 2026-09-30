@@ -39,7 +39,7 @@ class DeviceDetailTestCase:
         detail.expect_edit_button()
 
     def test_main_tab_panel_titles(self, auth_page, base_url, created_device):
-        """Every panel a device with no related objects renders is present, exactly once."""
+        """Each panel in PANEL_TITLES appears exactly once on a new device's main tab."""
         detail = DeviceDetailPage(auth_page, base_url)
         detail.navigate(created_device["device"]["id"])
 
