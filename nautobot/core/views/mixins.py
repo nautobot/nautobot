@@ -1110,11 +1110,13 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = form_class(
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=form_class),
             instance=self.obj,
+            **form_kwargs,
         )
         restrict_form_fields(form, request.user)
         if form.is_valid():
@@ -1142,11 +1144,13 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
         """
         self.obj = self.get_object()
         form_class = self.get_form_class()
+        form_kwargs = {"auto_id": "embedded_id_%s"} if request.headers.get("HX-Request", False) else {}
         form = form_class(
             data=request.POST,
             files=request.FILES,
             initial=normalize_querydict(request.GET, form_class=form_class),
             instance=self.obj,
+            **form_kwargs,
         )
         restrict_form_fields(form, request.user)
         if form.is_valid():

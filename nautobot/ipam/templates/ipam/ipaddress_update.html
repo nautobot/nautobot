@@ -4,7 +4,7 @@
 {% load helpers %}
 
 {% block tabs %}
-    {% if not editing %}
+    {% if base_template == 'generic/object_create_base.html' and not editing %}
         {% include 'ipam/inc/ipadress_edit_header.html' with active_tab='add' %}
     {% endif %}
 {% endblock %}

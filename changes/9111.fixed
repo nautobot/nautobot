@@ -1,0 +1,1 @@
+Fixed duplication of form fields when a NautobotUIViewSet-based embedded "create" modal failed form validation.

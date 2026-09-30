@@ -985,7 +985,6 @@ class IPAddressUIViewSet(NautobotUIViewSet):
     queryset = IPAddress.objects.select_related("tenant", "status", "role")
     serializer_class = serializers.IPAddressSerializer
     table_class = tables.IPAddressDetailTable
-    action_buttons = ("add", "import", "export")
 
     @action(
         detail=False,
