@@ -29,7 +29,7 @@ class DetailPage(BasePage):
     _PANEL_TITLE = ".card > .card-header strong"
     # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
-    # Gone once the deferred body swaps in. Count it rather than check visibility: htmx keeps it transparent.
+    # Removed when the deferred content swaps in. The spinner is an htmx-indicator at opacity 0, which Playwright still counts as visible, so assert the count.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
     # The placeholder's follow-up request.
     _DEFERRED_COMPONENT_REQUEST = re.compile(r"[?&]component_id=")
