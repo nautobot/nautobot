@@ -1165,6 +1165,15 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
         content = extract_page_body(response.content.decode(response.charset))
         self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
 
+        instance = self._get_queryset().first()
+        instance.parent = None
+        self._get_queryset().bulk_update([instance], ["parent"], batch_size=1)
+
+        response = super().test_get_object_with_permission()
+
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertIn("The parent field on this record appears to be set incorrectly", strip_tags(content))
+
     def test_edit_object_with_permission(self):
         instance = self._get_queryset().first()
         form_data = self.form_data.copy()
