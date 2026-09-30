@@ -122,7 +122,7 @@ def api(playwright, base_url):
 
 @pytest.fixture(scope="session")
 def status_for(api):
-    """Callable returning a Status assignable to *content_type* (e.g. `dcim.location`).
+    """Callable returning the API record of a Status valid for content_type.
 
     Nearly every `created_*` fixture needs a status; results are cached per content
     type for the session.
