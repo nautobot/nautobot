@@ -524,7 +524,7 @@ class BaseFilterSetTest(TestCase):
 
     def _test_lookups(self, filter_name, lookups_map, expected_type):
         for key, (exclude, lookup_expr) in lookups_map.items():
-            with self.subTest(field=key):
+            with self.subTest(filter_name=filter_name, key=key):
                 filter_key = f"{filter_name}__{key}" if key else filter_name
                 self.assertIsInstance(self.filters[filter_key], expected_type)
                 self.assertEqual(self.filters[filter_key].lookup_expr, lookup_expr)
@@ -1584,6 +1584,27 @@ class LookupIsNullTest(TestCase, testing.NautobotTestCaseMixin):
             dcim_models.Device.objects.filter(name__isnull=False),
         )
 
+    def test_isnull_on_to_many_relation(self):
+        """Test that the `isnull` filter doesn't return duplicates when traversing a to-many relation."""
+        device = dcim_models.Device.objects.get(name="Device 1")
+        for index in range(2):
+            tag = extras_models.Tag.objects.create(name=f"Isnull Test Tag {index}")
+            tag.content_types.add(ContentType.objects.get_for_model(dcim_models.Device))
+            device.tags.add(tag)
+
+        with self.subTest("isnull=False joins to the related rows, so the result must be deduplicated"):
+            params = {"tags__isnull": False}
+            self.assertQuerySetEqualAndNotEmpty(
+                dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
+                dcim_models.Device.objects.filter(tags__isnull=False).distinct(),
+            )
+        with self.subTest("isnull=True matches objects with no related rows, so it can't duplicate"):
+            params = {"tags__isnull": True}
+            self.assertQuerySetEqualAndNotEmpty(
+                dcim_filters.DeviceFilterSet(params, self.device_queryset).qs,
+                dcim_models.Device.objects.filter(tags__isnull=True),
+            )
+
 
 class FilterTypeTest(TestCase):
     client_class = testing.NautobotTestClient
@@ -1597,3 +1618,62 @@ class FilterTypeTest(TestCase):
         prefix_list_url = reverse(lookup.get_route_for_model(ipam_models.Prefix, "list"))
         response = self.client.get(f"{prefix_list_url}?prefix_length__lte=20")
         self.assertNotContains(response, "Invalid filters were specified")
+
+
+class AutoDistinctFilterTest(TestCase):
+    """Tests for `filters.AutoDistinctFilterMixin` and the `distinct` flag it derives."""
+
+    class LocationFilterSet(filters.BaseFilterSet):
+        # `powerpanels` is a reverse FK from PowerPanel, so a to-many traversal
+        power_panels = filters.NaturalKeyOrPKMultipleChoiceFilter(
+            field_name="power_panels",
+            queryset=dcim_models.PowerPanel.objects.all(),
+            to_field_name="name",
+        )
+        # `name` is a local field on Location, so no traversal at all
+        name = filters.MultiValueCharFilter()
+        # An explicit value must win over whatever would be derived
+        override = filters.MultiValueCharFilter(field_name="power_panels__name", distinct=False)
+
+        class Meta:
+            model = dcim_models.Location
+            fields = []
+
+    def setUp(self):
+        super().setUp()
+        self.filterset = self.LocationFilterSet({}, dcim_models.Location.objects.all())
+
+    def test_distinct_derived_for_to_many_traversal(self):
+        self.assertTrue(self.filterset.filters["power_panels"].distinct)
+
+    def test_distinct_derived_for_local_field(self):
+        self.assertFalse(self.filterset.filters["name"].distinct)
+
+    def test_explicit_distinct_takes_precedence(self):
+        self.assertFalse(self.filterset.filters["override"].distinct)
+
+    def test_distinct_not_applied_to_negated_filters(self):
+        """`qs.exclude()` compiles to `NOT IN (subquery)`, which cannot produce duplicate rows."""
+        self.assertFalse(self.filterset.filters["power_panels__n"].distinct)
+
+    def test_generated_lookup_expressions_inherit_derived_distinct(self):
+        """Lookup expressions generated for a declared filter must derive `distinct` the same way it does."""
+        self.assertIsNotNone(self.filterset.filters["name__ic"].model)
+        self.assertFalse(self.filterset.filters["name__ic"].distinct)
+
+    def test_field_path_traverses_to_many(self):
+        for field_name, expected in [
+            ("name", False),
+            ("tenant", False),
+            ("tenant__tenant_group", False),
+            ("power_panels", True),
+            ("power_panels__name", True),
+            ("tags", True),
+            ("this_is_not_a_field", None),
+            (None, None),
+        ]:
+            with self.subTest(field_name=field_name):
+                self.assertIs(
+                    filters.field_path_traverses_to_many(dcim_models.Location, field_name),
+                    expected,
+                )

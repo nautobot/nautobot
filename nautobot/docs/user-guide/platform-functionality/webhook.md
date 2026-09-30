@@ -14,6 +14,7 @@ When setting up a webhook, you need to define the following parameters:
 | **Object type(s)** | The type(s) of Nautobot objects that trigger the webhook. |
 | **Enabled** | Indicates whether the webhook is active. |
 | **Events** | Select one or more events: `create`, `update`, or `delete`. |
+| **Conditions** | Rules that narrow which of those changes are sent. Optional. |
 | **HTTP method** | The type of HTTP request (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`). |
 | **URL** | The fully qualified URL of the receiver. You can specify a port if needed. |
 | **HTTP content type** | Sets the `Content-Type` header (default: `application/json`). |
@@ -22,6 +23,14 @@ When setting up a webhook, you need to define the following parameters:
 | **Secret** | A secret string used for HMAC (SHA-512) authentication. The webhook request includes an `X-Hook-Signature` header. |
 | **SSL verification** | If unchecked, Nautobot skips SSL certificate validation (use with caution). |
 | **CA file path** | Specifies a custom CA file for SSL validation. |
+
+### Conditions
+
++++ 3.3.0
+
+A webhook with no conditions is sent for every change to the selected object types. Conditions narrow that down, for example to a device whose status moved to `Active`, or to changes made by anyone other than a sync account. Every condition must pass for the webhook to be sent.
+
+See [Conditions](../feature-guides/conditions.md) for the presets, the operators and the payload that conditions read.
 
 ## Jinja2 Template Support
 
@@ -50,7 +59,7 @@ Example: Trigger a Slack message when a new IP address is created.
 | `timestamp` | The event timestamp in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. |
 | `username` | The user who triggered the event. |
 | `request_id` | A unique request ID for correlation of multiple changes associated with a single request. |
-| `data` | A serialized representation of the object *after* the change. |
+| `data` | A serialized representation of the object _after_ the change. |
 | `snapshots` | Contains `prechange`, `postchange`, and `differences` snapshots. |
 
 ## Default Request Body
@@ -113,6 +122,8 @@ A webhook request is considered successful if the receiver responds with a `2XX`
 You can test webhooks with external services like [Beeceptor](https://beeceptor.com/) or [Pipedream RequestBin](https://pipedream.com/requestbin). These tools let you inspect webhook payloads and troubleshoot integration issues.
 
 If a webhook does not trigger as expected, ensure that the **Celery worker** process is running and check the Nautobot logs for errors.
+
+If the webhook has conditions and nothing is sent, look in the Nautobot log at `ERROR` level. A condition that cannot be checked, for example an operator given a value of the wrong type, stops the webhook from being sent, and is reported there with the name of the webhook and the number of the row at fault. Nothing in the web UI shows this.
 
 ## Webhook Administration and Security
 

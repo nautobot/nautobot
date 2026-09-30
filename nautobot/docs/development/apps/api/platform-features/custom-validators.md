@@ -16,14 +16,12 @@ from nautobot.apps.models import CustomValidator
 class LocationValidator(CustomValidator):
     """Custom validator for Locations to enforce that they must have a Tenant."""
 
-    model = 'dcim.location'
+    model = "dcim.location"
 
     def clean(self):
-        if self.context['object'].tenant is None:
+        if self.context["object"].tenant is None:
             # Enforce that all locations must have a tenant
-            self.validation_error({
-                "tenant": "All locations must have a tenant"
-            })
+            self.validation_error({"tenant": "All locations must have a tenant"})
 
 
 custom_validators = [LocationValidator]
@@ -47,7 +45,7 @@ from nautobot.apps.models import CustomValidator
 class LocationTenantValidator(CustomValidator):
     """Custom validator for Locations to enforce that only some users can update the Tenant."""
 
-    model = 'dcim.location'
+    model = "dcim.location"
 
     def clean(self):
         new_object_state = self.context["object"]
@@ -60,12 +58,9 @@ class LocationTenantValidator(CustomValidator):
 
         # Compare the tenant values between the two states
         if new_object_state.tenant != current_object_state.tenant:
-
             # Check if the user has permission to change the tenant, via being a member of "Tenant Managers"
             if not self.context["user"].groups.filter(name="Tenant Managers").exists():
-                self.validation_error({
-                    "tenant": "You do not have permission to change the tenant"
-                })
+                self.validation_error({"tenant": "You do not have permission to change the tenant"})
 
 
 custom_validators = [LocationTenantValidator]

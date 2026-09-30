@@ -42,3 +42,9 @@ lcov.info
 
 # Avoid accidental commit of analytics template override generated via ./docs/insert-analytics.sh
 docs/assets/overrides/main.html
+
+# pytest (Playwright E2E suite)
+.pytest_cache/
+
+# Playwright artifacts (--screenshot / --tracing)
+test-results/

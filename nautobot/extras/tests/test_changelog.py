@@ -15,6 +15,8 @@ from nautobot.core.testing.views import ModelViewTestCase
 from nautobot.core.utils.lookup import get_changes_for_model
 from nautobot.dcim.choices import InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
+    Cable,
+    CableToCableTermination,
     Device,
     DeviceType,
     DeviceTypeToSoftwareImageFile,
@@ -38,8 +40,15 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     ObjectChange,
     Role,
+    StaticGroupAssociation,
     Status,
     Tag,
+    Webhook,
+)
+from nautobot.extras.signals import (
+    _cache_obj_data_in_change_context,
+    _reuse_loaded_relations,
+    change_context_state,
 )
 from nautobot.ipam.models import (
     IPAddress,
@@ -421,6 +430,65 @@ class ChangeLogAPITest(APITestCase):
         self.assertEqual(oc.object_data["tags"], [self.tags[2].name])
         self.assertEqual(oc.user_id, self.user.pk)
 
+    def test_interface_tag_changes(self):
+        """Tag updates must persist matching snapshots and diffs, including an empty tag list."""
+        tags = [Tag.objects.create(name=name) for name in ("Interface tag A", "Interface tag B")]
+        for tag_obj in tags:
+            tag_obj.content_types.add(ContentType.objects.get_for_model(Interface))
+        self.add_permissions(
+            "dcim.add_interface", "dcim.change_interface", "dcim.view_device", "extras.view_status", "extras.view_tag"
+        )
+        payload = {
+            "device": str(Device.objects.first().pk),
+            "name": "vlan150",
+            "type": InterfaceTypeChoices.TYPE_VIRTUAL,
+            "status": str(Status.objects.get_for_model(Interface).first().pk),
+            "tags": [str(tag_obj.pk) for tag_obj in tags],
+        }
+        response = self.client.post(reverse("dcim-api:interface-list"), payload, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_201_CREATED)
+        interface = Interface.objects.get(pk=response.data["id"])
+        url = reverse("dcim-api:interface-detail", kwargs={"pk": interface.pk})
+
+        for label, data, expected_tags, expect_change in (
+            ("omit tags", {"description": "Updated description"}, tags, True),
+            ("remove one tag", {"tags": [str(tags[1].pk)]}, tags[1:], True),
+            ("clear final tag", {"tags": []}, [], True),
+            ("add two tags", {"tags": payload["tags"]}, tags, True),
+            ("clear multiple tags", {"tags": []}, [], True),
+            # Clearing an already-untagged interface changes nothing a reader would see, and this PATCH
+            # touches no other field either, so it must add no change.
+            ("clear untagged interface", {"tags": []}, [], False),
+        ):
+            with self.subTest(operation=label):
+                previous_tags = get_changes_for_model(interface).first().object_data_v2["tags"]
+                change_count = get_changes_for_model(interface).count()
+                response = self.client.patch(url, data, format="json", **self.header)
+                self.assertHttpStatus(response, status.HTTP_200_OK)
+                interface.refresh_from_db()
+                self.assertCountEqual(interface.tags.all(), expected_tags)
+                self.assertCountEqual(
+                    [str(tag_data["id"]) for tag_data in response.data["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                changes = get_changes_for_model(interface)
+                self.assertEqual(changes.count(), change_count + (1 if expect_change else 0))
+                if not expect_change:
+                    continue
+                change = changes.first()
+                self.assertCountEqual(change.object_data["tags"], [tag_obj.name for tag_obj in expected_tags])
+                self.assertCountEqual(
+                    [tag_data["id"] for tag_data in change.object_data_v2["tags"]],
+                    [str(tag_obj.pk) for tag_obj in expected_tags],
+                )
+                differences = change.get_snapshots()["differences"]
+                if previous_tags != change.object_data_v2["tags"]:
+                    self.assertEqual(differences["removed"]["tags"], previous_tags)
+                    self.assertEqual(differences["added"]["tags"], change.object_data_v2["tags"])
+                else:
+                    self.assertNotIn("tags", differences["removed"])
+                    self.assertNotIn("tags", differences["added"])
+
     def test_delete_object(self):
         location_type = LocationType.objects.get(name="Campus")
         location = Location(
@@ -590,6 +658,53 @@ class ObjectChangeModelTest(TestCase):  # TODO: change to BaseModelTestCase once
         self.assertEqual(
             len(snapshots["differences"]["added"]["content_types"]),
             ContentType.objects.filter(app_label="dcim").count(),
+        )
+
+    def test_clear_tags(self):
+        """Clearing tags directly must record the resulting empty relationship."""
+        location = Location.objects.filter(location_type__name="Campus").first()
+        tags = list(Tag.objects.get_for_model(Location)[:2])
+        with context_managers.web_request_context(self.user):
+            location.tags.set(tags)
+            location.save()
+        previous_change = get_changes_for_model(location).first()
+        change_count = get_changes_for_model(location).count()
+
+        with context_managers.web_request_context(self.user):
+            location.tags.clear()
+
+        self.assertFalse(location.tags.exists())
+        changes = get_changes_for_model(location)
+        self.assertEqual(changes.count(), change_count + 1)
+        change = changes.first()
+        self.assertEqual(change.object_data["tags"], [])
+        self.assertEqual(change.object_data_v2["tags"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {"removed": {"tags": previous_change.object_data_v2["tags"]}, "added": {"tags": []}},
+        )
+        self.assertEqual(Tag.objects.filter(pk__in=[tag_obj.pk for tag_obj in tags]).count(), len(tags))
+
+    def test_clear_m2m_fields(self):
+        """Clearing a standard M2M field must refresh its changelog snapshot too."""
+        with context_managers.web_request_context(self.user):
+            location_type = LocationType.objects.create(name="Test clear locationtype")
+            location_type.content_types.set(ContentType.objects.filter(app_label="dcim"))
+        previous_change = get_changes_for_model(location_type).first()
+
+        with context_managers.web_request_context(self.user):
+            location_type.content_types.clear()
+
+        changes = get_changes_for_model(location_type)
+        self.assertEqual(changes.count(), 2)
+        change = changes.first()
+        self.assertEqual(change.object_data_v2["content_types"], [])
+        self.assertEqual(
+            change.get_snapshots()["differences"],
+            {
+                "removed": {"content_types": previous_change.object_data_v2["content_types"]},
+                "added": {"content_types": []},
+            },
         )
 
     def test_opt_out(self):
@@ -826,6 +941,40 @@ class ChangeLogM2MThroughTest(APITestCase):
             self.assert_single_update_change(self.prefix, change_id)
             self.assert_single_update_change(locations[1], change_id)
 
+    def test_clear_interface_ip_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate interface/IP changes."""
+        ip_addresses = self.ip_addresses[:2]
+        self.interface.ip_addresses.set(ip_addresses)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.interface.ip_addresses.clear()
+
+        self.assertFalse(self.interface.ip_addresses.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.interface, change_id)
+        self.assertEqual(change.object_data_v2["ip_addresses"], [])
+        for ip_address in ip_addresses:
+            self.assertFalse(ip_address.interfaces.filter(pk=self.interface.pk).exists())
+            self.assert_single_update_change(ip_address, change_id)
+
+    def test_clear_prefix_location_assignments_logs_each_side_once(self):
+        """Through-row deletion and post_clear must not duplicate prefix/location changes."""
+        locations = list(self.locations[:2])
+        self.prefix.locations.set(locations)
+        change_id = uuid.uuid4()
+
+        with context_managers.web_request_context(self.user, change_id=change_id):
+            self.prefix.locations.clear()
+
+        self.assertFalse(self.prefix.locations.exists())
+        self.assertEqual(ObjectChange.objects.filter(request_id=change_id).count(), 3)
+        change = self.assert_single_update_change(self.prefix, change_id)
+        self.assertEqual(change.object_data_v2["locations"], [])
+        for location in locations:
+            self.assertFalse(location.prefixes.filter(pk=self.prefix.pk).exists())
+            self.assert_single_update_change(location, change_id)
+
     def test_orm_auto_created_m2m_remains_one_sided(self):
         route_target = RouteTarget.objects.create(name="65000:99999")
         vrf = VRF.objects.create(name="Change Log M2M Test VRF", namespace=self.prefix.namespace)
@@ -968,6 +1117,13 @@ class ChangeLogM2MThroughTest(APITestCase):
     ):
         """Creating a through record dispatches job hooks, webhooks, and events for both side objects (#9270)."""
         ip_address = self.ip_addresses[0]
+        # Records are only dispatched when something is listening for them.
+        webhook = Webhook.objects.create(
+            name="Interface and IP address updates", type_update=True, payload_url="http://localhost/"
+        )
+        webhook.content_types.set(
+            [ContentType.objects.get_for_model(Interface), ContentType.objects.get_for_model(IPAddress)]
+        )
         with context_managers.web_request_context(self.user):
             IPAddressToInterface.objects.create(ip_address=ip_address, interface=self.interface)
 
@@ -987,3 +1143,374 @@ class ChangeLogM2MThroughTest(APITestCase):
         self.assertEqual(jobhook_changed_objects, expected_changed_objects)
         event_topics = {call.kwargs["topic"] for call in mock_publish_event.call_args_list}
         self.assertEqual(event_topics, {"nautobot.update.dcim.interface", "nautobot.update.ipam.ipaddress"})
+
+
+class ChangeLogUnchangedSaveTest(TestCase):
+    """A save that changes nothing a reader would see must not leave a change record behind."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+
+    def setUp(self):
+        super().setUp()
+        with context_managers.web_request_context(self.user):
+            self.location = Location.objects.create(
+                name="Unchanged save test",
+                location_type=self.location_type,
+                status=self.status,
+                description="initial",
+            )
+        # The create itself is always recorded.
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_unchanged_save_records_nothing(self):
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_changed_save_is_recorded(self):
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def test_update_fields_writes_nothing_visible(self):
+        with context_managers.web_request_context(self.user):
+            self.location.save(update_fields=["last_updated"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+
+    def test_save_reverting_a_concurrent_write_is_recorded(self):
+        """
+        The comparison is against the stored row, not the values the instance was loaded with.
+
+        Someone else moved the row after this instance was loaded; saving the instance puts the old value
+        back, which is a real edit and must be recorded.
+        """
+        Location.objects.filter(pk=self.location.pk).update(description="written by someone else")
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+        self.assertEqual(Location.objects.get(pk=self.location.pk).description, "initial")
+        # The record must show the value the save actually put back, not the one it displaced.
+        oc = get_changes_for_model(self.location).first()
+        self.assertEqual(oc.action, ObjectChangeActionChoices.ACTION_UPDATE)
+        self.assertEqual(oc.object_data_v2["description"], "initial")
+
+    def test_m2m_change_is_recorded(self):
+        """An m2m addition moves none of the instance's own fields, yet is a change."""
+        # TODO: m2m it's a different path, so it will be done in different scope
+        location_tag = Tag.objects.get_for_model(Location).first()
+        with context_managers.web_request_context(self.user):
+            self.location.tags.add(location_tag)
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def _create_vm_interface(self, mode):
+        cluster_type = ClusterType.objects.create(name="Unchanged save m2m clear test")
+        cluster = Cluster.objects.create(name="Unchanged save m2m clear test", cluster_type=cluster_type)
+        vm = VirtualMachine.objects.create(
+            name="Unchanged save m2m clear test",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        with context_managers.web_request_context(self.user):
+            return VMInterface.objects.create(
+                name="eth0",
+                virtual_machine=vm,
+                status=Status.objects.get_for_model(VMInterface).first(),
+                mode=mode,
+            )
+
+    def test_m2m_clear_of_empty_relation_records_nothing(self):
+        """
+        `VMInterface.save()` always calls `tagged_vlans.clear()` when not in tagged mode.
+
+        Clearing a relation that already has nothing in it is a no-op and must not manufacture a change.
+        """
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_ACCESS)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)  # the create
+        with context_managers.web_request_context(self.user):
+            vm_interface.tagged_vlans.clear()
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)
+
+    def test_m2m_clear_of_populated_relation_is_recorded(self):
+        """Clearing a relation that actually has members is a real change and must be recorded."""
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_TAGGED)
+        vlan = VLAN.objects.create(
+            vid=4001,
+            name="Unchanged save m2m clear test",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        vm_interface.tagged_vlans.add(vlan)
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 1)  # the create; add() was outside any context
+
+        with context_managers.web_request_context(self.user):
+            vm_interface.tagged_vlans.clear()
+        self.assertEqual(get_changes_for_model(vm_interface).count(), 2)
+
+    def test_m2m_clear_of_populated_relation_is_recorded_from_reverse_side(self):
+        """The no-op check must also resolve the relation correctly from its reverse accessor."""
+        vm_interface = self._create_vm_interface(InterfaceModeChoices.MODE_TAGGED)
+        vlan = VLAN.objects.create(
+            vid=4002,
+            name="Unchanged save m2m clear test reverse",
+            status=Status.objects.get_for_model(VLAN).first(),
+            vlan_group=VLANGroup.objects.first(),
+        )
+        vm_interface.tagged_vlans.add(vlan)
+        self.assertEqual(get_changes_for_model(vlan).count(), 0)  # add() was outside any context
+
+        with context_managers.web_request_context(self.user):
+            vlan.vminterfaces_as_tagged.clear()
+        self.assertEqual(get_changes_for_model(vlan).count(), 1)
+
+    def test_m2m_clear_disambiguates_fields_sharing_a_through_model(self):
+        """
+        `VRF.devices`, `.virtual_machines`, and `.virtual_device_contexts` all share one through model
+        (`VRFDeviceAssignment`), distinguished only by `through_fields`. Django's `.clear()` deletes by
+        filtering that through model on the `vrf` column alone (see `_m2m_clear_would_touch_anything`),
+        so clearing one of these fields while it is itself empty still deletes a populated sibling's row
+        for the same VRF — and that must be recorded as the real change it is, not skipped as a no-op.
+        """
+        cluster_type = ClusterType.objects.create(name="Unchanged save m2m clear shared-through test")
+        cluster = Cluster.objects.create(name="Unchanged save m2m clear shared-through test", cluster_type=cluster_type)
+        vm = VirtualMachine.objects.create(
+            name="Unchanged save m2m clear shared-through test",
+            cluster=cluster,
+            status=Status.objects.get_for_model(VirtualMachine).first(),
+        )
+        with context_managers.web_request_context(self.user):
+            vrf = VRF.objects.create(
+                name="Unchanged save m2m clear shared-through test",
+                status=Status.objects.get_for_model(VRF).first(),
+            )
+        vrf.virtual_machines.add(vm)  # outside any context: `devices` itself stays empty
+        self.assertEqual(get_changes_for_model(vrf).count(), 1)  # the create
+
+        # `devices` has nothing of its own, but clearing it also clears the shared through model's
+        # `virtual_machines` row for this VRF, which is a real change.
+        with context_managers.web_request_context(self.user):
+            vrf.devices.clear()
+        self.assertEqual(get_changes_for_model(vrf).count(), 2)
+
+        # With nothing left in the through model for this VRF at all, clearing another field is a
+        # genuine no-op.
+        with context_managers.web_request_context(self.user):
+            vrf.virtual_device_contexts.clear()
+        self.assertEqual(get_changes_for_model(vrf).count(), 2)
+
+    def test_m2m_clear_disambiguates_fields_sharing_a_through_model_with_many_fields(self):
+        """
+        `Cable`'s termination accessors (`interfaces`, `front_ports`, etc.) all share one through model
+        (`CableToCableTermination`). Same hazard as `VRF`: clearing an accessor that is itself empty still
+        deletes a populated sibling accessor's row for the same cable, which must be recorded.
+        """
+        interface = Interface.objects.first()
+        with context_managers.web_request_context(self.user):
+            cable = Cable.objects.create(status=Status.objects.get_for_model(Cable).first())
+        # Created directly on the through model, bypassing `cable.interfaces.add()`, so only the `clear()`
+        # calls below are exercised through `m2m_changed`.
+        CableToCableTermination.objects.create(cable=cable, cable_end="A", interface=interface)
+        self.assertEqual(get_changes_for_model(cable).count(), 1)  # the create
+
+        # `front_ports` has nothing of its own, but clearing it also clears the shared through model's
+        # `interfaces` row for this cable, which is a real change.
+        with context_managers.web_request_context(self.user):
+            cable.front_ports.clear()
+        self.assertEqual(get_changes_for_model(cable).count(), 2)
+
+        # With nothing left in the through model for this cable at all, clearing another accessor is a
+        # genuine no-op.
+        with context_managers.web_request_context(self.user):
+            cable.console_ports.clear()
+        self.assertEqual(get_changes_for_model(cable).count(), 2)
+
+    def test_model_can_opt_out(self):
+        """A model whose stored value is not a pure function of its own fields opts out of the comparison."""
+        with mock.patch.object(Location, "changelog_skip_unchanged_saves", False, create=True):
+            with context_managers.web_request_context(self.user):
+                self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    @override_settings(CHANGELOG_SKIP_UNCHANGED_SAVES=False)
+    def test_deployment_can_opt_out(self):
+        """A deployment can keep the pre-3.3 behavior of recording every save, however little it changed."""
+        with context_managers.web_request_context(self.user):
+            self.location.save()
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    @override_settings(CHANGELOG_SKIP_UNCHANGED_SAVES=False)
+    def test_deployment_opt_out_covers_update_fields(self):
+        """The opt-out applies to every route into the comparison, not only the value check."""
+        with context_managers.web_request_context(self.user):
+            self.location.save(update_fields=["last_updated"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+
+    def test_indeterminate_comparison_records_the_change(self):
+        """
+        `_name` is derived in `pre_save`, so a save restricted to it cannot be compared beforehand.
+
+        Dropping a real change record is worse than writing a redundant one, so the change is recorded.
+        """
+        with self.assertLogs("nautobot.extras.signals", level="DEBUG") as logs:
+            with context_managers.web_request_context(self.user):
+                self.location.save(update_fields=["_name"])
+        self.assertEqual(get_changes_for_model(self.location).count(), 2)
+        self.assertTrue(any("is indeterminate" in line for line in logs.output))
+
+
+class ChangeLogPrechangeCaptureTest(TestCase):
+    """The "before" state of an update is captured during the save, and only when someone will read it."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.location_type = LocationType.objects.get(name="Campus")
+        cls.status = Status.objects.get_for_model(Location).first()
+
+    def setUp(self):
+        super().setUp()
+        self.location = Location.objects.create(
+            name="Prechange capture test",
+            location_type=self.location_type,
+            status=self.status,
+            description="initial",
+        )
+
+    def add_webhook(self):
+        webhook = Webhook.objects.create(name="Location updates", type_update=True, payload_url="http://localhost/")
+        webhook.content_types.set([ContentType.objects.get_for_model(Location)])
+        return webhook
+
+    @mock.patch("nautobot.extras.context_managers.publish_event")
+    @mock.patch("nautobot.extras.jobs.enqueue_job_hooks", return_value=(False, None))
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_nothing_listening_means_no_dispatch(
+        self, mock_enqueue_webhooks, mock_enqueue_job_hooks, mock_publish_event
+    ):
+        """The change is still recorded, it is just not handed to anyone."""
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+
+        self.assertEqual(get_changes_for_model(self.location).count(), 1)
+        mock_enqueue_webhooks.assert_not_called()
+        mock_enqueue_job_hooks.assert_not_called()
+        mock_publish_event.assert_not_called()
+
+    def test_nothing_listening_means_no_capture(self):
+        """Serializing the stored row is wasted work when nobody will read the result."""
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+            captured = change_context_state.get().pre_object_data_v2
+            self.assertEqual(captured, {})
+
+    def test_capture_is_made_when_something_is_listening(self):
+        self.add_webhook()
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+            captured = change_context_state.get().pre_object_data_v2
+            self.assertEqual(captured[str(self.location.pk)]["description"], "initial")
+
+    def test_no_capture_when_the_stored_row_could_not_be_read(self):
+        """A row deleted by someone else between the save starting and the read has no prior state."""
+        self.add_webhook()
+        with context_managers.web_request_context(self.user):
+            _cache_obj_data_in_change_context(
+                ObjectChangeActionChoices.ACTION_UPDATE, self.location, stored_instance=None
+            )
+            self.assertEqual(change_context_state.get().pre_object_data_v2, {})
+
+    def test_no_capture_for_an_object_that_declines_change_logging(self):
+        """A `StaticGroupAssociation` cached for a dynamic group gets no change record, so it gets no "before"."""
+        group = DynamicGroup.objects.create(
+            name="Prechange capture group",
+            content_type=ContentType.objects.get_for_model(Location),
+            group_type=DynamicGroupTypeChoices.TYPE_DYNAMIC_FILTER,
+            filter={"name": [self.location.name]},
+        )
+        group.update_cached_members()
+        association = StaticGroupAssociation.all_objects.filter(dynamic_group=group).first()
+        self.assertIsNotNone(association)
+        self.assertIsNone(association.to_objectchange(action=ObjectChangeActionChoices.ACTION_UPDATE))
+
+        webhook = Webhook.objects.create(
+            name="Static group association updates", type_update=True, payload_url="http://localhost/"
+        )
+        webhook.content_types.set([ContentType.objects.get_for_model(StaticGroupAssociation)])
+
+        with context_managers.web_request_context(self.user):
+            change_context = change_context_state.get()
+            # Something is listening, so an empty capture below can only be the model declining.
+            self.assertTrue(
+                change_context.has_consumers(
+                    ContentType.objects.get_for_model(StaticGroupAssociation),
+                    ObjectChangeActionChoices.ACTION_UPDATE,
+                )
+            )
+            association.associated_object_id = uuid.uuid4()
+            association.save()
+            self.assertEqual(change_context_state.get().pre_object_data_v2, {})
+
+    @mock.patch("nautobot.extras.signals._reuse_loaded_relations")
+    def test_stored_row_is_not_read_without_a_change_context(self, mock_reuse_loaded_relations):
+        """Outside a request or job both users of the stored row return immediately, so it must not be read."""
+        self.location.description = "changed"
+        self.location.save()
+        # `_reuse_loaded_relations()` runs only on a row that was read, so not calling it means no read.
+        mock_reuse_loaded_relations.assert_not_called()
+
+    def test_loaded_relations_are_reused_for_the_stored_row(self):
+        """The stored row borrows the related objects the instance already holds, saving a query each."""
+        instance = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)
+        stored = Location.objects.get(pk=self.location.pk)
+
+        _reuse_loaded_relations(instance, stored)
+
+        with self.assertNumQueries(0):
+            self.assertEqual(stored.status.pk, self.status.pk)
+            self.assertEqual(stored.location_type.pk, self.location_type.pk)
+
+    def test_relations_are_not_reused_when_this_save_changes_them(self):
+        """A foreign key the save is changing must still be read, or the snapshot would show the new value."""
+        new_status = Status.objects.get_for_model(Location).exclude(pk=self.status.pk).first()
+        instance = Location.objects.select_related("status").get(pk=self.location.pk)
+        instance.status = new_status
+        stored = Location.objects.get(pk=self.location.pk)
+
+        _reuse_loaded_relations(instance, stored)
+
+        with self.assertNumQueries(1):
+            self.assertEqual(stored.status.pk, self.status.pk)
+
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_prechange_keeps_the_previous_related_object(self, mock_enqueue_webhooks):
+        """Reusing loaded relations must not let the new value of a changed foreign key into `prechange`."""
+        self.add_webhook()
+        new_status = Status.objects.get_for_model(Location).exclude(pk=self.status.pk).first()
+
+        with context_managers.web_request_context(self.user):
+            location = Location.objects.select_related("status", "location_type").get(pk=self.location.pk)
+            location.status = new_status
+            location.save()
+
+        snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
+        self.assertEqual(snapshots["prechange"]["status"]["id"], str(self.status.pk))
+        self.assertEqual(snapshots["postchange"]["status"]["id"], str(new_status.pk))
+
+    @mock.patch("nautobot.extras.context_managers.enqueue_webhooks", return_value=None)
+    def test_prechange_shows_writes_that_bypassed_change_logging(self, mock_enqueue_webhooks):
+        """The "before" is the stored row, not the state left by the previous change record."""
+        self.add_webhook()
+        Location.objects.filter(pk=self.location.pk).update(description="written outside change logging")
+
+        with context_managers.web_request_context(self.user):
+            self.location.description = "changed"
+            self.location.save()
+
+        snapshots = mock_enqueue_webhooks.call_args.kwargs["snapshots"]
+        self.assertEqual(snapshots["prechange"]["description"], "written outside change logging")
+        self.assertEqual(snapshots["postchange"]["description"], "changed")

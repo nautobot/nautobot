@@ -2,7 +2,151 @@
 
 As a part of the Nautobot development team's commitment to security, we maintain the below historical list of security issues which have been fixed and disclosed. Note that this list **only** includes issues in Nautobot itself; while we frequently update our library dependencies to keep them up-to-date and free of known security issues therein, any reported issues in such libraries, and the corresponding updates to Nautobot's specified dependencies, are out of scope for this document.
 
-<!-- pyml disable-num-lines 900 proper-names -->
+<!-- pyml disable-num-lines 1000 proper-names -->
+
+## GHSA-m6h7-g92h-9p44
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 28, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Missing permissions enforcement on the REST API <code>/trace/</code> and <code>/paths/</code> endpoints for various cable-termination models. A user granted view permission on a cable termination through a constrained <code>ObjectPermission</code> received the full serialized detail of every other termination and cable along that cable path, including objects on devices outside their permitted scope.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-m6h7-g92h-9p44">GHSA-m6h7-g92h-9p44</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.43</li>
+        <li>&ge;3.0.0, &lt;3.2.6</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.43 (<a href="https://github.com/nautobot/nautobot/commit/406ec35a23ebe929df61172d5147f7cef102d3e5">patch</a>)</li>
+        <li>3.2.6 (<a href="https://github.com/nautobot/nautobot/commit/3bca201bf8a7f33be1cf792110e46e720bfaf38c">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-2v7j-x3g6-qj94
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 14, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>An incomplete fix for GHSA-p99c-c9qx-34fw leaves Nautobot's Jinja2 template sandbox escapable, allowing a low-privileged authenticated user to read any row and column in the Nautobot database, bypassing object permissions.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-2v7j-x3g6-qj94">GHSA-2v7j-x3g6-qj94</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.42</li>
+        <li>&ge;3.0.0, &lt;3.2.5</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.42 (<a href="https://github.com/nautobot/nautobot/commit/85999650fce53a4c4f3806e80643f2f617cd933d">patch</a>)</li>
+        <li>3.2.5 (<a href="https://github.com/nautobot/nautobot/commit/b62ff3e71adf9fc9ca23d9a142d2e8e823ead2ea">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-8f2w-54mq-66gg
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>September 14, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>A low-privileged authenticated user can harvest the cleartext REST API token of any other user, including a superuser, without ever holding permission on tokens, users, or secrets. The same mechanism discloses each affected user's password hash.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-8f2w-54mq-66gg">GHSA-8f2w-54mq-66gg</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.42</li>
+        <li>&ge;3.0.0, &lt;3.2.5</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.42 (<a href="https://github.com/nautobot/nautobot/commit/85999650fce53a4c4f3806e80643f2f617cd933d">patch</a>)</li>
+        <li>3.2.5 (<a href="https://github.com/nautobot/nautobot/commit/b62ff3e71adf9fc9ca23d9a142d2e8e823ead2ea">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
+
+## GHSA-x69f-q4wj-vx72
+
+<!-- pyml disable-next-line no-inline-html -->
+<table>
+  <tr>
+    <th>Disclosure&nbsp;Date</th>
+    <td>August 17, 2026</td>
+  </tr>
+  <tr>
+    <th>Summary</th>
+    <td>Nautobot's legacy "connections" REST API endpoints (<code>/api/dcim/console-connections/</code>, <code>/api/dcim/power-connections/</code>, and, on 2.4.x only, <code>/api/dcim/interface-connections/</code>) were implemented as plain Django REST Framework viewsets and so never applied object-level permission constraints to their querysets. Model-level permissions were still enforced, but a user granted view permissions on ConsolePort, PowerPort, or Interface records through a constrained ObjectPermission would receive every connected console port, power port, or interface in the system, in full serialized detail, rather than only the objects within their permitted scope. The corresponding UI views were not affected.</td>
+  </tr>
+  <tr>
+    <th>Full&nbsp;Description</th>
+    <td><a href="https://github.com/nautobot/nautobot/security/advisories/GHSA-x69f-q4wj-vx72">GHSA-x69f-q4wj-vx72</a></td>
+  </tr>
+  <tr>
+    <th>Affected&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>&lt;2.4.40</li>
+        <li>&ge;3.0.0, &lt;3.2.3</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <th>Patched&nbsp;Versions</th>
+    <td>
+      <ul>
+        <li>2.4.40 (<a href="https://github.com/nautobot/nautobot/commit/c307c08578ad900d29b1c4cf4a11a2809b4e74b3">patch</a>)</li>
+        <li>3.2.3 (<a href="https://github.com/nautobot/nautobot/commit/b1f10f6201224c9f6aad3f0366e1f9697fb1e99b">patch</a>)</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ## GHSA-h8rv-c7c8-cvmx
 

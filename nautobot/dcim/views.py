@@ -5871,7 +5871,17 @@ class ConnectionsListView(generic.ObjectListView):
 
 
 class ConsoleConnectionsListView(ConnectionsListView):
-    queryset = ConsolePort.objects.filter(cable_paths__isnull=False).distinct()
+    # `select_related("device")` feeds the `device` column (`ConsolePort.parent` -> `self.device`) and
+    # the GenericPrefetch feeds `path`, `path.destination`, and the destination's `parent`. Both are
+    # applied here rather than via `BaseTable.add_conditional_prefetch` because every column of this
+    # table is default-visible, and because two columns share the `cable_paths__destination` lookup
+    # (calling `prefetch_related` twice for one `prefetch_to` raises in Django).
+    queryset = (
+        ConsolePort.objects.filter(cable_paths__isnull=False)
+        .select_related("device")
+        .prefetch_related(ConsolePort.connection_destination_prefetch())
+        .distinct()
+    )
     filterset = filters.ConsoleConnectionFilterSet
     filterset_form = forms.ConsoleConnectionFilterForm
     table = tables.ConsoleConnectionTable
@@ -5881,7 +5891,13 @@ class ConsoleConnectionsListView(ConnectionsListView):
 
 
 class PowerConnectionsListView(ConnectionsListView):
-    queryset = PowerPort.objects.filter(cable_paths__isnull=False).distinct()
+    # See ConsoleConnectionsListView for why these are applied on the queryset.
+    queryset = (
+        PowerPort.objects.filter(cable_paths__isnull=False)
+        .select_related("device")
+        .prefetch_related(PowerPort.connection_destination_prefetch())
+        .distinct()
+    )
     filterset = filters.PowerConnectionFilterSet
     filterset_form = forms.PowerConnectionFilterForm
     table = tables.PowerConnectionTable

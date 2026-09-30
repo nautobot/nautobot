@@ -50,7 +50,7 @@
                         {{ form.port_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='port_speed' %}
                     </div>
-                    <span class="form-text">{{ form.port_speed.help_text }}</span>
+                    <span class="form-text" id="{{ form.port_speed.auto_id }}_helptext">{{ form.port_speed.help_text }}</span>
                 </div>
             </div>
             <div class="mb-10 d-md-flex justify-content-center">
@@ -60,7 +60,7 @@
                         {{ form.upstream_speed }}
                         {% include 'circuits/inc/speed_widget.html' with target_field='upstream_speed' %}
                     </div>
-                    <span class="form-text">{{ form.upstream_speed.help_text }}</span>
+                    <span class="form-text" id="{{ form.upstream_speed.auto_id }}_helptext">{{ form.upstream_speed.help_text }}</span>
                 </div>
             </div>
             {% render_field form.xconnect_id %}

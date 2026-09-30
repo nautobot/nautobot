@@ -1,17 +1,23 @@
+from enum import Enum
 from itertools import count, groupby
 import json
+import logging
 import unicodedata
 from urllib.parse import quote_plus, unquote_plus
 
 from django.apps import apps
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import FieldDoesNotExist
 from django.core.serializers import serialize
+from django.db.models import DateField, DateTimeField, Field, FileField, TimeField
 from django.utils.tree import Node
 import emoji
 from slugify import slugify
 
 from nautobot.core import constants
 from nautobot.core.utils.data import is_uuid
+
+logger = logging.getLogger(__name__)
 
 
 def array_to_string(array):
@@ -41,6 +47,59 @@ def is_taggable(obj):
     from nautobot.core.models.managers import TagsManager
 
     return hasattr(obj, "tags") and isinstance(obj.tags, TagsManager)
+
+
+def m2m_through_data_fields(through):
+    """The user-meaningful columns a many-to-many `through` model carries beyond the fields it joins on.
+
+    Empty means the relation is fully described by its members, so it can be exported as a list of member
+    natural keys and set from one. Any name returned is data only the through model can express
+    (`SecretsGroupAssociation.access_type`, `VRFDeviceAssignment.rd`), so preserving it means targeting
+    the through model itself rather than either side of the relation.
+
+    Args:
+        through (type): The through model, e.g. `SomeModel._meta.get_field("things").remote_field.through`.
+
+    Returns:
+        (list): Sorted field names, empty for a relation whose through table is only a join.
+    """
+    # Imported here rather than at module scope because `nautobot.core` must not import `nautobot.extras`
+    # at startup.
+    from nautobot.extras.utils import get_explicit_m2m_through_side_field_names
+
+    # Which foreign keys are the join has to come from the `ManyToManyField` declarations, not from the
+    # through model's own fields: an extra foreign key that is not declared as a side of any relation
+    # (`ControllerManagedDeviceGroupWirelessNetworkAssignment.vlan`) is data about the pairing, while a
+    # side may be a `OneToOneField` (every `CableToCableTermination` termination side) and so is not
+    # `many_to_one` at all. The union over every relation the through model serves is what is joined on:
+    # `VRFDeviceAssignment` joins on `device`, `virtual_machine`, and `virtual_device_context` in turn,
+    # with the sides not participating in a given row simply null.
+    joined_fks = get_explicit_m2m_through_side_field_names().get(through)
+    if joined_fks is None:
+        # Django's auto-created through models and taggit's `extras.TaggedItem` are not declared as the
+        # through of a `ManyToManyField`, so no side names are recorded for them. Both are pure joins,
+        # holding only their foreign keys and a pk.
+        joined_fks = {field.name for field in through._meta.get_fields() if field.many_to_one or field.one_to_one}
+    # A generic FK's own columns identify the member, so they are part of the join rather than data on it.
+    # Derived from the field pair rather than matched by name, so any GFK-based through is handled --
+    # notably `extras.TaggedItem`, whose `object_id` would otherwise make every tagged model look
+    # data-carrying.
+    generic_fk_columns = {
+        column
+        for field in through._meta.private_fields
+        if isinstance(field, GenericForeignKey)
+        for column in (field.ct_field, field.fk_field)
+    }
+    # The primary key needs naming explicitly: Nautobot's `BaseModel.id` is `editable=False`, but Django's
+    # auto-created through models use a plain `AutoField`, which is not.
+    ignored = set(joined_fks) | generic_fk_columns | {through._meta.pk.name}
+    return sorted(
+        field.name
+        for field in through._meta.get_fields()
+        # `concrete` drops the GenericRelations Nautobot mixes in (`associated_object_metadata`);
+        # `editable` drops the `auto_now`/`auto_now_add` bookkeeping (`created`, `last_updated`).
+        if field.concrete and field.editable and field.name not in ignored
+    )
 
 
 def pretty_print_query(query):
@@ -153,6 +212,124 @@ def serialize_object_v2(obj):
         data = serialize_object(obj)
 
     return data
+
+
+class ChangeVerdict(Enum):
+    """Outcome of comparing a save against the row the database currently holds.
+
+    `INDETERMINATE` means no verdict was possible; the caller must then treat the save as a change, since
+    dropping a real change record is worse than writing a redundant one.
+    """
+
+    UNCHANGED = "unchanged"
+    CHANGED = "changed"
+    INDETERMINATE = "indeterminate"
+
+
+def changelog_comparable_fields(instance, update_fields=None):
+    """
+    Return the concrete fields of `instance` worth comparing to decide whether a save changed anything.
+
+    Skips fields that cannot change on an update (primary keys, database-generated fields)
+    and `auto_now` fields, which change on every save. `auto_now_add` fields stay in, since an update
+    writes whatever the instance holds. Honors `update_fields` when Django passes it.
+
+    Args:
+        instance (Model): The instance being saved.
+        update_fields (iterable, optional): Field names or attnames this save is restricted to.
+
+    Returns:
+        (list[Field] | ChangeVerdict): The fields to compare; empty if the save writes nothing a reader
+            would see. `ChangeVerdict.INDETERMINATE` if no reliable comparison is possible.
+    """
+    fields = []
+    if update_fields is not None:
+        update_fields = set(update_fields)
+    for field in instance._meta.concrete_fields:
+        if field.primary_key:
+            continue
+        if getattr(field, "generated", False):
+            continue
+        # By attribute rather than by name, so an App's own auto_now field is covered too.
+        if getattr(field, "auto_now", False):
+            continue
+        if update_fields is not None:
+            if field.name not in update_fields and field.attname not in update_fields:
+                continue
+            # A field computed in `pre_save()` (`NaturalOrderingField` derives `_name` from `name`) holds a
+            # value we cannot predict, since Django calls `pre_save()` after the signal that gets us here.
+            # An unrestricted save is safe regardless, because the field it derives from is compared too;
+            # `update_fields` can leave that source out, and then nothing reliable is left to compare.
+            if _has_unpredictable_pre_save(field):
+                return ChangeVerdict.INDETERMINATE
+        fields.append(field)
+    return fields
+
+
+# Every `pre_save()` implementation whose outcome we know: Django's base, plus the date, time and file
+# overrides that are handled elsewhere. Compared by implementation rather than by field type, so that a
+# subclass introducing its own `pre_save` is caught rather than inheriting its parent's free pass.
+_PREDICTABLE_PRE_SAVE = frozenset(
+    {Field.pre_save, DateField.pre_save, DateTimeField.pre_save, TimeField.pre_save, FileField.pre_save}
+)
+
+
+def _has_unpredictable_pre_save(field):
+    """
+    Whether this field's class overrides `Field.pre_save()` in a way whose result we cannot predict.
+
+    Date, time and file fields override `pre_save` predictably and are handled elsewhere, so they do not count.
+
+    Returns:
+        (bool): True if the value this field will store cannot be read off the instance beforehand.
+    """
+    return type(field).pre_save not in _PREDICTABLE_PRE_SAVE
+
+
+def changelog_values_verdict(instance, stored_instance, fields, connection):
+    """
+    Compare `instance` against `stored_instance` for every field in `fields`.
+
+    Args:
+        instance (Model): The instance being saved.
+        stored_instance (Model): The same row as the database currently holds it.
+        fields (list[Field]): Fields to compare, from `changelog_comparable_fields`.
+        connection: The database connection the save is going to, used to prepare values.
+
+    Returns:
+        (ChangeVerdict): `UNCHANGED` if every value matches, `CHANGED` if one differs, `INDETERMINATE` if
+            it cannot be told.
+    """
+    for field in fields:
+        # Read through `__dict__` rather than the descriptor, which would issue a query for a deferred
+        # field and defeat the point. A field missing on either side is simply not knowable. `attname`
+        # only: that is the key Django stores the column value under; `field.name` is a descriptor and
+        # never a `__dict__` key.
+        if field.attname not in instance.__dict__ or field.attname not in stored_instance.__dict__:
+            return ChangeVerdict.INDETERMINATE
+        new_value = instance.__dict__[field.attname]
+        old_value = stored_instance.__dict__[field.attname]
+
+        # Learning an uncommitted file's stored name means calling `pre_save`, which uploads it.
+        if isinstance(field, FileField) and getattr(new_value, "_committed", True) is False:
+            return ChangeVerdict.CHANGED
+
+        # `==` tolerates what the database normalizes (JSON key order, Decimal precision); preparing the
+        # values catches the reverse, an unnormalized value assigned in memory (a string date, a string UUID).
+        try:
+            if old_value == new_value:
+                continue
+            if field.get_db_prep_save(new_value, connection) == field.get_db_prep_save(old_value, connection):
+                continue
+        except Exception:
+            # Any comparison or preparation failure means we cannot tell; logged because it may be a bug.
+            logger.debug(
+                "Could not compare %s.%s, assuming it changed", instance._meta.label, field.name, exc_info=True
+            )
+            return ChangeVerdict.INDETERMINATE
+        return ChangeVerdict.CHANGED
+
+    return ChangeVerdict.UNCHANGED
 
 
 def find_models_with_matching_fields(app_models, field_names=None, field_attributes=None, additional_constraints=None):

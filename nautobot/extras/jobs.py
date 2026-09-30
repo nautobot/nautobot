@@ -48,6 +48,7 @@ from nautobot.extras.choices import (
     ObjectChangeActionChoices,
     ObjectChangeEventContextChoices,
 )
+from nautobot.extras.conditions.gate import ConditionGate
 from nautobot.extras.context_managers import web_request_context
 from nautobot.extras.forms import JobForm
 from nautobot.extras.jobs_console_log import JobConsoleLogExecutor
@@ -732,6 +733,28 @@ class BaseJob:
         return return_data
 
     @classmethod
+    def _omitted_boolean_var_defaults(cls, data, cls_vars):
+        """The declared defaults of the `BooleanVar`s that `data` doesn't mention.
+
+        A bound `BooleanField` cleans an absent key to False, never to its `initial`, because an unchecked
+        HTML box submits nothing. A JSON body has no such convention, so restore the declared default here,
+        where "absent" still unambiguously means "unspecified" -- `as_form()` also binds UI POSTs and could
+        not tell the two apart.
+
+        `DryRunVar` is excluded defensively rather than of necessity: its `__init__` forces `default=False`,
+        so filling it in would change nothing today. Since dryrun can waive a Job's approval requirement,
+        an omitted key should not be able to turn it on even if that default later becomes settable.
+        """
+        return {
+            name: var.default
+            for name, var in cls_vars.items()
+            if isinstance(var, BooleanVar)
+            and not isinstance(var, DryRunVar)
+            and name not in data
+            and var.default is not None
+        }
+
+    @classmethod
     def validate_data(cls, data, files=None):
         cls_vars = cls._get_vars()
 
@@ -741,6 +764,8 @@ class BaseJob:
         for k in data:
             if k not in cls_vars:
                 raise ValidationError({k: "Job data contained an unknown property"})
+
+        data = {**cls._omitted_boolean_var_defaults(data, cls_vars), **data}
 
         # defer validation to the form object
         f = cls.as_form(data=cls.deserialize_data(data), files=files)
@@ -875,6 +900,7 @@ class ScriptVariable:
             self.field_attrs["label"] = label
         if description:
             self.field_attrs["help_text"] = description
+        self.default = default
         if default is not None:
             self.field_attrs["initial"] = default
         if widget:
@@ -1458,7 +1484,7 @@ def run_console_log_job_and_return_job_result(self, *args, **kwargs):
     return executor.execute()
 
 
-def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None):
+def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None, snapshots=None, gate=None):
     """
     Find job hook(s) assigned to this changed object type + action and enqueue them to be processed.
 
@@ -1466,6 +1492,8 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         object_change (ObjectChange): The change that may trigger JobHooks to execute.
         may_reload_jobs (bool): Whether to reload JobHook source code from disk to guarantee up-to-date code.
         jobhook_queryset (QuerySet): Previously retrieved set of JobHooks to potentially enqueue
+        snapshots (dict): The before/after data snapshots corresponding to the object_change.
+        gate (ConditionGate): Defaults to a new `ConditionGate()`.
 
     Returns:
         result (tuple[bool, QuerySet]): whether Jobs were reloaded here, and the jobhooks that were considered
@@ -1483,14 +1511,17 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
 
     # Retrieve any applicable job hooks
     if jobhook_queryset is None:
-        action_flag = {
-            ObjectChangeActionChoices.ACTION_CREATE: "type_create",
-            ObjectChangeActionChoices.ACTION_UPDATE: "type_update",
-            ObjectChangeActionChoices.ACTION_DELETE: "type_delete",
-        }[object_change.action]
+        action_flag = ObjectChangeActionChoices.HOOK_FLAGS[object_change.action]
         jobhook_queryset = JobHook.objects.filter(content_types=content_type, enabled=True, **{action_flag: True})
 
     if not jobhook_queryset:  # not .exists() as we *want* to populate the queryset cache
+        return jobs_reloaded, jobhook_queryset
+
+    if gate is None:
+        gate = ConditionGate()
+
+    accepted = gate.accepted(jobhook_queryset, object_change, snapshots)
+    if not accepted:
         return jobs_reloaded, jobhook_queryset
 
     # Enqueue the jobs related to the job_hooks
@@ -1498,7 +1529,7 @@ def enqueue_job_hooks(object_change, may_reload_jobs=True, jobhook_queryset=None
         get_jobs(reload=True)
         jobs_reloaded = True
 
-    for job_hook in jobhook_queryset:
+    for job_hook in accepted:
         job_model = job_hook.job
         if not job_model.installed or not job_model.enabled:
             logger.warning(

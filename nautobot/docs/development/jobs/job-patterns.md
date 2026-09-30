@@ -94,10 +94,11 @@ A Job's result is determined by how the `run()` method completes:
 
 This pattern lets you validate inputs, selectively fail under certain conditions, and return structured summaries or results.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example "Mixed Flow Handling"
     ```py
     from nautobot.apps.jobs import Job, StringVar, IntegerVar, register_jobs
+
 
     class LunchOrder(Job):
         name = StringVar(description="What are you ordering?")
@@ -113,6 +114,7 @@ This pattern lets you validate inputs, selectively fail under certain conditions
 
             self.logger.info("Order received: %d x %s", quantity, name)
             return f"Order summary: {quantity} x {name}"
+
 
     register_jobs(LunchOrder)
     ```
@@ -141,10 +143,11 @@ Jobs can generate output files that will be saved and made available to the user
 
 Use the `Job.create_file(filename, content)` method:
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job, register_jobs
+
 
     class MyJob(Job):
         class Meta:
@@ -153,6 +156,7 @@ Use the `Job.create_file(filename, content)` method:
         def run(self):
             self.create_file("greeting.txt", "Hello world!")
             self.create_file("farewell.txt", b"Goodbye for now!")  # Content can be str or bytes
+
 
     register_jobs(MyJob)
     ```
@@ -168,11 +172,12 @@ Output files created via `create_file()` are persistent and linked to the JobRes
 
 To accept user-provided files at runtime, use [`FileVar`](./job-structure.md#filevar). These files are passed into the Job's `run()` method as in-memory objects and must be read and processed during execution. They are not saved automatically.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     import csv
     from nautobot.apps.jobs import Job, FileVar, register_jobs
+
 
     class ProcessCSV(Job):
         class Meta:
@@ -185,6 +190,7 @@ To accept user-provided files at runtime, use [`FileVar`](./job-structure.md#fil
             reader = csv.DictReader(decoded_file)
             for row in reader:
                 self.logger.info("Device: %s | IP: %s", row["hostname"], row["ip_address"])
+
 
     register_jobs(ProcessCSV)
     ```
@@ -205,10 +211,11 @@ Use the following convenience methods to load structured data:
 
 These paths are relative to the Job's file location.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job, register_jobs
+
 
     class LoadConfig(Job):
         class Meta:
@@ -217,6 +224,7 @@ These paths are relative to the Job's file location.
         def run(self):
             config = self.load_yaml("defaults.yaml")
             self.logger.info("Loaded configuration with %d items.", len(config))
+
 
     register_jobs(LoadConfig)
     ```
@@ -241,21 +249,22 @@ This Job is useful when enforcing operational standards in environments where mi
     - ConsolePorts should have active connections
     - The `Status` model must include an `"Active"` value
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example "Device Validation Job"
     ```py
     from nautobot.apps.jobs import Job, register_jobs
     from nautobot.dcim.models import ConsolePort, Device, PowerPort
     from nautobot.extras.models import Status
 
+
     class DeviceConnectionsReport(Job):
         description = "Validate the minimum physical connections for each device"
 
         def test_console_connection(self):
-            STATUS_ACTIVE = Status.objects.get(name='Active')
+            STATUS_ACTIVE = Status.objects.get(name="Active")
 
             # Check that every console port for every active device has a connection defined.
-            for console_port in ConsolePort.objects.select_related('device').filter(device__status=STATUS_ACTIVE):
+            for console_port in ConsolePort.objects.select_related("device").filter(device__status=STATUS_ACTIVE):
                 if console_port.connected_endpoint is None:
                     self.logger.failure(
                         "No console connection defined for %s",
@@ -270,7 +279,7 @@ This Job is useful when enforcing operational standards in environments where mi
                     )
 
         def test_power_connections(self):
-            STATUS_ACTIVE = Status.objects.get(name='Active')
+            STATUS_ACTIVE = Status.objects.get(name="Active")
 
             # Check that every active device has at least two connected power supplies.
             for device in Device.objects.filter(status=STATUS_ACTIVE):
@@ -328,6 +337,7 @@ The following example includes permission checks for `add_location` and `add_dev
     from nautobot.apps.jobs import Job, StringVar, IntegerVar, ObjectVar, register_jobs
     from nautobot.dcim.models import Location, LocationType, Device, Manufacturer, DeviceType
     from nautobot.extras.models import Status, Role
+
 
     class NewBranch(Job):
         class Meta:
@@ -390,6 +400,7 @@ The following example includes permission checks for `add_location` and `add_dev
 
             return "\n".join(output)
 
+
     register_jobs(NewBranch)
     ```
 
@@ -402,10 +413,11 @@ The snippet below demonstrates a mix of common patterns: variable types (`String
 !!! note
     This snippet highlights only a portion of the full `ExampleEverythingJob`. To explore the complete implementation - including additional variables, error handling with `on_failure()`, and form customization - see the [full source code in the Example App](https://github.com/nautobot/nautobot/blob/main/examples/example_app/example_app/jobs.py).
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example "Everything Demo Job Snippet"
     ```py
     from nautobot.apps.jobs import Job, StringVar, IntegerVar, BooleanVar, ChoiceVar, FileVar, register_jobs
+
 
     class ExampleEverythingJob(Job):
         class Meta:
@@ -416,7 +428,7 @@ The snippet below demonstrates a mix of common patterns: variable types (`String
         example_string = StringVar(description="A text input.")
         example_choice = ChoiceVar(
             choices=[("a", "Alpha"), ("b", "Beta")],
-            description="Pick a choice."
+            description="Pick a choice.",
         )
         example_file = FileVar(description="Upload a file.")
 

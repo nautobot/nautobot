@@ -136,7 +136,7 @@ def create_job_result_and_run_job(module, name, source="local", *args, **kwargs)
     return job_result
 
 
-#: Return value of `get_job_class_and_model()`.
+# Return value of `get_job_class_and_model()`.
 JobClassInfo = collections.namedtuple("JobClassInfo", "job_class job_model")
 
 

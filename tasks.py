@@ -19,6 +19,7 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import time
 
 from invoke import Collection, task as invoke_task
@@ -85,11 +86,7 @@ namespace.configure(
     {
         "nautobot": {
             "project_name": "nautobot",  # extended automatically with Nautobot major/minor ver, see docker_compose()
-            # Sticking with 3.13 rather than 3.14 as our default for now, because Django 5.2's test runner doesn't
-            # support parallel execution under 3.14's default multiprocessing start method. Relevant references:
-            # https://docs.python.org/3/library/multiprocessing.html#multiprocessing-start-methods
-            # https://code.djangoproject.com/ticket/36531
-            "python_ver": "3.13",
+            "python_ver": "3.14",
             "local": False,
             "ephemeral_ports": False,
             "compose_dir": os.path.join(BASE_DIR, "development/"),
@@ -217,10 +214,11 @@ def docker_compose(context, command, **kwargs):
     return context.run(compose_command, env=env, **kwargs)
 
 
-def run_command(context, command, service="nautobot", **kwargs):
+def run_command(context, command, service="nautobot", command_env=None, **kwargs):
     """Wrapper to run a command locally or inside the provided container."""
     if is_truthy(context.nautobot.local):
         env = kwargs.pop("env", {})
+        env.update(command_env or {})
         if "hide" not in kwargs:
             print_command(command, env=env)
         return context.run(command, pty=True, env=env, **kwargs)
@@ -230,12 +228,18 @@ def run_command(context, command, service="nautobot", **kwargs):
         results = docker_compose(context, docker_compose_status, hide="out")
 
         root = kwargs.pop("root", False)
+        cmd_env = ""
+        if command_env:
+            for key, value in command_env.items():
+                cmd_env += f'--env "{key}={value}" '
+
         if service in results.stdout:
-            compose_command = f"exec {'--user=root ' if root else ''}{service} {command}"
+            compose_command = f"exec {'--user=root ' if root else ''}{cmd_env}{service} {command}"
         else:
             # Explicitly set the container name to allow network access by calling "nautobot:<port>"
             compose_command = (
-                f"run {'--user=root ' if root else ''}--rm --name '{service}' --entrypoint '{command}' {service}"
+                f"run {'--user=root ' if root else ''}--rm "
+                f"{cmd_env}--name '{service}' --entrypoint '{command}' {service}"
             )
 
         return docker_compose(context, compose_command, pty=True, **kwargs)
@@ -1133,10 +1137,71 @@ def check_schema(context, api_version=None):
 
 @task(
     help={
+        "app": "Run only one app's Playwright tests, by app label (e.g. 'dcim' runs nautobot/dcim/tests/integration).",
+        "url": "Base URL of the running Nautobot instance under test (default: NAUTOBOT_PLAYWRIGHT_URL, or http://localhost:8080).",
+        "username": "Login username for the instance under test (default: NAUTOBOT_PLAYWRIGHT_USERNAME, or admin).",
+        "password": "Login password for the instance under test (default: NAUTOBOT_PLAYWRIGHT_PASSWORD, or admin).",
+        "token": "REST API token for the instance under test (default: NAUTOBOT_PLAYWRIGHT_API_TOKEN, or the dev token).",
+        "headed": "Run the browser headed (visible) instead of headless.",
+        "pattern": "Only run tests whose names match the given substring (pytest -k).",
+        "marker": "Only run tests carrying the given pytest mark (pytest -m), e.g. behavioral or 'not behavioral'.",
+        # (this task runs on the HOST by design; see the docstring.)
+    }
+)
+def playwright(
+    context, app=None, url=None, username=None, password=None, token=None, headed=False, pattern=None, marker=None
+):
+    """Run the Playwright test suite against a running Nautobot instance.
+
+    Unlike the other test tasks, playwright does not run inside the Docker development
+    container. pytest runs directly on the host because the browsers are installed
+    there and the suite only needs HTTP reachability to the instance under test.
+    Runs pytest with plugin auto-loading disabled, only the explicitly named plugins
+    load. Requires the playwright dependency group and a browser.
+    `poetry install --with playwright && poetry run playwright install chromium`
+    CI adds `--with-deps` to the browser install for the runner's OS packages,
+    not needed on a developer machine.
+    """
+    # This task runs pytest on the host rather than in a container, so it needs the
+    # Poetry environment. `poetry run` works whether or not a Poetry shell is active.
+    if shutil.which("poetry"):
+        runner = "poetry run pytest"
+    else:
+        raise Exit(
+            "Could not find pytest or poetry. The Playwright suite needs its optional dependency group:\n"
+            "  poetry install --with playwright && poetry run playwright install chromium"
+        )
+    # Traces and screenshots are captured only when a test fails (written under
+    # test-results/). CI uploads the directory as a build artifact on failure.
+    command = f"{runner} -p playwright -p base_url --tracing=retain-on-failure --screenshot=only-on-failure"
+    if app:
+        command += f" nautobot/{app}/tests/integration"
+    if headed:
+        command += " --headed"
+    if pattern:
+        command += f" -k {shlex.quote(pattern)}"
+    if marker:
+        command += f" -m {shlex.quote(marker)}"
+    env = {"PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"}
+    if url:
+        env["NAUTOBOT_PLAYWRIGHT_URL"] = url
+    if username:
+        env["NAUTOBOT_PLAYWRIGHT_USERNAME"] = username
+    if password:
+        env["NAUTOBOT_PLAYWRIGHT_PASSWORD"] = password
+    if token:
+        env["NAUTOBOT_PLAYWRIGHT_API_TOKEN"] = token
+    print_command(command, env=env)
+    context.run(command, env=env, pty=True)
+
+
+@task(
+    help={
         "append_coverage": "Append coverage data to .coverage, otherwise it starts clean each time.",
         "buffer": "Discard output from passing tests.",
         "pdb": "Drop into the Python debugger on test failure. Should be used with `--no-buffer` to see output.",
         "cache_test_fixtures": "Save test database to a json fixture file to re-use on subsequent tests.",
+        "color": "Colorize test output.",
         "config_file": "Specify an alternative nautobot_config.py file to use for tests",
         "coverage": "Enable test code-coverage reporting. Off by default due to performance impact.",
         "exclude_tag": "Do not run tests with the specified tag (e.g. 'unit', 'integration', 'migration_test'). Can be used multiple times.",
@@ -1160,6 +1225,7 @@ def tests(
     buffer=True,
     pdb=False,
     cache_test_fixtures=True,
+    color=True,
     config_file="nautobot/core/tests/nautobot_config.py",
     coverage=False,
     exclude_tag=None,
@@ -1194,16 +1260,20 @@ def tests(
     if parallel_workers:
         parallel_workers = int(parallel_workers)
 
+    command_env = {}
     if coverage:
         append_arg = " --append" if append_coverage and not parallel else ""
         parallel_arg = " --parallel-mode" if parallel else ""
-        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli test {label}"
+        command = f"coverage run{append_arg}{parallel_arg} --module nautobot.core.cli"
     else:
-        command = f"nautobot-server test {label}"
-    command += f" --config={config_file}"
+        command = "nautobot-server"
+    command += f" --config={config_file} test {label}"
     # booleans
     if context.nautobot.get("cache_test_fixtures", cache_test_fixtures):
         command += " --cache-test-fixtures"
+    if not color:
+        command_env["DJANGO_COLORS"] = "nocolor"
+        command_env["NO_COLOR"] = "1"
     if keepdb:
         command += " --keepdb"
     if not reusedb:
@@ -1232,7 +1302,7 @@ def tests(
     for item in pattern or []:
         command += f" -k='{item}'"
 
-    run_command(context, command)
+    run_command(context, command, command_env=command_env)
 
     if coverage:
         run_command(context, "coverage combine")

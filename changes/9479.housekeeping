@@ -1,0 +1,1 @@
+Moved Playwright login out of the auth fixture and into a helper with documentation for using it in a script.

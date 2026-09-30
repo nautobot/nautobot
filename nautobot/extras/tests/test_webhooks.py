@@ -1,6 +1,6 @@
 from copy import deepcopy
 import json
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 import uuid
 
 from django.apps import apps
@@ -25,9 +25,14 @@ from nautobot.extras.models.statuses import Status
 from nautobot.extras.registry import registry
 from nautobot.extras.tasks import _send_webhook_request_pinned, process_webhook
 from nautobot.extras.utils import generate_signature
-from nautobot.extras.webhooks import validate_webhook_url, validate_webhook_url_format
+from nautobot.extras.webhooks import enqueue_webhooks, validate_webhook_url, validate_webhook_url_format
 
 User = get_user_model()
+
+
+BROKEN_ROWS = [
+    {"type": "preset", "preset": "field_compare", "values": {"field": "name", "operator": "in", "value": "Location 1"}}
+]
 
 
 class WebhookTest(APITestCase):
@@ -470,6 +475,118 @@ class WebhookTest(APITestCase):
         self.assertEqual(args[7]["differences"]["removed"], None)
         self.assertEqual(args[7]["differences"]["added"]["name"], "Location 1")
 
+    def _create_locations(self, *names):
+        with web_request_context(self.user, change_id=uuid.uuid4()):
+            for name in names:
+                Location.objects.create(
+                    name=name, location_type=LocationType.objects.get(name="Campus"), status=self.statuses[0]
+                )
+
+    def _condition_webhook(self, conditions, **lookup):
+        """Put `conditions` on the one webhook `lookup` selects, by `type_create=True` and such."""
+        webhook = Webhook.objects.get(**lookup)
+        webhook.conditions = conditions
+        webhook.save()
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_enqueue_webhooks_enqueues_when_the_conditions_pass(self, mock_async):
+        self._condition_webhook([{"type": "expression", "source": "data.name == 'Location 1'"}], type_create=True)
+
+        self._create_locations("Location 1")
+
+        mock_async.assert_called_once()
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_enqueue_webhooks_stays_quiet_when_the_conditions_do_not_pass(self, mock_async):
+        self._condition_webhook([{"type": "expression", "source": "data.name == 'somewhere else'"}], type_create=True)
+
+        self._create_locations("Location 1")
+
+        mock_async.assert_not_called()
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_a_preset_reading_the_snapshots_sees_the_change(self, mock_async):
+        """The expression cases only read `data`; a preset reads `snapshots`, the other half of the payload."""
+        self._condition_webhook(
+            [{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}], type_update=True
+        )
+        location = Location.objects.create(
+            name="Location 1", location_type=LocationType.objects.get(name="Campus"), status=self.statuses[0]
+        )
+
+        with web_request_context(self.user, change_id=uuid.uuid4()):
+            location.name = "Location 2"
+            location.save()
+
+        mock_async.assert_called_once()
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_a_preset_reading_the_snapshots_sees_an_untouched_field(self, mock_async):
+        """The watched field did not move, so the same preset has to come out the other way."""
+        self._condition_webhook(
+            [{"type": "preset", "preset": "field_changed", "values": {"field": "name"}}], type_update=True
+        )
+        location = Location.objects.create(
+            name="Location 1", location_type=LocationType.objects.get(name="Campus"), status=self.statuses[0]
+        )
+
+        with web_request_context(self.user, change_id=uuid.uuid4()):
+            location.description = "Touched something else"
+            location.save()
+
+        mock_async.assert_not_called()
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_a_row_that_cannot_be_evaluated_is_reported_and_is_not_enqueued(self, mock_async):
+        """`in` needs a set, so this row raises when it runs; a rule nobody can evaluate must go quiet."""
+        self._condition_webhook(BROKEN_ROWS, type_create=True)
+
+        with self.assertLogs("nautobot.extras.conditions.gate", level="ERROR") as logs:
+            self._create_locations("Location 1")
+
+        mock_async.assert_not_called()
+        self.assertIn("condition 1 could not be evaluated", logs.output[0])
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_a_broken_row_is_reported_once_for_a_run_of_changes(self, mock_async):
+        """One change touching many objects dispatches the same webhook each time; that is one message."""
+        self._condition_webhook(BROKEN_ROWS, type_create=True)
+
+        with self.assertLogs("nautobot.extras.conditions.gate", level="ERROR") as logs:
+            self._create_locations("Location 1", "Location 2", "Location 3")
+
+        self.assertEqual(len(logs.output), 1, logs.output)
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_conditions_are_checked_when_no_gate_is_given(self, mock_async):
+        self._create_locations("Location 1")
+        change = get_changes_for_model(Location).first()
+
+        self._condition_webhook([{"type": "expression", "source": "data.name == 'Location 1'"}], type_create=True)
+        mock_async.reset_mock()
+        enqueue_webhooks(change, snapshots=change.get_snapshots())
+        mock_async.assert_called_once()
+
+        self._condition_webhook([{"type": "expression", "source": "data.name == 'elsewhere'"}], type_create=True)
+        mock_async.reset_mock()
+        enqueue_webhooks(change, snapshots=change.get_snapshots())
+        mock_async.assert_not_called()
+
+    @patch("nautobot.extras.tasks.process_webhook.apply_async")
+    def test_conditions_that_are_not_a_list_are_reported_and_are_not_enqueued(self, mock_async):
+        """Only a validated save stores rows, so the column can hold something no row reads out of.
+
+        The location still has to be created: a misconfigured webhook is not a reason to refuse a change.
+        """
+        Webhook.objects.filter(type_create=True).update(conditions=5)
+
+        with self.assertLogs("nautobot.extras.conditions.gate", level="ERROR") as logs:
+            self._create_locations("Location 1")
+
+        mock_async.assert_not_called()
+        self.assertIn("its conditions could not be evaluated", logs.output[0])
+        self.assertTrue(Location.objects.filter(name="Location 1").exists())
+
     @patch("nautobot.extras.tasks.process_webhook.apply_async")
     def test_enqueue_webhooks_m2m_update(self, mock_async):
         """
@@ -518,7 +635,9 @@ class WebhookTest(APITestCase):
         all_changes = get_changes_for_model(location)
         self.assertEqual(all_changes.count(), 1)
         change = all_changes.first()
-        mock_enqueue_webhooks.assert_called_once_with(change, snapshots=change.get_snapshots(), webhook_queryset=None)
+        mock_enqueue_webhooks.assert_called_once_with(
+            change, snapshots=change.get_snapshots(), webhook_queryset=None, gate=ANY
+        )
 
     def test_all_webhook_supported_models(self):
         """

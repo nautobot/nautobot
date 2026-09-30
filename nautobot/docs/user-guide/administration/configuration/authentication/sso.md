@@ -114,12 +114,12 @@ The following guides are provided for some of the most common authentication met
 
 ### Okta
 
-1. In the Okta admin portal, create a new *Web* application
+1. In the Okta admin portal, create a new _Web_ application
 2. Configure the application as follows:
 
-    * *Base URIs*: should be the URI of your Nautobot application such as `https://nautobot.example.com`
-    * *Login redirect URIs*: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
-    * *Logout redirect URIs*: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
+    * **Base URIs**: should be the URI of your Nautobot application such as `https://nautobot.example.com`
+    * **Login redirect URIs**: should be the Base URI plus `/complete/okta-openidconnect/` such as `https://nautobot.example.com/complete/okta-openidconnect/`
+    * **Logout redirect URIs**: should be the Base URI plus `/disconnect/okta-openidconnect/` such as `https://nautobot.example.com/disconnect/okta-openidconnect/`
 
 3. Once the application is configured in Okta, SSO can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Okta authentication backends, use OIDC.
 
@@ -133,9 +133,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_OKTA_OAUTH2_KEY = '<Client ID from Okta>'
-SOCIAL_AUTH_OKTA_OAUTH2_SECRET = '<Client Secret From Okta>'
-SOCIAL_AUTH_OKTA_OAUTH2_API_URL = 'https://<Okta URL>'
+SOCIAL_AUTH_OKTA_OAUTH2_KEY = "<Client ID from Okta>"
+SOCIAL_AUTH_OKTA_OAUTH2_SECRET = "<Client Secret From Okta>"
+SOCIAL_AUTH_OKTA_OAUTH2_API_URL = "https://<Okta URL>"
 ```
 
 #### Okta - OpenID
@@ -148,16 +148,16 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = '<Client ID from Okta>'
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = '<Client Secret From Okta>'
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = 'https://<Okta URL>/oauth2/<Authentication Server>'
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_KEY = "<Client ID from Okta>"
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SECRET = "<Client Secret From Okta>"
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_API_URL = "https://<Okta URL>/oauth2/<Authentication Server>"
 ```
 
 The `/default` authentication server can be used for testing, however, it should not be used in production.
 
 #### Okta - SAML
 
-See [Google SAML Prerequisites](#google-saml) for common setup.
+See [Google SAML Prerequisites](#google---saml) for common setup.
 
 Setup SAML in Okta
 
@@ -210,13 +210,13 @@ SOCIAL_AUTH_SAML_ORG_INFO = {
 # Technical point of contact
 SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
     "givenName": "Bob Jones",
-    "emailAddress": "bob@example.com"
+    "emailAddress": "bob@example.com",
 }
 
 # Support point of contact
 SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
     "givenName": "Alice Jenkins",
-    "emailAddress": "alice@example.com"
+    "emailAddress": "alice@example.com",
 }
 
 # The Issuer URL for Okta from step 9
@@ -255,7 +255,7 @@ SOCIAL_AUTH_SAML_SECURITY_CONFIG = {
 # Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
 
 !!! warning
@@ -266,24 +266,24 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 #### Login with Okta SAML
 
-Note the provider entry we configured in SOCIAL_AUTH_SAML_ENABLED_IDPS as okta. This will be used to login and will be referenced in the query parameter using idp=okta. For example /login/saml/?idp=okta.
+Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `"okta"`. This will be used to login, passed in the login POST request as `"idp=okta"`.
 
-This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Okta, log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
+This should be the URL that is mapped to the "Continue with SSO" button on the login page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Okta, log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
 
-Be sure to configure EXTERNAL_AUTH_DEFAULT_GROUPS and EXTERNAL_AUTH_DEFAULT_PERMISSIONS next.
+Be sure to configure `EXTERNAL_AUTH_DEFAULT_GROUPS` and `EXTERNAL_AUTH_DEFAULT_PERMISSIONS` next.
 
 #### Okta - Additional Scopes
 
 It is possible to get additional OAuth scopes from okta by adding them to the `SOCIAL_AUTH_{BACKEND}_SCOPE` list. For example to get the `groups` scope from Okta using OAuth2 add the following to your `nautobot_config.py`:
 
 ```python
-SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ['groups']
+SOCIAL_AUTH_OKTA_OAUTH2_SCOPE = ["groups"]
 ```
 
 for OpenID:
 
 ```python
-SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ['groups']
+SOCIAL_AUTH_OKTA_OPENIDCONNECT_SCOPE = ["groups"]
 ```
 
 In order to use this returned scope a custom function needs to be written and added to the `SOCIAL_AUTH_PIPELINE` as described in the [`python-social-auth` authentication pipeline documentation](https://python-social-auth.readthedocs.io/en/stable/pipeline.html).
@@ -300,23 +300,23 @@ The following instructions guide you through the process of configuring Google f
     Please note there is further guidance provided by [`python-social-auth`](https://python-social-auth.readthedocs.io/en/latest/backends/google.html#google-oauth2) as well as [Google](https://developers.google.com/identity/protocols/oauth2?csw=1). For more information please utilize these additional resources.
 
 1. In the [Google API Console](https://console.developers.google.com/) create a new project or select an existing one.
-2. Select *OAuth consent screen* from the menu on the left side of the page
-3. For *User Type* select *Internal* and click *Create*
+2. Select _OAuth consent screen_ from the menu on the left side of the page
+3. For _User Type_ select _Internal_ and click _Create_.
 4. Configure as follows:
 
-    * *App name*: Acme Corp Nautobot
-    * *User support email*: select an email
-    * *App logo*: The Nautobot logo can be found at `nautobot/project-static/img/nautobot_logo.png`
+    * **App name**: Acme Corp Nautobot
+    * **User support email**: select an email
+    * **App logo**: The Nautobot logo can be found at `nautobot/project-static/img/nautobot_logo.png`
 
-5. Click *Save and Continue*
-6. No additional scopes are needed click *Save and Continue*
-7. Select *Credentials* from the menu on the left side of the page
-8. Click *+ Create Credentials* at the top of the page and select *OAuth client ID*
+5. Click _Save and Continue_
+6. No additional scopes are needed click _Save and Continue_
+7. Select _Credentials_ from the menu on the left side of the page
+8. Click _+ Create Credentials_ at the top of the page and select _OAuth client ID_
 9. Configure as follows:
 
-    * *Application type*: Web application
-    * *Name*: Nautobot
-    * *Authorized redirect URIs*: should be the Nautobot URL plus `/complete/google-oauth2/` for example `https://nautobot.example.com/complete/google-oauth2/`
+    * **Application type**: Web application
+    * **Name**: Nautobot
+    * **Authorized redirect URIs**: should be the Nautobot URL plus `/complete/google-oauth2/` for example `https://nautobot.example.com/complete/google-oauth2/`
 
 10. Click Create
 11. Edit your `nautobot_config.py` as follows:
@@ -327,9 +327,9 @@ AUTHENTICATION_BACKENDS = [
     "nautobot.core.authentication.ObjectPermissionBackend",
 ]
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = '<Client ID from Google>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = '<Secret ID from Google>'
-SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['openid']
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "<Client ID from Google>"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "<Secret ID from Google>"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ["openid"]
 ```
 
 #### Google - SAML
@@ -347,7 +347,7 @@ This guide will walk you through configuring Nautobot to authenticate using SAML
 Before you begin you will need the following:
 
 * The fully-qualified domain name (FQDN) of your Nautobot host must be registered in DNS. For this example we will be using `nautobot.example.com`.
-* A valid publicly trusted SSL certificate matching the FQDN of your host. You *cannot* use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
+* A valid publicly trusted SSL certificate matching the FQDN of your host. You _cannot_ use a self-signed certificate. Google validates this certificate to assert authenticity of SAML authentication requests.
 * The name and email address for a technical point of contact. For this example we will use `Bob Jones, bob@example.com`.
 * The name and email address for a support point of contact. For this example we will use `Alice Jenkins, alice@example.com.`
 
@@ -357,19 +357,19 @@ Before you begin you will need the following:
 2. Follow Google's official document to [Set up your own custom SAML application](https://support.google.com/a/answer/6087519?hl=en), pausing at step 6.
 3. From step 6 of the instructions, capture the **SSO URL**, **Entity ID**, and **Certificate**. You will use these in later steps to configure Nautobot. Each of these will be referred to as `GOOGLE_SSO_URL`, `GOOGLE_ENTITY_ID`, and `GOOGLE_CERTIFICATE` respectively.
 4. Skip step 7 in the instructions, as that does not apply here because we will be configuring Nautobot directly.
-5. For step 9 of the instructions under *Service provider details*, provide the following
+5. For step 9 of the instructions under _Service provider details_, provide the following
     * **ACS URL**: `https://nautobot.example.com/complete/saml/`
     * **Entity ID:** `https://nautobot.example.com/`
     * **Start URL:** Leave this field blank
 6. Skip step 10 in the instructions, as a signed response is not required.
-7. For step 11 of the instructions, under *Name ID*, set the following:
-    * **Name ID Format**: Select *EMAIL*
-    * **Name ID:** Select *Basic Information > Primary Email*
-8. For step 13 of the instructions, on the *Attribute mapping* page, add the following mappings for *Google Directory attributes* to *App attributes*:
-    * *Primary email* --> `email`
-    * *First name* --> `first_name`
-    * *Last name* --> `last_name`
-9. Click *Finish*
+7. For step 11 of the instructions, under _Name ID_, set the following:
+    * **Name ID Format**: Select _EMAIL_
+    * **Name ID:** Select _Basic Information > Primary Email_
+8. For step 13 of the instructions, on the _Attribute mapping_ page, add the following mappings for _Google Directory attributes_ to _App attributes_:
+    * **Primary email** --> `email`
+    * **First name** --> `first_name`
+    * **Last name** --> `last_name`
+9. Click _Finish_
 
 ##### Configure Nautobot
 
@@ -406,13 +406,13 @@ SOCIAL_AUTH_SAML_ORG_INFO = {
 # Technical point of contact
 SOCIAL_AUTH_SAML_TECHNICAL_CONTACT = {
     "givenName": "Bob Jones",
-    "emailAddress": "bob@example.com"
+    "emailAddress": "bob@example.com",
 }
 
 # Support point of contact
 SOCIAL_AUTH_SAML_SUPPORT_CONTACT = {
     "givenName": "Alice Jenkins",
-    "emailAddress": "alice@example.com"
+    "emailAddress": "alice@example.com",
 }
 
 # The Entity ID URL for Google from step 3
@@ -445,7 +445,7 @@ SOCIAL_AUTH_SAML_ENABLED_IDPS = {
 # Required for correctly redirecting when behind SSL proxy (NGINX). You may or may not need
 # these depending on your production deployment. They are provided here just in case.
 SECURE_SSL_REDIRECT = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
 
 !!! warning
@@ -459,9 +459,9 @@ On Google's official site to [Set up your own custom SAML application](https://s
 
 ##### Login with SAML
 
-Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `google`. This will be used to login and will be referenced in the query parameter using `idp=google`. For example `/login/saml/?idp=google`.
+Note the provider entry we configured in `SOCIAL_AUTH_SAML_ENABLED_IDPS` as `"google"`. This will be used to login, passed in the login POST request as `"idp=google"`.
 
-This should be the URL that is mapped to the "Log in" button on the top right of the index page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account", log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
+This should be the URL that is mapped to the "Continue with SSO" button on the login page when you navigate to Nautobot in your browser. Clicking this link should automatically redirect you to Google, ask you to "Choose an account", log you in and redirect you back to the Nautobot home page. Your email address will also be your username.
 
 ---
 
@@ -502,28 +502,28 @@ class MetadataView(View):
             config = saml_backend.generate_saml_config()
             return HttpResponse(
                 content=f"ERROR: {saml_error}, SAML backend config is {config}",
-                content_type="text/plain"
+                content_type="text/plain",
             )
 ```
 
 ### Azure AD
 
-1. In the Azure admin portal, search for and select *Azure Active Directory*.
-2. Under *Manage*, select *App registrations -> New registration*.
+1. In the Azure admin portal, search for and select _Azure Active Directory_.
+2. Under _Manage_, select _App registrations -> New registration_.
 3. Configure the application as follows:
 
-    * *Name*: This is the user-facing display name for the app.
-    * *Supported account types*: This specifies the AD directories that you're allowing to authenticate with this app.
-    * *Redirect URIs*: Don't fill this out yet, it will be configured in the following steps.
+    * **Name**: This is the user-facing display name for the app.
+    * **Supported account types**: This specifies the AD directories that you're allowing to authenticate with this app.
+    * **Redirect URIs**: Don't fill this out yet, it will be configured in the following steps.
 
-4. Once the application is configured in Azure, you'll be shown the app registration's *Overview* page. Please take note of the *Application (client) ID* for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
-5. From the App registration page, click on *Authentication*. Under *Platform configurations*, select *Add a platform* and select *Web*.
-6. Click on the *Add a Redirect URI* link on the page and configure it as follows:
+4. Once the application is configured in Azure, you'll be shown the app registration's _Overview_ page. Please take note of the _Application (client) ID_ for use later. SSO with Azure can either be configured with OAuth2 or OpenID Connect (OIDC). When using an organization's authentication server OAuth2 is preferred; with custom Azure authentication backends, use OIDC.
+5. From the App registration page, click on _Authentication_. Under _Platform configurations_, select _Add a platform_ and select _Web_.
+6. Click on the _Add a Redirect URI_ link on the page and configure it as follows:
 
-    * *Redirect URIs*: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
-    * *Redirect URIs with Tenant*: should be the Base URI plus `/complete/azuread-tenant-oauth2/` such as `https://nautobot.example.com/complete/azuread-tenant-oauth2/`
+    * **Redirect URIs**: should be the Base URI plus `/complete/azuread-oauth2/` such as `https://nautobot.example.com/complete/azuread-oauth2/`
+    * **Redirect URIs with Tenant**: should be the Base URI plus `/complete/azuread-tenant-oauth2/` such as `https://nautobot.example.com/complete/azuread-tenant-oauth2/`
 
-7. Once the Redirect URI is set, the last thing you'll need is to generate a *client secret*. To do so, click on *Certificates & secrets* and then the *New client secret* option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
+7. Once the Redirect URI is set, the last thing you'll need is to generate a _client secret_. To do so, click on _Certificates & secrets_ and then the _New client secret_ option. At this point you'll need to specify the expiration for the secret. Microsoft recommends less than 12 months with a maximum of 24 months as an option. Ensure you make a note of the secret that's generated for the next step.
 
 8. With the client secret generated, edit your `nautobot_config.py` as follows:
 
@@ -563,13 +563,16 @@ With those settings in place your users should be able to authenticate against A
 A group syncing function is provided and but needs to be configured. See [Group Syncing](#group-syncing).
 
 !!! note
-    You may need to set `UWSGI_BUFFER_SIZE` to something bigger than the default 4096 bytes in the UWSGI config if you are seeing errors like `invalid request block size` in your application logs (see [here](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size) for more information)
+    You may need to set `UWSGI_BUFFER_SIZE` to something bigger than the default 4096 bytes in the UWSGI config if you are seeing errors like `invalid request block size` in your application logs (see [the uWSGI documentation](https://uwsgi-docs.readthedocs.io/en/latest/Options.html#buffer-size) for more information)
 
 ## Group Syncing
 
 Nautobot can synchronize a user's group memberships from the SSO response each time they log in, and optionally flag members of specific groups as staff or superusers. This works with OAuth2/OIDC providers, where the group claim appears at the top level of the response, as well as with SAML providers, where the group attribute is nested under the SAML assertion's attributes.
 
 +++ 3.2.2 "SAML support"
+
+!!! warning
+    Enabling group syncing makes your identity provider the sole authority on a user's group memberships. Every time that user logs in, their Nautobot groups are replaced with the groups from the SSO response, so any group you granted by hand through the UI, the REST API, or a Job is removed at their next login. To grant a group that SSO does not know about, use [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) instead, which is reapplied on every request and therefore survives group syncing.
 
 To do so `nautobot.extras.group_sync.group_sync` must be part of `SOCIAL_AUTH_PIPELINE` which can be achieved
 by setting the environment variable `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true`. Or by setting
@@ -596,7 +599,7 @@ the default value of `"groups"`. For Azure you should override the value like:
 
 ```python
 # for Azure
-SSO_CLAIMS_GROUP = "groups"
+SSO_CLAIMS_GROUP = "roles"
 ```
 
 ```bash
@@ -616,3 +619,86 @@ SSO_STAFF_GROUPS = ["Nautobot Admins"]
 NAUTOBOT_SSO_SUPERUSER_GROUPS = "Nautobot Admins,MySuperUsers"
 NAUTOBOT_SSO_STAFF_GROUPS = "Nautobot Admins"
 ```
+
+### Limiting Which Groups Are Synced
+
++++ 3.2.4
+
+By default every group in the claim is synced, so each one becomes a Nautobot Group. On a shared instance, or with a provider that emits a group for every team in the company, that quickly fills Nautobot with groups nobody uses. Set `SSO_SYNC_GROUPS` to the exact group names you want, and everything else in the claim is ignored:
+
+```python
+SSO_SYNC_GROUPS = ["nautobot-ops", "nautobot-neteng"]
+```
+
+```bash
+# if set via env
+NAUTOBOT_SSO_SYNC_GROUPS = "nautobot-ops,nautobot-neteng"
+```
+
+Leaving `SSO_SYNC_GROUPS` empty, the default, syncs every group in the claim.
+
+!!! note
+    `SSO_SYNC_GROUPS` restricts group _membership_ only. Staff and superuser status is always evaluated against every group in the claim, so a group named in `SSO_SUPERUSER_GROUPS` or `SSO_STAFF_GROUPS` still grants that status even when it is left out of `SSO_SYNC_GROUPS`. That is usually what you want: the group grants the privilege without a matching Nautobot Group being created for it.
+
+If a user's claim contains none of the listed groups, they end up in no Nautobot groups at all, exactly as if the provider had returned an empty claim. Their staff and superuser status still reflects what the claim actually said.
+
+Turning this setting on does not delete Group objects that were created before it, so users stop being members of the now-unlisted groups at their next login, but the empty groups themselves remain for you to clean up.
+
+Because matching is by exact name, this does not cover every case. If you need prefix matching, pattern matching, or anything else, write your own group sync function as described below.
+
+### When the Provider Returns No Groups
+
++++ 3.2.4
+
+Group syncing is authoritative: on every login, the user's Nautobot group memberships are replaced with exactly the groups named in the claim, and the staff and superuser flags are recalculated from `SSO_STAFF_GROUPS` and `SSO_SUPERUSER_GROUPS`. A user removed from a group at the identity provider therefore loses the corresponding access in Nautobot at their next login.
+
+There are two cases where the provider returns nothing for Nautobot to act on, and they are handled differently:
+
+| Response | Behavior |
+| --- | --- |
+| The claim is present but empty, for example `{"groups": []}` | The provider has asserted that the user belongs to no groups. All group memberships are removed and the staff and superuser flags are cleared. |
+| The claim is absent entirely | Nautobot logs a warning and leaves the user's existing group memberships and staff/superuser status unchanged. |
+
+An absent claim usually means the provider is not releasing the claim at all, either because `SSO_CLAIMS_GROUP` names the wrong claim or because the provider's configuration changed. Since that says nothing either way about what the user is entitled to, Nautobot does not revoke access on the strength of it, which would otherwise lock every user out during a transient provider problem.
+
+!!! warning
+    A user therefore keeps whatever access their last successful sync granted them, including staff and superuser status, for as long as the claim stays absent. Watch for `Did not receive a ... claim from SSO` in the Nautobot logs, and treat it as a configuration error to fix rather than a benign message: until it is resolved, group syncing is not actually enforcing anything.
+
+Group syncing also does not remove access granted through [`EXTERNAL_AUTH_DEFAULT_GROUPS`](../../configuration/settings.md#external_auth_default_groups) or [`EXTERNAL_AUTH_DEFAULT_PERMISSIONS`](../../configuration/settings.md#external_auth_default_permissions), which are reapplied on each request.
+
+### Writing Your Own Group Sync Function
+
+The built-in function is intentionally simple: it matches group names exactly. If you need prefix or pattern matching, want to flatten nested groups, need to reshape a claim your provider emits in an unusual format, or want to map provider group names onto different Nautobot group names, write your own function and use it in place of the built-in one.
+
+Group syncing is an ordinary [`python-social-auth` pipeline function](https://python-social-auth.readthedocs.io/en/stable/pipeline.html). Yours needs to accept the same arguments:
+
+```python
+def group_sync(uid, user=None, response=None, *args, **kwargs):
+    """Sync the user's groups from the SSO response."""
+```
+
+`uid` is the user identifier from the provider, `user` is the Nautobot user (which may be `None`), and `response` is the data returned by the backend. Both `user` and `response` may be absent depending on where the pipeline stopped, so check them before use.
+
+Where your groups live in `response` depends on the protocol. OAuth2 and OIDC providers put the claim at the top level, so `response["groups"]`, while SAML providers nest assertion attributes, so `response["attributes"]["groups"]`. `nautobot.extras.group_sync.group_sync` handles both and is a good starting point to copy.
+
+Setting `NAUTOBOT_SSO_ENABLE_GROUP_SYNC` to `true` installs the built-in function, so to use your own, set `SOCIAL_AUTH_PIPELINE` explicitly and put your dotted path in the final position instead:
+
+```python
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.auth_allowed",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "social_core.pipeline.user.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+    "social_core.pipeline.user.user_details",
+    "my_custom_module.group_sync.group_sync",
+)
+```
+
+Your module needs to be importable by Nautobot, which means shipping it as part of a Nautobot App or installing it as a standalone Python module in the same environment. The `SSO_CLAIMS_GROUP`, `SSO_STAFF_GROUPS`, `SSO_SUPERUSER_GROUPS`, and `SSO_SYNC_GROUPS` settings are only read by the built-in function, so your own function is free to read them, ignore them, or define settings of its own.
+
+!!! warning
+    Your function is responsible for revoking access as well as granting it. A function that only ever adds groups will leave users holding access after the identity provider takes it away, and the same applies to the `is_staff` and `is_superuser` flags. Decide deliberately what should happen when the claim is empty or missing entirely, and see [When the Provider Returns No Groups](#when-the-provider-returns-no-groups) for the trade-off the built-in function makes.

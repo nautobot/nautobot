@@ -67,11 +67,11 @@ export const initializeDraggable = () => {
       const draggableContainer = closest(event.target, DRAGGABLE_CONTAINER_CLASS);
       draggableContainer.style.setProperty('--drop-indicator-inset', '0 0 100% 100%');
 
-      if (insert.after && insert.after !== draggable && insert.after.nextElementSibling !== draggable) {
+      if (insert?.after && insert.after !== draggable && insert.after.nextElementSibling !== draggable) {
         insert.after.after(draggable);
-      } else if (insert.before && insert.before !== draggable && insert.before.previousElementSibling !== draggable) {
+      } else if (insert?.before && insert.before !== draggable && insert.before.previousElementSibling !== draggable) {
         insert.before.before(draggable);
-      } else if (insert.inside) {
+      } else if (insert?.inside) {
         insert.inside.append(draggable);
       }
     }

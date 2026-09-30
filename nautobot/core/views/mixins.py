@@ -1,5 +1,5 @@
 import logging
-from typing import ClassVar, Optional, Type, Union
+from typing import ClassVar, Optional, Type
 
 from django.contrib import messages
 from django.contrib.auth.mixins import AccessMixin
@@ -14,7 +14,7 @@ from django.core.exceptions import (
 from django.db import transaction
 from django.db.models import CharField, ManyToManyField, Model, ProtectedError, Q, QuerySet
 from django.forms import Form, ModelMultipleChoiceField, MultipleHiddenInput
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import select_template, TemplateDoesNotExist
 from django.urls import resolve, reverse
@@ -48,12 +48,15 @@ from nautobot.core.utils import lookup, permissions
 from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
     get_filterable_params_from_filter_params,
+    NON_FILTER_PARAMS,
     normalize_querydict,
+    resolve_filter_params,
 )
 from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import (
     get_bulk_queryset_from_view,
     get_csv_form_fields_from_serializer_class,
+    get_overview,
     handle_protectederror,
     import_csv_helper,
     prepare_cloned_fields,
@@ -62,7 +65,12 @@ from nautobot.extras.context_managers import deferred_change_logging_for_bulk_op
 from nautobot.extras.forms import NoteForm
 from nautobot.extras.models import ExportTemplate, Job, JobResult, SavedView, ScheduledJob, UserSavedViewAssociation
 from nautobot.extras.tables import NoteTable, ObjectChangeTable
-from nautobot.extras.utils import bulk_delete_with_bulk_change_logging, get_base_template, remove_prefix_from_cf_key
+from nautobot.extras.utils import (
+    bulk_delete_with_bulk_change_logging,
+    get_base_template,
+    get_saved_view_filter_params,
+    remove_prefix_from_cf_key,
+)
 
 PERMISSIONS_ACTION_MAP = {
     "list": "view",
@@ -265,7 +273,7 @@ class UIComponentsMixin:
     view_titles: ClassVar[Optional[Titles]] = None
 
     @classmethod
-    def get_view_titles(cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List") -> Titles:
+    def get_view_titles(cls, model: str | Type[Model] | Model | None = None, view_type: str = "List") -> Titles:
         """
         Resolve and return the `Titles` component instance.
 
@@ -288,9 +296,7 @@ class UIComponentsMixin:
         return cls._resolve_component("view_titles", Titles, model, view_type)
 
     @classmethod
-    def get_breadcrumbs(
-        cls, model: Union[None, str, Type[Model], Model] = None, view_type: str = "List"
-    ) -> Breadcrumbs:
+    def get_breadcrumbs(cls, model: str | Type[Model] | Model | None = None, view_type: str = "List") -> Breadcrumbs:
         """
         Resolve and return the `Breadcrumbs` component instance.
 
@@ -316,10 +322,10 @@ class UIComponentsMixin:
     def _resolve_component(
         cls,
         attr_name: str,
-        default_cls: Type[Union[Breadcrumbs, Titles]],
-        model: Union[None, str, Type[Model], Model] = None,
+        default_cls: Type[Breadcrumbs | Titles],
+        model: str | Type[Model] | Model | None = None,
         view_type: str = "List",
-    ) -> Union[Breadcrumbs, Titles]:
+    ) -> Breadcrumbs | Titles:
         """
         Resolve a UI component by name.
 
@@ -330,7 +336,7 @@ class UIComponentsMixin:
         Args:
             attr_name (str): Attribute to resolve (e.g., "breadcrumbs").
             default_cls: Default Breadcrumbs/Title class to instantiate if not found.
-            model (Union[None, str, Type[Model], Model]): Django model (class/instance/dotted string) to locate a related view class.
+            model (str | Type[Model] | Model | None): Django model (class/instance/dotted string) to locate a related view class.
             view_type (str): View type for lookup (e.g., "List", or empty to resolve like "DeviceView").
         Returns:
             Breadcrumbs/Title instance.
@@ -348,9 +354,9 @@ class UIComponentsMixin:
 
     @staticmethod
     def _instantiate_if_needed(
-        attr: Union[None, Type[Union[Breadcrumbs, Titles]], Breadcrumbs, Titles],
-        default_cls: Type[Union[Breadcrumbs, Titles]],
-    ) -> Union[Breadcrumbs, Titles]:
+        attr: Type[Breadcrumbs | Titles] | Breadcrumbs | Titles | None,
+        default_cls: Type[Breadcrumbs | Titles],
+    ) -> Breadcrumbs | Titles:
         """
         Normalize a value into a component instance.
 
@@ -412,7 +418,7 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
         Resolve the named permissions for a given model (or instance) and a list of actions (e.g. view or add).
 
         Args:
-            model (Union[type(Model), Model]): A model or instance
+            model (type(Model) | Model): A model or instance
             actions (List[str]): A list of actions to perform on the model
         """
         model_permissions = []
@@ -650,14 +656,12 @@ class NautobotViewSetMixin(GenericViewSet, UIComponentsMixin, AccessMixin, GetRe
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(
+        return resolve_filter_params(
             params,
             self.non_filter_params,
             self.filterset_class(),  # pylint: disable=not-callable  # only called if filterset_class is not None
+            lambda: get_saved_view_filter_params(params.get("saved_view")),
         )
-        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
-        return filter_params
 
     def get_queryset(self):
         """
@@ -848,16 +852,7 @@ class ObjectListViewMixin(NautobotViewSetMixin, mixins.ListModelMixin):
     filterset_class: Optional[type[FilterSet]] = None
     filterset_form_class: Optional[type[Form]] = None
     hide_hierarchy_ui = False
-    non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
-        "page",  # used by django-tables2.RequestConfig
-        "per_page",  # used by get_paginate_count
-        "sort",  # table sorting
-        "saved_view",  # saved_view indicator pk or composite keys
-        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
-        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
-        "clear_view",  # indicator for if the clear view button is clicked or not
-    )
+    non_filter_params = NON_FILTER_PARAMS
 
     def filter_queryset(self, queryset):
         """
@@ -1066,13 +1061,14 @@ class ObjectEditViewMixin(NautobotViewSetMixin, mixins.CreateModelMixin, mixins.
             self.logger.info(f"{msg} {obj} (PK: {obj.pk})")
             try:
                 msg = format_html(
-                    '{} <a href="{}">{}</a>' + self.extra_message(**self.extra_message_context(obj)),
+                    '{} <a href="{}">{}</a>{}',
                     msg,
                     obj.get_absolute_url(),
                     obj,
+                    self.extra_message(**self.extra_message_context(obj)),
                 )
             except AttributeError:
-                msg = format_html("{} {}" + self.extra_message(**self.extra_message_context(obj)), msg, obj)
+                msg = format_html("{} {}{}", msg, obj, self.extra_message(**self.extra_message_context(obj)))
             messages.success(request, msg)
             if self.request.headers.get("HX-Request", False):
                 self.success_url = reverse(lookup.get_route_for_model(obj, "detail", api=True), args=[obj.pk])
@@ -1601,6 +1597,47 @@ class ObjectDataComplianceViewMixin(NautobotViewSetMixin):
     @drf_action(detail=True, url_path="data-compliance")
     def data_compliance(self, request, *args, **kwargs):
         return Response({})
+
+
+class ObjectOverviewViewMixin(NautobotViewSetMixin):
+    """
+    UI Mixin for an object's overview.
+
+    Only one of `overview_fields`, `overview_html`, or `overview_template_name` can be used at a time. With none of
+    them set, the overview displays the same key/value pairs as the first `ObjectFieldsPanel` in the left half of the
+    main tab of `object_detail_content`. A viewset with no such panel has no overview.
+
+    overview_fields: The fields to display, with optional key and value transforms
+    overview_html: HTML string to render
+    overview_template_name: Name of the template to render
+    """
+
+    overview_fields = None
+    overview_html = None
+    overview_template_name = None
+
+    @drf_action(detail=True, custom_view_base_action="view")
+    def overview(self, request, *args, **kwargs):
+        if request.headers.get("HX-Request", False):
+            # Number of columns to skip and span, as sent by the toggle's `hx-vals`, defaulted when unusable
+            colspans = {
+                param: int(request.GET[param]) if request.GET.get(param, "").isdigit() else default
+                for param, default in (("colspan_content", 100), ("colspan_offset", 0))
+            }
+
+            return Response(
+                {
+                    **get_overview(
+                        getattr(self, "object_detail_content", None),
+                        overview_fields=self.overview_fields,
+                        overview_html=self.overview_html,
+                        overview_template_name=self.overview_template_name,
+                    ),
+                    **colspans,
+                }
+            )
+
+        return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
 
 
 class ObjectBulkRenameViewMixin(NautobotViewSetMixin):

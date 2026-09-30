@@ -239,12 +239,27 @@ class ModularDeviceComponentTemplateFilterForm(DeviceComponentTemplateFilterForm
 
 
 class InterfaceCommonForm(forms.Form):
+    def _get_tagged_vlan_scope(self):
+        """Return the object whose Location constrains this interface's tagged VLANs, or None if there is none."""
+        if "device" not in self.cleaned_data:
+            # VMInterface forms scope tagged VLANs by the parent virtual machine instead of a device
+            return self.cleaned_data.get("virtual_machine")
+        if self.cleaned_data["device"] is not None:
+            return self.cleaned_data["device"]
+        # A Module interface has no device of its own in cleaned_data.
+        # A Module installed directly at a Location also has no parent device.
+        # Its own Location is deliberately not used here, because the model and REST API
+        # layers scope tagged VLANs by the parent device only.
+        module = self.cleaned_data.get("module")
+        if module is None:
+            raise forms.ValidationError("Either device or module must be set")
+        return getattr(module, "device", None)
+
     def clean(self):
         super().clean()
 
-        parent_field = "device" if "device" in self.cleaned_data else "virtual_machine"
-        tagged_vlans = self.cleaned_data["tagged_vlans"]
-        mode = self.cleaned_data["mode"]
+        tagged_vlans = self.cleaned_data.get("tagged_vlans") or []
+        mode = self.cleaned_data.get("mode")
 
         # Untagged interfaces cannot be assigned tagged VLANs
         if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
@@ -257,26 +272,28 @@ class InterfaceCommonForm(forms.Form):
         # Validate tagged VLANs; must be a global VLAN or in the same location as the
         # parent device/VM or any of that location's parent locations
         elif mode == InterfaceModeChoices.MODE_TAGGED:
-            location = self.cleaned_data[parent_field].location
-            if location:
-                location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
-            else:
-                location_ids = []
-            invalid_vlans = [
-                str(v)
-                for v in tagged_vlans
-                if v.locations.without_tree_fields().exists()
-                and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
-            ]
+            scope = self._get_tagged_vlan_scope()
+            if scope is not None:
+                location = scope.location
+                if location:
+                    location_ids = location.ancestors(include_self=True).values_list("id", flat=True)
+                else:
+                    location_ids = []
+                invalid_vlans = [
+                    str(v)
+                    for v in tagged_vlans
+                    if v.locations.without_tree_fields().exists()
+                    and not VLANLocationAssignment.objects.filter(location__in=location_ids, vlan=v).exists()
+                ]
 
-            if invalid_vlans:
-                raise forms.ValidationError(
-                    {
-                        "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
-                        "interface's parent device, or is in one of the parents of the interface's parent device's location, "
-                        "or it must be global."
-                    }
-                )
+                if invalid_vlans:
+                    raise forms.ValidationError(
+                        {
+                            "tagged_vlans": f"The tagged VLANs ({', '.join(invalid_vlans)}) must have the same location as the "
+                            "interface's parent device, or is in one of the parents of the interface's parent device's location, "
+                            "or it must be global."
+                        }
+                    )
 
 
 class ComponentForm(BootstrapMixin, EmbeddedActionsFormMixin, forms.Form):
@@ -981,11 +998,11 @@ class DeviceTypeForm(NautobotModelForm):
 
 class DeviceTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
-    Form for JSON/YAML import of DeviceType objects.
+    Form for single-record import, from YAML or JSON, of DeviceType objects.
 
-    TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
-    similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
-    at least nominally compatible with the netbox-community/devicetype-library repo.
+    Specifically, this follows the bespoke format used in the repository
+    https://github.com/nautobot/devicetype-library/.
+    This differs from the "generic" YAML format used for *bulk* export and import through the relevant system Jobs.
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
@@ -1101,11 +1118,11 @@ class ModuleTypeForm(NautobotModelForm):
 
 class ModuleTypeImportForm(BootstrapMixin, forms.ModelForm):
     """
-    Form for JSON/YAML import of ModuleType objects.
+    Form for single-record import, from YAML or JSON, of ModuleType objects.
 
-    TODO: at some point we'll want to add general-purpose YAML serialization/deserialization,
-    similar to what we've done for CSV in 2.0, but for the moment we're leaving this as-is so that we can remain
-    at least nominally compatible with the netbox-community/devicetype-library repo.
+    Specifically, this follows the bespoke format used in the repository
+    https://github.com/nautobot/devicetype-library/.
+    This differs from the "generic" YAML format used for *bulk* export and import through the relevant system Jobs.
     """
 
     manufacturer = forms.ModelChoiceField(queryset=Manufacturer.objects.all(), to_field_name="name")
@@ -1936,11 +1953,13 @@ class ModuleBayTemplateFilterForm(ModularDeviceComponentTemplateFilterForm):
 
 class ComponentTemplateImportForm(BootstrapMixin, CustomFieldModelCSVForm):
     """
-    Base form class for JSON/YAML import of device component templates as a part of the DeviceType import form/view.
+    Base class for JSON/YAML import of device-component templates as a part of the DeviceType/ModuleType import.
 
-    TODO: at some point we'll want to switch to general-purpose YAML import support, similar to what we've done for
-    CSV in 2.0, but for now we're keeping this as-is for nominal compatibility with the
-    netbox-community/devicetype-library repository.
+    Specifically, this follows the bespoke format used in the repository
+    https://github.com/nautobot/devicetype-library/.
+    This differs from the "generic" YAML format used for *bulk* export and import through the relevant system Jobs.
+
+    See also DeviceImportForm and ModuleImportForm.
     """
 
     Meta: type  # to be defined by concrete subclasses
@@ -3812,14 +3831,15 @@ class InterfaceBulkEditForm(
     def clean(self):
         super().clean()
 
-        tagged_vlans = bool(self.cleaned_data["add_tagged_vlans"] or self.cleaned_data["remove_tagged_vlans"])
+        mode = self.cleaned_data.get("mode")
+        tagged_vlans = bool(self.cleaned_data.get("add_tagged_vlans") or self.cleaned_data.get("remove_tagged_vlans"))
         # Untagged interfaces cannot be assigned tagged VLANs
-        if self.cleaned_data["mode"] == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
+        if mode == InterfaceModeChoices.MODE_ACCESS and tagged_vlans:
             raise forms.ValidationError({"mode": "An access interface cannot have tagged VLANs assigned."})
 
         # In theory UI blocks this from happening, but to ensure on backend we enforce.
         # An interface must be in tagged mode to have an untagged VLAN assigned
-        elif tagged_vlans and self.cleaned_data["mode"] != InterfaceModeChoices.MODE_TAGGED:
+        elif tagged_vlans and mode != InterfaceModeChoices.MODE_TAGGED:
             non_tagged = (
                 Interface.objects.filter(pk__in=self.cleaned_data["pk"])
                 .exclude(mode=InterfaceModeChoices.MODE_TAGGED)[:5]
@@ -3834,7 +3854,7 @@ class InterfaceBulkEditForm(
                 )
 
         # Remove all tagged VLAN assignments from "tagged all" interfaces
-        elif self.cleaned_data["mode"] == InterfaceModeChoices.MODE_TAGGED_ALL:
+        elif mode == InterfaceModeChoices.MODE_TAGGED_ALL:
             self.cleaned_data["tagged_vlans"] = []
 
 

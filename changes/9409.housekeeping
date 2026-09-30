@@ -1,0 +1,1 @@
+Moved the existing Selenium integration tests from `nautobot/<app>/tests/integration/` to `nautobot/<app>/tests/selenium/`.

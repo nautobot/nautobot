@@ -66,6 +66,7 @@ Enter the following Python commands into the shell:
 
 ```python
 from django.apps import apps
+
 for model in apps.get_models():
     if model._meta.managed and model.objects.exists():
         print(f"Deleting objects of {model}")

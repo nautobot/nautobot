@@ -1,0 +1,2 @@
+Added evaluation of conditions on webhooks and job hooks, so an action that carries conditions now runs only for the changes those conditions accept.
+Added an error log entry naming the action and the condition when a condition cannot be evaluated. The action does not run for that change.

@@ -16,6 +16,7 @@ from nautobot.core.filters import (
     ContentTypeFilter,
     ContentTypeMultipleChoiceFilter,
     ModelMultipleChoiceFilter,
+    MultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueDateTimeFilter,
     MultiValueUUIDFilter,
@@ -886,6 +887,13 @@ class SavedViewFilterSet(BaseFilterSet):
 
 
 class UserSavedViewAssociationFilterSet(NautobotFilterSet):
+    q = SearchFilter(
+        filter_predicates={
+            "view_name": "icontains",
+            "saved_view__name": "icontains",
+            "user__username": "icontains",
+        },
+    )
     saved_view = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=SavedView.objects.all(),
         to_field_name="name",
@@ -1151,7 +1159,7 @@ class JobQueueFilterSet(NautobotFilterSet, TenancyModelFilterSetMixin):
             "tenant__name": "icontains",
         },
     )
-    queue_type = django_filters.MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
+    queue_type = MultipleChoiceFilter(choices=JobQueueTypeChoices, null_value=None)
     jobs = NaturalKeyOrPKMultipleChoiceFilter(
         queryset=Job.objects.all(),
         label="Job (name or ID)",
@@ -1219,13 +1227,13 @@ class JobResultFilterSet(BaseFilterSet, CustomFieldModelFilterSetMixin):
         queryset=ScheduledJob.objects.all(),
         label="Scheduled Job (name or ID)",
     )
-    status = django_filters.MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
+    status = MultipleChoiceFilter(choices=JobResultStatusChoices, null_value=None)
     has_job_console_entries = RelatedMembershipBooleanFilter(
         field_name="job_console_entries",
         label="Has Job Console Entries",
     )
 
-    cancel_type = django_filters.MultipleChoiceFilter(
+    cancel_type = MultipleChoiceFilter(
         choices=JobCancelTypeChoices.CHOICES,
     )
 
@@ -1276,17 +1284,17 @@ class ScheduledJobFilterSet(BaseFilterSet):
         queryset=Job.objects.all(),
         label="Job (ID) - Deprecated (use job_model filter)",
     )
-    time_zone = django_filters.MultipleChoiceFilter(
+    time_zone = MultipleChoiceFilter(
         choices=[(str(obj), name) for obj, name in TimeZoneField().choices],
         label="Time zone",
         null_value="",
     )
-    approval_state = django_filters.MultipleChoiceFilter(
+    approval_state = MultipleChoiceFilter(
         field_name="associated_approval_workflows__current_state",
         label="Approval state",
         choices=ApprovalWorkflowStateChoices,
     )
-    state = django_filters.MultipleChoiceFilter(choices=ScheduledJobStateChoices, null_value=None)
+    state = MultipleChoiceFilter(choices=ScheduledJobStateChoices, null_value=None)
 
     class Meta:
         model = ScheduledJob
@@ -1458,9 +1466,7 @@ class ObjectChangeFilterSet(BaseFilterSet):
         to_field_name="username",
         label="User name (ID or username)",
     )
-    change_context = django_filters.MultipleChoiceFilter(
-        label="Change Context", choices=ObjectChangeEventContextChoices
-    )
+    change_context = MultipleChoiceFilter(label="Change Context", choices=ObjectChangeEventContextChoices)
     change_context_detail = MultiValueCharFilter(label="Change Context Detail")
 
     class Meta:
@@ -1618,8 +1624,8 @@ class SecretsGroupAssociationFilterSet(BaseFilterSet):
         label="Secret (ID or name)",
         to_field_name="name",
     )
-    access_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
-    secret_type = django_filters.MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
+    access_type = MultipleChoiceFilter(choices=SecretsGroupAccessTypeChoices)
+    secret_type = MultipleChoiceFilter(choices=SecretsGroupSecretTypeChoices)
 
     class Meta:
         model = SecretsGroupAssociation

@@ -13,6 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.files.storage import storages
+from django.db import connections, DEFAULT_DB_ALIAS
 from django.db.models.signals import m2m_changed, post_delete, post_migrate, post_save, pre_delete, pre_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -22,8 +23,10 @@ import redis.exceptions
 from nautobot.core.branching import BranchContext
 from nautobot.core.celery import app, import_jobs
 from nautobot.core.models import BaseModel
+from nautobot.core.models.utils import changelog_comparable_fields, changelog_values_verdict, ChangeVerdict
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.logging import sanitize
+from nautobot.extras.change_consumers import invalidate_change_consumers_cache
 from nautobot.extras.choices import (
     ApprovalWorkflowStateChoices,
     ButtonClassChoices,
@@ -41,11 +44,13 @@ from nautobot.extras.models import (
     DynamicGroupMembership,
     GitRepository,
     Job as JobModel,
+    JobHook,
     JobQueue as JobQueueModel,
     JobResult,
     MetadataType,
     ObjectChange,
     Relationship,
+    Webhook,
 )
 from nautobot.extras.models.approvals import (
     ApprovalWorkflow,
@@ -106,15 +111,21 @@ def prevent_delete_stage_definition_with_pending_stages(sender, instance, **kwar
 #
 
 
-def _cache_obj_data_in_change_context(action, sender, instance):
+def _cache_obj_data_in_change_context(action, instance, stored_instance=None):
     """
-    If this is an existing object that should have a change log entry,
-    we need to retrieve the existing object from the database and cache its data in the change context.
-    """
-    # We are caching the before object data in the change context so that it can be used later
-    change_context = change_context_state.get()
+    Cache the object's state as the database currently holds it, the "before" of this change, in the
+    change context. The webhook and event payloads assembled at the end of the request read it from there.
 
-    # Do nothing if the change_contex is None
+    This only happens when something is configured to receive those payloads. The capture costs a full
+    serialization and nothing else ever reads it.
+
+    Args:
+        action (str): One of the `ObjectChangeActionChoices` values.
+        instance (Model): The instance being saved.
+        stored_instance (Model | None): The row as the database holds it, read once by the caller. None
+            means it could not be read, in which case there is no prior state to capture.
+    """
+    change_context = change_context_state.get()
     if change_context is None:
         return
 
@@ -130,28 +141,53 @@ def _cache_obj_data_in_change_context(action, sender, instance):
     if not instance.present_in_database:
         return
 
-    # Does this object already have changes?
-    if ObjectChange.objects.filter(changed_object_id=instance.pk).exists():
+    # Skip the capture unless something is listening. That means an enabled webhook, an enabled job hook,
+    # or an event broker subscribed to this topic.
+    if not change_context.has_consumers(ContentType.objects.get_for_model(instance), action):
         return
 
-    # Retrieve the existing object from the database.
     if action == ObjectChangeActionChoices.ACTION_UPDATE:
-        instance = sender.objects.get(pk=instance.pk)
+        if stored_instance is None:
+            return
+        instance = stored_instance
 
     change = instance.to_objectchange(
         action=action,
     )
+    # A model may decline change logging per instance (`StaticGroupAssociation` does so for non-static
+    # groups), in which case there is no prior state worth caching either.
+    if change is None:
+        return
     change.request_id = uuid.uuid4()
     change.user = change_context.get_user(instance)
-    # cache the previous object data in the change context
-    if change_context.pre_object_data is None:
-        change_context.pre_object_data = {}
-    if change_context.pre_object_data_v2 is None:
-        change_context.pre_object_data_v2 = {}
-
-    change_context.pre_object_data.setdefault(str(instance.pk), change.object_data)
+    # Only the v2 form is cached. A capture always has one, so the v1 fallback in get_snapshots() could
+    # never be reached from here, and a bulk operation would hold a second copy of every object for nothing.
+    # The first capture in this request wins, so the "before" is the state at the start of the request.
     change_context.pre_object_data_v2.setdefault(str(instance.pk), change.object_data_v2)
     change_context_state.set(change_context)
+
+
+def _reuse_loaded_relations(instance, stored_instance):
+    """
+    Hand the stored row the related objects the instance being saved already has in memory.
+
+    The stored row is read cold, so serializing it renders every related object with a query of its own.
+    The instance being saved usually has them loaded, because the view or serializer that produced it
+    asked for them. Where both sides point at the same related row, the object is the same and is shared.
+
+    Args:
+        instance (Model): The instance being saved, whose loaded relations are the source.
+        stored_instance (Model): The row as the database holds it, which receives them.
+    """
+    for field in stored_instance._meta.concrete_fields:
+        if not (field.many_to_one or field.one_to_one):
+            continue
+        related_id = instance.__dict__.get(field.attname)
+        if related_id is None or related_id != stored_instance.__dict__.get(field.attname):
+            continue
+        cached = field.get_cached_value(instance, default=None)
+        if cached is not None:
+            field.set_cached_value(stored_instance, cached)
 
 
 def get_user_if_authenticated(user, instance):
@@ -242,18 +278,99 @@ def invalidate_openapi_schema_cache(sender, **kwargs):
 
 
 @receiver(pre_save)
-def _handle_changed_object_pre_save(sender, instance, raw=False, **kwargs):
+def _handle_changed_object_pre_save(sender, instance, raw=False, using=None, update_fields=None, **kwargs):
     """
     Fires before an object is created or updated.
-    It caches the current object data to capture the current state of the object.
-    This is used to ensure that a previous changelog entry exists for this object when this object is updated.
+
+    Reads the stored row once and puts it to two uses: recording whether this save changes anything (which
+    `_handle_changed_object` acts on), and caching the object's prior state so that an object with no
+    `ObjectChange` record yet still has a "before" to diff against.
     """
     if raw:
         return
 
-    # Ensure that a changelog entry exists for this object that is being updated
-    if not kwargs.get("created"):
-        _cache_obj_data_in_change_context(ObjectChangeActionChoices.ACTION_UPDATE, sender, instance)
+    # Both uses of the stored row below need a change context, so without one (nbshell, a management
+    # command, app code outside a request or job) the read would be pure overhead.
+    if change_context_state.get() is None:
+        return
+
+    # Read once here and handed to both callees below, which each used to fetch the row themselves.
+    # `_base_manager`, not `objects`, because a default manager may hide rows (`StaticGroupAssociation`
+    # hides associations of non-static groups, which made the old `objects.get()` raise `DoesNotExist`).
+    # `first()` rather than `get()` so a concurrently deleted row is a no-op instead of an exception
+    # raised from inside someone's `save()`.
+    stored_instance = None
+    if hasattr(instance, "to_objectchange") and getattr(instance, "present_in_database", False):
+        stored_instance = sender._base_manager.using(using).filter(pk=instance.pk).first()
+        if stored_instance is not None:
+            _reuse_loaded_relations(instance, stored_instance)
+
+    _record_unchanged_verdict(instance, stored_instance, using=using, update_fields=update_fields)
+
+    # Capture the "before" state of an object that is being updated, for the change record to diff against.
+    # A save that changes nothing records nothing, so there is no change for a "before" to belong to.
+    if not kwargs.get("created") and not getattr(instance, "_change_logging_unchanged", False):
+        _cache_obj_data_in_change_context(
+            ObjectChangeActionChoices.ACTION_UPDATE, instance, stored_instance=stored_instance
+        )
+
+
+def _record_unchanged_verdict(instance, stored_instance, using=None, update_fields=None):
+    """
+    Record on `instance` whether this save leaves every value a reader would see exactly as it was.
+
+    The comparison is against `stored_instance`, the row as the database holds it now, so a save that
+    reverts someone else's concurrent write still counts as a change.
+
+    The verdict is written on every change-logged instance and popped by `_handle_changed_object`, so a
+    stale `True` can never be read twice.
+
+    Args:
+        instance (Model): The instance being saved.
+        stored_instance (Model | None): The row as the database holds it, or None if it could not be read.
+        using (str, optional): The database alias this save is going to, for value preparation.
+        update_fields (iterable, optional): The `update_fields` Django is applying to this save, if any.
+    """
+    if not hasattr(instance, "to_objectchange"):
+        return
+    instance._change_logging_unchanged = False
+
+    # A deployment may turn the comparison off entirely to keep the pre-3.3 behavior of recording every save;
+    # a model may opt out for itself when its stored value is not a pure function of its own fields.
+    if not settings.CHANGELOG_SKIP_UNCHANGED_SAVES or not getattr(instance, "changelog_skip_unchanged_saves", True):
+        return
+
+    change_context = change_context_state.get()
+    if change_context is None:
+        return
+    # A brand-new object is a create, which is always recorded; so is a save racing a concurrent delete.
+    if stored_instance is None:
+        return
+
+    fields = changelog_comparable_fields(instance, update_fields=update_fields)
+    if fields is ChangeVerdict.INDETERMINATE:
+        logger.debug(
+            "Change detection for %s %s is indeterminate (update_fields %s restricts the save to a field "
+            "derived in pre_save). Recording the change",
+            instance._meta.label,
+            instance.pk,
+            sorted(update_fields),
+        )
+        return
+    if not fields:
+        # `update_fields` restricted the save to nothing a reader would see (`last_updated` alone).
+        instance._change_logging_unchanged = True
+        return
+
+    connection = connections[using or DEFAULT_DB_ALIAS]
+    verdict = changelog_values_verdict(instance, stored_instance, fields, connection)
+    if verdict is ChangeVerdict.INDETERMINATE:
+        logger.debug(
+            "Change detection for %s %s is indeterminate (a field could not be compared). Recording the change",
+            instance._meta.label,
+            instance.pk,
+        )
+    instance._change_logging_unchanged = verdict is ChangeVerdict.UNCHANGED
 
 
 @receiver(post_save, sender=GitRepository)
@@ -289,6 +406,50 @@ def _object_change_branch_name(instance):
     return DOLT_DEFAULT_BRANCH  # need to switch temporarily to the default `main` branch for this record
 
 
+def _m2m_clear_would_touch_anything(instance, through, reverse, model):
+    """
+    Determine whether an m2m_changed `pre_clear` for this relation is actually about to delete anything.
+
+    `m2m_changed` identifies the relation only by its `through` model, `reverse` direction, and the model
+    on the other side (`model`), not by field name, so the field first has to be found by matching those
+    against `instance`'s model. Matching `through` alone is not enough: distinct fields can share one
+    through model, distinguished only by `through_fields` (`VRF.devices`/`.virtual_machines`/
+    `.virtual_device_contexts`, or `Cable`'s several termination accessors) — `model`, which is always the
+    field's `related_model`, disambiguates them.
+
+    Once the field is found, checking *its own* manager for existing rows is not enough either: Django's
+    `.clear()` deletes by filtering the through model on the source side only (e.g. `vrf=<instance>`), not
+    also on the specific target column, whenever the target's own default queryset carries no filters of
+    its own (true for ordinary models) — see `ManyRelatedManager._build_remove_filters()`. So for fields
+    that share a through model, clearing one of them deletes every sibling relation's rows for this
+    instance too, even though that field's own manager reports nothing to clear. The no-op check has to
+    ask the same question `.clear()` will actually answer: does any row for this source exist in the
+    through model at all, not just for this specific field.
+    """
+    for field in instance._meta.get_fields():
+        if not getattr(field, "many_to_many", False) or field.concrete == reverse:
+            continue
+        if field.related_model is not model:
+            continue
+        field_through = getattr(field, "through", None) or getattr(field.remote_field, "through", None)
+        if field_through is not through:
+            continue
+        forward_field = field if field.concrete else field.field
+        try:
+            source_field_name = forward_field.m2m_reverse_field_name() if reverse else forward_field.m2m_field_name()
+        except AttributeError:
+            # Not a plain Django many-to-many (e.g. django-taggit's `TaggedItem`, which relates back to
+            # its tagged object through a GenericForeignKey rather than a named FK field). Such managers
+            # scope their own `.clear()` precisely to this instance, so the field's own manager already
+            # answers the right question.
+            accessor_name = field.name if field.concrete else field.get_accessor_name()
+            return getattr(instance, accessor_name).exists()
+        return through._default_manager.filter(**{source_field_name: instance}).exists()
+    # No matching field found (should not normally happen): assume there is something to clear, so the
+    # change is recorded rather than silently dropped.
+    return True
+
+
 @receiver(post_save)
 @receiver(m2m_changed)
 def _handle_changed_object(sender, instance, raw=False, **kwargs):
@@ -309,8 +470,32 @@ def _handle_changed_object(sender, instance, raw=False, **kwargs):
         action = ObjectChangeActionChoices.ACTION_CREATE
     elif "created" in kwargs:
         action = ObjectChangeActionChoices.ACTION_UPDATE
+        # Only `post_save` sends `created`, so an m2m_changed update (a real change, even though the
+        # instance's own fields did not move) never reaches this. `pop` either way, so the verdict is
+        # never read twice.
+        if instance.__dict__.pop("_change_logging_unchanged", False):
+            # The row was still written, so the counter counts it. There is just nothing for a reader to
+            # see, and so nothing to record.
+            model_updates.labels(instance._meta.model_name).inc()
+            return
     elif kwargs.get("action") in ["post_add", "post_remove"] and kwargs["pk_set"]:
         # m2m_changed with objects added or removed
+        action = ObjectChangeActionChoices.ACTION_UPDATE
+    elif kwargs.get("action") == "pre_clear":
+        # `post_clear` fires after the relationship is already empty, so a `.clear()` on an already-empty
+        # relationship is indistinguishable from one that actually removed something. Checking here, before
+        # the clear happens, is the only way to tell a no-op clear from a real one. The instance isn't
+        # serialized yet, though: that has to wait for `post_clear`, once the relation actually reflects
+        # its new, empty state, so the verdict is stashed for that handler to read.
+        instance._m2m_clear_has_data = _m2m_clear_would_touch_anything(
+            instance, sender, kwargs.get("reverse", False), kwargs.get("model")
+        )
+        return
+    elif kwargs.get("action") == "post_clear":
+        if not instance.__dict__.pop("_m2m_clear_has_data", True):
+            # Nothing was cleared: no-op, so no change to record.
+            return
+        # Clearing a relationship sends no pk_set, but its empty state must still be recorded.
         action = ObjectChangeActionChoices.ACTION_UPDATE
     else:
         return
@@ -553,6 +738,22 @@ def _handle_deleted_m2m_through_object(sender, instance, origin=None, **kwargs):
         return
 
     _record_m2m_side_object_changes(change_context, instance, side_field_names)
+
+
+@receiver(post_save, sender=JobHook)
+@receiver(post_delete, sender=JobHook)
+@receiver(m2m_changed, sender=JobHook.content_types.through)
+@receiver(post_save, sender=Webhook)
+@receiver(post_delete, sender=Webhook)
+@receiver(m2m_changed, sender=Webhook.content_types.through)
+def invalidate_change_consumers_cache_on_hook_change(sender, action=None, **kwargs):
+    """Invalidate the cached answers of `change_has_consumers()` when a Webhook or JobHook changes."""
+    # m2m_changed fires twice per operation; only the "post_" half is worth acting on, since at "pre_"
+    # the change isn't applied yet and recomputing would just re-cache the old answer. post_save and
+    # post_delete send no `action` at all
+    if action is not None and not action.startswith("post_"):
+        return
+    invalidate_change_consumers_cache()
 
 
 #

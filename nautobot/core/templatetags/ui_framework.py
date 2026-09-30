@@ -1,5 +1,6 @@
 from functools import partial
 import logging
+import math
 
 from django import template
 from django.template.loader import render_to_string
@@ -185,3 +186,17 @@ def render_default_panels_for_object(context, obj):
         return ""
     with context.update({"obj": obj, "object": obj, "object_detail_content": object_detail_content}):
         return render_components(context, object_detail_content.tabs[0].panels)
+
+
+@register.simple_tag(takes_context=True)
+def resolve_overview(context, overview):
+    """Resolve the given overview against the active render context.
+
+    An overview is a callable, taking the render context, that returns either an HTML string or key/value pairs.
+    The pairs come back as `fields`, alongside `rows` denoting the number of pairs rendered in a single column of a
+    two-column layout.
+    """
+    resolved = overview(context) if overview else None
+    if not isinstance(resolved, list):
+        return resolved
+    return {"fields": resolved, "rows": math.ceil(len(resolved) / 2)}

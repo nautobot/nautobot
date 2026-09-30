@@ -29,6 +29,7 @@ from django_tables2 import RequestConfig
 
 from nautobot.core.choices import ButtonColorChoices
 from nautobot.core.models.tree_queries import TreeModel
+from nautobot.core.tables import BaseTable
 from nautobot.core.templatetags.helpers import (
     badge,
     bettertitle,
@@ -55,7 +56,7 @@ from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.data_validation.tables import DataComplianceTable
 from nautobot.dcim.models import Rack
-from nautobot.extras.choices import CustomFieldTypeChoices
+from nautobot.extras.choices import CustomFieldTypeChoices, JobExecutionType
 from nautobot.extras.models import Job
 from nautobot.extras.registry import registry
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
@@ -159,6 +160,33 @@ class ObjectDetailContent:
             if component.component_id == component_id:
                 return component
         return None
+
+
+def get_overview_panel(object_detail_content, context=None):
+    """Return the panel an overview is built from, or None.
+
+    Structurally, that is the first `ObjectFieldsPanel` in the left half of the main tab. Given a context, the panel
+    is returned only if its `should_render(context)` is True.
+    """
+    if object_detail_content is None:
+        return None
+
+    main_tab = next((tab for tab in object_detail_content.tabs if tab.tab_id == "main"), None)
+    if main_tab is None:
+        return None
+
+    panel = next(
+        (
+            panel
+            for panel in main_tab.panels_for_section(SectionChoices.LEFT_HALF)
+            if isinstance(panel, ObjectFieldsPanel)
+        ),
+        None,
+    )
+    if panel is not None and context is not None and not panel.should_render(context):
+        return None
+
+    return panel
 
 
 class Component:
@@ -770,6 +798,8 @@ class Panel(Component):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
@@ -792,6 +822,7 @@ class Panel(Component):
     body_content_template_path = None
     body_id = None
     body_wrapper_template_path = "components/panel/body_wrapper_generic.html"
+    collapsed = False
     css_class = "default"
     footer_content_template_path = None
     header_extra_content_template_path = None
@@ -829,6 +860,7 @@ class Panel(Component):
                 body=self.render_body(context),
                 footer_content=self.render_footer_content(context),
                 body_id=self.body_id,
+                collapsed=self.collapsed,
             )
 
     def _get_body_id(self, context: Context):
@@ -870,6 +902,7 @@ class Panel(Component):
             context,
             body_id=self.body_id,
             body_content=self.render_body_content(context),
+            collapsed=self.collapsed,
         )
 
     def render_body_content(self, context: Context):
@@ -926,6 +959,8 @@ class DataTablePanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1057,6 +1092,7 @@ class ObjectsTablePanel(Panel):
     prefetch_related_fields = ()
     related_field_name = None
     related_list_url_name = None
+    row_overviews_visibility = BaseTable.RowOverviewsVisibility.TABLE_DEFAULT
     select_related_fields = ()
     show_table_config_button = True
     tab_id = None
@@ -1098,6 +1134,9 @@ class ObjectsTablePanel(Panel):
                 (or up to `max_display_count` if provided). Defaults to True.
             show_table_config_button (bool, optional): If False, do not allow user configuration of the table.
                 Defaults to True.
+            row_overviews_visibility (BaseTable.RowOverviewsVisibility, optional): If `HIDE`, omit the per-row
+                button that expands the row to reveal the object's overview. Defaults to `TABLE_DEFAULT`, which
+                leaves the decision to the table.
             table_title (str, optional): The title to display in the panel heading for the table.
                 If None, defaults to the plural verbose name of the table model.
             include_columns (list, optional): A list of field names to include in the table display.
@@ -1128,6 +1167,8 @@ class ObjectsTablePanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1330,6 +1371,7 @@ class ObjectsTablePanel(Panel):
                 "hide_hierarchy_ui": self.hide_hierarchy_ui,
                 "user": request.user,
                 "configurable": self.show_table_config_button,
+                "row_overviews_visibility": self.row_overviews_visibility,
             }
             if self.extra_columns is not None:
                 table_kwargs["extra_columns"] = self.extra_columns
@@ -1498,6 +1540,8 @@ class KeyValueTablePanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1721,6 +1765,8 @@ class EChartsPanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1809,6 +1855,8 @@ class ObjectFieldsPanel(KeyValueTablePanel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -1899,6 +1947,7 @@ class ObjectFieldsPanel(KeyValueTablePanel):
 
         if fields == "__all__":
             # Derive the list of fields from the instance, skipping certain fields by default.
+            # TODO 4.0: also skip fields in the model's `sensitive_fields`?
             fields = []
             for field in instance._meta.get_fields():
                 if field.hidden or field.name.startswith("_"):
@@ -2052,6 +2101,8 @@ class BaseTextPanel(Panel):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -2117,6 +2168,8 @@ class ObjectTextPanel(BaseTextPanel):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -2151,6 +2204,8 @@ class TextPanel(BaseTextPanel):
         css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
         section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
         body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+        collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+            the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
         header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
             if any, not including its label if any.
         footer_content_template_path (str, optional): Template path to render content into the panel footer, if any.
@@ -2187,6 +2242,8 @@ class StatsPanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -2275,6 +2332,8 @@ class AsyncStatsPanel(Panel):
             css_class (str, optional): Panel variant to render as, e.g. "default", "warning", "info".
             section (str, optional): One of the [`SectionChoices`](./ui.md#nautobot.apps.ui.SectionChoices) values, indicating the layout section this Panel belongs to.
             body_id (str, optional): HTML element `id` to attach to the rendered body wrapper of the panel.
+            collapsed (bool, optional): If True, the panel body will be initially rendered in its collapsed state
+                the user can still expand it by clicking the panel header. Defaults to False (initially expanded).
             body_content_template_path (str, optional): Template path to render the content contained *within* the panel body.
             header_extra_content_template_path (str, optional): Template path to render extra content into the panel header,
                 if any, not including its label if any.
@@ -2817,6 +2876,10 @@ class _JobModalButton(Button):
 
     class_path = None
     advanced_fields = ()
+    # Fields the launching context decides, and so are not the user's to change once the modal is open.
+    # Only ever applied in the modal, and only to a field the trigger actually supplied a value for; the
+    # Job's own form leaves them editable, that form having no launching context behind it.
+    fixed_fields = ()
     initial_field_mapping = {}
     run_button_label = "Run Job Now"
     job_result_key = None
@@ -2834,6 +2897,9 @@ class _JobModalButton(Button):
             label (str): The text of this button, not including any icon.
             color (ButtonColorChoices, optional): The color (class) of this button.
             advanced_fields (tuple, optional): A tuple of job fields to only render on the Advanced Settings section of the Modal.
+            fixed_fields (tuple, optional): A tuple of job fields that the launching context decides, and
+                that the modal therefore renders as disabled. Their values are carried in the form's
+                `hx-vals` so that submitting still sends them, a disabled input submitting nothing.
             initial_field_mapping (dict, optional): Map object attributes (using dunder notation) to the Job form field for initial data.
                 For example, `{"location": "location__name"}` would pre-populate the `location` field on the
                 Job form with the value of `obj.location.name` from the object in context.
@@ -2925,21 +2991,77 @@ class _JobModalButton(Button):
         """Override the default `get_link()` behavior since this button opens a modal."""
         return None
 
-    def get_extra_context(self, context: Context):
-        """Add necessary htmx attributes to the button."""
-        obj = get_obj_from_context(context, self.context_object_key)
-        base_context = super().get_extra_context(context)
+    def build_trigger_context(self, user=None, obj=None, extra_hx_vals=None, render_form=True):
+        """Compute the HTMX wiring for a trigger that opens this Job's modal.
+
+        Shared by `get_extra_context` (component-rendered buttons) and the list-view `export_button`
+        template tag (a hand-placed dropdown trigger), so the run-view URL, base hx-vals keys, and
+        disabled logic live in one place rather than being duplicated per trigger.
+
+        Args:
+            user: The requesting user, used to gate the disabled state. `None` is treated as
+                unauthenticated and skips the object-level restriction (matching the prior behavior).
+            obj: The object in context, used to resolve `initial_field_mapping` values. May be `None`.
+            extra_hx_vals (dict, optional): Additional hx-vals merged on top of the base set (e.g. the
+                export/import `content_type`, `query_string`, `export_fields`).
+            render_form (bool): Whether the trigger opens the Job's form, which is the usual case. Pass
+                False for a trigger that carries every input it needs and so runs the Job straight away,
+                landing on the progress-and-result page of the modal -- what a single-click action does.
+                The Job is then run on a POST, so such a trigger must not be a bare link.
+
+        Returns:
+            dict: ``{"url", "hx_vals" (dict), "disabled" (bool), "disabled_title" (str)}``.
+        """
+        # TODO: Potentially refactor to use values from the instance using component_id instead of passing as hx_vals.
         hx_vals = {
             field_name: resolve_attr(obj, model_field) for field_name, model_field in self.initial_field_mapping.items()
         }
-
-        # TODO: Potentially refactor to use values from the instance using component_id instead of passing as hx_vals.
-        hx_vals["render_job_form"] = True
+        if render_form:
+            # Omitted rather than falsified for a direct run: the run view tests this key for truthiness,
+            # where the string "False" that hx-vals would send is as true as any other.
+            hx_vals["render_job_form"] = True
+        else:
+            hx_vals["job_form_modal"] = True
+            hx_vals["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
         hx_vals["job_modal_button"] = self.button_id
         hx_vals["advanced_fields"] = self.advanced_fields
         hx_vals["run_button_label"] = self.run_button_label
         hx_vals["job_result_key"] = self.job_result_key
         hx_vals["refresh_on_close_if_done"] = self.refresh_on_close_if_done
+        if extra_hx_vals:
+            hx_vals.update(extra_hx_vals)
+
+        # If the user doesn't have permission to the Job, or the Job doesn't exist, or the job is disabled,
+        # the trigger is disabled.
+        disabled = False
+        disabled_title = ""
+        try:
+            jobs = Job.objects
+            if user is not None:
+                jobs = jobs.restrict(user, "run")
+            job = jobs.get_for_class_path(self.class_path)
+            if not job.enabled:
+                disabled = True
+                disabled_title = "Job is not enabled."
+        except Job.DoesNotExist:
+            disabled = True
+            disabled_title = "You do not have permission to run this Job."
+
+        return {
+            "url": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
+            "hx_vals": hx_vals,
+            "disabled": disabled,
+            "disabled_title": disabled_title,
+        }
+
+    def get_extra_context(self, context: Context):
+        """Add necessary htmx attributes to the button."""
+        obj = get_obj_from_context(context, self.context_object_key)
+        base_context = super().get_extra_context(context)
+        user = None
+        if "request" in context and context["request"].user is not None:
+            user = context["request"].user
+        trigger = self.build_trigger_context(user=user, obj=obj)
 
         raw_attrs = base_context.get("attributes")
         attributes = {} if raw_attrs is None else raw_attrs.copy()
@@ -2949,29 +3071,62 @@ class _JobModalButton(Button):
                 "data-bs-toggle": "modal",
                 "data-bs-target": "#nautobot-generic-modal",
                 "hx-target": "#modal-content-container",
-                "hx-post": reverse("extras:job_run_by_class_path", kwargs={"class_path": self.class_path}),
-                "hx-vals": json.dumps(hx_vals),
+                "hx-post": trigger["url"],
+                "hx-vals": json.dumps(trigger["hx_vals"]),
                 "hx-swap": "innerHTML",
             }
         )
-        # If the user doesn't have permission to the Job, or the Job doesn't exist, or job is disabled, disable the button.
-        disabled = False
-        disabled_reason = ""
-        try:
-            jobs = Job.objects
-            if "request" in context and context["request"].user is not None:
-                jobs = jobs.restrict(context["request"].user, "view")
-            job = jobs.get_for_class_path(self.class_path)
-            if not job.enabled:
-                disabled = True
-                disabled_reason = "Job is not enabled."
-        except Job.DoesNotExist:
-            disabled = True
-            disabled_reason = "You do not have permission to run this Job."
-        if disabled:
+        if trigger["disabled"]:
             attributes["disabled"] = "disabled"
-            attributes["title"] = disabled_reason
+            attributes["title"] = trigger["disabled_title"]
             attributes["aria-disabled"] = "true"
             attributes["tabindex"] = "-1"
         base_context["attributes"] = attributes
         return base_context
+
+
+class ExportObjectListModalButton(_JobModalButton):
+    """Registry entry for the list-view Export job modal.
+
+    This button is not rendered directly (the list-view Actions dropdown hand-wires the HTMX trigger via
+    the `export_button` template tag); it exists in the registry so that the job-result modal can offer a
+    file-download action once the `ExportObjectList` job completes.
+    """
+
+    class_path = "nautobot.core.jobs.ExportObjectList"
+    button_id = "core.export_object_list"
+    enable_scheduling = False
+    # `query_string` describes the launching view and is filled in from it, so it is plumbing rather than
+    # something to answer. `export_template` has an action of its own per template in the same menu that
+    # opens this dialog, which exports with it directly. Both stay reachable under Advanced Settings.
+    advanced_fields = ("query_string", "export_template")
+    # Which objects are being exported is what the list view was showing; picking a different type here
+    # would export something the user never asked about. The Job's own form still offers the choice.
+    fixed_fields = ("content_type",)
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("label", "Export to file")
+        kwargs.setdefault("weight", 100)
+        super().__init__(**kwargs)
+
+    def get_redirect_button(self, job_result, request, **kwargs):
+        """Offer a download button for the exported file once the job has succeeded."""
+        from nautobot.extras.choices import JobResultStatusChoices
+        from nautobot.extras.views import file_proxy_download_url
+
+        if job_result.status != JobResultStatusChoices.STATUS_SUCCESS:
+            return {}
+        file_proxy = job_result.files.first()
+        url = file_proxy_download_url(file_proxy)
+        if not url:
+            return {}
+        return {
+            "url": url,
+            "label": f"Download {file_proxy.name}",
+            "color": "success",
+            # `download` only applies to a same-origin URL, which is what the database and local-filesystem
+            # job-file backends produce. A remote backend (S3 and the like) hands back a URL on its own
+            # origin, where the browser ignores `download` and simply follows the link -- so open that in a
+            # new tab rather than navigating the page the modal is sitting on away to the file.
+            "attributes": {"download": file_proxy.name, "target": "_blank", "rel": "noopener"},
+        }

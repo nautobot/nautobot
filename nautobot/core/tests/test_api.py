@@ -7,32 +7,42 @@ import uuid
 
 from constance import config
 from constance.test import override_config
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
 from django.db import connections, DEFAULT_DB_ALIAS
+from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.test import override_settings, RequestFactory, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ParseError
+from rest_framework.relations import ManyRelatedField
 from rest_framework.settings import api_settings
 from rest_framework.test import APIRequestFactory, force_authenticate
 import yaml
 
-from nautobot.circuits.models import Provider
+from nautobot.circuits.api import serializers as circuits_serializers
+from nautobot.circuits.models import CircuitTermination, Provider
 from nautobot.core import testing
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.api.fields import NautobotHyperlinkedRelatedField
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model, get_view_name
 from nautobot.core.api.versioning import NautobotAPIVersioning
 from nautobot.core.api.views import ModelViewSet
-from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
+from nautobot.core.constants import (
+    COMPOSITE_KEY_SEPARATOR,
+)
 from nautobot.core.templatetags.helpers import humanize_speed
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim import models as dcim_models
 from nautobot.dcim.api import serializers as dcim_serializers
 from nautobot.extras import choices, models as extras_models
+from nautobot.extras.api import serializers as extras_serializers
 from nautobot.ipam import filters as ipam_filters, models as ipam_models
 from nautobot.ipam.api import serializers as ipam_serializers, views as ipam_api_views
 from nautobot.tenancy import models as tenancy_models
@@ -522,6 +532,42 @@ class NautobotCSVRendererTest(TestCase):
         self.assertIn("parent__name", read_data)
         self.assertEqual(read_data["parent__name"], location_type.parent.name)
 
+    # -- get_headers and the `cf_*` columns it derives from the data ------------
+    # A record carries every custom field of its object inside one `custom_fields` dict, so these headers
+    # cannot be narrowed by the serializer's field set the way concrete fields are -- only here.
+
+    CUSTOM_FIELD_DATA = [{"name": "x", "custom_fields": {"a": 1, "b": 2}}]
+
+    def test_get_headers__custom_fields_expand_when_unselected(self):
+        """With no selection every custom field gets a column, and `custom_fields` itself gets none."""
+        self.assertEqual(NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA), ["name", "cf_a", "cf_b"])
+
+    def test_get_headers__custom_fields_restricted_to_the_selection(self):
+        self.assertEqual(
+            NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["name", "cf_a"]),
+            ["name", "cf_a"],
+        )
+
+    def test_get_headers__custom_field_ordering_follows_the_selection(self):
+        self.assertEqual(
+            NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["cf_b", "name"]),
+            ["cf_b", "name"],
+        )
+
+    def test_get_headers__naming_the_dict_selects_every_custom_field(self):
+        self.assertEqual(
+            NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["name", "custom_fields"]),
+            ["name", "cf_a", "cf_b"],
+        )
+
+    def test_get_headers__selecting_no_custom_field_yields_no_cf_column(self):
+        self.assertEqual(NautobotCSVRenderer.get_headers(self.CUSTOM_FIELD_DATA, field_order=["name"]), ["name"])
+
+    def test_get_headers__custom_field_present_on_only_some_records(self):
+        """Headers are unioned across all records, since a value may be missing from any one of them."""
+        data = [{"name": "x", "custom_fields": {"a": 1}}, {"name": "y", "custom_fields": {"a": 1, "b": 2}}]
+        self.assertEqual(NautobotCSVRenderer.get_headers(data, field_order=["name", "cf_b"]), ["name", "cf_b"])
+
 
 class ModelViewSetMixinTest(testing.APITestCase):
     """Unit tests for ModelViewSetMixin, base class for ModelViewSet/ReadOnlyModelViewSet classes."""
@@ -684,7 +730,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_related_by_attributes(self):
         data = {
@@ -716,7 +762,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_related_by_attributes_multiple_matches(self):
         data = {
@@ -736,7 +782,7 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Multiple objects match"))
+        self.assertIn("Could not resolve a single", response.data["vlan_group"][0])
 
     @skip("Composite keys aren't being supported at this time")
     def test_related_by_composite_key(self):
@@ -770,8 +816,8 @@ class WritableNestedSerializerTest(testing.APITestCase):
             response = self.client.post(url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(ipam_models.VLAN.objects.filter(name="Test VLAN 100").count(), 0)
-        self.assertTrue(response.data["status"][0].startswith("Related object not found"))
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["status"][0])
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_related_by_invalid(self):
         data = {
@@ -998,6 +1044,27 @@ class DepthPermissionEnforcementTest(testing.APITestCase):
         self.assertEqual(hidden["display"], self.hidden_location.display)
 
 
+class InvalidDepthParameterTest(testing.APITestCase):
+    """Test that an out-of-range `?depth=` query parameter results in an HTTP 400, not an HTTP 500."""
+
+    def setUp(self):
+        super().setUp()
+        self.add_permissions("ipam.view_vlangroup")
+        self.vlan_group_list_url = reverse(get_route_for_model(ipam_models.VLANGroup, "list", api=True))
+
+    def test_depth_greater_than_max_returns_400(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=11", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_negative_depth_returns_400(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=-1", **self.header)
+        self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
+
+    def test_depth_within_range_returns_200(self):
+        response = self.client.get(f"{self.vlan_group_list_url}?depth=10", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+
+
 @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
 class WriteRelatedObjectPermissionTest(testing.APITestCase):
     """
@@ -1045,7 +1112,7 @@ class WriteRelatedObjectPermissionTest(testing.APITestCase):
         with testing.disable_warnings("django.request"):
             response = self.client.post(self.vlan_list_url, data, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
         self.assertFalse(ipam_models.VLAN.objects.filter(name="Write Perm VLAN 100").exists())
 
         # Granting view permission on the VLANGroup allows the reference.
@@ -1087,7 +1154,7 @@ class WriteRelatedObjectPermissionTest(testing.APITestCase):
                 **self.header,
             )
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
 
     def test_patch_fk_reference_requires_view_permission(self):
         """PATCH updating an FK to a related object the user cannot view is rejected and leaves it unchanged."""
@@ -1100,7 +1167,7 @@ class WriteRelatedObjectPermissionTest(testing.APITestCase):
         with testing.disable_warnings("django.request"):
             response = self.client.patch(url, {"vlan_group": self.vlan_group2.pk}, format="json", **self.header)
         self.assertHttpStatus(response, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue(response.data["vlan_group"][0].startswith("Related object not found"))
+        self.assertIn("Reference it by field(s) unique in your data", response.data["vlan_group"][0])
         vlan.refresh_from_db()
         self.assertEqual(vlan.vlan_group, self.vlan_group1)
 
@@ -1255,6 +1322,177 @@ class SettingsJSONSchemaViewTestCase(testing.APITestCase):
         response = self.client.get(url, **self.header)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_schema_data)
+
+
+class ExcludeM2MWritableTest(testing.APITestCase):
+    """A pure M2M stays writable regardless of whether it is readable in the response.
+
+    Such a field (auto-created through table, no extra data on it) can only be set from the base model's
+    endpoint, so it must remain writable however the response is shaped -- which is why these fields are
+    marked write-only rather than dropped. `exclude_m2m` shapes the response, and a response option must
+    not silently change write behavior.
+
+    `import_targets` is not one of the DEFAULT_M2M_FIELDS, so for it the three cases are: hidden by
+    `?exclude_m2m=true`, hidden by default when the parameter is absent, and readable via
+    `?exclude_m2m=false`.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.vrf = ipam_models.VRF.objects.create(
+            name="Exclude M2M VRF", namespace=ipam_models.Namespace.objects.first()
+        )
+        self.route_target = ipam_models.RouteTarget.objects.create(name="65000:777")
+        self.url = reverse("ipam-api:vrf-detail", kwargs={"pk": self.vrf.pk})
+
+    def test_patch_applies_m2m_hidden_from_the_response(self):
+        self.add_permissions("ipam.change_vrf", "ipam.view_vrf", "ipam.view_routetarget")
+        response = self.client.patch(
+            f"{self.url}?exclude_m2m=true",
+            {"import_targets": [self.route_target.pk]},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        # Hidden from the response the caller asked to slim down...
+        self.assertNotIn("import_targets", response.json())
+        # ...but the write still took effect.
+        self.assertEqual(list(self.vrf.import_targets.values_list("pk", flat=True)), [self.route_target.pk])
+
+    def test_patch_applies_m2m_outside_the_default_subset(self):
+        """`import_targets` isn't in DEFAULT_M2M_FIELDS, so it is hidden even without the parameter."""
+        self.add_permissions("ipam.change_vrf", "ipam.view_vrf", "ipam.view_routetarget")
+        response = self.client.patch(self.url, {"import_targets": [self.route_target.pk]}, format="json", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertNotIn("import_targets", response.json())
+        self.assertEqual(list(self.vrf.import_targets.values_list("pk", flat=True)), [self.route_target.pk])
+
+    def test_patch_returns_m2m_when_explicitly_included(self):
+        """`exclude_m2m=false` opts every M2M back into the response, and the write still applies."""
+        self.add_permissions("ipam.change_vrf", "ipam.view_vrf", "ipam.view_routetarget")
+        response = self.client.patch(
+            f"{self.url}?exclude_m2m=false",
+            {"import_targets": [self.route_target.pk]},
+            format="json",
+            **self.header,
+        )
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        returned = response.json()["import_targets"]
+        self.assertEqual(len(returned), 1)
+        self.assertEqual(returned[0]["id"], str(self.route_target.pk))
+        self.assertEqual(list(self.vrf.import_targets.values_list("pk", flat=True)), [self.route_target.pk])
+
+    def test_get_returns_m2m_when_explicitly_included(self):
+        """The same opt-in on a read: absent the parameter this field is hidden, `false` exposes it."""
+        self.vrf.import_targets.add(self.route_target)
+        self.add_permissions("ipam.view_vrf", "ipam.view_routetarget")
+        self.assertNotIn("import_targets", self.client.get(self.url, **self.header).json())
+        response = self.client.get(f"{self.url}?exclude_m2m=false", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual([entry["id"] for entry in response.json()["import_targets"]], [str(self.route_target.pk)])
+
+
+class RelatedModelResolutionTest(TestCase):
+    """`NautobotHyperlinkedRelatedField._related_model` must name the far side of the relation.
+
+    A writable related field carries a queryset and the answer is simply its model. A *read-only* one has
+    no queryset (DRF omits it), so the model's own metadata has to be consulted -- and it must be asked for
+    the relation's target, not for the model that happens to declare the field.
+    """
+
+    def test_related_model_from_queryset(self):
+        field = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}).fields["device_type"]
+        self.assertIsNotNone(field.queryset)
+        self.assertIs(field._related_model, dcim_models.DeviceType)
+
+    def test_related_model_of_read_only_forward_fk(self):
+        """`Circuit.circuit_termination_a` is `editable=False`, so its serializer field has no queryset."""
+        serializer = circuits_serializers.CircuitSerializer(context={"request": None, "depth": 0})
+        field = serializer.fields["circuit_termination_a"]
+        self.assertIsNone(field.queryset)
+        self.assertIs(field._related_model, CircuitTermination)
+
+    def test_related_model_of_read_only_m2m(self):
+        """A to-many field is wrapped in a `ManyRelatedField`, so the serializer is one level up.
+
+        This one is also sourced from a *reverse* relation under a different name, so it exercises both
+        the unwrapping and the `source`-not-`field_name` lookup.
+        """
+        serializer = extras_serializers.SecretsGroupSerializer(
+            context={"request": None, "depth": 0}, for_import_export=True
+        )
+        field = serializer.fields["secrets"]
+        self.assertIsInstance(field, ManyRelatedField)
+        self.assertIsNone(field.child_relation.queryset)
+        self.assertEqual(field.source, "secrets_group_associations")
+        # `secrets` is sourced from the association rows rather than from the Secrets themselves
+        self.assertIs(field.child_relation._related_model, extras_models.SecretsGroupAssociation)
+
+    def test_related_model_of_read_only_reverse_relation(self):
+        """A reverse relation resolves to the model declaring the FK, which is its far side.
+
+        `IPAddress.interfaces` is the reverse of `Interface.ip_addresses`. Reverse relations are found by
+        their `related_query_name`, which equals the accessor name whenever `related_name` is set -- as it
+        is for every reverse relation a Nautobot serializer sources a field from.
+        """
+        serializer = ipam_serializers.IPAddressSerializer(context={"request": None, "depth": 0}, for_import_export=True)
+        field = serializer.fields["interfaces"]
+        self.assertIsNone(field.child_relation.queryset)
+        self.assertIsInstance(ipam_models.IPAddress._meta.get_field(field.source), ForeignObjectRel)
+        self.assertIs(field.child_relation._related_model, dcim_models.Interface)
+
+    def test_related_model_of_reverse_one_to_one(self):
+        """A reverse one-to-one resolves too; its descriptor exposes `related` rather than `field`."""
+        field = dcim_serializers.DeviceSerializer(context={"request": None, "depth": 0}).fields["parent_bay"]
+        self.assertFalse(hasattr(dcim_models.Device.parent_bay, "field"))  # pylint: disable=no-member
+        self.assertIs(field._related_model, dcim_models.DeviceBay)
+
+    def test_related_model_is_none_when_undeterminable(self):
+        """An unbound field has no serializer to ask, and says so rather than guessing."""
+        with self.assertLogs("nautobot.core.api.fields", level="WARNING"):
+            self.assertIsNone(NautobotHyperlinkedRelatedField(read_only=True, view_name="x")._related_model)
+
+    def test_every_related_field_agrees_with_its_model(self):
+        """A meta-test: no serializer anywhere may report a target the model contradicts, or none at all.
+
+        The `unresolved` half is the one that guards against silently regressing a relation shape that
+        `_meta.get_field()` cannot look up (a default `<model>_set` accessor, say): the model-disagreement
+        check alone would skip such a field rather than fail on it.
+        """
+        mismatches = []
+        unresolved = []
+        context = {"request": None, "depth": 0}
+        for model in apps.get_models():
+            try:
+                serializer_class = get_serializer_for_model(model)
+            except SerializerNotFound:
+                # Plenty of models (through tables, internal models) have no serializer at all
+                continue
+            try:
+                fields = serializer_class(context=context, for_import_export=True).fields
+            except TypeError:
+                # A plain DRF serializer rather than a Nautobot one, so it takes no `for_import_export` kwarg -- and
+                # has no opt-in fields either, so its plain field set is the whole of it. `CablePathSerializer`
+                # is the only one in core today.
+                fields = serializer_class(context=context).fields
+            for name, field in fields.items():
+                related_field = field.child_relation if isinstance(field, ManyRelatedField) else field
+                if not isinstance(related_field, NautobotHyperlinkedRelatedField):
+                    continue
+                reported = related_field._related_model
+                if reported is None:
+                    unresolved.append(f"{serializer_class.__name__}.{name} (source={field.source!r})")
+                    continue
+                try:
+                    # `source`, not `name`: a serializer may represent a relation via another one, as
+                    # `SecretsGroupSerializer.secrets` does by sourcing the association rows.
+                    expected = model._meta.get_field(field.source).related_model
+                except FieldDoesNotExist:
+                    continue  # e.g. `tags`, which is a manager rather than a model field
+                if reported is not expected:
+                    mismatches.append(f"{serializer_class.__name__}.{name}: reported {reported}, model says {expected}")
+        self.assertEqual(mismatches, [])
+        self.assertEqual(unresolved, [])
 
 
 class NautobotGetViewNameTest(TestCase):

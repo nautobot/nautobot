@@ -3,7 +3,6 @@ from django.views.generic.base import RedirectView
 
 from nautobot.core.views.routers import NautobotUIViewSetRouter
 from nautobot.extras.views import ImageAttachmentEditView
-from nautobot.ipam.views import ServiceEditView
 
 from . import views
 from .models import (
@@ -216,11 +215,6 @@ urlpatterns = [
             url="/dcim/module-bays/add/?parent_device=%(pk)s&return_url=/dcim/devices/%(pk)s/module-bays/"
         ),
         name="device_modulebays_add",
-    ),
-    path(
-        "devices/<uuid:device>/services/assign/",
-        ServiceEditView.as_view(),
-        name="device_service_assign",
     ),
     path(
         "devices/<uuid:object_id>/images/add/",

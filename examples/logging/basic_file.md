@@ -30,7 +30,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["nautobot_log"],
-            "level": "INFO"
+            "level": "INFO",
         },
         "nautobot": {
             "handlers": ["nautobot_log"],

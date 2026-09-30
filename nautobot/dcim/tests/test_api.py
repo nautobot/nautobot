@@ -14,7 +14,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework import status
 
-from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries
+from nautobot.core.testing import APITestCase, APIViewTestCases, AssertNoRepeatedQueries, disable_warnings
 from nautobot.core.testing.utils import generate_random_device_asset_tag_of_specified_size, get_deletable_objects
 from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
@@ -35,6 +35,7 @@ from nautobot.dcim.choices import (
 from nautobot.dcim.constants import NONCONNECTABLE_IFACE_TYPES
 from nautobot.dcim.models import (
     Cable,
+    CablePath,
     CableToCableTermination,
     CableType,
     ConsolePort,
@@ -101,16 +102,35 @@ class AppTest(APITestCase):
         self.assertEqual(response.status_code, 200)
 
 
+BRIEF_REPRESENTATION_KEYS = {"id", "object_type", "url", "display"}
+"""Keys of the brief representation that a path object the user cannot view is downgraded to."""
+
+VERBOTEN_TRACED_CABLE_FIELDS = (
+    # Private fields, which `BaseModelSerializer.get_field_names()` filters out everywhere else.
+    "_abs_length",
+    "_custom_field_data",
+    # Forward M2M accessors, which cost a query each and list every termination on the cable
+    # without any lane structure. Compare `CableSerializer.Meta.exclude`.
+    "circuit_terminations",
+    "console_ports",
+    "console_server_ports",
+    "front_ports",
+    "interfaces",
+    "power_feeds",
+    "power_outlets",
+    "power_ports",
+    "rear_ports",
+)
+
+
 class Mixins:
     class ComponentTraceMixin(APITestCase):
         """Mixin for `ComponentModel` classes that support `trace` tests."""
 
         peer_termination_type = None
 
-        def test_trace(self):
-            """
-            Test tracing a device component's attached cable.
-            """
+        def _create_traced_cable(self):
+            """Cable the first instance of `self.model` to a new peer termination on a new Device."""
             if self.model is Interface:
                 obj = self.model.objects.exclude(type__in=NONCONNECTABLE_IFACE_TYPES).first()
             else:
@@ -134,10 +154,43 @@ class Mixins:
             cable_status = Status.objects.get_for_model(Cable).first()
             cable = Cable(termination_a=obj, termination_b=peer_obj, label="Cable 1", status=cable_status)
             cable.save()
+            return obj, peer_obj, cable
 
-            self.add_permissions(f"dcim.view_{self.model._meta.model_name}")
-            url = reverse(f"dcim-api:{self.model._meta.model_name}-trace", kwargs={"pk": obj.pk})
-            response = self.client.get(url, **self.header)
+        def _get_trace_url(self, obj):
+            return reverse(f"dcim-api:{self.model._meta.model_name}-trace", kwargs={"pk": obj.pk})
+
+        def _add_full_trace_permissions(self):
+            """Grant `view` on the origin's model, the peer termination's model, and Cable."""
+            self.add_permissions(
+                f"{self.model._meta.app_label}.view_{self.model._meta.model_name}",
+                f"{self.peer_termination_type._meta.app_label}.view_{self.peer_termination_type._meta.model_name}",
+                "dcim.view_cable",
+            )
+
+        def _constrain_view_to_object(self, obj):
+            """Grant `view` on `self.model`, constrained to `obj` alone.
+
+            An ObjectPermission also satisfies the model-level view gate, so no separate add_permissions()
+            call is needed. A constrained (rather than unconstrained) grant is used so that this covers peer
+            terminations of the same model as the origin, e.g. Interface-to-Interface.
+            """
+            obj_perm = ObjectPermission(
+                name="View trace origin only",
+                constraints={"pk": str(obj.pk)},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        def test_trace(self):
+            """
+            Test tracing a device component's attached cable as a user permitted to view every path element.
+            """
+            obj, peer_obj, cable = self._create_traced_cable()
+
+            self._add_full_trace_permissions()
+            response = self.client.get(self._get_trace_url(obj), **self.header)
 
             self.assertHttpStatus(response, status.HTTP_200_OK)
             self.assertEqual(len(response.data), 1)
@@ -145,6 +198,140 @@ class Mixins:
             self.assertEqual(segment1[0]["name"], obj.name)
             self.assertEqual(segment1[1]["label"], cable.label)
             self.assertEqual(segment1[2]["name"], peer_obj.name)
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_trace_masks_objects_the_user_cannot_view(self):
+            """
+            Trace a cable path as a user permitted to view only the origin object.
+
+            Path elements the user is not permitted to view (here, the Cable and the peer termination) must be
+            downgraded to their brief representation rather than exposing full detail, being reported as null,
+            being omitted, or truncating the path.
+            """
+            obj, peer_obj, cable = self._create_traced_cable()
+
+            self._constrain_view_to_object(obj)
+            response = self.client.get(self._get_trace_url(obj), **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            # The shape of the path does not depend on the requesting user's permissions.
+            self.assertEqual(len(response.data), 1)
+            segment1 = response.data[0]
+            self.assertEqual(len(segment1), 3)
+            # The origin is viewable, so it is still rendered in full.
+            self.assertEqual(segment1[0]["name"], obj.name)
+            # The Cable and the peer termination are not viewable, so they are masked.
+            for element, masked_obj in ((segment1[1], cable), (segment1[2], peer_obj)):
+                self.assertEqual(set(element.keys()), BRIEF_REPRESENTATION_KEYS)
+                self.assertEqual(str(element["id"]), str(masked_obj.pk))
+                self.assertEqual(element["object_type"], masked_obj._meta.label_lower)
+                self.assertEqual(element["display"], getattr(masked_obj, "display", str(masked_obj)))
+            self.assert_no_verboten_content(response)
+
+        def test_trace_cable_omits_private_and_termination_list_fields(self):
+            """
+            The Cable representation returned by `trace` excludes private fields and per-model termination lists.
+            """
+            obj, _, cable = self._create_traced_cable()
+
+            self._add_full_trace_permissions()
+            response = self.client.get(self._get_trace_url(obj), **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            traced_cable = response.data[0][1]
+            # The fields callers actually rely on are still present.
+            self.assertEqual(traced_cable["label"], cable.label)
+            for field_name in ("status", "type"):
+                self.assertIn(field_name, traced_cable)
+            # A cable the user may view is a strict superset of the brief form used when they may not,
+            # so a client can read id/object_type/url/display without knowing which form it received.
+            self.assertLessEqual(BRIEF_REPRESENTATION_KEYS, set(traced_cable))
+            for field_name in VERBOTEN_TRACED_CABLE_FIELDS:
+                self.assertNotIn(field_name, traced_cable)
+
+    class PassThroughPortPathsMixin(APITestCase):
+        """Mixin for `FrontPort`/`RearPort` classes that support the `paths` action."""
+
+        def _create_pass_through_path(self):
+            """Cable `interface_a - front_port | rear_port - interface_b` and return this model's port."""
+            device_kwargs = {
+                "location": Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+                "device_type": DeviceType.objects.first(),
+                "role": Role.objects.get_for_model(Device).first(),
+                "status": Status.objects.get_for_model(Device).first(),
+            }
+            patch_panel = Device.objects.create(name="Paths Patch Panel", **device_kwargs)
+            rear_port = RearPort.objects.create(device=patch_panel, name="Paths RP", positions=1)
+            front_port = FrontPort.objects.create(
+                device=patch_panel,
+                name="Paths FP",
+                type=PortTypeChoices.TYPE_8P8C,
+                rear_port=rear_port,
+                rear_port_position=1,
+            )
+            intf_status = Status.objects.get_for_model(Interface).first()
+            interfaces = [
+                Interface.objects.create(
+                    device=Device.objects.create(name=f"Paths Device {suffix}", **device_kwargs),
+                    name=f"Paths eth{index}",
+                    type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+                    status=intf_status,
+                )
+                for index, suffix in enumerate(("A", "B"))
+            ]
+            cable_status = Status.objects.get_for_model(Cable).first()
+            Cable.objects.create(
+                termination_a=interfaces[0], termination_b=front_port, label="Paths Cable 1", status=cable_status
+            )
+            Cable.objects.create(
+                termination_a=rear_port, termination_b=interfaces[1], label="Paths Cable 2", status=cable_status
+            )
+            return front_port if self.model is FrontPort else rear_port
+
+        def _get_paths_url(self, obj):
+            return reverse(f"dcim-api:{self.model._meta.model_name}-paths", kwargs={"pk": obj.pk})
+
+        @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+        def test_paths_masks_objects_the_user_cannot_view(self):
+            """
+            Retrieve a pass-through port's cable paths as a user permitted to view only that port.
+
+            Every other node along the path, including the Cables, must be downgraded to its brief
+            representation, and the path must not be shortened or have nodes omitted.
+            """
+            port = self._create_pass_through_path()
+
+            obj_perm = ObjectPermission(
+                name="View pass-through port only",
+                constraints={"pk": str(port.pk)},
+                actions=["view"],
+            )
+            obj_perm.save()
+            obj_perm.users.add(self.user)
+            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+            response = self.client.get(self._get_paths_url(port), **self.header)
+
+            self.assertHttpStatus(response, status.HTTP_200_OK)
+            # A cable path is built from each end of the run, so both traverse this port.
+            expected_paths = CablePath.objects.filter(path__contains=port)
+            returned_paths = {str(returned["id"]): returned["path"] for returned in response.data}
+            self.assertEqual(set(returned_paths), {str(cable_path.pk) for cable_path in expected_paths})
+            self.assertNotEqual(len(returned_paths), 0)
+
+            for cable_path in expected_paths:
+                # Compare against the path as stored, so neither truncation nor omission can pass unnoticed.
+                expected_nodes = cable_path.get_path()
+                path = returned_paths[str(cable_path.pk)]
+                self.assertEqual([str(node["id"]) for node in path], [str(node.pk) for node in expected_nodes])
+                for node, expected_node in zip(path, expected_nodes):
+                    if expected_node == port:
+                        # The port itself is viewable, so it is still rendered in full.
+                        self.assertEqual(node["name"], port.name)
+                    else:
+                        self.assertEqual(set(node.keys()), BRIEF_REPRESENTATION_KEYS)
+                        self.assertEqual(node["object_type"], expected_node._meta.label_lower)
+            self.assert_no_verboten_content(response)
 
     class BaseComponentTestMixin(APIViewTestCases.APIViewTestCase):
         """Mixin class for all `ComponentModel` model class tests."""
@@ -3065,12 +3252,18 @@ class InterfaceTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin
         )
 
 
-class FrontPortTest(Mixins.BasePortTestMixin):
+class FrontPortTest(Mixins.PassThroughPortPathsMixin, Mixins.BasePortTestMixin):
     model = FrontPort
     peer_termination_type = Interface
     update_data = {"label": "updated label", "description": "updated description"}
 
     def test_trace(self):
+        """FrontPorts don't support trace."""
+
+    def test_trace_masks_objects_the_user_cannot_view(self):
+        """FrontPorts don't support trace."""
+
+    def test_trace_cable_omits_private_and_termination_list_fields(self):
         """FrontPorts don't support trace."""
 
     @classmethod
@@ -3207,12 +3400,18 @@ class FrontPortTest(Mixins.BasePortTestMixin):
         )
 
 
-class RearPortTest(Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
+class RearPortTest(Mixins.PassThroughPortPathsMixin, Mixins.ModularDeviceComponentMixin, Mixins.BasePortTestMixin):
     model = RearPort
     peer_termination_type = Interface
     modular_component_create_data = {"type": PortTypeChoices.TYPE_8P8C}
 
     def test_trace(self):
+        """RearPorts don't support trace."""
+
+    def test_trace_masks_objects_the_user_cannot_view(self):
+        """RearPorts don't support trace."""
+
+    def test_trace_cable_omits_private_and_termination_list_fields(self):
         """RearPorts don't support trace."""
 
     @classmethod
@@ -4059,6 +4258,152 @@ class CableToCableTerminationTest(APIViewTestCases.APIViewTestCase):
         ]
 
 
+def create_connection_test_device(name):
+    """Shared helper to create a Device for the connection tests."""
+    return Device.objects.create(
+        name=name,
+        location=Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first(),
+        device_type=DeviceType.objects.first(),
+        role=Role.objects.get_for_model(Device).first(),
+        status=Status.objects.get_for_model(Device).first(),
+    )
+
+
+class ConnectionEndpointTestMixin:
+    """Shared assertions for the read-only console/power connection list endpoints."""
+
+    def _get_ids(self, response):
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assert_no_verboten_content(response)
+        return {str(entry["id"]) for entry in response.data["results"]}
+
+    def _constrain_to_visible_device(self):
+        """Grant `view` on this endpoint's model for the visible device's components only.
+
+        An ObjectPermission also satisfies the model-level view gate, so no separate add_permissions() call
+        is needed.
+        """
+        obj_perm = ObjectPermission(
+            name="Visible components",
+            constraints={"device__name": self.visible_device.name},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+    def test_list_requires_model_view_permission(self):
+        with disable_warnings("django.request"):
+            self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_403_FORBIDDEN)
+        self.add_permissions(self.view_permission)
+        self.assertHttpStatus(self.client.get(self.url, **self.header), status.HTTP_200_OK)
+
+    def test_list_returns_only_connected_components(self):
+        self.add_permissions(self.view_permission)
+        returned = self._get_ids(self.client.get(f"{self.url}?limit=0", **self.header))
+        self.assertIn(str(self.visible_port.pk), returned)
+        self.assertIn(str(self.hidden_port.pk), returned)
+        self.assertNotIn(str(self.unconnected_port.pk), returned)
+
+    def test_object_permission_constrains_list(self):
+        self._constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        returned = self._get_ids(response)
+        self.assertEqual(returned, {str(self.visible_port.pk)})
+        self.assertNotIn(str(self.hidden_port.pk), returned)
+        # `count` reflects the restricted queryset, not merely the current page.
+        self.assertEqual(response.data["count"], 1)
+
+    def test_object_permission_matching_nothing_returns_empty_list(self):
+        obj_perm = ObjectPermission(
+            name="No components",
+            constraints={"name": "Nonexistent Component"},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 0)
+
+    def test_related_objects_rendered_brief(self):
+        self._constrain_to_visible_device()
+        response = self.client.get(f"{self.url}?limit=0", **self.header)
+        self.assertHttpStatus(response, status.HTTP_200_OK)
+        row = response.data["results"][0]
+        for field_name in ("device", "cable", "cable_peer", "connected_endpoint"):
+            with self.subTest(field=field_name):
+                self.assertEqual(set(row[field_name].keys()), {"id", "object_type", "url"})
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class ConsoleConnectionTest(ConnectionEndpointTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/console-connections/` REST endpoint."""
+
+    model = ConsolePort
+    view_permission = "dcim.view_consoleport"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        cls.visible_device = create_connection_test_device("Console Conn Visible")
+        cls.hidden_device = create_connection_test_device("Console Conn Hidden")
+        peer_device = create_connection_test_device("Console Conn Peer")
+
+        cls.visible_port = ConsolePort.objects.create(device=cls.visible_device, name="Visible Console Port")
+        cls.hidden_port = ConsolePort.objects.create(device=cls.hidden_device, name="Hidden Console Port")
+        # Cabled to a pass-through RearPort, so it gets a CablePath but with no destination endpoint. It is
+        # not a completed connection and must never be listed here, even though its device is granted below.
+        cls.unconnected_port = ConsolePort.objects.create(device=cls.visible_device, name="Dangling Console Port")
+
+        server_ports = [
+            ConsoleServerPort.objects.create(device=peer_device, name=f"Conn Console Server Port {i}") for i in (1, 2)
+        ]
+        rear_port = RearPort.objects.create(
+            device=peer_device, name="Conn Console Rear Port", type=PortTypeChoices.TYPE_8P8C
+        )
+
+        # Saving a Cable builds its CablePath rows via post_save signal; no explicit CablePath creation needed.
+        Cable.objects.create(termination_a=cls.visible_port, termination_b=server_ports[0], status=connected)
+        Cable.objects.create(termination_a=cls.hidden_port, termination_b=server_ports[1], status=connected)
+        Cable.objects.create(termination_a=cls.unconnected_port, termination_b=rear_port, status=connected)
+
+        cls.url = reverse("dcim-api:consoleconnections-list")
+
+
+@override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+class PowerConnectionTest(ConnectionEndpointTestMixin, APITestCase):
+    """Coverage for the read-only `/dcim/power-connections/` REST endpoint."""
+
+    model = PowerPort
+    view_permission = "dcim.view_powerport"
+
+    @classmethod
+    def setUpTestData(cls):
+        connected = Status.objects.get_for_model(Cable).get(name="Connected")
+
+        cls.visible_device = create_connection_test_device("Power Conn Visible")
+        cls.hidden_device = create_connection_test_device("Power Conn Hidden")
+        peer_device = create_connection_test_device("Power Conn Peer")
+
+        cls.visible_port = PowerPort.objects.create(device=cls.visible_device, name="Visible Power Port")
+        cls.hidden_port = PowerPort.objects.create(device=cls.hidden_device, name="Hidden Power Port")
+        # A PowerPort can only terminate on a PowerOutlet or PowerFeed, so an uncabled port stands in for the
+        # "has no completed connection" case. Its device is granted below, so it also proves that the
+        # connection filter still applies on top of the object-permission restriction.
+        cls.unconnected_port = PowerPort.objects.create(device=cls.visible_device, name="Uncabled Power Port")
+
+        outlets = [PowerOutlet.objects.create(device=peer_device, name=f"Conn Power Outlet {i}") for i in (1, 2)]
+
+        Cable.objects.create(termination_a=cls.visible_port, termination_b=outlets[0], status=connected)
+        Cable.objects.create(termination_a=cls.hidden_port, termination_b=outlets[1], status=connected)
+
+        cls.url = reverse("dcim-api:powerconnections-list")
+
+
 class InterfaceConnectionTest(APITestCase):
     """Coverage for the read-only `/dcim/interface-connections/` REST endpoint.
 
@@ -4069,32 +4414,27 @@ class InterfaceConnectionTest(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        location = Location.objects.filter(location_type=LocationType.objects.get(name="Campus")).first()
-        device_type = DeviceType.objects.first()
-        device_role = Role.objects.get_for_model(Device).first()
-        device_status = Status.objects.get_for_model(Device).first()
         iface_status = Status.objects.get_for_model(Interface).first()
         connected = Status.objects.get_for_model(Cable).get(name="Connected")
 
-        def make_device(name):
-            return Device.objects.create(
-                name=name, location=location, device_type=device_type, role=device_role, status=device_status
-            )
-
         # Point-to-point connection.
-        cls.p2p_a = Interface.objects.create(device=make_device("API Conn A"), name="p2p-a", status=iface_status)
-        cls.p2p_b = Interface.objects.create(device=make_device("API Conn B"), name="p2p-b", status=iface_status)
+        cls.p2p_a = Interface.objects.create(
+            device=create_connection_test_device("API Conn A"), name="p2p-a", status=iface_status
+        )
+        cls.p2p_b = Interface.objects.create(
+            device=create_connection_test_device("API Conn B"), name="p2p-b", status=iface_status
+        )
         Cable(termination_a=cls.p2p_a, termination_b=cls.p2p_b, status=connected).save()
 
         # 1x4 breakout: trunk fanning out to four leaf interfaces.
         breakout_type = CableType.objects.create(name="API 1x4 breakout", a_connectors=1, b_connectors=4, total_lanes=4)
         cls.trunk = Interface.objects.create(
-            device=make_device("API Conn Trunk"),
+            device=create_connection_test_device("API Conn Trunk"),
             name="Trunk",
             type=InterfaceTypeChoices.TYPE_40GE_QSFP_PLUS,
             status=iface_status,
         )
-        leaf_device = make_device("API Conn Leaf")
+        leaf_device = create_connection_test_device("API Conn Leaf")
         cls.leaves = [
             Interface.objects.create(device=leaf_device, name=f"Leaf {i}", status=iface_status) for i in range(1, 5)
         ]

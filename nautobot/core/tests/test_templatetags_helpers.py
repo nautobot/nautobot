@@ -1,11 +1,14 @@
+import datetime
 from unittest import mock
 
 from constance.test import override_config
 from django.conf import settings
 from django.contrib.staticfiles import finders
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
+from django.template import Context, Template
 from django.templatetags.static import static, StaticNode
 from django.test import override_settings, tag
+from django.utils.html import format_html
 
 from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import NAUTOBOT_EDITION_URLS, NAUTOBOT_STATIC_ASSETS
@@ -85,6 +88,47 @@ class NautobotTemplatetagsHelperTest(TestCase):
             helpers.add_html_id('Hello\n<div class="...">\nGoodbye\n</div>', "my-div"),
             'Hello\n<div id="my-div" class="...">\nGoodbye\n</div>',
         )
+
+    def test_toast(self):
+        buttons = format_html('<button type="button">Confirm</button>')
+        self.assertTrue(helpers.toast("Message")["autohide"])
+        self.assertFalse(helpers.toast("Message", buttons=buttons)["autohide"])
+        self.assertTrue(helpers.toast("Message", autohide=True, buttons=buttons)["autohide"])
+
+        self.assertIn("mdi-lightbulb-on-outline", helpers.toast("Message")["icon"])
+        self.assertIn("mdi-check-circle-outline", helpers.toast("Message", status="success")["icon"])
+        self.assertIn("nautobot_chevron.svg", helpers.toast("Message", status="primary")["icon"])
+        self.assertEqual(helpers.toast("Message", icon=format_html("<i></i>"))["icon"], "<i></i>")
+
+        self.assertEqual(helpers.toast("Message")["delay"], 10000)
+
+        self.assertTrue(helpers.toast("Message")["html_id"].startswith("toast_"))
+        self.assertEqual(helpers.toast("Message", html_id="my-toast")["html_id"], "my-toast")
+
+    def test_toast_escapes_unsafe_content(self):
+        template = Template("{% load helpers %}{% toast buttons=buttons content=content icon=icon title=title %}")
+        unsafe = "<script>alert(1)</script>"
+
+        rendered = template.render(
+            Context({"buttons": unsafe, "content": unsafe, "icon": unsafe, "title": "<b>Hi</b>"})
+        )
+        self.assertNotIn("<script>", rendered)
+        self.assertEqual(rendered.count("&lt;script&gt;"), 3)
+        self.assertNotIn("<b>Hi</b>", rendered)
+
+        rendered = template.render(
+            Context(
+                {
+                    "buttons": format_html('<button type="button">Confirm</button>'),
+                    "content": format_html('<a href="/dcim/devices/">Device</a>'),
+                    "icon": format_html('<span class="mdi mdi-check"></span>'),
+                    "title": "Created",
+                }
+            )
+        )
+        self.assertIn('<button type="button">Confirm</button>', rendered)
+        self.assertIn('<a href="/dcim/devices/">Device</a>', rendered)
+        self.assertIn('<span class="mdi mdi-check"></span>', rendered)
 
     def test_render_markdown(self):
         self.assertTrue(callable(helpers.render_markdown))
@@ -199,6 +243,18 @@ class NautobotTemplatetagsHelperTest(TestCase):
         self.assertEqual(helpers.bettertitle("myTITle"), "MyTITle")
         self.assertEqual(helpers.bettertitle("mytitle"), "Mytitle")
         self.assertEqual(helpers.bettertitle("my title"), "My Title")
+
+    def test_humanize_duration(self):
+        self.assertEqual(helpers.humanize_duration(None), "")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=0)), "<1s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(milliseconds=340)), "<1s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=9)), "9s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=59)), "59s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=60)), "1m 0s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=192)), "3m 12s")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=3600)), "1h 0m")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(seconds=31300)), "8h 41m")
+        self.assertEqual(helpers.humanize_duration(datetime.timedelta(days=1, seconds=10800)), "1d 3h")
 
     def test_humanize_speed(self):
         self.assertEqual(helpers.humanize_speed(1544), "1.544 Mbps")

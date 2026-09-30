@@ -38,7 +38,8 @@
                             href="#theme_modal"
                             id="btn-theme-modal"
                         >
-                            <span class="mdi mdi-theme-light-dark"></span>
+                            <span aria-hidden="true" class="mdi mdi-theme-light-dark"></span>
+                            <span class="visually-hidden">Theme</span>
                         </a>
                     </div>
                     &middot;
@@ -48,7 +49,8 @@
                         href="{% if settings.BRANDING_URLS.docs %}{{ settings.BRANDING_URLS.docs }}{% else %}{% static 'docs/index.html' %}{% endif %}"
                         target="_blank"
                     >
-                        <span class="mdi mdi-book-open-page-variant"></span>
+                        <span aria-hidden="true" class="mdi mdi-book-open-page-variant"></span>
+                        <span class="visually-hidden">Docs</span>
                     </a>
                     &middot;
                     <a
@@ -57,9 +59,10 @@
                         href="{% url 'render_jinja_template' %}"
                         target="_blank"
                     >
-                        <svg style="height: 1.25rem; width: 1.25rem;" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+                        <svg aria-hidden="true" style="height: 1.25rem; width: 1.25rem;" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
                             <use href="{% static 'img/jinja_logo.svg' %}#jinja_logo" />
                         </svg>
+                        <span class="visually-hidden">Jinja Renderer</span>
                     </a>
                     &middot;
                     <a
@@ -68,7 +71,8 @@
                         href="{% url 'api_docs' %}"
                         target="_blank"
                     >
-                        <span class="mdi mdi-cloud-braces"></span>
+                        <span aria-hidden="true" class="mdi mdi-cloud-braces"></span>
+                        <span class="visually-hidden">API</span>
                     </a>
                     &middot;
                     <a
@@ -77,7 +81,8 @@
                         href="{% url 'graphql' %}"
                         target="_blank"
                     >
-                        <span class="mdi mdi-graphql"></span>
+                        <span aria-hidden="true" class="mdi mdi-graphql"></span>
+                        <span class="visually-hidden">GraphQL</span>
                     </a>
                     &middot;
                     <a
@@ -86,7 +91,8 @@
                         href="{{ settings.BRANDING_URLS.code }}"
                         target="_blank"
                     >
-                        <span class="mdi mdi-xml"></span>
+                        <span aria-hidden="true" class="mdi mdi-xml"></span>
+                        <span class="visually-hidden">Code</span>
                     </a>
                     &middot;
                     <a
@@ -95,7 +101,8 @@
                         href="{{ settings.BRANDING_URLS.help }}"
                         target="_blank"
                     >
-                        <span class="mdi mdi-lifebuoy"></span>
+                        <span aria-hidden="true" class="mdi mdi-lifebuoy"></span>
+                        <span class="visually-hidden">Help</span>
                     </a>
                 {% endif %}
             </div>

@@ -50,6 +50,33 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Nautobot optional settings/defaults
 #
 
+# Rate Limiting Settings
+NAUTOBOT_REST_RATE_LIMITING_BUDGET = int(os.getenv("NAUTOBOT_REST_RATE_LIMITING_BUDGET", "1000"))
+NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS = int(os.getenv("NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS", "60"))
+
+# REST Rate Limiting Complexity Cost Settings
+NAUTOBOT_REST_RATE_LIMITING_MODE = str(os.getenv("NAUTOBOT_REST_RATE_LIMITING_MODE", "off"))
+NAUTOBOT_REST_RATE_LIMITING_READ_COST = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_READ_COST", "1.0"))
+NAUTOBOT_REST_RATE_LIMITING_WRITE_COST = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_WRITE_COST", "3.0"))
+NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST = float(
+    os.getenv("NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST", "3.0")
+)
+NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST = float(
+    os.getenv("NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST", "3.0")
+)
+NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST", "3.0"))
+NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL = float(
+    os.getenv("NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL", "1.0")
+)
+NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER = float(
+    os.getenv("NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER", "3.0")
+)
+NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER = float(os.getenv("NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER", "3.0"))
+
+# GraphQL Rate Limiting Complexity Cost Settings
+NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE = str(os.getenv("NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE", "off"))
+
+
 # Base directory wherein all created files (jobs, git repositories, file uploads, static files) will be stored)
 NAUTOBOT_ROOT = os.getenv("NAUTOBOT_ROOT", os.path.expanduser("~/.nautobot"))
 
@@ -86,6 +113,10 @@ if "NAUTOBOT_BANNER_TOP" in os.environ and os.environ["NAUTOBOT_BANNER_TOP"] != 
 # Number of days to retain changelog entries. Set to 0 to retain changes indefinitely. Defaults to 90 if not set here.
 if "NAUTOBOT_CHANGELOG_RETENTION" in os.environ and os.environ["NAUTOBOT_CHANGELOG_RETENTION"] != "":
     CHANGELOG_RETENTION = int(os.environ["NAUTOBOT_CHANGELOG_RETENTION"])
+
+# Whether a save that modifies none of an object's field values should be left out of the change log.
+# Set to False to record such saves anyway, as Nautobot did before 3.3.0.
+CHANGELOG_SKIP_UNCHANGED_SAVES = is_truthy(os.getenv("NAUTOBOT_CHANGELOG_SKIP_UNCHANGED_SAVES", "True"))
 
 # Disable linking of Config Context objects via Dynamic Groups by default. This could cause performance impacts
 # when a large number of dynamic groups are present
@@ -128,6 +159,10 @@ EXEMPT_EXCLUDE_MODELS = (
     ("auth", "group"),
     ("users", "user"),
     ("users", "objectpermission"),
+    # Saved Views excluded only to bring the REST API in line with how the UI already behaves in the case of "*".
+    # The UI list view always requires `extras.view_savedview` regardless of this setting.
+    ("extras", "savedview"),
+    ("extras", "usersavedviewassociation"),
 )
 
 # Models to exempt from the enforcement of view permissions
@@ -254,8 +289,19 @@ if "NAUTOBOT_RELEASE_CHECK_TIMEOUT" in os.environ and os.environ["NAUTOBOT_RELEA
 if "NAUTOBOT_RELEASE_CHECK_URL" in os.environ and os.environ["NAUTOBOT_RELEASE_CHECK_URL"] != "":
     RELEASE_CHECK_URL = os.environ["NAUTOBOT_RELEASE_CHECK_URL"]
 
+# Request Metric Generation
+# Header contract defined here: https://www.w3.org/TR/server-timing/
+# Report the total server-side duration of each request in a W3C `Server-Timing` response header.
+REQUEST_TOTAL_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED", "False"))
+# Report the total duration of database queries in a W3C `Server-Timing` response header.
+REQUEST_DB_DURATION_HEADER_ENABLED = is_truthy(os.getenv("NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED", "False"))
+
 # Global 3rd-party authentication settings
 EXTERNAL_AUTH_DEFAULT_GROUPS = []
+if "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS" in os.environ and os.environ["NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"] != "":
+    EXTERNAL_AUTH_DEFAULT_GROUPS = os.getenv("NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS", "").split(
+        _CONFIG_SETTING_SEPARATOR
+    )
 EXTERNAL_AUTH_DEFAULT_PERMISSIONS = {}
 
 # Remote auth backend settings
@@ -291,6 +337,10 @@ SSO_STAFF_GROUPS = [
 # list of groups that an authenticating user can be a part of to be a Django super user
 SSO_SUPERUSER_GROUPS = [
     group for group in os.getenv("NAUTOBOT_SSO_SUPERUSER_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
+]
+# list of groups to sync into Nautobot; if empty, every group in the claim is synced
+SSO_SYNC_GROUPS = [
+    group for group in os.getenv("NAUTOBOT_SSO_SYNC_GROUPS", "").split(_CONFIG_SETTING_SEPARATOR) if group != ""
 ]
 
 # Job log entry sanitization and similar
@@ -373,6 +423,10 @@ FILTERS_NULL_CHOICE_LABEL = "None"
 FILTERS_NULL_CHOICE_VALUE = "null"
 
 STRICT_FILTERING = is_truthy(os.getenv("NAUTOBOT_STRICT_FILTERING", "True"))
+
+# Whether the ORM refuses to return the value of a field listed in a model's `sensitive_fields`.
+# TODO 4.0: change the default to True.
+STRICT_SENSITIVE_FIELDS = is_truthy(os.getenv("NAUTOBOT_STRICT_SENSITIVE_FIELDS", "False"))
 
 #
 # Django REST framework (API)
@@ -679,8 +733,10 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
+    "nautobot.core.middleware.RequestMetricMiddleware",
     "django_prometheus.middleware.PrometheusBeforeMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "nautobot.core.middleware.ComplexityCostRateLimitingMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "silk.middleware.SilkyMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -693,6 +749,7 @@ MIDDLEWARE = [
     "nautobot.core.middleware.RequestCacheMiddleware",
     "nautobot.core.middleware.RemoteUserMiddleware",
     "nautobot.core.middleware.ExternalAuthMiddleware",
+    "nautobot.core.middleware.HtmxLoginRedirectMiddleware",
     "nautobot.core.middleware.GraphQLOpenTelemetryMiddleware",
     "nautobot.core.middleware.ObjectChangeMiddleware",
     "nautobot.core.middleware.UserDefinedTimeZoneMiddleware",

@@ -32,20 +32,46 @@ Change records can also be accessed via the read-only GraphQL endpoint `/api/gra
 }
 ```
 
+## What Is Recorded
+
+### Saves That Change Nothing
+
++/- 3.3.0
+
+When you save an object without changing any of its fields, for example by clicking **Save** on an edit form you did not touch, or by sending an empty `PATCH` request, no change record is created. No [webhooks](webhook.md), [job hooks](jobs/jobhook.md), or [events](events.md) are triggered either. The object's `last_updated` timestamp still moves, because the row is still written to the database.
+
+Nautobot decides whether anything changed by comparing the values being saved with the values currently stored in the database. It does not compare them with the values the object had when it was loaded. This means that if someone else changed the object in the meantime and your save puts the old values back, that save is recorded as a change.
+
+Only the object's own fields take part in this comparison. Adding or removing related objects through a many-to-many relationship is always recorded, even when the end result is the same set of related objects. See [Many-to-Many Association Changes](#many-to-many-association-changes) below.
+
+If your deployment relies on the previous behavior, set [`CHANGELOG_SKIP_UNCHANGED_SAVES`](../administration/configuration/settings.md#changelog_skip_unchanged_saves) to `False` to record these saves again. This setting is provided to ease the transition and is expected to be removed in a future major release.
+
+### The `prechange` in Webhook and Event Payloads
+
++/- 3.3.0
+
+When an object is updated, the `prechange` snapshot in [webhook](webhook.md) and [event](events.md) payloads shows the object exactly as it was stored right before the change was written. This includes any modifications made outside of change logging, such as data migrations or bulk `update()` calls. In earlier versions the snapshot was rebuilt from the object's previous change record, which could be very old or absent entirely.
+
+This snapshot is only captured when a webhook, job hook, or event broker is configured for the object type, because nothing else uses it.
+
+Two places still rebuild `prechange` from the previous change record: the change log view in the UI, and `ObjectChange.get_snapshots()` when called from a [job hook](jobs/jobhook.md). After a change made outside of change logging, these may show a different `prechange` than the webhook payload did. This is a known inconsistency. The behavior may change in a future release.
+
+Changes to many-to-many associations are not made by saving a field, so their `prechange` is always rebuilt from the previous change record.
+
 ## Many-to-Many Association Changes
 
 +++ 3.2.2
 
 Some many-to-many relationships in Nautobot are implemented with an explicit "through" model that is exposed through its own REST API endpoint, for example `IPAddressToInterface` (`/api/ipam/ip-address-to-interface/`, associating IP addresses with interfaces) or `VRFPrefixAssignment` (`/api/ipam/vrf-prefix-assignments/`, associating VRFs with prefixes).
 
-Creating or deleting such an association record - whether through its REST API endpoint, the UI, or ORM many-to-many operations such as `interface.ip_addresses.add(...)`, `.remove(...)`, `.set(...)`, or `.clear()` - records an "update" change against *both* of the objects it associates. These change records appear in both objects' change logs and drive any [webhooks](webhook.md), [job hooks](jobs/jobhook.md), and [events](events.md) configured for those objects.
+Creating or deleting such an association record - whether through its REST API endpoint, the UI, or ORM many-to-many operations such as `interface.ip_addresses.add(...)`, `.remove(...)`, `.set(...)`, or `.clear()` - records an "update" change against _both_ of the objects it associates. These change records appear in both objects' change logs and drive any [webhooks](webhook.md), [job hooks](jobs/jobhook.md), and [events](events.md) configured for those objects.
 
 !!! note
     As with all change logging, ORM operations are only recorded when performed within a change-logging context: this is automatic for web requests and Jobs, while shell or script usage must be wrapped in `web_request_context`. See [Change Logging and Webhooks](../administration/tools/nautobot-shell.md#change-logging-and-webhooks) for details.
 
 Please note the following behavioral details:
 
-- Deleting an object that *cascades* to its association records (for example, deleting a Device that has VRF assignments) records a "delete" change for the deleted object only; the surviving objects on the other side of its associations (the VRFs) do not receive a change record, and their webhooks and job hooks do not fire. This is a deliberate trade-off: a single delete may cascade to association records for many thousands of surviving objects (consider deleting a Location to which thousands of Prefixes are assigned), and recording a change for each would require serializing every one of those objects and dispatching a webhook, job hook, and event for each within that one request. Note that the deleted object's own "delete" change record includes its final serialized data, so removed associations remain discoverable from that record where the object's REST API representation includes them (for example, a deleted Prefix's record includes its location assignments).
+- Deleting an object that _cascades_ to its association records (for example, deleting a Device that has VRF assignments) records a "delete" change for the deleted object only; the surviving objects on the other side of its associations (the VRFs) do not receive a change record, and their webhooks and job hooks do not fire. This is a deliberate trade-off: a single delete may cascade to association records for many thousands of surviving objects (consider deleting a Location to which thousands of Prefixes are assigned), and recording a change for each would require serializing every one of those objects and dispatching a webhook, job hook, and event for each within that one request. Note that the deleted object's own "delete" change record includes its final serialized data, so removed associations remain discoverable from that record where the object's REST API representation includes them (for example, a deleted Prefix's record includes its location assignments).
 - Updating additional fields on an association record itself (for example, `VRFDeviceAssignment.rd`) does not record a change against the associated objects, as their own data is unaffected.
 - Because the serialized data of the associated objects may not include the association itself, the "difference" display of such a change record may be empty even though the change record is meaningful and still drives webhooks, job hooks, and events.
 - App-defined models automatically receive the same behavior for any many-to-many relationship declared with an explicit `through` model. An App can opt an association model out of this behavior by setting the class attribute `is_m2m_change_logged = False` on the through model, as Nautobot itself does for user-specific preference data such as `UserSavedViewAssociation`.

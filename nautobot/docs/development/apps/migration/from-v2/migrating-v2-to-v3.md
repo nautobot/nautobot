@@ -138,7 +138,7 @@ curl -X 'GET' \
         "url": "https://next.demo.nautobot.com/api/extras/roles/77d3c3df-f983-51c2-aa1f-6ee7ebe646e2/",
     },
     "untagged_vlan": null,
-    "tagged_vlans": [              # <--------------- This only shows up in `exclude_m2m=False`
+    "tagged_vlans": [  # <--------------- This only shows up in `exclude_m2m=False`
         {
             "id": "4eaf3921-1dd2-58b1-a86e-6cf01bb812f9",
             "object_type": "ipam.vlan",

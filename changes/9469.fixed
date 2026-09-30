@@ -1,0 +1,1 @@
+Fixed a slow memory leak in change logging, where the captured pre-change state of an object was retained for the lifetime of the worker process instead of the request that captured it.

@@ -80,12 +80,13 @@ The `test_*` and `post_run` methods, previously provided for backwards compatibi
 
 Jobs no longer run in a single atomic [database transaction](https://docs.djangoproject.com/en/stable/topics/db/transactions/) by default. If a Job needs to run in a database transaction, you can use the `@transaction.atomic` decorator on the `run()` method or wrap parts of your Job code in the `with transaction.atomic()` context manager.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from django.db import transaction
     from nautobot.apps.jobs import Job, ObjectVar
     from nautobot.dcim import models
+
 
     class UpdateDeviceTypeHeightJob(Job):
         device_type = ObjectVar(model=models.DeviceType)
@@ -126,8 +127,9 @@ from . import my_job_module
 ```py title="$JOBS_ROOT/my_jobs/my_job_module.py"
 from nautobot.apps.jobs import Job, register_jobs
 
-class MyJob(Job):
-    ...
+
+class MyJob(Job): ...
+
 
 register_jobs(MyJob)
 ```
@@ -174,4 +176,4 @@ The Job's built-in`self.failed` flag, that was used to determine if a Job failed
 
 The `request` property has been changed to a Celery request instead of a Django request and no longer includes the information from the web request that initiated the Job. The `user` object is now available as `self.user` instead of `self.request.user`.
 
-> *Note:* [Migrating from v1.x to v2.0](../../apps/migration/from-v1.md) provides a general migration guide.
+> **Note:** [Migrating from v1.x to v2.0](../../apps/migration/from-v1.md) provides a general migration guide.

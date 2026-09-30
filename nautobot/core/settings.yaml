@@ -543,6 +543,24 @@ properties:
     environment_variable: "NAUTOBOT_CHANGELOG_RETENTION"
     is_constance_config: true
     type: "integer"
+  CHANGELOG_SKIP_UNCHANGED_SAVES:
+    default: true
+    description: >-
+      If `True`, saving an object without modifying any of its field values does not create a change record
+      and does not trigger webhooks, job hooks, or events. Set this to `False` to record such saves anyway,
+      as Nautobot did before 3.3.0.
+    details: |-
+      The object's `last_updated` timestamp is written either way; only the change record is affected.
+
+      !!! warning
+          This setting exists to give deployments time to adapt to the 3.3.0 behavior change. It is expected to be removed
+          in a future major release, so it should not be relied on indefinitely.
+
+      An individual model can opt out of the comparison regardless of this setting by declaring
+      `changelog_skip_unchanged_saves = False`.
+    environment_variable: "NAUTOBOT_CHANGELOG_SKIP_UNCHANGED_SAVES"
+    type: "boolean"
+    version_added: "3.3.0"
   CONFIG_CONTEXT_DYNAMIC_GROUPS_ENABLED:
     default: false
     description: >-
@@ -982,6 +1000,7 @@ properties:
   EXTERNAL_AUTH_DEFAULT_GROUPS:
     default: []
     description: "The list of group names to assign a new user account when created using 3rd-party authentication."
+    environment_variable: "NAUTOBOT_EXTERNAL_AUTH_DEFAULT_GROUPS"
     items:
       type: "string"
     type: "array"
@@ -1579,6 +1598,31 @@ properties:
           over these default values.
     environment_variable: "NAUTOBOT_NAPALM_USERNAME"
     type: "string"
+  NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE:
+    default: "off"
+    description: "Cost-based rate limiting mode for token-authenticated GraphQL API requests."
+    details: |-
+      | Value   | Behavior                                                                                                                |
+      |---------|-------------------------------------------------------------------------------------------------------------------------|
+      | off     | Requests are neither charged nor limited.                                                                               |
+      | report  | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | enforce | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted.       |
+
+      Only `"enforce"` consumes budget. In `report` mode the `RateLimit` header always reports a
+      full budget, so it shows the per-request cost but not what `enforce` would have rejected.
+
+      Requests without an `Authorization` header are never charged. If Redis is unreachable the
+      limiter fails open: the request is served and a full budget is reported.
+    enum:
+    - "off"
+    - "report"
+    - "enforce"
+    environment_variable: "NAUTOBOT_GRAPHQL_RATE_LIMITING_MODE"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
+    type: "string"
+    version_added: "3.3.0"
   NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS:
     type: "array"
     items:
@@ -1594,6 +1638,159 @@ properties:
       `NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS="pkg.a.FooInstrumentor,pkg.b.BarInstrumentor"`.)
     environment_variable: "NAUTOBOT_OTEL_EXTRA_INSTRUMENTORS"
     version_added: "3.2.0"
+  NAUTOBOT_REST_RATE_LIMITING_BUDGET:
+    default: 1000
+    description: >-
+      The complexity cost budget granted to each API token per window, in cost points.
+    details: |-
+      In `"enforce"` mode, a token is denied once its recorded consumption for the current window
+      reaches this value.
+
+      !!! note
+          This is a budget of *cost points*, not a count of requests or of returned objects. It is
+          unrelated to the REST API's `limit` query parameter.
+
+      Size this against the cost settings: with the defaults an unfiltered list request costs `4`,
+      so a budget of `1000` permits roughly 250 such requests per window.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_BUDGET"
+    minimum: 0
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS": "#nautobot_rest_rate_limiting_window_in_seconds"
+    type: "integer"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER:
+    default: 3.0
+    description: >-
+      Multiplier applied to a REST API request's running cost when `include=computed_fields` is
+      requested.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_COMPUTED_FIELDS_MULTIPLIER"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER:
+    default: 3.0
+    description: "Multiplier applied to a REST API request's running cost when `format=csv` is requested."
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_CSV_MULTIPLIER"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL:
+    default: 1.0
+    description: "Weight of each level of serializer nesting requested via the `depth` query parameter."
+    details: |-
+      When `depth` is non-zero, the request's running cost is multiplied by
+      `1 + (depth × DEPTH_MULTIPLIER_PER_LEVEL)`.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_DEPTH_MULTIPLIER_PER_LEVEL"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST:
+    default: 3.0
+    description: >-
+      Cost added for each REST API filter whose lookup can use an index, such as `exact`, `in`, or
+      `isw` (`istartswith`).
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_INDEXABLE_LOOKUP_COST"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST": "#nautobot_rest_rate_limiting_unindexable_lookup_cost"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_MODE:
+    default: "off"
+    description: "Cost-based rate limiting mode for token-authenticated REST API requests."
+    details: |-
+      | Value   | Behavior                                                                                                                |
+      |---------|-------------------------------------------------------------------------------------------------------------------------|
+      | off     | Requests are neither charged nor limited.                                                                               |
+      | report  | Each request's cost is calculated and reported in the response headers. No budget is consumed and no request is denied. |
+      | enforce | Each request's cost is charged against the token's budget, and requests are denied once that budget is exhausted.       |
+
+      Only `enforce` consumes budget. In `report` mode the `RateLimit` header always reports a
+      full budget, so it shows the per-request cost but not what `enforce` would have rejected.
+
+      Requests without an `Authorization` header are never charged. If Redis is unreachable the
+      limiter fails open: the request is served and a full budget is reported.
+    enum:
+    - "off"
+    - "report"
+    - "enforce"
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_MODE"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
+    type: "string"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST:
+    default: 3.0
+    description: >-
+      Cost added for each request a client would need to issue in order to page through the entire
+      result set.
+    details: |-
+      The number of requests is `ceil(record_count ÷ records_per_page)`, with a floor of `1`, where
+      `records_per_page` is the page size the paginator will actually serve for the request. A larger
+      `limit` therefore implies fewer requests and a lower cost.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_PAGINATION_COST"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_READ_COST:
+    default: 1.0
+    description: "Base cost of a REST API `GET`, `HEAD`, or `OPTIONS` request."
+    details: |-
+      This is the starting point for the REST cost estimate of a read request. The weights combine
+      as follows:
+
+      1. Start from `READ_COST`.
+      2. Add `PAGINATION_COST` for each request needed to page through the whole result set.
+      3. Multiply by `1 + (depth × DEPTH_MULTIPLIER_PER_LEVEL)` when `depth` is non-zero.
+      4. Add `INDEXABLE_LOOKUP_COST` for every filter whose lookup can use an index, and
+         `UNINDEXABLE_LOOKUP_COST` for every filter whose lookup cannot.
+      5. Multiply by `COMPUTED_FIELDS_MULTIPLIER` when `include=computed_fields` is requested.
+      6. Multiply by `CSV_MULTIPLIER` when `format=csv` is requested.
+
+      The result is rounded up to a whole number and charged against the token's budget.
+
+      Write requests do not use this formula. They are charged a flat `WRITE_COST`, rounded up.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_READ_COST"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_MODE": "#nautobot_rest_rate_limiting_mode"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST:
+    default: 3.0
+    description: >-
+      Cost added for each REST API filter whose lookup cannot use an index, such as `ic`
+      (`icontains`) or `re` (`regex`).
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_UNINDEXABLE_LOOKUP_COST"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+    type: "number"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS:
+    default: 60
+    description: >-
+      The length in seconds of each API token's complexity cost budget window.
+    details: |-
+      A token's window opens on its first charged request and closes after the specified window time.
+      Then the budget resets. Windows are per token and are not aligned to a wall clock, so
+      tokens reset in different intervals. Charges made during a window do not extend it.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WINDOW_IN_SECONDS"
+    minimum: 1
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_BUDGET": "#nautobot_rest_rate_limiting_budget"
+    type: "integer"
+    version_added: "3.3.0"
+  NAUTOBOT_REST_RATE_LIMITING_WRITE_COST:
+    default: 3.0
+    description: >-
+      Base cost of a REST API request using any method other than `GET`, `HEAD`, or `OPTIONS`.
+    environment_variable: "NAUTOBOT_REST_RATE_LIMITING_WRITE_COST"
+    see_also:
+      "NAUTOBOT_REST_RATE_LIMITING_READ_COST": "#nautobot_rest_rate_limiting_read_cost"
+    type: "number"
+    version_added: "3.3.0"
   NAUTOBOT_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/"
@@ -1893,6 +2090,32 @@ properties:
     see_also:
       "Remote User Authentication": "./authentication/remote.md"
     type: "string"
+  REQUEST_DB_DURATION_HEADER_ENABLED:
+    default: false
+    description: >-
+      When `true` Nautobot reports the time spent executing SQL for each request. This is
+      added to the response header `Server-Timing` field.
+      Example: `Server-Timing: db;dur=9.59;desc="5 database queries"`, where `dur` is milliseconds and the description reports the number of queries.
+    details: |-
+      Measures request SQL time.
+    environment_variable: "NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED"
+    see_also:
+      "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
+    type: "boolean"
+    version_added: "3.3.0"
+  REQUEST_TOTAL_DURATION_HEADER_ENABLED:
+    default: false
+    description: >-
+      When `true` Nautobot reports the total time spent processing each request. This is
+      added to the response header `Server-Timing` field.
+      Example: `Server-Timing: total;dur=42.71;desc="Total request duration"`, where `dur` is milliseconds.
+    details: |-
+      Measures total request processing time.
+    environment_variable: "NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED"
+    see_also:
+      "W3C Server Timing specification": "https://www.w3.org/TR/server-timing/"
+    type: "boolean"
+    version_added: "3.3.0"
   SANITIZER_PATTERNS:
     default: []
     default_literal: |-
@@ -2081,6 +2304,21 @@ properties:
     items:
       type: "string"
     type: "array"
+  SSO_SYNC_GROUPS:
+    default: []
+    description: >-
+      List of groups to sync into Nautobot from the SSO group claim. If empty, all groups in the claim are synced.
+    details: |-
+      This restricts group membership only. Staff and superuser status is always evaluated against every group in
+      the claim, so a group listed in `SSO_STAFF_GROUPS` or `SSO_SUPERUSER_GROUPS` still grants that status even if
+      it is omitted here and therefore never created in Nautobot.
+    environment_variable: "NAUTOBOT_SSO_SYNC_GROUPS"
+    see_also:
+      "Single Sign On": "./authentication/sso.md"
+    items:
+      type: "string"
+    type: "array"
+    version_added: "3.2.4"
   STATIC_ROOT:
     "$ref": "#/definitions/absolute_path"
     default: "~/.nautobot/static"
@@ -2168,6 +2406,22 @@ properties:
     environment_variable: "NAUTOBOT_STRICT_FILTERING"
     type: "boolean"
     version_added: "1.4.0"
+  STRICT_SENSITIVE_FIELDS:
+    default: false
+    description: >-
+      If set to `True`, the ORM will refuse to return the value of any field listed in a model's
+      `sensitive_fields` declaration, such as `Token.key`, unless the caller opts in explicitly.
+    details: |-
+      Nautobot models may declare `sensitive_fields` to mark columns that hold credentials or comparable
+      secrets. When this setting is `True`, reading such a field raises `SensitiveFieldError` for values
+      loaded from the database, whether read as an attribute or projected through a query.
+
+      This setting does **not** affect user-authored Jinja2 templates (Export Templates, Computed Fields,
+      Custom Links, and so on). Those are always denied access to a sensitive field, regardless of this
+      setting.
+    environment_variable: "NAUTOBOT_STRICT_SENSITIVE_FIELDS"
+    type: "boolean"
+    version_added: "3.2.5"
   SUPPORT_MESSAGE:
     default: ""
     description: "A message to include on error pages (status code 403, 404, 500, etc.) when an error occurs."

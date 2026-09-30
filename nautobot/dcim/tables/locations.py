@@ -84,3 +84,4 @@ class LocationTable(StatusTableMixin, BaseTable):
             "actions",
         )
         default_columns = ("pk", "name", "status", "parent", "tenant", "description", "tags", "actions")
+        show_row_overviews = False

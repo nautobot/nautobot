@@ -1,0 +1,1 @@
+Added a message to the "Export Object List" job when a many-to-many field has additional data recorded about each association (such as the priority recorded against each of an InterfaceRedundancyGroup's interfaces), noting which values are not included in the export and where to find them.

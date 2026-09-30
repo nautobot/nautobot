@@ -1,15 +1,10 @@
 import logging
 import uuid
 
-from django.core.exceptions import (
-    FieldError,
-    MultipleObjectsReturned,
-    ObjectDoesNotExist,
-)
 from django.db.models import AutoField, Model
 from rest_framework.exceptions import ValidationError
 
-from nautobot.core.api.utils import dict_to_filter_params
+from nautobot.core.api.utils import dict_to_filter_params, resolve_related_object
 from nautobot.core.utils.data import is_url
 
 logger = logging.getLogger(__name__)
@@ -90,14 +85,7 @@ class WritableSerializerMixin:
         Retrieve an unique object based on a dictionary of data attributes and raise errors accordingly if the object is not found.
         """
         filter_params = self.get_queryset_filter_params(data=data, queryset=queryset)
-        try:
-            return queryset.get(**filter_params)
-        except ObjectDoesNotExist as e:
-            raise ValidationError(f"Related object not found using the provided attributes: {filter_params}") from e
-        except MultipleObjectsReturned as e:
-            raise ValidationError(f"Multiple objects match the provided attributes: {filter_params}") from e
-        except FieldError as e:
-            raise ValidationError(e) from e
+        return resolve_related_object(queryset, filter_params)
 
     def to_internal_value(self, data):
         """

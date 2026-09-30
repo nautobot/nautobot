@@ -134,6 +134,48 @@ def check_postgresql_version(app_configs, databases=None, **kwargs):
 
 
 @register(Tags.security)
+def check_sensitive_fields_are_enforceable(app_configs, **kwargs):
+    """Flag a model that declares `sensitive_fields` but whose queryset cannot block query projections.
+
+    `BaseModel.from_db()` withholds the value from instances of any model, but refusing `values()`,
+    `values_list()`, `annotate()` and the other projection methods is the queryset's job. A model whose
+    default manager returns a plain `django.db.models.QuerySet`, or a custom one that does not build on
+    Nautobot's, therefore advertises a protection it only half provides.
+    """
+    # Imported here rather than at module scope: `nautobot.core.checks` is imported from
+    # `nautobot/core/__init__.py`, which runs before the app registry is populated, and reaching
+    # `nautobot.core.models` that early is circular by way of ContentType.
+    from django.apps import apps
+
+    from nautobot.core.models.querysets import SensitiveFieldsQuerySetMixin
+    from nautobot.core.models.sensitive_fields import get_sensitive_field_names
+
+    errors = []
+    for model in apps.get_models():
+        declared = get_sensitive_field_names(model)
+        if not declared:
+            continue
+        queryset = model._default_manager.get_queryset()
+        if not isinstance(queryset, SensitiveFieldsQuerySetMixin):
+            errors.append(
+                Error(
+                    f"{model._meta.label} declares sensitive_fields "
+                    f"({', '.join(sorted(declared))}) but its default queryset "
+                    f"({type(queryset).__name__}) does not provide SensitiveFieldsQuerySetMixin.",
+                    hint=(
+                        "The values are withheld from loaded instances, but values(), values_list(), "
+                        "annotate(), alias(), aggregate(), order_by() and distinct() will still return "
+                        "them. Mix SensitiveFieldsQuerySetMixin into the queryset class, or build it on "
+                        "RestrictedQuerySet, and make sure any custom manager's get_queryset() calls super()."
+                    ),
+                    obj=model,
+                    id="nautobot.core.E011",
+                )
+            )
+    return errors
+
+
+@register(Tags.security)
 def check_sanitizer_patterns(app_configs, **kwargs):
     errors = []
     for entry in settings.SANITIZER_PATTERNS:

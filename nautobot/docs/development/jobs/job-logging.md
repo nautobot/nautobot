@@ -90,8 +90,8 @@ You can attach structured metadata to log messages using the `extra` parameter. 
         "Validated device",
         extra={
             "grouping": "inventory-check",
-            "object": device
-        }
+            "object": device,
+        },
     )
     ```
 
@@ -105,10 +105,11 @@ To skip writing a log entry to the database but still print it to the console of
 
 If `grouping` is not specified, Nautobot uses the current function name as a default. If `object` is omitted, the log is not associated with any model instance.
 
-<!-- pyml disable-num-lines 10 proper-names -->
+<!-- pyml disable-num-lines 10 no-multiple-blanks,proper-names -->
 !!! example
     ```py
     from nautobot.apps.jobs import Job
+
 
     class MyJob(Job):
         def run(self):
@@ -143,9 +144,9 @@ As a security precaution, Nautobot passes all log messages through `nautobot.cor
 
 +++ 3.1.0
 
-The console_log_default flag controls how job stdout/stderr is handled and where the job is executed.
+The `console_log_default` flag controls how job stdout/stderr is handled and where the job is executed.
 
-*If not explicitly provided, `console_log_default` defaults to False.*
+_If not explicitly provided, `console_log_default` defaults to False._
 
 ### Asynchronous execution (synchronous=False)
 
@@ -227,7 +228,7 @@ When `console_log=True` and the job is executed asynchronously:
 
 ### Exporting Console Logs
 
-**Export Console Logs** button is available on the *Console Log* tab of the Job Result detail view.
+**Export Console Logs** button is available on the _Console Log_ tab of the Job Result detail view.
 
 Clicking the button downloads a plain-text file containing all `JobConsoleEntry` records associated with that Job Result, sorted chronologically. Each line follows the format:
 

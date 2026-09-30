@@ -14,8 +14,6 @@
     {% include "inc/header_messages.html" with messages=None %}
 {% endblock header_messages %}
 
-{% block title %}{{ block.super }}{% saved_view_title %}{% endblock %}
-
 {% block breadcrumbs_wrapper %}
     {% captureas default_breadcrumbs %}
         {% if list_url %}
@@ -66,9 +64,6 @@
                         {% block import_list_element %}
                             {% job_import_button content_type list_element=True%}
                         {% endblock import_list_element %}
-                    {% endif %}
-                    {% if permissions.add and 'import' in action_buttons and 'export' in action_buttons %}
-                        <li class="dropdown-divider"></li>
                     {% endif %}
                     {% if 'export' in action_buttons %}
                         {% block export_list_element %}
@@ -148,7 +143,7 @@
                     <form id="object_list_form" method="post" class="form form-horizontal">
                         {% csrf_token %}
                         <input type="hidden" name="return_url" value="{% if return_url %}{{ return_url }}{% else %}{{ request.path }}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}{% endif %}" />
-                        <span id="select_all_box" class="visually-hidden card d-print-none">
+                        <span id="select_all_box" class="d-none card d-print-none">
                             {% comment %}Replaced through HTMX call below{% endcomment %}
                         </span>
                         <div id="object_table_wrapper"
@@ -156,9 +151,9 @@
                              hx-params="*"
                              hx-select="#object_table"
                              {% if permissions.change or permissions.delete %}
-                                 hx-select-oob="#header_messages,#paginator,#select_all_box"
+                                 hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator,#select_all_box"
                              {% else %}
-                                 hx-select-oob="#header_messages,#paginator"
+                                 hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator"
                              {% endif %}
                              hx-trigger="load"
                         >
@@ -176,9 +171,9 @@
                          hx-params="*"
                          hx-select="#object_table"
                          {% if permissions.change or permissions.delete %}
-                             hx-select-oob="#header_messages,#paginator,#select_all_box"
+                             hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator,#select_all_box"
                          {% else %}
-                             hx-select-oob="#header_messages,#paginator"
+                             hx-select-oob="#header_messages,#toast-messages:beforeend,#paginator"
                          {% endif %}
                          hx-trigger="load"
                     >
@@ -194,6 +189,8 @@
         {% saved_view_modal request.GET.urlencode list_url model request %}
     {% endif %}
     {% dynamic_group_assignment_modal request=request content_type=content_type %}
+    {# Shared modal shell used by the HTMX job-modal framework (e.g. the Export job form). #}
+    {% include 'inc/generic_modal.html' %}
 {% endblock %}
 
 {% block drawer %}

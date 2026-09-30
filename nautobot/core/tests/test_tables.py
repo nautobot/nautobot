@@ -1,24 +1,44 @@
+import contextlib
+import importlib
+import pkgutil
 from types import SimpleNamespace
+from unittest import mock
+import warnings
 
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.core.exceptions import FieldDoesNotExist
 from django.db import connection
 from django.db.models import IntegerField, Value
-from django.test import tag, TestCase
+from django.test import SimpleTestCase, tag, TestCase
 from django.test.utils import CaptureQueriesContext
+from django_tables2 import Column
+from django_tables2.utils import Accessor
 
+import nautobot
 from nautobot.circuits.models import Circuit
 from nautobot.circuits.tables import CircuitTable
 from nautobot.core.models.querysets import count_related
-from nautobot.core.tables import ButtonsColumn, ComputedFieldColumn, LinkedCountColumn
+from nautobot.core.tables import BaseTable, ButtonsColumn, ComputedFieldColumn, LinkedCountColumn, ToggleColumn
 from nautobot.core.templatetags import helpers
-from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Rack, RackGroup
-from nautobot.dcim.tables import InventoryItemTable, LocationTable, LocationTypeTable, RackGroupTable
-from nautobot.extras.choices import ComputedFieldTypeChoices
-from nautobot.extras.models import ComputedField, JobLogEntry
+from nautobot.dcim.api.serializers import DeviceSerializer, ManufacturerSerializer
+from nautobot.dcim.models import Device, InventoryItem, Location, LocationType, Manufacturer, Rack, RackGroup
+from nautobot.dcim.tables import (
+    DeviceTable,
+    InventoryItemTable,
+    LocationTable,
+    LocationTypeTable,
+    ManufacturerTable,
+    RackGroupTable,
+)
+from nautobot.extras.choices import ComputedFieldTypeChoices, CustomFieldTypeChoices
+from nautobot.extras.models import ComputedField, CustomField, JobLogEntry
 from nautobot.extras.tables import JobLogEntryTable
-from nautobot.ipam.models import RIR
-from nautobot.ipam.tables import RIRTable
+from nautobot.ipam.api.serializers import PrefixSerializer
+from nautobot.ipam.models import Prefix, RIR
+from nautobot.ipam.tables import PrefixTable, RIRTable
 from nautobot.tenancy.tables import TenantGroupTable
+from nautobot.users.models import User
 from nautobot.wireless.models import WirelessNetwork
 from nautobot.wireless.tables import WirelessNetworkTable
 
@@ -259,6 +279,156 @@ class BaseTableLinkedCountColumnTestCase(TestCase):
             del RIR.assigned_prefix_count
 
 
+class BaseTableOverviewColumnTestCase(TestCase):
+    """Covers the `BaseTable` `overview` column."""
+
+    class OverviewTable(BaseTable):
+        pk = ToggleColumn()
+        actions = ButtonsColumn(RIR)
+
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("pk", "name", "is_private", "actions")
+            exclude = ("dynamic_group_count",)
+
+    class OptedOutOverviewTable(OverviewTable):
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("pk", "name", "is_private", "actions")
+            exclude = ("dynamic_group_count",)
+            show_row_overviews = False
+
+    class OverviewTableWithoutPk(BaseTable):
+        class Meta(BaseTable.Meta):
+            model = RIR
+            fields = ("name", "is_private")
+            exclude = ("dynamic_group_count",)
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch("nautobot.core.views.utils.has_overview", return_value=True)
+        self.mock_has_overview = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def get_overview_colspans(self, table):
+        bound_column = table.columns["overview"]
+        context = bound_column.column.get_context_data(
+            record=RIR(),
+            table=table,
+            value=None,
+            bound_column=bound_column,
+            bound_row=SimpleNamespace(row_counter=0),
+        )
+        return {key: context[key] for key in ("colspan_offset", "colspan_content")}
+
+    def test_meta_show_row_overviews(self):
+        """`Meta.show_row_overviews` is on by default and a table can opt out of it."""
+        self.assertTrue(self.OverviewTable.Meta.show_row_overviews)
+        self.assertFalse(self.OptedOutOverviewTable.Meta.show_row_overviews)
+
+    def test_argument_omitted(self):
+        """Omitting the `row_overviews_visibility` argument leaves the column out."""
+        table = self.OverviewTable(RIR.objects.none())
+        self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
+
+    def test_argument_show(self):
+        """`RowOverviewsVisibility.SHOW` adds the column before the content columns."""
+        table = self.OverviewTable(RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW)
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_argument_table_default_defers_to_meta(self):
+        """`RowOverviewsVisibility.TABLE_DEFAULT` defers to `Meta`, which opts in by default."""
+        table = self.OverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.TABLE_DEFAULT
+        )
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_argument_table_default_defers_to_meta_opting_out(self):
+        """`RowOverviewsVisibility.TABLE_DEFAULT` defers to `Meta`, which opts out when explicitly set to False."""
+        table = self.OptedOutOverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.TABLE_DEFAULT
+        )
+        self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
+
+    def test_argument_show_overrides_meta_opting_out(self):
+        """An explicit `RowOverviewsVisibility.SHOW` overrides `Meta`, regardless of its value."""
+        table = self.OptedOutOverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW
+        )
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_model_without_overview(self):
+        """No column is added for a model whose view cannot produce an overview."""
+        self.mock_has_overview.return_value = False
+        table = self.OverviewTable(RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW)
+        self.assertEqual(table.visible_columns, ["name", "is_private", "actions"])
+
+    def test_object_embedded_search_results(self):
+        """Object-embedded search results never get the column, whatever was requested."""
+        for visibility in (BaseTable.RowOverviewsVisibility.SHOW, BaseTable.RowOverviewsVisibility.TABLE_DEFAULT):
+            with self.subTest(row_overviews_visibility=visibility):
+                table = self.OverviewTable(
+                    RIR.objects.none(),
+                    row_overviews_visibility=visibility,
+                    is_object_embedded_search_results=True,
+                )
+                self.assertEqual(table.visible_columns, ["name", "is_private"])
+
+    def test_placed_after_visible_pk_column(self):
+        """A visible `pk` column precedes the overview column and widens the colspan offset."""
+        table = self.OverviewTable(RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW)
+        table.columns.show("pk")
+        self.assertEqual(table.visible_columns, ["pk", "overview", "name", "is_private", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 2, "colspan_content": 3})
+
+    def test_placed_first_without_pk_column(self):
+        """The column comes first on a table with no `pk` column."""
+        table = self.OverviewTableWithoutPk(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW
+        )
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 2})
+
+    def test_user_column_configuration(self):
+        """A user's saved column configuration reorders content columns without displacing the overview column."""
+        user = User.objects.create_user(username="overview-column")
+        user.set_config("tables.OverviewTable.columns", ["is_private", "name"], commit=True)
+        table = self.OverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW, user=user
+        )
+        self.assertEqual(table.visible_columns, ["overview", "is_private", "name", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_extra_columns(self):
+        """`extra_columns` count toward the content colspan."""
+        table = self.OverviewTable(
+            RIR.objects.none(),
+            row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW,
+            extra_columns=[("extra", Column())],
+        )
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private", "extra", "actions"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 4})
+
+    def test_excluded_from_configurable_columns(self):
+        """The column is not offered among the user-configurable columns."""
+        table = self.OverviewTable(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW, configurable=True
+        )
+        self.assertNotIn("overview", [name for name, _ in table.configurable_columns])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+    def test_configurable_table_without_actions_column(self):
+        """A configurable table with no `actions` column spans the extra config button cell."""
+        table = self.OverviewTableWithoutPk(
+            RIR.objects.none(), row_overviews_visibility=BaseTable.RowOverviewsVisibility.SHOW, configurable=True
+        )
+        self.assertEqual(table.visible_columns, ["overview", "name", "is_private"])
+        self.assertEqual(self.get_overview_colspans(table), {"colspan_offset": 1, "colspan_content": 3})
+
+
 class LinkedCountColumnRenderTestCase(TestCase):
     def test_nested_lookup_with_none_mid_chain_falls_back_to_count(self):
         """A None partway through a nested `lookup` chain breaks the walk and falls back to the count badge."""
@@ -350,3 +520,191 @@ class ComputedFieldColumnRenderTestCase(TestCase):
         column = ComputedFieldColumn(self.markdown_field)
         record = Location(name="Bold")
         self.assertEqual(column.render(record=record), helpers.render_markdown("**Bold**"))
+
+
+def _all_subclasses(cls):
+    """Every subclass of `cls`, recursively."""
+    subclasses = set()
+    for subclass in cls.__subclasses__():
+        subclasses.add(subclass)
+        subclasses |= _all_subclasses(subclass)
+    return subclasses
+
+
+def _import_all_table_modules():
+    """Import every `tables` module under `nautobot` so all `BaseTable` subclasses are registered."""
+    for module_info in pkgutil.walk_packages(nautobot.__path__, f"{nautobot.__name__}."):
+        if ".tables" not in module_info.name and not module_info.name.endswith("tables"):
+            continue
+        with contextlib.suppress(Exception):
+            # Some optional/app modules aren't importable in every configuration; skipping them
+            # only narrows coverage, and the assertion below is about what *is* importable.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                importlib.import_module(module_info.name)
+
+
+class TableAccessorAuditTestCase(SimpleTestCase):
+    """Static audit of every table column accessor, whether declared or derived from the column name.
+
+    Pure introspection, no database access.
+    Regression test for nautobot#9341.
+    """
+
+    def test_no_accessor_traverses_a_to_many_relation(self):
+        """No column accessor may traverse a to-many relation and then keep going.
+
+        `Accessor.resolve()` walks Python attributes, so a to-many relation yields a related manager,
+        which has none of the target model's attributes. Any further path segment therefore raises,
+        and `BoundRow._get_and_render_with` swallows the exception and renders the column default.
+        The column silently degrades to a placeholder at HTTP 200, which is exactly how nautobot#9341
+        shipped undetected past the list-view test suite.
+        """
+        _import_all_table_modules()
+        violations = []
+        for table in _all_subclasses(BaseTable):
+            model = getattr(table._meta, "model", None)
+            if model is None:
+                continue
+            for name, column in table.base_columns.items():
+                accessor = column.accessor if column.accessor is not None else name
+                bits = str(accessor).split(Accessor.SEPARATOR)
+                current = model
+                for index, bit in enumerate(bits):
+                    if current is None:
+                        break
+                    try:
+                        field = current._meta.get_field(bit)
+                    except (FieldDoesNotExist, AttributeError):
+                        break  # a property or method: not statically decidable, so leave it alone
+                    if field.one_to_many or field.many_to_many:
+                        if index < len(bits) - 1:
+                            violations.append(f"{table.__module__}.{table.__name__}.{name} -> {accessor}")
+                        break
+                    if isinstance(field, GenericForeignKey):
+                        break  # resolves to a single object, but its model isn't knowable statically
+                    current = getattr(getattr(field, "remote_field", None), "model", None)
+        self.assertEqual(
+            sorted(violations),
+            [],
+            "These accessors traverse a to-many relation (a manager) and will render as placeholders. "
+            "Route them through a property that returns a single object instead.",
+        )
+
+
+class SerializerPathsForVisibleColumnsTestCase(TestCase):
+    """Tests for BaseTable.serializer_paths_(by|for)_visible_columns() (export field-selection defaults)."""
+
+    def test_paths_by_column_reports_columns_it_cannot_place(self):
+        """The mapping keeps a `None` entry per unplaceable column, which the list form drops."""
+        computed_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Device),
+            key="export_probe",
+            label="Export Probe",
+            template="{{ obj.name }}",
+        )
+        table = DeviceTable(Device.objects.all())
+        # `DeviceTable` hides its non-default columns, and only what the view displays is exported
+        table.columns.show(f"cpf_{computed_field.key}")
+        mapping = table.serializer_paths_by_visible_column(DeviceSerializer)
+        self.assertEqual(mapping["name"], "name")
+        self.assertIsNone(mapping[f"cpf_{computed_field.key}"])  # rendered from a template, not a field
+        # Non-data columns are not in the mapping at all, there being nothing to report about them
+        self.assertNotIn("pk", mapping)
+        self.assertNotIn("actions", mapping)
+        self.assertNotIn(None, table.serializer_paths_for_visible_columns(DeviceSerializer))
+
+    def test_count_column_becomes_the_relation_it_counts(self):
+        """A count column carries the relation it counts, the count itself being unexportable.
+
+        `PrefixTable.vrf_count` counts what `Prefix.vrfs` holds, and `PrefixSerializer` exposes that M2M
+        to an export, so the export carries the VRFs themselves in the column's place. `vrfs` is one of
+        the opt-in M2M fields, readable only when the serializer is instantiated the way an export
+        instantiates it -- which is why the mapping has to build it that way.
+        """
+        table = PrefixTable(Prefix.objects.all())
+        table.columns.show("vrf_count")
+        self.assertIsInstance(table.columns["vrf_count"].column, LinkedCountColumn)
+        self.assertNotIn("vrfs", PrefixSerializer(context={"request": None, "depth": 0}).fields)
+        self.assertEqual(table.serializer_paths_by_visible_column(PrefixSerializer)["vrf_count"], "vrfs")
+
+    def test_count_column_is_not_a_field_even_when_the_serializer_has_one(self):
+        """Where the counted relation is not exposed, the column maps to nothing at all.
+
+        `ManufacturerSerializer` declares `device_type_count`, but that field reads an annotation made
+        for display; selecting it would put a column in an export with nothing in it. The relation the
+        count stands for is identified, but `device_types` is not a field an export can emit either.
+        """
+        table = ManufacturerTable(Manufacturer.objects.all())
+        column = table.columns["device_type_count"].column
+        self.assertIsInstance(column, LinkedCountColumn)
+        self.assertEqual(column.counted_relation(Manufacturer), "device_types")
+        serializer_fields = ManufacturerSerializer(context={"request": None, "depth": 0}, for_import_export=True).fields
+        self.assertIn("device_type_count", serializer_fields)
+        self.assertNotIn("device_types", serializer_fields)
+        self.assertIsNone(table.serializer_paths_by_visible_column(ManufacturerSerializer)["device_type_count"])
+
+    def test_counted_relation_requires_the_two_ends_to_agree(self):
+        """A coincidental relation to the counted model is not the relation being counted.
+
+        This is what keeps a column counting through some other mechanism -- `dynamic_group_count`, via
+        the static group associations -- from being mistaken for an unrelated M2M to the same model.
+        """
+        counted = LinkedCountColumn(viewname="ipam:vrf_list", url_params={"prefixes": "pk"})
+        self.assertEqual(counted.counted_relation(Prefix), "vrfs")
+        mismatched = LinkedCountColumn(
+            viewname="ipam:vrf_list", url_params={"prefixes": "pk"}, reverse_lookup="through_something_else"
+        )
+        self.assertIsNone(mismatched.counted_relation(Prefix))
+
+    def test_counted_relation_of_a_count_through_an_intermediate_model(self):
+        """A count reached through an intermediate model has no one relation for a column to hold."""
+        nested = LinkedCountColumn(
+            viewname="circuits:circuit_list",
+            url_params={"cloud_network": "name"},
+            reverse_lookup="circuit_terminations__cloud_network",
+            lookup="circuit_terminations__circuit",
+        )
+        self.assertIsNone(nested.counted_relation(Prefix))
+
+    def test_custom_field_column_maps_to_its_own_name(self):
+        """A custom-field column exports as `cf_<key>`, not as its `_custom_field_data` accessor."""
+        custom_field = CustomField.objects.create(
+            key="export_probe", label="Export Probe", type=CustomFieldTypeChoices.TYPE_TEXT
+        )
+        custom_field.validated_save()
+        custom_field.content_types.set([ContentType.objects.get_for_model(Device)])
+        table = DeviceTable(Device.objects.all())
+        column_name = f"cf_{custom_field.key}"
+        table.columns.show(column_name)  # `DeviceTable` hides its non-default columns
+        self.assertEqual(str(table.columns[column_name].accessor), f"_custom_field_data__{custom_field.key}")
+        self.assertEqual(table.serializer_paths_by_visible_column(DeviceSerializer)[column_name], column_name)
+
+    def test_device_table_columns_map_to_serializer_paths(self):
+        table = DeviceTable(Device.objects.all())
+        paths = table.serializer_paths_for_visible_columns(DeviceSerializer)
+        self.assertIn("name", paths)
+        # Non-data columns are omitted
+        self.assertNotIn("pk", paths)
+        self.assertNotIn("actions", paths)
+        # Every returned head is a serializer field or a custom-field reference
+        serializer = DeviceSerializer(context={"request": None, "depth": 0})
+        for path in paths:
+            head = path.split("__", 1)[0]
+            self.assertTrue(
+                head in serializer.fields or head.startswith("cf_"),
+                f"{path} does not correspond to a serializer field",
+            )
+
+    def test_column_override(self):
+        class OverriddenDeviceTable(DeviceTable):
+            column_serializer_field_overrides = {"name": "display", "status": None}
+
+            class Meta(DeviceTable.Meta):
+                pass
+
+        table = OverriddenDeviceTable(Device.objects.all())
+        paths = table.serializer_paths_for_visible_columns(DeviceSerializer)
+        self.assertIn("display", paths)
+        self.assertNotIn("name", paths)
+        self.assertNotIn("status", paths)

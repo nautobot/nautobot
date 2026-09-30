@@ -67,22 +67,16 @@ from nautobot.extras.models.metadata import MetadataChoice, MetadataTypeDataType
 source_cmdb_type = MetadataType(
     name="Upstream CMDB",
     description="Describes the upstream system for some parts of the device inventory data",
-    data_type=MetadataTypeDataTypeChoices.TYPE_SELECTION
+    data_type=MetadataTypeDataTypeChoices.TYPE_SELECTION,
 )
 source_cmdb_type.validated_save()
 # Add the Device model so it can have this type of metadata attached to it
 source_cmdb_type.content_types.add(ContentType.objects.get_for_model(Device))
 
 # Create the selection choices for the type
-choice_service_now = MetadataChoice(
-    metadata_type=source_cmdb_type,
-    value="SNOW"
-)
+choice_service_now = MetadataChoice(metadata_type=source_cmdb_type, value="SNOW")
 choice_service_now.validated_save()
-choice_remedy = MetadataChoice(
-    metadata_type=source_cmdb_type,
-    value="BMC Remedy"
-)
+choice_remedy = MetadataChoice(metadata_type=source_cmdb_type, value="BMC Remedy")
 choice_remedy.validated_save()
 
 
@@ -95,7 +89,7 @@ choice_remedy.validated_save()
 source_cmdb_owner_type = MetadataType(
     name="Upstream data owner",
     description="Describes the person that owns the record in the upstream CMDB system",
-    data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM
+    data_type=MetadataTypeDataTypeChoices.TYPE_CONTACT_TEAM,
 )
 source_cmdb_owner_type.validated_save()
 # Add the Device model so it can have this type of metadata attached to it
@@ -113,9 +107,16 @@ device = Device.objects.first()
 source_cmdb_metadata = ObjectMetadata(
     metadata_type=source_cmdb_type,
     assigned_object=device,
-    scoped_fields=["name", "location", "primary_ip4", "device_type"]  # Only these fields are sourced from the upstream CMDB
+    scoped_fields=[
+        "name",
+        "location",
+        "primary_ip4",
+        "device_type",
+    ],  # Only these fields are sourced from the upstream CMDB
 )
-source_cmdb_metadata.value = choice_service_now.value  # ObjectMetadata data values are always set and retrieved via the `value` property
+source_cmdb_metadata.value = (
+    choice_service_now.value
+)  # ObjectMetadata data values are always set and retrieved via the `value` property
 source_cmdb_metadata.validated_save()
 
 # Locate (or create) the Contact for the upstream data owner
@@ -125,7 +126,7 @@ owner = Contact.objects.get(name="John Smith")
 source_cmdb_owner_metadata = ObjectMetadata(
     metadata_type=source_cmdb_owner_type,
     assigned_object=device,
-    contact=owner
+    contact=owner,
 )
 source_cmdb_owner_metadata.validated_save()
 ```

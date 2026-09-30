@@ -59,6 +59,21 @@ class BannerClassChoices(ChoiceSet):
 
 
 #
+# Condition
+#
+
+
+class ConditionTypeChoices(ChoiceSet):
+    TYPE_PRESET = "preset"
+    TYPE_EXPRESSION = "expression"
+
+    CHOICES = (
+        (TYPE_PRESET, "Preset"),
+        (TYPE_EXPRESSION, "Expression"),
+    )
+
+
+#
 # Contact Association
 #
 
@@ -478,6 +493,13 @@ class ObjectChangeActionChoices(ChoiceSet):
         ACTION_CREATE: "success",
         ACTION_UPDATE: "primary",
         ACTION_DELETE: "danger",
+    }
+
+    # Name of the boolean field on Webhook/JobHook that opts a hook in to each action.
+    HOOK_FLAGS = {
+        ACTION_CREATE: "type_create",
+        ACTION_UPDATE: "type_update",
+        ACTION_DELETE: "type_delete",
     }
 
 

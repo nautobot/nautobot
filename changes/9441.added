@@ -1,0 +1,3 @@
+Added `RequestMetricMiddleware` to measure and report timing metrics as a `Server-Timing` header in HTTP responses.
+Added `REQUEST_TOTAL_DURATION_HEADER_ENABLED` settings variable, which when set to true enables a "total request duration" timing metric on each request/response.
+Added `REQUEST_DB_DURATION_HEADER_ENABLED` settings variable, which when set to true enables a "database query duration" timing metric on each request/response.

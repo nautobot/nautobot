@@ -1,11 +1,16 @@
 {% load form_helpers %}
 {% load helpers %}
 
-<div class="modal fade" tabindex="-1" id="{{ form_name }}_form">
+<div class="modal fade"
+     tabindex="-1"
+     id="{{ form_name }}_form"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="{{ form_name }}_form_title">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title">{{ form_name }}</h4>
+                <h2 class="modal-title" id="{{ form_name }}_form_title">{{ form_name }}</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">

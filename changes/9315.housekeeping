@@ -1,0 +1,2 @@
+Updated development dependency `django-debug-toolbar` to `~7.1.1`.
+Updated development dependency `time-machine` to `~3.4.0`.

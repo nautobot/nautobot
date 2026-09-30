@@ -3,7 +3,8 @@
     {% if widget.choices %}
         <span class="input-group-btn">
             <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown">
-                <span class="mdi mdi-chevron-down"></span>
+                <span aria-hidden="true" class="mdi mdi-chevron-down"></span>
+                <span class="visually-hidden">Choose a suggested value</span>
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 {% for value, label in widget.choices %}

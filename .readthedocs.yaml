@@ -13,7 +13,7 @@ build:
     python: "3.12"
   jobs:
     pre_build:
-      - "/bin/bash ./docs/insert-analytics.sh"
+      - "/bin/bash ./nautobot/docs/insert-analytics.sh"
     post_install:
       - "pip install poetry"
       # VIRTUAL_ENV needs to be set manually for now.

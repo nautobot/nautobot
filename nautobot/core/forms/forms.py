@@ -91,6 +91,11 @@ class BootstrapMixin(forms.BaseForm):
             forms.RadioSelect,
             nautobot_widgets.ClearableFileInput,
             nautobot_widgets.SelectMultipleOrderable,
+            # Listed in its own right because the check below is by exact class rather than by subclass.
+            # TODO: `isinstance` would express the intent better, but would newly exempt Django's
+            #   `ClearableFileInput` -- the default widget of every `FileField`, `FileVar` included -- which
+            #   Bootstrap 5 styles *via* `form-control`. Worth doing, with a look over the file inputs.
+            nautobot_widgets.ExportFieldSelect,
         ]
 
         for field in self.fields.values():
@@ -402,9 +407,9 @@ class TableConfigForm(BootstrapMixin, forms.Form):
                 return columns_order
 
             # Don't import from core to extras at module level to avoid circular imports
-            from nautobot.extras.models import SavedView
+            from nautobot.extras.utils import get_saved_view_or_none
 
-            saved_view = SavedView.objects.restrict(request.user, "view").filter(pk=saved_view_id).first()
+            saved_view = get_saved_view_or_none(saved_view_id)
             if not saved_view or not saved_view.config:
                 return columns_order
 

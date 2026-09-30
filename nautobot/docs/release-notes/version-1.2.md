@@ -74,7 +74,7 @@ Nautobot now again supports custom lookup filters on the `IPAddress`, `Prefix`, 
 
 #### Job Approval ([#125](https://github.com/nautobot/nautobot/issues/125))
 
-Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user *other than the submitter* can approve or deny a queued Job, at which point it will then be executed as normal.
+Jobs can now be optionally defined as `approval_required = True`, in which case the Job will not be executed immediately upon submission, but will instead be placed into an approval queue; any user _other than the submitter_ can approve or deny a queued Job, at which point it will then be executed as normal.
 
 #### Job Scheduling ([#374](https://github.com/nautobot/nautobot/issues/374))
 
@@ -104,7 +104,7 @@ Please refer to the [plugin development documentation](../development/apps/index
 The [Relationships](../user-guide/platform-functionality/relationship.md) feature has been extended in two ways:
 
 1. Relationships between the same object type (e.g. device-to-device) are now permitted and supported.
-2. For same-object-type relationships specifically, *symmetric* (peer-to-peer rather than source-to-destination) relationships are now an option.
+2. For same-object-type relationships specifically, _symmetric_ (peer-to-peer rather than source-to-destination) relationships are now an option.
 
 For more details, refer to the [Relationships](../user-guide/platform-functionality/relationship.md) documentation.
 

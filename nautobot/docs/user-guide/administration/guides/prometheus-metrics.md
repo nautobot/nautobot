@@ -110,6 +110,7 @@ For environments where it's not enough to rely on cleanups based on worker resta
     # Minimum age of files to consider for cleanup (e.g., 1 hour)
     MIN_AGE_SECONDS = 3600
 
+
     def cleanup_orphaned_prom_metric_files(metrics_dir):
         """
         Scans the multiproc directory and removes files
@@ -119,11 +120,11 @@ For environments where it's not enough to rely on cleanups based on worker resta
             return
 
         # Pattern to find PIDs in filenames (e.g., gauge_multiproc_123.db)
-        pid_pattern = re.compile(r'.+_(\d+)\.db$')
+        pid_pattern = re.compile(r".+_(\d+)\.db$")
 
         # Get list of currently running PIDs
         active_pids = set()
-        for pid in os.listdir('/proc'):
+        for pid in os.listdir("/proc"):
             if pid.isdigit():
                 active_pids.add(int(pid))
 
@@ -146,20 +147,21 @@ For environments where it's not enough to rely on cleanups based on worker resta
                         multiprocess.mark_process_dead(file_pid)
                         # 2. Delete the physical file, ignore if it was already removed
                         with suppress(FileNotFoundError):
-                           os.remove(file_path)
+                            os.remove(file_path)
                         print(f"Cleaned up orphaned metric file: {filename}")
                     except OSError as e:
                         print(f"Error deleting {filename}: {e}")
 
+
     # Schedule this script to run at regular intervals using uWSGI's `timer` feature.
     def cleanup_timer(signum):
-        cleanup_orphaned_prom_metric_files(os.getenv('prometheus_multiproc_dir'))
+        cleanup_orphaned_prom_metric_files(os.getenv("prometheus_multiproc_dir"))
+
 
     # Register only on the first worker to avoid multiple workers trying to clean up at the same time
     if uwsgi.worker_id() == 0:
         uwsgi.register_signal(99, "", cleanup_timer)
-        uwsgi.add_timer(99, 3600) # this is 1 hour in seconds
-
+        uwsgi.add_timer(99, 3600)  # this is 1 hour in seconds
     ```
 
 2. Copy the file to a specific path (eg. `/opt/nautobot/media/prometheus_cleanup.py`) and import it from uwsgi.ini file.
@@ -175,3 +177,69 @@ Relevant documentation:
 
 - [Prometheus client library multi-process mode](https://prometheus.github.io/client_python/multiprocess/)
 - [Django Prometheus multi-process mode documentation](https://github.com/django-commons/django-prometheus/blob/master/documentation/exports.md)
+
+## Request Metrics
+
++++ 3.3.0
+
+Request metrics were added in 3.3.0 to allow general benchmarking of a request.
+
+To enable these settings use these environment variables.
+
+| Environment Variable                           | Description                                                     |
+|------------------------------------------------|-----------------------------------------------------------------|
+| `NAUTOBOT_REQUEST_TOTAL_DURATION_HEADER_ENABLED` | The total time spent processing each request.                   |
+| `NAUTOBOT_REQUEST_DB_DURATION_HEADER_ENABLED`    | The time spent performing database operations for each request. |
+
+When enabled, the header of an API response will return a `Server-Timing` property.
+These standards are dervied from the W3C specification here - [https://www.w3.org/TR/server-timing/](https://www.w3.org/TR/server-timing/)
+
+The `Server-Timing` header property is a comma-delimited(,) list of metrics.
+Each metric is a semi-colon(;) delimited set of attributes.
+The metric attributes are
+
+```bash
+name;dur=00:00:00;desc=DESCRIPTION
+```
+
+Example
+
+```bash
+----- command -----------------------------------------------------------------
+curl --verbose --output /dev/null \
+    --header 'Accept: application/json' \
+    --header 'Authorization: Token REDACTED' \
+    'http://localhost:8080/api/extras/statuses/?limit=1'
+
+----- output ------------------------------------------------------------------
+* Host localhost:8080 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8080...
+* Connected to localhost (::1) port 8080
+> GET /api/extras/statuses/?limit=1 HTTP/1.1
+> Host: localhost:8080
+> User-Agent: curl/8.7.1
+> Accept: application/json
+> Authorization: Token REDACTED
+>
+* Request completely sent off
+< HTTP/1.1 200 OK
+< Date: Tue, 08 Sep 2026 00:18:00 GMT
+< Server: WSGIServer/0.2 CPython/3.13.15
+< Content-Type: application/json
+< Vary: Accept, Cookie, origin
+< Allow: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
+< API-Version: 3.3
+< X-Content-Type-Options: nosniff
+< Referrer-Policy: same-origin
+< Cross-Origin-Opener-Policy: same-origin
+< X-Frame-Options: DENY
+< Content-Length: 1085
+< Server-Timing: total;dur=33.76;desc="Total request duration", db;dur=4.55;desc="11 database queries"
+```
+
+!!! note
+    Django Debug Toolbar also uses this implementation to track performance. If any metrics are enabled AND Django Toolbar is enabled, both will be using the `Server-Timing` property to report metrics. They will not overwrite each other's output, but there may be duplicated metric names.

@@ -20,7 +20,7 @@ from django.test import override_settings, tag
 from django.utils.timezone import get_default_timezone, now
 from django_celery_beat.tzcrontab import TzAwareCrontab
 from git import GitCommandError
-from jinja2.exceptions import TemplateAssertionError, TemplateSyntaxError
+from jinja2.exceptions import SecurityError, TemplateAssertionError, TemplateSyntaxError
 import time_machine
 
 from nautobot.circuits.models import CircuitType
@@ -58,6 +58,8 @@ from nautobot.extras.constants import (
     JOB_LOG_MAX_GROUPING_LENGTH,
     JOB_LOG_MAX_LOG_OBJECT_LENGTH,
     JOB_OVERRIDABLE_FIELDS,
+    JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES,
+    JOB_RUNTIME_STATISTICS_SAMPLE_SIZE,
 )
 from nautobot.extras.datasources.registry import get_datasource_contents
 from nautobot.extras.jobs import get_job
@@ -527,6 +529,33 @@ class ComputedFieldTest(ModelTestCases.BaseModelTestCase):
         self.evil_computed_field.template = "{{ obj.secrets_groups.first().get_secret_value('Generic', 'secret') }}"
         rendered_value = self.evil_computed_field.render(context={"obj": self.secret})
         self.assertEqual(rendered_value, "")
+
+    def test_render_method_blocks_sandbox_escape_gadgets(self):
+        """Integration regression for GHSA-2v7j-x3g6-qj94: the sandbox-escape gadgets are blocked end to end.
+
+        Exercises the full ComputedField.render() path (not just render_jinja2), which swallows the
+        SecurityError and returns fallback_value, proving no DB contents are rendered.
+        """
+        fallback = "BLOCKED"
+        gadget_field = ComputedField.objects.create(
+            content_type=ContentType.objects.get_for_model(Location),
+            key="sandbox_escape_gadget",
+            label="Sandbox Escape Gadget",
+            fallback_value=fallback,
+            weight=51,
+        )
+        for template in [
+            # QuerySet.extra() raw-SQL injection. Harmless `SELECT 1`: extra() is refused at attribute
+            # access before any SQL runs, so this asserts the block without being a drop-in exploit.
+            "{{ obj.status.content_types.all().extra(select={'zz': '(SELECT 1)'}).values('zz')[:1]|list }}",
+            # ContentType.model_class() pivot to an arbitrary model's unrestricted manager.
+            "{{ obj.status.content_types.all().first().model_class().objects.count() }}",
+            # ContentType.get_all_objects_for_this_type() pivot (bypasses the model-class guard).
+            "{{ obj.status.content_types.all().first().get_all_objects_for_this_type().count() }}",
+        ]:
+            with self.subTest(template=template):
+                gadget_field.template = template
+                self.assertEqual(gadget_field.render(context={"obj": self.location1}), fallback)
 
     def test_check_if_key_is_graphql_safe(self):
         """
@@ -1645,6 +1674,27 @@ class ExportTemplateTest(ModelTestCases.BaseModelTestCase):
             content_type=self.device_ct, name="Export Template 1", template_code="hello world"
         )
 
+    def test_render_blocks_sandbox_escape_gadgets(self):
+        """Integration regression for GHSA-2v7j-x3g6-qj94 via the ExportTemplate.render() path.
+
+        ExportTemplate injects a live `queryset` into the render context and propagates render errors
+        (unlike ComputedField, which swallows them), so a sandbox-escape gadget must raise.
+        """
+        for template_code in [
+            # QuerySet.extra() raw-SQL injection, reached directly off the injected queryset.
+            "{{ queryset.extra(select={'z': '(SELECT 1)'}) | list }}",
+            # Data-mutating manager method must be refused on the queryset path too.
+            "{{ queryset.update(name='pwned') }}",
+        ]:
+            with self.subTest(template_code=template_code):
+                gadget_template = ExportTemplate(
+                    content_type=self.device_ct,
+                    name="Sandbox Escape Export Template",
+                    template_code=template_code,
+                )
+                with self.assertRaises(SecurityError):
+                    gadget_template.render(Device.objects.all())
+
     def test_name_contenttype_uniqueness(self):
         """
         The pair of (name, content_type) must be unique for an ExportTemplate.
@@ -2188,6 +2238,81 @@ class JobModelTest(ModelTestCases.BaseModelTestCase):
         cls.local_job = JobModel.objects.get(job_class_name="TestPassJob")
         cls.job_containing_sensitive_variables = JobModel.objects.get(job_class_name="TestHasSensitiveVariables")
         cls.app_job = JobModel.objects.get(job_class_name="ExampleJob")
+
+    @staticmethod
+    def _add_job_result(
+        job, seconds, status=JobResultStatusChoices.STATUS_SUCCESS, started=True, done=True, age=timedelta(hours=1)
+    ):
+        started_at = now() - age
+        result = JobResult.objects.create(job_model=job, name=job.name, status=status)
+        JobResult.objects.filter(pk=result.pk).update(
+            date_started=started_at if started else None,
+            date_done=started_at + timedelta(seconds=seconds) if done else None,
+        )
+
+    def test_runtime_statistics_requires_minimum_samples(self):
+        job = self.app_job
+        self.assertIsNone(job.runtime_statistics)
+
+        for _ in range(JOB_RUNTIME_STATISTICS_MINIMUM_SAMPLES - 1):
+            self._add_job_result(job, 10)
+        self.assertIsNone(job.runtime_statistics)
+
+        self._add_job_result(job, 10)
+        self.assertIsNotNone(job.runtime_statistics)
+
+    def test_runtime_statistics_values(self):
+        job = self.app_job
+        for seconds in (10, 20, 30):
+            self._add_job_result(job, seconds)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], 3)
+        self.assertEqual(stats["median"], timedelta(seconds=20))
+        self.assertEqual(stats["p90"], timedelta(seconds=28))
+        self.assertEqual(stats["longest"], timedelta(seconds=30))
+
+    def test_runtime_statistics_p90_is_below_the_longest_run(self):
+        job = self.app_job
+        for seconds in range(10, 110, 10):
+            self._add_job_result(job, seconds)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], 10)
+        self.assertEqual(stats["p90"], timedelta(seconds=91))
+        self.assertLess(stats["p90"], stats["longest"])
+
+    def test_runtime_statistics_varies_flag(self):
+        job = self.app_job
+        for seconds in (10, 20, 30):
+            self._add_job_result(job, seconds)
+        self.assertFalse(job.runtime_statistics["varies"])
+
+        self._add_job_result(job, 600)
+        self.assertTrue(job.runtime_statistics["varies"])
+
+    def test_runtime_statistics_ignores_incomplete_runs(self):
+        job = self.app_job
+        for seconds in (10, 20, 30):
+            self._add_job_result(job, seconds)
+
+        self._add_job_result(job, 9999, status=JobResultStatusChoices.STATUS_FAILURE)
+        self._add_job_result(job, 9999, started=False)
+        self._add_job_result(job, 9999, done=False)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], 3)
+        self.assertEqual(stats["longest"], timedelta(seconds=30))
+
+    def test_runtime_statistics_sample_size_is_capped(self):
+        job = self.app_job
+        self._add_job_result(job, 9999, age=timedelta(days=1))
+        for _ in range(JOB_RUNTIME_STATISTICS_SAMPLE_SIZE + 10):
+            self._add_job_result(job, 10)
+
+        stats = job.runtime_statistics
+        self.assertEqual(stats["sample_size"], JOB_RUNTIME_STATISTICS_SAMPLE_SIZE)
+        self.assertEqual(stats["longest"], timedelta(seconds=10))
 
     def test_job_class(self):
         from example_app.jobs import ExampleJob

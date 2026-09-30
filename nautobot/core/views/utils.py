@@ -6,10 +6,10 @@ import urllib.parse
 from django.conf import settings
 from django.contrib import messages
 from django.core.cache import cache
-from django.core.exceptions import FieldError, ValidationError
+from django.core.exceptions import FieldError, ImproperlyConfigured, ValidationError
 from django.db.models import ForeignKey
 from django.http import QueryDict
-from django.test.client import RequestFactory
+from django.template import Template
 from django.utils.html import format_html, format_html_join
 from django.utils.safestring import mark_safe
 from django_tables2 import RequestConfig
@@ -28,14 +28,16 @@ from nautobot.core.utils.lookup import (
     get_form_for_model,
     get_view_for_model,
 )
-from nautobot.core.utils.requests import normalize_querydict
+from nautobot.core.utils.requests import mock_wsgi_request, normalize_querydict
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.extras.models import SavedView
 from nautobot.extras.tables import AssociatedContactsTable, DynamicGroupTable, ObjectMetadataTable
+from nautobot.extras.utils import get_saved_view_or_none
 
 logger = logging.getLogger(__name__)
 
 METRICS_CACHE_KEY = "nautobot_app_metrics_cache"
+OVERVIEW_TEMPLATE = "components/htmx/overview.html"
 always_generated_metrics = [
     "nautobot_app_metrics_processing_ms"  # Always generate this metric to track the processing time of Nautobot App metrics, improved with caching.
 ]
@@ -400,6 +402,84 @@ def view_changes_not_saved(request, view, current_saved_view):
     return False
 
 
+def get_overview(object_detail_content, overview_fields=None, overview_html=None, overview_template_name=None):
+    """Determine what an object's overview should display, if anything.
+
+    HTML and field data are resolved lazily by the `resolve_overview` template tag, so that they are given the
+    context Django builds at render time rather than one assembled here.
+    """
+    declared = [kwarg for kwarg in (overview_fields, overview_html, overview_template_name) if kwarg is not None]
+    if len(declared) > 1:
+        raise ImproperlyConfigured(
+            "Only one of overview_fields, overview_html, or overview_template_name can be given at a time"
+        )
+
+    if overview_template_name is not None:
+        return {"template": OVERVIEW_TEMPLATE, "overview_template_name": overview_template_name}
+
+    if overview_html is not None:
+
+        def render_overview_html(context):
+            return Template(overview_html).render(context)
+
+        render_overview_html.do_not_call_in_templates = True
+
+        return {"template": OVERVIEW_TEMPLATE, "overview_html": render_overview_html}
+
+    def resolve_overview(context):
+        from nautobot.core.ui.object_detail import get_overview_panel, ObjectFieldsPanel  # Avoid circular import
+
+        if overview_fields is not None:
+            # This panel is never displayed. It acts only as the field data and rendering engine, so that
+            # explicitly declared fields render identically to the panel resolved below.
+            panel = ObjectFieldsPanel(
+                weight=100,
+                fields=list(overview_fields),
+                key_transforms={
+                    field: spec["key_transform"]
+                    for field, spec in overview_fields.items()
+                    if (spec or {}).get("key_transform")
+                },
+                value_transforms={
+                    field: spec["value_transforms"]
+                    for field, spec in overview_fields.items()
+                    if (spec or {}).get("value_transforms")
+                },
+            )
+        else:
+            panel = get_overview_panel(object_detail_content, context)
+
+        if panel is None:
+            return None
+
+        overview = []
+        for key, value in panel.get_data(context).items():
+            if value_display := panel.render_value(key, value, context):
+                overview.append((panel.render_key(key, value, context), value_display))
+
+        return overview
+
+    resolve_overview.do_not_call_in_templates = True
+
+    return {"template": OVERVIEW_TEMPLATE, "overview": resolve_overview}
+
+
+def has_overview(model):
+    """Determine whether the given model's view can produce an overview, without resolving one."""
+    from nautobot.core.ui.object_detail import get_overview_panel  # Avoid circular import
+    from nautobot.core.views.mixins import ObjectOverviewViewMixin  # Avoid circular import
+
+    view = get_view_for_model(model)
+    if view is None or not issubclass(view, ObjectOverviewViewMixin):
+        return False
+
+    for overview_attribute in (view.overview_template_name, view.overview_html, view.overview_fields):
+        if overview_attribute is not None:
+            return bool(overview_attribute)
+
+    return get_overview_panel(getattr(view, "object_detail_content", None)) is not None
+
+
 def common_detail_view_context(request, instance):
     """Additional template context for object detail views, shared by both ObjectView and NautobotHTMLRenderer."""
     context = {}
@@ -445,19 +525,47 @@ def common_detail_view_context(request, instance):
     return context
 
 
-def get_saved_views_for_user(user, list_url):
+def get_all_saved_views_for_user(user):
+    """
+    Get the SavedViews across all list views that the user is permitted to see.
+
+    Users with the `extras.view_savedview` permission can see all SavedViews; other users can see
+    only shared SavedViews and SavedViews they own.
+
+    Args:
+        user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
+
+    Returns:
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name, deferred to `pk`, `name` and `view`.
+    """
     # We are not using .restrict(request.user, "view") here
     # User should be able to see any saved view that he has the list view access to.
-    saved_views = SavedView.objects.filter(view=list_url).order_by("name").only("pk", "name")
+    saved_views = SavedView.objects.order_by("name").only("pk", "name", "view")
     if user.has_perms(["extras.view_savedview"]):
         return saved_views
 
     shared_saved_views = saved_views.filter(is_shared=True)
     if user.is_authenticated:
-        user_owned_saved_views = SavedView.objects.filter(view=list_url, owner=user).order_by("name").only("pk", "name")
-        return shared_saved_views | user_owned_saved_views
+        return shared_saved_views | saved_views.filter(owner=user)
 
     return shared_saved_views
+
+
+def get_saved_views_for_user(user, list_url):
+    """
+    Get the SavedViews for the given list view that the user is permitted to see.
+
+    Users with the `extras.view_savedview` permission can see all SavedViews for the list view.
+    Other users can see only shared SavedViews and SavedViews they own.
+
+    Args:
+        user (User): The user to retrieve SavedViews for; may be an `AnonymousUser`.
+        list_url (str): The list view name, for example `"dcim:device_list"`.
+
+    Returns:
+        (QuerySet[SavedView]): The permitted SavedViews, ordered by name, deferred to `pk` and `name`.
+    """
+    return get_all_saved_views_for_user(user).filter(view=list_url).only("pk", "name")
 
 
 def is_metrics_experimental_caching_enabled():
@@ -634,9 +742,8 @@ def get_bulk_queryset_from_view(
     for key, values in (filter_query_params or {}).items():
         values = values if isinstance(values, (list, tuple)) else [values]
         get_params.setlist(key, [str(value) for value in values])
-    synthetic_request = RequestFactory().get("/")
+    synthetic_request = mock_wsgi_request(user=user)
     synthetic_request.GET = get_params
-    synthetic_request.user = user
 
     def scoped_queryset(scoping_view_class):
         """Instantiate the given view and return its alter_queryset() result using the synthetic request."""
@@ -715,9 +822,9 @@ def get_bulk_queryset_from_view(
 
     saved_view_filter_params = {}
     if saved_view_id:
-        try:
-            saved_view_obj = SavedView.objects.get(id=saved_view_id)
-        except SavedView.DoesNotExist:
+        saved_view_obj = get_saved_view_or_none(saved_view_id)
+        if saved_view_obj is None:
+            # Fail closed: a bulk action scoped to a Saved View we cannot resolve should not act on anything.
             return queryset.none()
         saved_view_filter_params = saved_view_obj.config.get("filter_params", {})
 
@@ -737,3 +844,70 @@ def get_bulk_queryset_from_view(
     # This should be unreachable code.
     log.debug("No valid operation found to generate bulk queryset.")
     raise RuntimeError("No valid operation found to generate bulk queryset.")
+
+
+def _is_exportable_path(serializer_class, path, *, user, logger=None):  # pylint: disable=redefined-outer-name
+    """Whether an export can actually emit this field path, for this user.
+
+    The same check an explicit selection gets, applied per path so that one unusable column is dropped
+    rather than taking a whole derived selection down with it.
+    """
+    from nautobot.core.api.import_export import validate_field_paths
+
+    try:
+        validate_field_paths(serializer_class, [path], user=user)
+    except ValueError as exc:
+        if logger is not None:
+            logger.debug("Cannot export `%s`: %s", path, exc)
+        return False
+    return True
+
+
+def get_list_view_export_paths(model, *, user, saved_view=None, table_changes_pending=False, logger=None):  # pylint: disable=redefined-outer-name
+    """The columns a model's list view is displaying, as export field paths.
+
+    The table is built the way the list view builds it -- from the saved view in use, else the user's own
+    stored table configuration, else the table's default columns -- so this is the same set of columns, in
+    the same order, that the user is looking at.
+
+    Not every column is exportable: row selection and action buttons are not data at all, and a computed
+    field or related-object count is a displayed value with no serializer field behind it. Those are
+    reported rather than silently dropped, since what was asked for is the view.
+
+    Used by the export field picker's "match the list view" button; the export itself takes an explicit
+    field selection, so this is resolved while someone is looking at it rather than at run time.
+
+    Args:
+        model: The model whose list view is in question.
+        user: The user whose table configuration and permissions apply.
+        saved_view (SavedView, optional): The saved view the list view is displaying, if any.
+        table_changes_pending (bool): Whether the list view has unsaved table configuration changes.
+        logger (Logger, optional): Where to record, at debug level, each path that cannot be exported.
+
+    Returns:
+        tuple: `(paths, omitted)` -- the exportable field paths in the order the view shows them, and the
+            names of the columns with no exportable equivalent. `paths` is None if the model has no table
+            class at all, and empty if none of its columns can be exported.
+    """
+    from nautobot.core.api.utils import get_serializer_for_model
+    from nautobot.core.utils.lookup import get_table_for_model
+
+    table_class = get_table_for_model(model)
+    if table_class is None:
+        return None, []
+
+    table = table_class(
+        model.objects.none(),
+        user=user,
+        saved_view=saved_view,
+        table_changes_pending=table_changes_pending,
+    )
+    serializer_class = get_serializer_for_model(model)
+    paths, omitted = [], []
+    for column, path in table.serializer_paths_by_visible_column(serializer_class).items():
+        if path is None or not _is_exportable_path(serializer_class, path, user=user, logger=logger):
+            omitted.append(column)
+        elif path not in paths:
+            # Two columns can map to the same field; a selection names each field once.
+            paths.append(path)
+    return paths, omitted

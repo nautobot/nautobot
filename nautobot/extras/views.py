@@ -11,6 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.forms import CheckboxInput
 from django.forms.utils import pretty_name
 from django.http import Http404, HttpResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
@@ -1233,7 +1234,6 @@ class ContactAssociationUIViewSet(
     queryset = ContactAssociation.objects.all()
     serializer_class = serializers.ContactAssociationSerializer
     table_class = tables.AssociatedContactsTable
-    non_filter_params = ("export", "page", "per_page", "sort")
     object_detail_content = None
 
 
@@ -2623,8 +2623,11 @@ class JobUIViewSet(NautobotUIViewSet):
             console_log=console_log,
             job_kwargs=job_class.serialize_data(job_kwargs),
         )
+        # The modal's own form submit identifies itself by id; a single-click action that runs the Job
+        # without ever showing the form says so in its hx-vals instead, and wants the same modal back.
         htmx_trigger = request.headers.get("HX-Trigger", None)
-        if self.request.headers.get("HX-Request", False) and htmx_trigger == "job-form-modal":
+        wants_modal = htmx_trigger == "job-form-modal" or request.POST.get("job_form_modal")
+        if self.request.headers.get("HX-Request", False) and wants_modal:
             job_modal_button_registry_id = request.POST.get("job_modal_button", "")
             job_result_key = request.POST.get("job_result_key", None)
             refresh_on_close_if_done = request.POST.get("refresh_on_close_if_done", "false")
@@ -2692,6 +2695,16 @@ class JobUIViewSet(NautobotUIViewSet):
             return False
         return bool(job_modal_button.enable_scheduling)
 
+    def _resolve_fixed_fields(self, request):
+        """The Job fields this modal's button says the launching context decides.
+
+        Read from the registered `_JobModalButton`, never from the request, for the same reason scheduling
+        is: what the payload claims about itself is not authority for what the form permits.
+        """
+        button_id = request.POST.get("job_modal_button", "")
+        job_modal_button = registry["job_modal_buttons"].get(button_id) if button_id else None
+        return getattr(job_modal_button, "fixed_fields", ())
+
     def _render_response(self, request, job_model, job_class, job_form, job_execution_form, schedule_form):
         """Helper function to render the appropriate response, including handling HTMX modals."""
         htmx_request = self.request.headers.get("HX-Request", False)
@@ -2720,6 +2733,14 @@ class JobUIViewSet(NautobotUIViewSet):
             # (hx-vals would override the form field with the same name if present).
             if not enable_scheduling:
                 hx_vals_dict["_schedule_type"] = JobExecutionType.TYPE_IMMEDIATELY
+            # Fields the launching context decided are shown but not editable here. A disabled input
+            # submits nothing, so each one's value rides in hx-vals the same way, and only fields the
+            # trigger actually supplied are fixed -- otherwise a modal opened without one would offer a
+            # disabled, empty field that no one could fill in.
+            for field_name in self._resolve_fixed_fields(request):
+                if field_name in job_form.fields and request.POST.get(field_name):
+                    job_form.fields[field_name].disabled = True
+                    hx_vals_dict[field_name] = request.POST[field_name]
             response = render(
                 request,
                 template_name,
@@ -3053,6 +3074,34 @@ class SavedViewUIViewSet(
                     request, message=getattr(permission, "message", None), code=getattr(permission, "code", None)
                 )
 
+    def update(self, request, *args, **kwargs):
+        """
+        Enforce the same ownership rule as destroy() and update_saved_view_config().
+
+        Also require `extras.change_savedview` to change whether this is the global default view, since that
+        affects every user. Checked here rather than in perform_update() so that the edit form is not even
+        rendered for a user who is not permitted to submit it.
+        """
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk"))
+        can_modify_others = request.user.has_perms(["extras.change_savedview"])
+        if sv.owner != request.user and not can_modify_others:
+            messages.error(
+                request, f"You do not have the required permission to modify this Saved View owned by {sv.owner}"
+            )
+            return redirect(self.get_return_url(request, obj=sv))
+        # The edit form always submits the checkbox, so we parse the submitted value the same way
+        # the form's BooleanField will, to prevent misreading "false" as enable.
+        # This ensures the owner of the Saved View can change other fields despite lacking permission to set the global default.
+        requested_global_default = CheckboxInput().value_from_datadict(request.POST, {}, "is_global_default")
+        if (
+            request.method == "POST"
+            and bool(requested_global_default) != sv.is_global_default
+            and not can_modify_others
+        ):
+            messages.error(request, "You do not have the required permission to change the global default Saved View.")
+            return redirect(self.get_return_url(request, obj=sv))
+        return super().update(request, *args, **kwargs)
+
     def extra_message_context(self, obj):
         """
         Context variables for this extra message.
@@ -3091,7 +3140,7 @@ class SavedViewUIViewSet(
         Set current saved view as the the request.user default view. Overriding the global default view if there is one.
         """
         user = request.user
-        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk", None))
         UserSavedViewAssociation.objects.filter(user=user, view_name=sv.view).delete()
         UserSavedViewAssociation.objects.create(user=user, saved_view=sv, view_name=sv.view)
         list_view_url = sv.get_absolute_url()
@@ -3105,7 +3154,7 @@ class SavedViewUIViewSet(
         """
         Extract filter_params, pagination and sort_order from request.GET and apply it to the SavedView specified
         """
-        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk", None))
         if sv.owner == request.user or request.user.has_perms(["extras.change_savedview"]):
             pass
         else:
@@ -3246,7 +3295,7 @@ class SavedViewUIViewSet(
         request.POST: call perform_destroy() which validates the form and perform the action of delete.
         Override to add more variables to Response
         """
-        sv = SavedView.objects.get(pk=kwargs.get("pk", None))
+        sv = get_object_or_404(self.queryset.all(), pk=kwargs.get("pk", None))
         if sv.owner == request.user or request.user.has_perms(["extras.delete_savedview"]):
             pass
         else:
@@ -3486,6 +3535,20 @@ class JobHookUIViewSet(NautobotUIViewSet):
 #
 
 
+def file_proxy_download_url(file_proxy):
+    """
+    Build the download URL for a single FileProxy, respecting the configured job-files storage backend.
+
+    Returns an empty string if the FileProxy has no underlying file.
+    """
+    if not file_proxy or not file_proxy.file:
+        return ""
+    # Pick URL depending on storage backend
+    if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
+        return f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
+    return file_proxy.file.url
+
+
 def render_jobresult_files(files_manager):
     """
     Render job result files as an HTML <ul> list with download links.
@@ -3502,14 +3565,9 @@ def render_jobresult_files(files_manager):
 
     links = []
     for file_proxy in files_manager.all():
-        if not file_proxy.file:
+        href = file_proxy_download_url(file_proxy)
+        if not href:
             continue
-
-        # Pick URL depending on storage backend
-        if settings.STORAGES["nautobotjobfiles"]["BACKEND"] == "db_file_storage.storage.DatabaseFileStorage":
-            href = f"{reverse('db_file_storage.download_file')}?name={file_proxy.file}"
-        else:
-            href = file_proxy.file.url
 
         links.append(
             format_html(
@@ -4181,6 +4239,15 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
                 weight=200,
                 object_field="object_data",
                 render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+                collapsed=True,
+            ),
+            object_detail.ObjectTextPanel(
+                label="Object Data v2",
+                section=SectionChoices.LEFT_HALF,
+                weight=250,
+                object_field="object_data_v2",
+                render_as=object_detail.ObjectTextPanel.RenderOptions.JSON,
+                collapsed=True,
             ),
             object_detail.TextPanel(
                 label="Difference",

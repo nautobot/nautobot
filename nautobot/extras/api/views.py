@@ -16,6 +16,7 @@ from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, Valida
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.authentication import TokenPermissions
 from nautobot.core.api.parsers import NautobotCSVParser
@@ -38,6 +39,7 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
 )
+from nautobot.extras.conditions.presets import get_condition_presets
 from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.filters import RoleFilterSet
 from nautobot.extras.jobs import get_job
@@ -162,6 +164,28 @@ class ComputedFieldViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = ComputedField.objects.all()
     serializer_class = serializers.ComputedFieldSerializer
     filterset_class = filters.ComputedFieldFilterSet
+
+
+#
+# Condition presets
+#
+
+
+class ConditionPresetsViewSet(NautobotAPIVersionMixin, ViewSet):
+    """The condition presets this installation offers."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(responses={"200": serializers.ConditionPresetSerializer(many=True)})
+    def list(self, request):
+        """
+        Get the condition presets available for use in a `conditions` field.
+
+        Apps can register presets, so the catalog is not fixed even within one Nautobot version: a client
+        that builds condition rows reads it from here instead of keeping a copy that falls out of date.
+        """
+        catalog = [preset.as_dict() for preset in get_condition_presets()]
+        return Response(serializers.ConditionPresetSerializer(catalog, many=True).data)
 
 
 #
@@ -603,7 +627,65 @@ class SavedViewViewSet(ModelViewSet):
     serializer_class = serializers.SavedViewSerializer
     filterset_class = filters.SavedViewFilterSet
 
+    class SetDefaultPermissions(TokenPermissions):
+        """
+        Require no SavedView permissions at all, as setting your own default view does not modify the view.
 
+        Matches the UI, where any user can pin any saved view they have a link to as their own default.
+        """
+
+        perms_map = {
+            **TokenPermissions.perms_map,
+            "POST": [],
+            "DELETE": [],
+        }
+
+    def restrict_queryset(self, request, *args, **kwargs):
+        """Apply no permissions on the /set-default/ endpoint, otherwise as ModelViewSetMixin."""
+        if self.action == "set_default":
+            return
+        super().restrict_queryset(request, *args, **kwargs)
+
+    @extend_schema(
+        methods=["post"],
+        request=None,
+        responses={201: serializers.UserSavedViewAssociationSerializer},
+    )
+    @extend_schema(methods=["delete"], request=None, responses={204: None})
+    @action(
+        detail=True,
+        name="Set Default",
+        methods=["post", "delete"],
+        url_path="set-default",
+        permission_classes=[SetDefaultPermissions],
+        filterset_class=None,
+    )
+    def set_default(self, request, *args, **kwargs):
+        """Set (POST) or clear (DELETE) this saved view as the requesting user's default for its list view."""
+        saved_view = self.get_object()
+        UserSavedViewAssociation.objects.filter(user=request.user, view_name=saved_view.view).delete()
+        if request.method == "DELETE":
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        association = UserSavedViewAssociation(user=request.user, saved_view=saved_view, view_name=saved_view.view)
+        association.validated_save()
+        serializer = serializers.UserSavedViewAssociationSerializer(
+            association, context={"request": request, "depth": 0}
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+# TODO: 4.0 remove these endpoints in favor of the /api/extras/saved-views/<uuid>/set-default/ action.
+@extend_schema_view(
+    list=extend_schema(deprecated=True),
+    retrieve=extend_schema(deprecated=True),
+    create=extend_schema(deprecated=True),
+    update=extend_schema(deprecated=True),
+    partial_update=extend_schema(deprecated=True),
+    destroy=extend_schema(deprecated=True),
+    bulk_update=extend_schema(deprecated=True),
+    bulk_partial_update=extend_schema(deprecated=True),
+    bulk_destroy=extend_schema(deprecated=True),
+)
 class UserSavedViewAssociationViewSet(ModelViewSet):
     queryset = UserSavedViewAssociation.objects.all()
     serializer_class = serializers.UserSavedViewAssociationSerializer
@@ -802,8 +884,8 @@ class JobViewSetBase(
             ]:
                 if key in instance.field_attrs:
                     entry[key] = instance.field_attrs[key]
-            if "initial" in instance.field_attrs:
-                entry["default"] = instance.field_attrs["initial"]
+            if instance.default is not None:
+                entry["default"] = instance.default
             if "queryset" in instance.field_attrs:
                 content_type = ContentType.objects.get_for_model(instance.field_attrs["queryset"].model)
                 entry["model"] = f"{content_type.app_label}.{content_type.model}"
@@ -1149,6 +1231,17 @@ class JobResultViewSet(
             "POST": ["%(app_label)s.view_jobresult"],
         }
 
+    class JobLogEntryPermission(TokenPermissions):
+        """
+        Enforce `view_joblogentry` permission (in addition to `view_jobresult`) on the /logs/ endpoint.
+        """
+
+        perms_map = {
+            "GET": ["%(app_label)s.view_jobresult", "extras.view_joblogentry"],
+            "HEAD": ["%(app_label)s.view_jobresult", "extras.view_joblogentry"],
+            "OPTIONS": [],
+        }
+
     def restrict_queryset(self, request, *args, **kwargs):
         """
         Apply special permissions as queryset filter on the /cancel/ endpoint.
@@ -1161,10 +1254,13 @@ class JobResultViewSet(
         else:
             super().restrict_queryset(request, *args, **kwargs)
 
-    @action(detail=True)
+    @action(detail=True, permission_classes=[JobLogEntryPermission])
     def logs(self, request, pk=None):
-        job_result = self.get_object()
-        logs = job_result.job_log_entries.all()
+        # `get_object_or_404()` and not `self.get_object()` because object-level check of the latter resolves every entry in
+        # `perms_map` against the JobResult, so `extras.view_joblogentry` would raise ValueError (HTTP 500).
+        # `self.queryset` is already restricted to viewable JobResults by `restrict_queryset()`, so nothing is lost.
+        job_result = get_object_or_404(self.queryset, pk=pk)
+        logs = job_result.job_log_entries.restrict(request.user, "view")
         serializer = serializers.JobLogEntrySerializer(logs, context={"request": request}, many=True)
         return Response(serializer.data)
 

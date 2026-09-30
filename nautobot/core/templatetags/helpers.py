@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 import datetime
 from importlib import resources
 import json
@@ -6,6 +6,7 @@ import logging
 import re
 from typing import Literal
 from urllib.parse import parse_qs, quote_plus
+import uuid
 
 from django import template
 from django.apps import apps
@@ -13,7 +14,9 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.staticfiles.finders import find
-from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Model
+from django.db.models.manager import BaseManager
+from django.db.models.query import QuerySet
 from django.templatetags.static import static, StaticNode
 from django.urls import NoReverseMatch, reverse
 from django.utils.formats import date_format
@@ -22,6 +25,7 @@ from django.utils.safestring import mark_safe
 from django.utils.text import slugify as django_slugify
 from django.utils.translation import gettext as _
 from django_jinja import library
+from jinja2.exceptions import SecurityError
 from markdown import markdown
 import yaml
 
@@ -29,6 +33,7 @@ from nautobot.apps.config import get_app_settings_or_config
 from nautobot.core import forms
 from nautobot.core.choices import NautobotEditionChoices
 from nautobot.core.constants import NAUTOBOT_STATIC_ASSETS, PAGINATE_COUNT_DEFAULT
+from nautobot.core.templating import DANGEROUS_TYPES
 from nautobot.core.utils import color, config, data, deprecation, logging as nautobot_logging, lookup
 from nautobot.core.utils.requests import add_nautobot_version_query_param_to_url
 
@@ -290,6 +295,19 @@ def render_yaml(value, syntax_highlight=True):
     return rendered_yaml
 
 
+def _meta_value_is_unsafe(value):
+    """Return True if a `_meta` attribute value must not be exposed to a sandboxed template."""
+    if isinstance(value, (BaseManager, QuerySet, *DANGEROUS_TYPES)):
+        return True
+    if isinstance(value, type) and issubclass(value, Model):
+        return True
+    if isinstance(value, Mapping):
+        return any(_meta_value_is_unsafe(key) or _meta_value_is_unsafe(item) for key, item in value.items())
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return any(_meta_value_is_unsafe(item) for item in value)
+    return False
+
+
 @library.filter()
 @register.filter()
 def meta(obj, attr):
@@ -304,7 +322,12 @@ def meta(obj, attr):
     Returns:
         (any): return the value of the attribute
     """
-    return getattr(obj._meta, attr, "")
+    value = getattr(obj._meta, attr, "")
+    # This filter is an escape hatch onto `_meta` for benign metadata (verbose_name, app_label, ...), and
+    # unlike normal attribute access it does not pass through the sandbox's is_safe_attribute checks.
+    if _meta_value_is_unsafe(value):
+        raise SecurityError(f"access to model _meta.{attr} is not allowed in templates")
+    return value
 
 
 @library.filter()
@@ -399,6 +422,39 @@ def bettertitle(value):
 
 @library.filter()
 @register.filter()
+def humanize_duration(value):
+    """
+    Humanize a `datetime.timedelta` at a readable granularity. Examples:
+
+        timedelta(milliseconds=340) => "<1s"
+        timedelta(seconds=9) => "9s"
+        timedelta(seconds=192) => "3m 12s"
+        timedelta(seconds=31300) => "8h 41m"
+        timedelta(days=1, seconds=10800) => "1d 3h"
+    """
+    if value is None:
+        return ""
+
+    total_seconds = int(value.total_seconds())
+    if total_seconds < 1:
+        return "<1s"
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+
+    minutes, seconds = divmod(total_seconds, 60)
+    if minutes < 60:
+        return f"{minutes}m {seconds}s"
+
+    hours, minutes = divmod(minutes, 60)
+    if hours < 24:
+        return f"{hours}h {minutes}m"
+
+    days, hours = divmod(hours, 24)
+    return f"{days}d {hours}h"
+
+
+@library.filter()
+@register.filter()
 def humanize_speed(speed):
     """
     Humanize speeds given in Kbps. Examples:
@@ -436,7 +492,7 @@ def tzoffset(value):
 @register.filter()
 def fgcolor(value):
     """
-    Return the ideal foreground color (block or white) given an arbitrary background color in RRGGBB format.
+    Return the ideal foreground color (black or white) given an arbitrary background color in RRGGBB format.
 
     Args:
         value (str): Color in RRGGBB format, with or without #
@@ -446,7 +502,7 @@ def fgcolor(value):
 
     Example:
         >>> fgcolor("#999999")
-        "#ffffff"
+        "#000000"
     """
     value = value.lower().strip("#")
     if not re.match("^[0-9a-f]{6}$", value):
@@ -1164,8 +1220,7 @@ def saved_view_modal(
     request,
 ):
     from nautobot.extras.forms import SavedViewModalForm
-    from nautobot.extras.models import SavedView
-    from nautobot.extras.utils import fixup_filterset_query_params
+    from nautobot.extras.utils import fixup_filterset_query_params, get_saved_view_or_none
 
     sort_order = []
     per_page = None
@@ -1197,11 +1252,8 @@ def saved_view_modal(
             current_saved_view_pk = filters_applied.pop(param, None)
             if current_saved_view_pk:
                 current_saved_view_pk = current_saved_view_pk[0]
-                try:
-                    # We are not using .restrict(request.user, "view") here
-                    # User should be able to see any saved view that he has the list view access to.
-                    current_saved_view = SavedView.objects.get(pk=current_saved_view_pk)
-                except ObjectDoesNotExist:
+                current_saved_view = get_saved_view_or_none(current_saved_view_pk)
+                if current_saved_view is None:
                     messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         elif param == "table_changes_pending":
@@ -1327,6 +1379,91 @@ def advanced_filter_indicator(basic_filter_form, filter_params):
                 is_visible = True
                 break
     return {"is_visible": is_visible}
+
+
+@register.inclusion_tag("utilities/templatetags/toast.html")
+def toast(
+    content,
+    autohide=None,
+    buttons=None,
+    delay=10000,
+    dismissible=True,
+    html_id=None,
+    icon=None,
+    status=None,
+    title="",
+):
+    """Render a toast notification.
+
+    It is recommended to append toasts to the `#toast-messages` container, which is how the notifications created
+    using the Django messages framework behave. This toast container is out-of-the-box marked as the page's live
+    region, and automatically shows and dismisses toasts via `messages.js` frontend scripting.
+
+    All markup-bearing arguments (`buttons`, `content`, `icon`, `title`) are rendered with Django autoescaping, so
+    plain strings are escaped and only `SafeString` values are treated as HTML. Preferably, build them with
+    `format_html` in Python.
+
+    Args:
+        content (str): Toast body. Escaped unless it is a `SafeString`.
+        autohide (Optional[bool]): Whether the toast dismisses itself after `delay`. Defaults to `True`, except
+            when `buttons` are given, so toasts requiring a response are not dismissed before they can be acted on.
+        buttons (Optional[str]): Markup for the toast footer, typically call-to-action buttons. Escaped unless it
+            is a `SafeString`.
+        delay (int): Milliseconds before an autohiding toast dismisses itself. Defaults to `10000`.
+        dismissible (bool): Whether to render a close button. Defaults to `True`.
+        html_id (Optional[str]): HTML `id` of the toast. Generated if not given.
+        icon (Optional[str]): Markup for the toast header icon. Escaped unless it is a `SafeString`.
+            Defaults to an icon derived from `status`.
+        status (Optional[str]): Contextual status: one of `danger`, `info`, `primary`, `secondary`, `success`,
+            or `warning`. Selects both the toast styling and the default `icon`.
+        title (str): Toast header text. Escaped unless it is a `SafeString`.
+
+    Returns:
+        (dict): Template context for `utilities/templatetags/toast.html`.
+
+    Example:
+        {% toast content="Device created." status="success" title="Success" %}
+    """
+    if autohide is None:
+        autohide = not buttons
+
+    if not html_id:
+        html_id = f"toast_{uuid.uuid4()}"
+
+    if not icon:
+        if status == "primary":
+            icon = format_html(
+                """
+                    <img
+                        aria-hidden="true"
+                        alt=""
+                        class="flex-grow-0 flex-shrink-0 my-n2"
+                        src="{}"
+                        style="width: 1.25rem;"
+                    >
+                """,
+                static("img/nautobot_chevron.svg"),
+            )
+        else:
+            mdi = {
+                "danger": "mdi-alert-circle-outline",
+                "info": "mdi-information-outline",
+                "success": "mdi-check-circle-outline",
+                "warning": "mdi-alert-outline",
+            }.get(status, "mdi-lightbulb-on-outline")
+            icon = format_html('<span aria-hidden="true" class="mdi {}"></span>', mdi)
+
+    return {
+        "autohide": autohide,
+        "buttons": buttons,
+        "content": content,
+        "delay": delay,
+        "dismissible": dismissible,
+        "html_id": html_id,
+        "icon": icon,
+        "status": status,
+        "title": title,
+    }
 
 
 @register.simple_tag

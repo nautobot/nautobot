@@ -10,6 +10,7 @@ import netaddr
 from nautobot.cloud.models import CloudNetwork
 from nautobot.core.filters import (
     ModelMultipleChoiceFilter,
+    MultipleChoiceFilter,
     MultiValueCharFilter,
     MultiValueNumberFilter,
     MultiValueUUIDFilter,
@@ -21,7 +22,7 @@ from nautobot.core.filters import (
     TreeNodeMultipleChoiceFilter,
 )
 from nautobot.core.utils.data import is_uuid
-from nautobot.dcim.filters import LocatableModelFilterSetMixin
+from nautobot.dcim.filter_mixins import LocatableModelFilterSetMixin
 from nautobot.dcim.models import Device, Interface, Location, VirtualDeviceContext
 from nautobot.extras.filters import NautobotFilterSet, RoleModelFilterSetMixin, StatusModelFilterSetMixin
 from nautobot.ipam import choices
@@ -288,7 +289,7 @@ class PrefixFilterSet(
         field_name="rir",
         label="Has RIR",
     )
-    type = django_filters.MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
+    type = MultipleChoiceFilter(choices=choices.PrefixTypeChoices)
     max_depth = django_filters.NumberFilter(
         method="filter_max_depth",
         exclude=True,

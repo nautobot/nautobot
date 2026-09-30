@@ -4,9 +4,10 @@ const MODAL_ID = 'nautobot-generic-modal';
 const MODAL_CONTENT_CONTAINER_ID = 'modal-content-container';
 const REFRESH_ON_CLOSE_SELECTOR = '[data-nb-refresh-on-close="true"]';
 
+// The heading id must match the modal's `aria-labelledby` in `inc/generic_modal.html` and `inc/modal_header.html`.
 const FALLBACK_CONTENT = `
   <div class="modal-header">
-    <h4 class="modal-title" id="modal-fallback-title">Loading...</h4>
+    <h2 class="modal-title" id="nautobot-generic-modal-title">Loading...</h2>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
   </div>
   <div class="modal-body text-center p-5">

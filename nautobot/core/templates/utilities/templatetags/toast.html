@@ -1,0 +1,26 @@
+<div
+    aria-atomic="true"
+    class="toast fade{% if status %} nb-toast-{{ status }}{% endif %}"
+    id="{{ html_id }}"
+    {% if not autohide %}data-bs-autohide="false"{% endif %}
+    {% if autohide and delay %}data-bs-delay="{{ delay }}"{% endif %}
+>
+    <div class="toast-header">
+        {{ icon }}
+        {{ title }}
+        {% if dismissible %}
+            <button aria-label="Close" class="btn-close" data-bs-dismiss="toast" type="button"></button>
+        {% endif %}
+    </div>
+    <div class="toast-body">
+        {{ content }}
+    </div>
+    {% if buttons %}
+        <div class="nb-toast-footer">
+            {{ buttons }}
+        </div>
+    {% endif %}
+    {% if autohide %}
+        <div class="nb-toast-timeout-indicator"></div>
+    {% endif %}
+</div>

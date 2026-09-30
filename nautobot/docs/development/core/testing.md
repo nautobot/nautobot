@@ -34,8 +34,15 @@ Test cases that depend on the presence of the `example_app` example Nautobot App
 | Test Type   | Base Class                                                      | Code Location                              | Test Execution |
 | ----------- | --------------------------------------------------------------- | ------------------------------------------ | ----------------------------------- |
 | Unit        | `nautobot.core.testing.TestCase` or subclass (see below)        | `nautobot/APP/tests/test_*.py`             | `invoke tests`                      |
-| Integration | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/integration/test_*.py` | `invoke tests --tag integration`    |
+| Selenium    | `nautobot.core.testing.integration.SeleniumTestCase`            | `nautobot/APP/tests/selenium/test_*.py`    | `invoke tests --tag integration`    |
+| Playwright  | pytest (no current base class; interim structure — see [Playwright Testing](playwright-testing.md)) | `nautobot/APP/tests/integration/test_*.py` | `invoke playwright`                 |
 | Migration   | `django_test_migrations.contrib.unittest_case.MigratorTestCase` | `nautobot/APP/tests/migration/test_*.py`   | `invoke tests --tag migration_test` |
+
+!!! note
+    The Selenium tests keep their historical `integration` _tag_ (hence
+    `invoke tests --tag integration`) even though their files now live under
+    `tests/selenium/`; the `tests/integration/` directories now hold the Playwright
+    tests, which pytest selects by path, not by tag.
 
 - New unit tests **must always** inherit from `nautobot.core.testing.TestCase` or one of its subclasses. Do not use `django.test.TestCase` or `unittest.TestCase`.
     - API view test cases should generally inherit from one or more of the classes in `nautobot.core.testing.api.APIViewTestCases`.
@@ -81,7 +88,10 @@ If the model being tested is a `PrimaryModel`, the `tags` filter will be automat
 
 ## Integration Tests
 
-### Troubleshooting Integration Tests
+!!! info
+    New browser-based test coverage should be written as Playwright tests (in `nautobot/APP/tests/integration/`) rather than Selenium tests. See [Playwright Testing](playwright-testing.md).
+
+### Troubleshooting Selenium Tests
 
 Because integration tests normally involve interacting with Nautobot through a browser via [Selenium](https://www.selenium.dev/selenium/docs/api/py/index.html) and the [Splinter](https://splinter.readthedocs.io/en/latest/) wrapper library, they can be difficult to troubleshoot directly from the Python code when a failure occurs. A common troubleshooting technique is to add a `breakpoint()` at the appropriate place in the Python test code (i.e., immediately prior to the observed failure). When the breakpoint is hit and the test pauses, you can then use a VNC viewer application (such as macOS's "Screen Sharing" app) to connect to the running Selenium instance (`localhost:15900` if using the Docker development environment; the default password if prompted is simply "`secret`"). This will allow you to interact live with the testing web browser in its current state and can often provide invaluable insight into the nature of any test failure.
 
@@ -105,7 +115,7 @@ Factories for each Nautobot app's models are defined in the corresponding `nauto
 ```
 
 !!! warning
-    `factory_boy` is only a *development* dependency of Nautobot. You cannot use the model factories in a production deployment of Nautobot unless you directly `pip install factory_boy` into such a deployment.
+    `factory_boy` is only a _development_ dependency of Nautobot. You cannot use the model factories in a production deployment of Nautobot unless you directly `pip install factory_boy` into such a deployment.
 
 Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/testing/advanced/#defining-a-test-runner) class (`nautobot.core.tests.runner.NautobotTestRunner`) makes use of the various factories to pre-populate the test database with data before running any tests. This reduces the need for individual tests to define their own baseline data sets.
 
@@ -113,7 +123,7 @@ Nautobot's custom [test runner](https://docs.djangoproject.com/en/3.2/topics/tes
     Because Apps also commonly use Nautobot's test runner, the base Nautobot `settings.py` currently defaults [`TEST_USE_FACTORIES`](../../user-guide/administration/configuration/settings.md#test_use_factories) to `False` so as to not negatively impact App tests that may not be designed to account for the presence of pre-populated test data in the database. This configuration is overridden to `True` in `nautobot/core/tests/nautobot_config.py` for Nautobot's own tests.
 
 !!! warning
-    Factories should generally **not** be called within test code, i.e. in a `setUp()` or `setUpTestData()` method. This is because factory output is *stateful*, that is to say the output of any given factory call will depend on the history of *all previous factory calls* since the process was started. This means that a call to a factory within a test case will depend on which other test cases have also called factories, and what order they were called in, as well as whether the initial test database population was done via factories or whether they were bypassed by reuse of cached test data (see below).
+    Factories should generally **not** be called within test code, i.e. in a `setUp()` or `setUpTestData()` method. This is because factory output is _stateful_, that is to say the output of any given factory call will depend on the history of _all previous factory calls_ since the process was started. This means that a call to a factory within a test case will depend on which other test cases have also called factories, and what order they were called in, as well as whether the initial test database population was done via factories or whether they were bypassed by reuse of cached test data (see below).
 
     In short, we should only have one place in our tests where factories are called, and that's the `generate_test_data` management command. Individual tests should use standard `create()` or `save()` model methods, never factories.
 
@@ -152,6 +162,7 @@ The `AssertNoRepeatedQueries` context manager (available from `nautobot.core.tes
 
 ```python
 from nautobot.core.testing import AssertNoRepeatedQueries
+
 
 class MyTest(TestCase):
     def test_no_n_plus_one(self):

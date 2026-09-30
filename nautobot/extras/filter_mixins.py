@@ -292,6 +292,10 @@ class RelationshipModelFilterSetMixin(django_filters.FilterSet):
             # Check for invalid_relationship unit test
             if choice_model:
                 self.filters[field_name] = RelationshipFilter(
+                    # `field_name` here is a synthetic "cr_<key>__<side>" name rather than a real model field path,
+                    # so `distinct` can't be auto-derived; an object can have multiple associations on this side
+                    # exactly when it can have multiple peers.
+                    distinct=relationship.has_many(peer_side),
                     relationship=relationship,
                     side=side,
                     field_name=field_name,

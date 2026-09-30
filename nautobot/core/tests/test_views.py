@@ -9,8 +9,10 @@ import uuid
 
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
 from django.core.cache import cache
+from django.core.exceptions import ImproperlyConfigured
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings, RequestFactory, tag
 from django.test.utils import override_script_prefix
@@ -22,18 +24,21 @@ from nautobot.circuits.tables import ProviderTable
 from nautobot.circuits.views import ProviderUIViewSet
 from nautobot.core.constants import GLOBAL_SEARCH_EXCLUDE_LIST, SEARCH_MAX_RESULTS
 from nautobot.core.forms.forms import TableConfigForm
+from nautobot.core.templatetags.buttons import job_export_url
 from nautobot.core.testing import TestCase
 from nautobot.core.testing.api import APITestCase
 from nautobot.core.testing.context import load_event_broker_override_settings
 from nautobot.core.testing.utils import extract_page_body
+from nautobot.core.ui.object_detail import get_overview_panel
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
 from nautobot.core.views.mixins import GetReturnURLMixin
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
+from nautobot.dcim.views import LocationUIViewSet
 from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import FileProxy, SavedView, Status
+from nautobot.extras.models import ExportTemplate, FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
 from nautobot.users.models import ObjectPermission
@@ -99,6 +104,55 @@ class ObjectListViewActionButtonsTestCase(TestCase):
         self.assertIn('id="add-button"', response_body)
         self.assertNotIn('id="actions-dropdown"', response_body)
 
+    def _provider_list_body(self):
+        response = self.client.get(reverse("circuits:provider_list"))
+        self.assertHttpStatus(response, 200)
+        return extract_page_body(response.content.decode(response.charset))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_template_gets_an_action_of_its_own(self):
+        """Each Export Template is offered as an action that exports with it, without opening the dialog.
+
+        An Export Template renders its own output, so there is nothing for the dialog to ask about. The
+        trigger therefore carries every input the Job needs and must *omit* `render_job_form`: the run
+        view tests that key for truthiness, where the string "False" would be as true as any other and
+        would open the form instead of running the export.
+        """
+        self.add_permissions("extras.view_exporttemplate", "extras.run_job")
+        ExportTemplate.objects.create(
+            content_type=ContentType.objects.get_for_model(Provider),
+            name="Provider inventory",
+            description="One line per provider",
+            template_code="{% for provider in queryset %}{{ provider.name }}\n{% endfor %}",
+        )
+        body = self._provider_list_body()
+
+        self.assertIn("Export Templates", body)
+        self.assertIn("Provider inventory", body)
+        self.assertIn("One line per provider", body)  # the description becomes the entry's tooltip
+        # `job_form_modal` is what marks a trigger that runs the Job rather than opening its form; the
+        # dialog's own trigger mentions `export_template` too, that being one of its advanced fields.
+        direct_run = [hx_vals for hx_vals in re.findall(r"hx-vals='([^']+)'", body) if "job_form_modal" in hx_vals]
+        self.assertEqual(len(direct_run), 1, f"expected exactly one per-template trigger: {body}")
+        self.assertIn("export_template", direct_run[0])
+        self.assertIn("immediately", direct_run[0])
+        self.assertNotIn("render_job_form", direct_run[0])
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_export_templates_the_user_cannot_view_are_not_offered(self):
+        """The templates offered are the ones the user may view, the menu being built for them."""
+        self.add_permissions("extras.run_job")
+        ExportTemplate.objects.create(
+            content_type=ContentType.objects.get_for_model(Provider),
+            name="Provider inventory",
+            template_code="{% for provider in queryset %}{{ provider.name }}\n{% endfor %}",
+        )
+        body = self._provider_list_body()
+
+        self.assertIn("Export to file", body)  # the dialog is still offered
+        self.assertNotIn("Export Templates", body)
+        self.assertNotIn("Provider inventory", body)
+
 
 class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
     """Tests for the action buttons on object list views when the user lacks the `add` permission."""
@@ -119,8 +173,11 @@ class ObjectListViewActionButtonsWithoutAddPermissionTestCase(TestCase):
         response_body = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn('id="add-button"', response_body)
         self.assertIn('id="actions-dropdown"', response_body)
-        self.assertIn("Export as CSV", response_body)
+        self.assertIn("Export to file", response_body)
         self.assertNotIn('id="import-button"', response_body)
+        # The export trigger opens the `ExportObjectList` Job's modal, so it renders disabled -- but still
+        # renders -- for a user who cannot view that Job, as this one cannot. Disabled means no HTMX wiring.
+        self.assertNotIn(f'hx-post="{job_export_url()}"', response_body)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_actions_dropdown_not_rendered_when_import_only_without_add_permission(self):
@@ -284,13 +341,13 @@ class HomeViewTestCase(TestCase):
         def assertBodyContains(html):
             return self.assertBodyContains(response, html, html=True)
 
-        assertBodyContains("""<strong class="nb-text-none text-body">Organization</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/locations/">Locations</a></h4>""")
-        assertBodyContains("""<strong class="nb-text-none text-body">DCIM</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/dcim/devices/">Devices</a></h4>""")
-        assertBodyContains("""<strong class="nb-text-none text-body">IPAM</strong>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/prefixes/">Prefixes</a></h4>""")
-        assertBodyContains("""<h4 class="fw-normal lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h4>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">Organization</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/locations/">Locations</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">DCIM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/dcim/devices/">Devices</a></h3>""")
+        assertBodyContains("""<h2 class="d-inline fs-4 fw-bold nb-text-none text-body">IPAM</h2>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/prefixes/">Prefixes</a></h3>""")
+        assertBodyContains("""<h3 class="fw-normal fs-4 lh-base"><a href="/ipam/ip-addresses/">IP Addresses</a></h3>""")
 
 
 class AppDocsViewTestCase(TestCase):
@@ -499,7 +556,9 @@ class SearchContentTypeView(TestCase):
         response = self.client.get(
             reverse("search_content_type", kwargs={"content_type": "dcim.location"}), headers={"HX-Request": "true"}
         )
-        self.assertBodyContains(response, '<h4 class="modal-title">Search locations</h4>', html=True)
+        self.assertBodyContains(
+            response, '<h2 class="modal-title" id="embedded-action-modal-title">Search locations</h2>', html=True
+        )
         # Asserting that the field label is present is much simpler and almost equally as reliable as asserting the field itself.
         self.assertBodyContains(response, '<label for="embedded_id_location_type">Location type:</label>', html=True)
         self.assertBodyContains(response, '<div class="nb-embedded-search-results">', html=True)
@@ -609,44 +668,116 @@ class LiveSearchViewTestCase(TestCase):
         self.assertEqual(response.status_code, 400)
 
 
+class ViewportMetaTestCase(TestCase):
+    """
+    The viewport meta tag must not disable zooming (WCAG 1.4.4 Resize Text).
+
+    This is asserted here, rather than left to the axe-core integration tests, because it is a single-line regression
+    that is easy to reintroduce -- `user-scalable=no` is a common workaround for iOS Safari auto-zooming focused inputs --
+    and because a unit test runs on every suite rather than only when Selenium is available.
+    """
+
+    def test_viewport_permits_zoom(self):
+        response = self.client.get(reverse("home"))
+        self.assertHttpStatus(response, 200)
+        body = response.content.decode(response.charset)
+
+        match = re.search(r'<meta name="viewport" content="([^"]*)"', body)
+        self.assertIsNotNone(match, "No viewport meta tag found")
+        content = match.group(1)
+
+        self.assertNotIn("user-scalable=no", content.replace(" ", ""))
+        self.assertNotIn("maximum-scale", content, "maximum-scale caps zoom and fails WCAG 1.4.4")
+
+
 class MessagesViewTestCase(TestCase):
     def test_get_unauthenticated_redirects(self):
-        """Unauthenticated access redirects to the login page."""
+        """Unauthenticated access navigates the browser to the login page."""
         self.client.logout()
         response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        expected_params = urllib.parse.urlencode({"next": reverse("messages")})
-        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+        self.assertEqual(response.status_code, 204)
+        redirect = urllib.parse.urlsplit(response.headers["HX-Redirect"])
+        self.assertEqual(redirect.path, reverse("login"))
+        self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("messages")])
 
-    def test_empty(self):
-        """When there are no messages queued, response contains an empty header_messages container."""
-        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
-        self.assertBodyContains(response, '<div id="header_messages"></div>', html=True)
-
-    def test_messages(self):
-        """When there are messages queued, response contains them in the header_messages container."""
+    def build_request(self):
         request = RequestFactory().get("/messages/", headers={"HX-Request": "true"})
         # Use `CookieStorage` for test simplicity, `SessionStorage` which is actually in use would require additionally mocking session middleware.
         request._messages = messages.storage.cookie.CookieStorage(request)
         request.user = self.user
+        return request
+
+    def test_empty(self):
+        """When there are no messages queued, response contains an empty header_messages container."""
+        response = self.client.get(reverse("messages"), headers={"HX-Request": "true"})
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+
+    def test_messages(self):
+        """When there are messages queued, response contains them as ephemeral toasts."""
+        request = self.build_request()
         messages.info(request, "Test info message")
         messages.success(request, "Test success message")
         response = MessagesView.as_view()(request)
         self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+        self.assertBodyContains(response, "nb-toast-info")
+        self.assertBodyContains(response, "Test info message")
+        self.assertBodyContains(response, "nb-toast-success")
+        self.assertBodyContains(response, "Test success message")
+        self.assertNotContains(response, 'data-bs-autohide="false"')
+
+    def test_header_messages(self):
+        """Messages tagged `header_message` are rendered in the header_messages container instead of as toasts."""
+        request = self.build_request()
+        messages.warning(request, "Test header message", extra_tags="header_message")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
             response,
             """
-                <div id="header_messages">
-                    <div class="alert alert-info alert-dismissable" role="alert">
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
+                    <div class="alert alert-warning alert-dismissable" role="alert">
                         <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
-                        Test info message
-                    </div>
-                    <div class="alert alert-success alert-dismissable" role="alert">
-                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
-                        Test success message
+                        Test header message
                     </div>
                 </div>
             """,
             html=True,
         )
+        self.assertNotContains(response, "nb-toast")
+
+    def test_indefinite_messages(self):
+        """Messages tagged `indefinite` are rendered as toasts that do not dismiss themselves."""
+        request = self.build_request()
+        messages.error(request, "Test indefinite message", extra_tags="indefinite")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response, '<div aria-atomic="false" aria-live="polite" id="header_messages"></div>', html=True
+        )
+        self.assertBodyContains(response, "nb-toast-danger")
+        self.assertBodyContains(response, "Test indefinite message")
+        self.assertBodyContains(response, 'data-bs-autohide="false"')
+
+    def test_header_message_indefinite_messages(self):
+        """Messages tagged both `header_message` and `indefinite` are rendered as alerts, ignoring the `indefinite` tag."""
+        request = self.build_request()
+        messages.warning(request, "Test indefinite header message", extra_tags="header_message indefinite")
+        response = MessagesView.as_view()(request)
+        self.assertBodyContains(
+            response,
+            """
+                <div aria-atomic="false" aria-live="polite" id="header_messages">
+                    <div class="alert alert-warning alert-dismissable" role="alert">
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" aria-label="Close"></button>
+                        Test indefinite header message
+                    </div>
+                </div>
+            """,
+            html=True,
+        )
+        self.assertNotContains(response, "nb-toast")
 
     def test_search_content_type_bad_request_when_no_htmx(self):
         """Request made from a client other than HTMX results in HTTP 400 response."""
@@ -670,7 +801,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:location_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -689,7 +820,7 @@ class SearchFieldsTestCase(TestCase):
         response = self.client.get(reverse("dcim:device_list"))
         self.assertBodyContains(
             response,
-            '<input aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
+            '<input aria-label="Search" aria-placeholder="Press Ctrl+K to search" autocomplete="off" class="form-control nb-text-transparent" name="q" type="search" role="searchbox" value="">',
             html=True,
         )
         self.assertBodyContains(
@@ -727,11 +858,13 @@ class SearchViewTestCase(TestCase):
         self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
 
     def test_get_unauthenticated_redirects_htmx(self):
-        """Unauthenticated HTMX access redirects to the login page."""
+        """Unauthenticated HTMX access navigates the browser to the login page."""
         self.client.logout()
         response = self.client.get(reverse("search"), {"q": "test"}, headers={"HX-Request": "true"})
-        expected_params = urllib.parse.urlencode({"next": reverse("search") + "?q=test"})
-        self.assertRedirects(response, f"{reverse('login')}?{expected_params}")
+        self.assertEqual(response.status_code, 204)
+        redirect = urllib.parse.urlsplit(response.headers["HX-Redirect"])
+        self.assertEqual(redirect.path, reverse("login"))
+        self.assertEqual(urllib.parse.parse_qs(redirect.query)["next"], [reverse("search") + "?q=test"])
 
     def test_get_no_query_renders_search_form(self):
         """GET without ?q renders the search page, not the results page."""
@@ -1083,6 +1216,26 @@ class TableConfigDrawerTestCase(TestCase):
         self.assertEqual(new_order, custom_order)
         self.assertEqual(selected_columns, table.visible_columns)
 
+    def test_filter_column_saved_view_as_other_user(self):
+        """
+        Assert that a Saved View's column order applies to a user who does not own it and has no permissions.
+
+        A Saved View is resolved from `?saved_view=` by UUID alone everywhere else, including the columns and
+        column order of the rendered table, so the table config form must resolve it the same way.
+        """
+        other_user = get_user_model().objects.create_user(username="table-config-other-user")
+        table = ProviderTable(Provider.objects.all(), user=other_user, saved_view=self.saved_view)
+        request = RequestFactory().get("/circuits/providers/", data={"saved_view": self.saved_view.pk})
+        request.id = uuid.uuid4()
+        request.user = other_user
+        table.request = request
+
+        form = TableConfigForm(table)
+        new_order = [col[0] for col in form.fields["columns"].choices]
+        self.assertNotEqual(new_order, self.default_order)
+        self.assertEqual(new_order, self.saved_order)
+        self.assertEqual(self.custom_visible_columns, table.visible_columns)
+
 
 class NavAppsUITestCase(TestCase):
     def setUp(self):
@@ -1144,7 +1297,7 @@ class LoginUITestCase(TestCase):
 
     def make_request(self):
         response = self.client.get(reverse("login"))
-        sso_login_pattern = re.compile('<a href=".*">Continue with SSO</a>')
+        sso_login_pattern = re.compile(r'<button type="submit"[^>]*>\s*Continue with SSO\s*</button>')
         return sso_login_pattern.search(extract_page_body(response.content.decode(response.charset)))
 
     def test_sso_login_button_not_visible(self):
@@ -1594,3 +1747,140 @@ class ViewSetCustomActionsTestCase(TestCase):
         self.add_permissions("dcim.add_location", "dcim.change_location")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
+
+
+class ObjectOverviewViewTestCase(TestCase):
+    """Tests for the object overview endpoint rendering an object's overview row."""
+
+    def setUp(self):
+        super().setUp()
+        self.location = Location.objects.first()
+        self.url = reverse("dcim:location_overview", kwargs={"pk": self.location.pk})
+        self.add_permissions("dcim.view_location")
+
+    def test_default_overview(self):
+        """With no overview options set, the overview is built from the object detail view's fields panel."""
+        response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        keys = re.findall(r"<dt>(.*?)</dt>", response.content.decode(response.charset))
+        self.assertEqual(
+            keys,
+            ["Location Type", "Status", "Parent", "Tenant", "Facility", "AS Number", "Time Zone", "Description"],
+        )
+
+    def test_overview_fields(self):
+        """`overview_fields` renders the named fields with their key and value transforms applied."""
+        overview_fields = {"name": {"key_transform": "Label", "value_transforms": [lambda value: "VALUE"]}}
+        with mock.patch.object(LocationUIViewSet, "overview_fields", overview_fields):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<dl class="nb-overview-fields" style="--nb-overview-rows: 1;">'
+            '<div class="nb-overview-field nb-overview-field-column-end"><dt>Label</dt><dd>VALUE</dd></div>'
+            "</dl></td></tr>",
+        )
+
+    def test_overview_html(self):
+        """`overview_html` is rendered as an inline template against the object."""
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+            f'<td class="p-0" colspan="100"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_template_name(self):
+        """`overview_template_name` is rendered as the named template against the object."""
+        template_name = "components/panel/body_wrapper_generic_table.html"
+        with mock.patch.object(LocationUIViewSet, "overview_template_name", template_name):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<table class="collapse show table table-hover"></table></td></tr>',
+        )
+
+    def test_overview_colspans(self):
+        """The requested colspans are rendered as an offset cell and a content cell."""
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(
+                self.url, {"colspan_content": 3, "colspan_offset": 2}, headers={"HX-Request": "true"}
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td colspan="2"></td>'
+            f'<td class="p-0" colspan="3"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_colspan_offset_zero(self):
+        """A zero `colspan_offset` renders no offset cell at all."""
+        with mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"):
+            response = self.client.get(
+                self.url, {"colspan_content": 4, "colspan_offset": 0}, headers={"HX-Request": "true"}
+            )
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+            f'<td class="p-0" colspan="4"><b>{self.location.name}</b></td></tr>',
+        )
+
+    def test_overview_colspans_fall_back_to_defaults(self):
+        """Invalid colspans fall back to no offset and a full-width content cell."""
+        for colspans in (
+            {"colspan_content": "three", "colspan_offset": "two"},
+            {"colspan_content": -3, "colspan_offset": -2},
+            {"colspan_content": "", "colspan_offset": ""},
+        ):
+            with (
+                self.subTest(colspans=colspans),
+                mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
+            ):
+                response = self.client.get(self.url, colspans, headers={"HX-Request": "true"})
+                self.assertHttpStatus(response, 200)
+                self.assertHTMLEqual(
+                    response.content.decode(response.charset),
+                    f'<tr class="nb-overview-row" id="overview-{self.location.pk}">'
+                    f'<td class="p-0" colspan="100"><b>{self.location.name}</b></td></tr>',
+                )
+
+    def test_overview_placeholder_when_panel_declines_to_render(self):
+        """A panel whose `should_render()` is False yields the placeholder row instead."""
+        panel = get_overview_panel(LocationUIViewSet.object_detail_content)
+        with mock.patch.object(panel, "should_render", return_value=False):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertHttpStatus(response, 200)
+        self.assertHTMLEqual(
+            response.content.decode(response.charset),
+            f'<tr class="nb-overview-row" id="overview-{self.location.pk}"><td class="p-0" colspan="100">'
+            '<p class="mb-0 px-10 py-4 text-secondary">— No details to display —</p></td></tr>',
+        )
+
+    def test_overview_arguments_are_mutually_exclusive(self):
+        """Setting more than one overview option is a misconfiguration."""
+        self.client.raise_request_exception = False
+        with (
+            mock.patch.object(LocationUIViewSet, "overview_html", "<b>{{ object.name }}</b>"),
+            mock.patch.object(LocationUIViewSet, "overview_template_name", "components/htmx/overview.html"),
+        ):
+            response = self.client.get(self.url, headers={"HX-Request": "true"})
+        self.assertEqual(response.status_code, 500)
+        self.assertIsInstance(response.exc_info[1], ImproperlyConfigured)
+
+    def test_overview_bad_request_when_no_htmx(self):
+        """A non-HTMX request to the overview endpoint is rejected."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 400)
+
+
+class ObjectOverviewViewWithoutPermissionTestCase(TestCase):
+    def test_overview_requires_view_permission(self):
+        location = Location.objects.first()
+        url = reverse("dcim:location_overview", kwargs={"pk": location.pk})
+        self.assertHttpStatus(self.client.get(url), 403)

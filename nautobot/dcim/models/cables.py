@@ -5,6 +5,7 @@ from typing import Optional
 
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.prefetch import GenericPrefetch
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
@@ -48,7 +49,7 @@ from nautobot.extras.utils import extras_features
 # would be the much more invasive but much more "correct" fix.
 from nautobot.core.models.generics import BaseModel, PrimaryModel  # isort: skip
 
-from .device_components import CableTermination, FrontPort, RearPort
+from .device_components import CableTermination, FrontPort, Interface, RearPort
 
 __all__ = (
     "Cable",
@@ -1520,7 +1521,10 @@ class CablePath(BaseModel):
                 | (models.Q(destination_fans_out=False) & models.Q(origin_id__lt=models.F("destination_id")))
             )
             .order_by("origin_type", "origin_id", "peer_connector")
-            .prefetch_related("origin", "destination")
+            .prefetch_related(
+                GenericPrefetch("origin", [Interface.objects.select_related("device")]),
+                GenericPrefetch("destination", [Interface.objects.select_related("device")]),
+            )
         )
 
     @classmethod

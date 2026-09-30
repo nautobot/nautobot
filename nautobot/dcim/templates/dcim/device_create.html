@@ -67,7 +67,7 @@
                 <div class="col-lg-3"></div>
                 <div class="col-lg-9">
                     <span class="form-text">
-                        <span id="software_version_image_description"><img src="{% static 'img/ajax-loader.gif' %}"></span>
+                        <span id="software_version_image_description"><img alt="Loading software images" src="{% static 'img/ajax-loader.gif' %}"></span>
                         <ul id="software_version_image_list">
                             <li> Software images for the selected software version will appear here </li>
                         </ul>
@@ -89,6 +89,11 @@
             {% if editing %}
                 {% render_field form.primary_ip4 %}
                 {% render_field form.primary_ip6 %}
+            {% else %}
+                <div class="alert alert-info" role="alert">
+                    A management IP address can be selected after creating this device
+                    and assigning an IP address to at least one of its interfaces.
+                </div>
             {% endif %}
         </div>
     </div>
@@ -196,7 +201,7 @@
 
             function populate_software_image_list(software_version_id) {
                 clear_software_image_list();
-                software_version_image_description.innerHTML = '<img src="{% static 'img/ajax-loader.gif' %}">';
+                software_version_image_description.innerHTML = '<img alt="Loading software images" src="{% static 'img/ajax-loader.gif' %}">';
                 software_version_image_list.style.visibility = 'hidden'; // prevent flicker when changing values
                 software_version_image_container.style.setProperty('display', 'flex', 'important');
                 let device_type_id = getSelectField('device_type').find(':selected')[0].value;

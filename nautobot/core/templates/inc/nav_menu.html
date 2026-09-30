@@ -14,11 +14,17 @@
             type="button"
         ></button>
 
+        {% comment %}
+        Two brand links are rendered: the compact icon for the collapsed sidenav and the full logo for the expanded one.
+        Only one is ever active, because the inactive one is hidden with `visibility: hidden`, which also takes it out of
+        the accessibility tree and the tab order. Each image is the only content of its link, so its `alt` text supplies
+        the link's accessible name and must not be empty.
+        {% endcomment %}
         <a class="nb-sidenav-brand" href="{% url 'home' %}">
-            <img src="{% custom_branding_or_static 'navbar_icon' %}"/>
+            <img alt="{{ settings.BRANDING_TITLE }} home" src="{% custom_branding_or_static 'navbar_icon' %}"/>
         </a>
         <a class="position-absolute nb-sidenav-brand" href="{% url 'home' %}">
-            <img src="{% custom_branding_or_static 'logo' %}"/>
+            <img alt="{{ settings.BRANDING_TITLE }} home" src="{% custom_branding_or_static 'logo' %}"/>
         </a>
 
         <ul class="list-unstyled my-0 overflow-x-hidden overflow-y-auto pt-10 w-100">
@@ -106,7 +112,8 @@
                                 value="{{ nav_menu_version_control.active_time_travel_date|default:"" }}"
                             >
                             <button id="timetravel-cancel" class="btn btn-sm d-none" type="button" data-clear>
-                                <span class="mdi mdi-close"></span>
+                                <span aria-hidden="true" class="mdi mdi-close"></span>
+                                <span class="visually-hidden">Clear time travel date</span>
                             </button>
                         </form>
                     </li>

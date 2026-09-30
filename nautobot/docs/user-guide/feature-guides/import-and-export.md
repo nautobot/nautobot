@@ -1,0 +1,330 @@
+# Importing and Exporting Objects
+
+Nautobot can export any list of objects to a file in CSV, JSON, or YAML format. It can also import these same three formats to create new objects and/or update existing objects ("upsert") as desired.
+
+From any object list view, under the **Actions** menu, there are two available action items:
+
+- Export to file
+- Import from file
+
+These actions are backed by the built-in system Jobs `Export Object List` and `Import Objects` respectively. Because of this, you must have the _run_ permission for these Jobs as well as the appropriate permissions for the object type you are exporting/importing (see [Permissions](#permissions)) in order to perform these actions. Additionally, each time you perform these actions, because they are Job-backed, the action runs asynchronously (allowing for export/import of quite large data sets without running the risk of your browser HTTP request timing out) and produces a Job Result and corresponding log entries.
+
+## Exporting
+
+From any supported object list view, choose **Export to file** from the **Actions** menu. A modal dialog will open, allowing you to choose the export file format, optionally pick and order the object fields ("id", "name", etc.) to include or exclude from the export, and optionally apply filtering/sorting criteria to scope the export's content. When the Job finishes, you will be presented with the option to download the resulting file.
+
+The same inputs are available on the `Export Object List` Job's own form, if you would rather start from **Jobs** than from a list view.
+
+### Choosing an export format
+
+| Format | What you get |
+|--------|--------------|
+| CSV    | A `.csv` file in UTF-8 encoding with a leading BOM so that it can open cleanly in Microsoft Excel and similar editors. The first line will be a metadata comment (see [The self-describing file](#the-self-describing-file)), the second line will define column headers corresponding to the object fields included in the export, and each subsequent line will describe a single record. |
+| JSON   | A `.json` file, with top-level metadata keys (see [The self-describing file](#the-self-describing-file)) and a `records` key containing the list of exported objects. Data involving traversal to related objects via database foreign keys (and similar patterns) will be rendered as nested JSON objects, rather than the flattened set of columns present in CSV exports. |
+| YAML   | A `.yaml` file, structured exactly the same as the JSON export but in YAML format, which you may find easier to review and edit as desired. |
+| devicetype-library YAML | _For Device Types and Module Types only._ A `.yaml` file describing not only the selected [Device Types](../core-data-model/dcim/devicetype.md) or [Module Types](../core-data-model/dcim/moduletype.md), but also their associated component templates ([Interface Templates](../core-data-model/dcim/interfacetemplate.md), etc.). Suitable for interoperability with the [devicetype-library](https://github.com/nautobot/devicetype-library) Git repository. |
+
+### Null values
+
+Fields with a null value are represented in JSON and YAML as the native `null` type. Because CSV has no concept of a null type, the string `NULL` will be used in CSV export to represent a null value. This does unavoidably mean that a character field whose value is literally the text "NULL" will not survive an export-import loop via CSV - use JSON or YAML format instead if this is a concern for your data.
+
+### Related objects
+
+Related objects are represented differently per export format, but in all formats, Nautobot attempts to use the _natural key_ (if any) to represent a related object, only falling back to its UUID if no natural key is available.
+
+#### Foreign keys
+
+**CSV** exports flatten related-object natural keys into columns where the database path is joined by `__` - for example, a related Device Type (with natural keys "manufacturer name" and "model") might be represented by the columns `device_type__manufacturer__name` and `device_type__model`. On import, the two columns would work together to identify the specific existing Device Type being referenced. For a null related object, CSV uses the string `NoObject` since, again, CSV has no native null type:
+
+```csv
+name,device_type__manufacturer__name,device_type__model,tenant__name
+my-device,Cisco,ISR4331,my-tenant
+my-other-device,Cisco,ISR4331,NoObject
+```
+
+**JSON and YAML** exports represent related objects as nested data, and use the native null type when appropriate:
+
+```yaml
+records:
+  - name: "my-device"
+    device_type:
+      manufacturer:
+        name: "Cisco"
+      model: "ISR4331"
+    tenant:
+      name: "my-tenant"
+  - name: "my-other-device"
+    device_type:
+      manufacturer:
+        name: "Cisco"
+      model: "ISR4331"
+    tenant: null
+```
+
+JSON and YAML _imports_ also support the CSV-style flattened columns as well, if you're creating your own import file and find it more convenient:
+
+```yaml
+records:
+  - name: "my-other-device"
+    device_type__manufacturer__name: "Cisco"
+    device_type__model: "ISR4331"
+    tenant: null
+```
+
+#### Many-to-many relations
+
+Many to many relations to other objects follow a similar pattern to foreign keys, with some additional nuances.
+
+Relations to an object type that has a _single-value natural key_ (for example, `name`) or no natural key (falling back to `id`) are expressed as a list of such single values directly. In CSV, this will be a comma-separated list (escaped as appropriate) within the single column:
+
+```csv
+name,tags
+my-device,"tag-1,tag-2"
+my-other-device,tag-3
+```
+
+and in JSON or YAML this will be a list of values:
+
+```yaml
+  - name: "my-device"
+    tags:
+      - "tag-1"
+      - "tag-2"
+  - name: "my-other-device"
+    tags:
+      - "tag-3"
+```
+
+Conversely, relations to an object type with a _composite natural key_ will be expressed as a list of natural-key dictionaries. In CSV, this is represented as a JSON string within the single column:
+
+```csv
+name,software_image_files
+my-device,"[{""image_file_name"": ""ios.bin"", ""software_version__platform__name"": ""IOS"", ""software_version__version"": ""15.1""}]"
+```
+
+while in JSON or YAML it's a list of nested objects:
+
+```yaml
+  - name: "my-device"
+    software_image_files:
+      - image_file_name: "ios.bin"
+        software_version:
+          platform:
+            name: "IOS"
+          version: "15.1"
+```
+
+!!! tip "An alternate CSV representation for many-to-many imports with composite natural keys"
+    Although CSV _exports_ now always produce the above embedded-JSON representation of many-to-many relations that require a composite natural key to describe, CSV _imports_ additionally support an alternative representation where there is one column per field in the natural key, and the value of each column is the list of values for that field. This could look something like:
+
+    ```csv
+    name,software_image_files__image_file_name,software_image_files__software_version__platform__name,software_image_files__software_version__version
+    my-device,"ios151.bin,ios152.bin","IOS,IOS","15.1,15.2"
+    ```
+
+### Selecting fields to export
+
+By default an export includes every field of the object type. **Fields to Export** (`export_fields`) lets you instead pick the specific fields you want and put them in the order you want them to appear.
+
+In the browser this is a list of checkboxes, on both the **Export to file** dialog and the Job's own form. Check a field to include it, and drag a row by its handle to move it: the order of the rows is the order of the columns. The fields of a related object are nested inside that object's row and are shown by the chevron at the right of it; a nested field moves with its parent rather than on its own. Leaving everything unchecked exports every field, as usual, and **Clear** empties the selection to get back to that. A field marked `*` is one an import requires to create new records, so a selection that omits it cannot be imported back as new objects (see [Effect on re-importing the file](#effect-on-re-importing-the-file)). Only the object's own fields are ever marked: an import looks a related object up by what you exported of it rather than creating one, so what _that_ object would require to be created has no bearing on your file.
+
+Selecting a related object and selecting a field inside it are mutually exclusive, since they ask for different columns: checking one clears the other. A related object whose own fields are selected, but which is not itself selected, is shown with a dash rather than a check.
+
+Everywhere else - the REST API, a scheduled Job, or `nautobot-server export_objects` - the same parameter takes a comma-separated list:
+
+```no-highlight
+model,manufacturer__name,u_height
+```
+
+The columns appear in exactly the order you list them, so this is also how you control column order:
+
+```csv
+# nautobot_import_version=3; model=dcim.devicetype; match_fields=manufacturer model
+model,manufacturer__name,u_height
+ISR4331,Cisco,1
+```
+
+Each entry is either a plain field (`model`), or a path that traverses one or more foreign keys to reach a field of a related object, joined by `__` (`manufacturer__name`, `device_type__manufacturer__name`). A single path may traverse at most three relations.
+
+Naming a related object _without_ expanding it selects that object's whole natural key - the same columns an unrestricted export would have produced for it. So `model,manufacturer` gives you the same file as the example above minus `u_height`, because `manufacturer` expands to `manufacturer__name`:
+
+```csv
+model,manufacturer__name
+ISR4331,Cisco
+```
+
+Many-to-many fields, such as `tags`, can be selected like any other field, but cannot currently be traversed: `tags` is valid, `tags__name` is not. Selecting the field itself already gives you its members' natural keys, so `tags` yields the tag names; what is not yet supported is narrowing a member's representation to particular fields, such as asking for only `software_image_files__image_file_name`.
+
+#### Selecting custom fields
+
+Use `cf_<key>` to select an individual custom field, or `custom_fields` to select all of them at once. In the picker the individual custom fields are nested inside **custom_fields**, which is the last row of the list, since selecting it asks for everything the individual entries ask for one at a time - and keeps asking for it as custom fields are added later.
+
+In a CSV export both spellings produce one `cf_<key>` column per selected custom field, exactly as an unrestricted export does. In JSON and YAML exports, `custom_fields` keeps the nested dictionary, while an individual `cf_<key>` selection is emitted as a top-level key instead, since a single custom field cannot be named inside the dictionary:
+
+```yaml
+records:
+  - name: "Active"
+    cf_my_field: "a value"
+```
+
+#### Fields that cannot be selected
+
+The Job fails, with an error naming the entry at fault, rather than quietly writing a file that is missing what you asked for. This happens if a selection:
+
+- names a field the object type does not have, or a custom field that is not defined for it
+- names a field that exists only for input rather than output, such as the singular `location` field on VLANs and Prefixes - export the `locations` many-to-many field instead
+- names a value computed for display rather than stored on the object, such as the related-object counts a list view shows (`device_count`, `rack_count`, and the like) - export the related objects themselves instead
+- attempts to traverse a many-to-many field, or a field that is not a relation at all
+- traverses more than three relations in a single path
+- names a field on a related model that the user does not have at least some form of `view` permission for, with the exception of the `id` field which is always permitted.
+
+The picker does not pre-empt these rules; it offers the field graph of the object type as the data model defines it. Two differences follow. It lists one relation less deep than a path may traverse, so a deeper path is available by typing it even though no checkbox offers it. And it does not hide the fields of a related model you lack permission for, so selecting one fails when the export runs, with the error above, rather than silently going missing from the list.
+
+#### Effect on re-importing the file
+
+A file containing only some of an object type's fields may not contain enough information to identify the objects it describes. When the selected fields do not cover every field of the model's match key, the `match_fields` metadata is therefore omitted from the export (see [The self-describing file](#the-self-describing-file)), as in the `model,manufacturer__name` example above had `manufacturer__name` been left out.
+
+Such a file can still be imported - you just have to say what to match on, either by [specifying match fields](#match-fields) as an input to the `Import Objects` Job or by adding the metadata to the file yourself.
+
+### Scoping the exported objects
+
+An export always covers the same objects, in the same order, as the list view it was launched from. Exporting from a filtered, sorted view therefore gives you a file of exactly the rows you were looking at, and exporting from an unfiltered view gives you every object of that type in its default order.
+
+The `Export Object List` Job expresses that view through its **Filter Parameters** (`query_string`) input, which takes the view's URL query string:
+
+```no-highlight
+status=active&location=ams01&sort=-name
+```
+
+The filters and the sort order both apply. When the query string references a saved view (`?saved_view=<id>`), that view's own stored filters and sort order apply as well, exactly as they do when you visit it:
+
+- Its stored filters are used as long as the query string carries no filters of its own. Any filter in the query string means you changed the view's filters, and replaces the saved view's filters entirely rather than combining with them - which is what lets you widen a saved view as well as narrow it.
+- `&all_filters_removed=true` says you cleared the filters, so none apply.
+- Its stored sort order is used unless the query string carries a `sort` of its own.
+
+A sort on something the database cannot order by - a column computed for display, say - is skipped with a warning rather than failing the export.
+
+### Exporting the columns you are looking at
+
+**Match the list view**, the button above the field picker, fills the selection in with the columns the list view is displaying, in the order it displays them: those of the saved view in use, if any, otherwise the ones you have configured for yourself through the table's **Configure Table** dialog, otherwise the table's default columns. Because it fills in the picker rather than the export itself, you can see what you are about to get and then reorder or prune it before running the export.
+
+The button is the whole of this feature: the export itself takes nothing but an explicit list of fields, so what it fills in is an ordinary [**Fields to Export**](#selecting-fields-to-export) selection that you can then edit. Where there is no picker in front of you - the REST API, a scheduled Job, `nautobot-server export_objects` - name the fields you want instead. That is worth preferring anyway for anything repeated or automated, since it says what the file will contain rather than depending on how somebody's table happens to be configured when the export runs.
+
+A field selection has no effect on Export Templates or `devicetype-library YAML` exports, which render their own output.
+
+Not every column has a field behind it that can be exported. Row selection and action buttons are not data at all; computed fields, relationships, and related-object counts are values assembled for display rather than fields of the record.
+
+A count column is _about_ a relation, though, so where the relation itself is exportable the export carries that instead of the count: exporting a Prefix list view whose **VRFs** column shows a count of 3 gives you a `vrfs` column naming those three VRFs. Where the relation is not something an export can carry - a count of Devices in a Location, say, or of Dynamic Groups an object belongs to - the column is left out.
+
+Every column left out is named beneath the button, so the selection never quietly disagrees with the view it came from. This is more forgiving than naming those same fields explicitly, which is an error: here you asked for a view rather than for those particular fields. If none of the displayed columns can be exported at all, nothing is filled in - which is the selection that exports every field.
+
+## The self-describing file
+
+Each exported file produced by Nautobot includes metadata describing _how it should be re-imported_ - specifically, the following metadata:
+
+- `nautobot_import_version`: the version of Nautobot export/import data this file conforms to. Currently `3`, as there have been two previous styles of Nautobot export/import data, although neither of those styles ever included an explicit version-number string.
+- `model`: the Nautobot data model / content-type, such as "dcim.device".
+- `match_fields`: the [set of fields](#match-fields) (sometimes also referred to as a "match key") that should be used, when importing this file, to pair records in the file with existing Nautobot objects, in order to determine whether a given record should be used to create a new object or update an existing one.
+
+CSV exports carry the metadata as a directive on the first line:
+
+```csv
+# nautobot_import_version=3; model=extras.status; match_fields=name
+name,color
+Active,00ff00
+```
+
+while JSON and YAML exports carry the metadata at the document root:
+
+```yaml
+nautobot_import_version: 3
+model: "extras.status"
+match_fields:
+  - "name"
+records:
+  - name: "Active"
+    color: "00ff00"
+```
+
+## Importing
+
+Importing is the "Import Objects" Job, reached from the **Import from File** button on any object-list view, and it accepts CSV, JSON and YAML alike. Supply the data either by uploading a file or by pasting it into the text box.
+
++/- 3.3.0
+    Previous versions could import CSV only.
+
+### Choosing an import format
+
+The **Format** field defaults to auto-detection, which is almost always what you want: an uploaded file is recognized by its `.csv`, `.json`, `.yaml` or `.yml` extension, and pasted text by its first line of content — `{` or `[` for JSON, a `-` list item or a `key:` mapping for YAML, anything else for CSV. Set the field explicitly when a file's extension does not match what is in it.
+
+### Which objects are imported
+
+A file [exported by Nautobot](#the-self-describing-file) declares its own `model`, so you can leave **Content Type** empty and let the file say what it contains. If you do set it and the file declares a different model, the import is refused rather than being read as the wrong type — the usual cause is having picked up the wrong file.
+
+A file that declares no `model` — one you wrote yourself, say — needs the content type set explicitly.
+
+### Which fields are accepted
+
+Every column or key must be a field of that content type's REST API serializer, spelled exactly as an export writes it. Related objects may be given as a UUID or by natural key (`status__name`), and custom fields as `cf_<key>` columns. Anything unrecognized fails the import rather than being ignored, so that a mistyped field name is not silently dropped.
+
+Fields Nautobot generates rather than stores — `display`, `object_type`, `natural_slug` and the like — are accepted and ignored, so a file exported from Nautobot re-imports without needing to be trimmed first.
+
+### If a row fails
+
+**Rollback Changes on Failure** is enabled by default: if any row fails validation, the entire import is rolled back, so nothing is created or updated. Every failing row is still reported, so one run tells you everything that needs fixing. If you disable it, the rows that succeeded are kept, including any updates to existing objects, and you can import the rest later.
+
+### From the command line
+
+`nautobot-server import_objects` runs the same Job locally, which is useful for development and scripted testing:
+
+```no-highlight
+nautobot-server import_objects ./statuses.yaml --username admin
+nautobot-server import_objects ./devices.csv --username admin --content-type dcim.device --no-rollback
+```
+
+As in the UI, `--content-type` may be omitted for a file that declares its own model.
+
+### Match fields
+
+Each record in the file is paired with an existing object by its match fields. A record that matches an object updates that object in place; a record that matches nothing creates a new object. A record whose values are identical to the object it matches changes nothing, and is counted as unchanged rather than updated.
+
+The match fields for an import are, in order of precedence:
+
+1. the match fields given as an input to the "Import Objects" Job, if any;
+2. otherwise, the `match_fields` in the file's own [metadata](#the-self-describing-file), if any;
+3. otherwise, `id`, if the records include it;
+4. otherwise, the object type's default match fields: its "natural key", the field or set of fields that uniquely identify an object, for example a Status's `name` field. This is the same set of fields that an export writes into the file's metadata.
+
+An object type that has no natural key, and whose records don't include an `id`, can't be matched, so importing it only ever creates new objects.
+
+When the default match fields are in use (3 or 4 above), a record that can't be matched on them is treated as a new object: one that lacks a match field, such as a record without an `id` when matching on `id`, or one whose value for a related match field doesn't identify an existing object. Like any new object, it's only created if it's valid, so a record missing a required field, or referring to a related object that doesn't exist, is reported as an error. Match fields that you specify yourself (1 or 2 above) must be matchable in every record: a record that lacks one of them, or whose value for one doesn't identify an existing related object, is reported as an error without any attempt to create it.
+
+A record's `id` never changes the `id` of an existing object. When a record is matched on fields other than `id`, its `id` is ignored and the object keeps its own. This is what lets you import a file exported from a different Nautobot instance, in which the same objects have different ids: matched on their natural key, they update the objects that already exist here. When a record creates a new object, its `id`, if it has one, becomes the new object's `id`. Importing a file that includes `id` into an instance that doesn't have those objects therefore keeps their ids from the original instance.
+
+!!! tip "Renaming objects"
+    To rename objects in an exported file, enter `id` as the Job's match fields. The file's own match fields usually include the name, so a renamed record would otherwise match nothing.
+
+The import log reports each updated object with the fields that changed and their old and new values, naming related objects by the same fields the file uses. The values of sensitive fields, such as an API token's `key`, are never logged: a change to one is reported without either value. A field that can be written but not read, such as a user's `password`, has no old value to compare, so a record that sets one always counts as an update.
+
+!!! note "Only the fields in the file are updated"
+    An update changes only the fields that the record includes, so a file with just `name` and `description` leaves every other field of the matched object as it is. A field that the record includes as null (`NULL`, or `NoObject` in every column of a related object in CSV) is cleared.
+
+Match fields are always field names of the object itself, never lookups into a related object: a Device matches on `location`, not on `location__name`. A related object is identified by whatever the record gives for it, exactly as it is when the record is saved, so `location__name` and `location__parent__name` columns together identify the one Location they describe. A related object given as null matches objects that have none, so a Device with no tenant matches on `tenant` too.
+
+When importing, you can override the match fields for a particular file either by editing the metadata directly before uploading the file, or by explicitly specifying match fields as an input to the "Import Objects" Job. This can be powerful for in-place updates where you know that a given field(s), even though not actually enforced unique by Nautobot itself, happen in your particular use case to be unique identifiers for the existing objects in the system. Overriding the match fields in this case can allow you to specify records in a simpler or more portable way than using a full natural-key field set or using the raw `id` values would.
+
+!!! warning "You own the uniqueness"
+    When setting a custom set of match fields, _you are responsible_ for ensuring that the fields you choose do in fact uniquely identify objects in Nautobot. Nautobot does not enforce that your chosen fields are backed by a database-level uniqueness constraint, a data validation rule, or anything of the sort. If two rows in your file share the same match field values, you'll get a clear "does not uniquely identify each row" error, and if any row in your file matches more than one existing object, the import will refuse to import that row rather than guess which object you meant.
+
+## Permissions
+
+| Action | Permissions required |
+|--------|----------------------|
+| Export | Run permission for the `Export Object List` job, plus _view_ permission on the model. |
+| Import (create rows) | Run permission for the `Import Objects` job, plus _add_ permission on the model. |
+| Import (update rows) | Run permission for the `Import Objects` job, plus _change_ permission on the model. |
+
+Object permissions with constraints apply to imports as they do elsewhere in Nautobot:
+
+- Records are matched only against objects that you have permission to change. A record that would otherwise match an object you can't change is treated as a new object instead, so importing it usually fails with a uniqueness error, for example "status with this name already exists", rather than updating that object.
+- An updated object must still fall within your _change_ permission's constraints after the update, and a created object must fall within your _add_ permission's constraints. A record that would leave an object outside them is reported as an error, such as "does not have permission to update an object with these attributes", and nothing is saved for it.

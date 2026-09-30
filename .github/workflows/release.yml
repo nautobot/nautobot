@@ -69,10 +69,12 @@ jobs:
   publish_containers:
     if: ${{ ! github.event.release.draft }}
     name: "Build & Publish Container Images"
+    permissions:
+      packages: "write"
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         arch: [ "amd64", "arm64" ]
         os: [ "ubuntu-24.04", "ubuntu-24.04-arm" ]
         exclude:
@@ -135,11 +137,13 @@ jobs:
     if: ${{ ! github.event.release.draft }}
     needs:
       - "publish_containers"
+    permissions:
+      packages: "write"
     runs-on: "ubuntu-24.04"
     strategy:
       fail-fast: true
       matrix:
-        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        python-version: [ "3.11", "3.12", "3.13", "3.14" ]
     env:
       BUILD_PUSH_CONTAINER_ACTION_DEFAULT_PYTHON_VERSION: "3.14"
       BUILD_PUSH_CONTAINER_ACTION_SET_LATEST: "true" # Change this to false for LTM, Pre-release versions force this to false.

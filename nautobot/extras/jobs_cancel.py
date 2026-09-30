@@ -146,7 +146,7 @@ class JobCancelStrategy(ABC):
         )
 
     def _apply_cancel_metadata(
-        self, job_result: JobResult, user: User, cancel_type: str, now_timestamp: None | datetime = None
+        self, job_result: JobResult, user: User, cancel_type: str, now_timestamp: datetime | None = None
     ) -> set[str]:
         """Fill in termination metadata fields on a locked `JobResult`.
 

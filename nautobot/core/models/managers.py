@@ -42,3 +42,26 @@ class BaseManager(Manager):
 
 class TagsManager(_TaggableManager, BaseManager):
     """Manager class for model 'tags' fields."""
+
+    # django-taggit does not flag its mutating manager methods as `alters_data`, unlike Django's own
+    # related managers. Override them only to attach the flag. GHSA-2v7j-x3g6-qj94.
+    # TODO: Remove these once https://github.com/jazzband/django-taggit/issues/953 is fixed.
+    def add(self, *args, **kwargs):  # pylint: disable=useless-parent-delegation
+        return super().add(*args, **kwargs)
+
+    add.alters_data = True
+
+    def remove(self, *args, **kwargs):  # pylint: disable=useless-parent-delegation
+        return super().remove(*args, **kwargs)
+
+    remove.alters_data = True
+
+    def set(self, *args, **kwargs):  # pylint: disable=useless-parent-delegation
+        return super().set(*args, **kwargs)
+
+    set.alters_data = True
+
+    def clear(self, *args, **kwargs):  # pylint: disable=useless-parent-delegation
+        return super().clear(*args, **kwargs)
+
+    clear.alters_data = True

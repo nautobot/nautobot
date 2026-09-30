@@ -114,22 +114,29 @@
                         <div class="nb-tile-actions">
                             {% if app.docs|default:None != None %}
                                 <a href="{{ app.docs }}" class="btn btn-info btn-sm" target="_blank" data-bs-title="Docs">
+                                    <span class="visually-hidden">Docs</span>
                             {% else %}
                                 <a aria-disabled="true" class="btn btn-info btn-sm disabled" data-bs-title="No docs provided">
+                                    <span class="visually-hidden">No docs provided</span>
                             {% endif %}
-                            <span class="mdi mdi-book-open-page-variant"></span>
+                            <span aria-hidden="true" class="mdi mdi-book-open-page-variant"></span>
                         </a>
                     </div>
                     </div>
 
-                    <div class="modal fade" tabindex="-1" id="modal-{{ app.package_name }}">
+                    <div class="modal fade"
+                         tabindex="-1"
+                         id="modal-{{ app.package_name }}"
+                         role="dialog"
+                         aria-modal="true"
+                         aria-labelledby="modal-{{ app.package_name }}-title">
                         <div class="modal-dialog modal-lg" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h4 class="modal-title">
+                                    <h2 class="modal-title" id="modal-{{ app.package_name }}-title">
                                         {{ app.name }}
                                         {% if app.installed %}<span class="badge bg-success">Installed</span>{% endif %}
-                                    </h4>
+                                    </h2>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
 

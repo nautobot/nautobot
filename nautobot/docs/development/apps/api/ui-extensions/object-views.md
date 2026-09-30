@@ -64,6 +64,7 @@ class CircuitContent(TemplateExtension):
         ),
     )
 
+
 template_extensions = [CircuitContent]
 ```
 
@@ -127,6 +128,7 @@ For example:
 ```python title="example_app/template_content.py"
 class DeviceExtraTabs(TemplateExtension):
     """Template extension to add extra tabs to the Device detail view."""
+
     model = "dcim.device"
 
     def detail_tabs(self):
@@ -154,7 +156,7 @@ In either of the above cases, you would need to define a new view for the `devic
 {% endblock %}
 ```
 
-Here's a basic example of a tab's view. Note that while you're free to *add* additional context data in `get_extra_context`, you *must* call `super().get_extra_context()` and set the `active_tab` key to match the `tab_id` defined in the template extension for this view.
+Here's a basic example of a tab's view. Note that while you're free to _add_ additional context data in `get_extra_context`, you **must** call `super().get_extra_context()` and set the `active_tab` key to match the `tab_id` defined in the template extension for this view.
 
 +++ 2.4.22 "Added `get_detail_view_components_context_for_model()` helper function"
     The `get_detail_view_components_context_for_model()` helper function was added. Calling this allows you to correctly set the `breadcrumbs`, `object_detail_content`, and `view_titles` context keys from the base detail-view that this view is extending.
@@ -163,6 +165,7 @@ Here's a basic example of a tab's view. Note that while you're free to *add* add
 from nautobot.apps.utils import get_detail_view_components_context_for_model
 from nautobot.apps.views import ObjectView
 from nautobot.dcim.models import Device
+
 
 class DeviceDetailAppTabOne(ObjectView):
     """

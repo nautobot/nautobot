@@ -311,7 +311,6 @@ graph TB
             status=connected.id,
         )
         log(True, "Cable", f"{a_device} {a_name} <-> {b_device} {b_name}")
-
     ```
 
 ## Sample Design Builder
@@ -455,7 +454,7 @@ The following [Design Builder](https://docs.nautobot.com/projects/design-builder
 
 ## GraphQL
 
-The following query retrieves a virtual chassis by name and walks each member device and its interfaces. Querying `members { interfaces { ... } }` (rather than the master's `vc_interfaces`) returns *every* device fully — including each member's own management interface, which `vc_interfaces` filters out — so a template can generate the complete configuration for both devices. It returns the chassis `domain`, the `master` (to identify the primary), and per member its `vc_position`/`vc_priority`/`primary_ip4` plus each interface's `type`, `lag` membership, `mode`, and tagged/untagged VLANs.
+The following query retrieves a virtual chassis by name and walks each member device and its interfaces. Querying `members { interfaces { ... } }` (rather than the master's `vc_interfaces`) returns _every_ device fully — including each member's own management interface, which `vc_interfaces` filters out — so a template can generate the complete configuration for both devices. It returns the chassis `domain`, the `master` (to identify the primary), and per member its `vc_position`/`vc_priority`/`primary_ip4` plus each interface's `type`, `lag` membership, `mode`, and tagged/untagged VLANs.
 
 ```graphql
 query ($vc_name: [String]) {
@@ -879,8 +878,8 @@ The script below renders the templates against GraphQL query. Paste the GraphQL 
 ??? example "Config Generation Script"
 
     ```python
-    GRAPHQL_QUERY = """."""              # Replace with the GraphQL query from above
-    CLI_CONFIG_TEMPLATE = """."""         # Replace with one of the three config templates above
+    GRAPHQL_QUERY = """."""  # Replace with the GraphQL query from above
+    CLI_CONFIG_TEMPLATE = """."""  # Replace with one of the three config templates above
 
     import ipaddress
 

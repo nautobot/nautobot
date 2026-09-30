@@ -1183,6 +1183,7 @@ class DeviceModuleBayTable(ModuleBayTable):
         row_attrs = {
             "class": lambda record: "table-success" if record.installed_module else "",
         }
+        show_row_overviews = False
 
 
 class ModuleModuleBayTable(DeviceModuleBayTable):

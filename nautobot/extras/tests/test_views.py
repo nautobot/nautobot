@@ -113,6 +113,13 @@ from nautobot.extras.models import (
     Webhook,
 )
 from nautobot.extras.registry import registry
+from nautobot.extras.templatetags.custom_links import (
+    DISABLED_DROPDOWN_LINK,
+    DISABLED_LINK_BUTTON,
+    DROPDOWN_DIVIDER,
+    DROPDOWN_GROUP,
+    DROPDOWN_TRIGGER,
+)
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
@@ -615,7 +622,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -634,7 +641,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -655,7 +662,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -676,7 +683,7 @@ class ApprovalWorkflowViewTestCase(
             url = reverse("extras:approvalworkflow", args=[approval_workflow.pk])
             response = self.client.get(url, follow=True)
             self.assertHttpStatus(response, 200)
-            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span class="mdi mdi-chevron-down"></span></button>'
+            action_dropdown = '<button type="button" id="actions-dropdown" data-bs-toggle="dropdown" class="btn btn-warning rounded-end">Actions <span aria-hidden="true" class="mdi mdi-chevron-down"></span></button>'
             cancel_dropdown_item = f"""
             <a href="/extras/approval-workflows/{approval_workflow.pk}/cancel/" class="dropdown-item">
                 <span class="mdi mdi mdi-cancel" aria-hidden="true"></span>
@@ -2386,41 +2393,188 @@ class CustomLinkRenderingTestCase(TestCase):
 
     user_permissions = ["dcim.view_location"]
 
-    def test_view_object_with_custom_link(self):
+    @classmethod
+    def setUpTestData(cls):
+        cls.content_type = ContentType.objects.get_for_model(Location)
+        location_type = LocationType.objects.get(name="Campus")
+        status = Status.objects.get_for_model(Location).first()
+        cls.location = Location(name="Test Location", location_type=location_type, status=status)
+        cls.location.save()
+
+    def test_view_object_with_single_custom_link(self):
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name="Test",
             text="FOO {{ obj.name }} BAR",
             target_url="http://example.com/?location={{ obj.name }}",
-            new_window=False,
+            new_window=True,
         )
         customlink.save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
-        self.assertIn(f"FOO {location.name} BAR", content, content)
+        self.assertIn(f"FOO {self.location.name} BAR", content, content)
+        self.assertInHTML(
+            f'<a href="http://example.com/?location={self.location.name}" target="_blank" class="btn btn-secondary">'
+            f'<span aria-hidden="true" class="mdi mdi-link-variant me-4"></span>FOO {self.location.name} BAR</a>',
+            content,
+        )
+
+    def test_view_object_with_single_grouped_custom_link(self):
+        customlink = CustomLink(
+            content_type=self.content_type,
+            name="Test",
+            text="Link 1",
+            target_url="http://example.com/1",
+            group_name="Group 1",
+            button_class="primary",
+            new_window=False,
+        )
+        customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="primary", text="Group 1"), content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
+
+    def test_view_object_with_single_custom_link_group(self):
+        for index, button_class in enumerate(["primary", "danger"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                group_name="Group 1",
+                button_class=button_class,
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="primary", text="Group 1"), content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/2">Link 2</a></li>', content)
+
+    def test_view_object_with_multiple_custom_links(self):
+        for index, button_class in enumerate(["primary", "default"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                button_class=button_class,
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item text-primary" href="http://example.com/1">Link 1</a></li>', content
+        )
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/2">Link 2</a></li>', content)
+
+    def test_view_object_with_multiple_custom_link_groups(self):
+        for index, button_class in enumerate(["primary", "default"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                group_name=f"Group {index}",
+                button_class=button_class,
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
+        self.assertInHTML(DROPDOWN_GROUP.format(text="Group 1", links=""), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item ps-24 text-primary" href="http://example.com/1">Link 1</a></li>', content
+        )
+        self.assertInHTML(DROPDOWN_DIVIDER + DROPDOWN_GROUP.format(text="Group 2", links=""), content)
+        self.assertInHTML(DROPDOWN_DIVIDER, content, count=1)
+        self.assertInHTML('<li><a class="dropdown-item ps-24" href="http://example.com/2">Link 2</a></li>', content)
+
+    def test_view_object_with_grouped_and_ungrouped_custom_links(self):
+        for index, group_name in enumerate(["", "Group 1"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=f"Link {index}",
+                target_url=f"http://example.com/{index}",
+                group_name=group_name,
+                button_class="danger",
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item text-danger" href="http://example.com/1">Link 1</a></li>', content
+        )
+        self.assertInHTML(DROPDOWN_DIVIDER + DROPDOWN_GROUP.format(text="Group 1", links=""), content)
+        self.assertInHTML(
+            '<li><a class="dropdown-item ps-24 text-danger" href="http://example.com/2">Link 2</a></li>', content
+        )
+
+    def test_view_object_with_single_failing_custom_link(self):
+        customlink = CustomLink(
+            content_type=self.content_type,
+            name="Test",
+            text="{{ 1 / 0 }}",
+            target_url="http://example.com/",
+            new_window=False,
+        )
+        customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DISABLED_LINK_BUTTON.format(css_class="", title="division by zero", text="Test"), content)
+
+    def test_view_object_with_multiple_custom_links_one_failing(self):
+        for index, text in enumerate(["Link 1", "{{ 1 / 0 }}"], start=1):
+            customlink = CustomLink(
+                content_type=self.content_type,
+                name=f"Test {index}",
+                text=text,
+                target_url=f"http://example.com/{index}",
+                new_window=False,
+            )
+            customlink.validated_save()
+
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
+        self.assertEqual(response.status_code, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        self.assertInHTML(DROPDOWN_TRIGGER.format(css_class="secondary", text="Links"), content)
+        self.assertInHTML('<li><a class="dropdown-item" href="http://example.com/1">Link 1</a></li>', content)
+        self.assertInHTML(DISABLED_DROPDOWN_LINK.format(css_class="", title="division by zero", text="Test 2"), content)
 
     def test_view_object_with_unsafe_custom_link_text(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name="Test",
             text='<script>alert("Hello world!")</script>',
             target_url="http://example.com/?location=None",
             new_window=False,
         )
         customlink.validated_save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
@@ -2430,19 +2584,15 @@ class CustomLinkRenderingTestCase(TestCase):
     def test_view_object_with_unsafe_custom_link_url(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name="Test",
             text="Hello",
             target_url='"><script>alert("Hello world!")</script><a href="',
             new_window=False,
         )
         customlink.validated_save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
@@ -2452,19 +2602,15 @@ class CustomLinkRenderingTestCase(TestCase):
     def test_view_object_with_unsafe_custom_link_name(self):
         """Ensure that custom links can't be used as a vector for injecting scripts or breaking HTML."""
         customlink = CustomLink(
-            content_type=ContentType.objects.get_for_model(Location),
+            content_type=self.content_type,
             name='<script>alert("Hello World")</script>',
             text="Hello",
             target_url="http://example.com/?location={{ obj.name ",  # intentionally bad jinja2 to trigger error case
             new_window=False,
         )
         customlink.validated_save()
-        location_type = LocationType.objects.get(name="Campus")
-        status = Status.objects.get_for_model(Location).first()
-        location = Location(name="Test Location", location_type=location_type, status=status)
-        location.save()
 
-        response = self.client.get(location.get_absolute_url(), follow=True)
+        response = self.client.get(self.location.get_absolute_url(), follow=True)
         self.assertEqual(response.status_code, 200)
         content = extract_page_body(response.content.decode(response.charset))
         self.assertNotIn("<script>alert", content, content)
@@ -3989,6 +4135,159 @@ class SavedViewTest(ModelViewTestCase):
                 f'<span aria-hidden="true" class="mdi mdi-check"></span>{sv_name}<span class="mdi mdi-account-group ms-auto" aria-hidden="true" data-bs-toggle="tooltip" data-bs-title="Shared" data-bs-fallback-placements="[&quot;top&quot;]"></span>',
                 html=True,
             )
+
+    #
+    # Saved View edit form (extras:savedview_edit), as distinct from the update-config action tested above.
+    #
+
+    def get_edit_form_url(self, saved_view):
+        return reverse("extras:savedview_edit", kwargs={"pk": saved_view.pk})
+
+    def _other_user_saved_view(self, **kwargs):
+        other_user = User.objects.create(username=f"savedview-owner-{uuid.uuid4()}", is_active=True)
+        kwargs.setdefault("name", "Other User Saved View")
+        kwargs.setdefault("view", "dcim:location_list")
+        return SavedView.objects.create(owner=other_user, **kwargs)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_other_users_saved_view_as_different_user(self):
+        instance = self._other_user_saved_view(is_shared=False)
+        different_user = User.objects.create(username="Edit Form User 1", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "hacked", "is_shared": True, "is_global_default": True}),
+            follow=True,
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Other User Saved View")
+        self.assertFalse(instance.is_shared)
+        self.assertFalse(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_get_other_users_saved_view(self):
+        """The edit form should not even be rendered for a user who is not permitted to submit it."""
+        instance = self._other_user_saved_view(is_shared=False)
+        different_user = User.objects.create(username="Edit Form User 2", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.get(self.get_edit_form_url(instance), follow=True, headers={"HX-Request": "true"})
+        self.assertBodyContains(
+            response,
+            f"You do not have the required permission to modify this Saved View owned by {instance.owner}",
+        )
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_edit_form_other_users_saved_view_with_change_permission(self):
+        """extras.change_savedview still permits moderating other users' saved views in the UI."""
+        instance = self._other_user_saved_view(is_shared=True)
+        self.add_permissions("extras.change_savedview")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "Moderated Name", "is_shared": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "Moderated Name")
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_set_global_default_as_owner_without_change_permission(self):
+        instance = SavedView.objects.create(owner=self.user, name="My Own View", view="dcim:location_list")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": instance.name, "is_shared": True, "is_global_default": True}),
+            follow=True,
+            headers={"HX-Request": "true"},
+        )
+        self.assertBodyContains(
+            response, "You do not have the required permission to change the global default Saved View."
+        )
+        instance.refresh_from_db()
+        self.assertFalse(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_set_global_default_as_owner_with_change_permission(self):
+        instance = SavedView.objects.create(owner=self.user, name="My Own View", view="dcim:location_list")
+        self.add_permissions("extras.change_savedview")
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": instance.name, "is_global_default": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertTrue(instance.is_global_default)
+        self.assertTrue(instance.is_shared)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_rename_own_global_default_view_without_change_permission(self):
+        """An unchanged is_global_default must not trip the permission gate."""
+        instance = SavedView.objects.create(
+            owner=self.user, name="My Global Default", view="dcim:location_list", is_global_default=True
+        )
+        response = self.client.post(
+            self.get_edit_form_url(instance),
+            data=post_data({"name": "My Renamed Global Default", "is_shared": True, "is_global_default": True}),
+        )
+        self.assertHttpStatus(response, 302)
+        instance.refresh_from_db()
+        self.assertEqual(instance.name, "My Renamed Global Default")
+        self.assertTrue(instance.is_global_default)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_with_other_users_private_saved_view_param(self):
+        """
+        A `?saved_view=<uuid>` link applies regardless of ownership or `is_shared`.
+
+        This is a known side effect of the parameter rather than a designed sharing mechanism; it is not a
+        documented feature. If it is ever closed, this test should be updated deliberately.
+        """
+        # Create our own Locations and filter down to one of them, rather than asserting against ambient test
+        # data whose volume and pagination make presence on the first page of results unpredictable.
+        location_status = Status.objects.get_for_model(Location).first()
+        if location_status is None:
+            location_status = Status.objects.create(name="Saved View Link Status")
+            location_status.content_types.add(ContentType.objects.get_for_model(Location))
+        location_type = LocationType.objects.create(name="Saved View Link Location Type")
+        included = Location.objects.create(
+            name="Saved View Link Location Included", location_type=location_type, status=location_status
+        )
+        excluded = Location.objects.create(
+            name="Saved View Link Location Excluded", location_type=location_type, status=location_status
+        )
+        instance = self._other_user_saved_view(is_shared=False, config={"filter_params": {"name": [included.name]}})
+        different_user = User.objects.create(username="Saved View Link User", is_active=True)
+        self.client.force_login(different_user)
+        response = self.client.get(reverse("dcim:location_list") + f"?saved_view={instance.pk}", follow=True)
+        # The saved view's filter params were applied, narrowing the list to the single matching Location.
+        self.assertBodyContains(response, included.name)
+        self.assertNotIn(excluded.name, extract_page_body(response.content.decode(response.charset)))
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_list_view_with_invalid_saved_view_param(self):
+        for saved_view_param in [str(uuid.uuid4()), "not-a-uuid"]:
+            with self.subTest(saved_view=saved_view_param):
+                response = self.client.get(
+                    reverse("dcim:location_list") + f"?saved_view={saved_view_param}", follow=True
+                )
+                self.assertHttpStatus(response, 200)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_unknown_saved_view_returns_404(self):
+        """Every Saved View action that looks up its object by pk should 404 rather than error on an unknown pk."""
+        unknown_pk = uuid.uuid4()
+        for url_name in [
+            "extras:savedview_edit",
+            "extras:savedview_delete",
+            "extras:savedview_set_default",
+            "extras:savedview_update_config",
+        ]:
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name, kwargs={"pk": unknown_pk}))
+                self.assertHttpStatus(response, 404)
 
 
 # Not a full-fledged PrimaryObjectViewTestCase as there's no BulkEditView for Secrets
@@ -5930,6 +6229,31 @@ class JobTestCase(
             result = JobResult.objects.latest()
             self.assertIn(str(result.pk), content)
 
+    @mock.patch("nautobot.extras.views.get_worker_count", return_value=1)
+    def test_run_now_modal_requested_by_payload(self, _):
+        """A caller that never opened the form can still ask for the modal, by saying so in the payload.
+
+        The modal's own submit identifies itself by the id of the form making the request. A single-click
+        action -- an Export Template row in a list view's menu, say -- carries every input the Job needs
+        and so posts from a button of its own, which no `HX-Trigger` would identify; it sets
+        `job_form_modal` instead, and wants the same progress-and-result modal back.
+        """
+        self.add_permissions("extras.run_job")
+        self.add_permissions("extras.view_jobresult")
+
+        for run_url in self.run_urls:
+            response = self.client.post(
+                run_url,
+                data={**self.data_run_immediately, "job_form_modal": True},
+                headers={"HX-Request": "true"},
+            )
+
+            self.assertHttpStatus(response, 200)
+            content = response.content.decode(response.charset)
+            result = JobResult.objects.latest()
+            self.assertIn(str(result.pk), content)
+            self.assertIn("Job Status", content)  # the result modal, not a redirect or the form
+
     @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
     def test_render_job_form_modal_scheduling_resolved_from_registered_button(self):
         """The schedule form is rendered based on the registered _JobModalButton, never the POST payload."""
@@ -6575,7 +6899,7 @@ class JobTestCase(
         self.add_permissions("extras.view_objectchange", "extras.view_job")
         response = self.client.get(instance.get_changelog_url())
         self.assertBodyContains(response, f"{instance}")
-        changelog_table = "<thead><tr><th>Time</th><th>User name</th><th>Action</th><th>Type</th><th>Object</th><th>Request ID</th></tr></thead>"
+        changelog_table = '<thead><tr><th scope="col">Time</th><th scope="col">User name</th><th scope="col">Action</th><th scope="col">Type</th><th scope="col">Object</th><th scope="col">Request ID</th></tr></thead>'
         self.assertBodyContains(response, changelog_table, html=True)
 
 
@@ -6922,6 +7246,11 @@ class ObjectChangeTestCase(TestCase):
         objectchange = ObjectChange.objects.first()
         response = self.client.get(objectchange.get_absolute_url())
         self.assertHttpStatus(response, 200)
+        content = extract_page_body(response.content.decode(response.charset))
+        # Both the `object_data` and `object_data_v2` panels are rendered, initially collapsed.
+        for label, body_id in (("OBJECT DATA", "object-data"), ("OBJECT DATA V2", "object-data-v2")):
+            self.assertIn(label, content)
+            self.assertIn(f'<div class="collapse" id="{body_id}">', content)
 
 
 class ObjectMetadataTestCase(

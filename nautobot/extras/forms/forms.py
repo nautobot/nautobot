@@ -212,7 +212,6 @@ __all__ = (
     "ObjectMetadataCreateForm",
     "ObjectMetadataFilterForm",
     "ObjectMetadataForm",
-    "PasswordInputWithPlaceholder",
     "RelationshipAssociationFilterForm",
     "RelationshipBulkEditForm",
     "RelationshipFilterForm",
@@ -1291,21 +1290,6 @@ def get_git_datasource_content_choices():
     return get_datasource_content_choices("extras.gitrepository")
 
 
-class PasswordInputWithPlaceholder(forms.PasswordInput):
-    """PasswordInput that is populated with a placeholder value if any existing value is present."""
-
-    def __init__(self, attrs=None, placeholder="", render_value=False):
-        if placeholder:
-            render_value = True
-        self._placeholder = placeholder
-        super().__init__(attrs=attrs, render_value=render_value)
-
-    def get_context(self, name, value, attrs):
-        if value:
-            value = self._placeholder
-        return super().get_context(name, value, attrs)
-
-
 class GitRepositoryForm(NautobotModelForm):
     slug = SlugField(help_text="Filesystem-friendly unique shorthand")
 
@@ -1439,6 +1423,16 @@ class JobForm(BootstrapMixin, forms.Form):
     """
 
     # 4.0 TODO: Rename JobForm to JobDataForm and JobEditForm to JobForm.
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # A Job variable's form field is built before any data exists (`BaseJob.as_form_class`), so a field
+        # whose choices depend on what another variable of the same Job is set to cannot populate them
+        # itself. Any field defining `configure_for_form()` is handed the assembled form to read that from.
+        for name, field in self.fields.items():
+            configure_for_form = getattr(field, "configure_for_form", None)
+            if configure_for_form is not None:
+                configure_for_form(self, name)
 
 
 class JobEditForm(NautobotModelForm):
@@ -1777,6 +1771,7 @@ class JobHookForm(BootstrapMixin, forms.ModelForm):
             "type_create",
             "type_update",
             "type_delete",
+            "conditions",
         )
 
     def clean(self):
@@ -2896,6 +2891,7 @@ class WebhookForm(BootstrapMixin, forms.ModelForm):
             "type_create",
             "type_update",
             "type_delete",
+            "conditions",
             "payload_url",
             "http_method",
             "http_content_type",

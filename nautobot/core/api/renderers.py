@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 from rest_framework.renderers import BaseRenderer, BrowsableAPIRenderer, JSONRenderer
 
+from nautobot.core.api.import_export import EXCLUDED_CSV_FIELDS, PRIORITY_CSV_FIELDS
 from nautobot.core.celery import NautobotKombuJSONEncoder
 from nautobot.core.constants import COMPOSITE_KEY_SEPARATOR
 
@@ -35,6 +36,17 @@ class NautobotJSONRenderer(JSONRenderer):
     encoder_class = NautobotKombuJSONEncoder
 
 
+def join_list_cell(values):
+    """Join a list of values into a single comma-separated CSV cell.
+
+    Members are quoted by CSV's own rules, so a member containing a comma, quote or newline stays distinct
+    from two members and `a,b` renders exactly as it always did. Inverse of `NautobotCSVParser.split_list_cell`.
+    """
+    buffer = StringIO()
+    csv.writer(buffer, lineterminator="").writerow(values)
+    return buffer.getvalue()
+
+
 class NautobotCSVRenderer(BaseRenderer):
     """
     Render to CSV format.
@@ -57,10 +69,13 @@ class NautobotCSVRenderer(BaseRenderer):
         if isinstance(data, dict):
             data = [data]
 
-        headers = self.get_headers(data)
+        headers = self.get_headers(data, field_order=(renderer_context or {}).get("field_order"))
 
         buffer = StringIO()
         writer = csv.writer(buffer)
+        import_directives = (renderer_context or {}).get("import_directives")
+        if import_directives:
+            self.render_directive_row(writer, import_directives)
         writer.writerow(headers)
         for record in data:
             writer.writerow(
@@ -72,19 +87,36 @@ class NautobotCSVRenderer(BaseRenderer):
 
         return buffer.getvalue()
 
+    def render_directive_row(self, writer, directives):
+        """
+        Render `build_import_metadata` as a leading `# nautobot_import_version=1; ...` row.
+
+        The version directive doubles as the marker identifying the row as Nautobot's. The directive occupies
+        a single cell so it survives spreadsheet open-edit-save cycles; see the matching first-cell parsing
+        in NautobotCSVParser.
+        """
+        entries = []
+        for key, value in directives.items():
+            if isinstance(value, (list, tuple)):
+                value = " ".join(str(v) for v in value)
+            entries.append(f"{key}={value}")
+        writer.writerow([f"# {'; '.join(entries)}"])
+
     @classmethod
-    def get_headers(cls, data):
-        """Identify the appropriate CSV headers corresponding to the given data."""
+    def get_headers(cls, data, field_order=None):
+        """
+        Identify the appropriate CSV headers corresponding to the given data.
+
+        If `field_order` (a list of field names / `__` lookup paths, e.g. from an explicit export field
+        selection) is given, headers are ordered to match it instead of the default priority ordering, and
+        the `cf_*` headers are restricted to the custom fields it names.
+        """
         base_headers = list(data[0].keys())
 
-        # Remove specific headers that we know are irrelevant
-        for undesired_header in [
-            "computed_fields",
-            "custom_fields",  # will be handled later as a special case
-            "notes_url",  # irrelevant to CSV
-            "relationships",
-            "url",  # irrelevant to CSV
-        ]:
+        # Remove specific headers that we know are irrelevant. `custom_fields` is handled below as a special
+        # case; the rest have no flat spelling. Shared with the export field enumeration, so that a field
+        # selection cannot offer a column this would then drop.
+        for undesired_header in EXCLUDED_CSV_FIELDS:
             if undesired_header in base_headers:
                 base_headers.remove(undesired_header)
 
@@ -99,15 +131,35 @@ class NautobotCSVRenderer(BaseRenderer):
         else:
             cf_headers = []
 
+        # These headers come from the data rather than from the serializer's field set, so an explicit
+        # selection has to be applied to them here -- `OptInFieldsMixin` can only narrow the field set down
+        # to `custom_fields` as a whole, and every custom field of the object is inside it. Naming
+        # `custom_fields` asks for all of them; otherwise only the `cf_<key>` entries actually selected.
+        if field_order and "custom_fields" not in field_order:
+            selected_cf_headers = {entry for entry in field_order if entry.startswith("cf_")}
+            cf_headers = [header for header in cf_headers if header in selected_cf_headers]
+
         # TODO: relationships? computed fields?
 
         headers = base_headers + cf_headers
 
-        # Coerce important fields, if present, to the front of the list
-        for priority_header in ["id", "composite_key", "display", "name"]:
-            if priority_header in headers:
-                headers.remove(priority_header)
-                headers.insert(0, priority_header)
+        if field_order:
+            # Order headers to match the explicit field selection; a header belongs to the earliest
+            # selection entry it equals or nests under (e.g. `location__name` under `location`).
+            def selection_index(header):
+                for index, selected in enumerate(field_order):
+                    if header == selected or header.startswith(f"{selected}__"):
+                        return (index, header)
+                return (len(field_order), header)
+
+            headers.sort(key=selection_index)
+        else:
+            # Coerce important fields, if present, to the front of the list. Walked back-to-front, each
+            # insert going ahead of the last, so the result reads in `PRIORITY_CSV_FIELDS` order.
+            for priority_header in reversed(PRIORITY_CSV_FIELDS):
+                if priority_header in headers:
+                    headers.remove(priority_header)
+                    headers.insert(0, priority_header)
 
         return headers
 
@@ -167,7 +219,7 @@ class NautobotCSVRenderer(BaseRenderer):
                     value = json.dumps(value)
                 else:
                     # The below makes for better UX than `json.dump()` for most current cases.
-                    value = ",".join([str(v) if v is not None else "" for v in value])
+                    value = join_list_cell([str(v) if v is not None else "" for v in value])
             elif not isinstance(value, (str, int)):
                 value = str(value)
 

@@ -243,7 +243,9 @@ You can drop this snippet into an iPython shell or file. It leverages the public
 
     for prefix in (MGMT_PREFIX, FAILOVER_PREFIX, EXTERNAL_PREFIX, INTERNAL_PREFIX):
         _, created = get_or_create(
-            nb.ipam.prefixes, {"prefix": prefix, "namespace": namespace.id}, {"status": active.id}
+            nb.ipam.prefixes,
+            {"prefix": prefix, "namespace": namespace.id},
+            {"status": active.id},
         )
         log(created, "Prefix", prefix)
 
@@ -382,7 +384,6 @@ You can drop this snippet into an iPython shell or file. It leverages the public
                 {"priority": spec["priority"]},
             )
             log(created, "IRG association", f"{spec['name']} {vip_name} (priority {spec['priority']})")
-
     ```
 
 ## Sample Design Builder
@@ -883,8 +884,8 @@ The script below renders the templates against GraphQL query. Paste the GraphQL 
 ??? example "Config Generation Script"
 
     ```python
-    GRAPHQL_QUERY = """."""              # Replace with the GraphQL query from above
-    CLI_CONFIG_TEMPLATE = """."""         # Replace with one of the three config templates above
+    GRAPHQL_QUERY = """."""  # Replace with the GraphQL query from above
+    CLI_CONFIG_TEMPLATE = """."""  # Replace with one of the three config templates above
 
     import ipaddress
 

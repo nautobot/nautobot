@@ -1120,6 +1120,7 @@ class ImageAttachmentTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = ImageAttachment
         fields = ("pk", "name", "size", "created", "actions")
+        orderable = False
 
 
 def log_object_link(value, record):

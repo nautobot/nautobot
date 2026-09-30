@@ -48,7 +48,9 @@ from nautobot.core.utils.requests import (
     convert_querydict_to_dict,
     convert_querydict_to_factory_formset_acceptable_querydict,
     get_filterable_params_from_filter_params,
+    NON_FILTER_PARAMS,
     normalize_querydict,
+    resolve_filter_params,
 )
 from nautobot.core.views.mixins import (
     BulkEditAndBulkDeleteModelMixin,
@@ -70,6 +72,7 @@ from nautobot.core.views.utils import (
     view_changes_not_saved,
 )
 from nautobot.extras.models import ExportTemplate, SavedView, UserSavedViewAssociation
+from nautobot.extras.utils import get_saved_view_filter_params, get_saved_view_or_none
 
 
 class GenericView(UIComponentsMixin, LoginRequiredMixin, View):
@@ -178,28 +181,17 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
     table: Optional[type[Table]] = None
     template_name = "generic/object_list.html"
     action_buttons = ("add", "import", "export")
-    non_filter_params = (
-        "export",  # trigger for CSV/export-template/YAML export # 3.0 TODO: remove, irrelevant after #4746
-        "page",  # used by django-tables2.RequestConfig
-        "per_page",  # used by get_paginate_count
-        "sort",  # table sorting
-        "saved_view",  # saved_view indicator pk or composite keys
-        "table_changes_pending",  # indicator for if there is any table changes not applied to the saved view
-        "all_filters_removed",  # indicator for if all filters have been removed from the saved view
-        "clear_view",  # indicator for if the clear view button is clicked or not
-    )
+    non_filter_params = NON_FILTER_PARAMS
 
     def get_filter_params(self, request):
         """Helper function - take request.GET and discard any parameters that are not used for queryset filtering."""
         params = request.GET.copy()
-        filter_params = get_filterable_params_from_filter_params(
+        return resolve_filter_params(
             params,
             self.non_filter_params,
             self.filterset(),  # pylint: disable=not-callable  # this fn is only called if filterset is not None
+            lambda: get_saved_view_filter_params(params.get("saved_view")),
         )
-        if params.get("saved_view") and not filter_params and not params.get("all_filters_removed"):
-            return SavedView.objects.get(pk=params.get("saved_view")).config.get("filter_params", {})
-        return filter_params
 
     def get_required_permission(self):
         return get_permission_for_model(self.queryset.model, "view")
@@ -358,11 +350,8 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         saved_views = get_saved_views_for_user(user, list_url)
 
         if current_saved_view_pk:
-            try:
-                # We are not using .restrict(request.user, "view") here
-                # User should be able to see any saved view that he has the list view access to.
-                current_saved_view = SavedView.objects.get(view=list_url, pk=current_saved_view_pk)
-            except ObjectDoesNotExist:
+            current_saved_view = get_saved_view_or_none(current_saved_view_pk, view=list_url)
+            if current_saved_view is None:
                 messages.error(request, f"Saved view {current_saved_view_pk} not found")
 
         # Construct the objects table

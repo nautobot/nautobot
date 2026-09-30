@@ -1,0 +1,1 @@
+Added `change_has_consumers()`, which answers whether any enabled webhook, job hook, or event broker would act on a given content type and action, so that work done only for those consumers can be skipped.

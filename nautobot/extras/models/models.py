@@ -33,6 +33,7 @@ from nautobot.extras.choices import (
 from nautobot.extras.constants import HTTP_CONTENT_TYPE_JSON
 from nautobot.extras.models import ChangeLoggedModel
 from nautobot.extras.models.mixins import (
+    ConditionsMixin,
     ContactMixin,
     DataComplianceModelMixin,
     DynamicGroupsModelMixin,
@@ -351,13 +352,15 @@ class CustomLink(
     group_name = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,
-        help_text="Links with the same group will appear as a dropdown menu",
+        help_text="Links with the same group will appear together in a dropdown menu",
     )
     button_class = models.CharField(
         max_length=30,
         choices=ButtonClassChoices,
         default=ButtonClassChoices.CLASS_DEFAULT,
-        help_text="The class of the first link in a group will be used for the dropdown button",
+        help_text="The class of the standalone link button, or of the link's entry in a combined dropdown menu. "
+        "When only a single group applies to an object, the class of its first link will be used for the "
+        "dropdown button.",
     )
     new_window = models.BooleanField(help_text="Force link to open in a new window")
 
@@ -915,6 +918,14 @@ class SavedView(BaseModel, ChangeLoggedModel):
     def __str__(self):
         return f"{self.owner.username} - {self.view} - {self.name}"
 
+    def clean(self):
+        super().clean()
+        # Mirror save() so that form and serializer validation see the value that will actually be persisted.
+        if self.is_global_default:
+            self.is_shared = True
+
+    clean.alters_data = True
+
     def save(self, *args, **kwargs):
         # If this SavedView is set to a global default, all other saved views related to this view name should not be the global default.
         if self.is_global_default:
@@ -974,6 +985,7 @@ class UserSavedViewAssociation(BaseModel):
 @extras_features("graphql")
 class Webhook(
     ChangeLoggedModel,
+    ConditionsMixin,
     ContactMixin,
     DynamicGroupsModelMixin,
     NotesMixin,
@@ -1028,6 +1040,7 @@ class Webhook(
         "included. Available context data includes: <code>event</code>, <code>model</code>, "
         "<code>timestamp</code>, <code>username</code>, <code>request_id</code>, and <code>data</code>.",
     )
+    # TODO 4.0: Should this be a Secret object instead?
     secret = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
         blank=True,

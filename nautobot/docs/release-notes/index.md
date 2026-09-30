@@ -4,6 +4,8 @@
 
 TODO
 
+- Enhanced Import/Export: JSON/YAML, Upsert
+
 ## [3.2 - July 2026](version-3.2.md)
 
 - Breakout Cables

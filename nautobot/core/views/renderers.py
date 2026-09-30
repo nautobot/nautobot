@@ -2,7 +2,6 @@ import logging
 
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from django.template import engines, loader
 from django.urls import resolve
@@ -15,6 +14,7 @@ from nautobot.core.forms import (
     TableConfigForm,
 )
 from nautobot.core.forms.forms import DynamicFilterFormSet
+from nautobot.core.tables import BaseTable
 from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.permissions import get_permission_for_model
@@ -30,8 +30,8 @@ from nautobot.core.views.utils import (
     get_saved_views_for_user,
     view_changes_not_saved,
 )
-from nautobot.extras.models import SavedView
 from nautobot.extras.models.change_logging import ObjectChange
+from nautobot.extras.utils import get_saved_view_or_none
 
 
 class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
@@ -88,12 +88,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                 permissions = kwargs.get("permissions", {})
                 self.saved_view = None
                 if saved_view_pk is not None:
-                    try:
-                        # We are not using .restrict(request.user, "view") here
-                        # User should be able to see any saved view that he has the list view access to.
-                        self.saved_view = SavedView.objects.get(pk=saved_view_pk)
-                    except ObjectDoesNotExist:
-                        pass
+                    self.saved_view = get_saved_view_or_none(saved_view_pk)
                 if view.request.GET.getlist("sort") or (
                     self.saved_view is not None and self.saved_view.config.get("sort_order")
                 ):
@@ -105,6 +100,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
                     user=request.user,
                     hide_hierarchy_ui=view.hide_hierarchy_ui,
                     configurable=True,
+                    row_overviews_visibility=BaseTable.RowOverviewsVisibility.TABLE_DEFAULT,
                     is_object_embedded_search_results=is_object_embedded_search_request,
                 )
                 if "pk" in table.base_columns and (permissions["change"] or permissions["delete"]):

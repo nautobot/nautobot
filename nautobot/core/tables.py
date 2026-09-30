@@ -1,4 +1,6 @@
 import contextlib
+from enum import Enum
+import itertools
 import logging
 
 from django.conf import settings
@@ -41,11 +43,25 @@ class BaseTable(django_tables2.Table):
     Default table for object lists.
     """
 
+    class RowOverviewsVisibility(Enum):
+        """Whether a table renders the per-row button that expands the row to reveal the object's overview.
+
+        Attributes:
+            HIDE (str): Never render the button (value: "hide").
+            SHOW (str): Always render the button (value: "show").
+            TABLE_DEFAULT (str): Leave the decision to the table's `Meta.show_row_overviews` (value: "table_default").
+        """
+
+        HIDE = "hide"
+        SHOW = "show"
+        TABLE_DEFAULT = "table_default"
+
     class Meta:
         attrs = {
             "class": "table table-hover nb-table-headings",
         }
         default = helpers.HTML_NONE
+        show_row_overviews = True
 
     def __init__(
         self,
@@ -60,6 +76,7 @@ class BaseTable(django_tables2.Table):
         data_transform_callback=None,
         configurable=False,
         is_object_embedded_search_results=False,
+        row_overviews_visibility=RowOverviewsVisibility.HIDE,
         **kwargs,
     ):
         """
@@ -82,6 +99,10 @@ class BaseTable(django_tables2.Table):
                 `is_object_embedded_search_results` is set to `True`.
             is_object_embedded_search_results (bool): When set to `True` disable table configuration and sorting, render
                 columns unaffected by any user configuration, with static order and visibility.
+            row_overviews_visibility (RowOverviewsVisibility): Whether to include a per-row button that expands the
+                row to reveal the object's overview. Defaults to `HIDE`, opting out regardless of `Meta`. Pass
+                `TABLE_DEFAULT` to defer to the table's `Meta.show_row_overviews`, which tables that expand their
+                rows to children instead set to `False`.
             **kwargs (dict, optional): Passed through to django_tables2.Table
         Warning:
             Do not modify/set the `base_columns` attribute after BaseTable class is instantiated.
@@ -145,6 +166,22 @@ class BaseTable(django_tables2.Table):
         self.configurable = configurable
         self.is_object_embedded_search_results = is_object_embedded_search_results
 
+        if row_overviews_visibility is self.RowOverviewsVisibility.TABLE_DEFAULT:
+            show_row_overviews = getattr(self.Meta, "show_row_overviews", True)
+        else:
+            show_row_overviews = row_overviews_visibility is self.RowOverviewsVisibility.SHOW
+
+        from nautobot.core.views.utils import has_overview  # Avoid circular import through nautobot.extras.tables
+
+        # Overview toggles are relevant only for views with overview endpoints, and embedded search results tables are
+        # a special case in which `show_row_overviews` must be disabled regardless of table configuration.
+        self.show_row_overviews = show_row_overviews and not is_object_embedded_search_results and has_overview(model)
+        if self.show_row_overviews:
+            kwargs["extra_columns"] = [
+                *kwargs.get("extra_columns", []),
+                ("overview", OverviewColumn(url_name=get_route_for_model(model, "overview"))),
+            ]
+
         # Init table
         super().__init__(*args, order_by=order_by, orderable=orderable, row_attrs=row_attrs, **kwargs)
 
@@ -198,6 +235,11 @@ class BaseTable(django_tables2.Table):
                     self.columns.hide(name)
             self.sequence = [c for c in columns if c in self.base_columns]
 
+        # Always include the overview column, if enabled on the table, right after the PK column
+        if self.show_row_overviews:
+            with contextlib.suppress(ValueError):
+                self.sequence.remove("overview")
+            self.sequence.insert(0, "overview")
         # Always include PK and actions columns, if defined on the table, as first and last columns respectively
         if pk:
             with contextlib.suppress(ValueError):
@@ -336,18 +378,82 @@ class BaseTable(django_tables2.Table):
         selected_columns = [
             (name, column.verbose_name)
             for name, column in self.columns.items()
-            if name in self.sequence and name not in ["pk", "actions"]
+            if name in self.sequence and name not in ["pk", "actions", "overview"]
         ]
         available_columns = [
             (name, column.verbose_name)
             for name, column in self.columns.items()
-            if name not in self.sequence and name not in ["pk", "actions"]
+            if name not in self.sequence and name not in ["pk", "actions", "overview"]
         ]
         return selected_columns + available_columns
 
     @property
     def visible_columns(self):
         return [name for name, column in self.columns.items() if column.visible and name not in self.exclude]
+
+    # Optional per-table overrides mapping a column name to the serializer field path it exports as
+    # (or to None to exclude the column from export field selections entirely).
+    column_serializer_field_overrides = {}
+
+    def serializer_paths_by_visible_column(self, serializer_class):
+        """
+        Map each of this table's visible data columns to its serializer field path, or to None if it has none.
+
+        The mapping is heuristic: a column maps to `accessor.replace(".", "__")` if the head of that path
+        is a field of the given serializer, and a custom-field column maps to its own `cf_<key>` name; a
+        table may override individual columns via `column_serializer_field_overrides`. Columns with no
+        serializer counterpart (buttons, computed fields, relationships, ...) map to None, so that a
+        caller can report what it could not carry over; the non-data `pk` and `actions` columns are left
+        out of the mapping entirely.
+
+        A `LinkedCountColumn` never maps to its own name, even where the serializer declares a matching
+        field, since such a field reads an annotation this table adds for display rather than anything
+        stored on the record. It maps instead to the relation it counts, where the serializer exposes
+        that relation and `LinkedCountColumn.counted_relation()` can identify it -- so `vrf_count`
+        carries the VRFs themselves rather than dropping out. Otherwise it maps to None.
+
+        Returns:
+            (dict): `{column_name: serializer_field_path_or_None}`, in column display order.
+        """
+        # Instantiated the way an export instantiates it, as `validate_field_paths()` also takes care to
+        # do: `for_import_export=True` is what makes the opt-in M2M fields readable (see
+        # `OptInFieldsMixin._readable_m2m_sources`), and without it every column backed by one of them --
+        # the VRFs behind `PrefixTable.vrf_count`, say -- looks unexportable.
+        serializer = serializer_class(context={"request": None, "depth": 0}, for_import_export=True)
+        serializer_fields = serializer.fields
+        paths = {}
+        for name in self.visible_columns:
+            if name in ("pk", "actions"):
+                continue
+            if name in self.column_serializer_field_overrides:
+                paths[name] = self.column_serializer_field_overrides[name] or None
+                continue
+            column = self.columns[name].column
+            if isinstance(column, LinkedCountColumn):
+                # The count itself is unexportable, so carry the relation it counts where there is one
+                relation = column.counted_relation(self._meta.model)
+                paths[name] = relation if relation in serializer_fields else None
+                continue
+            if isinstance(column, CustomFieldColumn):
+                # A custom-field column renders from the model's `_custom_field_data`, so its accessor is
+                # of no use here; an export names the custom field itself, which is the column's own name.
+                paths[name] = name
+                continue
+            accessor = str(self.columns[name].accessor).replace(".", "__")
+            head = accessor.split("__", 1)[0]
+            paths[name] = accessor if head in serializer_fields else None
+        return paths
+
+    def serializer_paths_for_visible_columns(self, serializer_class):
+        """
+        The serializer field paths of this table's visible columns, for use as a default export field selection.
+
+        Columns with no serializer counterpart are omitted; see `serializer_paths_by_visible_column()`,
+        which additionally reports those. Duplicates are collapsed, two columns being able to map to the
+        same path, since a field selection names each field once.
+        """
+        paths = self.serializer_paths_by_visible_column(serializer_class).values()
+        return list(dict.fromkeys(path for path in paths if path))
 
     @property
     def order_by(self):
@@ -428,16 +534,75 @@ class ToggleColumn(django_tables2.CheckBoxColumn):
         visible = kwargs.pop("visible", False)
         if "attrs" not in kwargs:
             kwargs["attrs"] = {
-                "input": {"class": "form-check-input nb-form-check-input-sm mt-2"},
+                "input": {
+                    "class": "form-check-input nb-form-check-input-sm mt-2",
+                    # Accessible name identifying which row this checkbox selects; without one a screen reader
+                    # announces an unlabelled checkbox on every row. Resolved per record by `CheckBoxColumn.render`.
+                    "aria-label": lambda record: f"Select {record}",
+                },
                 "td": {"class": "nb-w-0"},
             }
         super().__init__(*args, default=default, visible=visible, **kwargs)
 
     @property
     def header(self):
+        # `title` alone is an unreliable accessible name, so pair it with an explicit `aria-label`.
         return mark_safe(
-            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2" title="Toggle all" />'
+            '<input type="checkbox" class="toggle form-check-input nb-form-check-input-sm mt-2"'
+            ' aria-label="Toggle all rows" title="Toggle all" />'
         )
+
+
+class OverviewColumn(django_tables2.TemplateColumn):
+    """Per-row button that expands the row to reveal the object's overview."""
+
+    template_code = """
+    <button
+        aria-expanded="false"
+        class="btn m-n2 nb-overview-toggle p-2 text-secondary"
+        data-nb-overview-row-id="overview-{{ record.pk }}"
+        data-nb-title-collapsed="Show details for {{ record }}"
+        data-nb-title-expanded="Hide details for {{ record }}"
+        hx-get="{% url overview_url_name pk=record.pk %}"
+        hx-indicator="closest .table-responsive"
+        hx-swap="afterend"
+        hx-sync="this:drop"
+        hx-target="closest tr"
+        hx-trigger="click[this.getAttribute('aria-expanded') === 'false']"
+        hx-vals='{"colspan_content": {{ colspan_content }}, "colspan_offset": {{ colspan_offset }}}'
+        title="Show details for {{ record }}"
+        type="button"
+    >
+        <span class="visually-hidden">Show details for {{ record }}</span>
+        <span aria-hidden="true" class="mdi mdi-window-maximize"></span>
+    </button>
+    """
+
+    def __init__(self, url_name, *args, **kwargs):
+        kwargs.setdefault("attrs", {"td": {"class": "nb-w-0"}})
+        super().__init__(
+            *args,
+            template_code=self.template_code,
+            extra_context={"overview_url_name": url_name},
+            orderable=False,
+            verbose_name="",
+            **kwargs,
+        )
+
+    def get_context_data(self, *, record, table, value, bound_column, **kwargs):
+        columns = table.visible_columns
+        # `takewhile` stops at the first content column, so only the leading toggle and checkbox cells are counted
+        colspan_offset = len(list(itertools.takewhile(lambda name: name in ("overview", "pk"), columns)))
+        colspan_content = len(columns) - colspan_offset
+        # A configurable table renders an extra cell for the config button, unless the last column is `actions` and
+        # hosts the button itself, as in `inc/table.html`
+        if table.configurable and columns[-1] != "actions":
+            colspan_content += 1
+        return {
+            **super().get_context_data(record=record, table=table, value=value, bound_column=bound_column, **kwargs),
+            "colspan_content": colspan_content,
+            "colspan_offset": colspan_offset,
+        }
 
 
 class BooleanColumn(django_tables2.Column):
@@ -736,6 +901,46 @@ class LinkedCountColumn(django_tables2.Column):
         self.display_field = display_field
         self.model = get_model_for_view_name(self.viewname)
         super().__init__(*args, default=default, **kwargs)
+
+    def counted_relation(self, model):
+        """The name of `model`'s own relation to the objects this column counts, or None if it is not one field.
+
+        A count column stands in for a relation: `PrefixTable.vrf_count` counts what `Prefix.vrfs` holds.
+        That makes the relation the natural thing to carry in the column's place where a count itself
+        cannot be carried -- an export, whose queryset has no `annotate()` behind the count.
+
+        Returns None unless the relation is a single field of `model`, which rules out a count reached
+        through an intermediate model (`CloudNetworkTable.circuit_count`, via circuit terminations) or
+        through the static group association machinery (`dynamic_group_count`): there is then no one
+        relation for a column to hold.
+        """
+        lookup = self.lookup or self._derived_lookup(model)
+        if not lookup or "__" in lookup:
+            return None
+        try:
+            # The far end of the relation, as the counted model names it: the reverse query name of a
+            # forward field, or the field's own name where `lookup` is itself a reverse accessor.
+            far_end = model._meta.get_field(lookup).remote_field.name
+        except (FieldDoesNotExist, AttributeError):
+            return None
+        # The two ends must describe the *same* relation. Without this check, a coincidental relation to
+        # the counted model gets mistaken for the counted one: `VpnTunnelEndpoint.dynamic_group_count`
+        # counts through static group associations, and `get_related_field_for_models()` offers its
+        # unrelated `protected_prefixes_dg` M2M, whose members are something else entirely.
+        if self.reverse_lookup and self.reverse_lookup != far_end:
+            return None
+        return lookup
+
+    def _derived_lookup(self, model):
+        """The relation from `model` to the counted model, where `lookup` was not given explicitly."""
+        if self.model is None:
+            return None
+        try:
+            # Raises if the two models have more than one relation, i.e. if which one is counted is ambiguous
+            related_field = get_related_field_for_models(model, self.model)
+        except AttributeError:
+            return None
+        return related_field.name if related_field is not None else None
 
     def render(self, *, bound_column, record, value):  # pylint: disable=arguments-differ  # tables2 varies its kwargs
         related_record = None
