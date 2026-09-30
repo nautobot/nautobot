@@ -1,3 +1,5 @@
+from django.urls import path
+
 from nautobot.core.api.routers import OrderedDefaultRouter
 
 from . import views
@@ -126,3 +128,15 @@ router.register("webhooks", views.WebhooksViewSet)
 
 app_name = "extras-api"
 urlpatterns = router.urls
+urlpatterns += [
+    path(
+        "provenance/<str:app_label>/<str:model>/<uuid:pk>/fields/",
+        views.ProvenanceFieldsAPIView.as_view(),
+        name="provenance_fields",
+    ),
+    path(
+        "provenance/<str:app_label>/<str:model>/<uuid:pk>/fields/<str:field>/",
+        views.ProvenanceFieldHistoryAPIView.as_view(),
+        name="provenance_field_history",
+    ),
+]

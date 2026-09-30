@@ -1,0 +1,53 @@
+{% comment %}
+Rendered inside the expanded overview row (components/htmx/overview.html), so the grey band comes from the table
+styling. The nested table is transparent so that band shows through; headings are grey like the list tables.
+{% endcomment %}
+<table class="table table-sm mb-0" style="--bs-table-bg: transparent;">
+    <thead>
+        <tr class="text-secondary fw-normal small">
+            <th scope="col" class="fw-normal ps-3 text-nowrap" style="width: 1%;">When</th>
+            <th scope="col" class="fw-normal" style="width: 30%;">Value</th>
+            <th scope="col" class="fw-normal">By</th>
+            <th scope="col" class="fw-normal">Via</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for entry, display in entries %}
+            <tr>
+                <td class="ps-3 text-nowrap">
+                    <span data-bs-toggle="tooltip" title="{{ entry.time|timesince }} ago">{{ entry.time|date:"Y-m-d H:i" }}</span>
+                </td>
+                <td>{% include "extras/inc/provenance_value.html" with value=display %}</td>
+                <td>{{ entry.user_name|default:"—" }}</td>
+                <td class="text-nowrap">
+                    {% if "-api:" in entry.change_context_detail %}api{% else %}{{ entry.change_context }}{% endif %}
+                    <a href="{% url 'extras:objectchange' pk=entry.change_pk %}" class="ms-1 text-secondary" title="Change log">
+                        <span class="mdi mdi-history" aria-hidden="true"></span>
+                        <span class="visually-hidden">Change log</span>
+                    </a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="4" class="ps-3 text-secondary">No changes to this field are on record.</td></tr>
+        {% endfor %}
+        {% if limit and summary.history.change_count > limit %}
+            <tr>
+                <td colspan="4" class="ps-3 text-secondary">
+                    Showing the last {{ limit }} of {{ summary.history.change_count }} values &middot;
+                    <a href="#"
+                       hx-get="{% url 'extras:object_provenance_field_row' app_label=summary.app_label model=summary.model_name pk=summary.object_pk field=summary.name %}?limit=0&amp;colspan_offset={{ colspan_offset }}&amp;colspan_content={{ colspan_content }}"
+                       hx-target="closest tr.nb-overview-row"
+                       hx-swap="outerHTML">show all</a>
+                </td>
+            </tr>
+        {% endif %}
+        {% if summary.history.truncated %}
+            <tr>
+                <td colspan="4" class="ps-3 text-secondary">
+                    <span class="mdi mdi-information-outline" aria-hidden="true"></span>
+                    Earlier values are not available: the oldest change on record is an update, so history before it was pruned or predates change logging.
+                </td>
+            </tr>
+        {% endif %}
+    </tbody>
+</table>

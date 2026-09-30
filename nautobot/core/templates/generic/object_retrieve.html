@@ -110,6 +110,19 @@
                         </li>
                     {% endif %}
                 {% endif %}
+                {% if perms.extras.view_objectchange %}
+                    {% if active_tab != 'provenance' and object.get_provenance_url or active_tab == 'provenance' %}
+                        <li class="nav-item" role="presentation">
+                            <a
+                                class="nav-link {% if active_tab == 'provenance' %}active{% endif %}"
+                                {% if active_tab == 'provenance' %} aria-current="page"{% endif %}
+                                href="{{ object.get_provenance_url }}"
+                            >
+                                Provenance
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endif %}
                 {% block extra_nav_tabs %}{% endblock extra_nav_tabs %}
             {% endblock nav_tabs %}
             {% plugin_object_detail_tabs object %}

@@ -1,0 +1,22 @@
+{% load helpers %}
+{% if value.kind == "object" %}
+    {% if value.url %}<a href="{{ value.url }}">{{ value.text }}</a>{% else %}{{ value.text }}{% endif %}
+{% elif value.kind == "list" %}
+    {% for item in value.items %}
+        <span class="badge bg-body-secondary border text-body">{% if item.url %}<a href="{{ item.url }}">{{ item.text }}</a>{% else %}{{ item.text }}{% endif %}</span>
+    {% empty %}
+        <span class="text-secondary">&mdash;</span>
+    {% endfor %}
+{% elif value.kind == "json" %}
+    {% if compact %}
+        <span class="text-secondary" title="Expand the row to see the full value">{{ value.text }}</span>
+    {% else %}
+        {{ value.data|render_json }}
+    {% endif %}
+{% elif value.kind == "untracked" %}
+    <span class="text-secondary" title="Relationship values are not recorded in the changelog">not in changelog</span>
+{% elif value.text %}
+    {{ value.text }}
+{% else %}
+    <span class="text-secondary">&mdash;</span>
+{% endif %}

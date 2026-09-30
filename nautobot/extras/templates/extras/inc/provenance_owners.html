@@ -1,0 +1,7 @@
+{% for owner in value %}
+    <div>
+        {% if owner.owner_url %}<a href="{{ owner.owner_url }}" title="{{ owner.metadata_type }}">{{ owner.owner }}</a>{% else %}{{ owner.owner|default:owner.value_display }}{% endif %}
+    </div>
+{% empty %}
+    <span class="text-secondary">&mdash;</span>
+{% endfor %}

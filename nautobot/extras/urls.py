@@ -103,4 +103,11 @@ urlpatterns = [
     ),
 ]
 
+urlpatterns += [
+    path(
+        "provenance/<str:app_label>/<str:model>/<uuid:pk>/field/<str:field>/row/",
+        views.ObjectProvenanceFieldRowView.as_view(),
+        name="object_provenance_field_row",
+    ),
+]
 urlpatterns += router.urls

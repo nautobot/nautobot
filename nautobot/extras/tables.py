@@ -19,6 +19,7 @@ from nautobot.core.tables import (
     ColoredLabelColumn,
     ContentTypesColumn,
     LinkedCountColumn,
+    OverviewColumn,
     TagColumn,
     ToggleColumn,
 )
@@ -1979,3 +1980,88 @@ class ContactAssociationTable(StatusTableMixin, RoleTableMixin, BaseTable):
     class Meta(BaseTable.Meta):
         model = ContactAssociation
         fields = ("role", "status", "associated_object_type", "associated_object")
+
+
+#
+# Provenance
+#
+
+_PROVENANCE_CORE_URL_TAG = "{% url overview_url_name pk=record.pk %}"
+_PROVENANCE_FIELD_URL_TAG = (
+    "{% url overview_url_name app_label=record.app_label model=record.model_name "
+    "pk=record.object_pk field=record.name %}"
+)
+
+PROVENANCE_LAST_CHANGED_TEMPLATE = """
+<span class="text-nowrap" data-bs-toggle="tooltip" title="{{ value.time|timesince }} ago">{{ value.time|date:"Y-m-d H:i" }}</span>
+"""
+
+PROVENANCE_CHANGED_BY_TEMPLATE = """{{ value.user_name|default:"—" }}"""
+
+PROVENANCE_CHANGE_COUNT_TEMPLATE = """
+{% if record.row.tracked %}{% if value %}{{ value }}{% else %}<span class="text-secondary">0</span>{% endif %}{% if record.history.truncated %}<span class="text-secondary" title="Earlier values are not available">+</span>{% endif %}{% else %}<span class="text-secondary">&mdash;</span>{% endif %}
+"""
+
+
+class ProvenanceFieldHistoryColumn(OverviewColumn):
+    """The expandable-row toggle, pointed at the per-field history endpoint.
+
+    The button markup, data attributes, and htmx attributes stay identical to `OverviewColumn` so `overview.js`
+    keeps handling expand and collapse; only the URL and the colspan arithmetic differ.
+    """
+
+    template_code = OverviewColumn.template_code.replace(_PROVENANCE_CORE_URL_TAG, _PROVENANCE_FIELD_URL_TAG)
+
+    def get_context_data(self, *, record, table, value, bound_column, **kwargs):
+        """The toggle is the first column; the expanded row spans every other column.
+
+        Skips `OverviewColumn`'s colspan arithmetic, which relies on `BaseTable` attributes this plain table lacks.
+        """
+        base_context = tables.TemplateColumn.get_context_data(
+            self, record=record, table=table, value=value, bound_column=bound_column, **kwargs
+        )
+        return {**base_context, "colspan_offset": 1, "colspan_content": len(table.columns) - 1}
+
+
+class ProvenanceFieldTable(tables.Table):
+    """One row per field of an object: current value, last change, owner, and change count."""
+
+    history = ProvenanceFieldHistoryColumn(url_name="extras:object_provenance_field_row")
+    label = tables.Column(accessor="row__label", verbose_name="Field", orderable=False)
+    current = tables.TemplateColumn(
+        template_name="extras/inc/provenance_value.html",
+        accessor="current",
+        verbose_name="Current value",
+        orderable=False,
+        extra_context={"compact": True},
+    )
+    last_changed = tables.TemplateColumn(
+        template_code=PROVENANCE_LAST_CHANGED_TEMPLATE,
+        accessor="history__last_changed",
+        verbose_name="Last changed",
+        orderable=False,
+        default="—",
+    )
+    changed_by = tables.TemplateColumn(
+        template_code=PROVENANCE_CHANGED_BY_TEMPLATE,
+        accessor="history__last_changed",
+        verbose_name="By",
+        orderable=False,
+        default="—",
+    )
+    owners = tables.TemplateColumn(
+        template_name="extras/inc/provenance_owners.html", accessor="owners", verbose_name="Owner", orderable=False
+    )
+    changes = tables.TemplateColumn(
+        template_code=PROVENANCE_CHANGE_COUNT_TEMPLATE,
+        accessor="history__update_count",
+        verbose_name="Changes",
+        orderable=False,
+        attrs={"td": {"class": "text-end"}, "th": {"class": "text-end"}},
+    )
+
+    class Meta:
+        attrs = {"class": "table table-hover nb-table-headings"}
+        orderable = False
+        empty_text = "This model has no editable fields to show."
+        sequence = ("history", "label", "current", "last_changed", "changed_by", "owners", "changes")

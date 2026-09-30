@@ -84,6 +84,7 @@ PERMISSIONS_ACTION_MAP = {
     "bulk_update": "change",
     "changelog": "view",
     "notes": "view",
+    "provenance": "view",
     "data_compliance": "view",
 }
 
@@ -1581,6 +1582,47 @@ class ObjectNotesViewMixin(NautobotViewSetMixin):
         data = {
             "base_template": get_base_template(self.base_template, model),
             "active_tab": "notes",
+        }
+        return Response(data)
+
+
+class ObjectProvenanceViewMixin(NautobotViewSetMixin):
+    """
+    UI mixin for an object's Provenance tab: one row per edit-form field, with the current value, the last change
+    (when and by whom), the owner from Object Metadata, and an expandable history of past values.
+
+    base_template: Specify to explicitly identify the base object detail template to render.
+        If not provided, "<app>/<model>.html", "<app>/<model>_retrieve.html", or "generic/object_retrieve.html"
+        will be used, as per `get_base_template()`.
+    """
+
+    base_template: Optional[str] = None
+
+    @drf_action(
+        detail=True, custom_view_base_action="view", custom_view_additional_permissions=["extras.view_objectchange"]
+    )
+    def provenance(self, request, *args, **kwargs):
+        from nautobot.extras.provenance.summary import summaries_for  # local import: extras depends on core
+        from nautobot.extras.tables import ProvenanceFieldTable
+
+        instance = self.get_object()
+        summaries = summaries_for(instance, user=request.user)
+        changed_only = request.GET.get("changed") == "true"
+        changed = [item for item in summaries if item.history.update_count]
+        has_owners = any(item.owners for item in summaries)
+        show_owners = has_owners or request.GET.get("owners") == "true"
+        table = ProvenanceFieldTable(changed if changed_only else summaries)
+        if not show_owners:
+            table.columns.hide("owners")
+        data = {
+            "base_template": get_base_template(self.base_template, self.get_queryset().model),
+            "active_tab": "provenance",
+            "table": table,
+            "provenance_field_count": len(summaries),
+            "provenance_changed_count": len(changed),
+            "provenance_changed_only": changed_only,
+            "provenance_show_owners": show_owners,
+            "provenance_has_owners": has_owners,
         }
         return Response(data)
 

@@ -5,6 +5,7 @@ from django.db.models import ProtectedError
 from django.forms import ValidationError as FormsValidationError
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
+from django.urls import NoReverseMatch
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -16,6 +17,7 @@ from rest_framework.exceptions import MethodNotAllowed, PermissionDenied, Valida
 from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.authentication import TokenPermissions
@@ -1616,3 +1618,60 @@ class WebhooksViewSet(NotesViewSetMixin, ModelViewSet):
     queryset = Webhook.objects.all()
     serializer_class = serializers.WebhookSerializer
     filterset_class = filters.WebhookFilterSet
+
+
+#
+# Provenance
+#
+
+
+class ProvenanceBaseAPIView(APIView):
+    """Shared lookup for the provenance endpoints.
+
+    `get_queryset` resolves the model from the URL so `TokenPermissions` can check the `view` permission for that
+    model before `get` runs.
+    """
+
+    def get_queryset(self):
+        from nautobot.extras.provenance.fields import resolve_model
+
+        model_class = resolve_model(self.kwargs["app_label"], self.kwargs["model"])
+        return model_class.objects.restrict(self.request.user, "view")
+
+    def get_object(self):
+        """Return the object or raise 404 (unknown model, missing object, or no view permission)."""
+        return get_object_or_404(self.get_queryset(), pk=self.kwargs["pk"])
+
+    @staticmethod
+    def object_payload(obj):
+        try:
+            url = obj.get_absolute_url()
+        except (AttributeError, NoReverseMatch):
+            url = None
+        return {"id": str(obj.pk), "display": str(obj), "url": url}
+
+
+class ProvenanceFieldsAPIView(ProvenanceBaseAPIView):
+    """Every Provenance row of one object, each with its most recent history entry."""
+
+    def get(self, request, app_label, model, pk):
+        from nautobot.extras.provenance import summary
+
+        obj = self.get_object()
+        summaries = summary.summaries_for(obj, user=request.user, limit=1)
+        return Response({"object": self.object_payload(obj), "fields": [item.to_dict() for item in summaries]})
+
+
+class ProvenanceFieldHistoryAPIView(ProvenanceBaseAPIView):
+    """One field of one object, with up to `limit` history entries (`limit=0` for all)."""
+
+    def get(self, request, app_label, model, pk, field):
+        from nautobot.extras.provenance import summary
+
+        obj = self.get_object()
+        limit_param = request.query_params.get("limit", str(summary.DEFAULT_LIMIT))
+        limit = int(limit_param) if limit_param.isdigit() else summary.DEFAULT_LIMIT
+        field_summary = summary.summary_for_field(obj, field, user=request.user, limit=limit)
+        if field_summary is None:
+            return Response({"detail": f"No field named {field}."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"object": self.object_payload(obj), **field_summary.to_dict()})

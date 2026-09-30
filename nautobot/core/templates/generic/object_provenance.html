@@ -1,0 +1,42 @@
+{% extends base_template %}
+{% load django_tables2 %}
+{% load helpers %}
+
+{% block content %}
+    <div class="align-items-center d-flex flex-wrap mb-16 gap-8">
+        <div class="d-flex align-items-center gap-8 flex-wrap d-print-none ms-auto">
+            {% if not provenance_has_owners %}
+                {% if provenance_show_owners %}
+                    <a href="{% django_querystring owners=None %}" class="btn btn-secondary">
+                        <span class="mdi mdi-account-off-outline" aria-hidden="true"></span> Hide owner
+                    </a>
+                {% else %}
+                    <a href="{% django_querystring owners='true' %}" class="btn btn-secondary"
+                       title="No Object Metadata owner is scoped to any field of this object">
+                        <span class="mdi mdi-account-outline" aria-hidden="true"></span> Show owner
+                    </a>
+                {% endif %}
+            {% endif %}
+            <div class="btn-group" role="group" aria-label="Which fields to show">
+                <a href="{% django_querystring changed=None %}"
+                   class="btn btn-primary{% if not provenance_changed_only %} bg-primary nb-text-body-bg{% endif %}">
+                    <span class="mdi mdi-format-list-bulleted" aria-hidden="true"></span> All fields
+                </a>
+                {# djlint:off B123 #}
+                <a href="{% django_querystring changed='true' %}"
+                   class="btn btn-primary{% if provenance_changed_only %} bg-primary nb-text-body-bg{% endif %}">
+                    <span class="mdi mdi-pencil-outline" aria-hidden="true"></span> Changed only
+                </a>
+                {# djlint:on B123 #}
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <strong>Provenance</strong>
+        </div>
+        <div class="table-responsive">
+            {% render_table table 'django_tables2/bootstrap5.html' %}
+        </div>
+    </div>
+{% endblock content %}

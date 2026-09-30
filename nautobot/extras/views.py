@@ -4320,6 +4320,46 @@ class ObjectChangeUIViewSet(ObjectDetailViewMixin, ObjectListViewMixin):
         return context
 
 
+class ObjectProvenanceFieldRowView(generic.GenericView):
+    """
+    htmx endpoint for the Provenance tab: the expanded row holding one field's value history.
+
+    Renders `components/htmx/overview.html` so the inserted `<tr>` matches what `overview.js` expects
+    (`id="overview-<field>"`, colspans from the toggle), with `extras/inc/provenance_history_row.html` as its content.
+    """
+
+    def get(self, request, app_label, model, pk, field):
+        from nautobot.extras.provenance import summary
+        from nautobot.extras.provenance.fields import display_snapshot, resolve_model
+
+        if not request.headers.get("HX-Request"):
+            return HttpResponseBadRequest("This endpoint supports only htmx requests.")
+        model_class = resolve_model(app_label, model)
+        obj = get_object_or_404(model_class.objects.restrict(request.user, "view"), pk=pk)
+        limit_param = request.GET.get("limit", str(summary.DEFAULT_LIMIT))
+        limit = int(limit_param) if limit_param.isdigit() else summary.DEFAULT_LIMIT
+        field_summary = summary.summary_for_field(obj, field, user=request.user, limit=limit)
+        if field_summary is None:
+            raise Http404(f"{model_class._meta.verbose_name} has no field {field}")
+        colspans = {
+            name: int(request.GET[name]) if request.GET.get(name, "").isdigit() else default
+            for name, default in (("colspan_content", 100), ("colspan_offset", 0))
+        }
+        return render(
+            request,
+            "components/htmx/overview.html",
+            {
+                "object": field_summary,  # gives the row its id, overview-<field name>
+                "instance": obj,
+                "summary": field_summary,
+                "entries": [(entry, display_snapshot(entry.value)) for entry in field_summary.history.entries],
+                "limit": limit,
+                "overview_template_name": "extras/inc/provenance_history_row.html",
+                **colspans,
+            },
+        )
+
+
 class ObjectChangeLogView(generic.GenericView):
     """
     Present a history of changes made to a particular object.

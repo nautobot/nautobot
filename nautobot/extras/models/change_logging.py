@@ -60,6 +60,16 @@ class ChangeLoggedModel(models.Model):
             if not hasattr(self, field):
                 continue
 
+    def get_provenance_url(self):
+        """Return the Provenance tab URL for this object."""
+        route = get_route_for_model(self, "provenance")
+
+        # Iterate the pk-like fields and try to get a URL, or return None.
+        fields = ["pk", "slug"]
+        for field in fields:
+            if not hasattr(self, field):
+                continue
+
             try:
                 return reverse(route, kwargs={field: getattr(self, field)})
             except NoReverseMatch:

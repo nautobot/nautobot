@@ -12,6 +12,7 @@ class NautobotUIViewSet(
     mixins.ObjectBulkRenameViewMixin,
     mixins.ObjectChangeLogViewMixin,
     mixins.ObjectNotesViewMixin,
+    mixins.ObjectProvenanceViewMixin,
     mixins.ObjectDataComplianceViewMixin,
     mixins.ObjectOverviewViewMixin,
 ):
