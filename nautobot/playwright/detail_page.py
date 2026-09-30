@@ -17,7 +17,7 @@ from nautobot.playwright.base_page import BasePage
 
 
 class DetailPage(BasePage):
-    """Shared detail-view behavior: navigation, the heading, the Edit button, and panels."""
+    """"Navigation, heading, Edit button, panel and deferred-component helpers for detail views.""""
 
     DETAIL_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/devices/{pk}/"
     VERBOSE_NAME = ""  # REQUIRED in subclass, e.g. "Device". The Edit button reads "Edit <this>".
