@@ -82,7 +82,7 @@ class DetailPage(BasePage):
         expect(self.panel(title)).to_contain_text(text)
 
     def expect_panel_field(self, title, key, value):
-        """Assert (auto-retrying) that the row keyed *key* in panel *title* contains *value*."""
+        """Assert (auto-retrying) that in panel title, the row whose first cell is key shows value in its second cell."""
         key_cell = self.page.locator("td:first-child").filter(has_text=re.compile(rf"^\s*{re.escape(key)}\s*$"))
         row = self.panel(title).locator("tr").filter(has=key_cell)
         expect(row.locator("td").nth(1)).to_contain_text(value)
