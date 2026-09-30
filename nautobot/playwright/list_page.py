@@ -18,7 +18,7 @@ from nautobot.playwright.base_page import BasePage, select2_filter_pick
 
 
 class ListPage(BasePage):
-    """Shared list-view behavior: navigation, table reads, and the filter drawer."""
+    """Shared list-view behavior."""
 
     LIST_PATH = ""  # REQUIRED in subclass, e.g. "/dcim/locations/"
 
