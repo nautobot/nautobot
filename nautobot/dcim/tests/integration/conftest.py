@@ -98,7 +98,7 @@ def created_device(create_object, status_for):
 
 @pytest.fixture
 def created_pdu(create_object, created_device):
-    """`created_device` with a power port and outlet, the smallest device that renders the Power Utilization panel."""
+    """created_device plus a power port and a power outlet. The Power Utilization panel renders only for a device with both."""
     device_id = created_device["device"]["id"]
     # Not "Input" to avoid matching the panel's first column header.
     power_port = create_object("dcim/power-ports", device=device_id, name="Inlet A")
