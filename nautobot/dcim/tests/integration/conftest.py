@@ -63,7 +63,7 @@ def created_device(create_object, status_for):
     URL, and the tests need their names.
     """
     unique = unique_name()
-    # A location holds devices only when its type lists dcim.device.
+    # Nautobot rejects a device whose location type does not list dcim.device in its content types.
     location_type = create_object("dcim/location-types", name=f"{unique}-location-type", content_types=["dcim.device"])
     location = create_object(
         "dcim/locations",
