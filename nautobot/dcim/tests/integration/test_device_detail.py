@@ -67,7 +67,7 @@ class DeviceDetailTestCase:
 
     @pytest.mark.behavioral
     def test_deferred_power_utilization_panel(self, auth_page, base_url, created_pdu):
-        """The Power Utilization panel arrives in its own request, after a placeholder."""
+        """The Power Utilization panel renders as a placeholder first, then loads its content in a separate request."""
         detail = DeviceDetailPage(auth_page, base_url)
         device_id = created_pdu["device"]["id"]
 
