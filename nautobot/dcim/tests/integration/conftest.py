@@ -100,7 +100,7 @@ def created_device(create_object, status_for):
 def created_pdu(create_object, created_device):
     """created_device plus a power port and a power outlet. The Power Utilization panel renders only for a device with both."""
     device_id = created_device["device"]["id"]
-    # Not "Input" to avoid matching the panel's first column header.
+    # The panel's first column header is "Input", so a port with that name would pass on the header alone.
     power_port = create_object("dcim/power-ports", device=device_id, name="Inlet A")
     power_outlet = create_object("dcim/power-outlets", device=device_id, name="Outlet A", power_port=power_port["id"])
     return {**created_device, "power_port": power_port, "power_outlet": power_outlet}
