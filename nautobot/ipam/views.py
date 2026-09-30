@@ -36,7 +36,7 @@ from nautobot.core.ui.choices import SectionChoices
 from nautobot.core.ui.titles import DEFAULT_TITLES, Titles
 from nautobot.core.utils.config import get_settings_or_config
 from nautobot.core.utils.requests import normalize_querydict
-from nautobot.core.views import generic, mixins as view_mixins
+from nautobot.core.views import mixins as view_mixins
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context, handle_protectederror
 from nautobot.core.views.viewsets import NautobotUIViewSet
