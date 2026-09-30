@@ -14,7 +14,7 @@ from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.constants import CSV_NO_OBJECT, CSV_NULL_TYPE, VARBINARY_IP_FIELD_REPR_OF_CSV_NO_OBJECT
-from nautobot.dcim.api.serializers import DeviceSerializer
+from nautobot.dcim.api.serializers import DeviceSerializer, LocationSerializer
 from nautobot.dcim.models.devices import Controller, Device, DeviceType, Platform, SoftwareImageFile, SoftwareVersion
 from nautobot.dcim.models.locations import Location
 from nautobot.dcim.models.racks import Rack
@@ -1044,6 +1044,24 @@ class CSVSingleObjectUpdateTestCase(TestCase):
         """Reported rather than raising IndexError out of the parser onto a 500."""
         with self.assertRaisesRegex(ParseError, "has no rows"):
             self._parse("name,color\n")
+
+
+class CSVNullRelationTestCase(TestCase):
+    """A relation that an export wrote as `NoObject` in every one of its columns parses as null."""
+
+    def test_null_relation_parses_as_none(self):
+        data = NautobotCSVParser().parse(
+            io.BytesIO(
+                "name,tenant__name,parent__name,parent__parent__name\n"
+                f"Test Site,{CSV_NO_OBJECT},Test Region,{CSV_NO_OBJECT}".encode("utf-8")
+            ),
+            parser_context={"request": None, "serializer_class": LocationSerializer},
+        )
+        self.assertEqual(len(data), 1)
+        # Every `tenant__` column is `NoObject`: the Location has no tenant, which updating it should say
+        self.assertIsNone(data[0]["tenant"])
+        # Only some `parent__` columns are: the parent exists, and is merely a top-level Location itself
+        self.assertEqual(data[0]["parent"]["name"], "Test Region")
 
 
 class CSVCustomFieldCellTestCase(TestCase):

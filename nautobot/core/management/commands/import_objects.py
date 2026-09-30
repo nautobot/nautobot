@@ -34,9 +34,9 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             "--match-fields",
-            help='Field name(s) to match existing records on, separated by commas (e.g. "name,serial"), '
-            "overriding any directive present in the file. NOT YET IMPLEMENTED: the value is passed to the "
-            "Job but nothing acts on it, so every import currently creates new objects.",
+            help='Field name(s) to match existing records on, separated by commas or spaces (e.g. "name,serial"), '
+            "overriding any directive present in the file. Records that match an existing object update it, "
+            "and the rest create new objects.",
         )
         parser.add_argument(
             "--format",

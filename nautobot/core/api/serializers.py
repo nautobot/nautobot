@@ -968,7 +968,8 @@ class RelationshipModelSerializerMixin(ValidatedModelSerializer):
         return instance
 
     def update(self, instance, validated_data):
-        relationships_key_specified = "relationships" in self.context["request"].data
+        request = self.context.get("request")
+        relationships_key_specified = "relationships" in getattr(request, "data", {})
         relationships_data = validated_data.pop("relationships", {})
         required_relationships_errors = self.Meta().model.required_related_objects_errors(
             output_for="api",

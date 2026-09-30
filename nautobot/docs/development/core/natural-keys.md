@@ -118,3 +118,22 @@ class MyUnnaturalModel(BaseModel):
 
     natural_key = AttributeRemover()
 ```
+
+### Natural Keys and Import Match Fields
+
+When [importing](../../user-guide/feature-guides/import-and-export.md#match-fields), a model's natural key also serves as its default match fields, reduced to the serializer fields its lookups start from: a natural key of `name`, `tenant__name` and `location__name` makes the match fields `name`, `tenant` and `location`, and a natural key of `pk` makes them `id`.
+
+If your model's natural key includes a field that its REST API serializer doesn't read or write directly, such as a `@property` or a field the serializer only accepts as part of another, declare the match fields on the serializer instead, as `Meta.import_match_fields`:
+
+```python
+class IPAddressSerializer(NautobotModelSerializer):
+    class Meta:
+        model = IPAddress
+        fields = "__all__"
+        # The natural key's `host` is written as part of `address`, and `parent__namespace` as part of `parent`
+        import_match_fields = ["address", "parent"]
+```
+
+Each match field must be a writable field of the serializer that holds a single value, and the model's queryset must accept that field's value as a `filter()` argument.
+
+The natural key is the fallback, not the first choice: an import whose records include `id` matches on `id`, whatever the model, unless match fields are given explicitly. A model whose natural key can't be matched on, and that doesn't declare `import_match_fields`, can therefore still be updated by an import that includes `id`, and is otherwise only ever created.
