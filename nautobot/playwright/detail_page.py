@@ -27,7 +27,7 @@ class DetailPage(BasePage):
     _EDIT_BUTTON = "#edit-button"
     # One per panel header. A panel's own label renders uppercased ("MANAGEMENT"), a table's title does not.
     _PANEL_TITLE = ".card > .card-header strong"
-    # Matches a whole class name. A `contains` match would stop at the `card-header`.
+    # Match "card" as a whole class. `contains(@class, 'card')` also matches the nearer card-header div.
     _ENCLOSING_CARD = "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' card ')][1]"
     # Gone once the deferred body swaps in. Count it rather than check visibility: htmx keeps it transparent.
     _PLACEHOLDER_SPINNER = "[hx-trigger='load'][hx-select^='#component-'] .spinner-border"
