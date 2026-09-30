@@ -248,9 +248,15 @@ class SavedViewsForUserTestCase(TestCase):
         ]
         self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
 
-    def test_anonymous_user_get_shared_views_only(self):
-        """Test if method is working with anonymous users and return only shared views."""
+    def test_anonymous_user_get_all_shared_views_only(self):
+        """Test if method is working with anonymous users and return only shared views across all list views."""
         saved_views = get_all_saved_views_for_user(AnonymousUser())
+        expected_names = ["saved_view_shared", "saved_view_shared_different_owner"]
+        self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
+
+    def test_anonymous_user_get_scoped_shared_views_only(self):
+        """Test if method is working with anonymous users and return only shared views for the list view."""
+        saved_views = get_saved_views_for_user(AnonymousUser(), "dcim:device_list")
         expected_names = ["saved_view_shared", "saved_view_shared_different_owner"]
         self.assertEqual(list(saved_views.values_list("name", flat=True)), expected_names)
 
