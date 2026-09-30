@@ -92,7 +92,7 @@ class DetailPage(BasePage):
     # -------------------------------------------------------------------------
 
     def fail_deferred_components(self, status=500):
-        """Make every deferred component's follow-up request fail, leaving its placeholder unresolved."""
+        """Make every deferred component's follow-up request fail, so each placeholder stays on the page."""
         self.page.route(self._DEFERRED_COMPONENT_REQUEST, lambda route: route.fulfill(status=status, body=""))
 
     def allow_deferred_components(self):
