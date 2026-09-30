@@ -1356,14 +1356,14 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_assign_without_interface_redirects(self):
         """GET on the assign endpoint with no interface/vminterface redirects to the add page."""
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions("ipam.view_ipaddress")
         response = self.client.get(reverse("ipam:ipaddress_assign"))
         self.assertHttpStatus(response, 302)
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_assign_with_invalid_interface_redirects(self):
         """GET on the assign endpoint with a non-existent interface warns and redirects to the add page."""
-        self.add_permissions("ipam.add_ipaddress")
+        self.add_permissions("ipam.view_ipaddress")
         response = self.client.get(reverse("ipam:ipaddress_assign") + "?interface=00000000-0000-0000-0000-000000000000")
         self.assertHttpStatus(response, 302)
 
@@ -1387,6 +1387,35 @@ class IPAddressTestCase(ViewTestCases.PrimaryObjectViewTestCase):
             reverse("ipam:ipaddress_assign") + f"?interface={interface.pk}&q=192.0.2.0/24&per_page=50"
         )
         self.assertHttpStatus(response, 200)
+
+    def test_assign_permissions_restriction(self):
+        self.add_permissions("dcim.change_interface")
+        interface = Interface.objects.first()
+        self.assertIsNotNone(interface)
+        interface.ip_addresses.clear()
+
+        ip_pks = list(IPAddress.objects.values_list("pk", flat=True)[:3])
+        self.assertEqual(len(ip_pks), 3)
+        obj_perm = ObjectPermission(name="Constrained IP", actions=["view"], constraints={"pk__in": ip_pks[:2]})
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(IPAddress))
+
+        url = reverse("ipam:ipaddress_assign") + f"?interface={interface.pk}"
+
+        response = self.client.post(url, data=post_data({"pk": []}), follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "select at least one IP")
+        self.assertQuerySetEqual(interface.ip_addresses.all(), [])
+
+        response = self.client.post(url, data=post_data({"pk": ip_pks}), follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertBodyContains(response, "permissions violation")
+        self.assertQuerySetEqual(interface.ip_addresses.all(), [])
+
+        response = self.client.post(url, data=post_data({"pk": ip_pks[:2]}), follow=True)
+        self.assertHttpStatus(response, 200)
+        self.assertQuerySetEqual(interface.ip_addresses.all(), IPAddress.objects.filter(pk__in=ip_pks[:2]))
 
     @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
     def test_list_with_saved_view_table_config(self):

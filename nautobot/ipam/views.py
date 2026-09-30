@@ -1241,7 +1241,7 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         methods=["get", "post"],
         url_path="assign",
         url_name="assign",
-        custom_view_base_action="add",
+        custom_view_base_action="view",
     )
     def assign(self, request, *args, **kwargs):
         """Search for IPAddresses to assign to Interface or VMInterface."""
@@ -1259,6 +1259,9 @@ class IPAddressUIViewSet(NautobotUIViewSet):
         if request.method == "POST":
             if pks := request.POST.getlist("pk"):
                 ip_addresses = IPAddress.objects.restrict(request.user, "view").filter(pk__in=pks)
+                if ip_addresses.count() != len(pks):
+                    messages.error(request, "Object update failed due to object-level permissions violation")
+                    return redirect(request.get_full_path())
                 interface.ip_addresses.add(*ip_addresses)
                 return redirect(self.get_return_url(request))
             messages.error(request, "Please select at least one IP Address from the table.")
