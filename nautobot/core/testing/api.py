@@ -1204,7 +1204,9 @@ class APIViewTestCases:
             obj_perm.save()
 
             # Send empty PATCH request
-            changes_before = lookup.get_changes_for_model(instance).count()
+            changes_before = lookup.get_changes_for_model(instance)
+            changes_before_count = changes_before.count()
+            changes_before = list(changes_before)
             response = self.client.patch(url, {}, format="json", **self.header)
             self.assertHttpStatus(response, status.HTTP_200_OK)
             serialized_object = response.json()
@@ -1214,7 +1216,8 @@ class APIViewTestCases:
             # An empty PATCH changes nothing a reader would see, so it adds no ObjectChange.
             if hasattr(self.model, "to_objectchange"):
                 objectchanges = lookup.get_changes_for_model(instance)
-                self.assertEqual(objectchanges.count(), changes_before)
+                self.assertQuerySetEqual(objectchanges, changes_before)
+                self.assertEqual(objectchanges.count(), changes_before_count)
                 objectchanges.delete()
 
             # Verify that a PATCH with some data updates that data correctly.

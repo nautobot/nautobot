@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.models import ContentType
+from django.test import override_settings
 from django.urls import reverse
 
 from nautobot.circuits.choices import CircuitTerminationSideChoices
@@ -6,6 +8,7 @@ from nautobot.core.testing import APITestCase, APIViewTestCases
 from nautobot.dcim.choices import InterfaceTypeChoices
 from nautobot.dcim.models import Cable, Device, DeviceType, FrontPort, Interface, Location, RearPort
 from nautobot.extras.models import Role, Status
+from nautobot.users.models import ObjectPermission
 
 
 class AppTest(APITestCase):
@@ -209,6 +212,60 @@ class CircuitTerminationTest(APIViewTestCases.APIViewTestCase):
         }
 
         cls.bulk_update_data = {"port_speed": 123456}
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=[])
+    def test_trace_masks_objects_the_user_cannot_view(self):
+        """
+        Trace a CircuitTermination's cable path as a user permitted to view only that termination.
+
+        `CircuitTerminationViewSet` inherits `PathEndpointMixin` from the DCIM app, so this covers masking
+        across an app boundary, where the peer termination and the Cable belong to a different app than the
+        endpoint being traced.
+        """
+        cable_status = Status.objects.get_for_model(Cable).first()
+        device = Device.objects.create(
+            device_type=DeviceType.objects.exclude(manufacturer__isnull=True).first(),
+            role=Role.objects.get_for_model(Device).first(),
+            name="Trace Device",
+            location=self.locations[0],
+            status=Status.objects.get_for_model(Device).first(),
+        )
+        interface = Interface.objects.create(
+            device=device,
+            type=InterfaceTypeChoices.TYPE_1GE_FIXED,
+            name="Trace Interface",
+            status=Status.objects.get_for_model(Interface).first(),
+        )
+        termination = self.circuits[0].circuit_termination_a
+        cable = Cable.objects.create(
+            termination_a=termination, termination_b=interface, label="Trace Cable", status=cable_status
+        )
+
+        obj_perm = ObjectPermission(
+            name="View trace origin only",
+            constraints={"pk": str(termination.pk)},
+            actions=["view"],
+        )
+        obj_perm.save()
+        obj_perm.users.add(self.user)
+        obj_perm.object_types.add(ContentType.objects.get_for_model(CircuitTermination))
+
+        url = reverse("circuits-api:circuittermination-trace", kwargs={"pk": termination.pk})
+        response = self.client.get(url, **self.header)
+
+        self.assertHttpStatus(response, 200)
+        self.assertEqual(len(response.data), 1)
+        segment1 = response.data[0]
+        self.assertEqual(len(segment1), 3)
+        # The origin is viewable, so it is still rendered in full.
+        self.assertEqual(str(segment1[0]["id"]), str(termination.pk))
+        self.assertIn("circuit", segment1[0])
+        # The Cable and the peer Interface are not viewable, so they are masked.
+        for element, masked_obj in ((segment1[1], cable), (segment1[2], interface)):
+            self.assertEqual(set(element.keys()), {"id", "object_type", "url", "display"})
+            self.assertEqual(str(element["id"]), str(masked_obj.pk))
+            self.assertEqual(element["object_type"], masked_obj._meta.label_lower)
+        self.assert_no_verboten_content(response)
 
     def test_circuit_termination_connected_endpoint(self):
         """Assert that API response for CircuitTermination connected cables to CircuitTermination, Interface, FortPort, or RearPort does not raise any errors"""
