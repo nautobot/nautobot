@@ -1,6 +1,7 @@
 """Helpers shared by the `ExportObjectList` and `ImportObjects` system Jobs and the commands that run them."""
 
 import csv
+from enum import Enum
 import json
 import re
 
@@ -8,11 +9,20 @@ from django.core.exceptions import FieldError, ObjectDoesNotExist, ValidationErr
 from rest_framework import serializers
 import yaml
 
+from nautobot.core.constants import CSV_NO_OBJECT
 from nautobot.core.models.querysets import RestrictedQuerySet
 from nautobot.core.utils.requests import mock_wsgi_request
 
 # A YAML block-mapping key at the start of a line: `records:`, `model: dcim.device`.
 _YAML_MAPPING_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_.-]*\s*:(\s|$)")
+
+
+class ImportRowOutcome(Enum):
+    """What importing one row of data did, when it succeeded. An unchanged row's save is rolled back."""
+
+    CREATED = "created"
+    UPDATED = "updated"
+    UNCHANGED = "unchanged"
 
 
 def restricted_queryset(model, user, action):
@@ -284,6 +294,78 @@ def find_existing_object(queryset, filter_params):
         # FieldError: a match field that isn't a database lookup for this model.
         # ValidationError: a match value of the wrong type, e.g. a non-UUID string matched against the pk.
         raise ValueError(str(exc)) from exc
+
+
+def change_snapshot(serializer_class, instance):
+    """The instance's writable fields, as an export would write them, for detecting what an import changed.
+
+    Taken with the serializer that saves the row, so that it covers exactly the fields a row can set, spelled
+    as the file spells them (`location__name`). Read-only fields such as `last_updated` are left out.
+    """
+    serializer = serializer_class(instance, context={"request": None}, for_import_export=True)
+    fields = serializer.fields
+    return {
+        key: value
+        for key, value in serializer.data.items()
+        # A related field is exported as its natural-key lookups (`location__name`), named for the field
+        if not getattr(fields.get(key.split("__", 1)[0]), "read_only", False)
+    }
+
+
+def write_only_field_names(serializer_class):
+    """The names of the fields that `change_snapshot()` can't read, and so can't compare.
+
+    Determined with every field shown, as the snapshot has them: a REST serializer also marks the M2M fields it
+    omits by default, such as `VRF.import_targets`, as write-only.
+    """
+    fields = serializer_class(context={"request": None}, for_import_export=True).fields
+    return {name for name, field in fields.items() if field.write_only}
+
+
+def write_only_changes(serializer, match_fields, write_only_fields):
+    """The write-only fields a validated row sets, other than its match fields, as `{field: new_value}`.
+
+    Such a field (`User.password`) can't be compared, so each one set is assumed to be a change, since
+    otherwise a row changing only that field would be rolled back as unchanged. A match field is excluded, as
+    it equals the matched object's own value.
+
+    Args:
+        serializer (Serializer): The row's serializer, after a successful `is_valid()`.
+        match_fields (list): The import's match fields, if any.
+        write_only_fields (set): As returned by `write_only_field_names()`.
+    """
+    return {
+        name: serializer.validated_data[serializer.fields[name].source]
+        for name in write_only_fields
+        if name in serializer.fields
+        and serializer.fields[name].source in serializer.validated_data
+        and name not in (match_fields or ())
+    }
+
+
+def format_change_diff(before, changed, sensitive_fields=(), write_only_fields=()):
+    """Render a `shallow_compare_dict()` result as `` `field`: `old` → `new`, ... `` for the Job log.
+
+    Fields and values are set as code, as the log is rendered as Markdown. Old values come from `before`. A
+    sensitive field's values are shown as `(redacted)`, and a write-only field's unreadable old value as
+    `(unknown)`.
+    """
+
+    def display(field, value):
+        # A relation's natural-key lookup reads CSV_NO_OBJECT, whatever the import format, when it has no object
+        if value is None or value == "" or ("__" in field and value == CSV_NO_OBJECT):
+            return "∅"
+        if isinstance(value, (list, dict)):
+            value = json.dumps(value, default=str, ensure_ascii=False)
+        return f"`{value}`"
+
+    def describe(field, new):
+        if field in sensitive_fields:
+            return f"`{field}`: (redacted) → (redacted)"
+        old = "(unknown)" if field in write_only_fields else display(field, before.get(field))
+        return f"`{field}`: {old} → {display(field, new)}"
+
+    return ", ".join(describe(field, new) for field, new in changed.items())
 
 
 def detect_import_format(filename=None, text=None):

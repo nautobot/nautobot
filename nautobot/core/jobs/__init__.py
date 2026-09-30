@@ -36,7 +36,6 @@ from nautobot.core.api.renderers import NautobotCSVRenderer
 from nautobot.core.api.serializers import CSV_NATURAL_KEY_QUERY_CHUNK
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app, register_jobs
-from nautobot.core.constants import CSV_NO_OBJECT
 from nautobot.core.exceptions import AbortTransaction
 from nautobot.core.forms.fields import ExportFieldsChoiceField
 from nautobot.core.forms.widgets import ExportFieldSelect
@@ -658,6 +657,10 @@ class ExportObjectList(Job):
         )
 
 
+class _RowFailed(Exception):
+    """A row of an import failed, its error already logged; the import goes on to the next row."""
+
+
 class ImportObjects(Job):
     """System Job to import CSV/JSON/YAML data to create and/or update a set of objects."""
 
@@ -711,28 +714,6 @@ class ImportObjects(Job):
         "yaml": NautobotYAMLImportParser,
     }
 
-    @staticmethod
-    def _snapshot(serializer_class, instance):
-        """The instance's writable fields as an export would write them, for detecting changes.
-
-        Read through the same serializer that saves the row, so that the snapshot holds exactly the fields an
-        import can set, whatever kind of field each is: a field left out would make a row changing only that
-        field look unchanged, and be rolled back. The export representation also spells each field the way the
-        file does, so a change is logged as `location__name: A → B` rather than by primary key.
-
-        Read-only fields are left out, a row being unable to change them: they are either bookkeeping, such as
-        `last_updated`, which bumps on every save and would make every row look changed, or derived from the
-        fields a row does set, such as `display`.
-        """
-        serializer = serializer_class(instance, context={"request": None}, for_import_export=True)
-        fields = serializer.fields
-        return {
-            key: value
-            for key, value in serializer.data.items()
-            # A related field is exported as its natural-key lookups (`location__name`), named for the field
-            if not getattr(fields.get(key.split("__", 1)[0]), "read_only", False)
-        }
-
     def _perform_import_operation(self, data, serializer_class, add_queryset, change_queryset, match, *, atomic):
         """Run the upsert, optionally wrapped in an atomic transaction.
 
@@ -761,184 +742,157 @@ class ImportObjects(Job):
             return [], [], [], validation_failed
         return created_objs, updated_objs, unchanged_objs, validation_failed
 
-    @staticmethod
-    def _write_only_fields(serializer_class):
-        """The names of the fields that `_snapshot()` can't read, and so can't compare.
-
-        Asked of the serializer as `_snapshot()` builds it, with every field shown: a REST serializer also marks
-        the M2M fields it leaves out of its responses by default (`VRF.import_targets`) as write-only, but those
-        the snapshot does read.
-        """
-        fields = serializer_class(context={"request": None}, for_import_export=True).fields
-        return {name for name, field in fields.items() if field.write_only}
-
-    @staticmethod
-    def _write_only_changes(serializer, match_fields, write_only_fields):
-        """The write-only fields a validated row sets, other than its match fields, as `{field: new_value}`.
-
-        A write-only field (`User.password`, `Prefix.location`) is absent from `_snapshot()`, so a change to it
-        can't be seen by comparing snapshots, and a row changing nothing else would be rolled back as
-        unchanged. So each one the row sets is taken to be a change: at worst an update that changed nothing.
-        A match field is the exception, having matched the existing object's own value.
-
-        Args:
-            write_only_fields (set): As `_write_only_fields()` gives them.
-        """
-        return {
-            name: serializer.validated_data[serializer.fields[name].source]
-            for name in write_only_fields
-            if name in serializer.fields
-            and serializer.fields[name].source in serializer.validated_data
-            and name not in (match_fields or ())
-        }
-
-    @staticmethod
-    def _format_diff(before, changed, sensitive_fields=(), write_only_fields=()):
-        """Render a shallow_compare_dict result as `` `field`: `old` → `new`, ... `` for logging.
-
-        The Job log is rendered as Markdown, so each field and value is set as code, where nothing in it can be
-        taken for markup.
-
-        `changed` is `{field: new_value}` (as returned by `shallow_compare_dict`); the old values come
-        from the pre-change `before` snapshot. A field in `sensitive_fields` is reported as changed, but
-        with neither value, since anyone who can view the job result can read its log. A field in
-        `write_only_fields` has no old value to report, as it can't be read.
-        """
-
-        def display(field, value):
-            # A relation's natural-key lookup reads CSV_NO_OBJECT, whatever the import format, when it has no object
-            if value is None or value == "" or ("__" in field and value == CSV_NO_OBJECT):
-                return "∅"
-            if isinstance(value, (list, dict)):
-                value = json.dumps(value, default=str, ensure_ascii=False)
-            return f"`{value}`"
-
-        def describe(field, new):
-            if field in sensitive_fields:
-                return f"`{field}`: (redacted) → (redacted)"
-            old = "(unknown)" if field in write_only_fields else display(field, before.get(field))
-            return f"`{field}`: {old} → {display(field, new)}"
-
-        return ", ".join(describe(field, new) for field, new in changed.items())
-
     def _perform_operation(self, data, serializer_class, add_queryset, change_queryset, match):
-        match_fields, match_fields_source = match
-        created_objs = []
-        updated_objs = []
-        unchanged_objs = []
+        """Import each row in turn, returning `(created_objs, updated_objs, unchanged_objs, validation_failed)`."""
+        match_fields, _ = match
+        outcomes = {outcome: [] for outcome in import_utils.ImportRowOutcome}
         validation_failed = False
         context = import_utils.import_serializer_context(self.user)
         # Resolves each row's match-field values, as the serializer that saves the row will resolve them
         match_serializer = serializer_class(context=context)
-        write_only_fields = self._write_only_fields(serializer_class)
+        write_only_fields = import_utils.write_only_field_names(serializer_class)
         for row, entry in enumerate(data, start=1):
-            instance = None
-            if match_fields:
-                try:
-                    filter_params = import_utils.build_match_filter(entry, match_fields, match_serializer)
-                    # Matching is performed within the change-restricted queryset: a record the user isn't
-                    # permitted to update is treated as unmatched, and the resulting create attempt will
-                    # surface a uniqueness error rather than exposing or modifying the record.
-                    instance = import_utils.find_existing_object(change_queryset, filter_params)
-                except MultipleObjectsReturned:
-                    self.logger.error(
-                        "Row %d: Multiple existing records match on (%s); cannot determine which to update",
-                        row,
-                        ", ".join(match_fields),
-                    )
-                    validation_failed = True
-                    continue
-                except ValueError as exc:
-                    if match_fields_source == "default":
-                        # The default match key isn't fully present in this data; treat the row as a create.
-                        instance = None
-                    else:
-                        self.logger.error("Row %d: `%s`", row, exc)
-                        validation_failed = True
-                        continue
-            before = None
-            if instance is not None:
-                # Snapshot the pristine state now: is_valid()/save() mutate the in-memory instance, so a
-                # later snapshot would already reflect the incoming values and hide the change.
-                before = self._snapshot(serializer_class, instance)
-                if "id" not in match_fields and "pk" not in match_fields:
-                    # Matched on other fields, such as the natural key of an export from another Nautobot, whose
-                    # objects have different ids. Saving the row's `id` onto the instance wouldn't change its pk:
-                    # Django would insert a copy under the new pk, or refuse it as a duplicate.
-                    entry = {key: value for key, value in entry.items() if key != "id"}
-                serializer = serializer_class(instance, data=entry, partial=True, context=context)
-            else:
-                serializer = serializer_class(data=entry, context=context)
-            if not serializer.is_valid():
-                validation_failed = True
-                for field, errs in serializer.errors.items():
-                    for err in errs:
-                        self.logger.error("Row %d: `%s`: `%s`", row, field, err)
-                continue
-
-            permission_queryset = change_queryset if instance is not None else add_queryset
-            outcome = None  # one of: "created", "updated", "unchanged", "denied"
-            diff = {}
-            write_only_changes = (
-                self._write_only_changes(serializer, match_fields, write_only_fields) if instance is not None else {}
-            )
             try:
-                with transaction.atomic():
-                    obj = serializer.save()
-                    if not permission_queryset.filter(pk=obj.pk).exists():
-                        outcome = "denied"
-                        raise AbortTransaction()
-                    if instance is not None:
-                        diff = {
-                            **shallow_compare_dict(before, self._snapshot(serializer_class, obj)),
-                            **write_only_changes,
-                        }
-                        if not diff:
-                            # Idempotent: nothing changed, so roll back the no-op save (and its change-log
-                            # entry) and record the row as unchanged.
-                            outcome = "unchanged"
-                            raise AbortTransaction()
-                        outcome = "updated"
-                    else:
-                        outcome = "created"
-            except AbortTransaction:
-                pass
-            except (DatabaseError, DjangoValidationError) as exc:
-                # A constraint/validation error not surfaced by the serializer (e.g. a database uniqueness
-                # violation) is reported as a row-level failure instead of crashing the whole job; the
-                # savepoint is already rolled back, so remaining rows still process.
-                self.logger.error("Row %d: %s", row, exc, extra={"object": instance} if instance else {})
+                instance = self._match_row(row, entry, match, match_serializer, change_queryset)
+                # Taken before validating the row, which sets its values on the instance
+                before = import_utils.change_snapshot(serializer_class, instance) if instance is not None else None
+                serializer = self._validated_row_serializer(
+                    row, entry, instance, match_fields, serializer_class, context
+                )
+                outcome, obj, diff, write_only_changes = self._save_row(
+                    row, serializer, instance, before, add_queryset, change_queryset, match_fields, write_only_fields
+                )
+            except _RowFailed:
                 validation_failed = True
                 continue
+            self._report_row(row, outcome, obj, before, diff, write_only_changes)
+            outcomes[outcome].append(obj)
+        return (
+            outcomes[import_utils.ImportRowOutcome.CREATED],
+            outcomes[import_utils.ImportRowOutcome.UPDATED],
+            outcomes[import_utils.ImportRowOutcome.UNCHANGED],
+            validation_failed,
+        )
 
-            if outcome == "denied":
-                self.logger.error(
-                    'Row %d: User "%s" does not have permission to %s an object with these attributes',
-                    row,
-                    self.user,
-                    "update" if instance is not None else "create",
-                )
-                validation_failed = True
-            elif outcome == "unchanged":
-                unchanged_objs.append(instance)
-                # Recorded at DEBUG only (a debug run logs every row, changes or not); the INFO summary
-                # reports the unchanged count.
-                self.logger.debug('Row %d: No changes for record "%s"', row, instance, extra={"object": instance})
-            elif outcome == "updated":
-                self.logger.info(
-                    'Row %d: Updated record "%s" (%s)',
-                    row,
-                    obj,
-                    self._format_diff(
-                        before, diff, get_sensitive_field_names(type(obj)), write_only_fields=write_only_changes
-                    ),
-                    extra={"object": obj},
-                )
-                updated_objs.append(obj)
-            elif outcome == "created":
-                self.logger.info('Row %d: Created record "%s"', row, obj, extra={"object": obj})
-                created_objs.append(obj)
-        return created_objs, updated_objs, unchanged_objs, validation_failed
+    def _match_row(self, row, entry, match, match_serializer, change_queryset):
+        """The existing object that a row updates, or None if the row is to create one.
+
+        Only objects the user may change are matched. A row matching one they can't is created instead, and
+        so fails on the object's uniqueness, without exposing or changing it.
+
+        Raises:
+            _RowFailed: if the row matches several objects, or can't be matched on match fields the user gave.
+        """
+        match_fields, match_fields_source = match
+        if not match_fields:
+            return None
+        try:
+            filter_params = import_utils.build_match_filter(entry, match_fields, match_serializer)
+            return import_utils.find_existing_object(change_queryset, filter_params)
+        except MultipleObjectsReturned as exc:
+            self.logger.error(
+                "Row %d: Multiple existing records match on (%s); cannot determine which to update",
+                row,
+                ", ".join(match_fields),
+            )
+            raise _RowFailed from exc
+        except ValueError as exc:
+            if match_fields_source == "default":
+                # The default match key isn't fully present in this data; treat the row as a create.
+                return None
+            self.logger.error("Row %d: `%s`", row, exc)
+            raise _RowFailed from exc
+
+    def _validated_row_serializer(self, row, entry, instance, match_fields, serializer_class, context):
+        """A validated serializer for the row: updating `instance` if the row matched one, else creating an object.
+
+        Raises:
+            _RowFailed: if the row isn't valid.
+        """
+        if instance is None:
+            serializer = serializer_class(data=entry, context=context)
+        else:
+            if "id" not in match_fields and "pk" not in match_fields:
+                # Matched on other fields, such as the natural key of an export from another Nautobot, whose
+                # objects have different ids. Saving the row's `id` onto the instance wouldn't change its pk:
+                # Django would insert a copy under the new pk, or refuse it as a duplicate.
+                entry = {key: value for key, value in entry.items() if key != "id"}
+            serializer = serializer_class(instance, data=entry, partial=True, context=context)
+        if not serializer.is_valid():
+            for field, errs in serializer.errors.items():
+                for err in errs:
+                    self.logger.error("Row %d: `%s`: `%s`", row, field, err)
+            raise _RowFailed
+        return serializer
+
+    def _save_row(
+        self, row, serializer, instance, before, add_queryset, change_queryset, match_fields, write_only_fields
+    ):
+        """Save a validated row in a savepoint of its own, returning `(outcome, obj, diff, write_only_changes)`.
+
+        A save that changed nothing is rolled back, as it would still bump `last_updated` and log a change.
+
+        Raises:
+            _RowFailed: if the saved object is outside the user's permissions, or the database refuses it.
+        """
+        permission_queryset = change_queryset if instance is not None else add_queryset
+        write_only_changes = (
+            import_utils.write_only_changes(serializer, match_fields, write_only_fields) if instance is not None else {}
+        )
+        outcome, diff, denied = None, {}, False
+        try:
+            with transaction.atomic():
+                obj = serializer.save()
+                if not permission_queryset.filter(pk=obj.pk).exists():
+                    denied = True
+                    raise AbortTransaction()
+                if instance is None:
+                    outcome = import_utils.ImportRowOutcome.CREATED
+                else:
+                    diff = {
+                        **shallow_compare_dict(before, import_utils.change_snapshot(type(serializer), obj)),
+                        **write_only_changes,
+                    }
+                    if not diff:
+                        outcome = import_utils.ImportRowOutcome.UNCHANGED
+                        raise AbortTransaction()
+                    outcome = import_utils.ImportRowOutcome.UPDATED
+        except AbortTransaction:
+            pass
+        except (DatabaseError, DjangoValidationError) as exc:
+            # A constraint/validation error not surfaced by the serializer (e.g. a database uniqueness
+            # violation) is reported as a row-level failure instead of crashing the whole job; the
+            # savepoint is already rolled back, so remaining rows still process.
+            self.logger.error("Row %d: %s", row, exc, extra={"object": instance} if instance else {})
+            raise _RowFailed from exc
+        if denied:
+            self.logger.error(
+                'Row %d: User "%s" does not have permission to %s an object with these attributes',
+                row,
+                self.user,
+                "update" if instance is not None else "create",
+            )
+            raise _RowFailed
+        return outcome, obj, diff, write_only_changes
+
+    def _report_row(self, row, outcome, obj, before, diff, write_only_changes):
+        """Log what importing a row did."""
+        if outcome == import_utils.ImportRowOutcome.CREATED:
+            self.logger.info('Row %d: Created record "%s"', row, obj, extra={"object": obj})
+        elif outcome == import_utils.ImportRowOutcome.UPDATED:
+            self.logger.info(
+                'Row %d: Updated record "%s" (%s)',
+                row,
+                obj,
+                import_utils.format_change_diff(
+                    before, diff, get_sensitive_field_names(type(obj)), write_only_fields=write_only_changes
+                ),
+                extra={"object": obj},
+            )
+        else:
+            # Recorded at DEBUG only (a debug run logs every row, changes or not); the INFO summary
+            # reports the unchanged count.
+            self.logger.debug('Row %d: No changes for record "%s"', row, obj, extra={"object": obj})
 
     # ---- PREPARE (resolve target, read input, pick parser) ----
 
