@@ -30,7 +30,7 @@ class DeviceDetailTestCase:
     """Tests that the Device detail page renders its expected panels and shows the device's data correctly."""
 
     def test_heading_and_action_buttons(self, auth_page, base_url, created_device):
-        """The detail page is headed by the device's name and offers Add Components and Edit Device."""
+        """The heading shows the device's name, and the Add Components and Edit Device buttons are rendered."""
         detail = DeviceDetailPage(auth_page, base_url)
         detail.navigate(created_device["device"]["id"])
 
