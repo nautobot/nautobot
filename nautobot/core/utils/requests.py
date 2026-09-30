@@ -8,6 +8,8 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.handlers.wsgi import WSGIRequest
 from django.http import QueryDict
+from django.urls import resolve
+from django.urls.exceptions import Resolver404
 import django_filters
 
 from nautobot.core import exceptions
@@ -310,3 +312,26 @@ def convert_querydict_to_dict(request_querydict):
         >>> {'foo': ['1'], 'bar': ['2', '3'], 'baz': ['']}
     """
     return {key: value for key, value in request_querydict.lists()}  # pylint: disable=unnecessary-comprehension
+
+
+def get_view_name_for_request(request):
+    """Resolve a request to the `view_name` of its URL pattern, such as "dcim-api:device-list".
+
+    Sometimes using the URL path provided, makes a lot of noise. For example, logging to prometheus.
+    This method returns the view name without the unique identifier so that it can be grouped easier.
+
+    Args:
+        request (WSGIRequest): the request to resolve
+
+    Returns:
+        str: the resolved view name, or `unresolved`
+    """
+    resolver_match = request.resolver_match
+    default_view_name = "unresolved"
+    if resolver_match is None:
+        try:
+            resolver_match = resolve(request.path_info)
+        except Resolver404:
+            return default_view_name
+
+    return resolver_match.view_name or default_view_name

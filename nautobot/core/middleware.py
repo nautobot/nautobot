@@ -31,6 +31,10 @@ from nautobot.core.authentication import (
     assign_permissions_to_user,
 )
 from nautobot.core.rate_limiting.budget_helpers import charge_bucket, get_rate_limit_bucket_id
+from nautobot.core.rate_limiting.metrics import (
+    record_rest_rate_limiting_backend_exception,
+    record_rest_request_complexity_cost,
+)
 from nautobot.core.rate_limiting.rest_calculator import (
     classify_rest_read_request_features,
     estimate_rest_read_request_cost,
@@ -663,15 +667,18 @@ class ComplexityCostRateLimitingMiddleware:
 
         if user_token is not None and should_complexity_cost_calculation_enforced is True:
             rate_limit_bucket_id = get_rate_limit_bucket_id(user_token)
-            consumed_budget, remaining_window_time_in_seconds = charge_bucket(
-                rate_limit_bucket_id,
-                request_complexity_cost_estimate,
-                rate_limiting_window_in_seconds,
-            )
-
-        if consumed_budget is None:
-            consumed_budget = 0
-            remaining_window_time_in_seconds = rate_limiting_window_in_seconds
+            try:
+                consumed_budget, remaining_window_time_in_seconds = charge_bucket(
+                    rate_limit_bucket_id,
+                    request_complexity_cost_estimate,
+                    rate_limiting_window_in_seconds,
+                )
+            except Exception as budget_charge_exception:
+                record_rest_rate_limiting_backend_exception(
+                    request,
+                    settings.NAUTOBOT_REST_RATE_LIMITING_MODE,
+                    budget_charge_exception,
+                )
 
         # ----------------------------------------------------------------------
         #  Generate Header Data
@@ -712,13 +719,22 @@ class ComplexityCostRateLimitingMiddleware:
         has_budget_been_fully_exhausted = consumed_budget_before_this_request >= rate_limit_budget
 
         if should_complexity_cost_calculation_enforced is True and has_budget_been_fully_exhausted is True:
+            request_outcome = "throttled"
             response = JsonResponse(
                 {"detail": "Request was throttled. The estimated complexity cost exceeds the budget."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
             response.headers["Retry-After"] = str(advertised_remaining_window_time_in_seconds)
         else:
+            request_outcome = "allowed"
             response = self.get_response(request)
+
+        record_rest_request_complexity_cost(
+            request,
+            settings.NAUTOBOT_REST_RATE_LIMITING_MODE,
+            request_outcome,
+            request_complexity_cost_estimate,
+        )
 
         # ----------------------------------------------------------------------
         #  Add To Header

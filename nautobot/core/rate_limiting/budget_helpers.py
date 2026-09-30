@@ -1,7 +1,7 @@
 import hashlib
 
 from django_redis import get_redis_connection
-import redis.exceptions
+import redis
 
 CREDENTIAL_DIGEST_LENGTH = 16
 NO_EXPIRY_SET = -1
@@ -37,5 +37,5 @@ def charge_bucket(bucket_id, cost, timeout):
             remaining_timeout = timeout
 
         return consumed_budget, remaining_timeout
-    except redis.exceptions.RedisError:
-        return None, None
+    except redis.exceptions.RedisError as redis_exception:
+        raise redis_exception
