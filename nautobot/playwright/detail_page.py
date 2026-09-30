@@ -1,10 +1,8 @@
-"""Shared page object for Nautobot object detail views.
+"""Shared page object for detail views built with the UI component framework. 
 
-The UI component framework builds every detail view (device, location, prefix, ...) from
-the same pieces: one heading, the standard action buttons, and a set of panels that all
-render the same card markup. That shared behavior lives here, so a markup change is a
-single edit. Subclasses set `DETAIL_PATH` and `VERBOSE_NAME` and add only what is
-specific to their model:
+These views share one heading, the Edit button, and the same card markup for 
+every panel. Subclasses set DETAIL_PATH and VERBOSE_NAME and add locators 
+specific to their model.
 
     class DeviceDetailPage(DetailPage):
         DETAIL_PATH = "/dcim/devices/{pk}/"
