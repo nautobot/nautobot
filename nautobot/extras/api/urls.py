@@ -15,8 +15,6 @@ router.register("computed-fields", views.ComputedFieldViewSet)
 
 # Condition presets
 router.register("condition-presets", views.ConditionPresetsViewSet, basename="condition-preset")
-router.register("condition-fields", views.ConditionFieldsViewSet, basename="condition-field")
-router.register("condition-operators", views.ConditionOperatorsViewSet, basename="condition-operator")
 
 # Config contexts
 router.register("config-contexts", views.ConfigContextViewSet)

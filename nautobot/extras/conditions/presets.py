@@ -175,9 +175,7 @@ class ConditionPreset:
             except ConditionPresetError as error:
                 # `messages`, not `message`: it renders `message % params`, so the text comes back
                 # with any `%` single and this error's constructor doubles it exactly once.
-                raise ConditionPresetError(
-                    f"Preset `{self.key}`: {' '.join(error.messages)}", **error.params, preset=self.key
-                ) from error
+                raise ConditionPresetError(" ".join(error.messages), **error.params, preset=self.key) from error
 
     def context_variables(self, values):
         """
@@ -250,7 +248,9 @@ FIELD_TRANSITION = ConditionPreset(
     ),
     parameters=(
         PresetParameter(name="field", label="Field", kind=PARAM_KIND_FIELD, help_text="Field to watch."),
-        PresetParameter(name="from", label="From", help_text="Value the field must have had before the change."),
+        PresetParameter(
+            name="from", label="Changes from", help_text="Value the field must have had before the change."
+        ),
         PresetParameter(name="to", label="To", help_text="Value the field must have after the change."),
     ),
     example_values={"field": "status.name", "from": "Staged", "to": "Active"},

@@ -1,20 +1,30 @@
 {% load form_helpers %}
 
 {% comment %}
-    The conditions editor. The Form tab builds the rows, the JSON tab holds the field that is actually
-    submitted, and the two are kept in step by `js/conditions_editor.js`.
+    The conditions editor. The Form tab shows rows the server renders, the JSON tab holds the field that
+    is actually submitted, and the two are kept in step by `js/conditions_editor.js`.
 {% endcomment %}
 
-{{ condition_presets|json_script:"condition-presets" }}
-{{ condition_operators|json_script:"condition-operators" }}
-{{ condition_colors|json_script:"condition-colors" }}
-
 <style type="text/css">
-    /* Parameters share the width left over by the preset select, and wrap only when they must. */
-    .nb-conditions .nb-condition-values { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-    .nb-conditions .nb-condition-values > * { flex: 1 1 10rem; min-width: 8rem; }
+    /* A row reads as a sentence: negation and the type open it, its parameters run down beside them,
+       one to a line, so nothing ever wraps and a sub-field appearing moves only what is below it. */
+    /* Every track is a fixed width. Each row is its own grid, so tracks sized to their own contents
+       would leave the rows out of step with one another. */
+    /* A row's parameters stack downward, so its cells start at the top rather than centre on the
+       tallest of them. Bootstrap's `align-middle` is deliberately not on the table: it would sit on
+       an element `vertical-align` is never inherited from, and say the opposite of this. */
+    .nb-conditions td { vertical-align: top; }
+    .nb-conditions > tbody > tr > td:first-child { width: 23rem; }
+    .nb-conditions .nb-condition-kind { display: flex; gap: 0.5rem; }
+    .nb-conditions .nb-condition-negate { flex: 0 0 8rem; }
+    .nb-conditions .nb-condition-type { flex: 1 1 auto; min-width: 0; }
+    .nb-conditions .nb-condition-values { display: grid; gap: 0.5rem 0.75rem; align-items: start;
+        grid-template-columns: 7.5rem minmax(0, 20rem); }
+    .nb-conditions .nb-condition-values > label { margin: 0.4rem 0 0; white-space: nowrap; }
     .nb-conditions .select2-container { width: 100% !important; }
-    .nb-conditions td:first-child { width: 16rem; }
+    /* One rule between rows. Without it a row of several lines runs into the next. */
+    .nb-conditions > tbody > tr > td { padding-top: 0.9rem; padding-bottom: 0.9rem; }
+    .nb-conditions > tbody > tr + tr > td { border-top: 1px solid var(--bs-border-color); }
 </style>
 
 <span class="form-text mb-12">
@@ -24,22 +34,36 @@
 
 <ul class="nav nav-tabs" role="tablist">
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" href="#conditions_form" role="tab" data-bs-toggle="tab">Form</a>
+        <a class="nav-link active" id="conditions_form-tab" href="#conditions_form" role="tab"
+           data-bs-toggle="tab" aria-controls="conditions_form" aria-selected="true">Form</a>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" href="#conditions_json" role="tab" data-bs-toggle="tab">JSON</a>
+        <a class="nav-link" id="conditions_json-tab" href="#conditions_json" role="tab"
+           data-bs-toggle="tab" aria-controls="conditions_json" aria-selected="false">JSON</a>
     </li>
 </ul>
 <div class="tab-content">
-    <div class="tab-pane active" id="conditions_form">
-        <table class="table table-borderless align-middle nb-conditions mb-0">
-            <tbody id="conditions-rows" data-fields-url="{% url 'extras-api:condition-field-list' %}"></tbody>
+    <div class="tab-pane active" id="conditions_form" role="tabpanel" aria-labelledby="conditions_form-tab">
+        <table class="table table-borderless nb-conditions mb-0">
+            {% comment %}
+                `hx-include` names the two fields by the id Django gives them, so a form that renamed
+                `conditions` or `content_types` would send neither and say nothing about it: the rows
+                would come back drawn from an empty field, with every field picker closed.
+            {% endcomment %}
+            <tbody id="conditions-rows"
+                   hx-post="{% url 'extras:condition_rows' %}{% if form.conditions.errors %}?validate=1{% endif %}"
+                   hx-trigger="load, conditions:reload from:body"
+                   hx-target="this"
+                   hx-swap="innerHTML"
+                   hx-include="#id_conditions, #id_content_types"
+                   hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'></tbody>
         </table>
-        <button type="button" class="btn btn-primary add-row" id="conditions-add">
+        <button type="button" class="btn btn-primary add-row" id="conditions-add"
+                data-row-url="{% url 'extras:condition_row' %}">
             <span class="mdi mdi-plus-thick" aria-hidden="true"></span> Add another Condition
         </button>
     </div>
-    <div class="tab-pane" id="conditions_json">
+    <div class="tab-pane" id="conditions_json" role="tabpanel" aria-labelledby="conditions_json-tab">
         {% render_field form.conditions %}
     </div>
 </div>

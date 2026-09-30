@@ -210,7 +210,7 @@ OPERATOR_CONTAINS = "contains"
 OPERATOR_STARTSWITH = "startswith"
 OPERATOR_ENDSWITH = "endswith"
 
-#: Every operator, in the order the form offers them.
+# Every operator, in the order the form offers them.
 OPERATORS = (
     Operator(
         key=OPERATOR_EQUALS,
@@ -286,23 +286,12 @@ FIELD_OPERATORS = tuple((operator.key, operator.label) for operator in OPERATORS
 FIELD_OPERATOR_KEYS = tuple(operator.key for operator in OPERATORS)
 
 
-def describe_operators():
-    """Everything a form needs to offer the operators, in the order they are offered.
+_BY_KEY = {operator.key: operator for operator in OPERATORS}
 
-    `kinds` are the field kinds an operator suits, `whole_value` says whether its target is a complete
-    value of the field rather than a fragment, and `set_kinds` are the kinds for which it takes several
-    values at once. A form reads this instead of keeping its own copy of the rules.
-    """
-    return [
-        {
-            "key": operator.key,
-            "label": operator.label,
-            "kinds": sorted(operator.applies_to),
-            "whole_value": operator.compares_whole_value,
-            "set_kinds": sorted(kind for kind in operator.applies_to if takes_a_set(operator.key, kind)),
-        }
-        for operator in OPERATORS
-    ]
+
+def operator_for(key):
+    """The operator a stored key names, or None when the table does not describe it."""
+    return _BY_KEY.get(key)
 
 
 def operators_for_kind(kind):

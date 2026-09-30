@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 from django import forms as django_forms
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied, ValidationError
 from django.db import IntegrityError, transaction
@@ -26,6 +27,7 @@ from django.utils.formats import date_format
 from django.utils.html import format_html, format_html_join
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.timezone import get_current_timezone, now
+from django.views.generic import View
 from django_tables2 import RequestConfig
 from jsonschema import SchemaError
 from jsonschema.validators import Draft7Validator
@@ -33,7 +35,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from nautobot.core.choices import ButtonActionColorChoices, ColorChoices
+from nautobot.core.api.exceptions import SerializerNotFound
+from nautobot.core.choices import ButtonActionColorChoices
 from nautobot.core.constants import PAGINATE_COUNT_DEFAULT
 from nautobot.core.exceptions import CeleryWorkerNotRunningException, FilterSetFieldNotFound
 from nautobot.core.forms import ApprovalForm, restrict_form_fields
@@ -41,7 +44,7 @@ from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.models.querysets import count_related
 from nautobot.core.models.utils import pretty_print_query
 from nautobot.core.templatetags import helpers
-from nautobot.core.templatetags.helpers import bettertitle, fgcolor
+from nautobot.core.templatetags.helpers import bettertitle
 from nautobot.core.templatetags.perms import can_cancel, can_change
 from nautobot.core.ui import object_detail
 from nautobot.core.ui.breadcrumbs import (
@@ -98,8 +101,8 @@ from nautobot.dcim.tables import (
     RackTable,
     VirtualDeviceContextTable,
 )
-from nautobot.extras.conditions.operators import describe_operators
-from nautobot.extras.conditions.presets import get_condition_presets
+from nautobot.extras.conditions.forms import ConditionRowForm, faults_by_row_and_control
+from nautobot.extras.conditions.model_fields import addressable_fields
 from nautobot.extras.constants import PENDING_WORKFLOWS_ERROR_CODE
 from nautobot.extras.context_managers import deferred_change_logging_for_bulk_operation
 from nautobot.extras.jobs_cancel import CancelFactory, user_can_cancel_job_result
@@ -3507,12 +3510,106 @@ class ScheduledJobUIViewSet(
         return redirect(obj.get_absolute_url())
 
 
-# The palette and its per-swatch style, so the editor renders colors the way every other color field in
-# Nautobot does without working out the readable foreground itself. The same for every request.
-CONDITION_COLORS = [
-    {"value": value, "label": label, "style": f"color: {fgcolor(value)}; background-color: #{value}"}
-    for value, label in ColorChoices
-]
+#
+# Conditions
+#
+
+
+def _addressable_fields_for(data):
+    """The fields every object type named in `data` carries, for the conditions editor.
+
+    A content type that no longer resolves is skipped and a model with no serializer yields nothing,
+    because the row still has to render: an empty field select is recoverable, a swap that failed is not.
+    """
+    chosen = [value for value in data.getlist("content_types") if value.isdigit()]
+    models = [content_type.model_class() for content_type in ContentType.objects.filter(pk__in=chosen)]
+    try:
+        return addressable_fields(*[model for model in models if model is not None])
+    except SerializerNotFound:
+        return []
+
+
+class HtmxOnlyMixin:
+    """Refuse a request the editor did not make.
+
+    Both views below answer with a fragment of a page, which is meaningless on its own, so neither is
+    an address to visit. HTMX sets `HX-Request` on everything it sends, `htmx.ajax` included, and the
+    four views in `nautobot.core.views` that serve fragments turn away what lacks it in the same words.
+    """
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.headers.get("HX-Request", False):
+            return HttpResponseBadRequest("Endpoint in question supports only HTMX-made requests.")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ConditionRowView(LoginRequiredMixin, HtmxOnlyMixin, View):
+    """One row of the conditions editor, rendered for the state the request carries.
+
+    The editor asks for a row again whenever a choice decides what the rest of it should be: the
+    condition type, the field it names, and the operator it compares with. The row's own inputs come
+    back with the request, so the answer is built from the choices made so far rather than from
+    anything stored.
+    """
+
+    def get(self, request):
+        given = request.GET.get("index") or "0"
+        index = int(given) if given.isdigit() else 0
+        form = ConditionRowForm(
+            request.GET,
+            index=index,
+            addressable=_addressable_fields_for(request.GET),
+            triggered_by=request.headers.get("HX-Trigger-Name"),
+        )
+        return render(request, "extras/inc/conditions_row.html", {"form": form})
+
+
+class ConditionRowsView(LoginRequiredMixin, HtmxOnlyMixin, View):
+    """Every row of the conditions editor, drawn from the JSON the `conditions` field holds.
+
+    The rows are a view of that field rather than a second copy of it, so they are rebuilt from it: when
+    the page loads, when the JSON tab has been edited by hand, and when the watched object types change
+    and with them the fields a condition may name.
+    """
+
+    def post(self, request):
+        rows, unreadable = self._rows_from_json(request.POST.get("conditions"))
+        addressable = _addressable_fields_for(request.POST)
+        # Faults are asked for in the query string because the body is the editor's own inputs, sent
+        # whole by `hx-include`. Only once a save has been refused: until then a row half filled in is
+        # a row being filled in, not a mistake.
+        faults = faults_by_row_and_control(rows) if request.GET.get("validate") else {}
+        return render(
+            request,
+            "extras/inc/conditions_rows.html",
+            {
+                "condition_rows": [
+                    ConditionRowForm(index=index, addressable=addressable, row=row, faults=faults.get(index))
+                    for index, row in enumerate(rows)
+                ],
+                "condition_rows_unreadable": unreadable,
+            },
+        )
+
+    @staticmethod
+    def _rows_from_json(conditions):
+        """The stored rows, and why the field could not be read as rows at all when it could not.
+
+        This is the coarsest of the three ways this feature reports a fault, above `row_problems`,
+        which blames a row, and `faults_by_row_and_control`, which blames a control. Here there are no
+        rows to blame, so the editor shows the one message in place of the table.
+
+        A form with nothing on it still offers one row, the way the other repeating forms here do.
+        """
+        try:
+            stored = json.loads(conditions or "[]")
+        except json.JSONDecodeError as error:
+            return [], f"The JSON tab does not parse: {error}."
+        if not isinstance(stored, list):
+            return [], "The JSON tab holds something that is not a list of conditions."
+        if not all(isinstance(row, dict) for row in stored):
+            return [], "The JSON tab holds a list, but something in it is not a condition."
+        return stored or [None], None
 
 
 class ConditionsViewMixin:
@@ -3530,11 +3627,6 @@ class ConditionsViewMixin:
         context = super().get_extra_context(request, instance)
         if self.action in ("create", "update"):
             context["main_card_excluded_fields"] = self.main_card_excluded_fields
-            # The same catalog the `/api/extras/condition-presets/` endpoint serves. Rendered into the
-            # page so the editor has it before the user touches anything.
-            context["condition_presets"] = [preset.as_dict() for preset in get_condition_presets()]
-            context["condition_operators"] = describe_operators()
-            context["condition_colors"] = CONDITION_COLORS
         return context
 
     @staticmethod

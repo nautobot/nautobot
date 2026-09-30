@@ -19,7 +19,6 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ViewSet
 
 from nautobot.core.api.authentication import TokenPermissions
-from nautobot.core.api.exceptions import SerializerNotFound
 from nautobot.core.api.parsers import NautobotCSVParser
 from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.api.views import (
@@ -40,8 +39,6 @@ from nautobot.extras.choices import (
     JobExecutionType,
     JobQueueTypeChoices,
 )
-from nautobot.extras.conditions.model_fields import addressable_fields
-from nautobot.extras.conditions.operators import describe_operators
 from nautobot.extras.conditions.presets import get_condition_presets
 from nautobot.extras.datasources import get_git_repository_for_sync
 from nautobot.extras.filters import RoleFilterSet
@@ -189,58 +186,6 @@ class ConditionPresetsViewSet(NautobotAPIVersionMixin, ViewSet):
         """
         catalog = [preset.as_dict() for preset in get_condition_presets()]
         return Response(serializers.ConditionPresetSerializer(catalog, many=True).data)
-
-
-class ConditionOperatorsViewSet(NautobotAPIVersionMixin, ViewSet):
-    """The comparison operators a `field_compare` row can use."""
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(exclude=True)
-    def list(self, request):
-        """
-        Get the operators, each with the field kinds it suits and how it takes its target.
-
-        The preset catalog names the operators a row may use. This says what each one means for a form:
-        which kinds of field it applies to, whether its target is a whole value or a fragment of one,
-        and when it takes several values at once.
-        """
-        return Response({"operators": describe_operators()})
-
-
-class ConditionFieldsViewSet(NautobotAPIVersionMixin, ViewSet):
-    """The fields a condition can name, for the object types an action was given."""
-
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(exclude=True)
-    def list(self, request):
-        """
-        Get the fields shared by the object types in `content-type-id`, which may be given more than once.
-
-        One condition is checked against every selected object type, so a field only one of them carries
-        would never be a safe thing to offer.
-        """
-        models = []
-        for content_type_id in request.query_params.getlist("content-type-id"):
-            try:
-                model = ContentType.objects.get(pk=content_type_id).model_class()
-            except (ContentType.DoesNotExist, ValueError):
-                return Response(
-                    {"detail": f"Unknown content-type-id `{content_type_id}`."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            if model is None:
-                return Response(
-                    {"detail": f"No model for content-type-id `{content_type_id}`."},
-                    status=status.HTTP_404_NOT_FOUND,
-                )
-            models.append(model)
-
-        try:
-            return Response({"fields": addressable_fields(*models)})
-        except SerializerNotFound as error:
-            return Response({"detail": str(error)}, status=status.HTTP_404_NOT_FOUND)
 
 
 #
