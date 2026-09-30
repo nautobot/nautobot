@@ -1,1 +1,1 @@
-Replaced the Selenium computed-field tests with a Playwright `ComputedFieldsTestCase` that checks computed-field placement on the Device detail view according to `advanced_ui`, and that a computed field can be added as a Device list column showing the value returned by the REST API; added shared table-column configuration helpers to the Playwright `ListPage`.
+Replaced the Selenium computed-field tests with a Playwright `ComputedFieldsTestCase`.

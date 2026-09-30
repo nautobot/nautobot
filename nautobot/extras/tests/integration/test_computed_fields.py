@@ -1,7 +1,4 @@
-"""Computed fields on the Device detail and list views.
-
-Playwright port of ``nautobot/extras/tests/selenium/test_computedfields.py::ComputedFieldsTestCase``.
-"""
+"""Computed fields on the Device detail and list views."""
 
 import pytest
 
@@ -10,11 +7,10 @@ from nautobot.dcim.tests.integration.pages.devices_page import DevicesPage
 
 
 class ComputedFieldsTestCase:
-    """1:1 Playwright port of the Selenium ``ComputedFieldsTestCase``.
+    """Computed-field placement on the Device detail view and the Device list column.
 
-    The Selenium ``test_computed_field_advanced_ui`` checked both `advanced_ui` settings in
-    one test, saving the field in between. It is split here into one test per setting, each
-    starting from a computed field created with that setting.
+    Each `advanced_ui` setting has its own test, starting from a computed field created
+    with that setting.
     """
 
     @pytest.mark.behavioral
