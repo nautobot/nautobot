@@ -6,7 +6,7 @@ from django.test import SimpleTestCase, tag
 from nautobot.extras.conditions.errors import ConditionValidationError
 from nautobot.extras.conditions.presets import ConditionPresetError, register_builtin_condition_presets
 from nautobot.extras.conditions.rows import ConditionRowError
-from nautobot.extras.conditions.validation import validate_conditions
+from nautobot.extras.conditions.validation import row_problems, validate_conditions
 
 EXPRESSION = {"type": "expression", "source": "data.mtu > 9000"}
 PRESET = {"type": "preset", "preset": "field_compare", "values": {"field": "mtu", "operator": "gt", "value": 9000}}
@@ -18,7 +18,7 @@ MIXED_ROWS = [BAD_EXPRESSION, EXPRESSION, BAD_PRESET]
 
 
 @tag("unit")
-class ValidateConditionsTest(SimpleTestCase):
+class ConditionValidationTest(SimpleTestCase):
     """`SimpleTestCase`: validating a row compiles its expression, which needs Django's Jinja engine."""
 
     def setUp(self):
@@ -74,3 +74,27 @@ class ValidateConditionsTest(SimpleTestCase):
     def test_a_template_delimiter_renders(self):
         error = self.assertRefused([{"type": "expression", "source": "{% if data.mtu %}x{% endif %}"}])
         self.assertIn("{%", error.messages[0])
+
+    def test_only_the_bad_rows_are_in_the_answer_keyed_by_position(self):
+        self.assertEqual(list(row_problems(MIXED_ROWS)), [0, 2])
+
+    def test_rows_that_pass_leave_nothing_behind(self):
+        self.assertEqual(row_problems([EXPRESSION, PRESET]), {})
+
+    def test_a_message_names_neither_its_row_nor_its_preset(self):
+        """Both are plain to anyone reading the row itself, and `_restated_out_of_context` adds them back."""
+        message = row_problems([BAD_PRESET])[0].messages[0]
+        self.assertEqual(message, "Parameter `operator` is required.")
+        self.assertNotIn("Condition", message)
+
+    def test_what_a_message_leaves_out_it_still_carries(self):
+        """A form places a complaint by `params`, not by reading the sentence."""
+        params = row_problems([BAD_PRESET])[0].error_list[0].params
+        self.assertEqual(params["preset"], "field_compare")
+        self.assertEqual(params["parameter"], "operator")
+
+    def test_a_value_that_is_not_a_list_has_no_rows_to_complain_about(self):
+        """`validate_conditions` refuses it outright. Here there is simply nothing to draw."""
+        for value in (None, "", {}, EXPRESSION):
+            with self.subTest(value=value):
+                self.assertEqual(row_problems(value), {})
