@@ -6,7 +6,7 @@ from nautobot.playwright.detail_page import DetailPage
 
 
 class DeviceDetailPage(DetailPage):
-    """The Device detail view. Heading, panels and deferred components come from DetailPage."""
+    """The Device detail view. Adds the Add Components button to DetailPage."""
 
     DETAIL_PATH = "/dcim/devices/{pk}/"
     VERBOSE_NAME = "Device"
