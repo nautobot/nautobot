@@ -47,11 +47,7 @@ class DeviceDetailTestCase:
             detail.expect_panel(title)
 
     def test_empty_panels_show_their_empty_state(self, auth_page, base_url, created_device):
-        """Each panel with nothing to show says so, in its own body.
-
-        A new device has no tags, VRF assignments, clusters, services, images or virtual
-        device contexts, so all six panels render their empty state.
-        """
+        """Each empty panel shows its empty-state message inside its own card."""
         detail = DeviceDetailPage(auth_page, base_url)
         detail.navigate(created_device["device"]["id"])
 
